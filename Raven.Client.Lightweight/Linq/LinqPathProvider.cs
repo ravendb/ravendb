@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="LinqPathProvider.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -49,53 +49,53 @@ namespace Raven.Client.Linq
 					if(callExpression.Arguments.Count != 1)
 						throw new ArgumentException("Not supported computation: " + callExpression +
                                             ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
-			
-					var target = GetPath(callExpression.Arguments[0]);
-					return new Result
-					{
-						MemberType = callExpression.Method.ReturnType,
-						IsNestedPath = false,
-						Path = target.Path + @".Count\(\)"
-					};
-				}
+            
+                    var target = GetPath(callExpression.Arguments[0]);
+                    return new Result
+                    {
+                        MemberType = callExpression.Method.ReturnType,
+                        IsNestedPath = false,
+                        Path = target.Path + @".Count\(\)"
+                    };
+                }
 
-				if (callExpression.Method.Name == "get_Item")
-				{
-					var parent = GetPath(callExpression.Object);
+                if (callExpression.Method.Name == "get_Item")
+                {
+                    var parent = GetPath(callExpression.Object);
 
-					return new Result
-					       {
-						       MemberType = callExpression.Method.ReturnType,
-						       IsNestedPath = false,
-						       Path = parent.Path + "." +
-						              GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
-					       };
-				}
+                    return new Result
+                           {
+                               MemberType = callExpression.Method.ReturnType,
+                               IsNestedPath = false,
+                               Path = parent.Path + "." +
+                                      GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
+                           };
+                }
 
-				throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-			}
+                throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+            }
 
-			var memberExpression = GetMemberExpression(expression);
+            var memberExpression = GetMemberExpression(expression);
 
-			var customMemberResult = conventions.TranslateCustomQueryExpression(this, memberExpression);
-			if (customMemberResult != null)
-				return customMemberResult;
+            var customMemberResult = conventions.TranslateCustomQueryExpression(this, memberExpression);
+            if (customMemberResult != null)
+                return customMemberResult;
 
-			// we truncate the nullable .Value because in json all values are nullable
-			if (memberExpression.Member.Name == "Value" &&
-			    Nullable.GetUnderlyingType(memberExpression.Expression.Type) != null)
-			{
-				return GetPath(memberExpression.Expression);
-			}
+            // we truncate the nullable .Value because in json all values are nullable
+            if (memberExpression.Member.Name == "Value" &&
+                Nullable.GetUnderlyingType(memberExpression.Expression.Type) != null)
+            {
+                return GetPath(memberExpression.Expression);
+            }
 
 
-			AssertNoComputation(memberExpression);
+            AssertNoComputation(memberExpression);
 
-			var result = new Result
-			{
-				Path = memberExpression.ToString(),
-				IsNestedPath = memberExpression.Expression is MemberExpression,
-				MemberType = memberExpression.Member.GetMemberType(),
+            var result = new Result
+            {
+                Path = memberExpression.ToString(),
+                IsNestedPath = memberExpression.Expression is MemberExpression,
+                MemberType = memberExpression.Member.GetMemberType(),
                 MaybeProperty = memberExpression.Member as PropertyInfo
 			};
 
@@ -341,9 +341,9 @@ namespace Raven.Client.Linq
 
 						throw new ArgumentException("Not supported computation: " + memberExpression +
                                                     ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
-				}
-				cur = cur.Expression as MemberExpression;
-			}
-		}
-	}
+                }
+                cur = cur.Expression as MemberExpression;
+            }
+        }
+    }
 }

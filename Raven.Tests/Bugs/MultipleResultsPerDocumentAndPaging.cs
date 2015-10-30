@@ -19,62 +19,62 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MultipleResultsPerDocumentAndPaging : RavenTest
-	{
-		[Fact]
-		public void WhenOutputtingMultipleResultsPerDocAndPagingWillGetCorrectSize()
-		{
-			using (var store = NewDocumentStore())
-			{
+    public class MultipleResultsPerDocumentAndPaging : RavenTest
+    {
+        [Fact]
+        public void WhenOutputtingMultipleResultsPerDocAndPagingWillGetCorrectSize()
+        {
+            using (var store = NewDocumentStore())
+            {
 
-				store.DatabaseCommands.PutIndex("Movies/ByActor", new IndexDefinition
-				{
-					Map = @"
+                store.DatabaseCommands.PutIndex("Movies/ByActor", new IndexDefinition
+                {
+                    Map = @"
 from movie in docs.Movies
 from actor in movie.Actors
 select new { Actor = actor, Name = movie.Name }",
-					Indexes = { { "Actor", FieldIndexing.Analyzed } },
-					Stores = { { "Name", FieldStorage.Yes } }
-				});
+                    Indexes = { { "Actor", FieldIndexing.Analyzed } },
+                    Stores = { { "Name", FieldStorage.Yes } }
+                });
 
-				using (var s1 = store.OpenSession())
-				{
-					s1.Store(
-						new Movie
-						{
-							Name = "Inception",
-							Actors = new[] { "Leonardo DiCaprio", "Joseph Gordon-Levitt", "Ellen Page", "Tom Hardy", "James Bond", "Shames Bond" }
-						});
-					s1.Store(
-						new Movie
-						{
-							Name = "The Sorcerer's Apprentice",
-							Actors = new[] { "Nicolas Cage", "Jay Baruchel", "Alfred Molina", "Teresa Palmer", "James Bond", "Shames Bond" }
-						});
-					s1.SaveChanges();
-				}
+                using (var s1 = store.OpenSession())
+                {
+                    s1.Store(
+                        new Movie
+                        {
+                            Name = "Inception",
+                            Actors = new[] { "Leonardo DiCaprio", "Joseph Gordon-Levitt", "Ellen Page", "Tom Hardy", "James Bond", "Shames Bond" }
+                        });
+                    s1.Store(
+                        new Movie
+                        {
+                            Name = "The Sorcerer's Apprentice",
+                            Actors = new[] { "Nicolas Cage", "Jay Baruchel", "Alfred Molina", "Teresa Palmer", "James Bond", "Shames Bond" }
+                        });
+                    s1.SaveChanges();
+                }
 
-				using (var s2 = store.OpenSession())
-				{
+                using (var s2 = store.OpenSession())
+                {
                     var movies = s2.Advanced.DocumentQuery<Movie>("Movies/ByActor")
-						.WhereEquals("Actor", "Bond")
-						.Take(2)
-						.WaitForNonStaleResults(TimeSpan.FromMinutes(5))
-						.ToList();
+                        .WhereEquals("Actor", "Bond")
+                        .Take(2)
+                        .WaitForNonStaleResults(TimeSpan.FromMinutes(5))
+                        .ToList();
 
-					Assert.Equal(2, movies.Count);
-				}
-			}
-		}
+                    Assert.Equal(2, movies.Count);
+                }
+            }
+        }
 
 
-		public class Movie
-		{
-			public string Id { get; set; }
-			public string Name { get; set; }
+        public class Movie
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
 
-			public string[] Actors { get; set; }
-		}
+            public string[] Actors { get; set; }
+        }
 
-	}
+    }
 }

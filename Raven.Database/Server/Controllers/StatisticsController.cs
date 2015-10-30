@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Web.Http;
 
 using Raven.Database.Server.WebApi.Attributes;

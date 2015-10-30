@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TableBase.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -24,21 +24,21 @@ namespace Raven.Database.Storage.Voron.Impl
 	{
         protected IBufferPool BufferPool { get; private set; }
 
-	    public string TableName { get; private set; }
+        public string TableName { get; private set; }
 
-		protected TableBase(string tableName, IBufferPool bufferPool)
-		{
-		    if (string.IsNullOrEmpty(tableName))
-				throw new ArgumentNullException(tableName);
+        protected TableBase(string tableName, IBufferPool bufferPool)
+        {
+            if (string.IsNullOrEmpty(tableName))
+                throw new ArgumentNullException(tableName);
 
             BufferPool = bufferPool;
-			TableName = tableName;
-		}
+            TableName = tableName;
+        }
 
-		public virtual void Add(WriteBatch writeBatch, string key, string value, ushort? expectedVersion = null)
-		{
-			Add(writeBatch, key, Encoding.UTF8.GetBytes(value), expectedVersion);
-		}
+        public virtual void Add(WriteBatch writeBatch, string key, string value, ushort? expectedVersion = null)
+        {
+            Add(writeBatch, key, Encoding.UTF8.GetBytes(value), expectedVersion);
+        }
 
 		public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
 		{
@@ -60,8 +60,8 @@ namespace Raven.Database.Storage.Voron.Impl
             value.WriteTo(stream);
             stream.Position = 0;
 
-			writeBatch.Add(key, stream, TableName, expectedVersion);
-		}
+            writeBatch.Add(key, stream, TableName, expectedVersion);
+        }
 
         public virtual void Add(WriteBatch writeBatch, Slice key, string value, ushort? expectedVersion = null)
         {

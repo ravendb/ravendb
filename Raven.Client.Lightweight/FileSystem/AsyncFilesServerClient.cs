@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -42,8 +42,8 @@ namespace Raven.Client.FileSystem
             remove { ReplicationInformer.FailoverStatusChanged -= value; }
         }
 
-		public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory = null, Guid? sessionId = null, Func<string, IFilesReplicationInformer> replicationInformerGetter = null, IFilesConflictListener[] conflictListeners = null, NameValueCollection operationsHeaders = null)
-			: base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders, replicationInformerGetter, fileSystemName)
+        public AsyncFilesServerClient(string serverUrl, string fileSystemName, FilesConvention conventions, OperationCredentials credentials, HttpJsonRequestFactory requestFactory = null, Guid? sessionId = null, Func<string, IFilesReplicationInformer> replicationInformerGetter = null, IFilesConflictListener[] conflictListeners = null, NameValueCollection operationsHeaders = null)
+            : base(serverUrl, conventions, credentials, requestFactory, sessionId, operationsHeaders, replicationInformerGetter, fileSystemName)
         {
             try
             {                
@@ -53,7 +53,7 @@ namespace Raven.Client.FileSystem
                 if (replicationInformerGetter != null && ReplicationInformer!= null)
 					ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
 
-				SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl, credentials.Credentials);
+                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl, credentials.Credentials);
             }
             catch (Exception)
             {
@@ -63,16 +63,16 @@ namespace Raven.Client.FileSystem
         }
 
         public AsyncFilesServerClient(string serverUrl, string fileSystemName, ICredentials credentials = null, string apiKey = null)
-			: this(serverUrl, fileSystemName, null, new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials))
+            : this(serverUrl, fileSystemName, null, new OperationCredentials(apiKey, credentials ?? CredentialCache.DefaultNetworkCredentials))
         {
         }
 
-	    protected override Func<string, IFilesReplicationInformer> DefaultReplicationInformerGetter()
-	    {
-		    return name => new FilesReplicationInformer(Conventions, RequestFactory);
-	    }
+        protected override Func<string, IFilesReplicationInformer> DefaultReplicationInformerGetter()
+        {
+            return name => new FilesReplicationInformer(Conventions, RequestFactory);
+        }
 
-	    protected override string BaseUrl
+        protected override string BaseUrl
         {
             get { return UrlFor(); }
         }
@@ -89,18 +89,18 @@ namespace Raven.Client.FileSystem
 
         public IAsyncFilesCommands ForFileSystem(string fileSystemName)
         {
-			return new AsyncFilesServerClient(ServerUrl, fileSystemName, Conventions, PrimaryCredentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
+            return new AsyncFilesServerClient(ServerUrl, fileSystemName, Conventions, PrimaryCredentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
         }
 
         public IAsyncFilesCommands With(ICredentials credentials)
         {
             var primaryCredentials = new OperationCredentials(ApiKey, credentials);
-			return new AsyncFilesServerClient(ServerUrl, FileSystemName, Conventions, primaryCredentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
+            return new AsyncFilesServerClient(ServerUrl, FileSystemName, Conventions, primaryCredentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
         }
 
         public IAsyncFilesCommands With(OperationCredentials credentials)
         {
-			return new AsyncFilesServerClient(ServerUrl, FileSystemName, Conventions, credentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
+            return new AsyncFilesServerClient(ServerUrl, FileSystemName, Conventions, credentials, RequestFactory, SessionId, ReplicationInformerGetter, conflictListeners, OperationsHeaders);
         }
 
         public string ApiKey { get; private set; }
@@ -227,7 +227,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-	    public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
+        public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication(HttpMethods.Get, async operation =>
             {
@@ -320,7 +320,7 @@ namespace Raven.Client.FileSystem
 			return ExecuteWithReplication(HttpMethods.Get, operation => StartsWithAsyncImpl(prefix, matches, start, pageSize, operation));
 	    }
 
-	    public async Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
+        public async Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
         {
             if (fromEtag == null)
                 throw new ArgumentException("fromEtag");
@@ -334,10 +334,10 @@ namespace Raven.Client.FileSystem
             else
             {
                 var sb = new StringBuilder(operationMetadata.Url)
-					.Append("/streams/files?etag=")
-					.Append(fromEtag)
-					.Append("&pageSize=")
-					.Append(pageSize);
+                    .Append("/streams/files?etag=")
+                    .Append(fromEtag)
+                    .Append("&pageSize=")
+                    .Append(pageSize);
 
                 var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions)
                                             .AddOperationHeaders(OperationsHeaders));
@@ -345,7 +345,7 @@ namespace Raven.Client.FileSystem
                 var response = await request.ExecuteRawResponseAsync()
                                             .ConfigureAwait(false);
 
-				await response.AssertNotFailingResponse().ConfigureAwait(false);
+                await response.AssertNotFailingResponse().ConfigureAwait(false);
 
                 return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
             }
@@ -400,7 +400,7 @@ namespace Raven.Client.FileSystem
                 var response = await request.ExecuteRawResponseAsync()
                                             .ConfigureAwait(false);
 
-				await response.AssertNotFailingResponse().ConfigureAwait(false);
+                await response.AssertNotFailingResponse().ConfigureAwait(false);
 
                 currentPageCount = 0;
                 currentEtag = etag;
@@ -459,9 +459,9 @@ namespace Raven.Client.FileSystem
 
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
         {
-	        private readonly HttpJsonRequest request;
+            private readonly HttpJsonRequest request;
 
-	        private readonly Stream stream;
+            private readonly Stream stream;
             private readonly StreamReader streamReader;
             private readonly JsonTextReaderAsync reader;
             private bool complete;
@@ -470,8 +470,8 @@ namespace Raven.Client.FileSystem
 
             public YieldStreamResults(HttpJsonRequest request, Stream stream)
             {
-	            this.request = request;
-	            this.stream = stream;
+                this.request = request;
+                this.stream = stream;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
             }
@@ -493,7 +493,7 @@ namespace Raven.Client.FileSystem
                 reader.Close();
                 streamReader.Close();
                 stream.Close();
-				request.Dispose();
+                request.Dispose();
             }
 
             public async Task<bool> MoveNextAsync()
@@ -520,8 +520,8 @@ namespace Raven.Client.FileSystem
 
                     await TryReadNextPageStart().ConfigureAwait(false);
 
-					await EnsureValidEndOfResponse().ConfigureAwait(false);
-					this.Dispose();
+                    await EnsureValidEndOfResponse().ConfigureAwait(false);
+                    this.Dispose();
                     return false;
                 }
 
@@ -597,23 +597,23 @@ namespace Raven.Client.FileSystem
 				{
 					var response = (RavenJArray) await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
-					var results = response.JsonDeserialization<FileHeader>();
+                    var results = response.JsonDeserialization<FileHeader>();
 
-					results.ForEach(x =>
-					{
-						if (x == null)
-							return;
+                    results.ForEach(x =>
+                    {
+                        if (x == null)
+                            return;
 
-						x.Metadata = new RavenJObject(x.Metadata, StringComparer.OrdinalIgnoreCase); // ensure metadata keys aren't case sensitive
-					});
+                        x.Metadata = new RavenJObject(x.Metadata, StringComparer.OrdinalIgnoreCase); // ensure metadata keys aren't case sensitive
+                    });
 
-					return results;
-				}
-				catch (Exception e)
-				{
-					throw e.SimplifyException();
-				}
-	        }
+                    return results;
+                }
+                catch (Exception e)
+                {
+                    throw e.SimplifyException();
+                }
+            }
         }
 
         public Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadataRef = null, long? from = null, long? to = null)
@@ -643,29 +643,29 @@ namespace Raven.Client.FileSystem
 
         public Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, Etag etag = null)
         {
-			if (source.CanRead == false)
-				throw new Exception("Stream does not support reading");
+            if (source.CanRead == false)
+                throw new Exception("Stream does not support reading");
 
-	        bool streamConsumed = false;
-	        long start = -1;
+            bool streamConsumed = false;
+            long start = -1;
 
-			if (source.CanSeek)
-				start = source.Position;
+            if (source.CanSeek)
+                start = source.Position;
 
-			return UploadAsync(filename, source.CopyTo, () =>
-			{
-				if (streamConsumed)
-				{
-					// If the content needs to be written to a target stream a 2nd time, then the stream must support
-					// seeking, otherwise the stream can't be copied a second time to a target stream (e.g. a NetworkStream).
-					if (source.CanSeek)
-						source.Position = start;
-					else
-						throw new InvalidOperationException("We need to resend the request body while the stream was already consumed. It cannot be read again because it's not seekable");
-				}
+            return UploadAsync(filename, source.CopyTo, () =>
+            {
+                if (streamConsumed)
+                {
+                    // If the content needs to be written to a target stream a 2nd time, then the stream must support
+                    // seeking, otherwise the stream can't be copied a second time to a target stream (e.g. a NetworkStream).
+                    if (source.CanSeek)
+                        source.Position = start;
+                    else
+                        throw new InvalidOperationException("We need to resend the request body while the stream was already consumed. It cannot be read again because it's not seekable");
+                }
 
-				streamConsumed = true;
-			}, source.Length, metadata, etag);
+                streamConsumed = true;
+            }, source.Length, metadata, etag);
         }
 
 		public Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, Etag etag = null)
@@ -687,7 +687,7 @@ namespace Raven.Client.FileSystem
 
         private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Action<Stream> source, Action prepareStream, RavenJObject metadata, bool preserveTimestamps, long size, Etag etag)
         {
-	        var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename);
+            var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename);
             if (preserveTimestamps)
                 operationUrl += "&preserveTimestamps=true";
 
@@ -745,7 +745,7 @@ namespace Raven.Client.FileSystem
 
         internal async Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string filename, FileHeader remote, string sourceServerUri, Action beforeConflictResolution)
         {
-			var files = await this.GetAsync(new[] { filename }).ConfigureAwait(false);
+            var files = await this.GetAsync(new[] { filename }).ConfigureAwait(false);
             FileHeader local = files.FirstOrDefault();
             
             // File does not exists anymore on the server.
@@ -778,10 +778,10 @@ namespace Raven.Client.FileSystem
                     try
                     {
                         var client = new SynchronizationClient(this, Conventions);
-						await client.ResolveConflictAsync(filename, resolutionStrategy).ConfigureAwait(false);
+                        await client.ResolveConflictAsync(filename, resolutionStrategy).ConfigureAwait(false);
 
                         // Refreshing the file information.
-						files = await this.GetAsync(new[] { filename }).ConfigureAwait(false);                        
+                        files = await this.GetAsync(new[] { filename }).ConfigureAwait(false);                        
                         files.ApplyIfNotNull ( x => 
                         {
                             // We notify the listeners.
@@ -830,8 +830,8 @@ namespace Raven.Client.FileSystem
         {
             foreach( var item in metadata )
             {
-				var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
-				request.AddHeader(item.Key, value);     
+                var value = item.Value is RavenJValue ? item.Value.ToString() : item.Value.ToString(Formatting.None);
+                request.AddHeader(item.Key, value);     
             }
         }
 
@@ -958,7 +958,7 @@ namespace Raven.Client.FileSystem
             return sortFields;
         }
 
-	    private class ConfigurationClient : IAsyncFilesConfigurationCommands, IHoldProfilingInformation
+        private class ConfigurationClient : IAsyncFilesConfigurationCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient client;
             private readonly FilesConvention convention;
@@ -1094,7 +1094,7 @@ namespace Raven.Client.FileSystem
             public ProfilingInformation ProfilingInformation { get; private set; }
         }
 
-		private class SynchronizationClient : SynchronizationServerClient, IAsyncFilesSynchronizationCommands
+        private class SynchronizationClient : SynchronizationServerClient, IAsyncFilesSynchronizationCommands
         {
             private readonly OperationCredentials credentials;
             private readonly FilesConvention convention;
@@ -1106,8 +1106,8 @@ namespace Raven.Client.FileSystem
             }
 
             public SynchronizationClient(AsyncFilesServerClient client, FilesConvention convention)
-				: base(client.ServerUrl, client.FileSystemName, client.ApiKey, client.PrimaryCredentials.Credentials,
-					client.Conventions, client.PrimaryCredentials, client.RequestFactory, client.OperationsHeaders)
+                : base(client.ServerUrl, client.FileSystemName, client.ApiKey, client.PrimaryCredentials.Credentials,
+                    client.Conventions, client.PrimaryCredentials, client.RequestFactory, client.OperationsHeaders)
             {
                 credentials = client.PrimaryCredentials;
                 this.convention = convention;
@@ -1280,22 +1280,22 @@ namespace Raven.Client.FileSystem
 					{
 						await request.WriteWithObjectAsync(destination).ConfigureAwait(false);
 
-						var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.JsonDeserialization<SynchronizationReport>();
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
+                        var response = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                        return response.JsonDeserialization<SynchronizationReport>();
+                    }
+                    catch (Exception e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                }
             }
 
-	        public void Dispose()
+            public void Dispose()
             {
             }
         }
 
-	    private class StorageClient : IAsyncFilesStorageCommands, IHoldProfilingInformation
+        private class StorageClient : IAsyncFilesStorageCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient client;
             private readonly FilesConvention convention;
@@ -1378,7 +1378,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-	    private class AdminClient : IAsyncFilesAdminCommands, IHoldProfilingInformation
+        private class AdminClient : IAsyncFilesAdminCommands, IHoldProfilingInformation
         {
             private readonly AsyncFilesServerClient client;
             private readonly FilesConvention convention;
@@ -1459,7 +1459,7 @@ namespace Raven.Client.FileSystem
 
             public async Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null)
             {
-				var requestUriString = string.Format("{0}/admin/fs/{1}?update=true", client.ServerUrl,
+                var requestUriString = string.Format("{0}/admin/fs/{1}?update=true", client.ServerUrl,
                                                      newFileSystemName ?? client.FileSystemName);
 
 				using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Put, client.PrimaryCredentials, convention)))
@@ -1494,7 +1494,7 @@ namespace Raven.Client.FileSystem
 
             public async Task EnsureFileSystemExistsAsync(string fileSystem)
             {
-				var filesystems = await GetNamesAsync().ConfigureAwait(false);
+                var filesystems = await GetNamesAsync().ConfigureAwait(false);
                 if (filesystems.Contains(fileSystem))
                     return;
 
@@ -1511,14 +1511,14 @@ namespace Raven.Client.FileSystem
 					{
 						await request.WriteWithObjectAsync(restoreRequest).ConfigureAwait(false);
 
-						var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-						return response.Value<long>("OperationId");
-					}
-					catch (Exception e)
-					{
-						throw e.SimplifyException();
-					}
-	            }
+                        var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                        return response.Value<long>("OperationId");
+                    }
+                    catch (Exception e)
+                    {
+                        throw e.SimplifyException();
+                    }
+                }
             }
 
             public async Task<long> StartCompact(string filesystemName)

@@ -48,7 +48,7 @@ class conflicts extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.conflictsSubscription = this.refreshConflictsObservable.throttle(3000).subscribe((e) => this.fetchConflicts(this.activeDatabase()));
     }
 
@@ -134,10 +134,10 @@ class conflicts extends viewModelBase {
         transDef.name(conflicts.conflictsTransformerName);
         transDef.transformResults("from result in results \r\n" +
             "                select new {  \r\n" +
-	        "                    Id = result[\"__document_id\"], \r\n" +
-	        "                    ConflictDetectedAt = result[\"@metadata\"].Value<DateTime>(\"Last-Modified\"),  \r\n" +
-	        "                    EntityName = result[\"@metadata\"][\"Raven-Entity-Name\"], \r\n" +
-	        "                    Versions = result.Conflicts.Select(versionId => { \r\n" +
+            "                    Id = result[\"__document_id\"], \r\n" +
+            "                    ConflictDetectedAt = result[\"@metadata\"].Value<DateTime>(\"Last-Modified\"),  \r\n" +
+            "                    EntityName = result[\"@metadata\"][\"Raven-Entity-Name\"], \r\n" +
+            "                    Versions = result.Conflicts.Select(versionId => { \r\n" +
             "                        var version = LoadDocument(versionId); \r\n" +
             "                 return new { Id = versionId, SourceId = version[\"@metadata\"][\"Raven-Replication-Source\"] }; \r\n" +
             "             }) \r\n" +

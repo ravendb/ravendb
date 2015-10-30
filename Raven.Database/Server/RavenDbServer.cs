@@ -20,76 +20,76 @@ using Raven.Database.Server.WebApi;
 
 namespace Raven.Server
 {
-	public class RavenDbServer : IDisposable
-	{
-		private readonly DocumentStore documentStore;
-		private readonly FilesStore filesStore;
+    public class RavenDbServer : IDisposable
+    {
+        private readonly DocumentStore documentStore;
+        private readonly FilesStore filesStore;
 
-	    private InMemoryRavenConfiguration configuration;
-	    private IServerThingsForTests serverThingsForTests;
-		private RavenDBOptions options;
-	    private OwinHttpServer owinHttpServer;
+        private InMemoryRavenConfiguration configuration;
+        private IServerThingsForTests serverThingsForTests;
+        private RavenDBOptions options;
+        private OwinHttpServer owinHttpServer;
       
-	    private string url;
+        private string url;
 
-		public RavenDbServer()
-			: this(new RavenConfiguration())
-		{}
+        public RavenDbServer()
+            : this(new RavenConfiguration())
+        {}
 
-		public RavenDbServer(InMemoryRavenConfiguration configuration)
-		{
-		    this.configuration = configuration;
-		    documentStore = new DocumentStore
-		    {
-			    Conventions =
-			    {
-				    FailoverBehavior = FailoverBehavior.FailImmediately
-			    }
-		    };
-			filesStore = new FilesStore
-			{
-				Conventions =
-				{
-					FailoverBehavior = FailoverBehavior.FailImmediately
-				}
-			};
-		}
+        public RavenDbServer(InMemoryRavenConfiguration configuration)
+        {
+            this.configuration = configuration;
+            documentStore = new DocumentStore
+            {
+                Conventions =
+                {
+                    FailoverBehavior = FailoverBehavior.FailImmediately
+                }
+            };
+            filesStore = new FilesStore
+            {
+                Conventions =
+                {
+                    FailoverBehavior = FailoverBehavior.FailImmediately
+                }
+            };
+        }
 
-	    public InMemoryRavenConfiguration Configuration
-	    {
-	        get { return configuration; }
-	        set { configuration = value; }
-	    }
+        public InMemoryRavenConfiguration Configuration
+        {
+            get { return configuration; }
+            set { configuration = value; }
+        }
 
-	    //TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
-		public DocumentDatabase SystemDatabase
-		{
-		    get
-		    {
-		        if (options == null)
-		            return null;
-		        return options.SystemDatabase;
-		    }
-		}
+        //TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+        public DocumentDatabase SystemDatabase
+        {
+            get
+            {
+                if (options == null)
+                    return null;
+                return options.SystemDatabase;
+            }
+        }
 
-		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
-		public IServerThingsForTests Server
-		{
-			get { return serverThingsForTests; }
-		}
+        //TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+        public IServerThingsForTests Server
+        {
+            get { return serverThingsForTests; }
+        }
 
-	    public DocumentStore DocumentStore
-	    {
+        public DocumentStore DocumentStore
+        {
             get { return documentStore; }
-	    }
-		public FilesStore FilesStore
-		{
-			get { return filesStore; }
-		}
+        }
+        public FilesStore FilesStore
+        {
+            get { return filesStore; }
+        }
 
-		public bool RunInMemory
-	    {
-	        get { return configuration.RunInMemory; }
+        public bool RunInMemory
+        {
+            get { return configuration.RunInMemory; }
             set { configuration.RunInMemory = value; }
 	    }
 
@@ -141,58 +141,58 @@ namespace Raven.Server
             set { url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
         }
 
-	    ///<summary>
+        ///<summary>
         /// Whatever we should also host an HTTP endpoint for the document database
         ///</summary>
         public bool UseEmbeddedHttpServer { get; set; }
 
-		public bool Disposed { get; private set; }
+        public bool Disposed { get; private set; }
 
-	    public void Dispose()
-	    {
-			if (Disposed)
-				return;
+        public void Dispose()
+        {
+            if (Disposed)
+                return;
 
-		    Disposed = true;
+            Disposed = true;
 
-		    if (documentStore != null)
-			    documentStore.Dispose();
+            if (documentStore != null)
+                documentStore.Dispose();
 
-		    if (filesStore != null)
-			    filesStore.Dispose();
+            if (filesStore != null)
+                filesStore.Dispose();
 
-		    if (owinHttpServer != null)
-			    owinHttpServer.Dispose();
+            if (owinHttpServer != null)
+                owinHttpServer.Dispose();
 
-			if (configuration != null)
-				configuration.Dispose();
-	    }
+            if (configuration != null)
+                configuration.Dispose();
+        }
 
-		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
-		private class ServerThingsForTests : IServerThingsForTests
-		{
-			private readonly RavenDBOptions options;
+        //TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+        private class ServerThingsForTests : IServerThingsForTests
+        {
+            private readonly RavenDBOptions options;
 
-			public ServerThingsForTests(RavenDBOptions options)
-			{
-				this.options = options;
-			}
+            public ServerThingsForTests(RavenDBOptions options)
+            {
+                this.options = options;
+            }
 
-			public bool HasPendingRequests
-			{
-				get { return false; } //TODO DH: fix (copied from WebApiServer)
-			}
+            public bool HasPendingRequests
+            {
+                get { return false; } //TODO DH: fix (copied from WebApiServer)
+            }
 
-			public int NumberOfRequests
-			{
-				get { return options.RequestManager.NumberOfRequests; }
-			}
-			public RavenDBOptions Options { get{return options;}}
+            public int NumberOfRequests
+            {
+                get { return options.RequestManager.NumberOfRequests; }
+            }
+            public RavenDBOptions Options { get{return options;}}
 
-			public void ResetNumberOfRequests()
-			{
-				options.RequestManager.ResetNumberOfRequests();
-			}
+            public void ResetNumberOfRequests()
+            {
+                options.RequestManager.ResetNumberOfRequests();
+            }
 
 			public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
 			{
@@ -204,20 +204,20 @@ namespace Raven.Server
                 return options.FileSystemLandlord.GetResourceInternal(fileSystemName);
             }
 
-			public RequestManager RequestManager { get { return options.RequestManager; } }
-		}
-	}
+            public RequestManager RequestManager { get { return options.RequestManager; } }
+        }
+    }
 
-	//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
-	public interface IServerThingsForTests
-	{
-		bool HasPendingRequests { get; }
-		int NumberOfRequests { get; }
-		RavenDBOptions Options { get; }
-		void ResetNumberOfRequests();
-		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
-	    Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName);
+    //TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+    public interface IServerThingsForTests
+    {
+        bool HasPendingRequests { get; }
+        int NumberOfRequests { get; }
+        RavenDBOptions Options { get; }
+        void ResetNumberOfRequests();
+        Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
+        Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName);
 
-		RequestManager RequestManager { get; }
-	}
+        RequestManager RequestManager { get; }
+    }
 }

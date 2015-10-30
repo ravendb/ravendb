@@ -152,20 +152,20 @@ namespace Raven.Client.Document
                 {
                     //expected & ignored, will retry this
                 }
-	        }
-	    }
+            }
+        }
 
-	    private async Task<RangeValue> HandleConflictsAsync(IAsyncDatabaseCommands databaseCommands, ConflictException e, long minNextMax)
-	    {
+        private async Task<RangeValue> HandleConflictsAsync(IAsyncDatabaseCommands databaseCommands, ConflictException e, long minNextMax)
+        {
             // resolving the conflict by selecting the highest number
-	        long highestMax = -1;
-	        if (e.ConflictedVersionIds.Length == 0)
-	            throw new InvalidOperationException("Got conflict exception, but no conflicted versions",e);
-	        foreach (var conflictedVersionId in e.ConflictedVersionIds)
-	        {
-	            var doc = await databaseCommands.GetAsync(conflictedVersionId).ConfigureAwait(false);
-	            highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
-	        }
+            long highestMax = -1;
+            if (e.ConflictedVersionIds.Length == 0)
+                throw new InvalidOperationException("Got conflict exception, but no conflicted versions",e);
+            foreach (var conflictedVersionId in e.ConflictedVersionIds)
+            {
+                var doc = await databaseCommands.GetAsync(conflictedVersionId).ConfigureAwait(false);
+                highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
+            }
 
             await PutDocumentAsync(databaseCommands, new JsonDocument
                 {
@@ -174,36 +174,36 @@ namespace Raven.Client.Document
                     DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
                     Key = HiLoDocumentKey
                 }).ConfigureAwait(false);
-	        return await GetNextRangeAsync(databaseCommands).ConfigureAwait(false);
-	    }
+            return await GetNextRangeAsync(databaseCommands).ConfigureAwait(false);
+        }
 
-	    private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
-		{
-			return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
-								 document.DataAsJson,
-								 document.Metadata);
-		}
+        private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
+        {
+            return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
+                                 document.DataAsJson,
+                                 document.Metadata);
+        }
 
-		private async Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
-		{
-		    var documents = await databaseCommands.GetAsync(new[] {HiLoDocumentKey, RavenKeyServerPrefix}, new string[0]).ConfigureAwait(false);
-		    if (documents.Results.Count == 2 && documents.Results[1] != null)
-		    {
-		        lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
-		    }
-		    else
-		    {
-		        lastServerPrefix = string.Empty;
-		    }
-		    if (documents.Results.Count == 0 || documents.Results[0] == null)
-		        return null;
+        private async Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
+        {
+            var documents = await databaseCommands.GetAsync(new[] {HiLoDocumentKey, RavenKeyServerPrefix}, new string[0]).ConfigureAwait(false);
+            if (documents.Results.Count == 2 && documents.Results[1] != null)
+            {
+                lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
+            }
+            else
+            {
+                lastServerPrefix = string.Empty;
+            }
+            if (documents.Results.Count == 0 || documents.Results[0] == null)
+                return null;
 
-		    var jsonDocument = documents.Results[0].ToJsonDocument();
-		    foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
-		    {
-		        jsonDocument.Metadata.Remove(key);
-		    }
-		    return jsonDocument;
-		}
-	}
+            var jsonDocument = documents.Results[0].ToJsonDocument();
+            foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
+            {
+                jsonDocument.Metadata.Remove(key);
+            }
+            return jsonDocument;
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace Voron.Trees
 {
@@ -8,11 +8,11 @@ namespace Voron.Trees
 		[FieldOffset(0)]
 		public long PageNumber;
 
-		[FieldOffset(8)]
-		public PageFlags Flags;
+        [FieldOffset(8)]
+        public PageFlags Flags;
 
-		[FieldOffset(9)]
-		public ushort Lower;
+        [FieldOffset(9)]
+        public ushort Lower;
 
 		[FieldOffset(9)]
 		public ushort FixedSize_ValueSize;

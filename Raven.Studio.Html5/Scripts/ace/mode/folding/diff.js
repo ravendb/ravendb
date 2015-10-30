@@ -36,9 +36,9 @@ var BaseFoldMode = require("./fold_mode").FoldMode;
 var Range = require("../../range").Range;
 
 var FoldMode = exports.FoldMode = function(levels, flag) {
-	this.regExpList = levels;
-	this.flag = flag;
-	this.foldingStartMarker = RegExp("^(" + levels.join("|") + ")", this.flag);
+    this.regExpList = levels;
+    this.flag = flag;
+    this.foldingStartMarker = RegExp("^(" + levels.join("|") + ")", this.flag);
 };
 oop.inherits(FoldMode, BaseFoldMode);
 

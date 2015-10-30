@@ -19,74 +19,74 @@ using Raven.Json.Linq;
 
 namespace Raven.Client
 {
-	/// <summary>
-	///     Advanced async session operations
-	/// </summary>
-	public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
-	{
-		/// <summary>
-		///     Access the eager operations
-		/// </summary>
-		IAsyncEagerSessionOperations Eagerly { get; }
+    /// <summary>
+    ///     Advanced async session operations
+    /// </summary>
+    public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
+    {
+        /// <summary>
+        ///     Access the eager operations
+        /// </summary>
+        IAsyncEagerSessionOperations Eagerly { get; }
 
-		/// <summary>
-		///     Access the lazy operations
-		/// </summary>
-		IAsyncLazySessionOperations Lazily { get; }
+        /// <summary>
+        ///     Access the lazy operations
+        /// </summary>
+        IAsyncLazySessionOperations Lazily { get; }
 
-		/// <summary>
-		///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
-		/// </summary>
-		/// <typeparam name="T">The result of the query</typeparam>
-		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-		IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+        /// <summary>
+        ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
-		/// <summary>
-		///     Query the specified index using Lucene syntax
-		/// </summary>
-		/// <param name="index">Name of the index.</param>
-		/// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
-		IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce = false);
+        /// <summary>
+        ///     Query the specified index using Lucene syntax
+        /// </summary>
+        /// <param name="index">Name of the index.</param>
+        /// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
+        IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce = false);
 
-		/// <summary>
-		///     Dynamically query RavenDB using Lucene syntax
-		/// </summary>
-		IAsyncDocumentQuery<T> AsyncDocumentQuery<T>();
+        /// <summary>
+        ///     Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        IAsyncDocumentQuery<T> AsyncDocumentQuery<T>();
 
-		/// <summary>
-		///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
-		/// </summary>
-		/// <typeparam name="T">The result of the query</typeparam>
-		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-		/// <returns></returns>
-		[Obsolete("Use AsyncDocumentQuery instead")]
-		IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+        /// <summary>
+        ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns></returns>
+        [Obsolete("Use AsyncDocumentQuery instead")]
+        IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
-		/// <summary>
-		///     Query the specified index using Lucene syntax
-		/// </summary>
-		/// <param name="index">Name of the index.</param>
-		/// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
-		[Obsolete("Use AsyncDocumentQuery instead")]
-		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce = false);
+        /// <summary>
+        ///     Query the specified index using Lucene syntax
+        /// </summary>
+        /// <param name="index">Name of the index.</param>
+        /// <param name="isMapReduce">Control how we treat identifier properties in map/reduce indexes</param>
+        [Obsolete("Use AsyncDocumentQuery instead")]
+        IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index, bool isMapReduce = false);
 
-		/// <summary>
-		///     Dynamically query RavenDB using Lucene syntax
-		/// </summary>
-		[Obsolete("Use AsyncDocumentQuery instead")]
-		IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
+        /// <summary>
+        ///     Dynamically query RavenDB using Lucene syntax
+        /// </summary>
+        [Obsolete("Use AsyncDocumentQuery instead")]
+        IAsyncDocumentQuery<T> AsyncLuceneQuery<T>();
 
-		/// <summary>
-		///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
-		/// </summary>
-		/// <param name="queries">Array of the faceted queries that will be executed on the server-side</param>
-		Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries);
+        /// <summary>
+        ///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+        /// </summary>
+        /// <param name="queries">Array of the faceted queries that will be executed on the server-side</param>
+        Task<FacetResults[]> MultiFacetedSearchAsync(params FacetQuery[] queries);
 
-		/// <summary>
-		///     Returns full document url for a given entity
-		/// </summary>
-		/// <param name="entity">Instance of an entity for which url will be returned</param>
-		string GetDocumentUrl(object entity);
+        /// <summary>
+        ///     Returns full document url for a given entity
+        /// </summary>
+        /// <param name="entity">Instance of an entity for which url will be returned</param>
+        string GetDocumentUrl(object entity);
 
         /// <summary>
         ///     Loads multiple entities that contain common prefix.
@@ -140,30 +140,30 @@ namespace Raven.Client
         /// <param name="token">The cancellation token.</param>
         Task RefreshAsync<T>(T entity, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
-		///     forces concurrency check with given Etag
-		/// </summary>
-		void Store(object entity, Etag etag);
+        /// <summary>
+        ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
+        ///     forces concurrency check with given Etag
+        /// </summary>
+        void Store(object entity, Etag etag);
 
-		/// <summary>
-		///     Stores entity in session with given id and forces concurrency check with given Etag.
-		/// </summary>
-		void Store(object entity, Etag etag, string id);
+        /// <summary>
+        ///     Stores entity in session with given id and forces concurrency check with given Etag.
+        /// </summary>
+        void Store(object entity, Etag etag, string id);
 
-		/// <summary>
-		///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.
-		///     <para>Forces concurrency check if the Id is not available during extraction.</para>
-		/// </summary>
-		/// <param name="entity">entity to store.</param>
-		void Store(object entity);
+        /// <summary>
+        ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.
+        ///     <para>Forces concurrency check if the Id is not available during extraction.</para>
+        /// </summary>
+        /// <param name="entity">entity to store.</param>
+        void Store(object entity);
 
-		/// <summary>
-		///     Stores the specified dynamic entity, under the specified id.
-		/// </summary>
-		/// <param name="entity">entity to store.</param>
-		/// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overridden.</param>
-		void Store(object entity, string id);
+        /// <summary>
+        ///     Stores the specified dynamic entity, under the specified id.
+        /// </summary>
+        /// <param name="entity">entity to store.</param>
+        /// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overridden.</param>
+        void Store(object entity, string id);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -233,12 +233,12 @@ namespace Raven.Client
         /// <param name="token">The cancellation token.</param>
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Gets the metadata for the specified entity.
-		///     If the entity is transient, it will load the metadata from the store
-		///     and associate the current state of the entity with the metadata from the server.
-		/// </summary>
-		/// <param name="instance">The instance.</param>
-		Task<RavenJObject> GetMetadataForAsync<T>(T instance);
-	}
+        /// <summary>
+        ///     Gets the metadata for the specified entity.
+        ///     If the entity is transient, it will load the metadata from the store
+        ///     and associate the current state of the entity with the metadata from the server.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        Task<RavenJObject> GetMetadataForAsync<T>(T instance);
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmugglerRemoteDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -31,31 +31,31 @@ namespace Raven.Smuggler
 	{
 		private readonly Func<DocumentStore> store;
 
-		private readonly Func<BulkInsertOperation> operation;
+        private readonly Func<BulkInsertOperation> operation;
 
-		private readonly Func<bool> isDocsStreamingSupported;
+        private readonly Func<bool> isDocsStreamingSupported;
 
-		private readonly Func<bool> isTransformersSupported;
+        private readonly Func<bool> isTransformersSupported;
 
 		private readonly Func<bool> isIdentitiesSmugglingSupported;
 
-		const int RetriesCount = 5;
+        const int RetriesCount = 5;
 
-		private DocumentStore Store
-		{
-			get { return store(); }
-		}
+        private DocumentStore Store
+        {
+            get { return store(); }
+        }
 
-		private BulkInsertOperation Operation
-		{
-			get { return operation(); }
-		}
+        private BulkInsertOperation Operation
+        {
+            get { return operation(); }
+        }
 
-		private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
+        private readonly SmugglerJintHelper jintHelper = new SmugglerJintHelper();
 
 		public SmugglerDatabaseOptions Options { get; private set; }
 
-		public bool LastRequestErrored { get; set; }
+        public bool LastRequestErrored { get; set; }
 
 		public SmugglerRemoteDatabaseOperations(Func<DocumentStore> store, Func<BulkInsertOperation> operation, Func<bool> isDocsStreamingSupported, Func<bool> isTransformersSupported, Func<bool> isIdentitiesSmugglingSupported)
 		{
@@ -73,10 +73,10 @@ namespace Raven.Smuggler
 			return Store.AsyncDatabaseCommands.DeleteAttachmentAsync(key, null);
 		}
 
-		public Task DeleteDocument(string key)
-		{
-			return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
-		}
+        public Task DeleteDocument(string key)
+        {
+            return Store.AsyncDatabaseCommands.DeleteAsync(key, null);
+        }
 
 		[Obsolete("Use RavenFS instead.")]
 		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
@@ -105,8 +105,8 @@ namespace Raven.Smuggler
 		{
 			var attachments = await Store.AsyncDatabaseCommands.GetAttachmentsAsync(start, etag, maxRecords).ConfigureAwait(false);
 
-			return attachments.ToList();
-		}
+            return attachments.ToList();
+        }
 
 		[Obsolete("Use RavenFS instead.")]
 		public async Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)

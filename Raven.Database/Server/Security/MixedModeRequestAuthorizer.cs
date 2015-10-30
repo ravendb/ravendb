@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,152 +16,152 @@ using System.Linq;
 
 namespace Raven.Database.Server.Security
 {
-	public class MixedModeRequestAuthorizer : AbstractRequestAuthorizer
-	{
-		private readonly WindowsRequestAuthorizer windowsRequestAuthorizer = new WindowsRequestAuthorizer();
-		private readonly OAuthRequestAuthorizer oAuthRequestAuthorizer = new OAuthRequestAuthorizer();
-		private readonly ConcurrentDictionary<string, OneTimeToken> singleUseAuthTokens = new ConcurrentDictionary<string, OneTimeToken>();
+    public class MixedModeRequestAuthorizer : AbstractRequestAuthorizer
+    {
+        private readonly WindowsRequestAuthorizer windowsRequestAuthorizer = new WindowsRequestAuthorizer();
+        private readonly OAuthRequestAuthorizer oAuthRequestAuthorizer = new OAuthRequestAuthorizer();
+        private readonly ConcurrentDictionary<string, OneTimeToken> singleUseAuthTokens = new ConcurrentDictionary<string, OneTimeToken>();
 
-		private class OneTimeToken
-		{
-			readonly Stopwatch age = Stopwatch.StartNew();
+        private class OneTimeToken
+        {
+            readonly Stopwatch age = Stopwatch.StartNew();
 
-			private IPrincipal user;
-			public string ResourceName { get; set; }
-			public IPrincipal User
-			{
-				get
-				{
-					return user;
-				}
-				set
-				{
-					if (value == null)
-					{
-						user = null;
-						return;
-					}
+            private IPrincipal user;
+            public string ResourceName { get; set; }
+            public IPrincipal User
+            {
+                get
+                {
+                    return user;
+                }
+                set
+                {
+                    if (value == null)
+                    {
+                        user = null;
+                        return;
+                    }
                     
-					user = new OneTimetokenPrincipal
-					{
-						Name = value.Identity.Name,
+                    user = new OneTimetokenPrincipal
+                    {
+                        Name = value.Identity.Name,
                         IsAdministratorInAnonymouseMode = value.IsAdministrator(AnonymousUserAccessMode.None)
-					};
-				}
-			}
-			public TimeSpan Age
-			{
-				get { return age.Elapsed; }
-		}
-		}
+                    };
+                }
+            }
+            public TimeSpan Age
+            {
+                get { return age.Elapsed; }
+        }
+        }
 
-		public class OneTimetokenPrincipal : IPrincipal, IIdentity
-		{
-			public bool IsInRole(string role)
-			{
+        public class OneTimetokenPrincipal : IPrincipal, IIdentity
+        {
+            public bool IsInRole(string role)
+            {
                 if (role == "Administrators")
                 {
                     return IsAdministratorInAnonymouseMode;
                 }
-			    return false;
-			}
+                return false;
+            }
 
             public bool IsAdministratorInAnonymouseMode { get; set; }
-			public IIdentity Identity { get { return this; } }
-			public string Name { get; set; }
-			public string AuthenticationType { get { return "one-time-token"; } }
-			public bool IsAuthenticated { get { return true; } }
-		}
+            public IIdentity Identity { get { return this; } }
+            public string Name { get; set; }
+            public string AuthenticationType { get { return "one-time-token"; } }
+            public bool IsAuthenticated { get { return true; } }
+        }
 
-		protected override void Initialize()
-		{
-			windowsRequestAuthorizer.Initialize(database, settings, tenantId, server);
-			oAuthRequestAuthorizer.Initialize(database, settings, tenantId, server);
-			base.Initialize();
-		}
+        protected override void Initialize()
+        {
+            windowsRequestAuthorizer.Initialize(database, settings, tenantId, server);
+            oAuthRequestAuthorizer.Initialize(database, settings, tenantId, server);
+            base.Initialize();
+        }
 
         public bool TryAuthorize(RavenBaseApiController controller, out HttpResponseMessage msg)
-		{
-			var requestUrl = controller.GetRequestUrl();
-			if (NeverSecret.IsNeverSecretUrl(requestUrl))
-			{
-				msg = controller.GetEmptyMessage();
-				return true;
-			}
+        {
+            var requestUrl = controller.GetRequestUrl();
+            if (NeverSecret.IsNeverSecretUrl(requestUrl))
+            {
+                msg = controller.GetEmptyMessage();
+                return true;
+            }
 
-			//CORS pre-flight (ignore creds if using cors).
-			if (Settings.AccessControlAllowOrigin.Count > 0 && controller.InnerRequest.Method.Method == "OPTIONS")
-			{
-				msg = controller.GetEmptyMessage();
-				return true;
-			}
+            //CORS pre-flight (ignore creds if using cors).
+            if (Settings.AccessControlAllowOrigin.Count > 0 && controller.InnerRequest.Method.Method == "OPTIONS")
+            {
+                msg = controller.GetEmptyMessage();
+                return true;
+            }
 
-			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
+            var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
             if (string.IsNullOrEmpty(oneTimeToken))
-			{
-			    oneTimeToken = controller.GetQueryStringValue("singleUseAuthToken");
-			}
+            {
+                oneTimeToken = controller.GetQueryStringValue("singleUseAuthToken");
+            }
 
-			if (string.IsNullOrEmpty(oneTimeToken) == false)
-			{
+            if (string.IsNullOrEmpty(oneTimeToken) == false)
+            {
                 return TryAuthorizeSingleUseAuthToken(controller, oneTimeToken, out msg);
-			}
+            }
 
-			var authHeader = controller.GetHeader("Authorization");
-			var hasApiKey = "True".Equals(controller.GetHeader("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
-			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");
-			if (hasApiKey || hasOAuthTokenInCookie ||
-				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-			{
-				return oAuthRequestAuthorizer.TryAuthorize(controller, hasApiKey, IgnoreDb.Urls.Contains(requestUrl), out msg);
-			}
-			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg);
-		}
+            var authHeader = controller.GetHeader("Authorization");
+            var hasApiKey = "True".Equals(controller.GetHeader("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
+            var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");
+            if (hasApiKey || hasOAuthTokenInCookie ||
+                string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+            {
+                return oAuthRequestAuthorizer.TryAuthorize(controller, hasApiKey, IgnoreDb.Urls.Contains(requestUrl), out msg);
+            }
+            return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg);
+        }
 
-	    public bool TryAuthorizeSingleUseAuthToken(string token, string tenantName, out object msg, out HttpStatusCode statusCode, out IPrincipal user)
-		{
+        public bool TryAuthorizeSingleUseAuthToken(string token, string tenantName, out object msg, out HttpStatusCode statusCode, out IPrincipal user)
+        {
             user = null;
-			OneTimeToken value;
-			if (singleUseAuthTokens.TryRemove(token, out value) == false)
-			{
+            OneTimeToken value;
+            if (singleUseAuthTokens.TryRemove(token, out value) == false)
+            {
                 msg = new
-				{
-					Error = "Unknown single use token, maybe it was already used?"
+                {
+                    Error = "Unknown single use token, maybe it was already used?"
                 };
                 statusCode = HttpStatusCode.Forbidden;
-				return false;
-			}
+                return false;
+            }
 
-			if (string.Equals(value.ResourceName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
+            if (string.Equals(value.ResourceName, tenantName, StringComparison.InvariantCultureIgnoreCase) == false &&
                 (value.ResourceName == Constants.SystemDatabase && tenantName == null) == false)
-			{
+            {
                 msg = new
-				{
-					Error = "This single use token cannot be used for this resource!"
+                {
+                    Error = "This single use token cannot be used for this resource!"
                 };
                 statusCode = HttpStatusCode.Forbidden;
-				return false;
-			}
+                return false;
+            }
 
-			if (value.Age.TotalMinutes > 2.5) // if the value is over 2.5 minutes old, reject it
-			{
+            if (value.Age.TotalMinutes > 2.5) // if the value is over 2.5 minutes old, reject it
+            {
                 msg = new
-				{
-					Error = "This single use token has expired after " + value.Age.TotalSeconds + " seconds"
+                {
+                    Error = "This single use token has expired after " + value.Age.TotalSeconds + " seconds"
                 };
                 statusCode = HttpStatusCode.Forbidden;
-				return false;
-			}
+                return false;
+            }
 
-	        msg = null;
-	        statusCode = HttpStatusCode.OK;
+            msg = null;
+            statusCode = HttpStatusCode.OK;
 
             CurrentOperationContext.User.Value = user = value.User;
-			return true;
-		}
+            return true;
+        }
 
         private bool TryAuthorizeSingleUseAuthToken(RavenBaseApiController controller, string token, out HttpResponseMessage msg)
-		{
+        {
             if (controller.WasAlreadyAuthorizedUsingSingleAuthToken)
             {
                 msg = controller.GetEmptyMessage();

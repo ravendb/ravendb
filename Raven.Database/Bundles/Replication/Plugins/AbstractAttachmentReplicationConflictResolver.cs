@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.Composition;
 using System.Text;
 
@@ -8,19 +8,19 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Plugins
 {
-	[InheritedExport]
-	[Obsolete("Use RavenFS instead.")]
-	public abstract class AbstractAttachmentReplicationConflictResolver
-	{
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+    [InheritedExport]
+    [Obsolete("Use RavenFS instead.")]
+    public abstract class AbstractAttachmentReplicationConflictResolver
+    {
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		public bool TryResolveConflict(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
-										Func<string, Attachment> getAttachment, out RavenJObject metadataToSave,
-										out byte[] dataToSave)
-		{
-			var success = TryResolve(id, metadata, data, existingAttachment, getAttachment, out metadataToSave, out dataToSave);
-			if (success == false)
-				return false;
+        public bool TryResolveConflict(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
+                                        Func<string, Attachment> getAttachment, out RavenJObject metadataToSave,
+                                        out byte[] dataToSave)
+        {
+            var success = TryResolve(id, metadata, data, existingAttachment, getAttachment, out metadataToSave, out dataToSave);
+            if (success == false)
+                return false;
 
 			var metaToSave = metadataToSave;
 			if (log.IsDebugEnabled)
@@ -41,11 +41,11 @@ namespace Raven.Bundles.Replication.Plugins
 					return builder.ToString();
 				});
 
-			return true;
-		}
+            return true;
+        }
 
-		protected abstract bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
-										Func<string, Attachment> getAttachment, out RavenJObject metadataToSave,
-										out byte[] dataToSave);
-	}
+        protected abstract bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment,
+                                        Func<string, Attachment> getAttachment, out RavenJObject metadataToSave,
+                                        out byte[] dataToSave);
+    }
 }

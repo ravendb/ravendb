@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TableStorage.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,39 +14,39 @@ using Voron.Trees;
 
 namespace Raven.Database.Storage.Voron.Impl
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Diagnostics;
-	using System.IO;
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
 
-	using global::Voron;
-	using global::Voron.Debugging;
-	using global::Voron.Impl;
+    using global::Voron;
+    using global::Voron.Debugging;
+    using global::Voron.Impl;
 
-	internal class TableStorage : IDisposable
-	{
-	    private readonly StorageEnvironmentOptions _options;
-	    private readonly IBufferPool bufferPool;
+    internal class TableStorage : IDisposable
+    {
+        private readonly StorageEnvironmentOptions _options;
+        private readonly IBufferPool bufferPool;
 
-	    private readonly StorageEnvironment env;
+        private readonly StorageEnvironment env;
 
 #if DEBUG
-		public TableStorage(StorageEnvironment environment, IBufferPool bufferPool)
-		{
-			this.bufferPool = bufferPool;
-			env = environment;
+        public TableStorage(StorageEnvironment environment, IBufferPool bufferPool)
+        {
+            this.bufferPool = bufferPool;
+            env = environment;
 
-			Initialize();
-		}
+            Initialize();
+        }
 #endif
 
-		public TableStorage(StorageEnvironmentOptions options, IBufferPool bufferPool)
-		{
+        public TableStorage(StorageEnvironmentOptions options, IBufferPool bufferPool)
+        {
             if (options == null)
                 throw new ArgumentNullException("options");
 
-		    _options = options;
-		    this.bufferPool = bufferPool;
+            _options = options;
+            this.bufferPool = bufferPool;
 
             Debug.Assert(options != null);
 
@@ -61,10 +61,10 @@ namespace Raven.Database.Storage.Voron.Impl
 //
 //			env = new StorageEnvironment(options, debugJournalName) {IsDebugRecording = true};
 //#else
-			env = new StorageEnvironment(options);
+            env = new StorageEnvironment(options);
 //#endif
-			Initialize();
-		}
+            Initialize();
+        }
 
 		internal StorageReport GenerateReportOnStorage(bool computeExactSizes = false)
 		{
@@ -74,58 +74,58 @@ namespace Raven.Database.Storage.Voron.Impl
 		    }
 		}
 
-		public SnapshotReader CreateSnapshot()
-		{
-			return env.CreateSnapshot();
-		}
+        public SnapshotReader CreateSnapshot()
+        {
+            return env.CreateSnapshot();
+        }
 
-		public Table Details { get; private set; }
+        public Table Details { get; private set; }
 
-		public Table Documents { get; private set; }
+        public Table Documents { get; private set; }
 
-		public TableOfStructures<IndexingWorkStatsFields> IndexingStats { get; private set; }
+        public TableOfStructures<IndexingWorkStatsFields> IndexingStats { get; private set; }
 
-		public TableOfStructures<ReducingWorkStatsFields> ReduceStats { get; private set; }
+        public TableOfStructures<ReducingWorkStatsFields> ReduceStats { get; private set; }
 
-		public Table IndexingMetadata { get; private set; }
+        public Table IndexingMetadata { get; private set; }
 
-		public TableOfStructures<LastIndexedStatsFields> LastIndexedEtags { get; private set; }
+        public TableOfStructures<LastIndexedStatsFields> LastIndexedEtags { get; private set; }
 
-		public TableOfStructures<DocumentReferencesFields> DocumentReferences { get; private set; }
+        public TableOfStructures<DocumentReferencesFields> DocumentReferences { get; private set; }
 
-		public Table Queues { get; private set; }
+        public Table Queues { get; private set; }
 
-		public Table Lists { get; private set; }
+        public Table Lists { get; private set; }
 
-		public TableOfStructures<TaskFields> Tasks { get; private set; }
+        public TableOfStructures<TaskFields> Tasks { get; private set; }
 
-		public TableOfStructures<ScheduledReductionFields> ScheduledReductions { get; private set; }
+        public TableOfStructures<ScheduledReductionFields> ScheduledReductions { get; private set; }
 
-		public TableOfStructures<MappedResultFields> MappedResults { get; private set; }
+        public TableOfStructures<MappedResultFields> MappedResults { get; private set; }
 
-		public TableOfStructures<ReduceResultFields> ReduceResults { get; private set; }
+        public TableOfStructures<ReduceResultFields> ReduceResults { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
-		public Table Attachments { get; private set; }
+        public Table Attachments { get; private set; }
 
-		public TableOfStructures<ReduceKeyCountFields> ReduceKeyCounts { get; private set; }
+        public TableOfStructures<ReduceKeyCountFields> ReduceKeyCounts { get; private set; }
 
-		public TableOfStructures<ReduceKeyTypeFields> ReduceKeyTypes { get; private set; }
+        public TableOfStructures<ReduceKeyTypeFields> ReduceKeyTypes { get; private set; }
 
-		public Table General { get; private set; }
+        public Table General { get; private set; }
 
-		public StorageEnvironment Environment
-		{
-			get
-			{
-				return env;
-			}
-		}
+        public StorageEnvironment Environment
+        {
+            get
+            {
+                return env;
+            }
+        }
 
-		public void Write(WriteBatch writeBatch)
-		{
-		    try
-		    {
+        public void Write(WriteBatch writeBatch)
+        {
+            try
+            {
                 env.Writer.Write(writeBatch);
 		    }
 		    catch (AggregateException ae)

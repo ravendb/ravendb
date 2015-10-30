@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="StartupTaskTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -132,26 +132,26 @@ namespace Raven.Tests.Bundles.LiveTest
                 Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind"));
                 Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
 
-				server
-					.Options
-					.ServerStartupTasks
-					.OfType<LiveTestResourceCleanerStartupTask>().First()
-					.ExecuteCleanup(null);
+                server
+                    .Options
+                    .ServerStartupTasks
+                    .OfType<LiveTestResourceCleanerStartupTask>().First()
+                    .ExecuteCleanup(null);
 
                 Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind"));
                 Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
 
-				server.Server.Options.FileSystemLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
+                server.Server.Options.FileSystemLandlord.LastRecentlyUsed["Northwind2"] = DateTime.MinValue;
 
-				server
-					.Options
-					.ServerStartupTasks
-					.OfType<LiveTestResourceCleanerStartupTask>().First()
-					.ExecuteCleanup(null);
+                server
+                    .Options
+                    .ServerStartupTasks
+                    .OfType<LiveTestResourceCleanerStartupTask>().First()
+                    .ExecuteCleanup(null);
 
                 Assert.Null(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind2"));
                 Assert.NotNull(store.DatabaseCommands.ForSystemDatabase().Get(Constants.FileSystem.Prefix + "Northwind3"));
-			}
-		}
-	}
+            }
+        }
+    }
 }

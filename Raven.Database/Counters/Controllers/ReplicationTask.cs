@@ -32,8 +32,8 @@ namespace Raven.Database.Counters.Controllers
         private readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
         private HttpRavenRequestFactory httpRavenRequestFactory;
 
-		private readonly CounterStorage storage;
-		private readonly CancellationTokenSource cancellation;
+        private readonly CounterStorage storage;
+        private readonly CancellationTokenSource cancellation;
 
 		enum ReplicationResult
 		{
@@ -64,7 +64,7 @@ namespace Raven.Database.Counters.Controllers
 
             httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = storage.ReplicationTimeoutInMs };
             replicationTask.Start();
-	    }
+        }
 
 		private void ReplicationAction()
 	    {
@@ -178,48 +178,48 @@ namespace Raven.Database.Counters.Controllers
 		private bool ReplicateTo(CounterReplicationDestination destination)
 		{
             var replicationStopwatch = Stopwatch.StartNew();
-			//todo: here, build url according to :destination.Url + '/counters/' + destination.
-			try
-			{
-				string lastError;
-			    long lastEtag;
-				bool result = false;
+            //todo: here, build url according to :destination.Url + '/counters/' + destination.
+            try
+            {
+                string lastError;
+                long lastEtag;
+                bool result = false;
 
-				switch (TryReplicate(destination, out lastEtag, out lastError))
-				{
-					case ReplicationResult.Success:
+                switch (TryReplicate(destination, out lastEtag, out lastError))
+                {
+                    case ReplicationResult.Success:
                         DateTime replicationTime = SystemTime.UtcNow;
                         RecordSuccess(destination.CounterStorageUrl, lastReplicatedEtag: lastEtag, lastReplicatedLastModified: replicationTime);
                         storage.MetricsCounters.OutgoingReplications.Mark();
-						result = true;
-						break;
-					case ReplicationResult.NotReplicated:
-						//TODO: Record not replicated
+                        result = true;
+                        break;
+                    case ReplicationResult.NotReplicated:
+                        //TODO: Record not replicated
                         RecordSuccess(destination.CounterStorageUrl, SystemTime.UtcNow);
-						break;
-					default:
-						RecordFailure(destination.CounterStorageUrl, lastError);
+                        break;
+                    default:
+                        RecordFailure(destination.CounterStorageUrl, lastError);
                         storage.MetricsCounters.OutgoingReplications.Mark();
-						break;
-				}
+                        break;
+                }
 
-				return result;
-			}
-			catch (Exception ex)
-			{
-				Log.ErrorException("Error occured replicating to: " + destination.CounterStorageUrl, ex);
-				RecordFailure(destination.CounterStorageUrl, ex.Message);
-				return false;
-			}
-			finally
-			{
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorException("Error occured replicating to: " + destination.CounterStorageUrl, ex);
+                RecordFailure(destination.CounterStorageUrl, ex.Message);
+                return false;
+            }
+            finally
+            {
                 replicationStopwatch.Stop();
-			    var elapsedMicroseconds = (long) (replicationStopwatch.Elapsed.TotalMilliseconds*SystemTime.MicroSecPerTick);
+                var elapsedMicroseconds = (long) (replicationStopwatch.Elapsed.TotalMilliseconds*SystemTime.MicroSecPerTick);
                 storage.MetricsCounters.GetReplicationDurationHistogram(destination.CounterStorageUrl).Update(elapsedMicroseconds);
-				var holder = activeReplicationTasks.GetOrAdd(destination.CounterStorageUrl, s => new SemaphoreSlim(0, 1));
-				holder.Release();
-			}
-		}
+                var holder = activeReplicationTasks.GetOrAdd(destination.CounterStorageUrl, s => new SemaphoreSlim(0, 1));
+                holder.Release();
+            }
+        }
 
 		private ReplicationResult TryReplicate(CounterReplicationDestination destination, out long lastEtagSent, out string lastError)
 		{
@@ -374,8 +374,8 @@ namespace Raven.Database.Counters.Controllers
                 lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x => x.Etag) : etag; // change this once changed this function do a reall paging
             }
 
-	        return message;
-	    }
+            return message;
+        }
 
 		private RavenConnectionStringOptions GetConnectionOptionsSafe(CounterReplicationDestination destination, out string lastError)
 		{
@@ -384,25 +384,25 @@ namespace Raven.Database.Counters.Controllers
 				var connectionStringOptions = new RavenConnectionStringOptions
 				{
                     Url = destination.ServerUrl,
-					ApiKey = destination.ApiKey,
-				};
-				if (string.IsNullOrEmpty(destination.Username) == false)
-				{
-					connectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
-						? new NetworkCredential(destination.Username, destination.Password)
-						: new NetworkCredential(destination.Username, destination.Password, destination.Domain);
-				}
-				lastError = string.Empty;
-				return connectionStringOptions;
-			}
-			catch (Exception e)
-			{
-				lastError = e.Message;
-				Log.ErrorException(string.Format("Ignoring bad replication config!{0}Could not figure out connection options for [Url: {1}]",
+                    ApiKey = destination.ApiKey,
+                };
+                if (string.IsNullOrEmpty(destination.Username) == false)
+                {
+                    connectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
+                        ? new NetworkCredential(destination.Username, destination.Password)
+                        : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
+                }
+                lastError = string.Empty;
+                return connectionStringOptions;
+            }
+            catch (Exception e)
+            {
+                lastError = e.Message;
+                Log.ErrorException(string.Format("Ignoring bad replication config!{0}Could not figure out connection options for [Url: {1}]",
                     Environment.NewLine, destination.ServerUrl), e);
-				return null;
-			}
-		}
+                return null;
+            }
+        }
 
         private bool IsFirstFailure(string destinationUrl)
         {
@@ -493,52 +493,52 @@ namespace Raven.Database.Counters.Controllers
                 stats.LastError = lastError;
         }
 
-		private void RecordFailure(string url, string lastError)
-		{
-			var stats = destinationsStats.GetOrAdd(url, new CounterDestinationStats { Url = url });
-			Interlocked.Increment(ref stats.FailureCountInternal);
-			stats.LastFailureTimestamp = SystemTime.UtcNow;
-			if (string.IsNullOrWhiteSpace(lastError) == false)
-			{
-				stats.LastError = lastError;
-			}
-		}
+        private void RecordFailure(string url, string lastError)
+        {
+            var stats = destinationsStats.GetOrAdd(url, new CounterDestinationStats { Url = url });
+            Interlocked.Increment(ref stats.FailureCountInternal);
+            stats.LastFailureTimestamp = SystemTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(lastError) == false)
+            {
+                stats.LastError = lastError;
+            }
+        }
 
-		private string HandleReplicationDistributionWebException(WebException e, string destinationUrl)
-		{
-			var response = e.Response as HttpWebResponse;
-			if (response != null)
-			{
-				Stream responseStream = response.GetResponseStream();
-				if (responseStream != null)
-				{
-					using (var streamReader = new StreamReader(responseStream))
-					{
-						var error = streamReader.ReadToEnd();
-						Log.WarnException("Replication to " + destinationUrl + " had failed\r\n" + error, e);
-					}
-				}
-				else
-				{
-					Log.WarnException("Replication to " + destinationUrl + " had failed", e);
-				}
-			}
-			else
-			{
-				Log.WarnException("Replication to " + destinationUrl + " had failed", e);
-			}
+        private string HandleReplicationDistributionWebException(WebException e, string destinationUrl)
+        {
+            var response = e.Response as HttpWebResponse;
+            if (response != null)
+            {
+                Stream responseStream = response.GetResponseStream();
+                if (responseStream != null)
+                {
+                    using (var streamReader = new StreamReader(responseStream))
+                    {
+                        var error = streamReader.ReadToEnd();
+                        Log.WarnException("Replication to " + destinationUrl + " had failed\r\n" + error, e);
+                    }
+                }
+                else
+                {
+                    Log.WarnException("Replication to " + destinationUrl + " had failed", e);
+                }
+            }
+            else
+            {
+                Log.WarnException("Replication to " + destinationUrl + " had failed", e);
+            }
 
-			return e.Message;
-		}
+            return e.Message;
+        }
 
-	    public int GetActiveTasksCount()
-	    {
-	        return activeTasks.Count;
-	    }
+        public int GetActiveTasksCount()
+        {
+            return activeTasks.Count;
+        }
 
         public ConcurrentDictionary<string, CounterDestinationStats> DestinationStats => destinationsStats;
 
-		public void Dispose()
+        public void Dispose()
         {
             Task task;
             cancellation.Cancel();

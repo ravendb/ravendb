@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -323,58 +323,58 @@ namespace Raven.Database.Server.Controllers.Admin
 			{
                 try
                 {
-				    MaintenanceActions.Restore(ravenConfiguration, restoreRequest,
-					    msg =>
-					    {
-						    restoreStatus.Messages.Add(msg);
-						    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-							    RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-					    });
+                    MaintenanceActions.Restore(ravenConfiguration, restoreRequest,
+                        msg =>
+                        {
+                            restoreStatus.Messages.Add(msg);
+                            DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                                RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                        });
 
-				    if (databaseDocument == null)
-					    return;
+                    if (databaseDocument == null)
+                        return;
 
-				    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
-					databaseDocument.Settings.Remove(Constants.RavenIndexPath);
-					databaseDocument.Settings.Remove(Constants.RavenEsentLogsPath);
-					databaseDocument.Settings.Remove(Constants.RavenTxJournalPath);
+                    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+                    databaseDocument.Settings.Remove(Constants.RavenIndexPath);
+                    databaseDocument.Settings.Remove(Constants.RavenEsentLogsPath);
+                    databaseDocument.Settings.Remove(Constants.RavenTxJournalPath);
 
-				    if (restoreRequest.IndexesLocation != null)
-					    databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                    if (restoreRequest.IndexesLocation != null)
+                        databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
 
-	                if (restoreRequest.JournalsLocation != null)
-		                databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                    if (restoreRequest.JournalsLocation != null)
+                        databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
 
-	                bool replicationBundleRemoved = false;
-				    if (restoreRequest.DisableReplicationDestinations)
-					    replicationBundleRemoved = TryRemoveReplicationBundle(databaseDocument);
+                    bool replicationBundleRemoved = false;
+                    if (restoreRequest.DisableReplicationDestinations)
+                        replicationBundleRemoved = TryRemoveReplicationBundle(databaseDocument);
 
-				    databaseDocument.Id = databaseName;
-				    DatabasesLandlord.Protect(databaseDocument);
-				    DatabasesLandlord
-					    .SystemDatabase
-					    .Documents
-					    .Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
+                    databaseDocument.Id = databaseName;
+                    DatabasesLandlord.Protect(databaseDocument);
+                    DatabasesLandlord
+                        .SystemDatabase
+                        .Documents
+                        .Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument), new RavenJObject(), null);
 
-				    restoreStatus.Messages.Add("The new database was created");
+                    restoreStatus.Messages.Add("The new database was created");
                     restoreStatus.State = RestoreStatusState.Completed;
-				    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
-					    RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
+                    DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
+                        RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 
-				    if (restoreRequest.GenerateNewDatabaseId) 
-					    GenerateNewDatabaseId(databaseName);
+                    if (restoreRequest.GenerateNewDatabaseId) 
+                        GenerateNewDatabaseId(databaseName);
 
-				    if (replicationBundleRemoved)
-					    AddReplicationBundleAndDisableReplicationDestinations(databaseName);
+                    if (replicationBundleRemoved)
+                        AddReplicationBundleAndDisableReplicationDestinations(databaseName);
 
                 }
                 catch (Exception e)
                 {
-	                var aggregateException = e as AggregateException;
-	                var exception = aggregateException != null ? aggregateException.ExtractSingleInnerException() : e;
+                    var aggregateException = e as AggregateException;
+                    var exception = aggregateException != null ? aggregateException.ExtractSingleInnerException() : e;
 
                     restoreStatus.State = RestoreStatusState.Faulted;
-					restoreStatus.Messages.Add("Unable to restore database " + exception.Message);
+                    restoreStatus.Messages.Add("Unable to restore database " + exception.Message);
                     DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                                RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
                     throw;
@@ -564,44 +564,44 @@ namespace Raven.Database.Server.Controllers.Admin
                 var compactStatus = new CompactStatus { State = CompactStatusState.Running, Messages = new List<string>() };
                 DatabasesLandlord.SystemDatabase.Documents.Delete(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null, null);
 
-			    try
-			    {
+                try
+                {
 
 					var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetResourceInternal(db));
 
-			        DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
-			        {
-			            bool skipProgressReport = false;
+                    DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
+                    {
+                        bool skipProgressReport = false;
                         bool isProgressReport = false;
                         if(IsUpdateMessage(msg))
                         {
                             isProgressReport = true;
-			                var now = SystemTime.UtcNow;
+                            var now = SystemTime.UtcNow;
                             compactStatus.LastProgressMessageTime = compactStatus.LastProgressMessageTime ?? DateTime.MinValue;
-			                var timeFromLastUpdate = (now - compactStatus.LastProgressMessageTime.Value);
+                            var timeFromLastUpdate = (now - compactStatus.LastProgressMessageTime.Value);
                             if (timeFromLastUpdate >= ReportProgressInterval)
                             {
                                 compactStatus.LastProgressMessageTime = now;
                                 compactStatus.LastProgressMessage = msg;
                             }
                             else skipProgressReport = true;
-			                
-			            }
-			            if (!skipProgressReport)
-			            {
-			                if (!isProgressReport) compactStatus.Messages.Add(msg);
-			                DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
-			                    RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
-			            }
+                            
+                        }
+                        if (!skipProgressReport)
+                        {
+                            if (!isProgressReport) compactStatus.Messages.Add(msg);
+                            DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
+                                RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
+                        }
 
-			        }));
+                    }));
                     compactStatus.State = CompactStatusState.Completed;
                     compactStatus.Messages.Add("Database compaction completed.");
                     DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
                                                                        RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
-			    }
-			    catch (Exception e)
-			    {
+                }
+                catch (Exception e)
+                {
                     compactStatus.Messages.Add("Unable to compact database " + e.Message);
                     compactStatus.State = CompactStatusState.Faulted;
                     DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenDatabaseCompactStatusDocumentKey(db), null,
@@ -637,52 +637,52 @@ namespace Raven.Database.Server.Controllers.Admin
         private static string EsentProgressString = "JET_SNPROG";
         private static string VoronProgressString = "Copied";
 
-		[HttpGet]
-		[RavenRoute("admin/indexingStatus")]
-		[RavenRoute("databases/{databaseName}/admin/indexingStatus")]
-		public HttpResponseMessage IndexingStatus()
-		{
-			string indexDisableStatus;
-			bool result;
-			if (bool.TryParse(Database.Configuration.Settings[Constants.IndexingDisabled], out result) && result)
-			{
-				indexDisableStatus = "Disabled";
-			}
-			else
-			{
-				indexDisableStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused";
-			}
-			return GetMessageWithObject(new { IndexingStatus = indexDisableStatus });
-		}
+        [HttpGet]
+        [RavenRoute("admin/indexingStatus")]
+        [RavenRoute("databases/{databaseName}/admin/indexingStatus")]
+        public HttpResponseMessage IndexingStatus()
+        {
+            string indexDisableStatus;
+            bool result;
+            if (bool.TryParse(Database.Configuration.Settings[Constants.IndexingDisabled], out result) && result)
+            {
+                indexDisableStatus = "Disabled";
+            }
+            else
+            {
+                indexDisableStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused";
+            }
+            return GetMessageWithObject(new { IndexingStatus = indexDisableStatus });
+        }
 
-		[HttpPost]
-		[RavenRoute("admin/optimize")]
-		[RavenRoute("databases/{databaseName}/admin/optimize")]
-		public void Optimize()
-		{
-			Database.IndexStorage.MergeAllIndexes();
-		}
+        [HttpPost]
+        [RavenRoute("admin/optimize")]
+        [RavenRoute("databases/{databaseName}/admin/optimize")]
+        public void Optimize()
+        {
+            Database.IndexStorage.MergeAllIndexes();
+        }
 
-		[HttpPost]
-		[RavenRoute("admin/startIndexing")]
-		[RavenRoute("databases/{databaseName}/admin/startIndexing")]
-		public void StartIndexing()
-		{
-			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
+        [HttpPost]
+        [RavenRoute("admin/startIndexing")]
+        [RavenRoute("databases/{databaseName}/admin/startIndexing")]
+        public void StartIndexing()
+        {
+            var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
 
-			if (string.IsNullOrEmpty(concurrency) == false)
-				Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
+            if (string.IsNullOrEmpty(concurrency) == false)
+                Database.Configuration.MaxNumberOfParallelProcessingTasks = Math.Max(1, int.Parse(concurrency));
 
-			Database.SpinBackgroundWorkers(true);
-		}
+            Database.SpinBackgroundWorkers(true);
+        }
 
-		[HttpPost]
-		[RavenRoute("admin/stopIndexing")]
-		[RavenRoute("databases/{databaseName}/admin/stopIndexing")]
-		public void StopIndexing()
-		{
-			Database.StopIndexingWorkers(true);
-		}
+        [HttpPost]
+        [RavenRoute("admin/stopIndexing")]
+        [RavenRoute("databases/{databaseName}/admin/stopIndexing")]
+        public void StopIndexing()
+        {
+            Database.StopIndexingWorkers(true);
+        }
 
         [HttpPost]
         [RavenRoute("admin/startReducing")]
@@ -966,118 +966,118 @@ namespace Raven.Database.Server.Controllers.Admin
 					else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
 
                     var process = new Process
-					{
-						StartInfo = new ProcessStartInfo
-						{
-							Arguments = string.Format("--pid={0} --stacktrace --output=\"{1}\"", Process.GetCurrentProcess().Id, ravenDebugOutput),
-							FileName = ravenDebugExe,
-							WindowStyle = ProcessWindowStyle.Normal,
-							LoadUserProfile = false,
-							RedirectStandardError = true,
-							RedirectStandardOutput = true,
-							UseShellExecute = false
-						},
-						EnableRaisingEvents = true
-					};
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            Arguments = string.Format("--pid={0} --stacktrace --output=\"{1}\"", Process.GetCurrentProcess().Id, ravenDebugOutput),
+                            FileName = ravenDebugExe,
+                            WindowStyle = ProcessWindowStyle.Normal,
+                            LoadUserProfile = false,
+                            RedirectStandardError = true,
+                            RedirectStandardOutput = true,
+                            UseShellExecute = false
+                        },
+                        EnableRaisingEvents = true
+                    };
 
-					
+                    
 
-					process.OutputDataReceived += (sender, args) => output += args.Data;
-					process.ErrorDataReceived += (sender, args) => output += args.Data;
+                    process.OutputDataReceived += (sender, args) => output += args.Data;
+                    process.ErrorDataReceived += (sender, args) => output += args.Data;
 
-					process.Start();
+                    process.Start();
 
-					process.BeginErrorReadLine();
-					process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                    process.BeginOutputReadLine();
 
-					process.WaitForExit();
+                    process.WaitForExit();
 
-					if (process.ExitCode != 0)
-					{
-						Log.Error("Could not read stacktraces. Message: " + output);
-						throw new InvalidOperationException("Could not read stacktraces.");
-					}
+                    if (process.ExitCode != 0)
+                    {
+                        Log.Error("Could not read stacktraces. Message: " + output);
+                        throw new InvalidOperationException("Could not read stacktraces.");
+                    }
 
-					using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
-					{
-						stackDumpOutputStream.CopyTo(stacktraceStream);
-					}
-				}
-				catch (Exception ex)
-				{
-					var streamWriter = new StreamWriter(stacktraceStream);
-					jsonSerializer.Serialize(streamWriter, new { Error = ex.Message, Details = output });
-					streamWriter.Flush();
-				}
-				finally
-				{
-					if (ravenDebugDir != null && Directory.Exists(ravenDebugDir)) IOExtensions.DeleteDirectory(ravenDebugDir);
-				}
+                    using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
+                    {
+                        stackDumpOutputStream.CopyTo(stacktraceStream);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var streamWriter = new StreamWriter(stacktraceStream);
+                    jsonSerializer.Serialize(streamWriter, new { Error = ex.Message, Details = output });
+                    streamWriter.Flush();
+                }
+                finally
+                {
+                    if (ravenDebugDir != null && Directory.Exists(ravenDebugDir)) IOExtensions.DeleteDirectory(ravenDebugDir);
+                }
 
-				stacktraceStream.Flush();
-			}
-		}
+                stacktraceStream.Flush();
+            }
+        }
 
-		private static void ExtractResource(string resource, string path)
-		{
-			var stream = typeof(DebugInfoProvider).Assembly.GetManifestResourceStream(resource);
+        private static void ExtractResource(string resource, string path)
+        {
+            var stream = typeof(DebugInfoProvider).Assembly.GetManifestResourceStream(resource);
 
-			if (stream == null)
-				throw new InvalidOperationException("Could not find the requested resource: " + resource);
+            if (stream == null)
+                throw new InvalidOperationException("Could not find the requested resource: " + resource);
 
-			var bytes = new byte[4096];
+            var bytes = new byte[4096];
 
-			using (var stackDump = File.Create(path, 4096))
-			{
-				while (true)
-				{
-					var read = stream.Read(bytes, 0, bytes.Length);
-					if (read == 0)
-						break;
+            using (var stackDump = File.Create(path, 4096))
+            {
+                while (true)
+                {
+                    var read = stream.Read(bytes, 0, bytes.Length);
+                    if (read == 0)
+                        break;
 
-					stackDump.Write(bytes, 0, read);
-				}
+                    stackDump.Write(bytes, 0, read);
+                }
 
-				stackDump.Flush();
-			}
-		}
+                stackDump.Flush();
+            }
+        }
 
 
-		[HttpGet]
-		[RavenRoute("admin/logs/configure")]
-		public HttpResponseMessage OnAdminLogsConfig()
-		{
-			var id = GetQueryStringValue("id");
-			if (string.IsNullOrEmpty(id))
-			{
-				return GetMessageWithObject(new
-				{
-					Error = "id query string parameter is mandatory when using logs endpoint"
-				}, HttpStatusCode.BadRequest);
-			}
+        [HttpGet]
+        [RavenRoute("admin/logs/configure")]
+        public HttpResponseMessage OnAdminLogsConfig()
+        {
+            var id = GetQueryStringValue("id");
+            if (string.IsNullOrEmpty(id))
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "id query string parameter is mandatory when using logs endpoint"
+                }, HttpStatusCode.BadRequest);
+            }
 
-			var logTarget = LogManager.GetTarget<AdminLogsTarget>();
-			var connectionState = logTarget.For(id, this);
+            var logTarget = LogManager.GetTarget<AdminLogsTarget>();
+            var connectionState = logTarget.For(id, this);
 
-			var command = GetQueryStringValue("command");
-			if (string.IsNullOrEmpty(command) == false)
-			{
-				if ("disconnect" == command)
-				{
-					logTarget.Disconnect(id);
-				}
-				return GetMessageWithObject(connectionState);
-			}
-			
-			var watchCatogory = GetQueryStringValues("watch-category");
-			var categoriesToWatch = watchCatogory.Select(
-				x =>
-				{
-					var tokens = x.Split(':');
-				    bool watchStack = tokens.Length == 3 && tokens[2] == "watch-stack";
-					LogLevel level;
-					if (Enum.TryParse(tokens[1], out level))
-					{
+            var command = GetQueryStringValue("command");
+            if (string.IsNullOrEmpty(command) == false)
+            {
+                if ("disconnect" == command)
+                {
+                    logTarget.Disconnect(id);
+                }
+                return GetMessageWithObject(connectionState);
+            }
+            
+            var watchCatogory = GetQueryStringValues("watch-category");
+            var categoriesToWatch = watchCatogory.Select(
+                x =>
+                {
+                    var tokens = x.Split(':');
+                    bool watchStack = tokens.Length == 3 && tokens[2] == "watch-stack";
+                    LogLevel level;
+                    if (Enum.TryParse(tokens[1], out level))
+                    {
                         return Tuple.Create(tokens[0], level, watchStack);
 					}
 					throw new InvalidOperationException("Unable to parse watch-category: " + tokens[1]);

@@ -46,7 +46,7 @@ namespace Raven.Smuggler
 
             using (primaryStore = await CreateStore(exportOptions.From).ConfigureAwait(false))
             using (documentStore = CreateDocumentStore(exportOptions.From))
-			{
+            {
                 Operations = new SmugglerRemoteFilesOperations(() => primaryStore, () => documentStore);
 
 				return await base.ExportData(exportOptions).ConfigureAwait(false);

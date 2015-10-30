@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1600.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -76,18 +76,18 @@ namespace Raven.Tests.Issues
 				Assert.True(autoIdexes.Count > 0);
 
                 autoIdexes.ForEach(x => db.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(x.Id, IndexingPriority.Idle)));
-				
-				db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
-				WaitForBackup(db, true);
-			}
-			IOExtensions.DeleteDirectory(DataDir);
+                
+                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+                WaitForBackup(db, true);
+            }
+            IOExtensions.DeleteDirectory(DataDir);
 
-		    MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
-		    {
-		        BackupLocation = BackupDir,
-		        DatabaseLocation = DataDir,
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            {
+                BackupLocation = BackupDir,
+                DatabaseLocation = DataDir,
                 Defrag = true
-		    },s => { });
+            },s => { });
 
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
@@ -100,13 +100,13 @@ namespace Raven.Tests.Issues
 
                 var autoIndexes = db.Statistics.Indexes.Where(x => x.Name.StartsWith("Auto")).ToList();
 
-				Assert.True(autoIndexes.Count > 0);
+                Assert.True(autoIndexes.Count > 0);
 
-				foreach (var indexStats in autoIndexes)
-				{
-					Assert.NotEqual(indexStats.Priority, IndexingPriority.Abandoned);
-				}
-			}
-		}
-	}
+                foreach (var indexStats in autoIndexes)
+                {
+                    Assert.NotEqual(indexStats.Priority, IndexingPriority.Abandoned);
+                }
+            }
+        }
+    }
 }

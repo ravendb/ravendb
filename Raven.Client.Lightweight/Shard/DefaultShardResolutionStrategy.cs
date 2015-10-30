@@ -13,63 +13,63 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Shard
 {
-	public class DefaultShardResolutionStrategy : IShardResolutionStrategy
-	{
-		private readonly ShardStrategy shardStrategy;
+    public class DefaultShardResolutionStrategy : IShardResolutionStrategy
+    {
+        private readonly ShardStrategy shardStrategy;
 
-		protected delegate string ShardFieldForQueryingFunc(Type entityType);
+        protected delegate string ShardFieldForQueryingFunc(Type entityType);
 
-		protected readonly List<string> ShardIds;
+        protected readonly List<string> ShardIds;
 
-		private readonly Dictionary<Type, Regex> regexToCaptureShardIdFromQueriesByType = new Dictionary<Type, Regex>();
+        private readonly Dictionary<Type, Regex> regexToCaptureShardIdFromQueriesByType = new Dictionary<Type, Regex>();
 
-		private readonly Dictionary<Type, Func<object, string>> shardResultToStringByType = new Dictionary<Type, Func<object, string>>();
-		private readonly Dictionary<Type, Func<string, string>> queryResultToStringByType = new Dictionary<Type, Func<string, string>>();
+        private readonly Dictionary<Type, Func<object, string>> shardResultToStringByType = new Dictionary<Type, Func<object, string>>();
+        private readonly Dictionary<Type, Func<string, string>> queryResultToStringByType = new Dictionary<Type, Func<string, string>>();
 
-		public DefaultShardResolutionStrategy(IEnumerable<string> shardIds, ShardStrategy shardStrategy)
-		{
-			this.shardStrategy = shardStrategy;
-			ShardIds = new List<string>(shardIds);
-			if (ShardIds.Count == 0)
-				throw new ArgumentException("shardIds must have at least one value", "shardIds");
-		}
+        public DefaultShardResolutionStrategy(IEnumerable<string> shardIds, ShardStrategy shardStrategy)
+        {
+            this.shardStrategy = shardStrategy;
+            ShardIds = new List<string>(shardIds);
+            if (ShardIds.Count == 0)
+                throw new ArgumentException("shardIds must have at least one value", "shardIds");
+        }
 
-		public DefaultShardResolutionStrategy ShardingOn<TEntity>(Expression<Func<TEntity, string>> shardingProperty, Func<string, string> translator = null)
-		{
-			return ShardingOn(shardingProperty, translator, translator);
-		}
+        public DefaultShardResolutionStrategy ShardingOn<TEntity>(Expression<Func<TEntity, string>> shardingProperty, Func<string, string> translator = null)
+        {
+            return ShardingOn(shardingProperty, translator, translator);
+        }
 
-		public DefaultShardResolutionStrategy ShardingOn<TEntity, TResult>(Expression<Func<TEntity, TResult>> shardingProperty, 
-			Func<TResult, string> valueTranslator = null,
-			Func<string, string> queryTranslator = null
-			)
-		{
-			valueTranslator = valueTranslator ?? (result =>
-			                                      	{
-														if (ReferenceEquals(result, null))
-															throw new InvalidOperationException("Got null for the shard id in the value translator for " +
-														typeof(TEntity) + " using " + shardingProperty +
-															                                    ", no idea how to get the shard id from null.");
+        public DefaultShardResolutionStrategy ShardingOn<TEntity, TResult>(Expression<Func<TEntity, TResult>> shardingProperty, 
+            Func<TResult, string> valueTranslator = null,
+            Func<string, string> queryTranslator = null
+            )
+        {
+            valueTranslator = valueTranslator ?? (result =>
+                                                    {
+                                                        if (ReferenceEquals(result, null))
+                                                            throw new InvalidOperationException("Got null for the shard id in the value translator for " +
+                                                        typeof(TEntity) + " using " + shardingProperty +
+                                                                                                ", no idea how to get the shard id from null.");
 
-														// by default we assume that if you have a separator in the value we got back
-														// the shard id is the very first value up until the first separator
-			                                      		var str = result.ToString();
-														var start = str.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
-														if (start == -1)
-															return str;
-			                                      		return str.Substring(0, start);
-			                                      	});
+                                                        // by default we assume that if you have a separator in the value we got back
+                                                        // the shard id is the very first value up until the first separator
+                                                        var str = result.ToString();
+                                                        var start = str.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
+                                                        if (start == -1)
+                                                            return str;
+                                                        return str.Substring(0, start);
+                                                    });
 
-			queryTranslator = queryTranslator ?? (result => valueTranslator((TResult)Convert.ChangeType(result, typeof(TResult))));
+            queryTranslator = queryTranslator ?? (result => valueTranslator((TResult)Convert.ChangeType(result, typeof(TResult))));
 
-			var shardFieldForQuerying = shardingProperty.ToPropertyPath();
+            var shardFieldForQuerying = shardingProperty.ToPropertyPath();
 
-			if (shardStrategy.Conventions.FindIdentityProperty(shardingProperty.ToProperty()))
-			{
-				shardFieldForQuerying = Constants.DocumentIdFieldName;
-			}
+            if (shardStrategy.Conventions.FindIdentityProperty(shardingProperty.ToProperty()))
+            {
+                shardFieldForQuerying = Constants.DocumentIdFieldName;
+            }
 
-			var pattern = string.Format(@"
+            var pattern = string.Format(@"
 {0}: \s* (?<Open>"")(?<shardId>[^""]+)(?<Close-Open>"") |
 {0}: \s* (?<shardId>[^""][^\s]*)", Regex.Escape(shardFieldForQuerying));
 

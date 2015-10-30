@@ -38,162 +38,162 @@ using Directory = System.IO.Directory;
 
 namespace Raven.Database.Linq
 {
-	public static class QueryParsingUtils
-	{
-		private static readonly ConcurrentDictionary<int, object> Locks = new ConcurrentDictionary<int, object>();
+    public static class QueryParsingUtils
+    {
+        private static readonly ConcurrentDictionary<int, object> Locks = new ConcurrentDictionary<int, object>();
 
-		[CLSCompliant(false)]
-		public static string GenerateText(TypeDeclaration type, 
-			OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
-			HashSet<string> namespaces = null)
-		{
-			var unit = new SyntaxTree();
+        [CLSCompliant(false)]
+        public static string GenerateText(TypeDeclaration type, 
+            OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
+            HashSet<string> namespaces = null)
+        {
+            var unit = new SyntaxTree();
 
-			if (namespaces == null)
-			{
-				namespaces = new HashSet<string>
-				{
-					typeof (SystemTime).Namespace,
-					typeof (AbstractViewGenerator).Namespace,
-					typeof (Enumerable).Namespace,
-					typeof (IEnumerable<>).Namespace,
-					typeof (IEnumerable).Namespace,
-					typeof (int).Namespace,
-					typeof (LinqOnDynamic).Namespace,
-					typeof (Field).Namespace,
-					typeof (CultureInfo).Namespace,
-					typeof (Regex).Namespace
-				};
-			}
+            if (namespaces == null)
+            {
+                namespaces = new HashSet<string>
+                {
+                    typeof (SystemTime).Namespace,
+                    typeof (AbstractViewGenerator).Namespace,
+                    typeof (Enumerable).Namespace,
+                    typeof (IEnumerable<>).Namespace,
+                    typeof (IEnumerable).Namespace,
+                    typeof (int).Namespace,
+                    typeof (LinqOnDynamic).Namespace,
+                    typeof (Field).Namespace,
+                    typeof (CultureInfo).Namespace,
+                    typeof (Regex).Namespace
+                };
+            }
 
-			foreach (var extension in extensions)
-			{
-				foreach (var ns in extension.Value.GetNamespacesToImport())
-				{
-					namespaces.Add(ns);
-				}
-			}
+            foreach (var extension in extensions)
+            {
+                foreach (var ns in extension.Value.GetNamespacesToImport())
+                {
+                    namespaces.Add(ns);
+                }
+            }
 
-			foreach (var ns in namespaces)
-			{
-				unit.Members.Add(new UsingDeclaration(ns));
-			}
+            foreach (var ns in namespaces)
+            {
+                unit.Members.Add(new UsingDeclaration(ns));
+            }
 
-			unit.Members.Add(new WindowsNewLine());
+            unit.Members.Add(new WindowsNewLine());
 
-			unit.Members.Add(type);
+            unit.Members.Add(type);
 
-			var stringWriter = new StringWriter();
-			var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
-			unit.AcceptVisitor(output);
+            var stringWriter = new StringWriter();
+            var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
+            unit.AcceptVisitor(output);
 
-			return stringWriter.GetStringBuilder().ToString();
-		}
+            return stringWriter.GetStringBuilder().ToString();
+        }
 
-		[CLSCompliant(false)]
-		public static string ToText(AstNode node)
-		{
-			var stringWriter = new StringWriter();
-			var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
-			node.AcceptVisitor(output);
+        [CLSCompliant(false)]
+        public static string ToText(AstNode node)
+        {
+            var stringWriter = new StringWriter();
+            var output = new CSharpOutputVisitor(stringWriter, FormattingOptionsFactory.CreateSharpDevelop());
+            node.AcceptVisitor(output);
 
-			return stringWriter.GetStringBuilder().ToString();
-		}
+            return stringWriter.GetStringBuilder().ToString();
+        }
 
-		[CLSCompliant(false)]
-		public static VariableInitializer GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
-		{
-			try
-			{
-				var parser = new CSharpParser();
-				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
+        [CLSCompliant(false)]
+        public static VariableInitializer GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
+        {
+            try
+            {
+                var parser = new CSharpParser();
+                var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
-				if (block.Count == 0 || parser.HasErrors)
-				{
-					var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
-					throw new InvalidOperationException("Could not understand query: \r\n" + errs);
-				}
+                if (block.Count == 0 || parser.HasErrors)
+                {
+                    var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
+                    throw new InvalidOperationException("Could not understand query: \r\n" + errs);
+                }
 
-				var declaration = block[0] as VariableDeclarationStatement;
-				if (declaration == null)
-					throw new InvalidOperationException("Only local variable declaration are allowed");
+                var declaration = block[0] as VariableDeclarationStatement;
+                if (declaration == null)
+                    throw new InvalidOperationException("Only local variable declaration are allowed");
 
-				if (declaration.Variables.Count != 1)
-					throw new InvalidOperationException("Only one variable declaration is allowed");
+                if (declaration.Variables.Count != 1)
+                    throw new InvalidOperationException("Only one variable declaration is allowed");
 
-				var variable = declaration.Variables.First();
+                var variable = declaration.Variables.First();
 
-				if (variable.Initializer == null)
-					throw new InvalidOperationException("Variable declaration must have an initializer");
+                if (variable.Initializer == null)
+                    throw new InvalidOperationException("Variable declaration must have an initializer");
 
-				var queryExpression = (variable.Initializer as QueryExpression);
-				if (queryExpression == null)
-					throw new InvalidOperationException("Variable initializer must be a query expression");
+                var queryExpression = (variable.Initializer as QueryExpression);
+                if (queryExpression == null)
+                    throw new InvalidOperationException("Variable initializer must be a query expression");
 
-				var selectClause = queryExpression.Clauses.OfType<QuerySelectClause>().FirstOrDefault();
-				if (selectClause == null)
-					throw new InvalidOperationException("Variable initializer must be a select query expression");
+                var selectClause = queryExpression.Clauses.OfType<QuerySelectClause>().FirstOrDefault();
+                if (selectClause == null)
+                    throw new InvalidOperationException("Variable initializer must be a select query expression");
 
-				var createExpression = GetAnonymousCreateExpression(selectClause.Expression) as AnonymousTypeCreateExpression;
-				if ((createExpression == null) && requiresSelectNewAnonymousType)
-					throw new InvalidOperationException(
-						"Variable initializer must be a select query expression returning an anonymous object");
+                var createExpression = GetAnonymousCreateExpression(selectClause.Expression) as AnonymousTypeCreateExpression;
+                if ((createExpression == null) && requiresSelectNewAnonymousType)
+                    throw new InvalidOperationException(
+                        "Variable initializer must be a select query expression returning an anonymous object");
 
-				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
-				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
-				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+                variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
+                variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
+                variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
                 variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
-				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
-				return variable;
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException("Could not understand query: " + e.Message, e);
-			}
-		}
+                variable.AcceptVisitor(new TransformObsoleteMethods(), null);
+                return variable;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not understand query: " + e.Message, e);
+            }
+        }
 
-		[CLSCompliant(false)]
-		public static VariableInitializer GetVariableDeclarationForLinqMethods(string query, bool requiresSelectNewAnonymousType)
-		{
-			try
-			{
+        [CLSCompliant(false)]
+        public static VariableInitializer GetVariableDeclarationForLinqMethods(string query, bool requiresSelectNewAnonymousType)
+        {
+            try
+            {
 
-				var parser = new CSharpParser();
+                var parser = new CSharpParser();
 
-				var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
+                var block = parser.ParseStatements(ToQueryStatement(query)).ToList();
 
-				if (block.Count == 0 || parser.HasErrors)
-				{
-					var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
-					throw new InvalidOperationException("Could not understand query: \r\n" + errs);
-				}
+                if (block.Count == 0 || parser.HasErrors)
+                {
+                    var errs = string.Join(Environment.NewLine, parser.Errors.Select(x => x.Region + ": " + x.ErrorType + " - " + x.Message));
+                    throw new InvalidOperationException("Could not understand query: \r\n" + errs);
+                }
 
-				var declaration = block[0] as VariableDeclarationStatement;
-				if (declaration == null)
-					throw new InvalidOperationException("Only local variable declaration are allowed");
+                var declaration = block[0] as VariableDeclarationStatement;
+                if (declaration == null)
+                    throw new InvalidOperationException("Only local variable declaration are allowed");
 
-				if (declaration.Variables.Count != 1)
-					throw new InvalidOperationException("Only one variable declaration is allowed");
+                if (declaration.Variables.Count != 1)
+                    throw new InvalidOperationException("Only one variable declaration is allowed");
 
-				var variable = declaration.Variables.First();
+                var variable = declaration.Variables.First();
 
-				if (variable.Initializer as InvocationExpression == null)
-					throw new InvalidOperationException("Variable declaration must have an initializer which is a method invocation expression");
+                if (variable.Initializer as InvocationExpression == null)
+                    throw new InvalidOperationException("Variable declaration must have an initializer which is a method invocation expression");
 
-				var targetObject = ((InvocationExpression)variable.Initializer).Target as MemberReferenceExpression;
-				if (targetObject == null)
-					throw new InvalidOperationException("Variable initializer must be invoked on a method reference expression");
+                var targetObject = ((InvocationExpression)variable.Initializer).Target as MemberReferenceExpression;
+                if (targetObject == null)
+                    throw new InvalidOperationException("Variable initializer must be invoked on a method reference expression");
 
-				if (targetObject.MemberName != "Select" && targetObject.MemberName != "SelectMany")
-					throw new InvalidOperationException("Variable initializer must end with a select call");
+                if (targetObject.MemberName != "Select" && targetObject.MemberName != "SelectMany")
+                    throw new InvalidOperationException("Variable initializer must end with a select call");
 
-				var lambdaExpression = AsLambdaExpression(((InvocationExpression)variable.Initializer).Arguments.Last());
-				if (lambdaExpression == null)
-					throw new InvalidOperationException("Variable initializer select must have a lambda expression");
+                var lambdaExpression = AsLambdaExpression(((InvocationExpression)variable.Initializer).Arguments.Last());
+                if (lambdaExpression == null)
+                    throw new InvalidOperationException("Variable initializer select must have a lambda expression");
 
-				variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
-				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
-				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+                variable.AcceptVisitor(new TransformNullCoalescingOperatorTransformer(), null);
+                variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
+                variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
                 variable.AcceptVisitor(new TransformDynamicInvocationExpressions(), null);
 				variable.AcceptVisitor(new TransformObsoleteMethods(), null);
 
@@ -448,115 +448,115 @@ namespace Raven.Database.Linq
                 indexCacheDir = Path.Combine(configuration.IndexStoragePath, "Raven", "CompiledIndexCache");
                 if (Directory.Exists(indexCacheDir) == false)
                     Directory.CreateDirectory(indexCacheDir);
-			}
+            }
 
-			return indexCacheDir;
-		}
+            return indexCacheDir;
+        }
 
-		private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
-												string basePath, string indexFilePath, InMemoryRavenConfiguration configuration)
-		{
-			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
+        private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
+                                                string basePath, string indexFilePath, InMemoryRavenConfiguration configuration)
+        {
+            var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
 
-			var assemblies = new HashSet<string>
-			{
-				typeof (SystemTime).Assembly.Location,
-				typeof (AbstractViewGenerator).Assembly.Location,
-				typeof (NameValueCollection).Assembly.Location,
-				typeof (Enumerable).Assembly.Location,
-				typeof (Microsoft.CSharp.RuntimeBinder.Binder).Assembly.Location,
+            var assemblies = new HashSet<string>
+            {
+                typeof (SystemTime).Assembly.Location,
+                typeof (AbstractViewGenerator).Assembly.Location,
+                typeof (NameValueCollection).Assembly.Location,
+                typeof (Enumerable).Assembly.Location,
+                typeof (Microsoft.CSharp.RuntimeBinder.Binder).Assembly.Location,
                 AssemblyExtractor.GetExtractedAssemblyLocationFor(typeof(Field), configuration),
-			};
-			foreach (var extension in extensions)
-			{
-				foreach (var assembly in extension.Value.GetAssembliesToReference())
-				{
-					assemblies.Add(assembly);
-				}
-			}
-			var compilerParameters = new CompilerParameters
-			{
-				GenerateExecutable = false,
-				GenerateInMemory = false,
-				IncludeDebugInformation = Debugger.IsAttached,
-				OutputAssembly = indexFilePath
-			};
-			if (basePath != null)
-				compilerParameters.TempFiles = new TempFileCollection(basePath, false);
+            };
+            foreach (var extension in extensions)
+            {
+                foreach (var assembly in extension.Value.GetAssembliesToReference())
+                {
+                    assemblies.Add(assembly);
+                }
+            }
+            var compilerParameters = new CompilerParameters
+            {
+                GenerateExecutable = false,
+                GenerateInMemory = false,
+                IncludeDebugInformation = Debugger.IsAttached,
+                OutputAssembly = indexFilePath
+            };
+            if (basePath != null)
+                compilerParameters.TempFiles = new TempFileCollection(basePath, false);
 
-			foreach (var assembly in assemblies)
-			{
-				compilerParameters.ReferencedAssemblies.Add(assembly);
-			}
+            foreach (var assembly in assemblies)
+            {
+                compilerParameters.ReferencedAssemblies.Add(assembly);
+            }
 
-			CompilerResults compileAssemblyFromFile;
-			if (indexFilePath != null)
-			{
-				var sourceFileName = indexFilePath + ".cs";
-				
-				File.WriteAllText(sourceFileName, source);
+            CompilerResults compileAssemblyFromFile;
+            if (indexFilePath != null)
+            {
+                var sourceFileName = indexFilePath + ".cs";
+                
+                File.WriteAllText(sourceFileName, source);
 
-				compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, sourceFileName);
-			}
-			else
-			{
-				compileAssemblyFromFile = provider.CompileAssemblyFromSource(compilerParameters, source);
-			}
-			var results = compileAssemblyFromFile;
+                compileAssemblyFromFile = provider.CompileAssemblyFromFile(compilerParameters, sourceFileName);
+            }
+            else
+            {
+                compileAssemblyFromFile = provider.CompileAssemblyFromSource(compilerParameters, source);
+            }
+            var results = compileAssemblyFromFile;
 
-			if (results.Errors.HasErrors)
-			{
-				var sb = new StringBuilder()
-					.AppendLine("Compilation Errors:")
-					.AppendLine();
+            if (results.Errors.HasErrors)
+            {
+                var sb = new StringBuilder()
+                    .AppendLine("Compilation Errors:")
+                    .AppendLine();
 
-				foreach (CompilerError error in results.Errors)
-				{
-					sb.AppendFormat("Line {0}, Position {1}: Error {2} - {3}\n", error.Line, error.Column, error.ErrorNumber, error.ErrorText);
-				}
+                foreach (CompilerError error in results.Errors)
+                {
+                    sb.AppendFormat("Line {0}, Position {1}: Error {2} - {3}\n", error.Line, error.Column, error.ErrorNumber, error.ErrorText);
+                }
 
-				sb.AppendLine();
+                sb.AppendLine();
 
-				sb.AppendLine("Source code:")
-				  .AppendLine(queryText)
-				  .AppendLine();
+                sb.AppendLine("Source code:")
+                  .AppendLine(queryText)
+                  .AppendLine();
 
-				throw new InvalidOperationException(sb.ToString());
-			}
+                throw new InvalidOperationException(sb.ToString());
+            }
 
-			var asm = Assembly.Load(File.ReadAllBytes(indexFilePath)); // avoid locking the file
+            var asm = Assembly.Load(File.ReadAllBytes(indexFilePath)); // avoid locking the file
 
-			// ReSharper disable once AssignNullToNotNullAttribute
-			File.SetCreationTime(indexFilePath, DateTime.UtcNow);
+            // ReSharper disable once AssignNullToNotNullAttribute
+            File.SetCreationTime(indexFilePath, DateTime.UtcNow);
 
-			CodeVerifier.AssertNoSecurityCriticalCalls(asm);
+            CodeVerifier.AssertNoSecurityCriticalCalls(asm);
 
-			Type result = asm.GetType(name);
-			if (result == null)
-				throw new InvalidOperationException(
-					"Could not get compiled index type. This probably means that there is something wrong with the assembly load context.");
-			return result;
-		}
+            Type result = asm.GetType(name);
+            if (result == null)
+                throw new InvalidOperationException(
+                    "Could not get compiled index type. This probably means that there is something wrong with the assembly load context.");
+            return result;
+        }
 
-		private static Type TryGetIndexFromDisk(string indexFilePath, string typeName)
-		{
-			try
-			{
-				if (File.Exists(indexFilePath))
-				{
-					// we don't use LoadFrom to avoid locking the file
-					return System.Reflection.Assembly.Load(File.ReadAllBytes(indexFilePath)).GetType(typeName);
-				}
-			}
-			catch
-			{
-				// If there were any problems loading this index from disk,
-				// just delete it if we can. It will be regenerated later.
-				try { File.Delete(indexFilePath); }
-				catch { }
-			}
+        private static Type TryGetIndexFromDisk(string indexFilePath, string typeName)
+        {
+            try
+            {
+                if (File.Exists(indexFilePath))
+                {
+                    // we don't use LoadFrom to avoid locking the file
+                    return System.Reflection.Assembly.Load(File.ReadAllBytes(indexFilePath)).GetType(typeName);
+                }
+            }
+            catch
+            {
+                // If there were any problems loading this index from disk,
+                // just delete it if we can. It will be regenerated later.
+                try { File.Delete(indexFilePath); }
+                catch { }
+            }
 
-			return null;
-		}
-	}
+            return null;
+        }
+    }
 }

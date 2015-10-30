@@ -59,152 +59,152 @@ namespace Raven.Database.Indexing
 	    {
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
             MetricsCounters = new MetricsCountersManager();
-	        InstallGauges();
-		    LastIdleTime = SystemTime.UtcNow;
-	    }
+            InstallGauges();
+            LastIdleTime = SystemTime.UtcNow;
+        }
 
-		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
-		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
+        public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+        public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
         public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
-		public string DatabaseName { get; set; }
+        public string DatabaseName { get; set; }
 
-	    public DateTime LastWorkTime
-	    {
+        public DateTime LastWorkTime
+        {
             get { return new DateTime(lastWorkTimeTicks); }
-	    }
-	    public DateTime LastIdleTime { get; set; }
-		public bool DoWork
-		{
-			get { return doWork; }
-		}
+        }
+        public DateTime LastIdleTime { get; set; }
+        public bool DoWork
+        {
+            get { return doWork; }
+        }
 
-		public bool RunIndexing
-		{
-			get { return doWork && doIndexing; }
-		}
+        public bool RunIndexing
+        {
+            get { return doWork && doIndexing; }
+        }
         public bool RunReducing
         {
             get { return doWork && doReducing; }
         }
         public void UpdateFoundWork()
-		{
-		    var now = SystemTime.UtcNow;
-		    var lastWorkTime = LastWorkTime;
-		    if ((now - lastWorkTime).TotalSeconds < 2)
-		    {
+        {
+            var now = SystemTime.UtcNow;
+            var lastWorkTime = LastWorkTime;
+            if ((now - lastWorkTime).TotalSeconds < 2)
+            {
                 // to avoid too much pressure on this, we only update this every 2 seconds
-		        return;
-		    }
+                return;
+            }
             // set the value atomically
-		    Interlocked.Exchange(ref lastWorkTimeTicks, now.Ticks);
-		}
+            Interlocked.Exchange(ref lastWorkTimeTicks, now.Ticks);
+        }
 
-	    //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
+        //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
         public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
 
-	    private int nextQueryId = 0;
+        private int nextQueryId = 0;
 
-		public InMemoryRavenConfiguration Configuration { get; set; }
-		public IndexStorage IndexStorage { get; set; }
+        public InMemoryRavenConfiguration Configuration { get; set; }
+        public IndexStorage IndexStorage { get; set; }
 
-		public TaskScheduler TaskScheduler { get; set; }
-		public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
+        public TaskScheduler TaskScheduler { get; set; }
+        public IndexDefinitionStorage IndexDefinitionStorage { get; set; }
 
-		[CLSCompliant(false)]
-		public ITransactionalStorage TransactionalStorage { get; set; }
+        [CLSCompliant(false)]
+        public ITransactionalStorage TransactionalStorage { get; set; }
 
-		public IndexingError[] Errors
-		{
-			get { return indexingErrors.ToArray(); }
-		}
+        public IndexingError[] Errors
+        {
+            get { return indexingErrors.ToArray(); }
+        }
 
-		public int CurrentNumberOfParallelTasks
-		{
-			get
-			{
-				var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks*BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
-				var numberOfParallelTasks = Math.Min((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
-				return Math.Max(numberOfParallelTasks, 1);
-			}
-		}
+        public int CurrentNumberOfParallelTasks
+        {
+            get
+            {
+                var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks*BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
+                var numberOfParallelTasks = Math.Min((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
+                return Math.Max(numberOfParallelTasks, 1);
+            }
+        }
 
-		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
+        public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
-		public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
+        public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
 
-		public int NumberOfItemsToExecuteReduceInSingleStep
-		{
-			get { return Configuration.NumberOfItemsToExecuteReduceInSingleStep; }
-		}
+        public int NumberOfItemsToExecuteReduceInSingleStep
+        {
+            get { return Configuration.NumberOfItemsToExecuteReduceInSingleStep; }
+        }
 
-		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)
-		{
-			return WaitForWork(timeout, ref workerWorkCounter, null, name);
-		}
+        public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)
+        {
+            return WaitForWork(timeout, ref workerWorkCounter, null, name);
+        }
 
         private void InstallGauges()
         {
             MetricsCounters.AddGauge(GetType(), "RunningQueriesCount", () => CurrentlyRunningQueries.Count);
         }
 
-		public void RecoverIndexingErrors()
-		{
-			var storedIndexingErrors = new List<ListItem>();
-			TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var indexName in IndexDefinitionStorage.IndexNames)
-				{
-					storedIndexingErrors.AddRange(accessor.Lists.Read("Raven/Indexing/Errors/" + indexName, Etag.Empty, null, 5000));
-				}
-			});
+        public void RecoverIndexingErrors()
+        {
+            var storedIndexingErrors = new List<ListItem>();
+            TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var indexName in IndexDefinitionStorage.IndexNames)
+                {
+                    storedIndexingErrors.AddRange(accessor.Lists.Read("Raven/Indexing/Errors/" + indexName, Etag.Empty, null, 5000));
+                }
+            });
 
-			if(storedIndexingErrors.Count == 0)
-				return;
+            if(storedIndexingErrors.Count == 0)
+                return;
 
-			var errors = storedIndexingErrors.Select(x => x.Data.JsonDeserialization<IndexingError>()).OrderBy(x => x.Timestamp);
+            var errors = storedIndexingErrors.Select(x => x.Data.JsonDeserialization<IndexingError>()).OrderBy(x => x.Timestamp);
 
-			foreach (var error in errors)
-			{
-				indexingErrors.Enqueue(error);
-			}
+            foreach (var error in errors)
+            {
+                indexingErrors.Enqueue(error);
+            }
 
-			TransactionalStorage.Batch(accessor =>
-			{
-				while (indexingErrors.Count > 50)
-				{
-					IndexingError error;
-					if (indexingErrors.TryDequeue(out error) == false)
-						continue;
+            TransactionalStorage.Batch(accessor =>
+            {
+                while (indexingErrors.Count > 50)
+                {
+                    IndexingError error;
+                    if (indexingErrors.TryDequeue(out error) == false)
+                        continue;
 
-					accessor.Lists.Remove("Raven/Indexing/Errors/" + error.IndexName, error.Id.ToString(CultureInfo.InvariantCulture));
-				}
-			});
+                    accessor.Lists.Remove("Raven/Indexing/Errors/" + error.IndexName, error.Id.ToString(CultureInfo.InvariantCulture));
+                }
+            });
 
-			errorsCounter = errors.Max(x => x.Id);
-		}
+            errorsCounter = errors.Max(x => x.Id);
+        }
 
-		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait, string name)
-		{
-			if (!doWork)
-				return false;
-			var currentWorkCounter = Thread.VolatileRead(ref workCounter);
-			if (currentWorkCounter != workerWorkCounter)
-			{
-				workerWorkCounter = currentWorkCounter;
-				return true;
-			}
-			if (beforeWait != null)
-				beforeWait();
-			lock (waitForWork)
-			{
-				if (!doWork)
-					return false;
-				currentWorkCounter = Thread.VolatileRead(ref workCounter);
-				if (currentWorkCounter != workerWorkCounter)
-				{
-					workerWorkCounter = currentWorkCounter;
-					return true;
-				}
+        public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait, string name)
+        {
+            if (!doWork)
+                return false;
+            var currentWorkCounter = Thread.VolatileRead(ref workCounter);
+            if (currentWorkCounter != workerWorkCounter)
+            {
+                workerWorkCounter = currentWorkCounter;
+                return true;
+            }
+            if (beforeWait != null)
+                beforeWait();
+            lock (waitForWork)
+            {
+                if (!doWork)
+                    return false;
+                currentWorkCounter = Thread.VolatileRead(ref workCounter);
+                if (currentWorkCounter != workerWorkCounter)
+                {
+                    workerWorkCounter = currentWorkCounter;
+                    return true;
+                }
                 CancellationToken.ThrowIfCancellationRequested();
 				if (log.IsDebugEnabled)
 					log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
@@ -364,43 +364,43 @@ namespace Raven.Database.Indexing
 			shouldNotifyOnWork.Dispose();
 
             MetricsCounters.Dispose();
-			cancellationTokenSource.Dispose();
-		}
+            cancellationTokenSource.Dispose();
+        }
 
-		public void ClearErrorsFor(string indexName)
-		{
-			var list = new List<IndexingError>();
-			var removed = new List<IndexingError>();
+        public void ClearErrorsFor(string indexName)
+        {
+            var list = new List<IndexingError>();
+            var removed = new List<IndexingError>();
 
-			IndexingError error;
-			while (indexingErrors.TryDequeue(out error))
-			{
-				if (StringComparer.OrdinalIgnoreCase.Equals(error.IndexName, indexName) == false)
-					list.Add(error);
-				else
-					removed.Add(error);
-			}
+            IndexingError error;
+            while (indexingErrors.TryDequeue(out error))
+            {
+                if (StringComparer.OrdinalIgnoreCase.Equals(error.IndexName, indexName) == false)
+                    list.Add(error);
+                else
+                    removed.Add(error);
+            }
 
-			foreach (var indexingError in list)
-			{
-				indexingErrors.Enqueue(indexingError);
-			}
+            foreach (var indexingError in list)
+            {
+                indexingErrors.Enqueue(indexingError);
+            }
 
-			TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var removedError in removed)
-				{
-					accessor.Lists.Remove("Raven/Indexing/Errors/" + indexName, removedError.Id.ToString(CultureInfo.InvariantCulture));
-				}
-			});
-		}
+            TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var removedError in removed)
+                {
+                    accessor.Lists.Remove("Raven/Indexing/Errors/" + indexName, removedError.Id.ToString(CultureInfo.InvariantCulture));
+                }
+            });
+        }
 
-		public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }
+        public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }
 
-		private bool disposed;
-	    private long lastWorkTimeTicks;
+        private bool disposed;
+        private long lastWorkTimeTicks;
 
-	    [CLSCompliant(false)]
+        [CLSCompliant(false)]
         public MetricsCountersManager MetricsCounters { get; private set; }
 
 		public IndexingBatchInfo ReportIndexingBatchStarted(int documentsCount, long documentsSize, List<string> indexesToWorkOn)
@@ -512,29 +512,29 @@ namespace Raven.Database.Indexing
         }
 
         public void StartIndexing()
-		{
-			doIndexing = true;
+        {
+            doIndexing = true;
             doReducing = true;
-		}
+        }
 
-		public void MarkAsRemovedFromIndex(HashSet<string> keys)
-		{
-			foreach (var key in keys)
-			{
-				recentlyDeleted.TryRemove(key);
-			}
-		}
+        public void MarkAsRemovedFromIndex(HashSet<string> keys)
+        {
+            foreach (var key in keys)
+            {
+                recentlyDeleted.TryRemove(key);
+            }
+        }
 
-		public bool ShouldRemoveFromIndex(string key)
-		{
-			var shouldRemoveFromIndex = recentlyDeleted.Contains(key);
-			return shouldRemoveFromIndex;
-		}
+        public bool ShouldRemoveFromIndex(string key)
+        {
+            var shouldRemoveFromIndex = recentlyDeleted.Contains(key);
+            return shouldRemoveFromIndex;
+        }
 
-		public void MarkDeleted(string key)
-		{
-			recentlyDeleted.Add(key);
-		}
+        public void MarkDeleted(string key)
+        {
+            recentlyDeleted.Add(key);
+        }
 
         public int GetNextQueryId()
         {

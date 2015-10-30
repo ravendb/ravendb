@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -7,12 +7,12 @@ using Xunit.Sdk;
 
 namespace Raven.Tests.Common.Attributes
 {
-	[CLSCompliant(false)]
-	public class IISExpressInstalledFactAttribute : FactAttribute
-	{
-		protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
-		{
-			var displayName = method.TypeName + "." + method.Name;
+    [CLSCompliant(false)]
+    public class IISExpressInstalledFactAttribute : FactAttribute
+    {
+        protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
+        {
+            var displayName = method.TypeName + "." + method.Name;
 
 			if (File.Exists(@"c:\Program Files\IIS Express\iisexpress.exe") == false)
 			{
@@ -22,10 +22,10 @@ namespace Raven.Tests.Common.Attributes
 				yield break;
 			}
 
-			foreach (var command in base.EnumerateTestCommands(method))
-			{
-				yield return command;
-			}
-		}
-	}
+            foreach (var command in base.EnumerateTestCommands(method))
+            {
+                yield return command;
+            }
+        }
+    }
 }

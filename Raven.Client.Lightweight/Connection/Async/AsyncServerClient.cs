@@ -860,9 +860,67 @@ namespace Raven.Client.Connection.Async
                 .AddOperationHeaders(OperationsHeaders))
                 .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
-                if (isGet == false)
+                RavenJToken result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+
+                List<Attachment> attachments = convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result)).Select(x => new Attachment
                 {
-                    await request.WriteAsync(new RavenJArray(uniqueIds)).WithCancellation(token).ConfigureAwait(false);
+                    Etag = x.Etag,
+                    Metadata = x.Metadata.WithCaseInsensitivePropertyNames(),
+                    Size = x.Size,
+                    Key = x.Key,
+                    Data = () =>
+                        { throw new InvalidOperationException("Cannot get attachment data from an attachment header"); }
+                }).ToList();
+
+                return new AsyncEnumeratorBridge<Attachment>(attachments.GetEnumerator());
+            }
+        }
+
+        public Task CommitAsync(string txId, CancellationToken token = default (CancellationToken))
+        {
+            return ExecuteWithReplication("POST", operationMetadata => DirectCommit(txId, operationMetadata, token), token);
+        }
+
+        private async Task DirectCommit(string txId, OperationMetadata operationMetadata, CancellationToken token)
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/commit?tx=" + txId, "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+            {
+                await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+            }
+        }
+
+        public Task RollbackAsync(string txId, CancellationToken token = default(CancellationToken))
+        {
+            return ExecuteWithReplication("POST", operationMetadata => DirectRollback(txId, operationMetadata, token), token);
+        }
+
+        private async Task DirectRollback(string txId, OperationMetadata operationMetadata, CancellationToken token = default(CancellationToken))
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/rollback?tx=" + txId, "POST", operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+            {
+                await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+            }
+        }
+
+        public Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null, CancellationToken token = default (CancellationToken))
+        {
+            return ExecuteWithReplication("POST", operationMetadata => DirectPrepareTransaction(txId, operationMetadata, resourceManagerId, recoveryInformation, token), token);
+        }
+
+        private async Task DirectPrepareTransaction(string txId, OperationMetadata operationMetadata, Guid? resourceManagerId, byte[] recoveryInformation, CancellationToken token = default (CancellationToken))
+        {
+            var opUrl = operationMetadata.Url + "/transaction/prepare?tx=" + txId;
+            if (resourceManagerId != null)
+                opUrl += "&resourceManagerId=" + resourceManagerId;
+
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, opUrl, "POST", operationMetadata.Credentials, convention)
+                .AddOperationHeaders(OperationsHeaders))
+                .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+            {
+                if (recoveryInformation != null)
+                {
+                    var ms = new MemoryStream(recoveryInformation);
+                    await request.WriteAsync(ms).WithCancellation(token).ConfigureAwait(false);
                 }
 
                 var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
@@ -1161,11 +1219,134 @@ namespace Raven.Client.Connection.Async
 		        {
                     new FacetQuery
                     {
-                        Facets =  facets,
-                        IndexName = index,
-                        Query = query,
-                        PageSize = pageSize,
-                        PageStart = start
+                        JsonDocument resolvedDocument;
+                        if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
+                        {
+                            await DirectPutAsync(operationMetadata, key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata, token).ConfigureAwait(false);
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+                finally
+                {
+                    resolvingConflict = false;
+                }
+            }
+
+            return false;
+        }
+
+        private async Task<T> RetryOperationBecauseOfConflict<T>(OperationMetadata operationMetadata, IEnumerable<RavenJObject> docResults,
+                                                                 T currentResult, Func<Task<T>> nextTry, Func<string, ConflictException> onConflictedQueryResult = null, CancellationToken token = default(CancellationToken))
+        {
+            bool requiresRetry = false;
+            foreach (var docResult in docResults)
+            {
+                token.ThrowIfCancellationRequested();
+                requiresRetry |=
+                    await AssertNonConflictedDocumentAndCheckIfNeedToReload(operationMetadata, docResult, onConflictedQueryResult, token).ConfigureAwait(false);
+            }
+
+            if (!requiresRetry)
+                return currentResult;
+
+            if (resolvingConflictRetries)
+                throw new InvalidOperationException(
+                    "Encountered another conflict after already resolving a conflict. Conflict resolution cannot recurse.");
+            resolvingConflictRetries = true;
+            retryBecauseOfConflict = true;
+            try
+            {
+                return await nextTry().WithCancellation(token).ConfigureAwait(false);
+            }
+            finally
+            {
+                resolvingConflictRetries = false;
+                retryBecauseOfConflict = false;
+            }
+        }
+
+        public async Task<RavenJToken> GetOperationStatusAsync(long id)
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention).AddOperationHeaders(OperationsHeaders)))
+            {
+                try
+                {
+                    return await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                }
+                catch (ErrorResponseException e)
+                {
+                    if (e.StatusCode == HttpStatusCode.NotFound) return null;
+                    throw;
+                }
+            }
+        }
+
+        private async Task<string> GetSingleAuthToken(OperationMetadata operationMetadata)
+        {
+            using (var request = CreateRequest(operationMetadata, "/singleAuthToken", "GET", disableRequestCompression: true))
+            {
+                var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                return response.Value<string>("Token");
+            }
+        }
+
+        private async Task<string> ValidateThatWeCanUseAuthenticateTokens(OperationMetadata operationMetadata, string token)
+        {
+            using (var request = CreateRequest(operationMetadata, "/singleAuthToken", "GET", disableRequestCompression: true, disableAuthentication: true))
+            {
+                request.AddOperationHeader("Single-Use-Auth-Token", token);
+                var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                return result.Value<string>("Token");
+            }
+        }
+
+        public IAsyncInfoDatabaseCommands Info
+        {
+            get { return this; }
+        }
+
+        async Task<ReplicationStatistics> IAsyncInfoDatabaseCommands.GetReplicationInfoAsync(CancellationToken token)
+        {
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.ReplicationInfo(), "GET", credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention)))
+            {
+                var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.Deserialize<ReplicationStatistics>(convention);
+            }
+        }
+
+        public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
+        {
+            return WithInternal(credentialsForSession);
+        }
+
+        internal AsyncServerClient WithInternal(ICredentials credentialsForSession)
+        {
+            return new AsyncServerClient(url, convention, new OperationCredentials(credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
+                                         replicationInformerGetter, databaseName, conflictListeners, false);
+        }
+
+        internal async Task<ReplicationDocument> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata)
+        {
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", "GET", operationMetadata.Credentials, convention);
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+            {
+                try
+                {
+                    var requestJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    return requestJson.JsonDeserialization<ReplicationDocument>();
+                }
+                catch (ErrorResponseException e)
+                {
+                    switch (e.StatusCode)
+                    {
+                        case HttpStatusCode.NotFound:
+                        case HttpStatusCode.BadRequest: //replication bundle if not enabled
+                            return null;
+                        default:
+                            throw;
                     }
 		        }).ContinueWith(x => x.Result.FirstOrDefault());
 			}

@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,13 +10,13 @@ using Xunit;
 
 namespace Raven.Tests.Core.BulkInsert
 {
-	public class ChunkedBulkInsert : RavenCoreTestBase
-	{
-		public class Node
-		{
-			public string Name { get; set; }
-			public Node[] Children { get; set; }
-		}
+    public class ChunkedBulkInsert : RavenCoreTestBase
+    {
+        public class Node
+        {
+            public string Name { get; set; }
+            public Node[] Children { get; set; }
+        }
 
 		[Fact]
 		public void ChunkVolumeConstraint()
@@ -54,7 +54,7 @@ namespace Raven.Tests.Core.BulkInsert
 				}
 			}
 
-		}
+        }
 
 		[Fact]
 		public void ChunkVolumeConstraintMakeSureUnneededConnectionsNotCreated()
@@ -92,7 +92,7 @@ namespace Raven.Tests.Core.BulkInsert
 				}
 			}
 
-		}
+        }
 
 		[Fact]
 		public void DocumentsInChunkConstraint()
@@ -114,25 +114,25 @@ namespace Raven.Tests.Core.BulkInsert
 							Interlocked.Increment(ref bulkInsertStartsCounter);
 					});
 
-					for (int i = 0; i < 20; i++)
-					{
-						bulkInsert.Store(new Node
-						{
-							Name = "Parent",
-						});
-					}
-				}
+                    for (int i = 0; i < 20; i++)
+                    {
+                        bulkInsert.Store(new Node
+                        {
+                            Name = "Parent",
+                        });
+                    }
+                }
 
-				Assert.Equal(20, bulkInsertStartsCounter);
-				WaitForIndexing(store);
-				using (var session = store.OpenSession())
-				{
-					var count = session.Query<Node>().Count();
-					Assert.Equal(count, 20);
-				}
-			}
+                Assert.Equal(20, bulkInsertStartsCounter);
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Node>().Count();
+                    Assert.Equal(count, 20);
+                }
+            }
 
-		}
+        }
 
 		[Fact]
 		public void DocumentsInChunkConstraintMakeSureUnneedConnectionsNotCreated()
@@ -154,24 +154,24 @@ namespace Raven.Tests.Core.BulkInsert
 							Interlocked.Increment(ref bulkInsertStartsCounter);
 					});
 
-					for (int i = 0; i < 20; i++)
-					{
-						bulkInsert.Store(new Node
-						{
-							Name = "Parent",
-						});
-					}
-				}
+                    for (int i = 0; i < 20; i++)
+                    {
+                        bulkInsert.Store(new Node
+                        {
+                            Name = "Parent",
+                        });
+                    }
+                }
 
-				Assert.Equal(1, bulkInsertStartsCounter);
-				WaitForIndexing(store);
-				using (var session = store.OpenSession())
-				{
-					var count = session.Query<Node>().Count();
-					Assert.Equal(count, 20);
-				}
-			}
-		}
+                Assert.Equal(1, bulkInsertStartsCounter);
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Node>().Count();
+                    Assert.Equal(count, 20);
+                }
+            }
+        }
 
 		[Fact]
 		public void ValidateChunkedBulkInsertOperationsIDsCount()
@@ -199,6 +199,6 @@ namespace Raven.Tests.Core.BulkInsert
 			}
 			Assert.Equal(10, bulkInsertStartsCounter.Count);
 
-		}
-	}
+        }
+    }
 }

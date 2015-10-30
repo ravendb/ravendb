@@ -127,34 +127,34 @@ namespace Raven.Database.Server.Controllers
 				Start = GetStart(),
 				Cutoff = GetCutOff(),
                 WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),
-				CutoffEtag = GetCutOffEtag(),
-				PageSize = GetPageSize(maxPageSize),
-				FieldsToFetch = GetQueryStringValues("fetch"),
-				DefaultField = GetQueryStringValue("defaultField"),
+                CutoffEtag = GetCutOffEtag(),
+                PageSize = GetPageSize(maxPageSize),
+                FieldsToFetch = GetQueryStringValues("fetch"),
+                DefaultField = GetQueryStringValue("defaultField"),
 
-				DefaultOperator =
-					string.Equals(GetQueryStringValue("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
-						QueryOperator.And :
-						QueryOperator.Or,
+                DefaultOperator =
+                    string.Equals(GetQueryStringValue("operator"), "AND", StringComparison.OrdinalIgnoreCase) ?
+                        QueryOperator.And :
+                        QueryOperator.Or,
 
-				SortedFields = EnumerableExtension.EmptyIfNull(GetQueryStringValues("sort"))
-					.Select(x => new SortedField(x))
-					.ToArray(),
-				HighlightedFields = GetHighlightedFields().ToArray(),
-				HighlighterPreTags = GetQueryStringValues("preTags"),
-				HighlighterPostTags = GetQueryStringValues("postTags"),
-				HighlighterKeyName = GetQueryStringValue("highlighterKeyName"),
-				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
-				TransformerParameters = ExtractTransformerParameters(),
-				ExplainScores = GetExplainScores(),
-				SortHints = GetSortHints(),
-				IsDistinct = IsDistinct()
-			};
+                SortedFields = EnumerableExtension.EmptyIfNull(GetQueryStringValues("sort"))
+                    .Select(x => new SortedField(x))
+                    .ToArray(),
+                HighlightedFields = GetHighlightedFields().ToArray(),
+                HighlighterPreTags = GetQueryStringValues("preTags"),
+                HighlighterPostTags = GetQueryStringValues("postTags"),
+                HighlighterKeyName = GetQueryStringValue("highlighterKeyName"),
+                ResultsTransformer = GetQueryStringValue("resultsTransformer"),
+                TransformerParameters = ExtractTransformerParameters(),
+                ExplainScores = GetExplainScores(),
+                SortHints = GetSortHints(),
+                IsDistinct = IsDistinct()
+            };
 
-			var allowMultipleIndexEntriesForSameDocumentToResultTransformer = GetQueryStringValue("allowMultipleIndexEntriesForSameDocumentToResultTransformer");
-			bool allowMultiple;
-			if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
-				query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
+            var allowMultipleIndexEntriesForSameDocumentToResultTransformer = GetQueryStringValue("allowMultipleIndexEntriesForSameDocumentToResultTransformer");
+            bool allowMultiple;
+            if (string.IsNullOrEmpty(allowMultipleIndexEntriesForSameDocumentToResultTransformer) == false && bool.TryParse(allowMultipleIndexEntriesForSameDocumentToResultTransformer, out allowMultiple))
+                query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultiple;
 
             if (query.WaitForNonStaleResultsAsOfNow)
                 query.Cutoff = SystemTime.UtcNow;
@@ -264,90 +264,90 @@ namespace Raven.Database.Server.Controllers
             return result;
         }
 
-		public DateTime? GetCutOff()
-		{
-			var etagAsString = GetQueryStringValue("cutOff");
-			if (etagAsString != null)
-			{
-				etagAsString = Uri.UnescapeDataString(etagAsString);
+        public DateTime? GetCutOff()
+        {
+            var etagAsString = GetQueryStringValue("cutOff");
+            if (etagAsString != null)
+            {
+                etagAsString = Uri.UnescapeDataString(etagAsString);
 
-				DateTime result;
-				if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
-					return result;
-				throw new BadRequestException("Could not parse cut off query parameter as date");
-			}
+                DateTime result;
+                if (DateTime.TryParseExact(etagAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+                    return result;
+                throw new BadRequestException("Could not parse cut off query parameter as date");
+            }
 
-			return null;
-		}
+            return null;
+        }
 
-		public IEnumerable<HighlightedField> GetHighlightedFields()
-		{
-			var highlightedFieldStrings = EnumerableExtension.EmptyIfNull(GetQueryStringValues("highlight"));
-			var fields = new HashSet<string>();
+        public IEnumerable<HighlightedField> GetHighlightedFields()
+        {
+            var highlightedFieldStrings = EnumerableExtension.EmptyIfNull(GetQueryStringValues("highlight"));
+            var fields = new HashSet<string>();
 
-			foreach (var highlightedFieldString in highlightedFieldStrings)
-			{
-				HighlightedField highlightedField;
-				if (HighlightedField.TryParse(highlightedFieldString, out highlightedField))
-				{
-					if (!fields.Add(highlightedField.Field))
-						throw new BadRequestException("Duplicate highlighted field has found: " + highlightedField.Field);
+            foreach (var highlightedFieldString in highlightedFieldStrings)
+            {
+                HighlightedField highlightedField;
+                if (HighlightedField.TryParse(highlightedFieldString, out highlightedField))
+                {
+                    if (!fields.Add(highlightedField.Field))
+                        throw new BadRequestException("Duplicate highlighted field has found: " + highlightedField.Field);
 
-					yield return highlightedField;
-				}
-				else 
-					throw new BadRequestException("Could not parse highlight query parameter as field highlight options");
-			}
-		}
+                    yield return highlightedField;
+                }
+                else 
+                    throw new BadRequestException("Could not parse highlight query parameter as field highlight options");
+            }
+        }
 
-		public Dictionary<string, RavenJToken> ExtractTransformerParameters()
-		{
-			var result = new Dictionary<string, RavenJToken>();
-			foreach (var key in InnerRequest.GetQueryNameValuePairs().Select(pair => pair.Key))
-			{
-				if (string.IsNullOrEmpty(key)) continue;
-				if (key.StartsWith("qp-") || key.StartsWith("tp-"))
-				{
-					var realkey = key.Substring(3);
-					result[realkey] = GetQueryStringValue(key);
-				}
-			}
+        public Dictionary<string, RavenJToken> ExtractTransformerParameters()
+        {
+            var result = new Dictionary<string, RavenJToken>();
+            foreach (var key in InnerRequest.GetQueryNameValuePairs().Select(pair => pair.Key))
+            {
+                if (string.IsNullOrEmpty(key)) continue;
+                if (key.StartsWith("qp-") || key.StartsWith("tp-"))
+                {
+                    var realkey = key.Substring(3);
+                    result[realkey] = GetQueryStringValue(key);
+                }
+            }
 
-			return result;
-		}
+            return result;
+        }
 
-		protected bool GetOverwriteExisting()
-		{
-			bool result;
-			if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
+        protected bool GetOverwriteExisting()
+        {
+            bool result;
+            if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
             {
                 // Check legacy key.
                 bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);         
             }
 
-			return result;
-		}
+            return result;
+        }
 
-		protected bool GetCheckReferencesInIndexes()
-		{
-			bool result;
-			bool.TryParse(GetQueryStringValue("checkReferencesInIndexes"), out result);
-			return result;
-		}
+        protected bool GetCheckReferencesInIndexes()
+        {
+            bool result;
+            bool.TryParse(GetQueryStringValue("checkReferencesInIndexes"), out result);
+            return result;
+        }
 
-		protected bool GetAllowStale()
-		{
-			bool stale;
-			bool.TryParse(GetQueryStringValue("allowStale"), out stale);
-			return stale;
-		}
+        protected bool GetAllowStale()
+        {
+            bool stale;
+            bool.TryParse(GetQueryStringValue("allowStale"), out stale);
+            return stale;
+        }
 
-		protected bool GetSkipOverwriteIfUnchanged()
-		{
-			bool result;
-			bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
-			return result;
-		}
+        protected bool GetSkipOverwriteIfUnchanged()
+        {
+            bool result;
+            bool.TryParse(GetQueryStringValue("skipOverwriteIfUnchanged"), out result);
+            return result;
+        }
 
         protected BulkInsertCompression GetCompression()
         {
@@ -396,15 +396,15 @@ namespace Raven.Database.Server.Controllers
             return result;
         }
 
-		protected bool GetRetrieveDetails()
-		{
-			bool details;
-			bool.TryParse(GetQueryStringValue("details"), out details);
-			return details;
-		}
+        protected bool GetRetrieveDetails()
+        {
+            bool details;
+            bool.TryParse(GetQueryStringValue("details"), out details);
+            return details;
+        }
 
-		protected void HandleReplication(HttpResponseMessage msg)
-		{
+        protected void HandleReplication(HttpResponseMessage msg)
+        {
 
             if (msg.StatusCode == HttpStatusCode.BadRequest ||
                 msg.StatusCode == HttpStatusCode.ServiceUnavailable ||
@@ -412,18 +412,18 @@ namespace Raven.Database.Server.Controllers
                 )
                 return;
 
-			var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
-			var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);
-			if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))
-			{
-				return;
-			}
+            var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
+            var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);
+            if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))
+            {
+                return;
+            }
 
-			DateTime primaryServerLastCheck;
-			if (DateTime.TryParse(clientPrimaryServerLastCheck, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out primaryServerLastCheck) == false)
-			{
-				return;
-			}
+            DateTime primaryServerLastCheck;
+            if (DateTime.TryParse(clientPrimaryServerLastCheck, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out primaryServerLastCheck) == false)
+            {
+                return;
+            }
 
 			var replicationTask = Resource.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 			if (replicationTask == null)
@@ -431,11 +431,11 @@ namespace Raven.Database.Server.Controllers
 				return;
 			}
 
-			if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
-			{
-				msg.Headers.TryAddWithoutValidation(Constants.RavenForcePrimaryServerCheck, "True");
-			}
-		}
+            if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
+            {
+                msg.Headers.TryAddWithoutValidation(Constants.RavenForcePrimaryServerCheck, "True");
+            }
+        }
 
 		protected Etag GetLastDocEtag()
 		{

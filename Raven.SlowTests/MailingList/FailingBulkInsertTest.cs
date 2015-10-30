@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -133,61 +133,61 @@ namespace Raven.SlowTests.MailingList
 
                 var queryResultWithIncludes = store.SystemDatabase.Queries.Query("Raven/DocumentsByEntityName", new IndexQuery(), CancellationToken.None);
 
-				Assert.Equal(12, queryResultWithIncludes.TotalResults);
-			}
-		}
+                Assert.Equal(12, queryResultWithIncludes.TotalResults);
+            }
+        }
 
-		private IEnumerable<IEnumerable<JsonDocument>> YieldDocumentBatch(EmbeddableDocumentStore store)
-		{
-			for (int i = 0; i < 3; i++)
-			{
-				Task.Factory.StartNew(() =>
-				{
-					store.SystemDatabase.Documents.Put("test/" + i, null, new RavenJObject(), new RavenJObject { { "Raven-Entity-Name", "Test" } }, null);
-				}).Wait();
+        private IEnumerable<IEnumerable<JsonDocument>> YieldDocumentBatch(EmbeddableDocumentStore store)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                Task.Factory.StartNew(() =>
+                {
+                    store.SystemDatabase.Documents.Put("test/" + i, null, new RavenJObject(), new RavenJObject { { "Raven-Entity-Name", "Test" } }, null);
+                }).Wait();
 
-				yield return YieldDocuments(i);
+                yield return YieldDocuments(i);
 
-				Task.Factory.StartNew(() =>
-				{
-					store.SystemDatabase.Documents.Put("test/" + i, null, new RavenJObject(), new RavenJObject { { "Raven-Entity-Name", "Test" } }, null);
-				}).Wait();
+                Task.Factory.StartNew(() =>
+                {
+                    store.SystemDatabase.Documents.Put("test/" + i, null, new RavenJObject(), new RavenJObject { { "Raven-Entity-Name", "Test" } }, null);
+                }).Wait();
 
-				// note this is called inside bulk insert batch - make sure that this will be run in a separate thread to avoid batch nesting 
-				// what would reuse an esent session and return invalid information about index staleness
-				Task.Factory.StartNew(() => WaitForIndexing(store), TaskCreationOptions.LongRunning).Wait(); 
-			}
-		}
+                // note this is called inside bulk insert batch - make sure that this will be run in a separate thread to avoid batch nesting 
+                // what would reuse an esent session and return invalid information about index staleness
+                Task.Factory.StartNew(() => WaitForIndexing(store), TaskCreationOptions.LongRunning).Wait(); 
+            }
+        }
 
-		private IEnumerable<JsonDocument> YieldDocuments(int b)
-		{
-			for (int i = 0; i < 3; i++)
-			{
-				yield return new JsonDocument
-				{
-					DataAsJson = new RavenJObject { { "Name", "Test" } },
-					Key = "sample/" + b + "/" + i,
-					Metadata = { { "Raven-Entity-Name", "SampleDatas" } },
-				};
-			}
-		}
+        private IEnumerable<JsonDocument> YieldDocuments(int b)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                yield return new JsonDocument
+                {
+                    DataAsJson = new RavenJObject { { "Name", "Test" } },
+                    Key = "sample/" + b + "/" + i,
+                    Metadata = { { "Raven-Entity-Name", "SampleDatas" } },
+                };
+            }
+        }
 
-		public class SampleData
-		{
-			public string Name { get; set; }
-		}
+        public class SampleData
+        {
+            public string Name { get; set; }
+        }
 
-		public class SampleData_Index : AbstractIndexCreationTask<SampleData>
-		{
-			public SampleData_Index()
-			{
-				Map = docs => from doc in docs
-							  select new
-								  {
-									  doc.Name
-								  };
-			}
-		}
-	}
+        public class SampleData_Index : AbstractIndexCreationTask<SampleData>
+        {
+            public SampleData_Index()
+            {
+                Map = docs => from doc in docs
+                              select new
+                                  {
+                                      doc.Name
+                                  };
+            }
+        }
+    }
 }
 

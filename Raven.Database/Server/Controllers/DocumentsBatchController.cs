@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -100,9 +100,9 @@ namespace Raven.Database.Server.Controllers
             if (indexDefinition.IsMapReduce)
                 throw new InvalidOperationException("Cannot execute DeleteByIndex operation on Map-Reduce indexes.");
 
-			// we don't use using because execution is async
-			var cts = new CancellationTokenSource();
-			var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            // we don't use using because execution is async
+            var cts = new CancellationTokenSource();
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
             return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, timeout);
@@ -194,13 +194,13 @@ namespace Raven.Database.Server.Controllers
             if (string.IsNullOrEmpty(index))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-	        var option = new BulkOperationOptions
-	        {
-		        AllowStale = GetAllowStale(),
-		        MaxOpsPerSec = GetMaxOpsPerSec(),
-		        StaleTimeout = GetStaleTimeout(),
-		        RetrieveDetails = GetRetrieveDetails()
-	        };
+            var option = new BulkOperationOptions
+            {
+                AllowStale = GetAllowStale(),
+                MaxOpsPerSec = GetMaxOpsPerSec(),
+                StaleTimeout = GetStaleTimeout(),
+                RetrieveDetails = GetRetrieveDetails()
+            };
 
             var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);
 
@@ -212,8 +212,8 @@ namespace Raven.Database.Server.Controllers
                 status.State = batchOperation(index, indexQuery, option);
             }).ContinueWith(t =>
             {
-				if (timeout != null)
-					timeout.Dispose();
+                if (timeout != null)
+                    timeout.Dispose();
 
                 if (t.IsFaulted == false)
                 {

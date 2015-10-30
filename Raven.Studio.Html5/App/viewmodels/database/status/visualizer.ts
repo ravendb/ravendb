@@ -114,7 +114,7 @@ class visualizer extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         var that = this;
         this.createKeyboardShortcut("esc", () => that.tooltipClose(), "body");
 

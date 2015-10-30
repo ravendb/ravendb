@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem;
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -7,11 +7,11 @@ namespace Raven.Client.FileSystem.Impl
 {
     internal class RenameFileOperation : IFilesOperation
     {
-	    private readonly InMemoryFilesSessionOperations sessionOperations;
+        private readonly InMemoryFilesSessionOperations sessionOperations;
 
         public string FileName { get; private set; }
-	    private string Destination { get; set; }
-	    private Etag Etag { get; set; }
+        private string Destination { get; set; }
+        private Etag Etag { get; set; }
 
         public RenameFileOperation(InMemoryFilesSessionOperations sessionOperations, string sourcePath, string destinationPath, Etag etag)
         {
@@ -24,7 +24,7 @@ namespace Raven.Client.FileSystem.Impl
             this.sessionOperations = sessionOperations;
             this.FileName = sourcePath;
             this.Destination = destinationPath;
-	        this.Etag = etag;
+            this.Etag = etag;
         }
         public async Task<FileHeader> Execute(IAsyncFilesSession session)
         {

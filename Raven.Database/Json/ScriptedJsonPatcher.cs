@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ScriptedJsonPatcher.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -225,9 +225,9 @@ namespace Raven.Database.Json
 			var jintEngine = new Engine(cfg =>
 			{
 #if DEBUG
-				cfg.AllowDebuggerStatement();
+                cfg.AllowDebuggerStatement();
 #else
-				cfg.AllowDebuggerStatement(false);
+                cfg.AllowDebuggerStatement(false);
 #endif
 				cfg.LimitRecursion(1024);
 				cfg.NullPropagation();

@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Indexing;
@@ -13,35 +13,35 @@ using System.Linq;
 
 namespace Raven.Tests.Bundles.Replication
 {
-	public class StoreIndex : ReplicationBase
-	{
-		[Fact]
-		public void When_storing_index_replicate_to_all_stores()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+    public class StoreIndex : ReplicationBase
+    {
+        [Fact]
+        public void When_storing_index_replicate_to_all_stores()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
             SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			var index = new IndexSample();
-			index.Execute(store1.DatabaseCommands, new DocumentConvention());
+            var index = new IndexSample();
+            index.Execute(store1.DatabaseCommands, new DocumentConvention());
 
 			Assert.True(WaitForIndexToReplicate(store2.DatabaseCommands, index.IndexName));
 			Assert.True(WaitForIndexToReplicate(store3.DatabaseCommands, index.IndexName));
 		}
 
-		[Fact]
-		public async Task When_storing_index_replicate_to_all_stores_async()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+        [Fact]
+        public async Task When_storing_index_replicate_to_all_stores_async()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
             SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			var index = new IndexSample();
-		    await index.ExecuteAsync(store1.AsyncDatabaseCommands, new DocumentConvention());
+            var index = new IndexSample();
+            await index.ExecuteAsync(store1.AsyncDatabaseCommands, new DocumentConvention());
 
 			Assert.True(WaitForIndexToReplicate(store2.DatabaseCommands, index.IndexName));
 			Assert.True(WaitForIndexToReplicate(store3.DatabaseCommands, index.IndexName));
@@ -137,7 +137,7 @@ namespace Raven.Tests.Bundles.Replication
 	where doc.type == ""page""
 	select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
-			};
-		}
-	}
+            };
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TriggerExtensions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,15 +11,15 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Plugins
 {
-	public static class TriggerExtensions
-	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+    public static class TriggerExtensions
+    {
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		public static bool CanReadFile(this OrderedPartCollection<AbstractFileReadTrigger> triggers, string name, RavenJObject metadata, ReadOperation operation)
-		{
-			foreach (var trigger in triggers)
-			{
-				var result = trigger.Value.AllowRead(name, metadata, operation);
+        public static bool CanReadFile(this OrderedPartCollection<AbstractFileReadTrigger> triggers, string name, RavenJObject metadata, ReadOperation operation)
+        {
+            foreach (var trigger in triggers)
+            {
+                var result = trigger.Value.AllowRead(name, metadata, operation);
 
 				switch (result.Veto)
 				{
@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Plugins
 				}
 			}
 
-			return true;
-		}
-	}
+            return true;
+        }
+    }
 }

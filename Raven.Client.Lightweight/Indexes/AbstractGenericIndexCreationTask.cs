@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,21 +8,21 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Client.Indexes
 {
-	/// <summary>
-	/// Abstract class used to provide infrastructure service for actual creation tasks
-	/// </summary>
-	public abstract class AbstractGenericIndexCreationTask<TReduceResult> : AbstractIndexCreationTask
-	{
-		/// <summary>
-		/// Create a new instance
-		/// </summary>
-		protected AbstractGenericIndexCreationTask()
-		{
-			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
-			StoresStrings = new Dictionary<string, FieldStorage>();
-			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
-			IndexesStrings = new Dictionary<string, FieldIndexing>();
-			IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+    /// <summary>
+    /// Abstract class used to provide infrastructure service for actual creation tasks
+    /// </summary>
+    public abstract class AbstractGenericIndexCreationTask<TReduceResult> : AbstractIndexCreationTask
+    {
+        /// <summary>
+        /// Create a new instance
+        /// </summary>
+        protected AbstractGenericIndexCreationTask()
+        {
+            Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
+            StoresStrings = new Dictionary<string, FieldStorage>();
+            Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
+            IndexesStrings = new Dictionary<string, FieldIndexing>();
+            IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
             IndexSortOptionsStrings = new Dictionary<string, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();

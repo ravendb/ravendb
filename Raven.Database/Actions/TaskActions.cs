@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TaskActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -70,7 +70,7 @@ namespace Raven.Database.Actions
                            Id = x.Key,
                            Payload = x.Value.Description.Payload,
                            StartTime = x.Value.Description.StartTime,
-						   TaskStatus = taskStatus,
+                           TaskStatus = taskStatus,
                            TaskType = x.Value.Description.TaskType,
                            Exception = ex
                        };
@@ -137,7 +137,7 @@ namespace Raven.Database.Actions
 #if DEBUG
                         pendingTaskAndState.Task.Wait(3000);
 #else
-						pendingTaskAndState.Task.Wait();
+                        pendingTaskAndState.Task.Wait();
 #endif
                     }
                     catch (Exception)
@@ -184,9 +184,9 @@ namespace Raven.Database.Actions
 
             IndexDeleteOperation,
 
-			ImportDatabase,
+            ImportDatabase,
 
-			RestoreDatabase,
+            RestoreDatabase,
 
             RestoreFilesystem,
 

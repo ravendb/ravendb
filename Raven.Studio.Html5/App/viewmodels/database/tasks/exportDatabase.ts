@@ -51,7 +51,7 @@ class exportDatabase extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         $("#transformScriptHelp").popover({
             html: true,
             trigger: 'hover',

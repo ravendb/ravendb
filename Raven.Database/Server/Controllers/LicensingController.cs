@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Database.Commercial;
@@ -19,8 +19,8 @@ namespace Raven.Database.Server.Controllers
 						"The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database",
 						HttpStatusCode.BadRequest);
 
-			// This method is NOT secured, and anyone can access it.
-			return GetMessageWithObject(ValidateLicense.CurrentLicense);
-		}
-	}
+            // This method is NOT secured, and anyone can access it.
+            return GetMessageWithObject(ValidateLicense.CurrentLicense);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TrafficRec.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -198,119 +198,119 @@ Requests skipped: {1}
 Nested and non nested request: {2}
 Total Time: {3}", requestsCounter, skippedRequestsCounter, totalCountOfLogicRequests, totalSp.ElapsedMilliseconds);
 
-		}
+        }
 
-		private static bool ValidateUrlString(string trafficUrlPart)
-		{
-			return (trafficUrlPart.StartsWith("/") || trafficUrlPart.StartsWith("\\")) && ValidateUrlFirstPathSegment(trafficUrlPart.Substring(1, trafficUrlPart.Length - 1))
-				|| ValidateUrlFirstPathSegment(trafficUrlPart);
-		}
+        private static bool ValidateUrlString(string trafficUrlPart)
+        {
+            return (trafficUrlPart.StartsWith("/") || trafficUrlPart.StartsWith("\\")) && ValidateUrlFirstPathSegment(trafficUrlPart.Substring(1, trafficUrlPart.Length - 1))
+                || ValidateUrlFirstPathSegment(trafficUrlPart);
+        }
 
-		private string ExtractUrlAndQuery(string uriString, out string trafficQueryPart)
-		{
-			string trafficUrlPart;
-			var queryStartIndex = uriString.IndexOf("?");
+        private string ExtractUrlAndQuery(string uriString, out string trafficQueryPart)
+        {
+            string trafficUrlPart;
+            var queryStartIndex = uriString.IndexOf("?");
 
-			if (queryStartIndex <= 0)
-			{
-				trafficUrlPart = uriString;
-				trafficQueryPart = uriString;
-			}
-			else
-			{
-				trafficUrlPart = uriString.Substring(0, queryStartIndex);
-				trafficQueryPart = uriString.Substring(queryStartIndex);
-			}
-			return trafficUrlPart;
-		}
+            if (queryStartIndex <= 0)
+            {
+                trafficUrlPart = uriString;
+                trafficQueryPart = uriString;
+            }
+            else
+            {
+                trafficUrlPart = uriString.Substring(0, queryStartIndex);
+                trafficQueryPart = uriString.Substring(queryStartIndex);
+            }
+            return trafficUrlPart;
+        }
 
-		private static bool ValidateUrlFirstPathSegment(string trafficUrlPart)
-		{
-			return trafficUrlPart.StartsWith("bulk_docs") ||
-				   trafficUrlPart.StartsWith("static") ||
-				   trafficUrlPart.StartsWith("bulkInsert") ||
-				   trafficUrlPart.StartsWith("changes") ||
-				   trafficUrlPart.StartsWith("traffic-watch");
-		}
-
-
-		/// <summary>
-		/// Connects to raven traffic event source and registers all the requests to the file defined in the config
-		/// </summary>
-		/// <param name="config">configuration conatining the connection, the file to write to, etc.</param>
-		/// <param name="store">the store to work with</param>
-		private void RecordRequests(TrafficToolConfiguration config, IDocumentStore store)
-		{
-			var requestsQueue = new ConcurrentQueue<RavenJObject>();
-			var messagesCount = 0;
-			var mre = new ManualResetEvent(false);
-			var trafficWatchObserver = new TrafficWatchObserver(store,config.ResourceName, mre, config.Timeout, x =>
-			{
-				if (config.AmountConstraint.HasValue && Interlocked.Increment(ref messagesCount) > config.AmountConstraint.Value)
-					mre.Set();
-				else
-					requestsQueue.Enqueue(x);
-			});
-
-			trafficWatchObserver.EstablishConnection();
-
-			var writingTask = Task.Run(() =>
-			{
-				WriteRequestsFromQueueToFile(requestsQueue, config.RecordFilePath, config.IsCompressed,config.PrintOutput, mre);
-			});
+        private static bool ValidateUrlFirstPathSegment(string trafficUrlPart)
+        {
+            return trafficUrlPart.StartsWith("bulk_docs") ||
+                   trafficUrlPart.StartsWith("static") ||
+                   trafficUrlPart.StartsWith("bulkInsert") ||
+                   trafficUrlPart.StartsWith("changes") ||
+                   trafficUrlPart.StartsWith("traffic-watch");
+        }
 
 
+        /// <summary>
+        /// Connects to raven traffic event source and registers all the requests to the file defined in the config
+        /// </summary>
+        /// <param name="config">configuration conatining the connection, the file to write to, etc.</param>
+        /// <param name="store">the store to work with</param>
+        private void RecordRequests(TrafficToolConfiguration config, IDocumentStore store)
+        {
+            var requestsQueue = new ConcurrentQueue<RavenJObject>();
+            var messagesCount = 0;
+            var mre = new ManualResetEvent(false);
+            var trafficWatchObserver = new TrafficWatchObserver(store,config.ResourceName, mre, config.Timeout, x =>
+            {
+                if (config.AmountConstraint.HasValue && Interlocked.Increment(ref messagesCount) > config.AmountConstraint.Value)
+                    mre.Set();
+                else
+                    requestsQueue.Enqueue(x);
+            });
 
-			if (config.DurationConstraint.HasValue)
-				mre.WaitOne(config.DurationConstraint.Value);
-			else
-				mre.WaitOne();
+            trafficWatchObserver.EstablishConnection();
 
-			mre.Set();
+            var writingTask = Task.Run(() =>
+            {
+                WriteRequestsFromQueueToFile(requestsQueue, config.RecordFilePath, config.IsCompressed,config.PrintOutput, mre);
+            });
 
-			writingTask.Wait();
-			trafficWatchObserver.OnCompleted();
-		}
 
-		private void WriteRequestsFromQueueToFile(ConcurrentQueue<RavenJObject> messages, string filePath, bool isCompressed, bool printOutput, ManualResetEvent mre)
-		{
-			RavenJObject notification;
-			var requestsCounter = 0;
-			using (var stream = File.Create(filePath))
-			{
-				Stream finalStream = stream;
-				if (isCompressed)
-					finalStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
 
-				using (var streamWriter = new StreamWriter(finalStream))
-				{
-					var jsonWriter = new JsonTextWriter(streamWriter)
-					{
-						Formatting = Formatting.Indented
-					};
-					jsonWriter.WriteStartArray();
-					
-					while (messages.TryDequeue(out notification) || mre.WaitOne(0) == false)
-					{
-						if (notification == null)
-						{
-							Thread.Sleep(100);
-							continue;
-						}
-						requestsCounter++;
-						if (printOutput)
-						{
-							Console.WriteLine("Request #{0} Stored", requestsCounter);
-						}
-						notification.WriteTo(jsonWriter);
-					}
-					jsonWriter.WriteEndArray();
-					streamWriter.Flush();
-				}
+            if (config.DurationConstraint.HasValue)
+                mre.WaitOne(config.DurationConstraint.Value);
+            else
+                mre.WaitOne();
 
-				if (isCompressed)
-					finalStream.Dispose();
-			}
-		}
-	}
+            mre.Set();
+
+            writingTask.Wait();
+            trafficWatchObserver.OnCompleted();
+        }
+
+        private void WriteRequestsFromQueueToFile(ConcurrentQueue<RavenJObject> messages, string filePath, bool isCompressed, bool printOutput, ManualResetEvent mre)
+        {
+            RavenJObject notification;
+            var requestsCounter = 0;
+            using (var stream = File.Create(filePath))
+            {
+                Stream finalStream = stream;
+                if (isCompressed)
+                    finalStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
+
+                using (var streamWriter = new StreamWriter(finalStream))
+                {
+                    var jsonWriter = new JsonTextWriter(streamWriter)
+                    {
+                        Formatting = Formatting.Indented
+                    };
+                    jsonWriter.WriteStartArray();
+                    
+                    while (messages.TryDequeue(out notification) || mre.WaitOne(0) == false)
+                    {
+                        if (notification == null)
+                        {
+                            Thread.Sleep(100);
+                            continue;
+                        }
+                        requestsCounter++;
+                        if (printOutput)
+                        {
+                            Console.WriteLine("Request #{0} Stored", requestsCounter);
+                        }
+                        notification.WriteTo(jsonWriter);
+                    }
+                    jsonWriter.WriteEndArray();
+                    streamWriter.Flush();
+                }
+
+                if (isCompressed)
+                    finalStream.Dispose();
+            }
+        }
+    }
 }

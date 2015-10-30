@@ -200,8 +200,8 @@ namespace Raven.Client.Changes
                             .ObserveException()
                             .ContinueWith(task =>
                             {
-	                            lastSendTask = null;
-	                            request.Dispose();
+                                lastSendTask = null;
+                                request.Dispose();
                             });
                 }
                 catch (Exception e)

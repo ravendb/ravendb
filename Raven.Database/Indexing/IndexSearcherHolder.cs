@@ -38,7 +38,7 @@ namespace Raven.Database.Indexing
         {
             var old = current;
             current = new IndexSearcherHoldingState(searcher, publicName, context.DatabaseName);
-	        
+            
             if (old == null)
                 return null;
 
@@ -113,10 +113,10 @@ namespace Raven.Database.Indexing
             private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
-	        private string databaseName;
-	        private string indexName;
+            private string databaseName;
+            private string indexName;
 
-	        public ReaderWriterLockSlim Lock
+            public ReaderWriterLockSlim Lock
             {
                 get { return rwls; }
             }
@@ -126,54 +126,54 @@ namespace Raven.Database.Indexing
                 public Term Term;
                 public double? Val;
 
-	            public override string ToString()
-	            {
-		            return string.Format("Term: {0}, Val: {1}", Term, Val);
-	            }
+                public override string ToString()
+                {
+                    return string.Format("Term: {0}, Val: {1}", Term, Val);
+                }
             }
 
-		
+        
             public IndexSearcherHoldingState(IndexSearcher indexSearcher, string publicName, string databaseName)
             {
                 IndexSearcher = indexSearcher;
-	            this.databaseName = databaseName;
-	            indexName = publicName;
-				MemoryStatistics.RegisterLowMemoryHandler(this);
+                this.databaseName = databaseName;
+                indexName = publicName;
+                MemoryStatistics.RegisterLowMemoryHandler(this);
             }
 
-	        public void HandleLowMemory()
-	        {
-				rwls.EnterWriteLock();
-		        try
-		        {
+            public void HandleLowMemory()
+            {
+                rwls.EnterWriteLock();
+                try
+                {
                     docsCache.Clear();
-		        }
-		        finally
-		        {
-					rwls.ExitWriteLock();
-		        }
-	        }
+                }
+                finally
+                {
+                    rwls.ExitWriteLock();
+                }
+            }
 
-	        public void SoftMemoryRelease()
-	        {
-		        
-	        }
+            public void SoftMemoryRelease()
+            {
+                
+            }
 
-	        public LowMemoryHandlerStatistics GetStats()
-	        {
-		        return new LowMemoryHandlerStatistics
-		        {
-					Name = "IndexSearcherHoldingState" ,
-					Metadata = new 
-					{
-						IndexName=indexName
-					},
-					DatabaseName = databaseName,
-					EstimatedUsedMemory = docsCache.Count*(sizeof(int) +sizeof(uint))*2
-		        };
-	        }
+            public LowMemoryHandlerStatistics GetStats()
+            {
+                return new LowMemoryHandlerStatistics
+                {
+                    Name = "IndexSearcherHoldingState" ,
+                    Metadata = new 
+                    {
+                        IndexName=indexName
+                    },
+                    DatabaseName = databaseName,
+                    EstimatedUsedMemory = docsCache.Count*(sizeof(int) +sizeof(uint))*2
+                };
+            }
 
-	        public void MarkForDisposal()
+            public void MarkForDisposal()
             {
                 ShouldDispose = true;
             }
@@ -196,7 +196,7 @@ namespace Raven.Database.Indexing
 
             private void DisposeRudely()
             {
-				if (IndexSearcher != null)
+                if (IndexSearcher != null)
                 {
                     using (IndexSearcher)
                     using (IndexSearcher.IndexReader) { }
@@ -228,10 +228,10 @@ namespace Raven.Database.Indexing
                 return docsCache.GetOrAdd(key, _ =>
                 {
                     var doc = IndexSearcher.Doc(docId);
-	                return new StringCollectionValue((from field in fields
-		                from fld in doc.GetFields(field)
-		                where fld.StringValue != null
-		                select fld.StringValue).ToList());
+                    return new StringCollectionValue((from field in fields
+                        from fld in doc.GetFields(field)
+                        where fld.StringValue != null
+                        select fld.StringValue).ToList());
                 });
                 
             }
@@ -243,7 +243,7 @@ namespace Raven.Database.Indexing
             private uint _crc;
 #if DEBUG
 // ReSharper disable once NotAccessedField.Local
-	        private List<string> _values;
+            private List<string> _values;
 #endif
 
             public override bool Equals(object obj)
@@ -264,7 +264,7 @@ namespace Raven.Database.Indexing
             public StringCollectionValue(List<string> values)
             {
 #if DEBUG
-	            _values = values;
+                _values = values;
 #endif
                 if (values.Count == 0)
                     throw new InvalidOperationException("Cannot apply distinct facet on empty fields, did you forget to store them in the index? ");

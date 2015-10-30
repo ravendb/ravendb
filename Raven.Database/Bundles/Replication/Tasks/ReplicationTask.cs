@@ -37,18 +37,18 @@ using System.Threading.Tasks;
 
 namespace Raven.Bundles.Replication.Tasks
 {
-	using Database.Indexing;
+    using Database.Indexing;
 
-	[ExportMetadata("Bundle", "Replication")]
-	[InheritedExport(typeof(IStartupTask))]
-	public class ReplicationTask : IStartupTask, IDisposable
-	{
-		public bool IsRunning { get; private set; }
+    [ExportMetadata("Bundle", "Replication")]
+    [InheritedExport(typeof(IStartupTask))]
+    public class ReplicationTask : IStartupTask, IDisposable
+    {
+        public bool IsRunning { get; private set; }
 
 		private volatile bool shouldPause;
 
-		public const int SystemDocsLimitForRemoteEtagUpdate = 15;
-		public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
+        public const int SystemDocsLimitForRemoteEtagUpdate = 15;
+        public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
 
 		public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
 

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -7,50 +7,50 @@ using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class SearchOperator : RavenTest
-	{
-		public class Something
-		{
-			public int Id { get; set; }
-			public string MyProp { get; set; }
-		}
+    public class SearchOperator : RavenTest
+    {
+        public class Something
+        {
+            public int Id { get; set; }
+            public string MyProp { get; set; }
+        }
 
-		public class FTSIndex : AbstractIndexCreationTask<Something>
-		{
-			public FTSIndex()
-			{
-				Map = docs => from doc in docs
-				              select new {doc.MyProp};
+        public class FTSIndex : AbstractIndexCreationTask<Something>
+        {
+            public FTSIndex()
+            {
+                Map = docs => from doc in docs
+                              select new {doc.MyProp};
 
-				Indexes.Add(x => x.MyProp, FieldIndexing.Analyzed);
-			}
-		}
+                Indexes.Add(x => x.MyProp, FieldIndexing.Analyzed);
+            }
+        }
 
-		[Fact]
-		public void DynamicLuceneQuery()
-		{
-			using (var store = NewDocumentStore())
-			{
-				new FTSIndex().Execute(store);
+        [Fact]
+        public void DynamicLuceneQuery()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new FTSIndex().Execute(store);
 
-				using (var session = store.OpenSession())
-				{
-					// insert two test documents
-					session.Store(new Something {Id = 23, MyProp = "the first string contains misspelled word sofware"});
-					session.Store(new Something {Id = 34, MyProp = "the second string contains the word software"});
-					session.SaveChanges();
+                using (var session = store.OpenSession())
+                {
+                    // insert two test documents
+                    session.Store(new Something {Id = 23, MyProp = "the first string contains misspelled word sofware"});
+                    session.Store(new Something {Id = 34, MyProp = "the second string contains the word software"});
+                    session.SaveChanges();
 
-					// search for the keyword software
+                    // search for the keyword software
                     var results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software")
-						.WaitForNonStaleResultsAsOfLastWrite()
-						.ToList();
-					Assert.Equal(1, results.Count);
+                        .WaitForNonStaleResultsAsOfLastWrite()
+                        .ToList();
+                    Assert.Equal(1, results.Count);
 
                     results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software~")
-						.WaitForNonStaleResultsAsOfLastWrite().ToList();
-					Assert.Equal(2, results.Count);
-				}
-			}
-		}
-	}
+                        .WaitForNonStaleResultsAsOfLastWrite().ToList();
+                    Assert.Equal(2, results.Count);
+                }
+            }
+        }
+    }
 }

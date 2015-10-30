@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AssemblyExtractor.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -17,7 +17,7 @@ namespace Raven.Database.Server
 {
     public static class AssemblyExtractor
     {
-		private static object locker = new object();
+        private static object locker = new object();
 
         private const string AssemblySuffix = ".dll";
 
@@ -35,27 +35,27 @@ namespace Raven.Database.Server
 
         public static void ExtractEmbeddedAssemblies(InMemoryRavenConfiguration configuration)
         {
-			lock (locker)
-			{
-				var assemblies = new HashSet<string> { 
-					typeof(Field).Assembly.GetName().Name 
-				};
+            lock (locker)
+            {
+                var assemblies = new HashSet<string> { 
+                    typeof(Field).Assembly.GetName().Name 
+                };
 
-				var assemblyLocation = configuration.AssembliesDirectory;
+                var assemblyLocation = configuration.AssembliesDirectory;
 
-				var assembly = Assembly.GetExecutingAssembly();
-				var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
+                var assembly = Assembly.GetExecutingAssembly();
+                var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
 
-				Extract(assembly, assembliesToExtract, assemblyLocation);
+                Extract(assembly, assembliesToExtract, assemblyLocation);
 
-				foreach (var assemblyToExtract in assembliesToExtract)
-					assemblies.Remove(assemblyToExtract.Value.Name);
+                foreach (var assemblyToExtract in assembliesToExtract)
+                    assemblies.Remove(assemblyToExtract.Value.Name);
 
 #if !DEBUG && !PROFILING
-				if (assemblies.Count != 0)
-					throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
+                if (assemblies.Count != 0)
+                    throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
 #endif
-			}
+            }
         }
 
         private static Dictionary<string, AssemblyToExtract> FindAssembliesToExtract(Assembly currentAssembly, HashSet<string> assembliesToFind)
@@ -89,38 +89,38 @@ namespace Raven.Database.Server
         {
             foreach (var assemblyToExtract in assembliesToExtract)
             {
-				if (!Directory.Exists(location))
-					Directory.CreateDirectory(location);
+                if (!Directory.Exists(location))
+                    Directory.CreateDirectory(location);
 
-				var assemblyPath = Path.Combine(location, assemblyToExtract.Value.Name + AssemblySuffix);
+                var assemblyPath = Path.Combine(location, assemblyToExtract.Value.Name + AssemblySuffix);
 
-	            if (File.Exists(assemblyPath))
-	            {
-		            var existingAssemblyVersion = FileVersionInfo.GetVersionInfo(assemblyPath);
-		            var assemblyInDomain = GetAssemblyByName(assemblyToExtract.Value.Name);
+                if (File.Exists(assemblyPath))
+                {
+                    var existingAssemblyVersion = FileVersionInfo.GetVersionInfo(assemblyPath);
+                    var assemblyInDomain = GetAssemblyByName(assemblyToExtract.Value.Name);
 
-					if(assemblyInDomain == null)
-						throw new InvalidOperationException("Requested assembly " + assemblyToExtract.Value.Name + " isn't present in current app domain.");
+                    if(assemblyInDomain == null)
+                        throw new InvalidOperationException("Requested assembly " + assemblyToExtract.Value.Name + " isn't present in current app domain.");
 
-		            var extractedAssembly =  assemblyInDomain.GetName().Version;
+                    var extractedAssembly =  assemblyInDomain.GetName().Version;
 
-		            if (existingAssemblyVersion.ProductMajorPart == extractedAssembly.Major &&
-		                existingAssemblyVersion.ProductMinorPart == extractedAssembly.Minor &&
-		                existingAssemblyVersion.ProductBuildPart == extractedAssembly.Build &&
-						existingAssemblyVersion.ProductPrivatePart == extractedAssembly.Revision)
-		            {
-			            continue; // .dll file exists and has proper version - no need to extract
-		            }
+                    if (existingAssemblyVersion.ProductMajorPart == extractedAssembly.Major &&
+                        existingAssemblyVersion.ProductMinorPart == extractedAssembly.Minor &&
+                        existingAssemblyVersion.ProductBuildPart == extractedAssembly.Build &&
+                        existingAssemblyVersion.ProductPrivatePart == extractedAssembly.Revision)
+                    {
+                        continue; // .dll file exists and has proper version - no need to extract
+                    }
 
-					try
-					{
-						File.Delete(assemblyPath);
-					}
-					catch (Exception)
-					{
-						continue; // probably busy for some reason, ignoring
-					}
-				}
+                    try
+                    {
+                        File.Delete(assemblyPath);
+                    }
+                    catch (Exception)
+                    {
+                        continue; // probably busy for some reason, ignoring
+                    }
+                }
 
                 using (var stream = assemblyToExtractFrom.GetManifestResourceStream(assemblyToExtract.Key))
                 {
@@ -142,11 +142,11 @@ namespace Raven.Database.Server
             }
         }
 
-		private static Assembly GetAssemblyByName(string name)
-		{
-			return AppDomain.CurrentDomain.GetAssemblies().
-				   SingleOrDefault(assembly => assembly.GetName().Name == name);
-		}
+        private static Assembly GetAssemblyByName(string name)
+        {
+            return AppDomain.CurrentDomain.GetAssemblies().
+                   SingleOrDefault(assembly => assembly.GetName().Name == name);
+        }
 
         private class AssemblyToExtract
         {

@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -38,12 +38,12 @@ namespace Voron.Impl.Scratch
         private int _currentScratchNumber = -1;
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
-		public ScratchBufferPool(StorageEnvironment env)
-		{
-			_options = env.Options;
-			_sizeLimit = env.Options.MaxScratchBufferSize;
-			_current = NextFile();
-		}
+        public ScratchBufferPool(StorageEnvironment env)
+        {
+            _options = env.Options;
+            _sizeLimit = env.Options.MaxScratchBufferSize;
+            _current = NextFile();
+        }
 
 		public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
 		{

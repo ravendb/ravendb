@@ -1,21 +1,21 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Shard
 {
-	/// <summary>
-	/// Apply an operation to all the shard session in sequence
-	/// </summary>
-	public class SequentialShardAccessStrategy : IShardAccessStrategy
-	{
-		private readonly Task runFirst;
+    /// <summary>
+    /// Apply an operation to all the shard session in sequence
+    /// </summary>
+    public class SequentialShardAccessStrategy : IShardAccessStrategy
+    {
+        private readonly Task runFirst;
 
-		public SequentialShardAccessStrategy(IDictionary<string, IAsyncFilesCommands> shards)
-		{
-			this.runFirst = ValidateShards(shards);
-		}
+        public SequentialShardAccessStrategy(IDictionary<string, IAsyncFilesCommands> shards)
+        {
+            this.runFirst = ValidateShards(shards);
+        }
 
 		private async Task ValidateShards(IEnumerable<KeyValuePair<string, IAsyncFilesCommands>> shards)
 		{
@@ -33,16 +33,16 @@ namespace Raven.Client.FileSystem.Shard
 				}
 			}
 
-			var shardsPointingToSameDb = shardsKeyIdList
-				.GroupBy(x => x.Item2)
-				.FirstOrDefault(x => x.Count() > 1);
+            var shardsPointingToSameDb = shardsKeyIdList
+                .GroupBy(x => x.Item2)
+                .FirstOrDefault(x => x.Count() > 1);
 
-			if (shardsPointingToSameDb != null)
-				throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
-					string.Join(", ", shardsPointingToSameDb.Select(x => x.Item1))));
-		}
+            if (shardsPointingToSameDb != null)
+                throw new NotSupportedException(string.Format("Multiple keys in shard dictionary for {0} are not supported.",
+                    string.Join(", ", shardsPointingToSameDb.Select(x => x.Item1))));
+        }
 
-		public event ShardingErrorHandle<IAsyncFilesCommands> OnAsyncError;
+        public event ShardingErrorHandle<IAsyncFilesCommands> OnAsyncError;
 
         public async Task<T[]> ApplyAsync<T>(IList<IAsyncFilesCommands> commands, ShardRequestData request, Func<IAsyncFilesCommands, int, Task<T>> operation)
         {
@@ -69,11 +69,11 @@ namespace Raven.Client.FileSystem.Shard
 				}
 			}
 
-			// if ALL nodes failed, we still throw
-			if (errors.Count == commands.Count)
-				throw new AggregateException(errors);
+            // if ALL nodes failed, we still throw
+            if (errors.Count == commands.Count)
+                throw new AggregateException(errors);
 
-			return list.ToArray();
-		}
-	}
+            return list.ToArray();
+        }
+    }
 }

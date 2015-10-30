@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -33,9 +33,9 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var status = Database.Tasks.GetTaskState(id);
-			return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
-		}
+            var status = Database.Tasks.GetTaskState(id);
+            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+        }
 
         [HttpGet]
         [RavenRoute("operation/kill")]
@@ -113,5 +113,5 @@ namespace Raven.Database.Server.Controllers
             Database.Documents.Put("Raven/Alerts", null, RavenJObject.FromObject(alerts), jsonDocument.Metadata, null);
             return GetEmptyMessage();
         }
-	}
+    }
 };

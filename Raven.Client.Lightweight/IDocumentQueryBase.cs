@@ -59,73 +59,73 @@ namespace Raven.Client
 		/// </summary>
         void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecuted);
 
-		/// <summary>
-		///     Add an AND to the query
-		/// </summary>
-		TSelf AndAlso();
+        /// <summary>
+        ///     Add an AND to the query
+        /// </summary>
+        TSelf AndAlso();
 
-		/// <summary>
-		///     Allows you to modify the index query before it is sent to the server
-		/// </summary>
-		TSelf BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution);
+        /// <summary>
+        ///     Allows you to modify the index query before it is sent to the server
+        /// </summary>
+        TSelf BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution);
 
-		/// <summary>
-		///     Specifies a boost weight to the last where clause.
-		///     The higher the boost factor, the more relevant the term will be.
-		/// </summary>
-		/// <param name="boost">
-		///     boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher
-		///     weight
-		/// </param>
-		/// <returns></returns>
-		/// <remarks>
-		///     http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
-		/// </remarks>
-		TSelf Boost(decimal boost);
+        /// <summary>
+        ///     Specifies a boost weight to the last where clause.
+        ///     The higher the boost factor, the more relevant the term will be.
+        /// </summary>
+        /// <param name="boost">
+        ///     boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher
+        ///     weight
+        /// </param>
+        /// <returns></returns>
+        /// <remarks>
+        ///     http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
+        /// </remarks>
+        TSelf Boost(decimal boost);
 
-		/// <summary>
-		///     Simplified method for closing a clause within the query
-		/// </summary>
-		/// <returns></returns>
-		TSelf CloseSubclause();
+        /// <summary>
+        ///     Simplified method for closing a clause within the query
+        /// </summary>
+        /// <returns></returns>
+        TSelf CloseSubclause();
 
-		/// <summary>
-		///     Performs a query matching ALL of the provided values against the given field (AND)
-		/// </summary>
-		TSelf ContainsAll(string fieldName, IEnumerable<object> values);
+        /// <summary>
+        ///     Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        TSelf ContainsAll(string fieldName, IEnumerable<object> values);
 
-		/// <summary>
-		///     Performs a query matching ALL of the provided values against the given field (AND)
-		/// </summary>
-		TSelf ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
+        /// <summary>
+        ///     Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        TSelf ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
-		/// <summary>
-		///     Performs a query matching ANY of the provided values against the given field (OR)
-		/// </summary>
-		TSelf ContainsAny(string fieldName, IEnumerable<object> values);
+        /// <summary>
+        ///     Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        TSelf ContainsAny(string fieldName, IEnumerable<object> values);
 
-		/// <summary>
-		///     Performs a query matching ANY of the provided values against the given field (OR)
-		/// </summary>
-		TSelf ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
+        /// <summary>
+        ///     Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        TSelf ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
-		/// <summary>
-		///     This function exists solely to forbid in memory where clause on IDocumentQuery, because
-		///     that is nearly always a mistake.
-		/// </summary>
-		[Obsolete(@"
+        /// <summary>
+        ///     This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        ///     that is nearly always a mistake.
+        /// </summary>
+        [Obsolete(@"
 You cannot issue an in memory filter - such as Count(x=>x.Name == ""Ayende"") - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.DocumentQuery<T>() is intended for lower level API access.
 If you really want to do in memory filtering on the data returned from the query, you can use: session.DocumentQuery<T>().ToList().Count(x=>x.Name == ""Ayende"")
 ", true)]
-		int Count(Func<T, bool> predicate);
+        int Count(Func<T, bool> predicate);
 
-		/// <summary>
-		///     This function exists solely to forbid in memory where clause on IDocumentQuery, because
-		///     that is nearly always a mistake.
-		/// </summary>
-		[Obsolete(@"
+        /// <summary>
+        ///     This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        ///     that is nearly always a mistake.
+        /// </summary>
+        [Obsolete(@"
 You cannot issue an in memory filter - such as Count() - on IDocumentQuery. 
 This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.
 Consider using session.Query<T>() instead of session.DocumentQuery<T>. The session.Query<T>() method fully supports Linq queries, while session.DocumentQuery<T>() is intended for lower level API access.

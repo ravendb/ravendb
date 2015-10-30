@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
@@ -12,7 +12,7 @@ namespace Raven.Database.FileSystem.Controllers
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]
         public HttpResponseMessage Subdirectories(string directory = null)
-		{
+        {
             int nesting = 1;
             if (directory != null)
             {
@@ -27,18 +27,18 @@ namespace Raven.Database.FileSystem.Controllers
             }
 
             IEnumerable<string> result = Search.GetTermsFor("__directoryName", directory)
-			                                .Where(subDir =>
-			                                {
-				                                if (subDir.StartsWith(directory) == false)
-					                                return false;
+                                            .Where(subDir =>
+                                            {
+                                                if (subDir.StartsWith(directory) == false)
+                                                    return false;
 
-				                                return nesting == subDir.Count(ch => ch == '/');
-			                                })
-			                                .Skip(Paging.Start)
-			                                .Take(Paging.PageSize);
+                                                return nesting == subDir.Count(ch => ch == '/');
+                                            })
+                                            .Skip(Paging.Start)
+                                            .Take(Paging.PageSize);
 
             return GetMessageWithObject(result)
                        .WithNoCache();
-		}
-	}
+        }
+    }
 }

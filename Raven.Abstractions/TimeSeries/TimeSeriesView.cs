@@ -16,11 +16,11 @@ namespace Raven.Abstractions.TimeSeries
 		public long OverallTotal { get; set; }
 		public List<ServerValue> Servers { get; set; }
 
-		public class ServerValue
-		{
-			public string Name { get; set; }
-			public long Positive { get; set; }
-			public long Negative { get; set; }
-		}
-	}
+        public class ServerValue
+        {
+            public string Name { get; set; }
+            public long Positive { get; set; }
+            public long Negative { get; set; }
+        }
+    }
 }

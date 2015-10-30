@@ -18,5 +18,5 @@ namespace Raven.Database.Server
 		public static readonly Raven.Abstractions.Threading.ThreadLocal<IPrincipal> User = new Raven.Abstractions.Threading.ThreadLocal<IPrincipal>(() => null);
         public static readonly Raven.Abstractions.Threading.ThreadLocal<Lazy<NameValueCollection>> Headers = new Raven.Abstractions.Threading.ThreadLocal<Lazy<NameValueCollection>>(() => null);
 
-	}
+    }
 }

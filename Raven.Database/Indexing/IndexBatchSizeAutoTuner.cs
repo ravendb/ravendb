@@ -5,14 +5,14 @@ using System.Reactive.Disposables;
 
 namespace Raven.Database.Indexing
 {
-	public class IndexBatchSizeAutoTuner : BaseBatchSizeAutoTuner
-	{
-		public IndexBatchSizeAutoTuner(WorkContext context)
-			: base(context)
-		{
-			LastAmountOfItemsToRemember = 1;
+    public class IndexBatchSizeAutoTuner : BaseBatchSizeAutoTuner
+    {
+        public IndexBatchSizeAutoTuner(WorkContext context)
+            : base(context)
+        {
+            LastAmountOfItemsToRemember = 1;
             InstallGauges();
-		}
+        }
 
         private void InstallGauges()
         {
@@ -22,64 +22,64 @@ namespace Raven.Database.Indexing
             metricCounters.AddGauge(typeof(IndexBatchSizeAutoTuner), "CurrentNumberOfItems", () => CurrentNumberOfItems);
         }
 
-		protected override int InitialNumberOfItems
-		{
-			get { return context.Configuration.InitialNumberOfItemsToProcessInSingleBatch; }
-		}
+        protected override int InitialNumberOfItems
+        {
+            get { return context.Configuration.InitialNumberOfItemsToProcessInSingleBatch; }
+        }
 
-		protected override int MaxNumberOfItems
-		{
-			get { return context.Configuration.MaxNumberOfItemsToProcessInSingleBatch; }
-		}
+        protected override int MaxNumberOfItems
+        {
+            get { return context.Configuration.MaxNumberOfItemsToProcessInSingleBatch; }
+        }
 
-		protected override int CurrentNumberOfItems
-		{
-			get { return context.CurrentNumberOfItemsToIndexInSingleBatch; }
-			set { context.CurrentNumberOfItemsToIndexInSingleBatch = value; }
-		}
-		
-		protected override sealed int LastAmountOfItemsToRemember { get; set; }
+        protected override int CurrentNumberOfItems
+        {
+            get { return context.CurrentNumberOfItemsToIndexInSingleBatch; }
+            set { context.CurrentNumberOfItemsToIndexInSingleBatch = value; }
+        }
+        
+        protected override sealed int LastAmountOfItemsToRemember { get; set; }
 
-		private List<int> lastAmountOfItemsToIndex = new List<int>();
+        private List<int> lastAmountOfItemsToIndex = new List<int>();
 
-		protected override void RecordAmountOfItems(int numberOfItems)
-		{
-			var currentLastAmountOfItemsToIndex = lastAmountOfItemsToIndex;
+        protected override void RecordAmountOfItems(int numberOfItems)
+        {
+            var currentLastAmountOfItemsToIndex = lastAmountOfItemsToIndex;
 
-			var amountToTake = currentLastAmountOfItemsToIndex.Count;
-			
-			if (amountToTake + 1 >= LastAmountOfItemsToRemember)
-				amountToTake = currentLastAmountOfItemsToIndex.Count - 1;
+            var amountToTake = currentLastAmountOfItemsToIndex.Count;
+            
+            if (amountToTake + 1 >= LastAmountOfItemsToRemember)
+                amountToTake = currentLastAmountOfItemsToIndex.Count - 1;
 
-			lastAmountOfItemsToIndex = new List<int>(currentLastAmountOfItemsToIndex.Take(amountToTake))
-										{
-											numberOfItems
-										};
-		}
+            lastAmountOfItemsToIndex = new List<int>(currentLastAmountOfItemsToIndex.Take(amountToTake))
+                                        {
+                                            numberOfItems
+                                        };
+        }
 
-		protected override IEnumerable<int> GetLastAmountOfItems()
-		{
-			return lastAmountOfItemsToIndex;
-		}
+        protected override IEnumerable<int> GetLastAmountOfItems()
+        {
+            return lastAmountOfItemsToIndex;
+        }
 
-		protected override string GetName
-		{
-			get { return "IndexBatchSizeAutoTuner"; }
-		}
+        protected override string GetName
+        {
+            get { return "IndexBatchSizeAutoTuner"; }
+        }
 
 		public IDisposable ConsiderLimitingNumberOfItemsToProcessForThisBatch(int? maxIndexOutputsPerDoc, bool containsMapReduceIndexes)
 		{
 			if (maxIndexOutputsPerDoc == null || maxIndexOutputsPerDoc <= (containsMapReduceIndexes ? context.Configuration.MaxMapReduceIndexOutputsPerDocument : context.Configuration.MaxSimpleIndexOutputsPerDocument))
 				return null;
 
-			var oldValue = NumberOfItemsToProcessInSingleBatch;
+            var oldValue = NumberOfItemsToProcessInSingleBatch;
 
 			int indexOutputsPerDocLog = (int) Math.Log(maxIndexOutputsPerDoc.Value);
 			indexOutputsPerDocLog = indexOutputsPerDocLog < 1 ? 1 : indexOutputsPerDocLog;
 			var newValue = Math.Max(NumberOfItemsToProcessInSingleBatch / indexOutputsPerDocLog, InitialNumberOfItems);
 
-			if (oldValue == newValue)
-				return null;
+            if (oldValue == newValue)
+                return null;
 
 			NumberOfItemsToProcessInSingleBatch = newValue;
 			return Disposable.Create(() => NumberOfItemsToProcessInSingleBatch = oldValue);

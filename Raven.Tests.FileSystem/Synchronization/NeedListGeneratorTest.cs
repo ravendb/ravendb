@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -164,5 +164,5 @@ namespace Raven.Tests.FileSystem.Synchronization
                 }
             }
         }
-	}
+    }
 }

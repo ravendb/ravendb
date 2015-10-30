@@ -13,15 +13,15 @@ using Xunit;
 
 namespace Raven.Tests.Security.OAuth
 {
-	using Raven.Abstractions.Connection;
+    using Raven.Abstractions.Connection;
 
-	public class ApiKey : RavenTest
-	{
-		private const string apiKey = "test/ThisIsMySecret";
+    public class ApiKey : RavenTest
+    {
+        private const string apiKey = "test/ThisIsMySecret";
 
-		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-		{
-			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        {
+            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 
 
             Authentication.EnableOnce();

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SubscriptionActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,32 +19,32 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Actions
 {
-	public class SubscriptionActions : ActionsBase
-	{
-		private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
-			new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
+    public class SubscriptionActions : ActionsBase
+    {
+        private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
+            new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
-		private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
+        private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
 
-		private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> forciblyReleasedSubscriptions = new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
+        private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> forciblyReleasedSubscriptions = new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
 
-		public SubscriptionActions(DocumentDatabase database, ILog log)
-			: base(database, null, null, log)
-		{
-		}
+        public SubscriptionActions(DocumentDatabase database, ILog log)
+            : base(database, null, null, log)
+        {
+        }
 
-		public long CreateSubscription(SubscriptionCriteria criteria)
-		{
-			long id = -1;
+        public long CreateSubscription(SubscriptionCriteria criteria)
+        {
+            long id = -1;
 
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
 
-				var config = new SubscriptionConfig
-				{
-					SubscriptionId = id,
-					Criteria = criteria,
+                var config = new SubscriptionConfig
+                {
+                    SubscriptionId = id,
+                    Criteria = criteria,
                     AckEtag = criteria.StartEtag ?? Etag.Empty,
 				};
 

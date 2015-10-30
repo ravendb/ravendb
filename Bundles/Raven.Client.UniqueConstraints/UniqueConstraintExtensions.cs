@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,92 +10,92 @@ using Raven.Client.Document.Async;
 
 namespace Raven.Client.UniqueConstraints
 {
-	public static class UniqueConstraintExtensions
-	{
-		public class ConstraintDocument
-		{
-			public ConstraintDocument()
-			{
-				Constraints = new Dictionary<string, Inner>();
-			}
+    public static class UniqueConstraintExtensions
+    {
+        public class ConstraintDocument
+        {
+            public ConstraintDocument()
+            {
+                Constraints = new Dictionary<string, Inner>();
+            }
 
-			public string RelatedId { get; set; }
+            public string RelatedId { get; set; }
 
-			public Dictionary<string, Inner> Constraints { get; set; }
+            public Dictionary<string, Inner> Constraints { get; set; }
 
-			public string GetRelatedIdFor(string key)
-			{
-				if (!string.IsNullOrEmpty(RelatedId))
-					return RelatedId;
+            public string GetRelatedIdFor(string key)
+            {
+                if (!string.IsNullOrEmpty(RelatedId))
+                    return RelatedId;
 
-				Inner inner;
-				if (Constraints.TryGetValue(key, out inner))
-					return inner.RelatedId;
+                Inner inner;
+                if (Constraints.TryGetValue(key, out inner))
+                    return inner.RelatedId;
 
-				return null;
-			}
+                return null;
+            }
 
-			public class Inner
-			{
-				public string RelatedId { get; set; }
-			}
-		}
+            public class Inner
+            {
+                public string RelatedId { get; set; }
+            }
+        }
 
-		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
-		{
-			var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
-			var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
-			if (uniqueConstraintsStoreListener == null)
-				throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
-			var propertyName = GetPropropertyNameForKeySelector(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
+        public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
+        {
+            var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
+            var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
+            if (uniqueConstraintsStoreListener == null)
+                throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
+            var propertyName = GetPropropertyNameForKeySelector(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
 
-			return LoadByUniqueConstraintInternal<T>(session, propertyName, new object[] { value }).FirstOrDefault();
-		}
+            return LoadByUniqueConstraintInternal<T>(session, propertyName, new object[] { value }).FirstOrDefault();
+        }
 
-		public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, params object[] values)
-		{
-			var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
-			var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
-			if (uniqueConstraintsStoreListener == null)
-				throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
+        public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, params object[] values)
+        {
+            var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
+            var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
+            if (uniqueConstraintsStoreListener == null)
+                throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
 
-			var propertyName = GetPropropertyNameForKeySelector<T>(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
+            var propertyName = GetPropropertyNameForKeySelector<T>(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
 
-			return LoadByUniqueConstraintInternal<T>(session, propertyName, values);
-		}
+            return LoadByUniqueConstraintInternal<T>(session, propertyName, values);
+        }
 
-		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, string keyName, object value)
-		{
-			return LoadByUniqueConstraintInternal<T>(session, keyName, new object[] { value }).FirstOrDefault();
-		}
+        public static T LoadByUniqueConstraint<T>(this IDocumentSession session, string keyName, object value)
+        {
+            return LoadByUniqueConstraintInternal<T>(session, keyName, new object[] { value }).FirstOrDefault();
+        }
 
-		public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, string keyName, params object[] values)
-		{
-			return LoadByUniqueConstraintInternal<T>(session, keyName, values);
-		}
+        public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, string keyName, params object[] values)
+        {
+            return LoadByUniqueConstraintInternal<T>(session, keyName, values);
+        }
 
-		public const string DummyId = "E1972AA7-148D-4035-9779-0EDFB3A7DBFF";
-		private static T[] LoadByUniqueConstraintInternal<T>(this IDocumentSession session, string propertyName, params object[] values)
-		{
-			if (values == null) throw new ArgumentNullException("value", "The unique value cannot be null");
-			if (string.IsNullOrWhiteSpace(propertyName)) { throw (propertyName == null) ? new ArgumentNullException("propertyName") : new ArgumentException("propertyName cannot be empty.", "propertyName"); }
+        public const string DummyId = "E1972AA7-148D-4035-9779-0EDFB3A7DBFF";
+        private static T[] LoadByUniqueConstraintInternal<T>(this IDocumentSession session, string propertyName, params object[] values)
+        {
+            if (values == null) throw new ArgumentNullException("value", "The unique value cannot be null");
+            if (string.IsNullOrWhiteSpace(propertyName)) { throw (propertyName == null) ? new ArgumentNullException("propertyName") : new ArgumentException("propertyName cannot be empty.", "propertyName"); }
 
-			if (values.Length == 0) { return new T[0]; }
+            if (values.Length == 0) { return new T[0]; }
 
-			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
+            var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 
-			var constraintInfo = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T)).SingleOrDefault(ci => ci.Configuration.Name == propertyName);
+            var constraintInfo = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T)).SingleOrDefault(ci => ci.Configuration.Name == propertyName);
 
-			if (constraintInfo != null)
-			{
-				var constraintsIds = (from value in values
-									  where value != null
-									  select
-										  new
-										  {
-											  Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive),
-											  Key = Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive)
-										  }).ToList();
+            if (constraintInfo != null)
+            {
+                var constraintsIds = (from value in values
+                                      where value != null
+                                      select
+                                          new
+                                          {
+                                              Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive),
+                                              Key = Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive)
+                                          }).ToList();
 
                 var constraintDocsIds = constraintsIds.Select(x => x.Id).ToList();
                 var inMemory = ((InMemoryDocumentSessionOperations)session);

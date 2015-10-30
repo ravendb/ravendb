@@ -18,121 +18,121 @@ using System.Net.Http;
 
 namespace Raven.Abstractions.Extensions
 {
-	/// <summary>
-	/// Extensions for handling metadata
-	/// </summary>
-	public static class MetadataExtensions
-	{
+    /// <summary>
+    /// Extensions for handling metadata
+    /// </summary>
+    public static class MetadataExtensions
+    {
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
-			// Raven internal headers
+        {
+            // Raven internal headers
             Constants.RavenServerBuild,
-			"Raven-Client-Version",
-			"Non-Authoritative-Information",
-			"Raven-Timer-Request",
-			"Raven-Authenticated-User",
-			"Raven-Last-Modified",
-			"Has-Api-Key",
+            "Raven-Client-Version",
+            "Non-Authoritative-Information",
+            "Raven-Timer-Request",
+            "Raven-Authenticated-User",
+            "Raven-Last-Modified",
+            "Has-Api-Key",
 
-			// COTS
-			"Access-Control-Allow-Origin",
-			"Access-Control-Max-Age",
-			"Access-Control-Allow-Methods",
-			"Access-Control-Request-Headers",
-			"Access-Control-Allow-Headers",
+            // COTS
+            "Access-Control-Allow-Origin",
+            "Access-Control-Max-Age",
+            "Access-Control-Allow-Methods",
+            "Access-Control-Request-Headers",
+            "Access-Control-Allow-Headers",
 
-			//proxy
-			"Reverse-Via",
-			"Persistent-Auth",
-			"Allow",
-			"Content-Disposition",
-			"Content-Encoding",
-			"Content-Language",
-			"Content-Location",
-			"Content-MD5",
-			"Content-Range",
-			"Content-Type",
-			"Expires",
-			// ignoring this header, we handle this internally
-			Constants.LastModified,
-			// Ignoring this header, since it may
-			// very well change due to things like encoding,
-			// adding metadata, etc
-			"Content-Length",
-			// Special things to ignore
-			"Keep-Alive",
-			"X-Powered-By",
-			"X-AspNet-Version",
-			"X-Requested-With",
-			"X-SourceFiles",
-			// Request headers
-			"Accept-Charset",
-			"Accept-Encoding",
-			"Accept",
-			"Accept-Language",
-			"Authorization",
-			"Cookie",
-			"Expect",
-			"From",
-			"Host",
-			"If-Match",
-			"If-Modified-Since",
-			"If-None-Match",
-			"If-Range",
-			"If-Unmodified-Since",
-			"Max-Forwards",
-			"Referer",
-			"TE",
-			"User-Agent",
-			"DNT",
-			//Response headers
-			"Accept-Ranges",
-			"Age",
-			"Allow",
-			Constants.MetadataEtagField,
-			"Location",
-			"Retry-After",
-			"Server",
-			"Set-Cookie2",
-			"Set-Cookie",
-			"Vary",
-			"Www-Authenticate",
-			// General
-			"Cache-Control",
-			"Connection",
-			"Date",
-			"Pragma",
-			"Trailer",
-			"Transfer-Encoding",
-			"Upgrade",
-			"Via",
-			"Warning",
+            //proxy
+            "Reverse-Via",
+            "Persistent-Auth",
+            "Allow",
+            "Content-Disposition",
+            "Content-Encoding",
+            "Content-Language",
+            "Content-Location",
+            "Content-MD5",
+            "Content-Range",
+            "Content-Type",
+            "Expires",
+            // ignoring this header, we handle this internally
+            Constants.LastModified,
+            // Ignoring this header, since it may
+            // very well change due to things like encoding,
+            // adding metadata, etc
+            "Content-Length",
+            // Special things to ignore
+            "Keep-Alive",
+            "X-Powered-By",
+            "X-AspNet-Version",
+            "X-Requested-With",
+            "X-SourceFiles",
+            // Request headers
+            "Accept-Charset",
+            "Accept-Encoding",
+            "Accept",
+            "Accept-Language",
+            "Authorization",
+            "Cookie",
+            "Expect",
+            "From",
+            "Host",
+            "If-Match",
+            "If-Modified-Since",
+            "If-None-Match",
+            "If-Range",
+            "If-Unmodified-Since",
+            "Max-Forwards",
+            "Referer",
+            "TE",
+            "User-Agent",
+            "DNT",
+            //Response headers
+            "Accept-Ranges",
+            "Age",
+            "Allow",
+            Constants.MetadataEtagField,
+            "Location",
+            "Retry-After",
+            "Server",
+            "Set-Cookie2",
+            "Set-Cookie",
+            "Vary",
+            "Www-Authenticate",
+            // General
+            "Cache-Control",
+            "Connection",
+            "Date",
+            "Pragma",
+            "Trailer",
+            "Transfer-Encoding",
+            "Upgrade",
+            "Via",
+            "Warning",
 
-			// IIS Application Request Routing Module
-			"X-ARR-LOG-ID",
-			"X-ARR-SSL",
-			"X-Forwarded-For",
-			"X-Original-URL",
+            // IIS Application Request Routing Module
+            "X-ARR-LOG-ID",
+            "X-ARR-SSL",
+            "X-Forwarded-For",
+            "X-Original-URL",
 
-			// Azure specific
-			"X-LiveUpgrade",
-			"DISGUISED-HOST",
-			"X-SITE-DEPLOYMENT-ID",
-		};
+            // Azure specific
+            "X-LiveUpgrade",
+            "DISGUISED-HOST",
+            "X-SITE-DEPLOYMENT-ID",
+        };
 
         private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		                                                                       {
-																				   "Temp",
-			                                                                       "X-NewRelic"
-		                                                                       };
+                                                                               {
+                                                                                   "Temp",
+                                                                                   "X-NewRelic"
+                                                                               };
 
-		/// <summary>
-		/// Filters the headers from unwanted headers
-		/// </summary>
-		/// <param name="self">HttpHeaders to filter</param>
-		/// <param name="headersToIgnore">Headers to ignore</param>
-		/// <param name="prefixesInHeadersToIgnore">Header prefixes to ignore</param>
-		/// <returns></returns>
+        /// <summary>
+        /// Filters the headers from unwanted headers
+        /// </summary>
+        /// <param name="self">HttpHeaders to filter</param>
+        /// <param name="headersToIgnore">Headers to ignore</param>
+        /// <param name="prefixesInHeadersToIgnore">Header prefixes to ignore</param>
+        /// <returns></returns>
         public static RavenJObject FilterHeadersToObject(this RavenJObject self, HashSet<string> headersToIgnore, HashSet<string> prefixesInHeadersToIgnore)
         {
             if (self == null)
@@ -153,24 +153,24 @@ namespace Raven.Abstractions.Extensions
             return metadata;
         }
 
-		/// <summary>
-		/// Filters the headers from unwanted headers
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeadersToObject(this RavenJObject self)
-		{
+        /// <summary>
+        /// Filters the headers from unwanted headers
+        /// </summary>
+        /// <param name="self">The self.</param>
+        /// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+        public static RavenJObject FilterHeadersToObject(this RavenJObject self)
+        {
             return FilterHeadersToObject(self, HeadersToIgnoreClient, PrefixesInHeadersToIgnoreClient);
-		}
+        }
 
         [Obsolete("Use RavenFS instead.")]
-		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
-		{
-			var filterHeaders = self.FilterHeadersToObject();
-			if (self["Content-Type"] != null)
-				filterHeaders["Content-Type"] = self["Content-Type"];
-			return filterHeaders;
-		}
+        public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
+        {
+            var filterHeaders = self.FilterHeadersToObject();
+            if (self["Content-Type"] != null)
+                filterHeaders["Content-Type"] = self["Content-Type"];
+            return filterHeaders;
+        }
 
         /// <summary>
         /// Filters the headers from unwanted headers
@@ -208,8 +208,8 @@ namespace Raven.Abstractions.Extensions
 
         [Obsolete("Use RavenFS instead.")]
         public static RavenJObject FilterHeadersAttachment(this IEnumerable<KeyValuePair<string, IEnumerable<string>>> self)
-		{
-			var filterHeaders = self.FilterHeadersToObject();
+        {
+            var filterHeaders = self.FilterHeadersToObject();
             string contentType = null;
             foreach (var keyValue in self)
             {
@@ -219,14 +219,14 @@ namespace Raven.Abstractions.Extensions
                     break;
                 }
             }
-			if (contentType != null)
-				filterHeaders["Content-Type"] = contentType;
+            if (contentType != null)
+                filterHeaders["Content-Type"] = contentType;
 
-			return filterHeaders;
-		}
+            return filterHeaders;
+        }
 
         /// <summary>
-		/// Filters the headers from unwanted headers
+        /// Filters the headers from unwanted headers
         /// </summary>
         /// <param name="self">HttpHeaders to filter</param>
         /// <param name="headersToIgnore">Headers to ignore</param>
@@ -308,20 +308,20 @@ namespace Raven.Abstractions.Extensions
             return metadata;
         }
 
-		private static string CaptureHeaderName(string header)
-		{
-			var lastWasDash = true;
-			var sb = new StringBuilder(header.Length);
+        private static string CaptureHeaderName(string header)
+        {
+            var lastWasDash = true;
+            var sb = new StringBuilder(header.Length);
 
-			foreach (var ch in header)
-			{
-				sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
+            foreach (var ch in header)
+            {
+                sb.Append(lastWasDash ? char.ToUpper(ch) : ch);
 
-				lastWasDash = ch == '-';
-			}
+                lastWasDash = ch == '-';
+            }
 
-			return sb.ToString();
-		}
+            return sb.ToString();
+        }
 
         private static RavenJToken GetValue(string val)
         {
@@ -340,14 +340,14 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
-		private static RavenJToken GetValueWithDates(string val)
-		{
-			try
-			{
-				if (val.StartsWith("{"))
-					return RavenJObject.Parse(val);
-				if (val.StartsWith("["))
-					return RavenJArray.Parse(val);
+        private static RavenJToken GetValueWithDates(string val)
+        {
+            try
+            {
+                if (val.StartsWith("{"))
+                    return RavenJObject.Parse(val);
+                if (val.StartsWith("["))
+                    return RavenJArray.Parse(val);
 
                 DateTime dateTime;
                 if (DateTime.TryParseExact(val, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
@@ -361,12 +361,12 @@ namespace Raven.Abstractions.Extensions
                 if (DateTimeOffset.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
                     return new RavenJValue(dateTimeOffset);
 
-				return new RavenJValue(Uri.UnescapeDataString(val));
-			}
-			catch (Exception exc)
-			{
-				throw new JsonReaderException(string.Concat("Unable to get value: ", val), exc);
-			}
-		}
-	}
+                return new RavenJValue(Uri.UnescapeDataString(val));
+            }
+            catch (Exception exc)
+            {
+                throw new JsonReaderException(string.Concat("Unable to get value: ", val), exc);
+            }
+        }
+    }
 }

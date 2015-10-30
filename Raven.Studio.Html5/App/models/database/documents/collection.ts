@@ -27,10 +27,10 @@ class collection implements ICollectionBase {
         this.documentCount(docCount);
     }
 
-	// Notifies consumers that this collection should be the selected one.
-	// Called from the UI when a user clicks a collection the documents page.
-	activate() {
-		ko.postbox.publish("ActivateCollection", this);
+    // Notifies consumers that this collection should be the selected one.
+    // Called from the UI when a user clicks a collection the documents page.
+    activate() {
+        ko.postbox.publish("ActivateCollection", this);
     }
 
     getDocuments(): pagedList {

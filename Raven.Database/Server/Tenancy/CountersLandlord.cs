@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CountersLandlord.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -29,9 +29,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Tenancy
 {
-	public class CountersLandlord : AbstractLandlord<CounterStorage>
-	{
-		private bool initialized;
+    public class CountersLandlord : AbstractLandlord<CounterStorage>
+    {
+        private bool initialized;
 
 		public override string ResourcePrefix { get { return Constants.Counter.Prefix; } }
 
@@ -44,7 +44,7 @@ namespace Raven.Database.Server.Tenancy
 
 	    public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
-		public void Init()
+        public void Init()
         {
             if (initialized)
                 return;
@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
 				var dbName = notification.Id.Substring(ResourcePrefix.Length);
                 Logger.Info("Shutting down counters {0} because the tenant counter document has been updated or removed", dbName);
-				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
+                Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 
@@ -133,8 +133,8 @@ namespace Raven.Database.Server.Tenancy
 			if (document.Disabled && !ignoreDisabledCounterStorage)
 				throw new InvalidOperationException("The counter storage has been disabled.");
 
-			return document;
-		}
+            return document;
+        }
 
 		public override async Task<CounterStorage> GetResourceInternal(string resourceName)
 		{

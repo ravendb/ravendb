@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="VersioningMetadataUpdateTrigger.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,56 +13,56 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 {
-	[InheritedExport(typeof(AbstractFileMetadataUpdateTrigger))]
-	[ExportMetadata("Bundle", "Versioning")]
-	public class VersioningMetadataUpdateTrigger : AbstractFileMetadataUpdateTrigger
-	{
-		private VersioningTriggerActions actions;
+    [InheritedExport(typeof(AbstractFileMetadataUpdateTrigger))]
+    [ExportMetadata("Bundle", "Versioning")]
+    public class VersioningMetadataUpdateTrigger : AbstractFileMetadataUpdateTrigger
+    {
+        private VersioningTriggerActions actions;
 
-		public override void Initialize()
-		{
-			actions = new VersioningTriggerActions(FileSystem);
-		}
+        public override void Initialize()
+        {
+            actions = new VersioningTriggerActions(FileSystem);
+        }
 
-		public override VetoResult AllowUpdate(string name, RavenJObject metadata)
-		{
-			return actions.AllowOperation(name, metadata);
-		}
+        public override VetoResult AllowUpdate(string name, RavenJObject metadata)
+        {
+            return actions.AllowOperation(name, metadata);
+        }
 
-		public override void OnUpdate(string name, RavenJObject metadata)
-		{
-			actions.InitializeMetadata(name, metadata);
-		}
+        public override void OnUpdate(string name, RavenJObject metadata)
+        {
+            actions.InitializeMetadata(name, metadata);
+        }
 
-		public override void AfterUpdate(string name, RavenJObject metadata)
-		{
-			var revisionFile = actions.PutRevisionFile(name, null, metadata);
+        public override void AfterUpdate(string name, RavenJObject metadata)
+        {
+            var revisionFile = actions.PutRevisionFile(name, null, metadata);
 
-			if(revisionFile == null)
-				return;
+            if(revisionFile == null)
+                return;
 
-			FileSystem.Storage.Batch(accessor =>
-			{
-				var start = 0;
-				const int pagesToLoad = 1024;
+            FileSystem.Storage.Batch(accessor =>
+            {
+                var start = 0;
+                const int pagesToLoad = 1024;
 
-				FileAndPagesInformation fileWithPages;
+                FileAndPagesInformation fileWithPages;
 
-				do
-				{
-					fileWithPages = accessor.GetFile(name, start, pagesToLoad);
+                do
+                {
+                    fileWithPages = accessor.GetFile(name, start, pagesToLoad);
 
-					foreach (var page in fileWithPages.Pages)
-					{
-						accessor.AssociatePage(revisionFile, page.Id, page.PositionInFile, page.Size);
-					}
+                    foreach (var page in fileWithPages.Pages)
+                    {
+                        accessor.AssociatePage(revisionFile, page.Id, page.PositionInFile, page.Size);
+                    }
 
-					start += pagesToLoad;
+                    start += pagesToLoad;
 
-				} while (fileWithPages.Pages.Count == pagesToLoad);
+                } while (fileWithPages.Pages.Count == pagesToLoad);
 
-				accessor.CompleteFileUpload(revisionFile);
-			});
-		}
-	}
+                accessor.CompleteFileUpload(revisionFile);
+            });
+        }
+    }
 }

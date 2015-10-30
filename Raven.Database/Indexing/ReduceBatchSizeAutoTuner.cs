@@ -3,14 +3,14 @@ using System.Linq;
 
 namespace Raven.Database.Indexing
 {
-	public class ReduceBatchSizeAutoTuner : BaseBatchSizeAutoTuner
-	{
-		public ReduceBatchSizeAutoTuner(WorkContext context)
-			: base(context)
-		{
-			LastAmountOfItemsToRemember = 1;
+    public class ReduceBatchSizeAutoTuner : BaseBatchSizeAutoTuner
+    {
+        public ReduceBatchSizeAutoTuner(WorkContext context)
+            : base(context)
+        {
+            LastAmountOfItemsToRemember = 1;
             InstallGauges();
-		}
+        }
 
         private void InstallGauges()
         {
@@ -20,49 +20,49 @@ namespace Raven.Database.Indexing
             metricCounters.AddGauge(typeof(ReduceBatchSizeAutoTuner), "CurrentNumberOfItems", () => CurrentNumberOfItems);
         }
 
-		protected override int InitialNumberOfItems
-		{
-			get { return context.Configuration.InitialNumberOfItemsToReduceInSingleBatch; }
-		}
+        protected override int InitialNumberOfItems
+        {
+            get { return context.Configuration.InitialNumberOfItemsToReduceInSingleBatch; }
+        }
 
-		protected override int MaxNumberOfItems
-		{
-			get { return context.Configuration.MaxNumberOfItemsToReduceInSingleBatch; }
-		}
+        protected override int MaxNumberOfItems
+        {
+            get { return context.Configuration.MaxNumberOfItemsToReduceInSingleBatch; }
+        }
 
-		protected override int CurrentNumberOfItems
-		{
-			get { return context.CurrentNumberOfItemsToReduceInSingleBatch; }
-			set { context.CurrentNumberOfItemsToReduceInSingleBatch = value; }
-		}
+        protected override int CurrentNumberOfItems
+        {
+            get { return context.CurrentNumberOfItemsToReduceInSingleBatch; }
+            set { context.CurrentNumberOfItemsToReduceInSingleBatch = value; }
+        }
 
-		protected override sealed int LastAmountOfItemsToRemember { get; set; }
+        protected override sealed int LastAmountOfItemsToRemember { get; set; }
 
-		private List<int> lastAmountOfItemsToReduce = new List<int>();
+        private List<int> lastAmountOfItemsToReduce = new List<int>();
 
-		protected override void RecordAmountOfItems(int numberOfItems)
-		{
-			var currentLastAmountOfItemsToReduce = lastAmountOfItemsToReduce;
+        protected override void RecordAmountOfItems(int numberOfItems)
+        {
+            var currentLastAmountOfItemsToReduce = lastAmountOfItemsToReduce;
 
-			var amountToTake = currentLastAmountOfItemsToReduce.Count;
+            var amountToTake = currentLastAmountOfItemsToReduce.Count;
 
-			if (amountToTake + 1 >= LastAmountOfItemsToRemember)
-				amountToTake = currentLastAmountOfItemsToReduce.Count - 1;
+            if (amountToTake + 1 >= LastAmountOfItemsToRemember)
+                amountToTake = currentLastAmountOfItemsToReduce.Count - 1;
 
-			lastAmountOfItemsToReduce = new List<int>(currentLastAmountOfItemsToReduce.Take(amountToTake))
-										{
-											numberOfItems
-										};
-		}
+            lastAmountOfItemsToReduce = new List<int>(currentLastAmountOfItemsToReduce.Take(amountToTake))
+                                        {
+                                            numberOfItems
+                                        };
+        }
 
-		protected override IEnumerable<int> GetLastAmountOfItems()
-		{
-			return lastAmountOfItemsToReduce;
-		}
+        protected override IEnumerable<int> GetLastAmountOfItems()
+        {
+            return lastAmountOfItemsToReduce;
+        }
 
-		protected override string GetName
-		{
-			get { return "ReduceBatchSizeAutoTuner"; }
-		}
-	}
+        protected override string GetName
+        {
+            get { return "ReduceBatchSizeAutoTuner"; }
+        }
+    }
 }

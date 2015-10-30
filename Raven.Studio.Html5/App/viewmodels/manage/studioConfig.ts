@@ -79,7 +79,7 @@ class studioConfig extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         var self = this;
         $(window).bind('storage', (e: any) => {
             if (e.originalEvent.key === serverBuildReminder.localStorageName) {

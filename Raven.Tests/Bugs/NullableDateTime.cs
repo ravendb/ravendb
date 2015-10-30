@@ -89,7 +89,7 @@ namespace Raven.Tests.Bugs
                     session
                         .Query<Doc, UnsetDocs>()
                         .Customize(x => x.WaitForNonStaleResults())
-						.ProjectFromIndexFieldsInto<DocSummary>()
+                        .ProjectFromIndexFieldsInto<DocSummary>()
                         .ToArray();
                 }
             }
@@ -99,7 +99,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void CanLoadFromIndex_Remote()
         {
-	        var path = NewDataPath();
+            var path = NewDataPath();
 
             using (var server = new Raven.Server.RavenDbServer(new
                                                                 Raven.Database.Config.RavenConfiguration()
@@ -135,7 +135,7 @@ namespace Raven.Tests.Bugs
                         session
                             .Query<Doc, UnsetDocs>()
                             .Customize(x => x.WaitForNonStaleResults())
-							.ProjectFromIndexFieldsInto<DocSummary>()
+                            .ProjectFromIndexFieldsInto<DocSummary>()
                             .ToArray();
                     }
                 }
@@ -168,10 +168,10 @@ namespace Raven.Tests.Bugs
                 using (var session = store.OpenSession())
                 {
                     var items = new[]
-					            	{
-					            		new Doc {Date = null},
-					            		new Doc {Date = SystemTime.UtcNow},
-					            	};
+                                    {
+                                        new Doc {Date = null},
+                                        new Doc {Date = SystemTime.UtcNow},
+                                    };
                     foreach (var item in items)
                         session.Store(item);
                     session.SaveChanges();

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="MetricsCountersManager.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,7 +19,7 @@ using metrics.Core;
 
 namespace Raven.Database.Util
 {
-	[CLSCompliant(false)]
+    [CLSCompliant(false)]
     public class MetricsCountersManager : IDisposable
     {
         readonly Metrics dbMetrics = new Metrics();
@@ -51,7 +51,7 @@ namespace Raven.Database.Util
 
         public ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>> ReplicationPerformanceStats { get; private set; }
 
-		public long ConcurrentRequestsCount;
+        public long ConcurrentRequestsCount;
         
         public MetricsCountersManager()
         {

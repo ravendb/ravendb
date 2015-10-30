@@ -39,26 +39,26 @@ namespace Raven.Abstractions.Data
 		/// </summary>
         public double TotalDurationMs { get; set; }
 
-		/// <summary>
-		/// Time (in milliseconds) that passed since first index completed the batch to full batch completion.
-		/// </summary>
-		public double TimeSinceFirstIndexInBatchCompletedMs { get; set; }
+        /// <summary>
+        /// Time (in milliseconds) that passed since first index completed the batch to full batch completion.
+        /// </summary>
+        public double TimeSinceFirstIndexInBatchCompletedMs { get; set; }
 
-		public ConcurrentDictionary<string, IndexingPerformanceStats> PerformanceStats { get; set; }
+        public ConcurrentDictionary<string, IndexingPerformanceStats> PerformanceStats { get; set; }
 
-		public void BatchCompleted()
-		{
-			var now = SystemTime.UtcNow;
+        public void BatchCompleted()
+        {
+            var now = SystemTime.UtcNow;
             TotalDurationMs = (now - StartedAt).TotalMilliseconds;
 
-			if (PerformanceStats.Count > 0)
-				TimeSinceFirstIndexInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.Completed)).TotalMilliseconds;
-		}
-	}
+            if (PerformanceStats.Count > 0)
+                TimeSinceFirstIndexInBatchCompletedMs = (now - PerformanceStats.Min(x => x.Value.Completed)).TotalMilliseconds;
+        }
+    }
 
-	public enum BatchType
-	{
-		Standard,
-		Precomputed
-	}
+    public enum BatchType
+    {
+        Standard,
+        Precomputed
+    }
 }

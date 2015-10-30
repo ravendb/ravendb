@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,16 +15,16 @@ namespace Raven.Database.FileSystem.Controllers
 	{
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/static/FavIcon")]		
-		public HttpResponseMessage FavIcon()
-		{
-			return new HttpResponseMessage(HttpStatusCode.NotFound);
-		}
+        public HttpResponseMessage FavIcon()
+        {
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }
 
-		[HttpGet]
+        [HttpGet]
         [RavenRoute("fs/{fileSystemName}/static/id")]
-		public HttpResponseMessage Id()
-		{
-			return Request.CreateResponse(HttpStatusCode.OK, FileSystem.Storage.Id);
-		}
-	}
+        public HttpResponseMessage Id()
+        {
+            return Request.CreateResponse(HttpStatusCode.OK, FileSystem.Storage.Id);
+        }
+    }
 }

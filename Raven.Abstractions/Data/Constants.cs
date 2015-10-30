@@ -212,10 +212,10 @@ namespace Raven.Abstractions.Data
 		public const string RavenSqlReplicationConnectionsDocumentName = "Raven/SqlReplication/Connections";
 
         [Obsolete("Use RavenFS instead.")]
-		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
+        public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
         //Periodic export
-		public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
+        public const string RavenPeriodicExportsDocsTombstones = "Raven/PeriodicExports/Docs/Tombstones";
 
         [Obsolete("Use RavenFS instead.")]
 		public const string RavenPeriodicExportsAttachmentsTombstones = "Raven/PeriodicExports/Attachments/Tombstones";
@@ -260,9 +260,9 @@ namespace Raven.Abstractions.Data
 		
         public const string MetadataEtagField = "ETag";
 
-		public const string TempUploadsDirectoryName = "RavenTempUploads";
+        public const string TempUploadsDirectoryName = "RavenTempUploads";
 
-		public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
+        public const string DataCouldNotBeDecrypted = "<data could not be decrypted>";
 
 		public const int NumberOfCachedRequests = 1024;
 
@@ -309,10 +309,10 @@ namespace Raven.Abstractions.Data
 	        public const string RavenFsSize = "RavenFS-Size";
             public const string PreventSchemaUpdate = "Raven/PreventSchemaUpdate";
 
-	        public static class Versioning
-	        {
-				public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
-	        }
+            public static class Versioning
+            {
+                public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
+            }
         }
 
 		//Counters

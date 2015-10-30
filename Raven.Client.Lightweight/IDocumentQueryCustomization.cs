@@ -363,5 +363,5 @@ namespace Raven.Client
         /// When using spatial queries, instruct the query to sort by the distance from the origin point
         /// </summary>
         IDocumentQueryCustomization SortByDistance(double lat, double lng, string fieldName);
-	}
+    }
 }

@@ -1,4 +1,4 @@
-﻿namespace Raven.Abstractions.FileSystem
+namespace Raven.Abstractions.FileSystem
 {
 	public class FileSystemNotification
 	{

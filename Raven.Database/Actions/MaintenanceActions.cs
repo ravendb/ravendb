@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="MaintenanceActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -57,12 +57,12 @@ namespace Raven.Database.Actions
             string storage;
             if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
             {
-	            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
-					storage = InMemoryRavenConfiguration.VoronTypeName;
-	            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-					storage = InMemoryRavenConfiguration.EsentTypeName;
-				else
-					storage = InMemoryRavenConfiguration.EsentTypeName;
+                if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
+                    storage = InMemoryRavenConfiguration.VoronTypeName;
+                else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+                    storage = InMemoryRavenConfiguration.EsentTypeName;
+                else
+                    storage = InMemoryRavenConfiguration.EsentTypeName;
             }
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))

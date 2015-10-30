@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SqlReplicationTask.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -705,13 +705,13 @@ namespace Raven.Database.Bundles.SqlReplication
 
 				var docs = new List<ReplicatedDoc>
                            {
-	                           new ReplicatedDoc
-	                           {
-		                           Document = doc,
-								   Etag = jsonDocument.Etag,
-								   Key = jsonDocument.Key,
-								   SerializedSizeOnDisk = jsonDocument.SerializedSizeOnDisk
-	                           }
+                               new ReplicatedDoc
+                               {
+                                   Document = doc,
+                                   Etag = jsonDocument.Etag,
+                                   Key = jsonDocument.Key,
+                                   SerializedSizeOnDisk = jsonDocument.SerializedSizeOnDisk
+                               }
                            };
 				var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 

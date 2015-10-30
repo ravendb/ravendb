@@ -12,12 +12,12 @@ namespace Raven.Database.FileSystem.Controllers
 		[HttpGet]
         [RavenRoute("fs/{fileSystemName}/stats")]
         public HttpResponseMessage Get()
-		{
-			var count = 0;
-			Storage.Batch(accessor =>
-			{
-				count = accessor.GetFileCount();
-			});
+        {
+            var count = 0;
+            Storage.Batch(accessor =>
+            {
+                count = accessor.GetFileCount();
+            });
 
             var stats = new FileSystemStats
             {

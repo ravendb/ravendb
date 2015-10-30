@@ -210,7 +210,7 @@ namespace Raven.Database.Counters.Controllers
 			var counterStorage = SystemDatabase.Documents.Get(docKey, null);
 			if (counterStorage != null && isCounterStorageUpdate == false)
             {
-				return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
+                return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
             }
 
 			var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>().ConfigureAwait(false);

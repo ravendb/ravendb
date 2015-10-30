@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");
 import resource = require("models/resources/resource");

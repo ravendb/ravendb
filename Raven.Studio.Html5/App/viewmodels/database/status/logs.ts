@@ -22,7 +22,7 @@ class logs extends viewModelBase {
     sortAsc = ko.observable<boolean>(true);
     filteredAndSortedLogs: KnockoutComputed<Array<logDto>>;
     columnWidths: Array<KnockoutObservable<number>>;
-	showLogDetails = ko.observable<boolean>(false);
+    showLogDetails = ko.observable<boolean>(false);
 
     constructor() {
         super();
@@ -66,8 +66,8 @@ class logs extends viewModelBase {
     }
 
     attached() {
-		super.attached();
-		this.showLogDetails.subscribe(x => {
+        super.attached();
+        this.showLogDetails.subscribe(x => {
                 $(".logRecords").toggleClass("logRecords-small");
         });
 
@@ -88,14 +88,14 @@ class logs extends viewModelBase {
     fetchLogs(): JQueryPromise<logDto[]> {
         var db = this.activeDatabase();
         if (db) {
-	        var deferred = $.Deferred();
+            var deferred = $.Deferred();
             new getLogsCommand(db)
                 .execute()
                 .done((results: logDto[]) => {
-		            this.processLogResults(results);
-		            deferred.resolve(results);
-	            });
-	        return deferred;
+                    this.processLogResults(results);
+                    deferred.resolve(results);
+                });
+            return deferred;
         }
 
         return null;
@@ -150,14 +150,14 @@ class logs extends viewModelBase {
 
     selectLog(log: logDto) {
         this.selectedLog(log);
-		this.showLogDetails(true);
-		$(".logRecords").addClass("logRecords-small");
+        this.showLogDetails(true);
+        $(".logRecords").addClass("logRecords-small");
     }
 
-	unSelectLog(log: logDto) {
-		this.selectedLog(null);
-		this.showLogDetails(false);
-	}
+    unSelectLog(log: logDto) {
+        this.selectedLog(null);
+        this.showLogDetails(false);
+    }
 
     tableKeyDown(sender: any, e: KeyboardEvent) {
         var isKeyUp = e.keyCode === 38;

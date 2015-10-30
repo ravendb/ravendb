@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 
 using Raven.Database.Config;
@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.FileSystem
 {
-	public class StorageSignatureRepositoryTests : StorageTest
+    public class StorageSignatureRepositoryTests : StorageTest
     {
 		private InMemoryRavenConfiguration configuration;
 

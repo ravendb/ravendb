@@ -92,7 +92,7 @@ namespace Raven.Client.FileSystem.Connection
             lock (this)
             {
                 var serverClient = (IAsyncFilesCommandsImpl)commands;
-				var urlForFilename = serverClient.UrlFor();
+                var urlForFilename = serverClient.UrlFor();
                 var serverHash = ServerHash.GetServerHash(urlForFilename);
                 JsonDocument document = null;
 
@@ -134,13 +134,13 @@ namespace Raven.Client.FileSystem.Connection
             }
         }
 
-	    public override void ClearReplicationInformationLocalCache(IAsyncFilesCommands client)
-	    {
-			var serverClient = (IAsyncFilesCommandsImpl)client;
-			var urlForFilename = serverClient.UrlFor();
-			var serverHash = ServerHash.GetServerHash(urlForFilename);
-			ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
-	    }
+        public override void ClearReplicationInformationLocalCache(IAsyncFilesCommands client)
+        {
+            var serverClient = (IAsyncFilesCommandsImpl)client;
+            var urlForFilename = serverClient.UrlFor();
+            var serverHash = ServerHash.GetServerHash(urlForFilename);
+            ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
+        }
 
 
 		public override void Dispose()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -513,61 +513,61 @@ namespace Raven.Database.Server.Controllers
 	    [RavenRoute("debug/slow-dump-ref-csv")]
 		[RavenRoute("databases/{databaseName}/debug/slow-dump-ref-csv")]
         public HttpResponseMessage DumpRefsToCsv(int sampleCount = 10)
-	    {
-		    return new HttpResponseMessage
-		    {
-			    Content = new PushStreamContent((stream, content, context) =>
-			    {
-					using (var writer = new StreamWriter(stream))
-					{
-						writer.WriteLine("ref count,document key,sample references");
-						Database.TransactionalStorage.Batch(accessor =>
-						{
-							accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
-						});
-						writer.Flush();
+        {
+            return new HttpResponseMessage
+            {
+                Content = new PushStreamContent((stream, content, context) =>
+                {
+                    using (var writer = new StreamWriter(stream))
+                    {
+                        writer.WriteLine("ref count,document key,sample references");
+                        Database.TransactionalStorage.Batch(accessor =>
+                        {
+                            accessor.Indexing.DumpAllReferancesToCSV(writer, sampleCount);
+                        });
+                        writer.Flush();
                         stream.Flush();
-					}
-			    })
-			    {
-				    Headers =
-				    {
-					    ContentDisposition = new ContentDispositionHeaderValue("attachment")
-					    {
-						    FileName = "doc-refs.csv",
-					    },
-					    ContentType = new MediaTypeHeaderValue("application/octet-stream")
-				    }
-			    }
-		    };
-	    }
+                    }
+                })
+                {
+                    Headers =
+                    {
+                        ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                        {
+                            FileName = "doc-refs.csv",
+                        },
+                        ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                    }
+                }
+            };
+        }
 
-		[HttpGet]
-		[RavenRoute("debug/docrefs")]
-		[RavenRoute("databases/{databaseName}/debug/docrefs")]
-		public HttpResponseMessage DocRefs(string id)
-		{
-		    var op = GetQueryStringValue("op");
-			op = op == "from" ? "from" : "to";
+        [HttpGet]
+        [RavenRoute("debug/docrefs")]
+        [RavenRoute("databases/{databaseName}/debug/docrefs")]
+        public HttpResponseMessage DocRefs(string id)
+        {
+            var op = GetQueryStringValue("op");
+            op = op == "from" ? "from" : "to";
 
-			var totalCountReferencing = -1;
-			List<string> results = null;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				totalCountReferencing = accessor.Indexing.GetCountOfDocumentsReferencing(id);
-				var documentsReferencing =
-					op == "from"
-					? accessor.Indexing.GetDocumentsReferencesFrom(id)
-					: accessor.Indexing.GetDocumentsReferencing(id);
-				results = documentsReferencing.Skip(GetStart()).Take(GetPageSize(Database.Configuration.MaxPageSize)).ToList();
-			});
+            var totalCountReferencing = -1;
+            List<string> results = null;
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                totalCountReferencing = accessor.Indexing.GetCountOfDocumentsReferencing(id);
+                var documentsReferencing =
+                    op == "from"
+                    ? accessor.Indexing.GetDocumentsReferencesFrom(id)
+                    : accessor.Indexing.GetDocumentsReferencing(id);
+                results = documentsReferencing.Skip(GetStart()).Take(GetPageSize(Database.Configuration.MaxPageSize)).ToList();
+            });
 
-			return GetMessageWithObject(new
-			{
-				TotalCountReferencing = totalCountReferencing,
-				Results = results
-			});
-		}
+            return GetMessageWithObject(new
+            {
+                TotalCountReferencing = totalCountReferencing,
+                Results = results
+            });
+        }
 
         //DumpAllReferancesToCSV
 		[HttpGet]

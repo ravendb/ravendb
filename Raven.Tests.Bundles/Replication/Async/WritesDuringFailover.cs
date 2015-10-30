@@ -14,59 +14,59 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Replication.Async
 {
-	public class WritesDuringFailover : ReplicationBase
-	{
-		[Fact]
-		public async Task Can_failover_reads()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+    public class WritesDuringFailover : ReplicationBase
+    {
+        [Fact]
+        public async Task Can_failover_reads()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
 
-			TellFirstInstanceToReplicateToSecondInstance();
+            TellFirstInstanceToReplicateToSecondInstance();
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
 
 			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				await session.StoreAsync(new Company {Name = "Hibernating Rhinos"});
-				await session.SaveChangesAsync();
-			}
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company {Name = "Hibernating Rhinos"});
+                await session.SaveChangesAsync();
+            }
 
-			await WaitForReplication(store2);
+            await WaitForReplication(store2);
 
-			servers[0].Dispose();
+            servers[0].Dispose();
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				var company = await session.LoadAsync<Company>("companies/1");
-				Assert.NotNull(company);
-			}
-		}
+            using (var session = store1.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<Company>("companies/1");
+                Assert.NotNull(company);
+            }
+        }
 
-		[Fact]
-		public async Task Can_disallow_failover()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+        [Fact]
+        public async Task Can_disallow_failover()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
 
-			store1.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+            store1.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 
-			TellFirstInstanceToReplicateToSecondInstance();
+            TellFirstInstanceToReplicateToSecondInstance();
 
 			var serverClient = ((ServerClient)store1.DatabaseCommands);
 			GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
-				await session.SaveChangesAsync();
-			}
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+                await session.SaveChangesAsync();
+            }
 
-			await WaitForReplication(store2);
+            await WaitForReplication(store2);
 
-			servers[0].Dispose();
+            servers[0].Dispose();
 
 			using (var session = store1.OpenAsyncSession())
 			{

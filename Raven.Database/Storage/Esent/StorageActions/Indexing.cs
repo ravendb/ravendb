@@ -21,143 +21,143 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage.Esent.StorageActions
 {
-	public partial class DocumentStorageActions : IIndexingStorageActions
-	{
-		private bool SetCurrentIndexStatsToImpl(int index)
-		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats,index, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no index named: " + index);
+    public partial class DocumentStorageActions : IIndexingStorageActions
+    {
+        private bool SetCurrentIndexStatsToImpl(int index)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.MakeKey(session, IndexesStats,index, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+                throw new IndexDoesNotExistsException("There is no index named: " + index);
 
-			// this is optional
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, index, MakeKeyGrbit.NewKey);
-			return Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
-		}
+            // this is optional
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.MakeKey(session, IndexesStatsReduce, index, MakeKeyGrbit.NewKey);
+            return Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+        }
 
-		public IEnumerable<IndexStats> GetIndexesStats()
-		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+        public IEnumerable<IndexStats> GetIndexesStats()
+        {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
 
-			Api.MoveBeforeFirst(session, IndexesStats);
-			while (Api.TryMoveNext(session, IndexesStats))
-			{
-				yield return GetIndexStats();
-			}
-		}
+            Api.MoveBeforeFirst(session, IndexesStats);
+            while (Api.TryMoveNext(session, IndexesStats))
+            {
+                yield return GetIndexStats();
+            }
+        }
 
-		public IndexStats GetIndexStats(int index)
-		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+        public IndexStats GetIndexStats(int index)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
 
-			Api.MakeKey(session, IndexesStats, index, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-				return null;
+            Api.MakeKey(session, IndexesStats, index, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+                return null;
 
-			return GetIndexStats();
-		}
+            return GetIndexStats();
+        }
 
 
-		private IndexStats GetIndexStats()
-		{
-		    var id = (int)Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
-			Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
-			var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
+        private IndexStats GetIndexStats()
+        {
+            var id = (int)Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
+            Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
+            var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
-			Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
-			Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
+            Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
+            Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
 
-			var lastIndexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
+            var lastIndexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
             var createdTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["created_timestamp"]).Value;
-			var lastIndexingTime = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"]).Value;
-			return new IndexStats
-			{
-				Id = id,
-				TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
-				IndexingAttempts =
-					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
-				IndexingSuccesses =
-					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
-				IndexingErrors =
-					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
-				Priority = (IndexingPriority)Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["priority"]).Value,
-				LastIndexedEtag = Etag.Parse(Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])),
-				LastIndexedTimestamp = DateTime.FromBinary(lastIndexedTimestamp),
+            var lastIndexingTime = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"]).Value;
+            return new IndexStats
+            {
+                Id = id,
+                TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
+                IndexingAttempts =
+                    Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
+                IndexingSuccesses =
+                    Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
+                IndexingErrors =
+                    Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
+                Priority = (IndexingPriority)Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["priority"]).Value,
+                LastIndexedEtag = Etag.Parse(Api.RetrieveColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"])),
+                LastIndexedTimestamp = DateTime.FromBinary(lastIndexedTimestamp),
                 CreatedTimestamp = DateTime.FromBinary(createdTimestamp),
-				LastIndexingTime = DateTime.FromBinary(lastIndexingTime),
-				ReduceIndexingAttempts =
-					hasReduce == false
-						? null
-						: Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
-													tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
-				ReduceIndexingSuccesses = hasReduce == false
-											  ? null
-											  : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
-																		  tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
-				ReduceIndexingErrors = hasReduce == false
-										   ? null
-										   : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
-																	   tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
-				LastReducedEtag = hasReduce == false ? (Etag)null : GetLastReduceIndexWithPotentialNull(),
-				LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
-			};
-		}
+                LastIndexingTime = DateTime.FromBinary(lastIndexingTime),
+                ReduceIndexingAttempts =
+                    hasReduce == false
+                        ? null
+                        : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+                                                    tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]),
+                ReduceIndexingSuccesses = hasReduce == false
+                                              ? null
+                                              : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+                                                                          tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]),
+                ReduceIndexingErrors = hasReduce == false
+                                           ? null
+                                           : Api.RetrieveColumnAsInt32(session, IndexesStatsReduce,
+                                                                       tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]),
+                LastReducedEtag = hasReduce == false ? (Etag)null : GetLastReduceIndexWithPotentialNull(),
+                LastReducedTimestamp = hasReduce == false ? (DateTime?)null : GetLastReducedTimestampWithPotentialNull(),
+            };
+        }
 
-		private DateTime GetLastReducedTimestampWithPotentialNull()
-		{
-			var binary = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
-			if (binary == null)
-				return DateTime.MinValue;
-			return DateTime.FromBinary(binary.Value);
-		}
+        private DateTime GetLastReducedTimestampWithPotentialNull()
+        {
+            var binary = Api.RetrieveColumnAsInt64(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]);
+            if (binary == null)
+                return DateTime.MinValue;
+            return DateTime.FromBinary(binary.Value);
+        }
 
-		private Etag GetLastReduceIndexWithPotentialNull()
-		{
-			var bytes = Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
-			if (bytes == null)
-				return null;
-			return Etag.Parse(bytes);
-		}
+        private Etag GetLastReduceIndexWithPotentialNull()
+        {
+            var bytes = Api.RetrieveColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
+            if (bytes == null)
+                return null;
+            return Etag.Parse(bytes);
+        }
 
-		public void AddIndex(int id, bool createMapReduce)
-		{
-			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
-			{
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], id);
+        public void AddIndex(int id, bool createMapReduce)
+        {
+            using (var update = new Update(session, IndexesStats, JET_prep.Insert))
+            {
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], id);
                 Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["priority"], 1);
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue.ToBinary());
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"], DateTime.MinValue.ToBinary());
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue.ToBinary());
+                Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"], DateTime.MinValue.ToBinary());
                 Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["created_timestamp"], SystemTime.UtcNow.ToBinary());
-				update.Save();
-			}
+                update.Save();
+            }
 
 
-			using (var update = new Update(session, IndexesEtags, JET_prep.Insert))
-			{
-			    Api.SetColumn(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["key"], id);
-				update.Save();
-			}
+            using (var update = new Update(session, IndexesEtags, JET_prep.Insert))
+            {
+                Api.SetColumn(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["key"], id);
+                update.Save();
+            }
 
-			if (createMapReduce == false)
-				return;
+            if (createMapReduce == false)
+                return;
 
-			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Insert))
-			{
-			    Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], id);
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue.ToBinary());
-				update.Save();
-			}
-		}
+            using (var update = new Update(session, IndexesStatsReduce, JET_prep.Insert))
+            {
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], id);
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue.ToBinary());
+                update.Save();
+            }
+        }
 
-	    public void PrepareIndexForDeletion(int id)
-	    {
+        public void PrepareIndexForDeletion(int id)
+        {
             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
             Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ))
@@ -178,68 +178,68 @@ namespace Raven.Database.Storage.Esent.StorageActions
             {
                 Api.JetDelete(session, IndexesStatsReduce);
             }
-	    }
+        }
 
-	    public void DeleteIndex(int id, CancellationToken cancellationToken)
-		{
-			foreach (var op in new[]
-			{
-				new { Table = MappedResults, Index = "by_view_and_doc_key" },
-				new { Table = ScheduledReductions, Index = "by_view_level_and_hashed_reduce_key_and_bucket" },
-				new { Table = ReducedResults, Index = "by_view_level_hashed_reduce_key_and_bucket" },
-				new { Table = ReduceKeysCounts, Index = "by_view_and_hashed_reduce_key" },
-				new { Table = ReduceKeysStatus, Index = "by_view_and_hashed_reduce_key" },
-				new { Table = IndexedDocumentsReferences, Index = "by_view_and_key" },
-			})
-			{
-				Api.JetSetCurrentIndex(session, op.Table, op.Index);
-				Api.MakeKey(session, op.Table, id, MakeKeyGrbit.NewKey);
-				if (!Api.TrySeek(session, op.Table, SeekGrbit.SeekGE))
-					continue;
-				var columnids = Api.GetColumnDictionary(session, op.Table);
-				do
-				{
-					var indexNameFromDb = Api.RetrieveColumnAsInt32(session, op.Table, columnids["view"]);
-					if (id != indexNameFromDb)
-						break;
-					MaybePulseTransaction();
-					Api.JetDelete(session, op.Table);
+        public void DeleteIndex(int id, CancellationToken cancellationToken)
+        {
+            foreach (var op in new[]
+            {
+                new { Table = MappedResults, Index = "by_view_and_doc_key" },
+                new { Table = ScheduledReductions, Index = "by_view_level_and_hashed_reduce_key_and_bucket" },
+                new { Table = ReducedResults, Index = "by_view_level_hashed_reduce_key_and_bucket" },
+                new { Table = ReduceKeysCounts, Index = "by_view_and_hashed_reduce_key" },
+                new { Table = ReduceKeysStatus, Index = "by_view_and_hashed_reduce_key" },
+                new { Table = IndexedDocumentsReferences, Index = "by_view_and_key" },
+            })
+            {
+                Api.JetSetCurrentIndex(session, op.Table, op.Index);
+                Api.MakeKey(session, op.Table, id, MakeKeyGrbit.NewKey);
+                if (!Api.TrySeek(session, op.Table, SeekGrbit.SeekGE))
+                    continue;
+                var columnids = Api.GetColumnDictionary(session, op.Table);
+                do
+                {
+                    var indexNameFromDb = Api.RetrieveColumnAsInt32(session, op.Table, columnids["view"]);
+                    if (id != indexNameFromDb)
+                        break;
+                    MaybePulseTransaction();
+                    Api.JetDelete(session, op.Table);
                 } while (Api.TryMoveNext(session, op.Table) && cancellationToken.IsCancellationRequested == false);
-			}
+            }
 
-		}
+        }
 
-		public IndexFailureInformation GetFailureRate(int index)
-		{
-			var hasReduce = SetCurrentIndexStatsToImpl(index);
-			return new IndexFailureInformation
-			{
-				Id = index,
-				Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
-				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
-				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
-				ReduceAttempts = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]) : null,
-				ReduceErrors = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]) : null,
-				ReduceSuccesses = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]) : null
-			};
-		}
+        public IndexFailureInformation GetFailureRate(int index)
+        {
+            var hasReduce = SetCurrentIndexStatsToImpl(index);
+            return new IndexFailureInformation
+            {
+                Id = index,
+                Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
+                Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
+                Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
+                ReduceAttempts = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]) : null,
+                ReduceErrors = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"]) : null,
+                ReduceSuccesses = hasReduce ? Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_successes"]) : null
+            };
+        }
 
-		public void UpdateLastIndexed(int id, Etag etag, DateTime timestamp)
-		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no index with id: " + id.ToString());
+        public void UpdateLastIndexed(int id, Etag etag, DateTime timestamp)
+        {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
+                throw new IndexDoesNotExistsException("There is no index with id: " + id.ToString());
 
-			using (var update = new Update(session, IndexesStats, JET_prep.Replace))
-			{
-				Api.SetColumn(session, IndexesStats,tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],etag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, IndexesStats,
-							  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
-							  timestamp.ToBinary());
-				update.Save();
-			}
-		}
+            using (var update = new Update(session, IndexesStats, JET_prep.Replace))
+            {
+                Api.SetColumn(session, IndexesStats,tableColumnsCache.IndexesStatsColumns["last_indexed_etag"],etag.TransformToValueForEsentSorting());
+                Api.SetColumn(session, IndexesStats,
+                              tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"],
+                              timestamp.ToBinary());
+                update.Save();
+            }
+        }
 
         public void SetIndexPriority(int id, IndexingPriority priority)
         {
@@ -247,7 +247,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
             {
-	            throw new IndexDoesNotExistsException(message: "There is no index with id: " + id.ToString());
+                throw new IndexDoesNotExistsException(message: "There is no index with id: " + id.ToString());
             }
 
             using (var update = new Update(session, IndexesStats, JET_prep.Replace))
@@ -458,53 +458,53 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
         public void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs)
         {
-	        Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
-	        Api.JetMove(session, IndexedDocumentsReferences, JET_Move.First, MoveGrbit.None);
-	        var keysToRef = new Dictionary<string, DocCountWithSampleDocIds>();
-	        do
-	        {
-		        var key = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-			        tableColumnsCache.IndexedDocumentsReferencesColumns["key"], Encoding.Unicode);
-				DocCountWithSampleDocIds docData;
-				if (keysToRef.TryGetValue(key, out docData) == false)
-		        {
-					keysToRef[key] = docData = new DocCountWithSampleDocIds()
-			        {
-				        Count = 0,
-				        SampleDocsIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-			        };
-		        }
-		        var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-			        tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], Encoding.Unicode);
-		        if (docData.Count < numberOfSampleDocs)
-					docData.SampleDocsIds.Add(item);
-		        docData.Count++;
-	        } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
-	        
-	        foreach (var kvp in keysToRef.OrderByDescending(x=>x.Value.Count))
-	        {
-		        writer.WriteLine("{0},{1},\"{2}\"", kvp.Value.Count, kvp.Key, string.Join(", ", kvp.Value.SampleDocsIds));
-	        }
+            Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_key");
+            Api.JetMove(session, IndexedDocumentsReferences, JET_Move.First, MoveGrbit.None);
+            var keysToRef = new Dictionary<string, DocCountWithSampleDocIds>();
+            do
+            {
+                var key = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+                    tableColumnsCache.IndexedDocumentsReferencesColumns["key"], Encoding.Unicode);
+                DocCountWithSampleDocIds docData;
+                if (keysToRef.TryGetValue(key, out docData) == false)
+                {
+                    keysToRef[key] = docData = new DocCountWithSampleDocIds()
+                    {
+                        Count = 0,
+                        SampleDocsIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    };
+                }
+                var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+                    tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], Encoding.Unicode);
+                if (docData.Count < numberOfSampleDocs)
+                    docData.SampleDocsIds.Add(item);
+                docData.Count++;
+            } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+            
+            foreach (var kvp in keysToRef.OrderByDescending(x=>x.Value.Count))
+            {
+                writer.WriteLine("{0},{1},\"{2}\"", kvp.Value.Count, kvp.Key, string.Join(", ", kvp.Value.SampleDocsIds));
+            }
         }
 
-		private IEnumerable<string> QueryReferences(string key, string id, string col)
-		{
-			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, id);            
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
-				return Enumerable.Empty<string>();
-			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
-			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-								 
-			var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			do
-			{
-				var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
-				                                        tableColumnsCache.IndexedDocumentsReferencesColumns[col], Encoding.Unicode);
-				results.Add(item);
-			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
-			return results;
-		}
-	}
+        private IEnumerable<string> QueryReferences(string key, string id, string col)
+        {
+            Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, id);            
+            Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
+                return Enumerable.Empty<string>();
+            Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.JetSetIndexRange(session, IndexedDocumentsReferences,
+                                 SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+                                 
+            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            do
+            {
+                var item = Api.RetrieveColumnAsString(session, IndexedDocumentsReferences,
+                                                        tableColumnsCache.IndexedDocumentsReferencesColumns[col], Encoding.Unicode);
+                results.Add(item);
+            } while (Api.TryMoveNext(session, IndexedDocumentsReferences));
+            return results;
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -208,12 +208,12 @@ namespace Raven.Database.Util
 	        var availableMemoryInMb = MemoryStatistics.AvailableMemoryInMb;
 	        if (availableMemoryInMb >= 1536 ||
                 availableMemoryInMb > (MemoryStatistics.TotalPhysicalMemory*0.2))
-	        {
+            {
                 // there is no point in even running this if we have more than 1.5GB of memory or more than 20% of 
                 // memory free, it is better to let the system run in, then inducing GC manually
-	            return;
-	        }
+                return;
+            }
             CollectGarbage(1, GCCollectionMode.Optimized);
         }
-	}
+    }
 }

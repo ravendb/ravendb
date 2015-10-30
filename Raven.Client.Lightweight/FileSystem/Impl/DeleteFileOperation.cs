@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using System;
 using System.Threading.Tasks;
@@ -7,11 +7,11 @@ namespace Raven.Client.FileSystem.Impl
 {
     internal class DeleteFileOperation : IFilesOperation
     {
-	    private readonly InMemoryFilesSessionOperations sessionOperations;
+        private readonly InMemoryFilesSessionOperations sessionOperations;
 
         public string FileName { get; private set; }
 
-	    private Etag Etag { get; set; }
+        private Etag Etag { get; set; }
 
         public DeleteFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, Etag etag)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -222,12 +222,12 @@ namespace Raven.Tests.Issues
 					session.SaveChanges();
 				}
 
-				WaitForIndexing(source);
-				sourceDatabase.StopBackgroundWorkers();
-				destinationDatabase.StopBackgroundWorkers();
+                WaitForIndexing(source);
+                sourceDatabase.StopBackgroundWorkers();
+                destinationDatabase.StopBackgroundWorkers();
 
-				var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
-				sourceReplicationTask.Pause();
+                var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
+                sourceReplicationTask.Pause();
 
 				SetupReplication(source.DatabaseCommands, destination);
 
@@ -271,28 +271,28 @@ namespace Raven.Tests.Issues
 				var testIndex2 = new UserIndex2();
 				testIndex2.SetName(testIndex.IndexName);
 
-				var oldIndexDef = new IndexDefinition
-				{
-					Map = "from user in docs.Users\n select new {\n\tName = user.Name\n}"
-				};
+                var oldIndexDef = new IndexDefinition
+                {
+                    Map = "from user in docs.Users\n select new {\n\tName = user.Name\n}"
+                };
 
-				source.DatabaseCommands.PutIndex(testIndex.IndexName, oldIndexDef);
+                source.DatabaseCommands.PutIndex(testIndex.IndexName, oldIndexDef);
 
-				var sourceDatabase = await servers[0].Server.GetDatabaseInternal(source.DefaultDatabase);
-				var destinationDatabase = await servers[1].Server.GetDatabaseInternal(destination.DefaultDatabase);
+                var sourceDatabase = await servers[0].Server.GetDatabaseInternal(source.DefaultDatabase);
+                var destinationDatabase = await servers[1].Server.GetDatabaseInternal(destination.DefaultDatabase);
 
-				using (var session = source.OpenSession())
-				{
-					session.Store(new User
-					{
-						Name = "John Doe"
-					});
-					session.SaveChanges();
-				}
+                using (var session = source.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "John Doe"
+                    });
+                    session.SaveChanges();
+                }
 
-				WaitForIndexing(source);
-				sourceDatabase.StopBackgroundWorkers();
-				destinationDatabase.StopBackgroundWorkers();
+                WaitForIndexing(source);
+                sourceDatabase.StopBackgroundWorkers();
+                destinationDatabase.StopBackgroundWorkers();
 
 				var sourceReplicationTask = sourceDatabase.StartupTasks.OfType<ReplicationTask>().First();
 				sourceReplicationTask.Pause();
@@ -301,39 +301,39 @@ namespace Raven.Tests.Issues
 
 				sourceReplicationTask.IndexReplication.Execute(); //replicate the usual index
 
-				source.SideBySideExecuteIndex(testIndex);
+                source.SideBySideExecuteIndex(testIndex);
 
 				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index
 
-				//sanity check
-				Assert.NotNull(destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName));
+                //sanity check
+                Assert.NotNull(destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName));
 
-				sourceDatabase.Indexes.DeleteIndex(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
-				
-				source.SideBySideExecuteIndex(testIndex2); //replaces the testIndex side-by-side index on source
+                sourceDatabase.Indexes.DeleteIndex(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
+                
+                source.SideBySideExecuteIndex(testIndex2); //replaces the testIndex side-by-side index on source
 
 				sourceReplicationTask.IndexReplication.Execute(); //should replicate the replaced side-by-sude index to destination
 
-				var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
-				Assert.NotNull(sideBySideIndex);
-				Assert.True(sideBySideIndex.Equals(testIndex2.CreateIndexDefinition(),false));
-			}
-		}
+                var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
+                Assert.NotNull(sideBySideIndex);
+                Assert.True(sideBySideIndex.Equals(testIndex2.CreateIndexDefinition(),false));
+            }
+        }
 
-		/*
-		 * This tests the following scenario
-		 * 1) Index + Side-by-Side index replicated to destination
-		 * 2) Original index is deleted at destination, side-by-side index remains
-		 * 3) Index + Side-by-Side index replicated to destination again
-		 * 4) Result: The original index is recreated with side-by-side definition; The remaining side-by-side index on destination is deleted
-		 */
-		[Fact]
-		public async Task If_deleted_original_index_on_destination_but_not_side_by_side_index()
-		{
-			using (var source = CreateStore())
-			using (var destination = CreateStore())
-			{
-				var testIndex = new UserIndex();
+        /*
+         * This tests the following scenario
+         * 1) Index + Side-by-Side index replicated to destination
+         * 2) Original index is deleted at destination, side-by-side index remains
+         * 3) Index + Side-by-Side index replicated to destination again
+         * 4) Result: The original index is recreated with side-by-side definition; The remaining side-by-side index on destination is deleted
+         */
+        [Fact]
+        public async Task If_deleted_original_index_on_destination_but_not_side_by_side_index()
+        {
+            using (var source = CreateStore())
+            using (var destination = CreateStore())
+            {
+                var testIndex = new UserIndex();
 
 				var oldIndexDef = new IndexDefinition
 				{
@@ -369,34 +369,34 @@ namespace Raven.Tests.Issues
 
 				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index
 
-				destinationDatabase.Indexes.DeleteIndex(testIndex.IndexName); //delete the original index
+                destinationDatabase.Indexes.DeleteIndex(testIndex.IndexName); //delete the original index
 
-				var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
-				Assert.NotNull(sideBySideIndex);
+                var sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
+                Assert.NotNull(sideBySideIndex);
 
 				VerifyReplacementDocumentIsThere(Constants.SideBySideIndexNamePrefix + testIndex.IndexName, destinationDatabase);
 				sourceReplicationTask.IndexReplication.Execute(); //replicate the side-by-side index again
 
-				var oldIndex = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
-				Assert.True(oldIndex.Equals(testIndex.CreateIndexDefinition(), false));
+                var oldIndex = destinationDatabase.Indexes.GetIndexDefinition(testIndex.IndexName);
+                Assert.True(oldIndex.Equals(testIndex.CreateIndexDefinition(), false));
 
-				sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
-				Assert.Null(sideBySideIndex);
-				Assert.Null(destinationDatabase.Documents.Get(Constants.IndexReplacePrefix + Constants.SideBySideIndexNamePrefix + testIndex.IndexName, null));
-			}
-		}
+                sideBySideIndex = destinationDatabase.Indexes.GetIndexDefinition(Constants.SideBySideIndexNamePrefix + testIndex.IndexName);
+                Assert.Null(sideBySideIndex);
+                Assert.Null(destinationDatabase.Documents.Get(Constants.IndexReplacePrefix + Constants.SideBySideIndexNamePrefix + testIndex.IndexName, null));
+            }
+        }
 
-		private static void VerifyReplacementDocumentIsThere(string replacementIndexName, DocumentDatabase destinationDatabase,bool shouldVerifyEtag = false)
-		{
-			var id = Constants.IndexReplacePrefix + replacementIndexName;
-			var documentInfo = destinationDatabase.Documents.Get(id, null);
-			Assert.NotNull(documentInfo);
+        private static void VerifyReplacementDocumentIsThere(string replacementIndexName, DocumentDatabase destinationDatabase,bool shouldVerifyEtag = false)
+        {
+            var id = Constants.IndexReplacePrefix + replacementIndexName;
+            var documentInfo = destinationDatabase.Documents.Get(id, null);
+            Assert.NotNull(documentInfo);
 
-			if (shouldVerifyEtag)
-			{
-				var indexReplacementDoc = documentInfo.DataAsJson;
-				Assert.Equal(destinationDatabase.Statistics.LastDocEtag, Etag.Parse(indexReplacementDoc.Value<string>("MinimumEtagBeforeReplace")));
-			}
-		}
-	}
+            if (shouldVerifyEtag)
+            {
+                var indexReplacementDoc = documentInfo.DataAsJson;
+                Assert.Equal(destinationDatabase.Statistics.LastDocEtag, Etag.Parse(indexReplacementDoc.Value<string>("MinimumEtagBeforeReplace")));
+            }
+        }
+    }
 }

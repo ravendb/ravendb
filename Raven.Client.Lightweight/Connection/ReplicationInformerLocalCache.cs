@@ -16,11 +16,11 @@ namespace Raven.Client.Connection
 		public static IsolatedStorageFile GetIsolatedStorageFile()
 		{
 #if MONO
-			return IsolatedStorageFile.GetUserStoreForApplication();
+            return IsolatedStorageFile.GetUserStoreForApplication();
 #else
-			return IsolatedStorageFile.GetMachineStoreForDomain();
+            return IsolatedStorageFile.GetMachineStoreForDomain();
 #endif
-		}
+        }
 
 		public static void ClearReplicationInformationFromLocalCache(string serverHash)
 		{
@@ -30,8 +30,8 @@ namespace Raven.Client.Connection
 				{
 					var path = "RavenDB Replication Information For - " + serverHash;
 
-					if (machineStoreForApplication.GetFileNames(path).Length == 0)
-						return;
+                    if (machineStoreForApplication.GetFileNames(path).Length == 0)
+                        return;
 
 					machineStoreForApplication.DeleteFile(path);
 				}
@@ -50,8 +50,8 @@ namespace Raven.Client.Connection
 				{
 					var path = "RavenDB Replication Information For - " + serverHash;
 
-					if (machineStoreForApplication.GetFileNames(path).Length == 0)
-						return null;
+                    if (machineStoreForApplication.GetFileNames(path).Length == 0)
+                        return null;
 
 					using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
 					{

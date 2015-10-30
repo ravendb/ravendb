@@ -101,127 +101,127 @@ namespace Raven.Database.Server.Connections
             Interlocked.Decrement(ref watchAllTransformers);
         }
 
-		public void WatchAllIndexes()
-		{
-			Interlocked.Increment(ref watchAllIndexes);
-		}
+        public void WatchAllIndexes()
+        {
+            Interlocked.Increment(ref watchAllIndexes);
+        }
 
-		public void UnwatchAllIndexes()
-		{
-			Interlocked.Decrement(ref watchAllIndexes);
-		}
+        public void UnwatchAllIndexes()
+        {
+            Interlocked.Decrement(ref watchAllIndexes);
+        }
 
-		public void WatchConflicts()
-		{
-			Interlocked.Increment(ref watchConflicts);
-		}
+        public void WatchConflicts()
+        {
+            Interlocked.Increment(ref watchConflicts);
+        }
 
-		public void UnwatchConflicts()
-		{
-			Interlocked.Decrement(ref watchConflicts);
-		}
+        public void UnwatchConflicts()
+        {
+            Interlocked.Decrement(ref watchConflicts);
+        }
 
-		public void WatchSync()
-		{
-			Interlocked.Increment(ref watchSync);
-		}
+        public void WatchSync()
+        {
+            Interlocked.Increment(ref watchSync);
+        }
 
-		public void UnwatchSync()
-		{
-			Interlocked.Decrement(ref watchSync);
-		}
+        public void UnwatchSync()
+        {
+            Interlocked.Decrement(ref watchSync);
+        }
 
-		public void WatchFolder(string folder)
-		{
-			matchingFolders.TryAdd(folder);
-		}
+        public void WatchFolder(string folder)
+        {
+            matchingFolders.TryAdd(folder);
+        }
 
-		public void UnwatchFolder(string folder)
-		{
-			matchingFolders.TryRemove(folder);
-		}
+        public void UnwatchFolder(string folder)
+        {
+            matchingFolders.TryRemove(folder);
+        }
 
-		public void WatchConfig()
-		{
-			Interlocked.Increment(ref watchConfig);
-		}
+        public void WatchConfig()
+        {
+            Interlocked.Increment(ref watchConfig);
+        }
 
-		public void UnwatchConfig()
-		{
-			Interlocked.Decrement(ref watchConfig);
-		}
+        public void UnwatchConfig()
+        {
+            Interlocked.Decrement(ref watchConfig);
+        }
 
-		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
-		{
-		    if (!matchingBulkInserts.Contains(string.Empty) && 
+        public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+        {
+            if (!matchingBulkInserts.Contains(string.Empty) && 
                 !matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString())) 
                 return;
-		    Enqueue(new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" });
-		}
+            Enqueue(new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" });
+        }
 
-	    public void Send(DocumentChangeNotification documentChangeNotification)
-		{
-			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
-			if (watchAllDocuments > 0)
-			{
-				Enqueue(value);
-				return;
-			}
+        public void Send(DocumentChangeNotification documentChangeNotification)
+        {
+            var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
+            if (watchAllDocuments > 0)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			if (documentChangeNotification.Id != null && matchingDocuments.Contains(documentChangeNotification.Id))
-			{
-				Enqueue(value);
-				return;
-			}
+            if (documentChangeNotification.Id != null && matchingDocuments.Contains(documentChangeNotification.Id))
+            {
+                Enqueue(value);
+                return;
+            }
 
-			var hasPrefix = documentChangeNotification.Id != null && matchingDocumentPrefixes
-				.Any(x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
+            var hasPrefix = documentChangeNotification.Id != null && matchingDocumentPrefixes
+                .Any(x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
 
-			if (hasPrefix)
-			{
-				Enqueue(value);
-				return;
-			}
+            if (hasPrefix)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			var hasCollection = documentChangeNotification.CollectionName != null && matchingDocumentsInCollection
-				.Any(x => string.Equals(x, documentChangeNotification.CollectionName, StringComparison.InvariantCultureIgnoreCase));
+            var hasCollection = documentChangeNotification.CollectionName != null && matchingDocumentsInCollection
+                .Any(x => string.Equals(x, documentChangeNotification.CollectionName, StringComparison.InvariantCultureIgnoreCase));
 
-			if (hasCollection)
-			{
-				Enqueue(value);
-				return;
-			}
+            if (hasCollection)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			var hasType = documentChangeNotification.TypeName != null && matchingDocumentsOfType
-				.Any(x => string.Equals(x, documentChangeNotification.TypeName, StringComparison.InvariantCultureIgnoreCase));
+            var hasType = documentChangeNotification.TypeName != null && matchingDocumentsOfType
+                .Any(x => string.Equals(x, documentChangeNotification.TypeName, StringComparison.InvariantCultureIgnoreCase));
 
-			if (hasType)
-			{
-				Enqueue(value);
-				return;
-			}
+            if (hasType)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			if (documentChangeNotification.Id != null || documentChangeNotification.CollectionName != null || documentChangeNotification.TypeName != null)
-			{
-				return;
-			}
+            if (documentChangeNotification.Id != null || documentChangeNotification.CollectionName != null || documentChangeNotification.TypeName != null)
+            {
+                return;
+            }
 
-			Enqueue(value);
-		}
+            Enqueue(value);
+        }
 
-		public void Send(IndexChangeNotification indexChangeNotification)
-		{
-		    if (watchAllIndexes > 0)
-			{
-				Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
-				return;
-			}
+        public void Send(IndexChangeNotification indexChangeNotification)
+        {
+            if (watchAllIndexes > 0)
+            {
+                Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
+                return;
+            }
 
-			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
-				return;
+            if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
+                return;
 
-			Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
-		}
+            Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
+        }
 
         public void Send(TransformerChangeNotification transformerChangeNotification)
         {

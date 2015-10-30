@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Raven.Abstractions.FileSystem.Notifications
 {
@@ -6,23 +6,23 @@ namespace Raven.Abstractions.FileSystem.Notifications
 	{
 		public string FileName { get; set; }
         public string DestinationFileSystemUrl { get; set; }
-		public Guid SourceServerId { get; set; }
-		public string SourceFileSystemUrl { get; set; }
-		public SynchronizationType Type { get; set; }
-		public SynchronizationAction Action { get; set; }
-		public SynchronizationDirection Direction { get; set; }
-	}
+        public Guid SourceServerId { get; set; }
+        public string SourceFileSystemUrl { get; set; }
+        public SynchronizationType Type { get; set; }
+        public SynchronizationAction Action { get; set; }
+        public SynchronizationDirection Direction { get; set; }
+    }
 
-	public enum SynchronizationAction
-	{
+    public enum SynchronizationAction
+    {
         Enqueue,
-		Start,
-		Finish
-	}
+        Start,
+        Finish
+    }
 
-	public enum SynchronizationDirection
-	{
-		Outgoing,
-		Incoming
-	}
+    public enum SynchronizationDirection
+    {
+        Outgoing,
+        Incoming
+    }
 }

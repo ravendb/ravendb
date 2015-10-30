@@ -16,15 +16,15 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Indexes
 {
-	/// <summary>
-	/// Base class for creating transformers
-	/// </summary>
-	/// <remarks>
-	/// The naming convention is that underscores in the inherited class names are replaced by slashed
-	/// For example: Posts_ByName will be saved to Posts/ByName
-	/// </remarks>
+    /// <summary>
+    /// Base class for creating transformers
+    /// </summary>
+    /// <remarks>
+    /// The naming convention is that underscores in the inherited class names are replaced by slashed
+    /// For example: Posts_ByName will be saved to Posts/ByName
+    /// </remarks>
 #if !MONO
-	[System.ComponentModel.Composition.InheritedExport]
+    [System.ComponentModel.Composition.InheritedExport]
 #endif
 	public abstract class AbstractTransformerCreationTask : AbstractCommonApiForIndexesAndTransformers
 	{
@@ -257,6 +257,6 @@ namespace Raven.Client.Indexes
             }
 
             return transformerDefinition;
-		}
-	}
+        }
+    }
 }

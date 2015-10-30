@@ -16,124 +16,124 @@ using Raven.Storage.Esent;
 
 namespace Raven.Database.Storage.Esent.Backup
 {
-	internal class RestoreOperation : BaseRestoreOperation
-	{
+    internal class RestoreOperation : BaseRestoreOperation
+    {
         public RestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
             : base(restoreRequest, configuration, operationOutputCallback)
-		{
-		}
+        {
+        }
 
 
-		protected override bool IsValidBackup(string backupFilename)
-		{
-			return File.Exists(Path.Combine(backupLocation, backupFilename));
-		}
+        protected override bool IsValidBackup(string backupFilename)
+        {
+            return File.Exists(Path.Combine(backupLocation, backupFilename));
+        }
 
-		public override void Execute()
-		{
+        public override void Execute()
+        {
             ValidateRestorePreconditionsAndReturnLogsPath("RavenDB.Backup");
-			
-			Directory.CreateDirectory(Path.Combine(journalLocation, "logs"));
+            
+            Directory.CreateDirectory(Path.Combine(journalLocation, "logs"));
             Directory.CreateDirectory(Path.Combine(journalLocation, "temp"));
             Directory.CreateDirectory(Path.Combine(journalLocation, "system"));
 
-			CombineIncrementalBackups();
+            CombineIncrementalBackups();
 
-			CopyIndexDefinitions();
+            CopyIndexDefinitions();
 
-			CopyIndexes();
+            CopyIndexes();
 
-			var dataFilePath = Path.Combine(databaseLocation, "Data");
+            var dataFilePath = Path.Combine(databaseLocation, "Data");
 
-			bool hideTerminationException = false;
-			JET_INSTANCE instance;
-			TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
-			try
-			{
-				Configuration.Storage.Esent.JournalsStoragePath = journalLocation;
-				new TransactionalStorageConfigurator(Configuration, null).ConfigureInstance(instance, databaseLocation);
-				Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
-				var fileName = Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name, "Data");
-				var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(fileName);
+            bool hideTerminationException = false;
+            JET_INSTANCE instance;
+            TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
+            try
+            {
+                Configuration.Storage.Esent.JournalsStoragePath = journalLocation;
+                new TransactionalStorageConfigurator(Configuration, null).ConfigureInstance(instance, databaseLocation);
+                Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
+                var fileName = Path.Combine(new DirectoryInfo(databaseLocation).Parent.FullName, new DirectoryInfo(databaseLocation).Name, "Data");
+                var fileThatGetsCreatedButDoesntSeemLikeItShould = new FileInfo(fileName);
 
-				TransactionalStorage.DisableIndexChecking(instance);
+                TransactionalStorage.DisableIndexChecking(instance);
 
-				if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
-				{
-					fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
-				}
+                if (fileThatGetsCreatedButDoesntSeemLikeItShould.Exists)
+                {
+                    fileThatGetsCreatedButDoesntSeemLikeItShould.MoveTo(dataFilePath);
+                }
 
-				if (_restoreRequest.Defrag)
-				{
-					output("Esent Restore: Begin Database Compaction");
-					TransactionalStorage.Compact(Configuration, CompactStatusCallback);
-					output("Esent Restore: Database Compaction Completed");
-				}
-			}
-			catch(Exception e)
-			{
-				output("Esent Restore: Failure! Could not restore database!");
-				output(e.ToString());
-				log.WarnException("Could not complete restore", e);
-				hideTerminationException = true;
-				throw;
-			}
-			finally
-			{
-				try
-				{
-					Api.JetTerm(instance);
-				}
-				catch (Exception)
-				{
-					if (hideTerminationException == false)
-						throw;
-				}
-			}
-		}
+                if (_restoreRequest.Defrag)
+                {
+                    output("Esent Restore: Begin Database Compaction");
+                    TransactionalStorage.Compact(Configuration, CompactStatusCallback);
+                    output("Esent Restore: Database Compaction Completed");
+                }
+            }
+            catch(Exception e)
+            {
+                output("Esent Restore: Failure! Could not restore database!");
+                output(e.ToString());
+                log.WarnException("Could not complete restore", e);
+                hideTerminationException = true;
+                throw;
+            }
+            finally
+            {
+                try
+                {
+                    Api.JetTerm(instance);
+                }
+                catch (Exception)
+                {
+                    if (hideTerminationException == false)
+                        throw;
+                }
+            }
+        }
 
-	    private void CombineIncrementalBackups()
-		{
-			var directories = Directory.GetDirectories(backupLocation, "Inc*")
-				.OrderBy(dir => dir)
-				.ToList();
+        private void CombineIncrementalBackups()
+        {
+            var directories = Directory.GetDirectories(backupLocation, "Inc*")
+                .OrderBy(dir => dir)
+                .ToList();
 
-			foreach (var directory in directories)
-			{
-				foreach (var file in Directory.GetFiles(directory, "RVN*.log"))
-				{
-					var justFile = Path.GetFileName(file);
+            foreach (var directory in directories)
+            {
+                foreach (var file in Directory.GetFiles(directory, "RVN*.log"))
+                {
+                    var justFile = Path.GetFileName(file);
                     output(string.Format("Copying incremental log : {0}", justFile));
                     File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
-				}
-			}
-		}
+                }
+            }
+        }
 
-		private JET_err RestoreStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
-		{
-			output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
-			Console.WriteLine("Esent Restore: {0} {1} {2}", snp, snt, data);
+        private JET_err RestoreStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+        {
+            output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
+            Console.WriteLine("Esent Restore: {0} {1} {2}", snp, snt, data);
 
-			return JET_err.Success;
-		}
+            return JET_err.Success;
+        }
 
-		private DateTime lastCompactionProgressStatusUpdate;
+        private DateTime lastCompactionProgressStatusUpdate;
 
-		private JET_err CompactStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
-		{
-			Console.WriteLine("Esent Compact: {0} {1} {2}", snp, snt, data);
+        private JET_err CompactStatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+        {
+            Console.WriteLine("Esent Compact: {0} {1} {2}", snp, snt, data);
 
-			if (snt == JET_SNT.Progress)
-			{
-				if(SystemTime.UtcNow - lastCompactionProgressStatusUpdate < TimeSpan.FromMilliseconds(100))
-					return JET_err.Success;
+            if (snt == JET_SNT.Progress)
+            {
+                if(SystemTime.UtcNow - lastCompactionProgressStatusUpdate < TimeSpan.FromMilliseconds(100))
+                    return JET_err.Success;
 
-				lastCompactionProgressStatusUpdate = SystemTime.UtcNow;
-			}
+                lastCompactionProgressStatusUpdate = SystemTime.UtcNow;
+            }
 
-			output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
-			
-			return JET_err.Success;
-		}
-	}
+            output(string.Format("Esent Compact: {0} {1} {2}", snp, snt, data));
+            
+            return JET_err.Success;
+        }
+    }
 }

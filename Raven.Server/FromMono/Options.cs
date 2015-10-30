@@ -144,616 +144,616 @@ using NDesk.Options;
 namespace NDesk.Options
 {
 
-	public class OptionValueCollection : IList, IList<string>
-	{
-
-		List<string> values = new List<string>();
-		OptionContext c;
-
-		internal OptionValueCollection(OptionContext c)
-		{
-			this.c = c;
-		}
-
-		#region ICollection
-		void ICollection.CopyTo(Array array, int index) { (values as ICollection).CopyTo(array, index); }
-		bool ICollection.IsSynchronized { get { return (values as ICollection).IsSynchronized; } }
-		object ICollection.SyncRoot { get { return (values as ICollection).SyncRoot; } }
-		#endregion
-
-		#region ICollection<T>
-		public void Add(string item) { values.Add(item); }
-		public void Clear() { values.Clear(); }
-		public bool Contains(string item) { return values.Contains(item); }
-		public void CopyTo(string[] array, int arrayIndex) { values.CopyTo(array, arrayIndex); }
-		public bool Remove(string item) { return values.Remove(item); }
-		public int Count { get { return values.Count; } }
-		public bool IsReadOnly { get { return false; } }
-		#endregion
-
-		#region IEnumerable
-		IEnumerator IEnumerable.GetEnumerator() { return values.GetEnumerator(); }
-		#endregion
-
-		#region IEnumerable<T>
-		public IEnumerator<string> GetEnumerator() { return values.GetEnumerator(); }
-		#endregion
-
-		#region IList
-		int IList.Add(object value) { return (values as IList).Add(value); }
-		bool IList.Contains(object value) { return (values as IList).Contains(value); }
-		int IList.IndexOf(object value) { return (values as IList).IndexOf(value); }
-		void IList.Insert(int index, object value) { (values as IList).Insert(index, value); }
-		void IList.Remove(object value) { (values as IList).Remove(value); }
-		void IList.RemoveAt(int index) { (values as IList).RemoveAt(index); }
-		bool IList.IsFixedSize { get { return false; } }
-		object IList.this[int index] { get { return this[index]; } set { (values as IList)[index] = value; } }
-		#endregion
-
-		#region IList<T>
-		public int IndexOf(string item) { return values.IndexOf(item); }
-		public void Insert(int index, string item) { values.Insert(index, item); }
-		public void RemoveAt(int index) { values.RemoveAt(index); }
-
-		private void AssertValid(int index)
-		{
-			if (c.Option == null)
-				throw new InvalidOperationException("OptionContext.Option is null.");
-			if (index >= c.Option.MaxValueCount)
-				throw new ArgumentOutOfRangeException("index");
-			if (c.Option.OptionValueType == OptionValueType.Required &&
-					index >= values.Count)
-				throw new OptionException(string.Format(
-							c.OptionSet.MessageLocalizer("Missing required value for option '{0}'."), c.OptionName),
-						c.OptionName);
-		}
-
-		public string this[int index]
-		{
-			get
-			{
-				AssertValid(index);
-				return index >= values.Count ? null : values[index];
-			}
-			set
-			{
-				values[index] = value;
-			}
-		}
-		#endregion
-
-		public List<string> ToList()
-		{
-			return new List<string>(values);
-		}
-
-		public string[] ToArray()
-		{
-			return values.ToArray();
-		}
-
-		public override string ToString()
-		{
-			return string.Join(", ", values.ToArray());
-		}
-	}
-
-	public class OptionContext
-	{
-		private Option option;
-		private string name;
-		private int index;
-		private OptionSet set;
-		private OptionValueCollection c;
-
-		public OptionContext(OptionSet set)
-		{
-			this.set = set;
-			this.c = new OptionValueCollection(this);
-		}
-
-		public Option Option
-		{
-			get { return option; }
-			set { option = value; }
-		}
-
-		public string OptionName
-		{
-			get { return name; }
-			set { name = value; }
-		}
-
-		public int OptionIndex
-		{
-			get { return index; }
-			set { index = value; }
-		}
-
-		public OptionSet OptionSet
-		{
-			get { return set; }
-		}
-
-		public OptionValueCollection OptionValues
-		{
-			get { return c; }
-		}
-	}
-
-	public enum OptionValueType
-	{
-		None,
-		Optional,
-		Required,
-	}
-
-	public abstract class Option
-	{
-		private readonly string prototype;
-
-		private readonly OptionCategory category;
-
-		private readonly string description;
-
-		private readonly string[] names;
-
-		private readonly OptionValueType type;
-
-		private readonly int count;
-
-		private string[] separators;
-
-		protected Option(string prototype, OptionCategory category, string description, int maxValueCount)
-		{
-			if (prototype == null)
-				throw new ArgumentNullException("prototype");
-			if (prototype.Length == 0)
-				throw new ArgumentException("Cannot be the empty string.", "prototype");
-			if (maxValueCount < 0)
-				throw new ArgumentOutOfRangeException("maxValueCount");
-
-			this.prototype = prototype;
-			this.category = category;
-			this.names = prototype.Split('|');
-			this.description = description;
-			this.count = maxValueCount;
-			this.type = ParsePrototype();
-
-			if (this.count == 0 && type != OptionValueType.None)
-				throw new ArgumentException(
-						"Cannot provide maxValueCount of 0 for OptionValueType.Required or " +
-							"OptionValueType.Optional.",
-						"maxValueCount");
-			if (this.type == OptionValueType.None && maxValueCount > 1)
-				throw new ArgumentException(
-						string.Format("Cannot provide maxValueCount of {0} for OptionValueType.None.", maxValueCount),
-						"maxValueCount");
-			if (Array.IndexOf(names, "<>") >= 0 &&
-					((names.Length == 1 && this.type != OptionValueType.None) ||
-					 (names.Length > 1 && this.MaxValueCount > 1)))
-				throw new ArgumentException(
-						"The default option handler '<>' cannot require values.",
-						"prototype");
-		}
-
-		public string Prototype { get { return prototype; } }
-		public string Description { get { return description; } }
-		public OptionValueType OptionValueType { get { return type; } }
-		public int MaxValueCount { get { return count; } }
-		public OptionCategory Category { get { return category; } }
-
-		public string[] GetNames()
-		{
-			return (string[])names.Clone();
-		}
-
-		public string[] GetValueSeparators()
-		{
-			if (separators == null)
-				return new string[0];
-			return (string[])separators.Clone();
-		}
-
-		protected static T Parse<T>(string value, OptionContext c)
-		{
-			TypeConverter conv = TypeDescriptor.GetConverter(typeof(T));
-			T t = default(T);
-			try
-			{
-				if (value != null)
-					t = (T)conv.ConvertFromString(value);
-			}
-			catch (Exception e)
-			{
-				throw new OptionException(
-						string.Format(
-							c.OptionSet.MessageLocalizer("Could not convert string `{0}' to type {1} for option `{2}'."),
-							value, typeof(T).Name, c.OptionName),
-						c.OptionName, e);
-			}
-			return t;
-		}
-
-		internal string[] Names { get { return names; } }
-		internal string[] ValueSeparators { get { return separators; } }
-
-		static readonly char[] NameTerminator = new char[] { '=', ':' };
-
-		private OptionValueType ParsePrototype()
-		{
-			char type = '\0';
-			List<string> seps = new List<string>();
-			for (int i = 0; i < names.Length; ++i)
-			{
-				string name = names[i];
-				if (name.Length == 0)
-					throw new ArgumentException("Empty option names are not supported.", "prototype");
-
-				int end = name.IndexOfAny(NameTerminator);
-				if (end == -1)
-					continue;
-				names[i] = name.Substring(0, end);
-				if (type == '\0' || type == name[end])
-					type = name[end];
-				else
-					throw new ArgumentException(
-							string.Format("Conflicting option types: '{0}' vs. '{1}'.", type, name[end]),
-							"prototype");
-				AddSeparators(name, end, seps);
-			}
-
-			if (type == '\0')
-				return OptionValueType.None;
-
-			if (count <= 1 && seps.Count != 0)
-				throw new ArgumentException(
-						string.Format("Cannot provide key/value separators for Options taking {0} value(s).", count),
-						"prototype");
-			if (count > 1)
-			{
-				if (seps.Count == 0)
-					this.separators = new string[] { ":", "=" };
-				else if (seps.Count == 1 && seps[0].Length == 0)
-					this.separators = null;
-				else
-					this.separators = seps.ToArray();
-			}
-
-			return type == '=' ? OptionValueType.Required : OptionValueType.Optional;
-		}
-
-		private static void AddSeparators(string name, int end, ICollection<string> seps)
-		{
-			int start = -1;
-			for (int i = end + 1; i < name.Length; ++i)
-			{
-				switch (name[i])
-				{
-					case '{':
-						if (start != -1)
-							throw new ArgumentException(
-									string.Format("Ill-formed name/value separator found in \"{0}\".", name),
-									"prototype");
-						start = i + 1;
-						break;
-					case '}':
-						if (start == -1)
-							throw new ArgumentException(
-									string.Format("Ill-formed name/value separator found in \"{0}\".", name),
-									"prototype");
-						seps.Add(name.Substring(start, i - start));
-						start = -1;
-						break;
-					default:
-						if (start == -1)
-							seps.Add(name[i].ToString());
-						break;
-				}
-			}
-			if (start != -1)
-				throw new ArgumentException(
-						string.Format("Ill-formed name/value separator found in \"{0}\".", name),
-						"prototype");
-		}
-
-		public void Invoke(OptionContext c)
-		{
-			OnParseComplete(c);
-			c.OptionName = null;
-			c.Option = null;
-			c.OptionValues.Clear();
-		}
-
-		protected abstract void OnParseComplete(OptionContext c);
-
-		public override string ToString()
-		{
-			return Prototype;
-		}
-	}
-
-	[Serializable]
-	public class OptionException : Exception
-	{
-		private string option;
-
-		public OptionException()
-		{
-		}
-
-		public OptionException(string message, string optionName)
-			: base(message)
-		{
-			this.option = optionName;
-		}
-
-		public OptionException(string message, string optionName, Exception innerException)
-			: base(message, innerException)
-		{
-			this.option = optionName;
-		}
-
-		protected OptionException(SerializationInfo info, StreamingContext context)
-			: base(info, context)
-		{
-			this.option = info.GetString("OptionName");
-		}
-
-		public string OptionName
-		{
-			get { return this.option; }
-		}
-
-		[SecurityPermission(SecurityAction.LinkDemand, SerializationFormatter = true)]
-		public override void GetObjectData(SerializationInfo info, StreamingContext context)
-		{
-			base.GetObjectData(info, context);
-			info.AddValue("OptionName", option);
-		}
-	}
-
-	public delegate void OptionAction<TKey, TValue>(TKey key, TValue value);
-
-	public class OptionSet : KeyedCollection<string, Option>
-	{
-		public OptionSet()
-			: this(delegate(string f) { return f; })
-		{
-		}
-
-		public Action<string> OnWarning = delegate { };
-
-		public OptionSet(Converter<string, string> localizer)
-		{
-			this.localizer = localizer;
-		}
-
-		Converter<string, string> localizer;
-
-		public Converter<string, string> MessageLocalizer
-		{
-			get { return localizer; }
-		}
-
-		protected override string GetKeyForItem(Option item)
-		{
-			if (item == null)
-				throw new ArgumentNullException("option");
-			if (item.Names != null && item.Names.Length > 0)
-				return item.Names[0];
-			// This should never happen, as it's invalid for Option to be
-			// constructed w/o any names.
-			throw new InvalidOperationException("Option has no names!");
-		}
-
-		[Obsolete("Use KeyedCollection.this[string]")]
-		protected Option GetOptionForName(string option)
-		{
-			if (option == null)
-				throw new ArgumentNullException("option");
-			try
-			{
-				return base[option];
-			}
-			catch (KeyNotFoundException)
-			{
-				return null;
-			}
-		}
-
-		protected override void InsertItem(int index, Option item)
-		{
-			base.InsertItem(index, item);
-			AddImpl(item);
-		}
-
-		protected override void RemoveItem(int index)
-		{
-			base.RemoveItem(index);
-			Option p = Items[index];
-			// KeyedCollection.RemoveItem() handles the 0th item
-			for (int i = 1; i < p.Names.Length; ++i)
-			{
-				Dictionary.Remove(p.Names[i]);
-			}
-		}
-
-		protected override void SetItem(int index, Option item)
-		{
-			base.SetItem(index, item);
-			RemoveItem(index);
-			AddImpl(item);
-		}
-
-		private void AddImpl(Option option)
-		{
-			if (option == null)
-				throw new ArgumentNullException("option");
-			List<string> added = new List<string>(option.Names.Length);
-			try
-			{
-				// KeyedCollection.InsertItem/SetItem handle the 0th name.
-				for (int i = 1; i < option.Names.Length; ++i)
-				{
-					Dictionary.Add(option.Names[i], option);
-					added.Add(option.Names[i]);
-				}
-			}
-			catch (Exception)
-			{
-				foreach (string name in added)
-					Dictionary.Remove(name);
-				throw;
-			}
-		}
-
-		public new OptionSet Add(Option option)
-		{
-			base.Add(option);
-			return this;
-		}
-
-		sealed class ActionOption : Option
-		{
-			readonly Action<OptionValueCollection> action;
-
-			public ActionOption(string prototype, OptionCategory category, string description, int count, Action<OptionValueCollection> action)
-				: base(prototype, category, description, count)
-			{
-				if (action == null)
-					throw new ArgumentNullException("action");
-				this.action = action;
-			}
-
-			protected override void OnParseComplete(OptionContext c)
-			{
-				action(c.OptionValues);
-			}
-		}
-
-		public OptionSet Add(string prototype, OptionCategory category, string description, Action<string> action)
-		{
-			if (action == null)
-				throw new ArgumentNullException("action");
-			Option p = new ActionOption(prototype, category, description, 1, v => action(v[0]));
-			base.Add(p);
-			return this;
-		}
-
-		public OptionSet Add(string prototype, OptionCategory category, string description, OptionAction<string, string> action)
-		{
-			if (action == null)
-				throw new ArgumentNullException("action");
-			Option p = new ActionOption(prototype, category, description, 2, v => action(v[0], v[1]));
-			base.Add(p);
-			return this;
-		}
-
-		sealed class ActionOption<T> : Option
-		{
-			readonly Action<T> action;
-
-			public ActionOption(string prototype, OptionCategory category, string description, Action<T> action)
-				: base(prototype, category, description, 1)
-			{
-				if (action == null)
-					throw new ArgumentNullException("action");
-				this.action = action;
-			}
-
-			protected override void OnParseComplete(OptionContext c)
-			{
-				action(Parse<T>(c.OptionValues[0], c));
-			}
-		}
-
-		sealed class ActionOption<TKey, TValue> : Option
-		{
-			OptionAction<TKey, TValue> action;
-
-			public ActionOption(string prototype, OptionCategory category, string description, OptionAction<TKey, TValue> action)
-				: base(prototype, category, description, 2)
-			{
-				if (action == null)
-					throw new ArgumentNullException("action");
-				this.action = action;
-			}
-
-			protected override void OnParseComplete(OptionContext c)
-			{
-				action(
-						Parse<TKey>(c.OptionValues[0], c),
-						Parse<TValue>(c.OptionValues[1], c));
-			}
-		}
-
-		public OptionSet Add<TKey, TValue>(string prototype, OptionCategory category, string description, OptionAction<TKey, TValue> action)
-		{
-			return Add(new ActionOption<TKey, TValue>(prototype, category, description, action));
-		}
-
-		protected virtual OptionContext CreateOptionContext()
-		{
-			return new OptionContext(this);
-		}
+    public class OptionValueCollection : IList, IList<string>
+    {
+
+        List<string> values = new List<string>();
+        OptionContext c;
+
+        internal OptionValueCollection(OptionContext c)
+        {
+            this.c = c;
+        }
+
+        #region ICollection
+        void ICollection.CopyTo(Array array, int index) { (values as ICollection).CopyTo(array, index); }
+        bool ICollection.IsSynchronized { get { return (values as ICollection).IsSynchronized; } }
+        object ICollection.SyncRoot { get { return (values as ICollection).SyncRoot; } }
+        #endregion
+
+        #region ICollection<T>
+        public void Add(string item) { values.Add(item); }
+        public void Clear() { values.Clear(); }
+        public bool Contains(string item) { return values.Contains(item); }
+        public void CopyTo(string[] array, int arrayIndex) { values.CopyTo(array, arrayIndex); }
+        public bool Remove(string item) { return values.Remove(item); }
+        public int Count { get { return values.Count; } }
+        public bool IsReadOnly { get { return false; } }
+        #endregion
+
+        #region IEnumerable
+        IEnumerator IEnumerable.GetEnumerator() { return values.GetEnumerator(); }
+        #endregion
+
+        #region IEnumerable<T>
+        public IEnumerator<string> GetEnumerator() { return values.GetEnumerator(); }
+        #endregion
+
+        #region IList
+        int IList.Add(object value) { return (values as IList).Add(value); }
+        bool IList.Contains(object value) { return (values as IList).Contains(value); }
+        int IList.IndexOf(object value) { return (values as IList).IndexOf(value); }
+        void IList.Insert(int index, object value) { (values as IList).Insert(index, value); }
+        void IList.Remove(object value) { (values as IList).Remove(value); }
+        void IList.RemoveAt(int index) { (values as IList).RemoveAt(index); }
+        bool IList.IsFixedSize { get { return false; } }
+        object IList.this[int index] { get { return this[index]; } set { (values as IList)[index] = value; } }
+        #endregion
+
+        #region IList<T>
+        public int IndexOf(string item) { return values.IndexOf(item); }
+        public void Insert(int index, string item) { values.Insert(index, item); }
+        public void RemoveAt(int index) { values.RemoveAt(index); }
+
+        private void AssertValid(int index)
+        {
+            if (c.Option == null)
+                throw new InvalidOperationException("OptionContext.Option is null.");
+            if (index >= c.Option.MaxValueCount)
+                throw new ArgumentOutOfRangeException("index");
+            if (c.Option.OptionValueType == OptionValueType.Required &&
+                    index >= values.Count)
+                throw new OptionException(string.Format(
+                            c.OptionSet.MessageLocalizer("Missing required value for option '{0}'."), c.OptionName),
+                        c.OptionName);
+        }
+
+        public string this[int index]
+        {
+            get
+            {
+                AssertValid(index);
+                return index >= values.Count ? null : values[index];
+            }
+            set
+            {
+                values[index] = value;
+            }
+        }
+        #endregion
+
+        public List<string> ToList()
+        {
+            return new List<string>(values);
+        }
+
+        public string[] ToArray()
+        {
+            return values.ToArray();
+        }
+
+        public override string ToString()
+        {
+            return string.Join(", ", values.ToArray());
+        }
+    }
+
+    public class OptionContext
+    {
+        private Option option;
+        private string name;
+        private int index;
+        private OptionSet set;
+        private OptionValueCollection c;
+
+        public OptionContext(OptionSet set)
+        {
+            this.set = set;
+            this.c = new OptionValueCollection(this);
+        }
+
+        public Option Option
+        {
+            get { return option; }
+            set { option = value; }
+        }
+
+        public string OptionName
+        {
+            get { return name; }
+            set { name = value; }
+        }
+
+        public int OptionIndex
+        {
+            get { return index; }
+            set { index = value; }
+        }
+
+        public OptionSet OptionSet
+        {
+            get { return set; }
+        }
+
+        public OptionValueCollection OptionValues
+        {
+            get { return c; }
+        }
+    }
+
+    public enum OptionValueType
+    {
+        None,
+        Optional,
+        Required,
+    }
+
+    public abstract class Option
+    {
+        private readonly string prototype;
+
+        private readonly OptionCategory category;
+
+        private readonly string description;
+
+        private readonly string[] names;
+
+        private readonly OptionValueType type;
+
+        private readonly int count;
+
+        private string[] separators;
+
+        protected Option(string prototype, OptionCategory category, string description, int maxValueCount)
+        {
+            if (prototype == null)
+                throw new ArgumentNullException("prototype");
+            if (prototype.Length == 0)
+                throw new ArgumentException("Cannot be the empty string.", "prototype");
+            if (maxValueCount < 0)
+                throw new ArgumentOutOfRangeException("maxValueCount");
+
+            this.prototype = prototype;
+            this.category = category;
+            this.names = prototype.Split('|');
+            this.description = description;
+            this.count = maxValueCount;
+            this.type = ParsePrototype();
+
+            if (this.count == 0 && type != OptionValueType.None)
+                throw new ArgumentException(
+                        "Cannot provide maxValueCount of 0 for OptionValueType.Required or " +
+                            "OptionValueType.Optional.",
+                        "maxValueCount");
+            if (this.type == OptionValueType.None && maxValueCount > 1)
+                throw new ArgumentException(
+                        string.Format("Cannot provide maxValueCount of {0} for OptionValueType.None.", maxValueCount),
+                        "maxValueCount");
+            if (Array.IndexOf(names, "<>") >= 0 &&
+                    ((names.Length == 1 && this.type != OptionValueType.None) ||
+                     (names.Length > 1 && this.MaxValueCount > 1)))
+                throw new ArgumentException(
+                        "The default option handler '<>' cannot require values.",
+                        "prototype");
+        }
+
+        public string Prototype { get { return prototype; } }
+        public string Description { get { return description; } }
+        public OptionValueType OptionValueType { get { return type; } }
+        public int MaxValueCount { get { return count; } }
+        public OptionCategory Category { get { return category; } }
+
+        public string[] GetNames()
+        {
+            return (string[])names.Clone();
+        }
+
+        public string[] GetValueSeparators()
+        {
+            if (separators == null)
+                return new string[0];
+            return (string[])separators.Clone();
+        }
+
+        protected static T Parse<T>(string value, OptionContext c)
+        {
+            TypeConverter conv = TypeDescriptor.GetConverter(typeof(T));
+            T t = default(T);
+            try
+            {
+                if (value != null)
+                    t = (T)conv.ConvertFromString(value);
+            }
+            catch (Exception e)
+            {
+                throw new OptionException(
+                        string.Format(
+                            c.OptionSet.MessageLocalizer("Could not convert string `{0}' to type {1} for option `{2}'."),
+                            value, typeof(T).Name, c.OptionName),
+                        c.OptionName, e);
+            }
+            return t;
+        }
+
+        internal string[] Names { get { return names; } }
+        internal string[] ValueSeparators { get { return separators; } }
+
+        static readonly char[] NameTerminator = new char[] { '=', ':' };
+
+        private OptionValueType ParsePrototype()
+        {
+            char type = '\0';
+            List<string> seps = new List<string>();
+            for (int i = 0; i < names.Length; ++i)
+            {
+                string name = names[i];
+                if (name.Length == 0)
+                    throw new ArgumentException("Empty option names are not supported.", "prototype");
+
+                int end = name.IndexOfAny(NameTerminator);
+                if (end == -1)
+                    continue;
+                names[i] = name.Substring(0, end);
+                if (type == '\0' || type == name[end])
+                    type = name[end];
+                else
+                    throw new ArgumentException(
+                            string.Format("Conflicting option types: '{0}' vs. '{1}'.", type, name[end]),
+                            "prototype");
+                AddSeparators(name, end, seps);
+            }
+
+            if (type == '\0')
+                return OptionValueType.None;
+
+            if (count <= 1 && seps.Count != 0)
+                throw new ArgumentException(
+                        string.Format("Cannot provide key/value separators for Options taking {0} value(s).", count),
+                        "prototype");
+            if (count > 1)
+            {
+                if (seps.Count == 0)
+                    this.separators = new string[] { ":", "=" };
+                else if (seps.Count == 1 && seps[0].Length == 0)
+                    this.separators = null;
+                else
+                    this.separators = seps.ToArray();
+            }
+
+            return type == '=' ? OptionValueType.Required : OptionValueType.Optional;
+        }
+
+        private static void AddSeparators(string name, int end, ICollection<string> seps)
+        {
+            int start = -1;
+            for (int i = end + 1; i < name.Length; ++i)
+            {
+                switch (name[i])
+                {
+                    case '{':
+                        if (start != -1)
+                            throw new ArgumentException(
+                                    string.Format("Ill-formed name/value separator found in \"{0}\".", name),
+                                    "prototype");
+                        start = i + 1;
+                        break;
+                    case '}':
+                        if (start == -1)
+                            throw new ArgumentException(
+                                    string.Format("Ill-formed name/value separator found in \"{0}\".", name),
+                                    "prototype");
+                        seps.Add(name.Substring(start, i - start));
+                        start = -1;
+                        break;
+                    default:
+                        if (start == -1)
+                            seps.Add(name[i].ToString());
+                        break;
+                }
+            }
+            if (start != -1)
+                throw new ArgumentException(
+                        string.Format("Ill-formed name/value separator found in \"{0}\".", name),
+                        "prototype");
+        }
+
+        public void Invoke(OptionContext c)
+        {
+            OnParseComplete(c);
+            c.OptionName = null;
+            c.Option = null;
+            c.OptionValues.Clear();
+        }
+
+        protected abstract void OnParseComplete(OptionContext c);
+
+        public override string ToString()
+        {
+            return Prototype;
+        }
+    }
+
+    [Serializable]
+    public class OptionException : Exception
+    {
+        private string option;
+
+        public OptionException()
+        {
+        }
+
+        public OptionException(string message, string optionName)
+            : base(message)
+        {
+            this.option = optionName;
+        }
+
+        public OptionException(string message, string optionName, Exception innerException)
+            : base(message, innerException)
+        {
+            this.option = optionName;
+        }
+
+        protected OptionException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+            this.option = info.GetString("OptionName");
+        }
+
+        public string OptionName
+        {
+            get { return this.option; }
+        }
+
+        [SecurityPermission(SecurityAction.LinkDemand, SerializationFormatter = true)]
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            base.GetObjectData(info, context);
+            info.AddValue("OptionName", option);
+        }
+    }
+
+    public delegate void OptionAction<TKey, TValue>(TKey key, TValue value);
+
+    public class OptionSet : KeyedCollection<string, Option>
+    {
+        public OptionSet()
+            : this(delegate(string f) { return f; })
+        {
+        }
+
+        public Action<string> OnWarning = delegate { };
+
+        public OptionSet(Converter<string, string> localizer)
+        {
+            this.localizer = localizer;
+        }
+
+        Converter<string, string> localizer;
+
+        public Converter<string, string> MessageLocalizer
+        {
+            get { return localizer; }
+        }
+
+        protected override string GetKeyForItem(Option item)
+        {
+            if (item == null)
+                throw new ArgumentNullException("option");
+            if (item.Names != null && item.Names.Length > 0)
+                return item.Names[0];
+            // This should never happen, as it's invalid for Option to be
+            // constructed w/o any names.
+            throw new InvalidOperationException("Option has no names!");
+        }
+
+        [Obsolete("Use KeyedCollection.this[string]")]
+        protected Option GetOptionForName(string option)
+        {
+            if (option == null)
+                throw new ArgumentNullException("option");
+            try
+            {
+                return base[option];
+            }
+            catch (KeyNotFoundException)
+            {
+                return null;
+            }
+        }
+
+        protected override void InsertItem(int index, Option item)
+        {
+            base.InsertItem(index, item);
+            AddImpl(item);
+        }
+
+        protected override void RemoveItem(int index)
+        {
+            base.RemoveItem(index);
+            Option p = Items[index];
+            // KeyedCollection.RemoveItem() handles the 0th item
+            for (int i = 1; i < p.Names.Length; ++i)
+            {
+                Dictionary.Remove(p.Names[i]);
+            }
+        }
+
+        protected override void SetItem(int index, Option item)
+        {
+            base.SetItem(index, item);
+            RemoveItem(index);
+            AddImpl(item);
+        }
+
+        private void AddImpl(Option option)
+        {
+            if (option == null)
+                throw new ArgumentNullException("option");
+            List<string> added = new List<string>(option.Names.Length);
+            try
+            {
+                // KeyedCollection.InsertItem/SetItem handle the 0th name.
+                for (int i = 1; i < option.Names.Length; ++i)
+                {
+                    Dictionary.Add(option.Names[i], option);
+                    added.Add(option.Names[i]);
+                }
+            }
+            catch (Exception)
+            {
+                foreach (string name in added)
+                    Dictionary.Remove(name);
+                throw;
+            }
+        }
+
+        public new OptionSet Add(Option option)
+        {
+            base.Add(option);
+            return this;
+        }
+
+        sealed class ActionOption : Option
+        {
+            readonly Action<OptionValueCollection> action;
+
+            public ActionOption(string prototype, OptionCategory category, string description, int count, Action<OptionValueCollection> action)
+                : base(prototype, category, description, count)
+            {
+                if (action == null)
+                    throw new ArgumentNullException("action");
+                this.action = action;
+            }
+
+            protected override void OnParseComplete(OptionContext c)
+            {
+                action(c.OptionValues);
+            }
+        }
+
+        public OptionSet Add(string prototype, OptionCategory category, string description, Action<string> action)
+        {
+            if (action == null)
+                throw new ArgumentNullException("action");
+            Option p = new ActionOption(prototype, category, description, 1, v => action(v[0]));
+            base.Add(p);
+            return this;
+        }
+
+        public OptionSet Add(string prototype, OptionCategory category, string description, OptionAction<string, string> action)
+        {
+            if (action == null)
+                throw new ArgumentNullException("action");
+            Option p = new ActionOption(prototype, category, description, 2, v => action(v[0], v[1]));
+            base.Add(p);
+            return this;
+        }
+
+        sealed class ActionOption<T> : Option
+        {
+            readonly Action<T> action;
+
+            public ActionOption(string prototype, OptionCategory category, string description, Action<T> action)
+                : base(prototype, category, description, 1)
+            {
+                if (action == null)
+                    throw new ArgumentNullException("action");
+                this.action = action;
+            }
+
+            protected override void OnParseComplete(OptionContext c)
+            {
+                action(Parse<T>(c.OptionValues[0], c));
+            }
+        }
+
+        sealed class ActionOption<TKey, TValue> : Option
+        {
+            OptionAction<TKey, TValue> action;
+
+            public ActionOption(string prototype, OptionCategory category, string description, OptionAction<TKey, TValue> action)
+                : base(prototype, category, description, 2)
+            {
+                if (action == null)
+                    throw new ArgumentNullException("action");
+                this.action = action;
+            }
+
+            protected override void OnParseComplete(OptionContext c)
+            {
+                action(
+                        Parse<TKey>(c.OptionValues[0], c),
+                        Parse<TValue>(c.OptionValues[1], c));
+            }
+        }
+
+        public OptionSet Add<TKey, TValue>(string prototype, OptionCategory category, string description, OptionAction<TKey, TValue> action)
+        {
+            return Add(new ActionOption<TKey, TValue>(prototype, category, description, action));
+        }
+
+        protected virtual OptionContext CreateOptionContext()
+        {
+            return new OptionContext(this);
+        }
 
 #if LINQ
-		public List<string> Parse (IEnumerable<string> arguments)
-		{
-			bool process = true;
-			OptionContext c = CreateOptionContext ();
-			c.OptionIndex = -1;
-			var def = GetOptionForName ("<>");
-			var unprocessed = 
-				from argument in arguments
-				where ++c.OptionIndex >= 0 && (process || def != null)
-					? process
-						? argument == "--" 
-							? (process = false)
-							: !Parse (argument, c)
-								? def != null 
-									? Unprocessed (null, def, c, argument) 
-									: true
-								: false
-						: def != null 
-							? Unprocessed (null, def, c, argument)
-							: true
-					: true
-				select argument;
-			List<string> r = unprocessed.ToList ();
-			if (c.Option != null)
-				c.Option.Invoke (c);
-			return r;
-		}
+        public List<string> Parse (IEnumerable<string> arguments)
+        {
+            bool process = true;
+            OptionContext c = CreateOptionContext ();
+            c.OptionIndex = -1;
+            var def = GetOptionForName ("<>");
+            var unprocessed = 
+                from argument in arguments
+                where ++c.OptionIndex >= 0 && (process || def != null)
+                    ? process
+                        ? argument == "--" 
+                            ? (process = false)
+                            : !Parse (argument, c)
+                                ? def != null 
+                                    ? Unprocessed (null, def, c, argument) 
+                                    : true
+                                : false
+                        : def != null 
+                            ? Unprocessed (null, def, c, argument)
+                            : true
+                    : true
+                select argument;
+            List<string> r = unprocessed.ToList ();
+            if (c.Option != null)
+                c.Option.Invoke (c);
+            return r;
+        }
 #else
-		public List<string> Parse(IEnumerable<string> arguments)
-		{
-			OptionContext c = CreateOptionContext();
-			c.OptionIndex = -1;
-			bool process = true;
-			List<string> unprocessed = new List<string>();
-			Option def = Contains("<>") ? this["<>"] : null;
-			foreach (string argument in arguments)
-			{
-				++c.OptionIndex;
-				if (argument == "--")
-				{
-					process = false;
-					continue;
-				}
-				if (!process)
-				{
-					Unprocessed(unprocessed, def, c, argument);
-					continue;
-				}
-				if (!Parse(argument, c))
-					Unprocessed(unprocessed, def, c, argument);
-			}
-			if (c.Option != null)
-				c.Option.Invoke(c);
-			return unprocessed;
-		}
+        public List<string> Parse(IEnumerable<string> arguments)
+        {
+            OptionContext c = CreateOptionContext();
+            c.OptionIndex = -1;
+            bool process = true;
+            List<string> unprocessed = new List<string>();
+            Option def = Contains("<>") ? this["<>"] : null;
+            foreach (string argument in arguments)
+            {
+                ++c.OptionIndex;
+                if (argument == "--")
+                {
+                    process = false;
+                    continue;
+                }
+                if (!process)
+                {
+                    Unprocessed(unprocessed, def, c, argument);
+                    continue;
+                }
+                if (!Parse(argument, c))
+                    Unprocessed(unprocessed, def, c, argument);
+            }
+            if (c.Option != null)
+                c.Option.Invoke(c);
+            return unprocessed;
+        }
 #endif
 
 		private static bool Unprocessed(ICollection<string> extra, Option def, OptionContext c, string argument)

@@ -1,13 +1,13 @@
-﻿namespace Raven.Abstractions.Data
+namespace Raven.Abstractions.Data
 {
-	public class MoreLikeThisQueryResult
-	{
-		public MoreLikeThisQueryResult()
-		{
-			
-		}
+    public class MoreLikeThisQueryResult
+    {
+        public MoreLikeThisQueryResult()
+        {
+            
+        }
 
-		public MultiLoadResult Result { get; set; }
-		public Etag Etag { get; set; }
-	}
+        public MultiLoadResult Result { get; set; }
+        public Etag Etag { get; set; }
+    }
 }

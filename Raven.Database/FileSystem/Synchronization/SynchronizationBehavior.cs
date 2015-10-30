@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SynchronizationBehavior.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -277,9 +277,9 @@ namespace Raven.Database.FileSystem.Synchronization
 
 				var synchronizingFile = SynchronizingFileStream.CreatingOrOpeningAndWriting(fs, tempFileName, sourceMetadata);
 
-				fs.PutTriggers.Apply(trigger => trigger.AfterPut(tempFileName, null, sourceMetadata));
+                fs.PutTriggers.Apply(trigger => trigger.AfterPut(tempFileName, null, sourceMetadata));
 
-				var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
+                var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
 
 				if (Log.IsDebugEnabled)
 					Log.Debug("Starting to process/read multipart content of a file '{0}'", fileName);
@@ -289,30 +289,30 @@ namespace Raven.Database.FileSystem.Synchronization
 				if (Log.IsDebugEnabled)
 					Log.Debug("Multipart content of a file '{0}' was processed/read", fileName);
 
-				report.BytesCopied = provider.BytesCopied;
-				report.BytesTransfered = provider.BytesTransfered;
-				report.NeedListLength = provider.NumberOfFileParts;
+                report.BytesCopied = provider.BytesCopied;
+                report.BytesTransfered = provider.BytesTransfered;
+                report.NeedListLength = provider.NumberOfFileParts;
 
-				synchronizingFile.PreventUploadComplete = false;
-				synchronizingFile.Flush();
-				synchronizingFile.Dispose();
-				sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
+                synchronizingFile.PreventUploadComplete = false;
+                synchronizingFile.Flush();
+                synchronizingFile.Dispose();
+                sourceMetadata["Content-MD5"] = synchronizingFile.FileHash;
 
-				FileUpdateResult updateResult = null;
-				fs.Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
+                FileUpdateResult updateResult = null;
+                fs.Storage.Batch(accessor => updateResult = accessor.UpdateFileMetadata(tempFileName, sourceMetadata, null));
 
-				fs.Storage.Batch(accessor =>
-				{
-					using (fs.DisableAllTriggersForCurrentThread())
-					{
-						fs.Files.IndicateFileToDelete(fileName, null);
-					}
+                fs.Storage.Batch(accessor =>
+                {
+                    using (fs.DisableAllTriggersForCurrentThread())
+                    {
+                        fs.Files.IndicateFileToDelete(fileName, null);
+                    }
 
-					accessor.RenameFile(tempFileName, fileName);
+                    accessor.RenameFile(tempFileName, fileName);
 
-					fs.Search.Delete(tempFileName);
-					fs.Search.Index(fileName, sourceMetadata, updateResult.Etag);
-				});
+                    fs.Search.Delete(tempFileName);
+                    fs.Search.Index(fileName, sourceMetadata, updateResult.Etag);
+                });
 
 				if (Log.IsDebugEnabled)
 				{
@@ -323,13 +323,13 @@ namespace Raven.Database.FileSystem.Synchronization
 					Log.Debug(message);
 				}
 
-				fs.Publisher.Publish(new FileChangeNotification { File = fileName, Action = localFile == null ? FileChangeAction.Add : FileChangeAction.Update });
-			}
-		}
+                fs.Publisher.Publish(new FileChangeNotification { File = fileName, Action = localFile == null ? FileChangeAction.Add : FileChangeAction.Update });
+            }
+        }
 
-		private static bool ShouldAddExceptionToReport(Exception ex)
-		{
-			return ex is ConflictResolvedInFavourOfCurrentVersionException == false;
-		}
-	}
+        private static bool ShouldAddExceptionToReport(Exception ex)
+        {
+            return ex is ConflictResolvedInFavourOfCurrentVersionException == false;
+        }
+    }
 }

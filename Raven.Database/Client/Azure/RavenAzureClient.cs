@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenAzureClient.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -23,64 +23,64 @@ using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Azure
 {
-	public class RavenAzureClient : RavenStorageClient
-	{
-		private readonly string accountName;
+    public class RavenAzureClient : RavenStorageClient
+    {
+        private readonly string accountName;
 
-		private readonly byte[] accountKey;
+        private readonly byte[] accountKey;
 
 
-		public RavenAzureClient(string accountName, string accountKey)
-		{
-			this.accountName = accountName;
-			this.accountKey = Convert.FromBase64String(accountKey);
-		}
+        public RavenAzureClient(string accountName, string accountKey)
+        {
+            this.accountName = accountName;
+            this.accountKey = Convert.FromBase64String(accountKey);
+        }
 
-		public void PutContainer(string containerName)
-		{
-			var url = GetUrl(containerName) + "?restype=container";
+        public void PutContainer(string containerName)
+        {
+            var url = GetUrl(containerName) + "?restype=container";
 
-			var now = SystemTime.UtcNow;
-			var content = new EmptyContent
-						  {
-							  Headers =
-					              {
-						              {"x-ms-date", now.ToString("R") },
-									  {"x-ms-version", "2011-08-18" },
-					              }
-						  };
+            var now = SystemTime.UtcNow;
+            var content = new EmptyContent
+                          {
+                              Headers =
+                                  {
+                                      {"x-ms-date", now.ToString("R") },
+                                      {"x-ms-version", "2011-08-18" },
+                                  }
+                          };
 
-			var client = GetClient();
-			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
 
-			var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
-			if (response.IsSuccessStatusCode)
-				return;
+            var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
+            if (response.IsSuccessStatusCode)
+                return;
 
-			if (response.StatusCode == HttpStatusCode.Conflict)
-				return;
+            if (response.StatusCode == HttpStatusCode.Conflict)
+                return;
 
-			throw ErrorResponseException.FromResponseMessage(response);
-		}
+            throw ErrorResponseException.FromResponseMessage(response);
+        }
 
-		public void PutBlob(string containerName, string key, Stream stream, Dictionary<string, string> metadata)
-		{
-			var url = GetUrl(containerName) + "/" + key;
+        public void PutBlob(string containerName, string key, Stream stream, Dictionary<string, string> metadata)
+        {
+            var url = GetUrl(containerName) + "/" + key;
 
-			var now = SystemTime.UtcNow;
-			var content = new StreamContent(stream)
-						  {
-							  Headers =
-				              {
-					              { "x-ms-date", now.ToString("R") }, 
-								  { "x-ms-version", "2011-08-18" },
-								  { "x-ms-blob-type", "BlockBlob" },
-								  { "Content-Length", stream.Length.ToString(CultureInfo.InvariantCulture) }
-				              }
-						  };
+            var now = SystemTime.UtcNow;
+            var content = new StreamContent(stream)
+                          {
+                              Headers =
+                              {
+                                  { "x-ms-date", now.ToString("R") }, 
+                                  { "x-ms-version", "2011-08-18" },
+                                  { "x-ms-blob-type", "BlockBlob" },
+                                  { "Content-Length", stream.Length.ToString(CultureInfo.InvariantCulture) }
+                              }
+                          };
 
-			foreach (var metadataKey in metadata.Keys)
-				content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
+            foreach (var metadataKey in metadata.Keys)
+                content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
 			var client = GetClient(TimeSpan.FromHours(1));
 			client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);

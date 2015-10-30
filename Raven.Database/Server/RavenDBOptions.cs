@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 using Raven.Abstractions.Extensions;
@@ -137,8 +137,8 @@ namespace Raven.Database.Server
 
             var errors = new List<Exception>();
 
-		    foreach (var disposable in toDispose)
-		    {
+            foreach (var disposable in toDispose)
+            {
                 try
                 {
                     if (disposable != null)
@@ -148,39 +148,39 @@ namespace Raven.Database.Server
                 {
                     errors.Add(e);
                 }
-		    }
+            }
 
-			if (errors.Count != 0)
+            if (errors.Count != 0)
                 throw new AggregateException(errors);
-		}
+        }
 
-		public IDisposable PreventDispose()
-		{
-			preventDisposing = true;
+        public IDisposable PreventDispose()
+        {
+            preventDisposing = true;
 
-			return new DisposableAction(() => preventDisposing = false);
-		}
+            return new DisposableAction(() => preventDisposing = false);
+        }
 
-		private class RavenServer : IRavenServer
-		{
-			private readonly InMemoryRavenConfiguration systemConfiguration;
-			private readonly DocumentDatabase systemDatabase;
+        private class RavenServer : IRavenServer
+        {
+            private readonly InMemoryRavenConfiguration systemConfiguration;
+            private readonly DocumentDatabase systemDatabase;
 
-			public RavenServer(DocumentDatabase systemDatabase, InMemoryRavenConfiguration systemConfiguration)
-			{
-				this.systemDatabase = systemDatabase;
-				this.systemConfiguration = systemConfiguration;
-			}
+            public RavenServer(DocumentDatabase systemDatabase, InMemoryRavenConfiguration systemConfiguration)
+            {
+                this.systemDatabase = systemDatabase;
+                this.systemConfiguration = systemConfiguration;
+            }
 
-			public DocumentDatabase SystemDatabase
-			{
-				get { return systemDatabase; }
-			}
+            public DocumentDatabase SystemDatabase
+            {
+                get { return systemDatabase; }
+            }
 
-			public InMemoryRavenConfiguration SystemConfiguration
-			{
-				get { return systemConfiguration; }
-			}
-		}
-	}
+            public InMemoryRavenConfiguration SystemConfiguration
+            {
+                get { return systemConfiguration; }
+            }
+        }
+    }
 }

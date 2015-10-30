@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -138,14 +138,14 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
             return new JConstructor(this);
         }
 
-	    /// <summary>
-	    /// Writes this token to a <see cref="JsonWriter"/>.
-	    /// </summary>
-	    /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
-	    /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-		public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
-	    {
-		    writer.WriteStartConstructor(_name);
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+        {
+            writer.WriteStartConstructor(_name);
 
             foreach (JToken token in Children())
             {
@@ -155,17 +155,17 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
             writer.WriteEndConstructor();
         }
 
-	    /// <summary>
-	    /// Writes this token to a <see cref="JsonWriter"/>.
-	    /// </summary>
-	    /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
-	    /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-	    public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
-	    {
-			WriteTo(writer, new JsonConverterCollection(converters));
-	    }
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        {
+            WriteTo(writer, new JsonConverterCollection(converters));
+        }
 
-	    /// <summary>
+        /// <summary>
         /// Gets the <see cref="JToken"/> with the specified key.
         /// </summary>
         /// <value>The <see cref="JToken"/> with the specified key.</value>

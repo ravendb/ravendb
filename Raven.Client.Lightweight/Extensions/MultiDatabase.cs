@@ -23,9 +23,9 @@ namespace Raven.Client.Extensions
             {
                 Id = "Raven/Databases/" + name,
                 Settings =
-				{
-					{"Raven/DataDir", Path.Combine("~", name)},
-				}
+                {
+                    {"Raven/DataDir", Path.Combine("~", name)},
+                }
             };
         }
         public static FileSystemDocument CreateFileSystemDocument(string name)
@@ -105,7 +105,7 @@ namespace Raven.Client.Extensions
         public static string GetRootDatabaseUrl(string url)
         {
             var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+            var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
             if (indexOfDatabases != -1)
                 databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
             if (databaseUrl.EndsWith("/"))
@@ -113,16 +113,16 @@ namespace Raven.Client.Extensions
             return databaseUrl;
         }
 
-		public static string GetRootFileSystemUrl(string url)
-		{
-			var fileSystemUrl = url;
-			var indexOfDatabases = fileSystemUrl.IndexOf("/fs/", StringComparison.OrdinalIgnoreCase);
-			if (indexOfDatabases != -1)
-				fileSystemUrl = fileSystemUrl.Substring(0, indexOfDatabases);
-			if (fileSystemUrl.EndsWith("/"))
-				return fileSystemUrl.Substring(0, fileSystemUrl.Length - 1);
-			return fileSystemUrl;
-		}
+        public static string GetRootFileSystemUrl(string url)
+        {
+            var fileSystemUrl = url;
+            var indexOfDatabases = fileSystemUrl.IndexOf("/fs/", StringComparison.OrdinalIgnoreCase);
+            if (indexOfDatabases != -1)
+                fileSystemUrl = fileSystemUrl.Substring(0, indexOfDatabases);
+            if (fileSystemUrl.EndsWith("/"))
+                return fileSystemUrl.Substring(0, fileSystemUrl.Length - 1);
+            return fileSystemUrl;
+        }
 
         public static string GetDatabaseName(string url)
         {
@@ -130,7 +130,7 @@ namespace Raven.Client.Extensions
                 return null;
 
             var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+            var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
             if (indexOfDatabases != -1)
             {
                 databaseUrl = databaseUrl.Substring(indexOfDatabases + "/databases/".Length);

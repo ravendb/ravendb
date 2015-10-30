@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.Odbc;
@@ -24,8 +24,8 @@ namespace Raven.Database.Bundles.SqlReplication
             providerFactory = DbProviderFactories.GetFactory(cfg.FactoryName);
             commandBuilder = providerFactory.CreateCommandBuilder();
             if (SqlServerFactoryNames.Contains(cfg.FactoryName))
-		    {
-		        IsSqlServerFactoryType = true;
+            {
+                IsSqlServerFactoryType = true;
         }
         }
         private bool IsSqlServerFactoryType = false;

@@ -60,7 +60,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 Token = token
             }).WithNoCache();
-		}
+        }
     }
 }
 
@@ -100,6 +100,6 @@ namespace Raven.Database.TimeSeries.Controllers
             {
                 Token = token
             }).WithNoCache();
-		}
+        }
     }
 }

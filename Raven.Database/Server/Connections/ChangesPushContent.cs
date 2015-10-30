@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
@@ -17,32 +17,32 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Connections
 {
-	public class ChangesPushContent : HttpContent, IEventsTransport
-	{
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class ChangesPushContent : HttpContent, IEventsTransport
+    {
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		public string Id { get; private set; }
+        public string Id { get; private set; }
 
-	    public bool Connected
-	    {
+        public bool Connected
+        {
             get { return connected && cancellationTokenSource.IsCancellationRequested == false; }
-	        set { connected = value; }
-	    }
+            set { connected = value; }
+        }
 
-	    private readonly DateTime _started = SystemTime.UtcNow;
-		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
+        private readonly DateTime _started = SystemTime.UtcNow;
+        public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
 
-		public event Action Disconnected = delegate { };
+        public event Action Disconnected = delegate { };
         public long CoolDownWithDataLossInMiliseconds { get; set; }
 
         private long lastMessageSentTick = 0;
         private object lastMessageEnqueuedAndNotSent = null;
 
-		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
-		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
-	    private readonly CancellationTokenSource cancellationTokenSource;
-	    private bool connected;
-	    public string ResourceName { get; set; }
+        private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
+        private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
+        private readonly CancellationTokenSource cancellationTokenSource;
+        private bool connected;
+        public string ResourceName { get; set; }
 
         public ChangesPushContent(RavenBaseApiController controller)
 		{
@@ -50,18 +50,18 @@ namespace Raven.Database.Server.Connections
             ResourceName = controller.ResourceName;
 			Id = controller.GetQueryStringValue("id");
             
-			if (string.IsNullOrEmpty(Id))
-				throw new ArgumentException("Id is mandatory");
+            if (string.IsNullOrEmpty(Id))
+                throw new ArgumentException("Id is mandatory");
             cancellationTokenSource = WebSocketTransportFactory.RavenGcCancellation;
             long coolDownWithDataLossInMiliseconds = 0;
-			long.TryParse(controller.GetQueryStringValue("coolDownWithDataLoss"), out coolDownWithDataLossInMiliseconds);
+            long.TryParse(controller.GetQueryStringValue("coolDownWithDataLoss"), out coolDownWithDataLossInMiliseconds);
             CoolDownWithDataLossInMiliseconds = coolDownWithDataLossInMiliseconds;
-		}
+        }
 
-		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
-		{
-		    try
-		    {
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        {
+            try
+            {
                 using (var writer = new StreamWriter(stream))
                 {
                     await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n").ConfigureAwait(false);
@@ -119,15 +119,15 @@ namespace Raven.Database.Server.Connections
                         }
                     }
                 }
-		    }
-		    finally
-		    {
+            }
+            finally
+            {
                 Disconnected();
-		    }
-		}
+            }
+        }
 
-		private async Task SendMessage(object message, StreamWriter writer)
-		{
+        private async Task SendMessage(object message, StreamWriter writer)
+        {
             var o = JsonExtensions.ToJObject(message);        
             await writer.WriteAsync("data: ").ConfigureAwait(false);
             await writer.WriteAsync(o.ToString(Formatting.None)).ConfigureAwait(false);

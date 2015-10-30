@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DiskPerformanceTester.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -84,7 +84,7 @@ namespace Raven.Database.DiskIO
 
         protected readonly DiskPerformanceStorage dataStorage;
 
-		protected string filePath;
+        protected string filePath;
         
         protected Timer secondTimer;
 
@@ -129,7 +129,7 @@ namespace Raven.Database.DiskIO
             var sw = new Stopwatch();
             sw.Start();
 
-			AssertDiskSpace(path, testRequest.FileSize);
+            AssertDiskSpace(path, testRequest.FileSize);
 
             if (File.Exists(path))
             {
@@ -168,7 +168,7 @@ namespace Raven.Database.DiskIO
 
                     for (long i = 0; i < testRequest.FileSize; i += bufferSize)
                     {
-						taskKillToken.ThrowIfCancellationRequested();
+                        taskKillToken.ThrowIfCancellationRequested();
                         random.NextBytes(buffer);
                         fs.Write(buffer, 0, bufferSize);
                     }
@@ -178,17 +178,17 @@ namespace Raven.Database.DiskIO
             }
         }
 
-	    private static void AssertDiskSpace(string path, long fileSize)
-	    {
-			var pathRoot = new DirectoryInfo(path).Root;
-		    var drive = new DriveInfo(pathRoot.FullName);
-		    if (drive != null && drive.AvailableFreeSpace / 2  < fileSize)
-		    {
-				throw new Exception("Temporary test file size cannot exceed more than 50% of current free disk space.");
-		    }
-	    }
+        private static void AssertDiskSpace(string path, long fileSize)
+        {
+            var pathRoot = new DirectoryInfo(path).Root;
+            var drive = new DriveInfo(pathRoot.FullName);
+            if (drive != null && drive.AvailableFreeSpace / 2  < fileSize)
+            {
+                throw new Exception("Temporary test file size cannot exceed more than 50% of current free disk space.");
+            }
+        }
 
-	    protected long LongRandom(long min, long max, int mutlipleOf, Random rand)
+        protected long LongRandom(long min, long max, int mutlipleOf, Random rand)
         {
             var buf = new byte[8];
             rand.NextBytes(buf);
@@ -207,16 +207,16 @@ namespace Raven.Database.DiskIO
             }
         }
 
-	    public override void Dispose()
-	    {
-		    DisposeTimer();
-			IOExtensions.DeleteFile(filePath);
-	    }
+        public override void Dispose()
+        {
+            DisposeTimer();
+            IOExtensions.DeleteFile(filePath);
+        }
 
-	    protected void DisposeTimer()
-	    {
-			if (secondTimer == null)
-				return;
+        protected void DisposeTimer()
+        {
+            if (secondTimer == null)
+                return;
 
 			secondTimer.Dispose();
 			secondTimer = null;
@@ -231,7 +231,7 @@ namespace Raven.Database.DiskIO
 
         public GenericDiskPerformanceTester(GenericPerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken taskKillToken = new CancellationToken()) : base(testRequest, onInfo, taskKillToken)
         {
-			IOExtensions.CreateDirectoryIfNotExists(testRequest.Path);
+            IOExtensions.CreateDirectoryIfNotExists(testRequest.Path);
             filePath = Path.Combine(testRequest.Path, TemporaryFileName);
             threads = new List<Thread>(testRequest.ThreadCount);
             perThreadRandom = Enumerable.Range(1, testRequest.ThreadCount)
@@ -558,7 +558,7 @@ namespace Raven.Database.DiskIO
 
         public BatchDiskPerformanceTester(BatchPerformanceTestRequest testRequest, Action<string> onInfo, CancellationToken token = new CancellationToken()) : base(testRequest, onInfo, token)
         {
-			IOExtensions.CreateDirectoryIfNotExists(testRequest.Path);
+            IOExtensions.CreateDirectoryIfNotExists(testRequest.Path);
             filePath = Path.Combine(testRequest.Path, TemporaryFileName);
             journalPath = Path.Combine(testRequest.Path, TemporaryJournalFileName);
         }
@@ -622,7 +622,7 @@ namespace Raven.Database.DiskIO
 			}
 		}
 
-	    private int RoundToMultipleOf(int number, int multiple)
+        private int RoundToMultipleOf(int number, int multiple)
         {
             var rounded = (int) Math.Round(number*1.0/multiple);
             return rounded*multiple;

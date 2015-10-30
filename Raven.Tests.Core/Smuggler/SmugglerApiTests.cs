@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -31,8 +31,8 @@ namespace Raven.Tests.Core.Smuggler
 
         public SmugglerApiTests()
         {
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
             IOExtensions.DeleteDirectory(BackupDir);
         }
 

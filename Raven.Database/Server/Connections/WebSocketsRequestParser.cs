@@ -218,20 +218,20 @@ namespace Raven.Database.Server.Connections
 			await base.ValidateRequest(request).ConfigureAwait(false);
 
             if (request.ResourceName != Constants.SystemDatabase)
-				throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Request should be without resource context, or with system database.");
-		}
+                throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Request should be without resource context, or with system database.");
+        }
 
-		protected override void AuthenticateRequest(WebSocketRequest request)
-		{
-			base.AuthenticateRequest(request);
+        protected override void AuthenticateRequest(WebSocketRequest request)
+        {
+            base.AuthenticateRequest(request);
 
-			var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+            var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
 
-			if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-				DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
-			{
-				throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Administrator user is required in order to trace the whole server.");
-			}
-		}
-	}
+            if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
+                DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+            {
+                throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Administrator user is required in order to trace the whole server.");
+            }
+        }
+    }
 }

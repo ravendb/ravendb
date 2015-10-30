@@ -6,25 +6,25 @@ using Raven.Abstractions;
 
 namespace Raven.Client.Connection.Profiling
 {
-	/// <summary>
-	/// The result of a request made to the server
-	/// </summary>
-	[Serializable]
-	public class RequestResultArgs : EventArgs
-	{
-		/// <summary>
-		/// Creates a new instance of <seealso cref="RequestResultArgs"/>
-		/// </summary>
-		public RequestResultArgs()
-		{
-			At = SystemTime.UtcNow;
-			AdditionalInformation = new Dictionary<string, string>();
-		}
+    /// <summary>
+    /// The result of a request made to the server
+    /// </summary>
+    [Serializable]
+    public class RequestResultArgs : EventArgs
+    {
+        /// <summary>
+        /// Creates a new instance of <seealso cref="RequestResultArgs"/>
+        /// </summary>
+        public RequestResultArgs()
+        {
+            At = SystemTime.UtcNow;
+            AdditionalInformation = new Dictionary<string, string>();
+        }
 
-		/// <summary>
-		/// Any additional information that might be required
-		/// </summary>
-		public IDictionary<string, string> AdditionalInformation { get; set; }
+        /// <summary>
+        /// Any additional information that might be required
+        /// </summary>
+        public IDictionary<string, string> AdditionalInformation { get; set; }
 
 		/// <summary>
 		/// When the request completed
@@ -59,17 +59,17 @@ namespace Raven.Client.Connection.Profiling
 		/// </summary>
 		public string Result { get; set; }
 
-		/// <summary>
-		/// Total amount of memory used by strings here
-		/// </summary>
-		public int TotalSize
-		{
-			get
-			{
-				return (Result != null ? Result.Length : 0) +
-				       (PostedData != null ? PostedData.Length : 0) +
-				       (Url != null ? Url.Length : 0);
-			}
-		}
-	}
+        /// <summary>
+        /// Total amount of memory used by strings here
+        /// </summary>
+        public int TotalSize
+        {
+            get
+            {
+                return (Result != null ? Result.Length : 0) +
+                       (PostedData != null ? PostedData.Length : 0) +
+                       (Url != null ? Url.Length : 0);
+            }
+        }
+    }
 }

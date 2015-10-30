@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Authentication.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,30 +11,30 @@ using Raven.Database.Commercial;
 
 namespace Raven.Database.Server.Security
 {
-	public static class Authentication
-	{
-		private static DateTime? licenseEnabled;
+    public static class Authentication
+    {
+        private static DateTime? licenseEnabled;
 
-		public static void Disable()
-		{
-			licenseEnabled = null;
-		}
+        public static void Disable()
+        {
+            licenseEnabled = null;
+        }
 
         public static void EnableOnce()
         {
-	        licenseEnabled = SystemTime.UtcNow.AddMinutes(1);
+            licenseEnabled = SystemTime.UtcNow.AddMinutes(1);
         }
 
-		public static bool IsLicensedForRavenFs
-		{
-			get
-			{
-				if (licenseEnabled != null)
-				{
-					if (SystemTime.UtcNow < licenseEnabled.Value)
-						return true;
-					licenseEnabled = null;
-				}
+        public static bool IsLicensedForRavenFs
+        {
+            get
+            {
+                if (licenseEnabled != null)
+                {
+                    if (SystemTime.UtcNow < licenseEnabled.Value)
+                        return true;
+                    licenseEnabled = null;
+                }
 
 				string ravenFsValue;
 				var license = ValidateLicense.CurrentLicense;
@@ -106,15 +106,15 @@ namespace Raven.Database.Server.Security
 			}
 		}
 
-		public static bool IsEnabled
-		{
-			get
-			{
-				if (licenseEnabled != null)
+        public static bool IsEnabled
+        {
+            get
+            {
+                if (licenseEnabled != null)
                 {
-					if (SystemTime.UtcNow < licenseEnabled.Value)
-						return true;
-					licenseEnabled = null;
+                    if (SystemTime.UtcNow < licenseEnabled.Value)
+                        return true;
+                    licenseEnabled = null;
                 }
 
 			    return ValidateLicense.CurrentLicense.IsCommercial ||

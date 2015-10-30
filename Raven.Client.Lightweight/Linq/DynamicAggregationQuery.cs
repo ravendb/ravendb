@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -9,98 +9,98 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Client.Linq
 {
 
-	public class DynamicAggregationQuery<T>
-	{
-		private readonly IQueryable<T> queryable;
-		private readonly List<AggregationQuery<T>> facets;
+    public class DynamicAggregationQuery<T>
+    {
+        private readonly IQueryable<T> queryable;
+        private readonly List<AggregationQuery<T>> facets;
         private readonly Dictionary<string,string> renames = new Dictionary<string, string>();
 
-		public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName = null)
-		{
-			facets = new List<AggregationQuery<T>>();
-			this.queryable = queryable;
-			AndAggregateOn(path, displayName);
-		}
+        public DynamicAggregationQuery(IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName = null)
+        {
+            facets = new List<AggregationQuery<T>>();
+            this.queryable = queryable;
+            AndAggregateOn(path, displayName);
+        }
 
 
-		public DynamicAggregationQuery(IQueryable<T> queryable, string path, string displayName = null)
-		{
-			facets = new List<AggregationQuery<T>>();
-			this.queryable = queryable;
-			facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
+        public DynamicAggregationQuery(IQueryable<T> queryable, string path, string displayName = null)
+        {
+            facets = new List<AggregationQuery<T>>();
+            this.queryable = queryable;
+            facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
 
-		}
+        }
 
-		public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName = null)
-		{
-			var propertyPath = path.ToPropertyPath('_');
-			if (IsNumeric(path))
-			{
-				var tmp = propertyPath + "_Range";
-				renames[propertyPath] = tmp;
-				propertyPath = tmp;
-			}
-		    if (displayName == null)
-		        displayName = propertyPath;
-		    if (facets.Count > 0)
-		    {
-	           if (facets.Any(facet => facet.DisplayName == displayName))
+        public DynamicAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, string displayName = null)
+        {
+            var propertyPath = path.ToPropertyPath('_');
+            if (IsNumeric(path))
+            {
+                var tmp = propertyPath + "_Range";
+                renames[propertyPath] = tmp;
+                propertyPath = tmp;
+            }
+            if (displayName == null)
+                displayName = propertyPath;
+            if (facets.Count > 0)
+            {
+               if (facets.Any(facet => facet.DisplayName == displayName))
                {
-		            throw new InvalidOperationException("Cannot use the more than one aggregation function with the same name/without name");
-		        }
-		    }
-		    facets.Add(new AggregationQuery<T> { Name = propertyPath, DisplayName = displayName});
+                    throw new InvalidOperationException("Cannot use the more than one aggregation function with the same name/without name");
+                }
+            }
+            facets.Add(new AggregationQuery<T> { Name = propertyPath, DisplayName = displayName});
 
-			return this;
-		}
+            return this;
+        }
 
-		public DynamicAggregationQuery<T> AndAggregateOn(string path, string displayName = null)
-		{
-			facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
+        public DynamicAggregationQuery<T> AndAggregateOn(string path, string displayName = null)
+        {
+            facets.Add(new AggregationQuery<T> { Name = path, DisplayName = displayName });
 
-			return this;
-		}
+            return this;
+        }
 
-	    private bool IsNumeric(Expression<Func<T, object>> path)
-	    {
-	        var unaryExpression = path.Body as UnaryExpression;
-	        if (unaryExpression == null)
-	            return false;
-	        if (unaryExpression.NodeType != ExpressionType.Convert &&
-	            unaryExpression.NodeType != ExpressionType.ConvertChecked)
-	            return false;
-	        var type = unaryExpression.Operand.Type;
-	        return type == typeof (int) ||
-	               type == typeof (long) ||
-	               type == typeof (short) ||
-	               type == typeof (decimal) ||
-	               type == typeof (double) ||
-	               type == typeof (float);
-	    }
+        private bool IsNumeric(Expression<Func<T, object>> path)
+        {
+            var unaryExpression = path.Body as UnaryExpression;
+            if (unaryExpression == null)
+                return false;
+            if (unaryExpression.NodeType != ExpressionType.Convert &&
+                unaryExpression.NodeType != ExpressionType.ConvertChecked)
+                return false;
+            var type = unaryExpression.Operand.Type;
+            return type == typeof (int) ||
+                   type == typeof (long) ||
+                   type == typeof (short) ||
+                   type == typeof (decimal) ||
+                   type == typeof (double) ||
+                   type == typeof (float);
+        }
 
-	    public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)
-		{
-			var last = facets.Last();
-			
-			last.Ranges = last.Ranges ?? new List<Expression<Func<T, bool>>>();
+        public DynamicAggregationQuery<T> AddRanges(params Expression<Func<T, bool>>[] paths)
+        {
+            var last = facets.Last();
+            
+            last.Ranges = last.Ranges ?? new List<Expression<Func<T, bool>>>();
 
-			foreach (var func in paths)
-			{
-				last.Ranges.Add(func);
-			}
+            foreach (var func in paths)
+            {
+                last.Ranges.Add(func);
+            }
 
-			return this;
-		}
+            return this;
+        }
 
-	    private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
-	    {
-	        var last = facets.Last();
-	        last.Aggregation |= facetAggregation;
-	        if (facetAggregation == FacetAggregation.Count && 
+        private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
+        {
+            var last = facets.Last();
+            last.Aggregation |= facetAggregation;
+            if (facetAggregation == FacetAggregation.Count && 
                 string.IsNullOrEmpty(last.AggregationField) == false)
-	        {
+            {
                 return;
-	        }
+            }
             if((string.IsNullOrEmpty(last.AggregationField) == false) && (!last.AggregationField.Equals(path.ToPropertyPath())))
                   throw new InvalidOperationException("Cannot call different aggregation function with differentt parameters at the same aggregation. Use AndAggregateOn");
 
@@ -168,10 +168,10 @@ namespace Raven.Client.Linq
 	                facetResults.Results.ContainsKey(rename.Key) == false)
 	            {
                         facetResults.Results[rename.Key] = value;
-	                facetResults.Results.Remove(rename.Value);
-	            }
-	        }
-	        return facetResults;
-	    }
-	}
+                    facetResults.Results.Remove(rename.Value);
+                }
+            }
+            return facetResults;
+        }
+    }
 }

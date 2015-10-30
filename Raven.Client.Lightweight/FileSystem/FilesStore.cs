@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -24,7 +24,7 @@ namespace Raven.Client.FileSystem
         /// The current session id - only used during construction
         /// </summary>
         [ThreadStatic]
-		private static Guid? currentSessionId;
+        private static Guid? currentSessionId;
 
         private HttpJsonRequestFactory jsonRequestFactory;
         private FilesConvention conventions;
@@ -140,9 +140,9 @@ namespace Raven.Client.FileSystem
 				key = MultiDatabase.GetRootFileSystemUrl(Url) + "/fs/" + fsName;
             }
 
-			var result = replicationInformers.GetOrAdd(key, replicationUrl => Conventions.ReplicationInformerFactory(replicationUrl, jsonRequestFactory));
-			return result;
-		}
+            var result = replicationInformers.GetOrAdd(key, replicationUrl => Conventions.ReplicationInformerFactory(replicationUrl, jsonRequestFactory));
+            return result;
+        }
 
         /// <summary>
         /// Gets the conventions.
@@ -179,12 +179,12 @@ namespace Raven.Client.FileSystem
         public virtual string Url
         {
             get { return url; }
-	        set
-	        {
-		        if(value == null)
-					throw new ArgumentNullException("value");
-		        url = value.TrimEnd('/');
-	        }
+            set
+            {
+                if(value == null)
+                    throw new ArgumentNullException("value");
+                url = value.TrimEnd('/');
+            }
         }
         
 
@@ -329,7 +329,7 @@ namespace Raven.Client.FileSystem
             currentSessionId = sessionId;
             try
             {
-	            var client = SetupCommandsAsync(this.AsyncFilesCommands, sessionOptions);
+                var client = SetupCommandsAsync(this.AsyncFilesCommands, sessionOptions);
                 var session = new AsyncFilesSession(this, client, this.Listeners, sessionId);
                 AfterSessionCreated(session);
                 return session;
@@ -346,8 +346,8 @@ namespace Raven.Client.FileSystem
                 throw new ArgumentException("Filesystem cannot be null, empty or whitespace.", "FileSystem");
 
             filesCommands = filesCommands.ForFileSystem(options.FileSystem);
-	        if (options.ApiKey != null || options.Credentials != null)
-		        filesCommands = filesCommands.With(new OperationCredentials(options.ApiKey, options.Credentials));
+            if (options.ApiKey != null || options.Credentials != null)
+                filesCommands = filesCommands.With(new OperationCredentials(options.ApiKey, options.Credentials));
             
             return filesCommands;
         }
@@ -449,10 +449,10 @@ namespace Raven.Client.FileSystem
                     remoteFileSystemCommand.Dispose();
             }
 
-			foreach (var replicationInformer in replicationInformers)
-			{
-				replicationInformer.Value.Dispose();
-			}
+            foreach (var replicationInformer in replicationInformers)
+            {
+                replicationInformer.Value.Dispose();
+            }
 
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -432,13 +432,13 @@ namespace Raven.Database.Server.WebApi
 			catch (Exception e)
 			{
 
-				Logger.WarnException("Could not gather information to log request stats", e);
-			}
+                Logger.WarnException("Could not gather information to log request stats", e);
+            }
 
-			if (logHttpRequestStatsParam == null || sw == null)
-				return;
+            if (logHttpRequestStatsParam == null || sw == null)
+                return;
 
-			sw.Stop();
+            sw.Stop();
 
 			MarkRequestDuration(controller, sw.ElapsedMilliseconds);
 
@@ -478,28 +478,28 @@ namespace Raven.Database.Server.WebApi
 			if (string.IsNullOrWhiteSpace(databaseName))
 				databaseName = Constants.SystemDatabase;
 
-			var traces = tracedRequests.GetOrAdd(databaseName, new ConcurrentQueue<LogHttpRequestStatsParams>());
+            var traces = tracedRequests.GetOrAdd(databaseName, new ConcurrentQueue<LogHttpRequestStatsParams>());
 
-			LogHttpRequestStatsParams _;
-			while (traces.Count > 50 && traces.TryDequeue(out _))
-			{
-			}
+            LogHttpRequestStatsParams _;
+            while (traces.Count > 50 && traces.TryDequeue(out _))
+            {
+            }
 
-			traces.Enqueue(requestLog);
-		}
+            traces.Enqueue(requestLog);
+        }
 
 
-		public IEnumerable<LogHttpRequestStatsParams> GetRecentRequests(string databaseName)
-		{
-			if (string.IsNullOrWhiteSpace(databaseName))
-				databaseName = Constants.SystemDatabase;
+        public IEnumerable<LogHttpRequestStatsParams> GetRecentRequests(string databaseName)
+        {
+            if (string.IsNullOrWhiteSpace(databaseName))
+                databaseName = Constants.SystemDatabase;
 
-			ConcurrentQueue<LogHttpRequestStatsParams> queue;
-			if (tracedRequests.TryGetValue(databaseName, out queue) == false)
-				return Enumerable.Empty<LogHttpRequestStatsParams>();
+            ConcurrentQueue<LogHttpRequestStatsParams> queue;
+            if (tracedRequests.TryGetValue(databaseName, out queue) == false)
+                return Enumerable.Empty<LogHttpRequestStatsParams>();
 
-			return queue.ToArray().Reverse();
-		}
+            return queue.ToArray().Reverse();
+        }
 
 		private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
 		{

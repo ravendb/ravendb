@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -7,14 +7,14 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 
 namespace Raven.Database.FileSystem.Synchronization.Rdc
 {
-	internal class NeedListParser
-	{
-		public static async Task ParseAsync(IPartialDataAccess source, IPartialDataAccess seed, Stream output,
-											IEnumerable<RdcNeed> needList, CancellationToken token)
-		{
-			foreach (var item in needList)
-			{
-				token.ThrowIfCancellationRequested();
+    internal class NeedListParser
+    {
+        public static async Task ParseAsync(IPartialDataAccess source, IPartialDataAccess seed, Stream output,
+                                            IEnumerable<RdcNeed> needList, CancellationToken token)
+        {
+            foreach (var item in needList)
+            {
+                token.ThrowIfCancellationRequested();
 
 				switch (item.BlockType)
 				{

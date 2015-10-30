@@ -73,10 +73,10 @@ class query extends viewModelBase {
     selectedIndexLabel: KnockoutComputed<string>;
     appUrls: computedAppUrls;
     isIndexMapReduce: KnockoutComputed<boolean>;
-	isDynamicIndex: KnockoutComputed<boolean>;
+    isDynamicIndex: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false);
     isCacheDisable = ko.observable<boolean>(false);
-	enableDeleteButton: KnockoutComputed<boolean>;
+    enableDeleteButton: KnockoutComputed<boolean>;
     token = ko.observable<singleAuthToken>();
     warningText = ko.observable<string>();
     isWarning = ko.observable<boolean>(false);
@@ -127,14 +127,14 @@ class query extends viewModelBase {
             var allIndexes = this.indexes();
             var selectedIndex = this.selectedIndex();
 
-	        var allIndexesCopy: Array<indexDataDto>;
+            var allIndexesCopy: Array<indexDataDto>;
 
             if (!!selectedIndex && selectedIndex.indexOf(this.dynamicPrefix) === -1) {
-	            allIndexesCopy = allIndexes.filter((indexDto: indexDataDto) => indexDto.name !== selectedIndex);
+                allIndexesCopy = allIndexes.filter((indexDto: indexDataDto) => indexDto.name !== selectedIndex);
             } else {
-	            allIndexesCopy = allIndexes.slice(0); // make copy as sort works in situ
+                allIndexesCopy = allIndexes.slice(0); // make copy as sort works in situ
             }
-			allIndexesCopy.sort((l: indexDataDto, r: indexDataDto) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1);
+            allIndexesCopy.sort((l: indexDataDto, r: indexDataDto) => l.name.toLowerCase() > r.name.toLowerCase() ? 1 : -1);
             return allIndexesCopy;
         });
 
@@ -168,20 +168,20 @@ class query extends viewModelBase {
             return !!currentIndex && currentIndex.hasReduce;
         });
 
-	    this.isDynamicIndex = ko.computed(() => {
-			var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
-		    if (currentIndex) {
-			    console.log(currentIndex.name);
-		    }
-		    return !!currentIndex && currentIndex.name.startsWith("Auto/");
-		});
+        this.isDynamicIndex = ko.computed(() => {
+            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+            if (currentIndex) {
+                console.log(currentIndex.name);
+            }
+            return !!currentIndex && currentIndex.name.startsWith("Auto/");
+        });
 
-		this.enableDeleteButton = ko.computed(() => {
-			var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
-			var isMapReduce = this.isIndexMapReduce();
-			var isDynamic = this.isDynamicIndex();
-			return !!currentIndex && !isMapReduce && !isDynamic;
-	    });
+        this.enableDeleteButton = ko.computed(() => {
+            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+            var isMapReduce = this.isIndexMapReduce();
+            var isDynamic = this.isDynamicIndex();
+            return !!currentIndex && !isMapReduce && !isDynamic;
+        });
 
         aceEditorBindingHandler.install();
 
@@ -235,7 +235,7 @@ class query extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         this.createKeyboardShortcut("F2", () => this.editSelectedIndex(), query.containerSelector);
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.containerSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
@@ -363,9 +363,9 @@ class query extends viewModelBase {
             var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
             var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
             if (matchingQuery) {
-	            this.runRecentQuery(matchingQuery);
+                this.runRecentQuery(matchingQuery);
             } else {
-	            this.navigate(appUrl.forQuery(this.activeDatabase()));
+                this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
         }
     }

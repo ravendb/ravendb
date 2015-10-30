@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import filesystem = require('models/filesystem/filesystem');
 import versioningEntry = require("models/filesystem/versioningEntry");
 import appUrl = require("common/appUrl");

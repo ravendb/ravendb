@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
@@ -374,6 +374,6 @@ namespace Raven.Client.Document
         /// </summary>
         void ContainsAll(string fieldName, IEnumerable<object> values);
 
-	    void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
-	}
+        void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
+    }
 }

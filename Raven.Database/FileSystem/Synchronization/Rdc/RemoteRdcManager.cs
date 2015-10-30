@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -9,28 +9,28 @@ using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.FileSystem.Synchronization.Rdc
 {
-	public class RemoteRdcManager
-	{
-		private readonly ISynchronizationServerClient synchronizationServerClient;		
+    public class RemoteRdcManager
+    {
+        private readonly ISynchronizationServerClient synchronizationServerClient;		
 
-		private readonly ISignatureRepository localSignatureRepository;
+        private readonly ISignatureRepository localSignatureRepository;
         private readonly ISignatureRepository remoteCacheSignatureRepository;
 
-		public RemoteRdcManager(ISynchronizationServerClient synchronizationServerClient, 
+        public RemoteRdcManager(ISynchronizationServerClient synchronizationServerClient, 
                                 ISignatureRepository localSignatureRepository,
-								ISignatureRepository remoteCacheSignatureRepository)
-		{            
-			this.localSignatureRepository = localSignatureRepository;
-			this.remoteCacheSignatureRepository = remoteCacheSignatureRepository;
-			this.synchronizationServerClient = synchronizationServerClient;
-		}
+                                ISignatureRepository remoteCacheSignatureRepository)
+        {            
+            this.localSignatureRepository = localSignatureRepository;
+            this.remoteCacheSignatureRepository = remoteCacheSignatureRepository;
+            this.synchronizationServerClient = synchronizationServerClient;
+        }
 
-		/// <summary>
-		///     Returns signature manifest and synchronizes remote cache sig repository
-		/// </summary>
-		/// <param name="dataInfo"></param>
-		/// <param name="token"> </param>
-		/// <returns></returns>
+        /// <summary>
+        ///     Returns signature manifest and synchronizes remote cache sig repository
+        /// </summary>
+        /// <param name="dataInfo"></param>
+        /// <param name="token"> </param>
+        /// <returns></returns>
         public async Task<SignatureManifest> SynchronizeSignaturesAsync(DataInfo dataInfo, CancellationToken token)
         {
 			var remoteSignatureManifest = await synchronizationServerClient.GetRdcManifestAsync(dataInfo.Name).ConfigureAwait(false);
@@ -50,40 +50,40 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
             return remoteSignatureManifest;
         }
 
-		private async Task SynchronizePairAsync(IList<LocalRemotePair> sigPairs, CancellationToken token)
-		{
-			for (var i = 1; i < sigPairs.Count; i++)
-			{
-				token.ThrowIfCancellationRequested();
+        private async Task SynchronizePairAsync(IList<LocalRemotePair> sigPairs, CancellationToken token)
+        {
+            for (var i = 1; i < sigPairs.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
 
-				var curr = sigPairs[i];
-				var prev = sigPairs[i - 1];
+                var curr = sigPairs[i];
+                var prev = sigPairs[i - 1];
 
 				await SynchronizeAsync(curr.Local, prev.Local, curr.Remote, prev.Remote, token).ConfigureAwait(false);
 			}
 		}
 
-		private IList<LocalRemotePair> PrepareSigPairs(SignatureManifest signatureManifest)
-		{
-			var remoteSignatures = signatureManifest.Signatures;
-			var localSignatures = localSignatureRepository.GetByFileName().ToList();
+        private IList<LocalRemotePair> PrepareSigPairs(SignatureManifest signatureManifest)
+        {
+            var remoteSignatures = signatureManifest.Signatures;
+            var localSignatures = localSignatureRepository.GetByFileName().ToList();
 
-			var length = Math.Min(remoteSignatures.Count, localSignatures.Count);
-			var remoteSignatureNames = remoteSignatures.Skip(remoteSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
-			var localSignatureNames = localSignatures.Skip(localSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
-			return localSignatureNames.Zip(remoteSignatureNames,
-										   (local, remote) => new LocalRemotePair { Local = local, Remote = remote }).ToList();
-		}
+            var length = Math.Min(remoteSignatures.Count, localSignatures.Count);
+            var remoteSignatureNames = remoteSignatures.Skip(remoteSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
+            var localSignatureNames = localSignatures.Skip(localSignatures.Count - length).Take(length).Select(item => item.Name).ToList();
+            return localSignatureNames.Zip(remoteSignatureNames,
+                                           (local, remote) => new LocalRemotePair { Local = local, Remote = remote }).ToList();
+        }
 
-		private async Task SynchronizeAsync(string localSigName, string localSigSigName, string remoteSigName,
-											string remoteSigSigName, CancellationToken token)
-		{
-			using (var needListGenerator = new NeedListGenerator(localSignatureRepository, remoteCacheSignatureRepository))
-			{
-				var source = new RemoteSignaturePartialAccess(synchronizationServerClient, remoteSigName);
-				var seed = new SignaturePartialAccess(localSigName, localSignatureRepository);
-				var needList = needListGenerator.CreateNeedsList(SignatureInfo.Parse(localSigSigName),
-																 SignatureInfo.Parse(remoteSigSigName), token);
+        private async Task SynchronizeAsync(string localSigName, string localSigSigName, string remoteSigName,
+                                            string remoteSigSigName, CancellationToken token)
+        {
+            using (var needListGenerator = new NeedListGenerator(localSignatureRepository, remoteCacheSignatureRepository))
+            {
+                var source = new RemoteSignaturePartialAccess(synchronizationServerClient, remoteSigName);
+                var seed = new SignaturePartialAccess(localSigName, localSignatureRepository);
+                var needList = needListGenerator.CreateNeedsList(SignatureInfo.Parse(localSigSigName),
+                                                                 SignatureInfo.Parse(remoteSigSigName), token);
 
 				using (var output = remoteCacheSignatureRepository.CreateContent(remoteSigName))
 				{
@@ -92,10 +92,10 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc
 			}
 		}
 
-		private class LocalRemotePair
-		{
-			public string Local { get; set; }
-			public string Remote { get; set; }
-		}
-	}
+        private class LocalRemotePair
+        {
+            public string Local { get; set; }
+            public string Remote { get; set; }
+        }
+    }
 }

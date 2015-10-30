@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationTopology.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -21,9 +21,9 @@ namespace Raven.Database.Bundles.Replication.Data
 			SkippedResources = new HashSet<string>();
 		}
 
-		public HashSet<string> Servers { get; set; }
+        public HashSet<string> Servers { get; set; }
 
-		public HashSet<ReplicationTopologyConnection> Connections { get; set; }
+        public HashSet<ReplicationTopologyConnection> Connections { get; set; }
 
 		public HashSet<string> SkippedResources { get; set; }
 		public ReplicationTopologyConnection GetConnection(string fromUrl, string toUrl)
@@ -32,27 +32,27 @@ namespace Raven.Database.Bundles.Replication.Data
 		}
 	}
 
-	public class ReplicationTopologyConnection
-	{
-		public string Source { get; set; }
+    public class ReplicationTopologyConnection
+    {
+        public string Source { get; set; }
 
-		public string Destination { get; set; }
+        public string Destination { get; set; }
 
-		public Guid SendServerId { get; set; }
+        public Guid SendServerId { get; set; }
 
-		public Guid StoredServerId { get; set; }
+        public Guid StoredServerId { get; set; }
 
         [Obsolete("Use RavenFS instead.")]
-		public Etag LastAttachmentEtag { get; set; }
+        public Etag LastAttachmentEtag { get; set; }
 
-		public Etag LastDocumentEtag { get; set; }
+        public Etag LastDocumentEtag { get; set; }
 
-		public TransitiveReplicationOptions ReplicationBehavior { get; set; }
+        public TransitiveReplicationOptions ReplicationBehavior { get; set; }
 
-		public ReplicatonNodeState SourceToDestinationState { get; set; }
+        public ReplicatonNodeState SourceToDestinationState { get; set; }
 
-		public ReplicatonNodeState DestinationToSourceState { get; set; }
+        public ReplicatonNodeState DestinationToSourceState { get; set; }
 
-		public List<string> Errors { get; set; }
-	}
+        public List<string> Errors { get; set; }
+    }
 }

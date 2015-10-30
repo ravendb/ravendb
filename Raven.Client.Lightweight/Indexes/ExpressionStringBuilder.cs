@@ -20,236 +20,236 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
-	/// <summary>
-	///   Based off of System.Linq.Expressions.ExpressionStringBuilder
-	/// </summary>
-	public class ExpressionStringBuilder : ExpressionVisitor
-	{
-		// Fields
-		private static readonly char[] LiteralSymbolsToEscape = new[] { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
-		private static readonly string[] LiteralEscapedSymbols = new[] { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
+    /// <summary>
+    ///   Based off of System.Linq.Expressions.ExpressionStringBuilder
+    /// </summary>
+    public class ExpressionStringBuilder : ExpressionVisitor
+    {
+        // Fields
+        private static readonly char[] LiteralSymbolsToEscape = new[] { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
+        private static readonly string[] LiteralEscapedSymbols = new[] { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
-		private readonly StringBuilder _out = new StringBuilder();
-		private readonly DocumentConvention convention;
-		private readonly Type queryRoot;
-		private readonly string queryRootName;
-		private readonly bool translateIdentityProperty;
-		private ExpressionOperatorPrecedence _currentPrecedence;
-		private Dictionary<object, int> _ids;
+        private readonly StringBuilder _out = new StringBuilder();
+        private readonly DocumentConvention convention;
+        private readonly Type queryRoot;
+        private readonly string queryRootName;
+        private readonly bool translateIdentityProperty;
+        private ExpressionOperatorPrecedence _currentPrecedence;
+        private Dictionary<object, int> _ids;
         private Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase); 
-		private bool castLambdas;
+        private bool castLambdas;
 
 
-		// Methods
-		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
-										string queryRootName)
-		{
-			this.convention = convention;
-			this.translateIdentityProperty = translateIdentityProperty;
-			this.queryRoot = queryRoot;
-			this.queryRootName = queryRootName;
-		}
+        // Methods
+        private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
+                                        string queryRootName)
+        {
+            this.convention = convention;
+            this.translateIdentityProperty = translateIdentityProperty;
+            this.queryRoot = queryRoot;
+            this.queryRootName = queryRootName;
+        }
 
-		private int GetLabelId(LabelTarget label)
-		{
-			if (_ids == null)
-			{
-				_ids = new Dictionary<object, int> { { label, 0 } };
-			}
-			else if (!_ids.ContainsKey(label))
-			{
-				_ids.Add(label, _ids.Count);
-			}
-		    return _ids.Count;
-		}
+        private int GetLabelId(LabelTarget label)
+        {
+            if (_ids == null)
+            {
+                _ids = new Dictionary<object, int> { { label, 0 } };
+            }
+            else if (!_ids.ContainsKey(label))
+            {
+                _ids.Add(label, _ids.Count);
+            }
+            return _ids.Count;
+        }
 
-		private void AddParam(ParameterExpression p)
-		{
-			if (_ids == null)
-			{
-				_ids = new Dictionary<object, int>();
-				_ids.Add(_ids, 0);
-			}
-			else if (!_ids.ContainsKey(p))
-			{
-				_ids.Add(p, _ids.Count);
-			}
-		}
+        private void AddParam(ParameterExpression p)
+        {
+            if (_ids == null)
+            {
+                _ids = new Dictionary<object, int>();
+                _ids.Add(_ids, 0);
+            }
+            else if (!_ids.ContainsKey(p))
+            {
+                _ids.Add(p, _ids.Count);
+            }
+        }
 
-		internal string CatchBlockToString(CatchBlock node)
-		{
-			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-			builder.VisitCatchBlock(node);
-			return builder.ToString();
-		}
+        internal string CatchBlockToString(CatchBlock node)
+        {
+            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            builder.VisitCatchBlock(node);
+            return builder.ToString();
+        }
 
-		private void DumpLabel(LabelTarget target)
-		{
-			if (!string.IsNullOrEmpty(target.Name))
-			{
-				Out(target.Name);
-			}
-			else
-			{
-				Out("UnnamedLabel_" + GetLabelId(target));
-			}
-		}
+        private void DumpLabel(LabelTarget target)
+        {
+            if (!string.IsNullOrEmpty(target.Name))
+            {
+                Out(target.Name);
+            }
+            else
+            {
+                Out("UnnamedLabel_" + GetLabelId(target));
+            }
+        }
 
-		internal string ElementInitBindingToString(ElementInit node)
-		{
-			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-			builder.VisitElementInit(node);
-			return builder.ToString();
-		}
+        internal string ElementInitBindingToString(ElementInit node)
+        {
+            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            builder.VisitElementInit(node);
+            return builder.ToString();
+        }
 
-		/// <summary>
-		///   Convert the expression to a string
-		/// </summary>
-		public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
-												string queryRootName, Expression node)
-		{
-			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-			builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
-			return builder.ToString();
-		}
+        /// <summary>
+        ///   Convert the expression to a string
+        /// </summary>
+        public static string ExpressionToString(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
+                                                string queryRootName, Expression node)
+        {
+            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
+            return builder.ToString();
+        }
 
-		private static string FormatBinder(CallSiteBinder binder)
-		{
-			var binder2 = binder as ConvertBinder;
-			if (binder2 != null)
-			{
-				return ("Convert " + binder2.Type);
-			}
-			var binder3 = binder as GetMemberBinder;
-			if (binder3 != null)
-			{
-				return ("GetMember " + binder3.Name);
-			}
-			var binder4 = binder as SetMemberBinder;
-			if (binder4 != null)
-			{
-				return ("SetMember " + binder4.Name);
-			}
-			var binder5 = binder as DeleteMemberBinder;
-			if (binder5 != null)
-			{
-				return ("DeleteMember " + binder5.Name);
-			}
-			if (binder is GetIndexBinder)
-			{
-				return "GetIndex";
-			}
-			if (binder is SetIndexBinder)
-			{
-				return "SetIndex";
-			}
-			if (binder is DeleteIndexBinder)
-			{
-				return "DeleteIndex";
-			}
-			var binder6 = binder as InvokeMemberBinder;
-			if (binder6 != null)
-			{
-				return ("Call " + binder6.Name);
-			}
-			if (binder is InvokeBinder)
-			{
-				return "Invoke";
-			}
-			if (binder is CreateInstanceBinder)
-			{
-				return "Create";
-			}
-			var binder7 = binder as UnaryOperationBinder;
-			if (binder7 != null)
-			{
-				return binder7.Operation.ToString();
-			}
-			var binder8 = binder as BinaryOperationBinder;
-			if (binder8 != null)
-			{
-				return binder8.Operation.ToString();
-			}
-			return "CallSiteBinder";
-		}
+        private static string FormatBinder(CallSiteBinder binder)
+        {
+            var binder2 = binder as ConvertBinder;
+            if (binder2 != null)
+            {
+                return ("Convert " + binder2.Type);
+            }
+            var binder3 = binder as GetMemberBinder;
+            if (binder3 != null)
+            {
+                return ("GetMember " + binder3.Name);
+            }
+            var binder4 = binder as SetMemberBinder;
+            if (binder4 != null)
+            {
+                return ("SetMember " + binder4.Name);
+            }
+            var binder5 = binder as DeleteMemberBinder;
+            if (binder5 != null)
+            {
+                return ("DeleteMember " + binder5.Name);
+            }
+            if (binder is GetIndexBinder)
+            {
+                return "GetIndex";
+            }
+            if (binder is SetIndexBinder)
+            {
+                return "SetIndex";
+            }
+            if (binder is DeleteIndexBinder)
+            {
+                return "DeleteIndex";
+            }
+            var binder6 = binder as InvokeMemberBinder;
+            if (binder6 != null)
+            {
+                return ("Call " + binder6.Name);
+            }
+            if (binder is InvokeBinder)
+            {
+                return "Invoke";
+            }
+            if (binder is CreateInstanceBinder)
+            {
+                return "Create";
+            }
+            var binder7 = binder as UnaryOperationBinder;
+            if (binder7 != null)
+            {
+                return binder7.Operation.ToString();
+            }
+            var binder8 = binder as BinaryOperationBinder;
+            if (binder8 != null)
+            {
+                return binder8.Operation.ToString();
+            }
+            return "CallSiteBinder";
+        }
 
 
-		private int GetParamId(ParameterExpression p)
-		{
-			int count;
-			if (_ids == null)
-			{
-				_ids = new Dictionary<object, int>();
-				AddParam(p);
-				return 0;
-			}
-			if (!_ids.TryGetValue(p, out count))
-			{
-				count = _ids.Count;
-				AddParam(p);
-			}
-			return count;
-		}
+        private int GetParamId(ParameterExpression p)
+        {
+            int count;
+            if (_ids == null)
+            {
+                _ids = new Dictionary<object, int>();
+                AddParam(p);
+                return 0;
+            }
+            if (!_ids.TryGetValue(p, out count))
+            {
+                count = _ids.Count;
+                AddParam(p);
+            }
+            return count;
+        }
 
-		internal string MemberBindingToString(MemberBinding node)
-		{
-			var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
-			builder.VisitMemberBinding(node);
-			return builder.ToString();
-		}
+        internal string MemberBindingToString(MemberBinding node)
+        {
+            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            builder.VisitMemberBinding(node);
+            return builder.ToString();
+        }
 
-		private void Out(char c)
-		{
-			_out.Append(c);
-		}
+        private void Out(char c)
+        {
+            _out.Append(c);
+        }
 
-		private void Out(string s)
-		{
-			_out.Append(s);
-		}
+        private void Out(string s)
+        {
+            _out.Append(s);
+        }
 
-		private void OutMember(Expression instance, MemberInfo member, Type exprType)
-		{
-			var name = GetPropertyName(member.Name, exprType);
+        private void OutMember(Expression instance, MemberInfo member, Type exprType)
+        {
+            var name = GetPropertyName(member.Name, exprType);
             if (TranslateToDocumentId(instance, member, exprType))
-			{
-				name = Constants.DocumentIdFieldName;
-			}
-			if (instance != null)
-			{
-				if (ShouldParantesisMemberExpression(instance))
-					Out("(");
-				Visit(instance);
-				if (ShouldParantesisMemberExpression(instance))
-					Out(")");
-				Out("." + name);
-			}
-			else
-			{
-				var parentType = member.DeclaringType;
-				while (parentType.IsNested)
-				{
-					parentType = parentType.DeclaringType;
-					if (parentType == null)
-						break;
-					Out(parentType.Name + ".");
-				}
+            {
+                name = Constants.DocumentIdFieldName;
+            }
+            if (instance != null)
+            {
+                if (ShouldParantesisMemberExpression(instance))
+                    Out("(");
+                Visit(instance);
+                if (ShouldParantesisMemberExpression(instance))
+                    Out(")");
+                Out("." + name);
+            }
+            else
+            {
+                var parentType = member.DeclaringType;
+                while (parentType.IsNested)
+                {
+                    parentType = parentType.DeclaringType;
+                    if (parentType == null)
+                        break;
+                    Out(parentType.Name + ".");
+                }
 
-				Out(member.DeclaringType.Name + "." + name);
-			}
-		}
+                Out(member.DeclaringType.Name + "." + name);
+            }
+        }
 
-		private static bool ShouldParantesisMemberExpression(Expression instance)
-		{
-			switch (instance.NodeType)
-			{
-				case ExpressionType.Parameter:
-				case ExpressionType.MemberAccess:
-					return false;
-				default:
-					return true;
-			}
-		}
+        private static bool ShouldParantesisMemberExpression(Expression instance)
+        {
+            switch (instance.NodeType)
+            {
+                case ExpressionType.Parameter:
+                case ExpressionType.MemberAccess:
+                    return false;
+                default:
+                    return true;
+            }
+        }
 
         private bool TranslateToDocumentId(Expression instance, MemberInfo member, Type exprType)
         {
@@ -1326,354 +1326,371 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitMember(MemberExpression node)
 		{
 
-            if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null)
+            if (memberInfo == null)
             {
-                switch (node.Member.Name)
-			{
-                    case "HasValue":
-                        // we don't have nullable type on the server side, we just compare to null
-                        Out("(");
-				Visit(node.Expression);
-                        Out(" != null)");
-                        return node;
-                    case "Value":
-                        Visit(node.Expression);
-				return node; // we don't have nullable type on the server side, we can safely ignore this.
-			}
+                memberInfo = ReflectionUtil.GetPropertiesAndFieldsFor(exprType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    .FirstOrDefault(x => x.Name == name);
             }
 
-			var exprType = node.Expression != null ? node.Member.DeclaringType : node.Type;
-			OutMember(node.Expression, node.Member, exprType);
-			return node;
-		}
-
-		/// <summary>
-		///   Visits the member assignment.
-		/// </summary>
-		/// <param name = "assignment">The assignment.</param>
-		/// <returns></returns>
-		protected override MemberAssignment VisitMemberAssignment(MemberAssignment assignment)
-		{
-			Out(assignment.Member.Name);
-			Out(" = ");
-			var constantExpression = assignment.Expression as ConstantExpression;
-			if (constantExpression != null && constantExpression.Value == null)
-			{
-				var memberType = GetMemberType(assignment.Member);
-				if (ShouldConvert(memberType))
-				{
-					Visit(Expression.Convert(assignment.Expression, memberType));
-				}
-				else
-				{
-					Out("(object)null");
-				}
-				return assignment;
-			}
-			Visit(assignment.Expression);
-			return assignment;
-		}
-
-		/// <summary>
-		///   Visits the children of the <see cref = "T:System.Linq.Expressions.MemberInitExpression" />.
-		/// </summary>
-		/// <param name = "node">The expression to visit.</param>
-		/// <returns>
-		///   The modified expression, if it or any subexpression was modified; otherwise, returns the original expression.
-		/// </returns>
-		protected override Expression VisitMemberInit(MemberInitExpression node)
-		{
-			if ((node.NewExpression.Arguments.Count == 0) && node.NewExpression.Type.Name.Contains("<"))
-			{
-				Out("new");
-			}
-			else
-			{
-				Visit(node.NewExpression);
-				if (TypeExistsOnServer(node.Type) == false)
-				{
-					const int removeLength = 2;
-					_out.Remove(_out.Length - removeLength, removeLength);
-				}
-			}
-			Out(" {");
-			var num = 0;
-			var count = node.Bindings.Count;
-			while (num < count)
-			{
-				var binding = node.Bindings[num];
-				if (num > 0)
-				{
-					Out(", ");
-				}
-				VisitMemberBinding(binding);
-				num++;
-			}
-			Out("}");
-			return node;
-		}
-
-		/// <summary>
-		///   Visits the member list binding.
-		/// </summary>
-		/// <param name = "binding">The binding.</param>
-		/// <returns></returns>
-		protected override MemberListBinding VisitMemberListBinding(MemberListBinding binding)
-		{
-			Out(binding.Member.Name);
-			Out(" = {");
-			var num = 0;
-			var count = binding.Initializers.Count;
-			while (num < count)
-			{
-				if (num > 0)
-				{
-					Out(", ");
-				}
-				VisitElementInit(binding.Initializers[num]);
-				num++;
-			}
-			Out("}");
-			return binding;
-		}
-
-		/// <summary>
-		///   Visits the member member binding.
-		/// </summary>
-		/// <param name = "binding">The binding.</param>
-		/// <returns></returns>
-		protected override MemberMemberBinding VisitMemberMemberBinding(MemberMemberBinding binding)
-		{
-			Out(binding.Member.Name);
-			Out(" = {");
-			var num = 0;
-			var count = binding.Bindings.Count;
-			while (num < count)
-			{
-				if (num > 0)
-				{
-					Out(", ");
-				}
-				VisitMemberBinding(binding.Bindings[num]);
-				num++;
-			}
-			Out("}");
-			return binding;
-		}
-
-		/// <summary>
-		///   Visits the children of the <see cref = "T:System.Linq.Expressions.MethodCallExpression" />.
-		/// </summary>
-		/// <param name = "node">The expression to visit.</param>
-		/// <returns>
-		///   The modified expression, if it or any subexpression was modified; otherwise, returns the original expression.
-		/// </returns>
-		protected override Expression VisitMethodCall(MethodCallExpression node)
-		{
-			var constantExpression = node.Object as ConstantExpression;
-			if (constantExpression != null && node.Type == typeof(Delegate))
-			{
-				var methodInfo = constantExpression.Value as MethodInfo;
-				if (methodInfo != null && methodInfo.DeclaringType == typeof(AbstractCommonApiForIndexesAndTransformers))// a delegate call
-				{
-					Out("((Func<");
-					for (int i = 0; i < methodInfo.GetParameters().Length; i++)
-					{
-						Out("dynamic, ");
-					}
-					Out("dynamic>)(");
-					Out(methodInfo.Name);
-					Out("))");
-					return node;
-				}
-			}
-            if (node.Method.Name == "GetValueOrDefault" && Nullable.GetUnderlyingType(node.Method.DeclaringType) != null)
+            if (memberInfo != null)
             {
-                Visit(node.Object);
-                return node; // we don't do anything here on the server
-            }
-
-			var num = 0;
-			var expression = node.Object;
-			if (IsExtensionMethod(node))
-			{
-				num = 1;
-				expression = node.Arguments[0];
-			}
-			if (expression != null)
-			{
-				switch (node.Method.Name)
-				{
-					case "MetadataFor":
-						Visit(node.Arguments[0]);
-						Out("[\"@metadata\"]");
-						return node;
-					case "AsDocument":
-						Visit(node.Arguments[0]);
-						return node;
-				}
-				if (expression.Type == typeof(IClientSideDatabase))
-				{
-					Out("Database");
-				}
-				else if (typeof(AbstractCommonApiForIndexesAndTransformers).IsAssignableFrom(expression.Type))
-				{
-					// this is a method that
-					// exists on both the server side and the client side
-					Out("this");
-				}
-                else
-				{
-					Visit(expression);
-				}
-				if (IsIndexerCall(node) == false)
-				{
-					Out(".");
-				}
-			}
-			if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
-			{
-				Out("DynamicEnumerable.");
-			}
-			else if (node.Method.IsStatic && IsExtensionMethod(node) == false)
-			{
-				if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
-				{
-					Out("new Raven.Abstractions.Linq.DynamicList(");
-					Visit(node.Arguments[0]);
-					Out(")");
-					return node; // we don't do casting on the server
-				}
-				Out(node.Method.DeclaringType.Name);
-				Out(".");
-			}
-			if (IsIndexerCall(node))
-			{
-				Out("[");
-			}
-			else
-			{
-				switch (node.Method.Name)
-				{
-					case "First":
-						Out("FirstOrDefault");
-						break;
-					case "Last":
-						Out("LastOrDefault");
-						break;
-					case "Single":
-						Out("SingleOrDefault");
-						break;
-					case "ElementAt":
-						Out("ElementAtOrDefault");
-						break;
-					// Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
-					case "OfType":
-						Out("Where");
-						break;
-					default:
-						Out(node.Method.Name);
-                        if (node.Method.IsGenericMethod)
-                        {
-                            OutputGenericMethodArgumentsIfNeeded(node.Method);
-                        }
-						break;
-				}
-				Out("(");
-			}
-			var num2 = num;
-			var count = node.Arguments.Count;
-			while (num2 < count)
-			{
-				if (num2 > num)
-				{
-					Out(", ");
-				}
-				var old = castLambdas;
-				try
-				{
-				    switch (node.Method.Name)
-				    {
-				        case "Sum":
-				        case "Average":
-				        case "Min":
-				        case "Max":
-				            castLambdas = true;
-				            break;
-				        default:
-				            castLambdas = false;
-				            break;
-				    }
-				    var oldAvoidDuplicateParameters = _avoidDuplicatedParameters;
-				    if (node.Method.Name == "Select")
-				    {
-				        _avoidDuplicatedParameters = true;
-				    }
-				    Visit(node.Arguments[num2]);
-				    _avoidDuplicatedParameters = oldAvoidDuplicateParameters;
-				    // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
-				    if (node.Method.Name == "OfType")
-				    {
-				        var type = node.Method.GetGenericArguments()[0];
-				        var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
-				        Out(", (Func<dynamic, bool>)(_itemRaven => string.Equals(_itemRaven[\"$type\"], \"");
-				        Out(typeFullName);
-				        Out("\", StringComparison.Ordinal))");
-				    }
-				}
-				finally
-				{
-					castLambdas = old;
-				}
-				num2++;
-			}
-			Out(IsIndexerCall(node) ? "]" : ")");
-
-			if (node.Type.IsValueType && TypeExistsOnServer(node.Type))
-			{
-				switch (node.Method.Name)
-				{
-					case "First":
-					case "FirstOrDefault":
-					case "Last":
-					case "LastOrDefault":
-					case "Single":
-					case "SingleOrDefault":
-					case "ElementAt":
-					case "ElementAtOrDefault":
-						Out(" ?? ");
-						VisitDefault(Expression.Default(node.Type));
-						break;
-				}
-			}
-			return node;
-		}
-
-        private void OutputGenericMethodArgumentsIfNeeded(MethodInfo method)
-        {
-            var genericArguments = method.GetGenericArguments();
-            if (genericArguments.All(TypeExistsOnServer) == false)
-                return; // no point if the types aren't on the server
-            switch (method.DeclaringType.Name)
-            {
-                case "Enumerable":
-                case "Queryable":
-                    return; // we don't need those, we have LinqOnDynamic for it
-            }
-
-            Out("<");
-            bool first = true;
-            foreach (var genericArgument in genericArguments)
-            {
-                if (first == false)
+                foreach (var customAttribute in memberInfo.GetCustomAttributes(true))
                 {
-                    Out(", ");
+                    string propName;
+                    var customAttributeType = customAttribute.GetType();
+                    if (typeof (JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+                        continue;
+                    switch (customAttributeType.Name)
+                    {
+                        case "JsonPropertyAttribute":
+                            propName = ((dynamic)customAttribute).PropertyName;
+                            break;
+                        case "DataMemberAttribute":
+                            propName = ((dynamic)customAttribute).Name;
+                            break;
+                        default:
+                            continue;
+                    }
+                    if (keywordsInCSharp.Contains(propName))
+                        return '@' + propName;
+                    return propName ?? name;
                 }
-                first = false;
-
-                VisitType(genericArgument);
             }
-            Out(">");
+            return name;
+        }
+
+
+        private static Type GetMemberType(MemberInfo member)
+        {
+            var prop = member as PropertyInfo;
+            if (prop != null)
+                return prop.PropertyType;
+            return ((FieldInfo)member).FieldType;
+        }
+
+        internal string SwitchCaseToString(SwitchCase node)
+        {
+            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            builder.VisitSwitchCase(node);
+            return builder.ToString();
+        }
+
+        /// <summary>
+        ///   Returns a <see cref = "System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>
+        ///   A <see cref = "System.String" /> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return _out.ToString();
+        }
+
+        private void SometimesParenthesis(ExpressionOperatorPrecedence outer, ExpressionOperatorPrecedence inner,
+                                          Action visitor)
+        {
+            var needParenthesis = outer.NeedsParenthesisFor(inner);
+
+            if (needParenthesis)
+                Out("(");
+
+            visitor();
+
+            if (needParenthesis)
+                Out(")");
+        }
+
+        private void Visit(Expression node, ExpressionOperatorPrecedence outerPrecedence)
+        {
+            var previous = _currentPrecedence;
+            _currentPrecedence = outerPrecedence;
+            Visit(node);
+            _currentPrecedence = previous;
+        }
+
+        /// <summary>
+        ///   Visits the children of the <see cref = "T:System.Linq.Expressions.BinaryExpression" />.
+        /// </summary>
+        /// <param name = "node">The expression to visit.</param>
+        /// <returns>
+        ///   The modified expression, if it or any subexpression was modified; otherwise, returns the original expression.
+        /// </returns>
+        protected override Expression VisitBinary(BinaryExpression node)
+        {
+            return VisitBinary(node, _currentPrecedence);
+        }
+
+        private Expression VisitBinary(BinaryExpression node, ExpressionOperatorPrecedence outerPrecedence)
+        {
+            ExpressionOperatorPrecedence innerPrecedence;
+
+            string str;
+            var leftOp = node.Left;
+            var rightOp = node.Right;
+
+            FixupEnumBinaryExpression(ref leftOp, ref rightOp);
+            switch (node.NodeType)
+            {
+                case ExpressionType.Add:
+                    str = "+";
+                    innerPrecedence = ExpressionOperatorPrecedence.Additive;
+                    break;
+
+                case ExpressionType.AddChecked:
+                    str = "+";
+                    innerPrecedence = ExpressionOperatorPrecedence.Additive;
+                    break;
+
+                case ExpressionType.And:
+                    if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
+                    {
+                        str = "&";
+                        innerPrecedence = ExpressionOperatorPrecedence.LogicalAND;
+                    }
+                    else
+                    {
+                        str = "And";
+                        innerPrecedence = ExpressionOperatorPrecedence.ConditionalAND;
+                    }
+                    break;
+
+                case ExpressionType.AndAlso:
+                    str = "&&";
+                    innerPrecedence = ExpressionOperatorPrecedence.ConditionalAND;
+                    break;
+
+                case ExpressionType.Coalesce:
+                    str = "??";
+                    innerPrecedence = ExpressionOperatorPrecedence.NullCoalescing;
+                    break;
+
+                case ExpressionType.Divide:
+                    str = "/";
+                    innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
+                    break;
+
+                case ExpressionType.Equal:
+                    str = "==";
+                    innerPrecedence = ExpressionOperatorPrecedence.Equality;
+                    break;
+
+                case ExpressionType.ExclusiveOr:
+                    str = "^";
+                    innerPrecedence = ExpressionOperatorPrecedence.LogicalXOR;
+                    break;
+
+                case ExpressionType.GreaterThan:
+                    str = ">";
+                    innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
+                    break;
+
+                case ExpressionType.GreaterThanOrEqual:
+                    str = ">=";
+                    innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
+                    break;
+
+                case ExpressionType.LeftShift:
+                    str = "<<";
+                    innerPrecedence = ExpressionOperatorPrecedence.Shift;
+                    break;
+
+                case ExpressionType.LessThan:
+                    str = "<";
+                    innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
+                    break;
+
+                case ExpressionType.LessThanOrEqual:
+                    str = "<=";
+                    innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
+                    break;
+
+                case ExpressionType.Modulo:
+                    str = "%";
+                    innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
+                    break;
+
+                case ExpressionType.Multiply:
+                    str = "*";
+                    innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
+                    break;
+
+                case ExpressionType.MultiplyChecked:
+                    str = "*";
+                    innerPrecedence = ExpressionOperatorPrecedence.Multiplicative;
+                    break;
+
+                case ExpressionType.NotEqual:
+                    str = "!=";
+                    innerPrecedence = ExpressionOperatorPrecedence.RelationalAndTypeTesting;
+                    break;
+
+                case ExpressionType.Or:
+                    if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
+                    {
+                        str = "|";
+                        innerPrecedence = ExpressionOperatorPrecedence.LogicalOR;
+                    }
+                    else
+                    {
+                        str = "Or";
+                        innerPrecedence = ExpressionOperatorPrecedence.LogicalOR;
+                    }
+                    break;
+
+                case ExpressionType.OrElse:
+                    str = "||";
+                    innerPrecedence = ExpressionOperatorPrecedence.ConditionalOR;
+                    break;
+
+                case ExpressionType.Power:
+                    str = "^";
+                    innerPrecedence = ExpressionOperatorPrecedence.LogicalXOR;
+                    break;
+
+                case ExpressionType.RightShift:
+                    str = ">>";
+                    innerPrecedence = ExpressionOperatorPrecedence.Shift;
+                    break;
+
+                case ExpressionType.Subtract:
+                    str = "-";
+                    innerPrecedence = ExpressionOperatorPrecedence.Additive;
+                    break;
+
+                case ExpressionType.SubtractChecked:
+                    str = "-";
+                    innerPrecedence = ExpressionOperatorPrecedence.Additive;
+                    break;
+
+                case ExpressionType.Assign:
+                    str = "=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.AddAssign:
+                    str = "+=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.AndAssign:
+                    if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
+                    {
+                        str = "&=";
+                        innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    }
+                    else
+                    {
+                        str = "&&=";
+                        innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    }
+                    break;
+
+                case ExpressionType.DivideAssign:
+                    str = "/=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.ExclusiveOrAssign:
+                    str = "^=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.LeftShiftAssign:
+                    str = "<<=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.ModuloAssign:
+                    str = "%=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.MultiplyAssign:
+                    str = "*=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.OrAssign:
+                    if ((node.Type != typeof(bool)) && (node.Type != typeof(bool?)))
+                    {
+                        str = "|=";
+                        innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    }
+                    else
+                    {
+                        str = "||=";
+                        innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    }
+                    break;
+
+                case ExpressionType.PowerAssign:
+                    str = "**=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.RightShiftAssign:
+                    str = ">>=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.SubtractAssign:
+                    str = "-=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.AddAssignChecked:
+                    str = "+=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.MultiplyAssignChecked:
+                    str = "*=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.SubtractAssignChecked:
+                    str = "-=";
+                    innerPrecedence = ExpressionOperatorPrecedence.Assignment;
+                    break;
+
+                case ExpressionType.ArrayIndex:
+
+                    innerPrecedence = ExpressionOperatorPrecedence.Primary;
+
+                    SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
+                    {
+                        Visit(leftOp, innerPrecedence);
+                        Out("[");
+                        Visit(rightOp, innerPrecedence);
+                        Out("]");
+                    });
+                    return node;
+
+                default:
+                    throw new InvalidOperationException();
+            }
+
+
+            SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
+            {
+                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+                {
+                    Out("((");
+                    Out(ConvertTypeToCSharpKeyword(rightOp.Type));
+                    Out(")(");
+                }
+                Visit(leftOp, innerPrecedence);
+                Out(' ');
+                Out(str);
+                Out(' ');
+                Visit(rightOp, innerPrecedence);
+                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+                {
+                    Out("))");
+                }
+            });
+
+            return node;
         }
 
 		private static bool IsIndexerCall(MethodCallExpression node)
@@ -2174,13 +2191,14 @@ namespace Raven.Client.Indexes
 				case ExpressionType.ConvertChecked:
                     if (node.Method != null && node.Method.Name == "Parse" && node.Method.DeclaringType == typeof(DateTime))
                     {
-                        Out(node.Method.DeclaringType.Name);
-                        Out(".Parse(");
+                        right = Expression.Constant(null);
                     }
                     else
                     {
-					Out("(");
-					ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
+                        right = convention.SaveEnumsAsIntegers
+                                    ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
+                                    : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
+
                     }
 					break;
 				case ExpressionType.ArrayLength:

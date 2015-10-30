@@ -16,7 +16,7 @@ class status extends viewModelBase {
     private bundleMap = { replication: "Replication Stats", sqlreplication: "SQL Replication Stats" };
     userDatabasePages = ko.observableArray(status.initialVisibleViews.slice());
 
-	constructor() {
+    constructor() {
         super();
             
         this.appUrls = appUrl.forCurrentDatabase();

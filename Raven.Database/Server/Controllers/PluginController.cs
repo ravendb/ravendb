@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
@@ -18,9 +18,9 @@ namespace Raven.Database.Server.Controllers
 			if (Directory.Exists(dir) == false)
 				return GetMessageWithObject(new PluginsStatus());
 
-			var plugins = new PluginsStatus { Plugins = Directory.GetFiles(dir, "*.dll").Select(Path.GetFileNameWithoutExtension).ToList() };
+            var plugins = new PluginsStatus { Plugins = Directory.GetFiles(dir, "*.dll").Select(Path.GetFileNameWithoutExtension).ToList() };
 
-			return GetMessageWithObject(plugins);
-		}
-	}
+            return GetMessageWithObject(plugins);
+        }
+    }
 }

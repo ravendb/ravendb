@@ -15,7 +15,7 @@ class ioTest extends viewModelBase {
     ioTestRequest: performanceTestRequest = performanceTestRequest.empty();
     testResult = ko.observable<performanceTestResultWrapped>();
 
-	currentStatus = ko.observable<string>();
+    currentStatus = ko.observable<string>();
     lastCommand: ioTestCommand = null;
 
     chunkSizeCustomValidityError: KnockoutComputed<string>;

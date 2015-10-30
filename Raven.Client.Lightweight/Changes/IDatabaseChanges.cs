@@ -4,35 +4,35 @@ using Raven.Abstractions.Data;
 namespace Raven.Client.Changes
 {
     public interface IDatabaseChanges : IConnectableChanges<IDatabaseChanges>
-	{
-		/// <summary>
-		/// Subscribe to changes for specified index only.
-		/// </summary>
-		IObservableWithTask<IndexChangeNotification> ForIndex(string indexName);
+    {
+        /// <summary>
+        /// Subscribe to changes for specified index only.
+        /// </summary>
+        IObservableWithTask<IndexChangeNotification> ForIndex(string indexName);
 
-		/// <summary>
-		/// Subscribe to changes for specified document only.
-		/// </summary>
-		IObservableWithTask<DocumentChangeNotification> ForDocument(string docId);
+        /// <summary>
+        /// Subscribe to changes for specified document only.
+        /// </summary>
+        IObservableWithTask<DocumentChangeNotification> ForDocument(string docId);
 
-		/// <summary>
-		/// Subscribe to changes for all documents.
-		/// </summary>
-		IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
+        /// <summary>
+        /// Subscribe to changes for all documents.
+        /// </summary>
+        IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
 
-		/// <summary>
-		/// Subscribe to changes for all indexes.
-		/// </summary>
-		IObservableWithTask<IndexChangeNotification> ForAllIndexes();
+        /// <summary>
+        /// Subscribe to changes for all indexes.
+        /// </summary>
+        IObservableWithTask<IndexChangeNotification> ForAllIndexes();
 
-		/// <summary>
-		/// Subscribe to changes for all transformers.
-		/// </summary>
-	    IObservableWithTask<TransformerChangeNotification> ForAllTransformers();
+        /// <summary>
+        /// Subscribe to changes for all transformers.
+        /// </summary>
+        IObservableWithTask<TransformerChangeNotification> ForAllTransformers();
 
-		/// <summary>
-		/// Subscribe to changes for all documents that Id starts with given prefix.
-		/// </summary>
+        /// <summary>
+        /// Subscribe to changes for all documents that Id starts with given prefix.
+        /// </summary>
         IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
 
 		/// <summary>

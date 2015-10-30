@@ -1,4 +1,4 @@
-﻿using NDesk.Options;
+using NDesk.Options;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.RavenFS;

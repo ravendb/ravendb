@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.NetworkInformation;
@@ -13,268 +13,268 @@ using Rhino.Licensing.Discovery;
 
 namespace Rhino.Licensing
 {
-	using Raven.Abstractions.Util.Encryptors;
+    using Raven.Abstractions.Util.Encryptors;
 
-	/// <summary>
-	/// Base license validator.
-	/// </summary>
-	public abstract class AbstractLicenseValidator : IDisposable
-	{
-		/// <summary>
-		/// License validator logger
-		/// </summary>
-		protected readonly ILog Logger = LogManager.GetCurrentClassLogger();
+    /// <summary>
+    /// Base license validator.
+    /// </summary>
+    public abstract class AbstractLicenseValidator : IDisposable
+    {
+        /// <summary>
+        /// License validator logger
+        /// </summary>
+        protected readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
-		private bool licenseInfoLogged;
+        private bool licenseInfoLogged;
 
-		/// <summary>
-		/// Standard Time servers
-		/// </summary>
-		protected readonly string[] TimeServers = new[]
-		{
-			"time.nist.gov",
-			"time-nw.nist.gov",
-			"time-a.nist.gov",
-			"time-b.nist.gov",
-			"time-a.timefreq.bldrdoc.gov",
-			"time-b.timefreq.bldrdoc.gov",
-			"time-c.timefreq.bldrdoc.gov",
-			"utcnist.colorado.edu",
-			"nist1.datum.com",
-			"nist1.dc.certifiedtime.com",
-			"nist1.nyc.certifiedtime.com",
-		};
+        /// <summary>
+        /// Standard Time servers
+        /// </summary>
+        protected readonly string[] TimeServers = new[]
+        {
+            "time.nist.gov",
+            "time-nw.nist.gov",
+            "time-a.nist.gov",
+            "time-b.nist.gov",
+            "time-a.timefreq.bldrdoc.gov",
+            "time-b.timefreq.bldrdoc.gov",
+            "time-c.timefreq.bldrdoc.gov",
+            "utcnist.colorado.edu",
+            "nist1.datum.com",
+            "nist1.dc.certifiedtime.com",
+            "nist1.nyc.certifiedtime.com",
+        };
 
-		private readonly string licenseServerUrl;
-		private readonly Guid clientId;
-		private readonly string publicKey;
-		private Timer nextLeaseTimer;
-		private bool disableFutureChecks;
-		private bool currentlyValidatingLicense;
-		private readonly DiscoveryHost discoveryHost;
-		private DiscoveryClient discoveryClient;
-		private readonly Guid senderId = Guid.NewGuid();
+        private readonly string licenseServerUrl;
+        private readonly Guid clientId;
+        private readonly string publicKey;
+        private Timer nextLeaseTimer;
+        private bool disableFutureChecks;
+        private bool currentlyValidatingLicense;
+        private readonly DiscoveryHost discoveryHost;
+        private DiscoveryClient discoveryClient;
+        private readonly Guid senderId = Guid.NewGuid();
 
-		/// <summary>
-		/// Fired when license data is invalidated
-		/// </summary>
-		public event Action<InvalidationType> LicenseInvalidated;
+        /// <summary>
+        /// Fired when license data is invalidated
+        /// </summary>
+        public event Action<InvalidationType> LicenseInvalidated;
 
-		/// <summary>
-		/// Gets the expiration date of the license
-		/// </summary>
-		public DateTime ExpirationDate { get; private set; }
+        /// <summary>
+        /// Gets the expiration date of the license
+        /// </summary>
+        public DateTime ExpirationDate { get; private set; }
 
-		/// <summary>
-		/// How to behave when using the same license multiple times
-		/// </summary>
-		public MultipleLicenseUsage MultipleLicenseUsageBehavior { get; set; }
+        /// <summary>
+        /// How to behave when using the same license multiple times
+        /// </summary>
+        public MultipleLicenseUsage MultipleLicenseUsageBehavior { get; set; }
 
-		/// <summary>
-		/// Options for detecting multiple licenses
-		/// </summary>
-		public enum MultipleLicenseUsage
-		{
-			/// <summary>
-			/// Deny if multiple licenses are used
-			/// </summary>
-			Deny,
-			/// <summary>
-			/// Only allow if it is running for the same user
-			/// </summary>
-			AllowForSameUser,
-			/// <summary>
-			/// Allow multiple copies of the same license to exist
-			/// Usually valid for OEM scenarios
-			/// </summary>
-			AllowSameLicense
-		}
+        /// <summary>
+        /// Options for detecting multiple licenses
+        /// </summary>
+        public enum MultipleLicenseUsage
+        {
+            /// <summary>
+            /// Deny if multiple licenses are used
+            /// </summary>
+            Deny,
+            /// <summary>
+            /// Only allow if it is running for the same user
+            /// </summary>
+            AllowForSameUser,
+            /// <summary>
+            /// Allow multiple copies of the same license to exist
+            /// Usually valid for OEM scenarios
+            /// </summary>
+            AllowSameLicense
+        }
 
-		/// <summary>
-		/// Gets or Sets the endpoint address of the subscription service
-		/// </summary>
-		public string SubscriptionEndpoint { get; set; }
+        /// <summary>
+        /// Gets or Sets the endpoint address of the subscription service
+        /// </summary>
+        public string SubscriptionEndpoint { get; set; }
 
-		/// <summary>
-		/// Gets the Type of the license
-		/// </summary>
-		public LicenseType LicenseType { get; private set; }
+        /// <summary>
+        /// Gets the Type of the license
+        /// </summary>
+        public LicenseType LicenseType { get; private set; }
 
-		/// <summary>
-		/// Gets the Id of the license holder
-		/// </summary>
-		public Guid UserId { get; private set; }
+        /// <summary>
+        /// Gets the Id of the license holder
+        /// </summary>
+        public Guid UserId { get; private set; }
 
-		/// <summary>
-		/// Gets the name of the license holder
-		/// </summary>
-		public string Name { get; private set; }
+        /// <summary>
+        /// Gets the name of the license holder
+        /// </summary>
+        public string Name { get; private set; }
 
-		/// <summary>
-		/// Gets or Sets Floating license support
-		/// </summary>
-		public bool DisableFloatingLicenses { get; set; }
+        /// <summary>
+        /// Gets or Sets Floating license support
+        /// </summary>
+        public bool DisableFloatingLicenses { get; set; }
 
-		/// <summary>
-		/// Gets extra license information
-		/// </summary>
-		public Dictionary<string, string> LicenseAttributes { get; private set; }
+        /// <summary>
+        /// Gets extra license information
+        /// </summary>
+        public Dictionary<string, string> LicenseAttributes { get; private set; }
 
-		/// <summary>
-		/// Gets or Sets the license content
-		/// </summary>
-		protected abstract string License { get; set; }
+        /// <summary>
+        /// Gets or Sets the license content
+        /// </summary>
+        protected abstract string License { get; set; }
 
-		private void LeaseLicenseAgain(object state)
-		{
-			if (License == null)
-				return;
+        private void LeaseLicenseAgain(object state)
+        {
+            if (License == null)
+                return;
 
-			var client = discoveryClient;
-			if (client != null)
-				client.PublishMyPresence();
+            var client = discoveryClient;
+            if (client != null)
+                client.PublishMyPresence();
 
-			try
-			{
-				if (IsLicenseValid())
-					return;
-			}
-			catch (RhinoLicensingException)
-			{
-				try
-				{
-					RaiseLicenseInvalidated();
-				}
-				catch (InvalidOperationException)
-				{
-					/* continue to RaiseLicenseInvalidated */
-				}
-				return;
-			}
+            try
+            {
+                if (IsLicenseValid())
+                    return;
+            }
+            catch (RhinoLicensingException)
+            {
+                try
+                {
+                    RaiseLicenseInvalidated();
+                }
+                catch (InvalidOperationException)
+                {
+                    /* continue to RaiseLicenseInvalidated */
+                }
+                return;
+            }
 
-			RaiseLicenseInvalidated();
-		}
+            RaiseLicenseInvalidated();
+        }
 
-		private void RaiseLicenseInvalidated()
-		{
-			var licenseInvalidated = LicenseInvalidated;
-			if (licenseInvalidated == null)
-				throw new InvalidOperationException("License was invalidated, but there is no one subscribe to the LicenseInvalidated event");
-			licenseInvalidated(LicenseType == LicenseType.Floating
-								? InvalidationType.CannotGetNewLicense
-								: InvalidationType.TimeExpired);
-		}
+        private void RaiseLicenseInvalidated()
+        {
+            var licenseInvalidated = LicenseInvalidated;
+            if (licenseInvalidated == null)
+                throw new InvalidOperationException("License was invalidated, but there is no one subscribe to the LicenseInvalidated event");
+            licenseInvalidated(LicenseType == LicenseType.Floating
+                                ? InvalidationType.CannotGetNewLicense
+                                : InvalidationType.TimeExpired);
+        }
 
-		/// <summary>
-		/// Creates a license validator with specified public key.
-		/// </summary>
-		/// <param name="publicKey">public key</param>
-		protected AbstractLicenseValidator(string publicKey)
-		{
-			LeaseTimeout = TimeSpan.FromMinutes(5);
-			discoveryHost = new DiscoveryHost();
-			LicenseAttributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-			this.publicKey = publicKey;
-			discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
-		}
+        /// <summary>
+        /// Creates a license validator with specified public key.
+        /// </summary>
+        /// <param name="publicKey">public key</param>
+        protected AbstractLicenseValidator(string publicKey)
+        {
+            LeaseTimeout = TimeSpan.FromMinutes(5);
+            discoveryHost = new DiscoveryHost();
+            LicenseAttributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            this.publicKey = publicKey;
+            discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
+        }
 
-		private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
-		{
-			if (senderId == clientDiscoveredEventArgs.SenderId) // we got our own notification, ignore it
-				return;
-			if (UserId != clientDiscoveredEventArgs.UserId) // another license, we don't care
-				return;
+        private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
+        {
+            if (senderId == clientDiscoveredEventArgs.SenderId) // we got our own notification, ignore it
+                return;
+            if (UserId != clientDiscoveredEventArgs.UserId) // another license, we don't care
+                return;
 
-			// same user id, different senders
-			switch (MultipleLicenseUsageBehavior)
-			{
-				case MultipleLicenseUsage.AllowSameLicense:
-					return;
-				case MultipleLicenseUsage.AllowForSameUser:
-					if (Environment.UserName == clientDiscoveredEventArgs.UserName)
-						return;
-					break;
-				case MultipleLicenseUsage.Deny:
-					if (Environment.UserName == clientDiscoveredEventArgs.UserName &&
-						Environment.MachineName == clientDiscoveredEventArgs.MachineName)
-						return;
-					break;
-				default:
-					throw new ArgumentOutOfRangeException("invalid MultipleLicenseUsageBehavior: " + MultipleLicenseUsageBehavior);
-			}
-			var client = discoveryClient;
-			if (client != null)
-			{
-				client.PublishMyPresence();
-			}
-			RaiseLicenseInvalidated();
-			var onMultipleLicensesWereDiscovered = MultipleLicensesWereDiscovered;
-			if (onMultipleLicensesWereDiscovered != null)
-			{
-				onMultipleLicensesWereDiscovered(this, clientDiscoveredEventArgs);
-			}
-			else
-			{
-				throw new InvalidOperationException("Multiple licenses were discovered, but no one is handling the MultipleLicensesWereDiscovered event");
-			}
-		}
+            // same user id, different senders
+            switch (MultipleLicenseUsageBehavior)
+            {
+                case MultipleLicenseUsage.AllowSameLicense:
+                    return;
+                case MultipleLicenseUsage.AllowForSameUser:
+                    if (Environment.UserName == clientDiscoveredEventArgs.UserName)
+                        return;
+                    break;
+                case MultipleLicenseUsage.Deny:
+                    if (Environment.UserName == clientDiscoveredEventArgs.UserName &&
+                        Environment.MachineName == clientDiscoveredEventArgs.MachineName)
+                        return;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("invalid MultipleLicenseUsageBehavior: " + MultipleLicenseUsageBehavior);
+            }
+            var client = discoveryClient;
+            if (client != null)
+            {
+                client.PublishMyPresence();
+            }
+            RaiseLicenseInvalidated();
+            var onMultipleLicensesWereDiscovered = MultipleLicensesWereDiscovered;
+            if (onMultipleLicensesWereDiscovered != null)
+            {
+                onMultipleLicensesWereDiscovered(this, clientDiscoveredEventArgs);
+            }
+            else
+            {
+                throw new InvalidOperationException("Multiple licenses were discovered, but no one is handling the MultipleLicensesWereDiscovered event");
+            }
+        }
 
-		public event EventHandler<DiscoveryHost.ClientDiscoveredEventArgs> MultipleLicensesWereDiscovered;
+        public event EventHandler<DiscoveryHost.ClientDiscoveredEventArgs> MultipleLicensesWereDiscovered;
 
-		/// <summary>
-		/// Creates a license validator using the client information
-		/// and a service endpoint address to validate the license.
-		/// </summary>
-		protected AbstractLicenseValidator(string publicKey, string licenseServerUrl, Guid clientId)
-			: this(publicKey)
-		{
-			this.licenseServerUrl = licenseServerUrl;
-			this.clientId = clientId;
-		}
+        /// <summary>
+        /// Creates a license validator using the client information
+        /// and a service endpoint address to validate the license.
+        /// </summary>
+        protected AbstractLicenseValidator(string publicKey, string licenseServerUrl, Guid clientId)
+            : this(publicKey)
+        {
+            this.licenseServerUrl = licenseServerUrl;
+            this.clientId = clientId;
+        }
 
-		/// <summary>
-		/// Validates loaded license
-		/// </summary>
-		public virtual void AssertValidLicense(bool turnOffDiscoveryClient = false)
-		{
+        /// <summary>
+        /// Validates loaded license
+        /// </summary>
+        public virtual void AssertValidLicense(bool turnOffDiscoveryClient = false)
+        {
             AssertValidLicense(() => { }, turnOffDiscoveryClient);
-		}
+        }
 
-		/// <summary>
-		/// Validates loaded license
-		/// </summary>
-		public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false)
-		{
-			LicenseAttributes.Clear();
-			if (IsLicenseValid())
-			{
-				onValidLicense();
+        /// <summary>
+        /// Validates loaded license
+        /// </summary>
+        public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false)
+        {
+            LicenseAttributes.Clear();
+            if (IsLicenseValid())
+            {
+                onValidLicense();
 
-				if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
-					return;
+                if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
+                    return;
 
-				nextLeaseTimer = new Timer(LeaseLicenseAgain);
-			    if (!turnOffDiscoveryClient)
-			    {
-					try
-					{
-						discoveryHost.Start();
-					}
-					catch (Exception e)
-					{
-						// we explicitly don't want bad things to happen if we can't do that
-						Logger.ErrorException("Could not setup node discovery", e);
-					}
-			        if (discoveryClient == null)
-			        {
-			            lock (this)
-			            {
-			                if (discoveryClient == null)
-			                {
+                nextLeaseTimer = new Timer(LeaseLicenseAgain);
+                if (!turnOffDiscoveryClient)
+                {
+                    try
+                    {
+                        discoveryHost.Start();
+                    }
+                    catch (Exception e)
+                    {
+                        // we explicitly don't want bad things to happen if we can't do that
+                        Logger.ErrorException("Could not setup node discovery", e);
+                    }
+                    if (discoveryClient == null)
+                    {
+                        lock (this)
+                        {
+                            if (discoveryClient == null)
+                            {
                                 discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
-			                }
-			            }
-			        }
+                            }
+                        }
+                    }
                     discoveryClient.PublishMyPresence();
 
 			    }

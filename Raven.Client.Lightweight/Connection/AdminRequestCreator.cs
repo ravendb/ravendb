@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AdminDatabaseCommandsBase.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -38,18 +38,18 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
 			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
             MultiDatabase.AssertValidName(dbname);
-			doc = RavenJObject.FromObject(databaseDocument);
-			doc.Remove("Id");
+            doc = RavenJObject.FromObject(databaseDocument);
+            doc.Remove("Id");
 
 			return createRequestForSystemDatabase("/admin/databases/" + Uri.EscapeDataString(dbname), HttpMethods.Put);
 		}
 
-		public HttpJsonRequest DeleteDatabase(string databaseName, bool hardDelete)
-		{
-			var deleteUrl = "/admin/databases/" + Uri.EscapeDataString(databaseName);
+        public HttpJsonRequest DeleteDatabase(string databaseName, bool hardDelete)
+        {
+            var deleteUrl = "/admin/databases/" + Uri.EscapeDataString(databaseName);
 
-			if(hardDelete)
-				deleteUrl += "?hard-delete=true";
+            if(hardDelete)
+                deleteUrl += "?hard-delete=true";
 
 			return createRequestForSystemDatabase(deleteUrl, HttpMethods.Delete);
 		}
@@ -75,15 +75,15 @@ namespace Raven.Client.Connection
 			return createRequestForSystemDatabase("/admin/stats", HttpMethods.Get);
 		}
 
-		public HttpJsonRequest StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName, bool incremental)
-		{
+        public HttpJsonRequest StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName, bool incremental)
+        {
             if (databaseName == Constants.SystemDatabase)
             {
 				return createRequestForSystemDatabase("/admin/backup", HttpMethods.Post);
             }
 			return createRequestForSystemDatabase("/databases/" + databaseName + "/admin/backup?incremental=" + incremental, HttpMethods.Post);
             
-		}
+        }
 
 		public HttpJsonRequest CreateRestoreRequest()
 		{
@@ -108,7 +108,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Gets the list of databases from the server asynchronously
         /// </summary>
-		public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken))
+        public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken))
         {
 	        using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/databases?pageSize={0}&start={1}", pageSize, start), HttpMethods.Get))
 	        {
@@ -118,5 +118,5 @@ namespace Raven.Client.Connection
 					.ToArray();
 	        }
         }
-	}
+    }
 }

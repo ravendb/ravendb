@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TreeStateTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -178,22 +178,22 @@ namespace Voron.Tests.Trees
 					tree.MultiAdd("key2", "items/" + i + "/" + new string('p', i));
 				}
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree = tx.ReadTree("multi-tree");
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = tx.ReadTree("multi-tree");
 
-				for (int i = 0; i < 50; i++)
-				{
-					Assert.DoesNotThrow(() => tree.MultiDelete("key", "items/" + i + "/" + new string('p', i)));
-					Assert.DoesNotThrow(() => tree.MultiDelete("key2", "items/" + i + "/" + new string('p', i)));
-				}
+                for (int i = 0; i < 50; i++)
+                {
+                    Assert.DoesNotThrow(() => tree.MultiDelete("key", "items/" + i + "/" + new string('p', i)));
+                    Assert.DoesNotThrow(() => tree.MultiDelete("key2", "items/" + i + "/" + new string('p', i)));
+                }
 
-				Assert.True(tree.State.PageCount >= 0);
-				Assert.Equal(tree.AllPages().Count, tree.State.PageCount);
-			}
-		}
-	}
+                Assert.True(tree.State.PageCount >= 0);
+                Assert.Equal(tree.AllPages().Count, tree.State.PageCount);
+            }
+        }
+    }
 }

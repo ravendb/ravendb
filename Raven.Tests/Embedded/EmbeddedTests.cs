@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
@@ -39,7 +39,7 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void Can_receive_changes_notification()
         {
-			using (var server = GetNewServer())
+            using (var server = GetNewServer())
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
                 var taskObservable = server.DocumentStore.Changes();
@@ -62,7 +62,7 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void Streaming_Results_Should_Sort_Properly()
         {
-			using (var server = GetNewServer())
+            using (var server = GetNewServer())
             {
                 var documentStore = server.DocumentStore;
                 documentStore.ExecuteIndex(new FooIndex());
@@ -106,8 +106,8 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void CanInsertSeveralDocuments()
         {
-	        var configuration = new RavenConfiguration();
-	        configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            var configuration = new RavenConfiguration();
+            configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
             using (var server = new RavenDbServer(configuration).Initialize())
             {
                 var store = server.DocumentStore;

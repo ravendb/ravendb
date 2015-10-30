@@ -42,10 +42,10 @@ namespace Raven.Bundles.Expiration
                                   {
                                       Map =
                                           @"
-	from doc in docs
-	let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
-	where expiry != null
-	select new { Expiry = expiry }
+    from doc in docs
+    let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
+    where expiry != null
+    select new { Expiry = expiry }
 "
                                   });
             }

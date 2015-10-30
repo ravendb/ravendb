@@ -16,82 +16,82 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class AsyncCommit : RavenTest
-	{
-		[Fact]
-		public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalse()
-		{
-			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
-			{
-                EnsureDtcIsSupported(documentStore);
-
-				using (var s = documentStore.OpenSession())
-				{
-					s.Store(new AccurateCount.User { Name = "Ayende" });
-					s.SaveChanges();
-				}
-
-				using (var s = documentStore.OpenSession())
-				using (var scope = new TransactionScope())
-				{
-					var user = s.Load<AccurateCount.User>("users/1");
-					user.Name = "Rahien";
-					s.SaveChanges();
-					scope.Complete();
-				}
-
-				using (var s = documentStore.OpenSession())
-				{
-					s.Advanced.AllowNonAuthoritativeInformation = false;
-					var user = s.Load<AccurateCount.User>("users/1");
-					Assert.Equal("Rahien", user.Name);
-				}
-			}
-		}
-
-		[Fact]
-		public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalseWhenQuerying()
-		{
+    public class AsyncCommit : RavenTest
+    {
+        [Fact]
+        public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalse()
+        {
             using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
-			{
+            {
                 EnsureDtcIsSupported(documentStore);
 
-				documentStore.DatabaseCommands.PutIndex("test",
-														new IndexDefinition
-														{
-															Map = "from doc in docs select new { doc.Name }"
-														});
+                using (var s = documentStore.OpenSession())
+                {
+                    s.Store(new AccurateCount.User { Name = "Ayende" });
+                    s.SaveChanges();
+                }
 
-				using (var s = documentStore.OpenSession())
-				{
-					s.Store(new AccurateCount.User { Name = "Ayende" });
-					s.SaveChanges();
-				}
+                using (var s = documentStore.OpenSession())
+                using (var scope = new TransactionScope())
+                {
+                    var user = s.Load<AccurateCount.User>("users/1");
+                    user.Name = "Rahien";
+                    s.SaveChanges();
+                    scope.Complete();
+                }
 
-				WaitForIndexing(documentStore);
+                using (var s = documentStore.OpenSession())
+                {
+                    s.Advanced.AllowNonAuthoritativeInformation = false;
+                    var user = s.Load<AccurateCount.User>("users/1");
+                    Assert.Equal("Rahien", user.Name);
+                }
+            }
+        }
 
-				var task = new Task(() =>
-				{
-					using (var s = documentStore.OpenSession())
-					{
-						s.Advanced.AllowNonAuthoritativeInformation = false;
-						var user = s.Advanced.DocumentQuery<AccurateCount.User>("test")
-							.FirstOrDefault();
-						Assert.Equal("Rahien", user.Name);
-					}
-				});
-				using (var s = documentStore.OpenSession())
-				using (var scope = new TransactionScope())
-				{
-					var user = s.Load<AccurateCount.User>("users/1");
-					user.Name = "Rahien";
-					s.SaveChanges();
-					task.Start();
+        [Fact]
+        public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalseWhenQuerying()
+        {
+            using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+            {
+                EnsureDtcIsSupported(documentStore);
+
+                documentStore.DatabaseCommands.PutIndex("test",
+                                                        new IndexDefinition
+                                                        {
+                                                            Map = "from doc in docs select new { doc.Name }"
+                                                        });
+
+                using (var s = documentStore.OpenSession())
+                {
+                    s.Store(new AccurateCount.User { Name = "Ayende" });
+                    s.SaveChanges();
+                }
+
+                WaitForIndexing(documentStore);
+
+                var task = new Task(() =>
+                {
+                    using (var s = documentStore.OpenSession())
+                    {
+                        s.Advanced.AllowNonAuthoritativeInformation = false;
+                        var user = s.Advanced.DocumentQuery<AccurateCount.User>("test")
+                            .FirstOrDefault();
+                        Assert.Equal("Rahien", user.Name);
+                    }
+                });
+                using (var s = documentStore.OpenSession())
+                using (var scope = new TransactionScope())
+                {
+                    var user = s.Load<AccurateCount.User>("users/1");
+                    user.Name = "Rahien";
+                    s.SaveChanges();
+                    task.Start();
                     Assert.False(task.Wait(250, CancellationToken.None));
-					scope.Complete();
-				}
-				task.Wait();
-			}
-		}
-	}
+                    scope.Complete();
+                }
+                task.Wait();
+            }
+        }
+    }
 }

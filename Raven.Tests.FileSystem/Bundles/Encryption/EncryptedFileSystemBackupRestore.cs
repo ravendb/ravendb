@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="EncryptedFileSystemBackupRestore.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -23,24 +23,63 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Bundles.Encryption
 {
-	public class EncryptedFileSystemBackupRestore : FileSystemEncryptionTest
-	{
+    public class EncryptedFileSystemBackupRestore : FileSystemEncryptionTest
+    {
         private readonly string backupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BackupRestoreTests.Backup");
 		private new string dataPath;
 
-		public EncryptedFileSystemBackupRestore()
+        public EncryptedFileSystemBackupRestore()
         {
             IOExtensions.DeleteDirectory(backupDir);
         }
 
         public override void Dispose()
         {
-			base.Dispose();
+            base.Dispose();
 
             IOExtensions.DeleteDirectory(backupDir);
 
-			if(dataPath != null)
-				IOExtensions.DeleteDirectory(dataPath);
+            if(dataPath != null)
+                IOExtensions.DeleteDirectory(dataPath);
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task CanRestoreBackupIfEncryptionEnabledOnServer(string requestedStorage)
+        {
+            using (var client = NewAsyncClientForEncryptedFs(requestedStorage))
+            {
+                var server = GetServer();
+
+                string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "NewFS");
+
+                await CreateSampleData(client);
+                // fetch md5 sums for later verification
+                var md5Sums = FetchMd5Sums(client);
+
+                // create backup
+                await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
+                WaitForBackup(client, true);
+
+                // restore newly created backup
+                await client.Admin.StartRestore(new FilesystemRestoreRequest
+                {
+                    BackupLocation = backupDir,
+                    FilesystemName = "NewFS",
+                    FilesystemLocation = filesystemDir
+                });
+
+                SpinWait.SpinUntil(() => client.Admin.GetNamesAsync().Result.Contains("NewFS"),
+                            Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1));
+
+                var restoredMd5Sums = FetchMd5Sums(client.ForFileSystem("NewFS"));
+                Assert.Equal(md5Sums, restoredMd5Sums);
+
+                var restoredClientComputedMd5Sums = ComputeMd5Sums(client.ForFileSystem("NewFS"));
+                Assert.Equal(md5Sums, restoredClientComputedMd5Sums);
+            }
+
+            AssertPlainTextIsNotSavedInFileSystem("Secret", "records");
         }
 
 		[Theory]

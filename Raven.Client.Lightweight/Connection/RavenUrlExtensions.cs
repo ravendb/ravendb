@@ -4,8 +4,8 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
-	public static class RavenUrlExtensions
-	{
+    public static class RavenUrlExtensions
+    {
         public static string ForDatabase(this string url, string database)
         {
 	        if (!string.IsNullOrEmpty(database) && !url.Contains("/databases/"))

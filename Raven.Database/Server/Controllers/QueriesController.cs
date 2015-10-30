@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -69,93 +69,93 @@ namespace Raven.Database.Server.Controllers
                         sb.Append("\t").Append(item).AppendLine();
                     }
                 });
-		    }
-		    else
-		    {
-		        itemsToLoad = new RavenJArray(GetQueryStringValues("id").Cast<object>());
-		    }
+            }
+            else
+            {
+                itemsToLoad = new RavenJArray(GetQueryStringValues("id").Cast<object>());
+            }
 
-			var result = new MultiLoadResult();
-			var loadedIds = new HashSet<string>();
+            var result = new MultiLoadResult();
+            var loadedIds = new HashSet<string>();
             var includedIds = new HashSet<string>();
-			var includes = GetQueryStringValues("include") ?? new string[0];
-			var transformer = GetQueryStringValue("transformer") ?? GetQueryStringValue("resultTransformer");
-			var transformerParameters = this.ExtractTransformerParameters();
-			var transactionInformation = GetRequestTransaction();
-			var includedEtags = new List<byte>();
+            var includes = GetQueryStringValues("include") ?? new string[0];
+            var transformer = GetQueryStringValue("transformer") ?? GetQueryStringValue("resultTransformer");
+            var transformerParameters = this.ExtractTransformerParameters();
+            var transactionInformation = GetRequestTransaction();
+            var includedEtags = new List<byte>();
 
-		    if (string.IsNullOrEmpty(transformer) == false)
-		    {
+            if (string.IsNullOrEmpty(transformer) == false)
+            {
                 var transformerDef = Database.IndexDefinitionStorage.GetTransformer(transformer);
-		        if (transformerDef == null)
-		            return GetMessageWithObject(new {Error = "No such transformer: " + transformer}, HttpStatusCode.BadRequest);
+                if (transformerDef == null)
+                    return GetMessageWithObject(new {Error = "No such transformer: " + transformer}, HttpStatusCode.BadRequest);
                 includedEtags.AddRange(transformerDef.GetHashCodeBytes());
 
-		    }
+            }
 
-			Database.TransactionalStorage.Batch(actions =>
-			{
-				foreach (RavenJToken item in itemsToLoad)
-				{
-					var value = item.Value<string>();
-					if (loadedIds.Add(value) == false)
-						continue;
-					var documentByKey = string.IsNullOrEmpty(transformer)
-										? Database.Documents.Get(value, transactionInformation)
+            Database.TransactionalStorage.Batch(actions =>
+            {
+                foreach (RavenJToken item in itemsToLoad)
+                {
+                    var value = item.Value<string>();
+                    if (loadedIds.Add(value) == false)
+                        continue;
+                    var documentByKey = string.IsNullOrEmpty(transformer)
+                                        ? Database.Documents.Get(value, transactionInformation)
                                         : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, transformerParameters, out includedIds);
 				    if (documentByKey == null)
 				    {
                         if(ClientIsV3OrHigher(Request))
                             result.Results.Add(null); 
                         continue;
-				    }
-					result.Results.Add(documentByKey.ToJson());
+                    }
+                    result.Results.Add(documentByKey.ToJson());
 
-					if (documentByKey.Etag != null)
-						includedEtags.AddRange(documentByKey.Etag.ToByteArray());
+                    if (documentByKey.Etag != null)
+                        includedEtags.AddRange(documentByKey.Etag.ToByteArray());
 
-					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
-				}
+                    includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
+                }
 
-				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
-				{
-					includedEtags.AddRange(etag.ToByteArray());
-					result.Includes.Add(includedDoc);
-				}, includes, loadedIds);
+                var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
+                {
+                    includedEtags.AddRange(etag.ToByteArray());
+                    result.Includes.Add(includedDoc);
+                }, includes, loadedIds);
 
-				foreach (var item in result.Results.Where(item => item != null))
-				{
-					addIncludesCommand.Execute(item);
-				}
-			});
+                foreach (var item in result.Results.Where(item => item != null))
+                {
+                    addIncludesCommand.Execute(item);
+                }
+            });
 
 
-			foreach (var includedId in includedIds)
-		    {
-		        var doc = Database.Documents.Get(includedId, transactionInformation);
-		        if (doc == null)
-		        {
+            foreach (var includedId in includedIds)
+            {
+                var doc = Database.Documents.Get(includedId, transactionInformation);
+                if (doc == null)
+                {
                     continue;
-		        }
+                }
                 includedEtags.AddRange(doc.Etag.ToByteArray());
-		        result.Includes.Add(doc.ToJson());
-		    }
+                result.Includes.Add(doc.ToJson());
+            }
 
             var computeHash = Encryptor.Current.Hash.Compute16(includedEtags.ToArray());
             Etag computedEtag = Etag.Parse(computeHash);
 
-			if (MatchEtag(computedEtag))
-			{
-				return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
+            if (MatchEtag(computedEtag))
+            {
+                return GetEmptyMessage(HttpStatusCode.NotModified);
+            }
 
-			var msg = GetMessageWithObject(result);
-			WriteETag(computedEtag, msg);
+            var msg = GetMessageWithObject(result);
+            WriteETag(computedEtag, msg);
 
-			AddRequestTraceInfo(sb => sb.Append("Results count: {0}, includes count: {1}", result.Results.Count, result.Includes.Count).AppendLine());
+            AddRequestTraceInfo(sb => sb.Append("Results count: {0}, includes count: {1}", result.Results.Count, result.Includes.Count).AppendLine());
 
-			return msg;
-		}
+            return msg;
+        }
         
-	}
+    }
 }

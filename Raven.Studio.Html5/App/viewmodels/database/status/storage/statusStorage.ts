@@ -8,7 +8,7 @@ class statusDebug extends viewModelBase {
     router: DurandalRouter;
     currentRouteTitle: KnockoutComputed<string>;
 
-	constructor() {
+    constructor() {
         super();
 
         this.router = status.statusRouter.createChildRouter()

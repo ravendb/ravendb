@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -23,10 +23,10 @@ namespace Raven.Tests
 
             var license = licenseGenerator.Generate("Foo", Guid.NewGuid(), new DateTime(2000, 1, 1), licenseValues, LicenseType.Subscription);
             var licenseValidator = new StringLicenseValidator(rsa.ToXmlString(false), license)
-			{
-				DisableFloatingLicenses = true,
-				SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc"
-			};
+            {
+                DisableFloatingLicenses = true,
+                SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc"
+            };
             licenseValidator.AssertValidLicense();
         }
 

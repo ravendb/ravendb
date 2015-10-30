@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,51 +33,51 @@ using Raven.Database.Server.WebApi.Handlers;
 using Raven.Abstractions.Logging;
 namespace Owin
 {
-	public static class AppBuilderExtensions
-	{
-		private const string HostOnAppDisposing = "host.OnAppDisposing";
+    public static class AppBuilderExtensions
+    {
+        private const string HostOnAppDisposing = "host.OnAppDisposing";
 
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app)
-		{
-			return UseRavenDB(app, new RavenConfiguration());
-		}
+        public static IAppBuilder UseRavenDB(this IAppBuilder app)
+        {
+            return UseRavenDB(app, new RavenConfiguration());
+        }
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)
-		{
-			return UseRavenDB(app, new RavenDBOptions(configuration));
-		}
+        public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)
+        {
+            return UseRavenDB(app, new RavenDBOptions(configuration));
+        }
 
-		private static IAppBuilder UseInterceptor(this IAppBuilder app)
-		{
-			return app.Use(typeof(InterceptMiddleware));
-		}
+        private static IAppBuilder UseInterceptor(this IAppBuilder app)
+        {
+            return app.Use(typeof(InterceptMiddleware));
+        }
 
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOptions options)
-		{
-			if (options == null)
-			{
-				throw new ArgumentNullException("options");
-			}
+        public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOptions options)
+        {
+            if (options == null)
+            {
+                throw new ArgumentNullException("options");
+            }
 
-			if (app.Properties.ContainsKey(HostOnAppDisposing))
-			{
-				// This is a katana specific key (i.e. not a standard OWIN key) to be notified
-				// when the host in being shut down. Works both in HttpListener and SystemWeb hosting
-				// Until owin spec is officially updated, there is no other way to know the host
-				// is shutting down / disposing
-				var appDisposing = app.Properties[HostOnAppDisposing] as CancellationToken?;
-				if (appDisposing.HasValue)
-				{
-					appDisposing.Value.Register(options.Dispose);
-				}
-			}
+            if (app.Properties.ContainsKey(HostOnAppDisposing))
+            {
+                // This is a katana specific key (i.e. not a standard OWIN key) to be notified
+                // when the host in being shut down. Works both in HttpListener and SystemWeb hosting
+                // Until owin spec is officially updated, there is no other way to know the host
+                // is shutting down / disposing
+                var appDisposing = app.Properties[HostOnAppDisposing] as CancellationToken?;
+                if (appDisposing.HasValue)
+                {
+                    appDisposing.Value.Register(options.Dispose);
+                }
+            }
 
-			AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
+            AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
 
 #if DEBUG
-			app.UseInterceptor();
+            app.UseInterceptor();
 #endif
 
 			app.Use((context, func) => UpgradeToWebSockets(options, context, func));
@@ -127,97 +127,97 @@ namespace Owin
 			cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
 			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
-			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
-			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
-			cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());
-			cfg.Filters.Add(new RavenExceptionFilterAttribute());
+            cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
+            cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
+            cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());
+            cfg.Filters.Add(new RavenExceptionFilterAttribute());
 
-			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
-			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
+            cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
+            cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
-			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+            cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 
-			if (RouteCacher.TryAddRoutesFromCache(cfg) == false)
-				AddRoutes(cfg);
+            if (RouteCacher.TryAddRoutesFromCache(cfg) == false)
+                AddRoutes(cfg);
 
-			cfg.EnsureInitialized();
+            cfg.EnsureInitialized();
 
-			RouteCacher.CacheRoutesIfNecessary(cfg);
+            RouteCacher.CacheRoutesIfNecessary(cfg);
 
-			return cfg;
-		}
+            return cfg;
+        }
 
-		private static void AddRoutes(HttpConfiguration cfg)
-		{
-			cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
+        private static void AddRoutes(HttpConfiguration cfg)
+        {
+            cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
 
-			cfg.Routes.MapHttpRoute(
-				"RavenFs", "fs/{controller}/{action}",
-				new { id = RouteParameter.Optional });
+            cfg.Routes.MapHttpRoute(
+                "RavenFs", "fs/{controller}/{action}",
+                new { id = RouteParameter.Optional });
 
-			cfg.Routes.MapHttpRoute(
-				"API Default", "{controller}/{action}",
-				new { id = RouteParameter.Optional });
+            cfg.Routes.MapHttpRoute(
+                "API Default", "{controller}/{action}",
+                new { id = RouteParameter.Optional });
 
-			cfg.Routes.MapHttpRoute(
-				"Database Route", "databases/{databaseName}/{controller}/{action}",
-				new { id = RouteParameter.Optional });
-		}
+            cfg.Routes.MapHttpRoute(
+                "Database Route", "databases/{databaseName}/{controller}/{action}",
+                new { id = RouteParameter.Optional });
+        }
 
-		private class RavenAssemblyResolver : IAssembliesResolver
-		{
-			public ICollection<Assembly> GetAssemblies()
-			{
-				return AppDomain.CurrentDomain.GetAssemblies()
+        private class RavenAssemblyResolver : IAssembliesResolver
+        {
+            public ICollection<Assembly> GetAssemblies()
+            {
+                return AppDomain.CurrentDomain.GetAssemblies()
                     .Where(IsRavenAssembly)
-					.ToArray();
-			}
+                    .ToArray();
+            }
 
-		    private static bool IsRavenAssembly(Assembly assembly)
-		    {
-		        if (assembly.IsDynamic)
-		            return false;
+            private static bool IsRavenAssembly(Assembly assembly)
+            {
+                if (assembly.IsDynamic)
+                    return false;
 
-			    try
-			    {
-				    return assembly.ExportedTypes.Any(t => t.IsSubclassOf(typeof (RavenBaseApiController)));
-			    }
-			    catch (FileLoadException)
-			    {
-					// if we can't figure out, this proably isn't it
-				    return false;
-			    }
-		        catch (FileNotFoundException)
-		        {
+                try
+                {
+                    return assembly.ExportedTypes.Any(t => t.IsSubclassOf(typeof (RavenBaseApiController)));
+                }
+                catch (FileLoadException)
+                {
+                    // if we can't figure out, this proably isn't it
+                    return false;
+                }
+                catch (FileNotFoundException)
+                {
                     //ExportedTypes will throw a FileNotFoundException if the assembly references another assembly which cannot be loaded/found
-		            return false;
-		        }
-		    }
-		}
+                    return false;
+                }
+            }
+        }
 
-		public class SelectiveBufferPolicySelector : IHostBufferPolicySelector
-		{
-			public bool UseBufferedInputStream(object hostContext)
-			{
-				var context = hostContext as IOwinContext;
+        public class SelectiveBufferPolicySelector : IHostBufferPolicySelector
+        {
+            public bool UseBufferedInputStream(object hostContext)
+            {
+                var context = hostContext as IOwinContext;
 
                 if (context != null)
-				{
+                {
                     var pathString = context.Request.Path;
-				    if (pathString.HasValue)
-				    {
+                    if (pathString.HasValue)
+                    {
                         var localPath = pathString.Value;
-				        var length = localPath.Length;
-				        if (length < 10) // the shortest possible URL to consider here: fs/{fs_name_at_least_one_character}/files
-				            return true;
+                        var length = localPath.Length;
+                        if (length < 10) // the shortest possible URL to consider here: fs/{fs_name_at_least_one_character}/files
+                            return true;
 
-				        var prev = localPath[length - 2];
-				        switch (localPath[length-1])
-				        {
-				            case 't':
+                        var prev = localPath[length - 2];
+                        switch (localPath[length-1])
+                        {
+                            case 't':
                             case 'T':
-				                switch (prev)
-				                {
+                                switch (prev)
+                                {
                                     case 'R':
                                     case 'r':
                                         return (
@@ -225,47 +225,47 @@ namespace Owin
                                             localPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase)
                                             ) == false;
                                     default:
-				                        return true;
-				                        
-				                }
+                                        return true;
+                                        
+                                }
                             case 'e':
                             case 'E':
-				                switch (prev)
-				                {
+                                switch (prev)
+                                {
                                     case 'l':
                                     case 'L':
                                         return localPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) == false;
-									default:
-				                        return true;
-				                }
-							case 'D':
-							case 'd':
-								switch (prev)
-								{
-									case 'E':
-									case 'e':
-										return localPath.EndsWith("synchronization/MultipartProceed", StringComparison.OrdinalIgnoreCase) == false;
-									default:
-										return true;
-								}
-							case 's':
+                                    default:
+                                        return true;
+                                }
+                            case 'D':
+                            case 'd':
+                                switch (prev)
+                                {
+                                    case 'E':
+                                    case 'e':
+                                        return localPath.EndsWith("synchronization/MultipartProceed", StringComparison.OrdinalIgnoreCase) == false;
+                                    default:
+                                        return true;
+                                }
+                            case 's':
                             case 'S':
-				                switch (prev)
-				                {
+                                switch (prev)
+                                {
                                     case 'T':
                                     case 't':
                                         return localPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase) == false;
                                     case 'c':
                                     case 'C':
                                         if (localPath[length - 4] == '/')
-				                        return true;
-				                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
-									case 'E':
-									case 'e':
-										return localPath.EndsWith("files", StringComparison.OrdinalIgnoreCase) == false || context.Request.Method != "PUT";
-									default:
-				                        return true;
-				                }
+                                        return true;
+                                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
+                                    case 'E':
+                                    case 'e':
+                                        return localPath.EndsWith("files", StringComparison.OrdinalIgnoreCase) == false || context.Request.Method != "PUT";
+                                    default:
+                                        return true;
+                                }
                             default:
 				                return true;
 				        }

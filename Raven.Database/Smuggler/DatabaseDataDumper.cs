@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DatabaseDataDumper.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -18,13 +18,13 @@ using Raven.Smuggler;
 
 namespace Raven.Database.Smuggler
 {
-	public class DatabaseDataDumper : SmugglerDatabaseApiBase
-	{
+    public class DatabaseDataDumper : SmugglerDatabaseApiBase
+    {
         public DatabaseDataDumper(DocumentDatabase database, SmugglerDatabaseOptions options = null)
             : base(options ?? new SmugglerDatabaseOptions())
-		{
-			Operations = new SmugglerEmbeddedDatabaseOperations(database);
-		}
+        {
+            Operations = new SmugglerEmbeddedDatabaseOperations(database);
+        }
 
 		public override async Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch)
 		{
@@ -115,17 +115,17 @@ namespace Raven.Database.Smuggler
 			return result;
 		}
 
-		public Action<string> Progress
-		{
-			get
-			{
-				return ((SmugglerEmbeddedDatabaseOperations)Operations).Progress;
-			}
+        public Action<string> Progress
+        {
+            get
+            {
+                return ((SmugglerEmbeddedDatabaseOperations)Operations).Progress;
+            }
 
-			set
-			{
-				((SmugglerEmbeddedDatabaseOperations)Operations).Progress = value;
-			}
-		}
-	}
+            set
+            {
+                ((SmugglerEmbeddedDatabaseOperations)Operations).Progress = value;
+            }
+        }
+    }
 }

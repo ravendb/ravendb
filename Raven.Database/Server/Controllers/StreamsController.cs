@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Controllers
         }
 
         private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, 
-			Lazy<NameValueCollection> headers, IPrincipal user)
+            Lazy<NameValueCollection> headers, IPrincipal user)
         {
 			var old = CurrentOperationContext.Headers.Value;
 			var oldUser = CurrentOperationContext.User.Value;

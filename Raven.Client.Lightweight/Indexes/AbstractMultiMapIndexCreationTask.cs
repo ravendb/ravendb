@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
@@ -13,32 +13,32 @@ using System.Reflection;
 
 namespace Raven.Client.Indexes
 {
-	/// <summary>
-	/// Allow to create indexes with multiple maps
-	/// </summary>
-	public abstract class AbstractMultiMapIndexCreationTask<TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
-	{
-		private readonly List<Func<string>> maps = new List<Func<string>>();
+    /// <summary>
+    /// Allow to create indexes with multiple maps
+    /// </summary>
+    public abstract class AbstractMultiMapIndexCreationTask<TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
+    {
+        private readonly List<Func<string>> maps = new List<Func<string>>();
 
-		protected void AddMap<TSource>(Expression<Func<IEnumerable<TSource>, IEnumerable>> expression)
-		{
-			maps.Add(() =>
-			{
-				string querySource = typeof(TSource) == typeof(object) ? "docs" : "docs." + Conventions.GetTypeTagName(typeof(TSource));
-				return IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TSource, TReduceResult>(expression, Conventions, querySource, translateIdentityProperty: true);
-			});
-		}
+        protected void AddMap<TSource>(Expression<Func<IEnumerable<TSource>, IEnumerable>> expression)
+        {
+            maps.Add(() =>
+            {
+                string querySource = typeof(TSource) == typeof(object) ? "docs" : "docs." + Conventions.GetTypeTagName(typeof(TSource));
+                return IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TSource, TReduceResult>(expression, Conventions, querySource, translateIdentityProperty: true);
+            });
+        }
 
-		/// <summary>
-		/// Uses reflection to call <see cref="AddMap{TSource}"/> for the base type and all available subclasses.
-		/// </summary>
-		/// <remarks>This is taken from Oren's code in this thread https://groups.google.com/d/msg/ravendb/eFUlQG-spzE/Ac0PrvsFyJYJ </remarks>
-		/// <typeparam name="TBase">The base class type whose descendant types are to be included in the index.</typeparam>
-		/// <param name="expr"></param>
-		protected void AddMapForAll<TBase>(Expression<Func<IEnumerable<TBase>, IEnumerable>> expr)
-		{
-			// Index the base class.
-			AddMap(expr);
+        /// <summary>
+        /// Uses reflection to call <see cref="AddMap{TSource}"/> for the base type and all available subclasses.
+        /// </summary>
+        /// <remarks>This is taken from Oren's code in this thread https://groups.google.com/d/msg/ravendb/eFUlQG-spzE/Ac0PrvsFyJYJ </remarks>
+        /// <typeparam name="TBase">The base class type whose descendant types are to be included in the index.</typeparam>
+        /// <param name="expr"></param>
+        protected void AddMapForAll<TBase>(Expression<Func<IEnumerable<TBase>, IEnumerable>> expr)
+        {
+            // Index the base class.
+            AddMap(expr);
 
 			// Index child classes.
 			var children = typeof(TBase).Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
@@ -54,14 +54,14 @@ namespace Raven.Client.Indexes
 			}
 		}
 
-		/// <summary>
-		/// Creates the index definition.
-		/// </summary>
-		/// <returns></returns>
-		public override IndexDefinition CreateIndexDefinition()
-		{
-			if (Conventions == null)
-				Conventions = new DocumentConvention();
+        /// <summary>
+        /// Creates the index definition.
+        /// </summary>
+        /// <returns></returns>
+        public override IndexDefinition CreateIndexDefinition()
+        {
+            if (Conventions == null)
+                Conventions = new DocumentConvention();
 
 			var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>()
 			{
@@ -90,24 +90,24 @@ namespace Raven.Client.Indexes
 			            formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
 			       
                 }
-				indexDefinition.Maps.Add(formattedMap);
-			}
-			return indexDefinition;
-		}
+                indexDefinition.Maps.Add(formattedMap);
+            }
+            return indexDefinition;
+        }
 
-		/// <summary>
-		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
-		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
-		/// will be skipped and the appropriate error message will be added to the indexing errors.
-		/// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
-		/// </summary>
-		public int? MaxIndexOutputsPerDocument { get; set; }
-	}
+        /// <summary>
+        /// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
+        /// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
+        /// will be skipped and the appropriate error message will be added to the indexing errors.
+        /// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
+        /// </summary>
+        public int? MaxIndexOutputsPerDocument { get; set; }
+    }
 
-	/// <summary>
-	/// Allow to create indexes with multiple maps
-	/// </summary>
-	public abstract class AbstractMultiMapIndexCreationTask : AbstractMultiMapIndexCreationTask<object>
-	{
-	}
+    /// <summary>
+    /// Allow to create indexes with multiple maps
+    /// </summary>
+    public abstract class AbstractMultiMapIndexCreationTask : AbstractMultiMapIndexCreationTask<object>
+    {
+    }
 }

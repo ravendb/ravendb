@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -103,9 +103,9 @@ Copyright (C) 2008 - {0} - Hibernating Rhinos
             Console.WriteLine(@"
 Usage:
   - Export a RavenDB database to a file in raven.dump format.
-	Raven.StorgaeExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\northwind.raven [-BatchSize]
+    Raven.StorgaeExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\northwind.raven [-BatchSize]
   - Export an ESENT table from given RavenDB database into a CSV formated file.
-	Raven.StorgaeExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\ref.csv -T ref 
+    Raven.StorgaeExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\ref.csv -T ref 
 
 Parameters:
  -T <TableName> : The name of the table to be exported.

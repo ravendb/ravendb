@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -9,55 +9,55 @@ using Voron.Trees;
 
 namespace Voron.Tests
 {
-	using System.Collections.Generic;
+    using System.Collections.Generic;
 
-	public abstract class StorageTest : IDisposable
-	{
-		private StorageEnvironment _storageEnvironment;
-		protected StorageEnvironmentOptions _options;
-		protected const string DataDir = "test.data";
+    public abstract class StorageTest : IDisposable
+    {
+        private StorageEnvironment _storageEnvironment;
+        protected StorageEnvironmentOptions _options;
+        protected const string DataDir = "test.data";
 
-		public StorageEnvironment Env
-		{
-		    get
-		    {
-			    if (_storageEnvironment == null)
-			    {
-				    lock (this)
-				    {
-					    if (_storageEnvironment == null)
-						    _storageEnvironment = new StorageEnvironment(_options);
-				    }
-			    }
-		        return _storageEnvironment;
-		    }
-		}
+        public StorageEnvironment Env
+        {
+            get
+            {
+                if (_storageEnvironment == null)
+                {
+                    lock (this)
+                    {
+                        if (_storageEnvironment == null)
+                            _storageEnvironment = new StorageEnvironment(_options);
+                    }
+                }
+                return _storageEnvironment;
+            }
+        }
 
-		protected StorageTest(StorageEnvironmentOptions options)
-		{
-			_options = options;
-		}
+        protected StorageTest(StorageEnvironmentOptions options)
+        {
+            _options = options;
+        }
 
-		protected StorageTest()
-		{
-			DeleteDirectory(DataDir);
-		    _options = StorageEnvironmentOptions.CreateMemoryOnly();
-			Configure(_options);
-		}
+        protected StorageTest()
+        {
+            DeleteDirectory(DataDir);
+            _options = StorageEnvironmentOptions.CreateMemoryOnly();
+            Configure(_options);
+        }
 
-		protected void RestartDatabase()
-		{
-			StopDatabase();
+        protected void RestartDatabase()
+        {
+            StopDatabase();
 
-			StartDatabase();
-		}
+            StartDatabase();
+        }
 
-	    protected void RequireFileBasedPager()
-	    {
-	        if(_storageEnvironment != null)
+        protected void RequireFileBasedPager()
+        {
+            if(_storageEnvironment != null)
                 throw new InvalidOperationException("Too late");
             if (_options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-	            return;
+                return;
             DeleteDirectory(DataDir);
             _options = StorageEnvironmentOptions.ForPath(DataDir);
             Configure(_options);

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="LiveTestResourceCleanerStartupTask.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,169 +19,169 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.LiveTest
 {
-	public class LiveTestResourceCleanerStartupTask : IServerStartupTask
-	{
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class LiveTestResourceCleanerStartupTask : IServerStartupTask
+    {
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		private TimeSpan maxTimeResourceCanBeIdle;
+        private TimeSpan maxTimeResourceCanBeIdle;
 
-		private RavenDBOptions options;
+        private RavenDBOptions options;
 
-		public void Execute(RavenDBOptions serverOptions)
-		{
-			options = serverOptions;
+        public void Execute(RavenDBOptions serverOptions)
+        {
+            options = serverOptions;
 
-			int val;
-			if (int.TryParse(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Tenants/MaxIdleTimeForTenantResource"], out val) == false)
-				val = 900;
+            int val;
+            if (int.TryParse(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Tenants/MaxIdleTimeForTenantResource"], out val) == false)
+                val = 900;
 
-			maxTimeResourceCanBeIdle = TimeSpan.FromSeconds(val);
+            maxTimeResourceCanBeIdle = TimeSpan.FromSeconds(val);
 
-			log.Info("LiveTestResourceCleanerStartupTask started. MaxTimeResourceCanBeIdle: " + maxTimeResourceCanBeIdle.TotalSeconds + " seconds.");
+            log.Info("LiveTestResourceCleanerStartupTask started. MaxTimeResourceCanBeIdle: " + maxTimeResourceCanBeIdle.TotalSeconds + " seconds.");
 
-			options.SystemDatabase.TimerManager.NewTimer(ExecuteCleanup, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
-		}
+            options.SystemDatabase.TimerManager.NewTimer(ExecuteCleanup, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
+        }
 
-		public void Dispose()
-		{
-		}
+        public void Dispose()
+        {
+        }
 
-		public void ExecuteCleanup(object state)
-		{
-			log.Info("LiveTestResourceCleanerStartupTask. Executing cleanup.");
+        public void ExecuteCleanup(object state)
+        {
+            log.Info("LiveTestResourceCleanerStartupTask. Executing cleanup.");
 
-			var databaseLandlord = options.DatabaseLandlord;
-			var fileSystemLandlord = options.FileSystemLandlord;
+            var databaseLandlord = options.DatabaseLandlord;
+            var fileSystemLandlord = options.FileSystemLandlord;
 
-			if (options.Disposed)
-			{
-				Dispose();
-				return;
-			}
+            if (options.Disposed)
+            {
+                Dispose();
+                return;
+            }
 
-			try
-			{
-				CleanupDatabases(databaseLandlord);
-				CleanupFileSystems(databaseLandlord, fileSystemLandlord);
-			}
-			catch (Exception e)
-			{
-				log.ErrorException("Unexpected error.", e);
-			}
-		}
+            try
+            {
+                CleanupDatabases(databaseLandlord);
+                CleanupFileSystems(databaseLandlord, fileSystemLandlord);
+            }
+            catch (Exception e)
+            {
+                log.ErrorException("Unexpected error.", e);
+            }
+        }
 
-		private void CleanupFileSystems(DatabasesLandlord databaseLandlord, FileSystemsLandlord fileSystemLandlord)
-		{
-			var systemDatabase = databaseLandlord.SystemDatabase;
+        private void CleanupFileSystems(DatabasesLandlord databaseLandlord, FileSystemsLandlord fileSystemLandlord)
+        {
+            var systemDatabase = databaseLandlord.SystemDatabase;
 
-			int nextStart = 0;
-			var fileSystemDocuments = systemDatabase
-				.Documents
+            int nextStart = 0;
+            var fileSystemDocuments = systemDatabase
+                .Documents
                 .GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 
-			var fileSystemIds = fileSystemDocuments
-				.Select(x => ((RavenJObject)x)["@metadata"])
-				.Where(x => x != null)
-				.Select(x => x.Value<string>("@id"))
-				.Where(x => x != null && x != Constants.SystemDatabase)
-				.ToList();
+            var fileSystemIds = fileSystemDocuments
+                .Select(x => ((RavenJObject)x)["@metadata"])
+                .Where(x => x != null)
+                .Select(x => x.Value<string>("@id"))
+                .Where(x => x != null && x != Constants.SystemDatabase)
+                .ToList();
 
-			foreach (var fileSystemId in fileSystemIds)
-			{
-				try
-				{
-					var key = fileSystemId;
+            foreach (var fileSystemId in fileSystemIds)
+            {
+                try
+                {
+                    var key = fileSystemId;
                     if (key.StartsWith(Constants.FileSystem.Prefix))
                         key = key.Substring(Constants.FileSystem.Prefix.Length);
 
-					var shouldCleanup = false;
+                    var shouldCleanup = false;
 
-					DateTime value;
-					if (fileSystemLandlord.IsFileSystemLoaded(key) == false) 
-						shouldCleanup = true;
-					else if (fileSystemLandlord.LastRecentlyUsed.TryGetValue(key, out value) == false || (SystemTime.UtcNow - value) > maxTimeResourceCanBeIdle) 
-						shouldCleanup = true;
+                    DateTime value;
+                    if (fileSystemLandlord.IsFileSystemLoaded(key) == false) 
+                        shouldCleanup = true;
+                    else if (fileSystemLandlord.LastRecentlyUsed.TryGetValue(key, out value) == false || (SystemTime.UtcNow - value) > maxTimeResourceCanBeIdle) 
+                        shouldCleanup = true;
 
-					if (shouldCleanup == false) 
-						continue;
+                    if (shouldCleanup == false) 
+                        continue;
 
-					var configuration = fileSystemLandlord.CreateTenantConfiguration(key, true);
+                    var configuration = fileSystemLandlord.CreateTenantConfiguration(key, true);
 
-					fileSystemLandlord.Cleanup(key, maxTimeResourceCanBeIdle, database => false);
+                    fileSystemLandlord.Cleanup(key, maxTimeResourceCanBeIdle, database => false);
 
                     var docKey = Constants.FileSystem.Prefix + key;
-					systemDatabase.Documents.Delete(docKey, null, null);
+                    systemDatabase.Documents.Delete(docKey, null, null);
 
-					if (configuration == null)
-						continue;
+                    if (configuration == null)
+                        continue;
 
-					IOExtensions.DeleteDirectory(configuration.FileSystem.DataDirectory);
-				}
-				catch (Exception e)
-				{
-					log.WarnException(string.Format("Failed to cleanup '{0}' filesystem.", fileSystemId), e);
-				}
-			}
-		}
+                    IOExtensions.DeleteDirectory(configuration.FileSystem.DataDirectory);
+                }
+                catch (Exception e)
+                {
+                    log.WarnException(string.Format("Failed to cleanup '{0}' filesystem.", fileSystemId), e);
+                }
+            }
+        }
 
-		private void CleanupDatabases(DatabasesLandlord databaseLandlord)
-		{
-			var systemDatabase = databaseLandlord.SystemDatabase;
+        private void CleanupDatabases(DatabasesLandlord databaseLandlord)
+        {
+            var systemDatabase = databaseLandlord.SystemDatabase;
 
-			int nextStart = 0;
-			var databaseDocuments = systemDatabase
-				.Documents
-				.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
+            int nextStart = 0;
+            var databaseDocuments = systemDatabase
+                .Documents
+                .GetDocumentsWithIdStartingWith(Constants.Database.Prefix, null, null, 0, int.MaxValue, CancellationToken.None, ref nextStart);
 
-			var databaseIds = databaseDocuments
-				.Select(x => ((RavenJObject)x)["@metadata"])
-				.Where(x => x != null)
-				.Select(x => x.Value<string>("@id"))
-				.Where(x => x != null && x != Constants.SystemDatabase)
-				.ToList();
+            var databaseIds = databaseDocuments
+                .Select(x => ((RavenJObject)x)["@metadata"])
+                .Where(x => x != null)
+                .Select(x => x.Value<string>("@id"))
+                .Where(x => x != null && x != Constants.SystemDatabase)
+                .ToList();
 
-			foreach (var databaseId in databaseIds)
-			{
-				try
-				{
-					var key = databaseId;
-					if (key.StartsWith(Constants.Database.Prefix))
-						key = key.Substring(Constants.Database.Prefix.Length);
+            foreach (var databaseId in databaseIds)
+            {
+                try
+                {
+                    var key = databaseId;
+                    if (key.StartsWith(Constants.Database.Prefix))
+                        key = key.Substring(Constants.Database.Prefix.Length);
 
-					var shouldCleanup = false;
+                    var shouldCleanup = false;
 
-					DateTime value;
-					if (databaseLandlord.IsDatabaseLoaded(key) == false)
-						shouldCleanup = true;
-					else if (databaseLandlord.LastRecentlyUsed.TryGetValue(key, out value) == false || (SystemTime.UtcNow - value) > maxTimeResourceCanBeIdle)
-						shouldCleanup = true;
+                    DateTime value;
+                    if (databaseLandlord.IsDatabaseLoaded(key) == false)
+                        shouldCleanup = true;
+                    else if (databaseLandlord.LastRecentlyUsed.TryGetValue(key, out value) == false || (SystemTime.UtcNow - value) > maxTimeResourceCanBeIdle)
+                        shouldCleanup = true;
 
-					if (shouldCleanup == false)
-						continue;
+                    if (shouldCleanup == false)
+                        continue;
 
-					var configuration = databaseLandlord.CreateTenantConfiguration(key, true);
+                    var configuration = databaseLandlord.CreateTenantConfiguration(key, true);
 
-					databaseLandlord.Cleanup(key, maxTimeResourceCanBeIdle, database => false);
+                    databaseLandlord.Cleanup(key, maxTimeResourceCanBeIdle, database => false);
 
-					var docKey = Constants.Database.Prefix + key;
-					systemDatabase.Documents.Delete(docKey, null, null);
+                    var docKey = Constants.Database.Prefix + key;
+                    systemDatabase.Documents.Delete(docKey, null, null);
 
-					if (configuration == null)
-						continue;
+                    if (configuration == null)
+                        continue;
 
-					IOExtensions.DeleteDirectory(configuration.DataDirectory);
-					if (configuration.IndexStoragePath != null)
-						IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
-					if (configuration.Storage.Esent.JournalsStoragePath != null)
-						IOExtensions.DeleteDirectory(configuration.Storage.Esent.JournalsStoragePath);
-					if (configuration.Storage.Voron.JournalsStoragePath != null)
-						IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
-				}
-				catch (Exception e)
-				{
-					log.WarnException(string.Format("Failed to cleanup '{0}' database.", databaseId), e);
-				}
-			}
-		}
-	}
+                    IOExtensions.DeleteDirectory(configuration.DataDirectory);
+                    if (configuration.IndexStoragePath != null)
+                        IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+                    if (configuration.Storage.Esent.JournalsStoragePath != null)
+                        IOExtensions.DeleteDirectory(configuration.Storage.Esent.JournalsStoragePath);
+                    if (configuration.Storage.Voron.JournalsStoragePath != null)
+                        IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
+                }
+                catch (Exception e)
+                {
+                    log.WarnException(string.Format("Failed to cleanup '{0}' database.", databaseId), e);
+                }
+            }
+        }
+    }
 }

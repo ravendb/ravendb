@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_abc.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,44 +11,44 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3555 : RavenTest
-	{
-		[Fact]
-		public void ShouldRenewConnectionAndProperlyGetNotification()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var firstAllDocsSubscription = store.Changes().Task.Result
-					.ForAllDocuments()
-					.Subscribe(x =>
-					{
-						
-					});
+    public class RavenDB_3555 : RavenTest
+    {
+        [Fact]
+        public void ShouldRenewConnectionAndProperlyGetNotification()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var firstAllDocsSubscription = store.Changes().Task.Result
+                    .ForAllDocuments()
+                    .Subscribe(x =>
+                    {
+                        
+                    });
 
-				store.Changes().WaitForAllPendingSubscriptions();
+                store.Changes().WaitForAllPendingSubscriptions();
 
-				var allDocsObservable = store.Changes().Task.Result
-					.ForAllDocuments();
+                var allDocsObservable = store.Changes().Task.Result
+                    .ForAllDocuments();
 
-				firstAllDocsSubscription.Dispose();
+                firstAllDocsSubscription.Dispose();
 
-				var items = new BlockingCollection<string>();
+                var items = new BlockingCollection<string>();
 
-				allDocsObservable.Subscribe(x => items.Add(x.Id));
+                allDocsObservable.Subscribe(x => items.Add(x.Id));
 
-				allDocsObservable.Task.Wait();
+                allDocsObservable.Task.Wait();
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User(), "users/1");
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				string userId;
-				Assert.True(items.TryTake(out userId, TimeSpan.FromSeconds(10)));
-				Assert.Equal("users/1", userId);
-			}
-		}
-	}
+                string userId;
+                Assert.True(items.TryTake(out userId, TimeSpan.FromSeconds(10)));
+                Assert.Equal("users/1", userId);
+            }
+        }
+    }
 }

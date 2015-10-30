@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 // -----------------------------------------------------------------------
 //  <copyright file="Tree.MultiTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -14,133 +14,133 @@ using Voron.Util;
 
 namespace Voron.Trees
 {
-	/* Multi tree behavior
-	 * -------------------
-	 * A multi tree is a tree that is used only with MultiRead, MultiAdd, MultiDelete
-	 * The common use case is a secondary index that allows duplicates. 
-	 * 
-	 * The API exposed goes like this:
-	 * 
-	 * MultiAdd("key", "val1"), MultiAdd("key", "val2"), MultiAdd("key", "val3") 
-	 * 
-	 * And then you can read it back with MultiRead("key") : IIterator
-	 * 
-	 * When deleting, you delete one value at a time: MultiDelete("key", "val1")
-	 * 
-	 * The actual values are stored as keys in a separate tree per key. In order to optimize
-	 * space usage, multi trees work in the following fashion.
-	 * 
-	 * If the totale size of the values per key is less than NodeMaxSize, we store them as an embedded
-	 * page inside the owning tree. If then are more than the node max size, we create a separate tree
-	 * for them and then only store the tree root infromation.
-	 */
-	public unsafe partial class Tree
-	{
-		public bool IsMultiValueTree { get; set; }
+    /* Multi tree behavior
+     * -------------------
+     * A multi tree is a tree that is used only with MultiRead, MultiAdd, MultiDelete
+     * The common use case is a secondary index that allows duplicates. 
+     * 
+     * The API exposed goes like this:
+     * 
+     * MultiAdd("key", "val1"), MultiAdd("key", "val2"), MultiAdd("key", "val3") 
+     * 
+     * And then you can read it back with MultiRead("key") : IIterator
+     * 
+     * When deleting, you delete one value at a time: MultiDelete("key", "val1")
+     * 
+     * The actual values are stored as keys in a separate tree per key. In order to optimize
+     * space usage, multi trees work in the following fashion.
+     * 
+     * If the totale size of the values per key is less than NodeMaxSize, we store them as an embedded
+     * page inside the owning tree. If then are more than the node max size, we create a separate tree
+     * for them and then only store the tree root infromation.
+     */
+    public unsafe partial class Tree
+    {
+        public bool IsMultiValueTree { get; set; }
 
-		public void MultiAdd(Slice key, Slice value, ushort? version = null)
-		{
-			if (value == null) throw new ArgumentNullException("value");
-			int maxNodeSize = AbstractPager.NodeMaxSize;
-			if (value.Size > maxNodeSize)
-				throw new ArgumentException(
-					"Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", "value");
-			if (value.Size == 0)
-				throw new ArgumentException("Cannot add empty value to child tree");
+        public void MultiAdd(Slice key, Slice value, ushort? version = null)
+        {
+            if (value == null) throw new ArgumentNullException("value");
+            int maxNodeSize = AbstractPager.NodeMaxSize;
+            if (value.Size > maxNodeSize)
+                throw new ArgumentException(
+                    "Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", "value");
+            if (value.Size == 0)
+                throw new ArgumentException("Cannot add empty value to child tree");
 
-			State.IsModified = true;
-			State.Flags |= TreeFlags.MultiValueTrees;
+            State.IsModified = true;
+            State.Flags |= TreeFlags.MultiValueTrees;
 
-			Lazy<Cursor> lazy;
-			NodeHeader* node;
-			var page = FindPageFor(key, out node, out lazy);
-			if ((page == null || page.LastMatch != 0))
-			{
-				MultiAddOnNewValue(_tx, key, value, version, maxNodeSize);
-				return;
-			}
+            Lazy<Cursor> lazy;
+            NodeHeader* node;
+            var page = FindPageFor(key, out node, out lazy);
+            if ((page == null || page.LastMatch != 0))
+            {
+                MultiAddOnNewValue(_tx, key, value, version, maxNodeSize);
+                return;
+            }
 
-			page = _tx.ModifyPage(page.PageNumber, this, page);
-			var item = page.GetNode(page.LastSearchPosition);
+            page = _tx.ModifyPage(page.PageNumber, this, page);
+            var item = page.GetNode(page.LastSearchPosition);
 
-			// already was turned into a multi tree, not much to do here
-			if (item->Flags == NodeFlags.MultiValuePageRef)
-			{
-				var existingTree = OpenMultiValueTree(_tx, key, item);
-				existingTree.DirectAdd(value, 0, version: version);
-				return;
-			}
+            // already was turned into a multi tree, not much to do here
+            if (item->Flags == NodeFlags.MultiValuePageRef)
+            {
+                var existingTree = OpenMultiValueTree(_tx, key, item);
+                existingTree.DirectAdd(value, 0, version: version);
+                return;
+            }
 
-			byte* nestedPagePtr;
-			if (item->Flags == NodeFlags.PageRef)
-			{
-				var overFlowPage = _tx.ModifyPage(item->PageNumber, this ,null);
-				nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
-			}
-			else
-			{
-				nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
-			}
+            byte* nestedPagePtr;
+            if (item->Flags == NodeFlags.PageRef)
+            {
+                var overFlowPage = _tx.ModifyPage(item->PageNumber, this ,null);
+                nestedPagePtr = overFlowPage.Base + Constants.PageHeaderSize;
+            }
+            else
+            {
+                nestedPagePtr = NodeHeader.DirectAccess(_tx, item);
+            }
 
-			var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
+            var nestedPage = new Page(nestedPagePtr, "multi tree", (ushort)NodeHeader.GetDataSize(_tx, item));
 
-			var existingItem = nestedPage.Search(value);
-			if (nestedPage.LastMatch != 0)
-				existingItem = null;// not an actual match, just greater than
+            var existingItem = nestedPage.Search(value);
+            if (nestedPage.LastMatch != 0)
+                existingItem = null;// not an actual match, just greater than
 
-			ushort previousNodeRevision = existingItem != null ?  existingItem->Version : (ushort)0;
-			CheckConcurrency(key, value, version, previousNodeRevision, TreeActionType.Add);
-			
-			if (existingItem != null)
-			{
-				// maybe same value added twice?
-				var tmpKey = page.GetNodeKey(item);
-				if (tmpKey.Compare(value) == 0)
-					return; // already there, turning into a no-op
-				nestedPage.RemoveNode(nestedPage.LastSearchPosition);
-			}
+            ushort previousNodeRevision = existingItem != null ?  existingItem->Version : (ushort)0;
+            CheckConcurrency(key, value, version, previousNodeRevision, TreeActionType.Add);
+            
+            if (existingItem != null)
+            {
+                // maybe same value added twice?
+                var tmpKey = page.GetNodeKey(item);
+                if (tmpKey.Compare(value) == 0)
+                    return; // already there, turning into a no-op
+                nestedPage.RemoveNode(nestedPage.LastSearchPosition);
+            }
 
-			var valueToInsert = nestedPage.PrepareKeyToInsert(value, nestedPage.LastSearchPosition);
+            var valueToInsert = nestedPage.PrepareKeyToInsert(value, nestedPage.LastSearchPosition);
 
-			if (nestedPage.HasSpaceFor(_tx, valueToInsert, 0))
-			{
-				// we are now working on top of the modified root page, we can just modify the memory directly
-				nestedPage.AddDataNode(nestedPage.LastSearchPosition, valueToInsert, 0, previousNodeRevision);
-				return;
-			}
+            if (nestedPage.HasSpaceFor(_tx, valueToInsert, 0))
+            {
+                // we are now working on top of the modified root page, we can just modify the memory directly
+                nestedPage.AddDataNode(nestedPage.LastSearchPosition, valueToInsert, 0, previousNodeRevision);
+                return;
+            }
 
-			int pageSize = nestedPage.CalcSizeUsed() + Constants.PageHeaderSize;
-			var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(valueToInsert, 0);
-			if (newRequiredSize <= maxNodeSize)
-			{
-				// we can just expand the current value... no need to create a nested tree yet
+            int pageSize = nestedPage.CalcSizeUsed() + Constants.PageHeaderSize;
+            var newRequiredSize = pageSize + nestedPage.GetRequiredSpace(valueToInsert, 0);
+            if (newRequiredSize <= maxNodeSize)
+            {
+                // we can just expand the current value... no need to create a nested tree yet
                 var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
 
                 var currentDataSize = NodeHeader.GetDataSize(_tx, item);
                 ExpandMultiTreeNestedPageSize(_tx, key, value, nestedPagePtr, actualPageSize, currentDataSize);
 
-				return;
-			}
-			// we now have to convert this into a tree instance, instead of just a nested page
-			var tree = Create(_tx, KeysPrefixing, TreeFlags.MultiValue);
-			for (int i = 0; i < nestedPage.NumberOfEntries; i++)
-			{
-				var existingValue = nestedPage.GetNodeKey(i);
-				tree.DirectAdd(existingValue, 0);
-			}
-			tree.DirectAdd(value, 0, version: version);
-			_tx.AddMultiValueTree(this, key, tree);
-			// we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-			DirectAdd(key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
-		}
+                return;
+            }
+            // we now have to convert this into a tree instance, instead of just a nested page
+            var tree = Create(_tx, KeysPrefixing, TreeFlags.MultiValue);
+            for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+            {
+                var existingValue = nestedPage.GetNodeKey(i);
+                tree.DirectAdd(existingValue, 0);
+            }
+            tree.DirectAdd(value, 0, version: version);
+            _tx.AddMultiValueTree(this, key, tree);
+            // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
+            DirectAdd(key, sizeof (TreeRootHeader), NodeFlags.MultiValuePageRef);
+        }
 
-		private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
-		{
-			Debug.Assert(newSize > currentSize);
-			TemporaryPage tmp;
-			using (tx.Environment.GetTemporaryPage(tx, out tmp))
-			{
-				var tempPagePointer = tmp.TempPagePointer;
+        private void ExpandMultiTreeNestedPageSize(Transaction tx, Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
+        {
+            Debug.Assert(newSize > currentSize);
+            TemporaryPage tmp;
+            using (tx.Environment.GetTemporaryPage(tx, out tmp))
+            {
+                var tempPagePointer = tmp.TempPagePointer;
                 Memory.Copy(tempPagePointer, nestedPagePtr, currentSize);
 				Delete(key); // release our current page
 				Page nestedPage = new Page(tempPagePointer, "multi tree", (ushort)currentSize);

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ScriptedJsonPatcherOperationScope.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -186,63 +186,63 @@ namespace Raven.Database.Json
             RecordActionForDebug("PutDocument", newDocument.Key, newDocument.DataAsJson, newDocument.Metadata);
             AddToContext(newDocument.Key, newDocument);
             return newDocument.Key;
-		}
+        }
 
-	    private void GenerateKeyForPutDocument(string key, JsonDocument newDocument)
-	    {
+        private void GenerateKeyForPutDocument(string key, JsonDocument newDocument)
+        {
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
-	        if (key.EndsWith("/"))
-	        {
-	            using (Database.DocumentLock.Lock())
-	            {
-	                Database.TransactionalStorage.Batch(actions => {
-	                    key += Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions);
-	                });
-	            }
-	        }
-	        newDocument.Key = key;
-	    }
+            if (key.EndsWith("/"))
+            {
+                using (Database.DocumentLock.Lock())
+                {
+                    Database.TransactionalStorage.Batch(actions => {
+                        key += Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions);
+                    });
+                }
+            }
+            newDocument.Key = key;
+        }
 
-	    public override void DeleteDocument(string documentKey)
-		{
-			throw new NotSupportedException("Deleting documents is not supported.");
-		}
+        public override void DeleteDocument(string documentKey)
+        {
+            throw new NotSupportedException("Deleting documents is not supported.");
+        }
 
-		public override void Dispose()
-		{
-		}
+        public override void Dispose()
+        {
+        }
 
-		protected void AddToContext(string key, JsonDocument document)
-		{
-			if (string.IsNullOrEmpty(key) || key.EndsWith("/"))
-				incompleteDocumentKeyContext.Add(document);
-			else
-				documentKeyContext[key] = document;
-		}
+        protected void AddToContext(string key, JsonDocument document)
+        {
+            if (string.IsNullOrEmpty(key) || key.EndsWith("/"))
+                incompleteDocumentKeyContext.Add(document);
+            else
+                documentKeyContext[key] = document;
+        }
 
-		protected void DeleteFromContext(string key)
-		{
-			documentKeyContext[key] = null;
-		}
+        protected void DeleteFromContext(string key)
+        {
+            documentKeyContext[key] = null;
+        }
 
-		public IEnumerable<ScriptedJsonPatcher.Operation> GetOperations()
-		{
-			return documentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
-			{
-				Type = x.Value != null ? ScriptedJsonPatcher.OperationType.Put : ScriptedJsonPatcher.OperationType.Delete,
-				DocumentKey = x.Key,
-				Document = x.Value
-			}).Union(incompleteDocumentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
-			{
-				Type = ScriptedJsonPatcher.OperationType.Put,
-				DocumentKey = x.Key,
-				Document = x
-			}));
-		}
+        public IEnumerable<ScriptedJsonPatcher.Operation> GetOperations()
+        {
+            return documentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
+            {
+                Type = x.Value != null ? ScriptedJsonPatcher.OperationType.Put : ScriptedJsonPatcher.OperationType.Delete,
+                DocumentKey = x.Key,
+                Document = x.Value
+            }).Union(incompleteDocumentKeyContext.Select(x => new ScriptedJsonPatcher.Operation
+            {
+                Type = ScriptedJsonPatcher.OperationType.Put,
+                DocumentKey = x.Key,
+                Document = x
+            }));
+        }
 
-		public IEnumerable<JsonDocument> GetPutOperations()
-		{
-			return GetOperations().Where(x => x.Type == ScriptedJsonPatcher.OperationType.Put).Select(x => x.Document);
-		}
-	}
+        public IEnumerable<JsonDocument> GetPutOperations()
+        {
+            return GetOperations().Where(x => x.Type == ScriptedJsonPatcher.OperationType.Put).Select(x => x.Document);
+        }
+    }
 }

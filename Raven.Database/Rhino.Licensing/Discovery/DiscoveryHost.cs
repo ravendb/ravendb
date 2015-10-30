@@ -7,19 +7,19 @@ using System.Net.Sockets;
 
 namespace Rhino.Licensing.Discovery
 {
-	///<summary>
-	/// Listen to presence notifications
-	///</summary>
-	public class DiscoveryHost : IDisposable
-	{
-		private Socket socket;
-		private readonly byte[] buffer = new byte[1024 * 4];
+    ///<summary>
+    /// Listen to presence notifications
+    ///</summary>
+    public class DiscoveryHost : IDisposable
+    {
+        private Socket socket;
+        private readonly byte[] buffer = new byte[1024 * 4];
 
-		///<summary>
-		/// Starts listening to network notifications
-		///</summary>
-		public void Start()
-		{
+        ///<summary>
+        /// Starts listening to network notifications
+        ///</summary>
+        public void Start()
+        {
             if (socket != null)
             {
                 if (!IsStop) return;

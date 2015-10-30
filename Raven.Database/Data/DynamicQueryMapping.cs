@@ -18,104 +18,104 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Data
 {
-	public class DynamicQueryMapping
-	{
-		public string IndexName { get; set; }
-		public string ForEntityName { get; set; }
-		public DynamicSortInfo[] SortDescriptors { get; set; }
-		public DynamicQueryMappingItem[] Items { get; set; }
-		public string[] HighlightedFields { get; set; }
+    public class DynamicQueryMapping
+    {
+        public string IndexName { get; set; }
+        public string ForEntityName { get; set; }
+        public DynamicSortInfo[] SortDescriptors { get; set; }
+        public DynamicQueryMappingItem[] Items { get; set; }
+        public string[] HighlightedFields { get; set; }
 
-		private List<Action<IndexDefinition>> extraActionsToPerform = new List<Action<IndexDefinition>>();
+        private List<Action<IndexDefinition>> extraActionsToPerform = new List<Action<IndexDefinition>>();
 
-		public DynamicQueryMapping()
-		{
-			Items = new DynamicQueryMappingItem[0];
-			SortDescriptors = new DynamicSortInfo[0];
-		}
+        public DynamicQueryMapping()
+        {
+            Items = new DynamicQueryMappingItem[0];
+            SortDescriptors = new DynamicSortInfo[0];
+        }
 
-		public IndexDefinition CreateIndexDefinition()
-		{
-		    var fromClause = string.Empty;
-		    var realMappings = new HashSet<string>();
+        public IndexDefinition CreateIndexDefinition()
+        {
+            var fromClause = string.Empty;
+            var realMappings = new HashSet<string>();
 
-		    if (!string.IsNullOrEmpty(ForEntityName))
-		    {
-		        fromClause = "from doc in docs." + ForEntityName;
-		    }
-		    else
-		    {
-		        fromClause = "from doc in docs";
-		    }
+            if (!string.IsNullOrEmpty(ForEntityName))
+            {
+                fromClause = "from doc in docs." + ForEntityName;
+            }
+            else
+            {
+                fromClause = "from doc in docs";
+            }
 
-		    bool containsNestedItems = false;
+            bool containsNestedItems = false;
 
-		    foreach (var map in Items)
-		    {
-		        var currentDoc = "doc";
-		        var currentExpression = new StringBuilder();
-		        var mapFromClauses = new List<String>();
-		        int currentIndex = 0;
-		        bool nestedCollection = false;
-		        while (currentIndex < map.From.Length)
-		        {
-		            char currentChar = map.From[currentIndex++];
-		            switch (currentChar)
-		            {
-		                case ',':
-		                    containsNestedItems = true;
+            foreach (var map in Items)
+            {
+                var currentDoc = "doc";
+                var currentExpression = new StringBuilder();
+                var mapFromClauses = new List<String>();
+                int currentIndex = 0;
+                bool nestedCollection = false;
+                while (currentIndex < map.From.Length)
+                {
+                    char currentChar = map.From[currentIndex++];
+                    switch (currentChar)
+                    {
+                        case ',':
+                            containsNestedItems = true;
 
-		                    // doc.NewDoc.Items
-		                    String newDocumentSource = string.Format("{0}.{1}", currentDoc, currentExpression);
+                            // doc.NewDoc.Items
+                            String newDocumentSource = string.Format("{0}.{1}", currentDoc, currentExpression);
 
-		                    // docNewDocItemsItem
-		                    String newDoc = string.Format("{0}Item", newDocumentSource.Replace(".", ""));
+                            // docNewDocItemsItem
+                            String newDoc = string.Format("{0}Item", newDocumentSource.Replace(".", ""));
 
-		                    // from docNewDocItemsItem in doc.NewDoc.Items
-		                    String docInclude = string.Format("from {0} in ((IEnumerable<dynamic>){1}).DefaultIfEmpty()", newDoc, newDocumentSource);
-		                    mapFromClauses.Add(docInclude);
-		                    nestedCollection = true;
-		                    // Start building the property again
-		                    currentExpression.Clear();
+                            // from docNewDocItemsItem in doc.NewDoc.Items
+                            String docInclude = string.Format("from {0} in ((IEnumerable<dynamic>){1}).DefaultIfEmpty()", newDoc, newDocumentSource);
+                            mapFromClauses.Add(docInclude);
+                            nestedCollection = true;
+                            // Start building the property again
+                            currentExpression.Clear();
 
-		                    // And from this new doc
-		                    currentDoc = newDoc;
+                            // And from this new doc
+                            currentDoc = newDoc;
 
-		                    break;
-		                default:
-		                    nestedCollection = false;
-		                    currentExpression.Append(currentChar);
-		                    break;
-		            }
-		        }
+                            break;
+                        default:
+                            nestedCollection = false;
+                            currentExpression.Append(currentChar);
+                            break;
+                    }
+                }
 
-		        if (currentExpression.Length > 0 && currentExpression[0] != '[')
-		        {
-		            currentExpression.Insert(0, '.');
-		        }
+                if (currentExpression.Length > 0 && currentExpression[0] != '[')
+                {
+                    currentExpression.Insert(0, '.');
+                }
 
-		        var indexedMember = currentExpression.ToString().Replace("_Range", "");
-		        string rightHandSide;
+                var indexedMember = currentExpression.ToString().Replace("_Range", "");
+                string rightHandSide;
 
-		        if (indexedMember.Length == 0 && nestedCollection == false)
-		            rightHandSide = currentDoc;
-		        else if (mapFromClauses.Count > 0)
-		            rightHandSide = String.Format("({0} select {1}{2}).ToArray()", String.Join("\n", mapFromClauses), currentDoc,
-		                indexedMember);
-		        else rightHandSide = String.Format("{0}{1}", currentDoc, indexedMember);
+                if (indexedMember.Length == 0 && nestedCollection == false)
+                    rightHandSide = currentDoc;
+                else if (mapFromClauses.Count > 0)
+                    rightHandSide = String.Format("({0} select {1}{2}).ToArray()", String.Join("\n", mapFromClauses), currentDoc,
+                        indexedMember);
+                else rightHandSide = String.Format("{0}{1}", currentDoc, indexedMember);
 
-		        realMappings.Add(string.Format("{0} = {1}",
-		            map.To.Replace("_Range", ""),
-		            rightHandSide
-		            ));
-		    }
+                realMappings.Add(string.Format("{0} = {1}",
+                    map.To.Replace("_Range", ""),
+                    rightHandSide
+                    ));
+            }
 
-		    string mapDefinition;
+            string mapDefinition;
 
-		    if (realMappings.Count == 1 && containsNestedItems == false)
-		        mapDefinition = string.Format("{0}\r\nselect new {{ {1} }}", fromClause, realMappings.First());
-		    else
-		        mapDefinition = string.Format("{0}\r\nselect new\r\n{{\r\n\t{1}\r\n}}", fromClause, string.Join(",\r\n\t", realMappings));
+            if (realMappings.Count == 1 && containsNestedItems == false)
+                mapDefinition = string.Format("{0}\r\nselect new {{ {1} }}", fromClause, realMappings.First());
+            else
+                mapDefinition = string.Format("{0}\r\nselect new\r\n{{\r\n\t{1}\r\n}}", fromClause, string.Join(",\r\n\t", realMappings));
 
             mapDefinition = IndexPrettyPrinter.TryFormat(mapDefinition);
 

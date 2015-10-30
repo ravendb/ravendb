@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
-	public interface IMetricsData
-	{
-	}
+    public interface IMetricsData
+    {
+    }
 
 	public class DatabaseMetrics
 	{
@@ -25,31 +25,31 @@ namespace Raven.Abstractions.Data
 		public Dictionary<string, HistogramData> ReplicationDurationHistogram { get; set; }
 	}
 
-	public class HistogramData : IMetricsData
-	{
-		public HistogramData()
-		{
-			Percentiles = new Dictionary<string, double>();
-		}
+    public class HistogramData : IMetricsData
+    {
+        public HistogramData()
+        {
+            Percentiles = new Dictionary<string, double>();
+        }
 
-		public long Counter { get; set; }
-		public double Max { get; set; }
-		public double Min { get; set; }
-		public double Mean { get; set; }
-		public double Stdev { get; set; }
-		public Dictionary<string, double> Percentiles { get; set; }
-		public MetricType Type = MetricType.Histogram;
-	}
+        public long Counter { get; set; }
+        public double Max { get; set; }
+        public double Min { get; set; }
+        public double Mean { get; set; }
+        public double Stdev { get; set; }
+        public Dictionary<string, double> Percentiles { get; set; }
+        public MetricType Type = MetricType.Histogram;
+    }
 
-	public class MeterData : IMetricsData
-	{
-		public long Count { get; set; }
-		public double MeanRate { get; set; }
-		public double OneMinuteRate { get; set; }
-		public double FiveMinuteRate { get; set; }
-		public double FifteenMinuteRate { get; set; }
-		public MetricType Type = MetricType.Meter;
-	}
+    public class MeterData : IMetricsData
+    {
+        public long Count { get; set; }
+        public double MeanRate { get; set; }
+        public double OneMinuteRate { get; set; }
+        public double FiveMinuteRate { get; set; }
+        public double FifteenMinuteRate { get; set; }
+        public MetricType Type = MetricType.Meter;
+    }
 
 
 	public class OneMinuteMetricData : IMetricsData

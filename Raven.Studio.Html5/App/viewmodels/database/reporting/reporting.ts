@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
@@ -194,7 +194,7 @@ class reporting extends viewModelBase {
                 .done((resultSet: pagedResultSet) => this.queryDuration(resultSet.additionalResultInfo));
         };
         this.reportResults(new pagedList(resultsFetcher));
-	}
+    }
 
 	toggleCacheEnable() {
 		this.isCacheDisable(!this.isCacheDisable());

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="HttpIdTest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -23,17 +23,17 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				using (var session = store.OpenSession())
-				{
-					var foo = session.Load<Foo>("http://whatever");
-					Assert.NotNull(foo);
-				}
-			}
-		}
+                using (var session = store.OpenSession())
+                {
+                    var foo = session.Load<Foo>("http://whatever");
+                    Assert.NotNull(foo);
+                }
+            }
+        }
 
-		public class Foo
-		{
-			public string Id { get; set; }
-		}
-	}
+        public class Foo
+        {
+            public string Id { get; set; }
+        }
+    }
 }

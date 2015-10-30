@@ -316,9 +316,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 				results.Add(new KeyValuePair<string, long>(identityName, identityValue.Value));
 }
-			while (Api.TryMoveNext(session, Identity) && results.Count < take);
+            while (Api.TryMoveNext(session, Identity) && results.Count < take);
 
-			return results;
-		}
-	}
+            return results;
+        }
+    }
 }

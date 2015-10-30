@@ -26,7 +26,7 @@ class appUrl {
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
     private static currentTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
     
-	// Stores some computed values that update whenever the current database updates.
+    // Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
 		adminSettings: ko.computed(() => appUrl.forAdminSettings()),
 		adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
@@ -295,9 +295,9 @@ class appUrl {
         return "#admin/settings/trafficWatch";
     }
 
-	static forLicenseInformation(): string {
-		return "#admin/settings/licenseInformation";
-	}
+    static forLicenseInformation(): string {
+        return "#admin/settings/licenseInformation";
+    }
 
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
@@ -336,16 +336,16 @@ class appUrl {
     }
 
     /**
-	* Gets the URL for edit document.
-	* @param id The ID of the document to edit, or null to edit a new document.
-	* @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
-	* @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
-	* @param database The database to use in the URL. If null, the current database will be used.
-	*/
+    * Gets the URL for edit document.
+    * @param id The ID of the document to edit, or null to edit a new document.
+    * @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
+    * @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
+    * @param database The database to use in the URL. If null, the current database will be used.
+    */
     static forEditDoc(id: string, collectionName: string, docIndexInCollection: number, db: database): string {
-		var databaseUrlPart = appUrl.getEncodedDbPart(db);
-		var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
-		var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
+        var databaseUrlPart = appUrl.getEncodedDbPart(db);
+        var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
+        var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
     }
 
@@ -844,9 +844,9 @@ class appUrl {
         }
     }
 
-	/**
-	* Gets the database from the current web browser address. Returns the system database if no database name was found.
-	*/
+    /**
+    * Gets the database from the current web browser address. Returns the system database if no database name was found.
+    */
     static getDatabase(): database {
 
         // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
@@ -1027,11 +1027,11 @@ class appUrl {
         }
     }
 
-	/**
-	* Gets an object containing computed URLs that update when the current database updates.
-	*/
-	static forCurrentDatabase(): computedAppUrls {
-		return appUrl.currentDbComputeds;
+    /**
+    * Gets an object containing computed URLs that update when the current database updates.
+    */
+    static forCurrentDatabase(): computedAppUrls {
+        return appUrl.currentDbComputeds;
     }
 
     static forCurrentFilesystem(): computedAppUrls {
@@ -1064,8 +1064,8 @@ class appUrl {
         }
     }
 
-	private static getEncodedDbPart(db?: database) {
-		return db ? "&database=" + encodeURIComponent(db.name) : "";
+    private static getEncodedDbPart(db?: database) {
+        return db ? "&database=" + encodeURIComponent(db.name) : "";
     }
     
     private static getEncodedFsPart(fs?: filesystem) {

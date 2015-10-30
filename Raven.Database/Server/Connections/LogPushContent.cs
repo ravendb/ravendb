@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
@@ -14,27 +14,27 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Database.Server.Connections
 {
     public class LogsPushContent : HttpContent, IEventsTransport
-	{
-	    private const int QueueCapacity = 10000;
+    {
+        private const int QueueCapacity = 10000;
 
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-	    private bool hitCapacity = false;
-		private readonly DateTime _started = SystemTime.UtcNow;
-		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
+        private bool hitCapacity = false;
+        private readonly DateTime _started = SystemTime.UtcNow;
+        public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
 
-		public string Id { get; private set; }
+        public string Id { get; private set; }
 
-		public bool Connected { get; set; }
+        public bool Connected { get; set; }
 
-		public event Action Disconnected = delegate { };
+        public event Action Disconnected = delegate { };
 
         private readonly BlockingCollection<LogEventInfo> msgs = new BlockingCollection<LogEventInfo>(QueueCapacity); 
 
         public LogsPushContent(RavenBaseApiController controller)
-		{
-			Connected = true;
-			Id = controller.GetQueryStringValue("id");
+        {
+            Connected = true;
+            Id = controller.GetQueryStringValue("id");
             
 			if (string.IsNullOrEmpty(Id))
 				throw new ArgumentException("Id is mandatory");
@@ -107,14 +107,14 @@ namespace Raven.Database.Server.Connections
 		{
 		    var message = msg as LogEventInfo;
             if (msgs.TryAdd(message) == false)
-			{
+            {
                 if (hitCapacity == false)
                 {
                     hitCapacity = true;
                     log.Warn("Reached max capacity of LogPush queue, id = " + Id);
                 }
-			}
-		}
+            }
+        }
 
 
         public string ResourceName {get; set; }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -132,93 +132,93 @@ namespace Raven.Database.Bundles.Encryption
 			}
 
 // ReSharper disable once PossibleInvalidOperationException
-			return encryptionIVSize.Value;
-		}
+            return encryptionIVSize.Value;
+        }
 
-		private SymmetricAlgorithm GetCryptoProvider(byte[] iv)
-		{
-			var result = encryptionSettings.GenerateAlgorithm();
-			encryptionStartingKeyAndIV = encryptionStartingKeyAndIV ?? GetStartingKeyAndIVForEncryption(result);
+        private SymmetricAlgorithm GetCryptoProvider(byte[] iv)
+        {
+            var result = encryptionSettings.GenerateAlgorithm();
+            encryptionStartingKeyAndIV = encryptionStartingKeyAndIV ?? GetStartingKeyAndIVForEncryption(result);
 
-			if (iv != null && iv.Length != encryptionIVSize)
-				throw new ArgumentException("GetCryptoProvider: IV has wrong length. Given length: " + iv.Length + ", expected length: " + encryptionIVSize);
+            if (iv != null && iv.Length != encryptionIVSize)
+                throw new ArgumentException("GetCryptoProvider: IV has wrong length. Given length: " + iv.Length + ", expected length: " + encryptionIVSize);
 
-			result.Key = encryptionStartingKeyAndIV.Item1;
-			result.IV = iv ?? encryptionStartingKeyAndIV.Item2;
-			return result;
-		}
+            result.Key = encryptionStartingKeyAndIV.Item1;
+            result.IV = iv ?? encryptionStartingKeyAndIV.Item2;
+            return result;
+        }
 
-		private SymmetricAlgorithm GetCryptoProviderWithRandomIV(out byte[] iv)
-		{
-			iv = new byte[GetIVLength()];
-			LocalRNG.Value.GetBytes(iv);
+        private SymmetricAlgorithm GetCryptoProviderWithRandomIV(out byte[] iv)
+        {
+            iv = new byte[GetIVLength()];
+            LocalRNG.Value.GetBytes(iv);
 
-			return GetCryptoProvider(iv);
-		}
+            return GetCryptoProvider(iv);
+        }
 
-		private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
-		{
-			int bits = algorithm.ValidKeySize(encryptionSettings.PreferedEncryptionKeyBitsSize) ? 
-				encryptionSettings.PreferedEncryptionKeyBitsSize :
-				algorithm.LegalKeySizes[0].MaxSize;
-			
-			encryptionKeySize = bits / 8;
-			encryptionIVSize = algorithm.IV.Length;
+        private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
+        {
+            int bits = algorithm.ValidKeySize(encryptionSettings.PreferedEncryptionKeyBitsSize) ? 
+                encryptionSettings.PreferedEncryptionKeyBitsSize :
+                algorithm.LegalKeySizes[0].MaxSize;
+            
+            encryptionKeySize = bits / 8;
+            encryptionIVSize = algorithm.IV.Length;
 
-			var deriveBytes = new Rfc2898DeriveBytes(encryptionSettings.EncryptionKey, GetSaltFromEncryptionKey(encryptionSettings.EncryptionKey), Constants.Rfc2898Iterations);
-			return Tuple.Create(deriveBytes.GetBytes(encryptionKeySize.Value), deriveBytes.GetBytes(encryptionIVSize.Value));
-		}
+            var deriveBytes = new Rfc2898DeriveBytes(encryptionSettings.EncryptionKey, GetSaltFromEncryptionKey(encryptionSettings.EncryptionKey), Constants.Rfc2898Iterations);
+            return Tuple.Create(deriveBytes.GetBytes(encryptionKeySize.Value), deriveBytes.GetBytes(encryptionIVSize.Value));
+        }
 
-		private byte[] GetSaltFromEncryptionKey(byte[] key)
-		{
-			return UsingSha1 == false ? Encryptor.Current.Hash.Compute16(key) : Encryptor.Current.Hash.Compute20(key);
-		}
+        private byte[] GetSaltFromEncryptionKey(byte[] key)
+        {
+            return UsingSha1 == false ? Encryptor.Current.Hash.Compute16(key) : Encryptor.Current.Hash.Compute20(key);
+        }
 
-		public struct EncodedBlock
-		{
-			public EncodedBlock(byte[] iv, byte[] data)
-			{
-				IV = iv;
-				Data = data;
-			}
+        public struct EncodedBlock
+        {
+            public EncodedBlock(byte[] iv, byte[] data)
+            {
+                IV = iv;
+                Data = data;
+            }
 
-			public readonly byte[] IV;
-			public readonly byte[] Data;
-		}
+            public readonly byte[] IV;
+            public readonly byte[] Data;
+        }
 
-		public void UseSha1()
-		{
-			encryptionStartingKeyAndIV = null;
-			Interlocked.Exchange(ref usingSha1, 1); //atomically set to true
-		}
-	}
+        public void UseSha1()
+        {
+            encryptionStartingKeyAndIV = null;
+            Interlocked.Exchange(ref usingSha1, 1); //atomically set to true
+        }
+    }
 
-	internal static class CodecSaltExtensions
-	{
-		public static Stream WriteSalt(this Stream stream, string key)
-		{
-			byte[] keyBytes = Encoding.UTF8.GetBytes(key);
-			stream.Write(keyBytes, 0, keyBytes.Length);
-			return stream;
-		}
+    internal static class CodecSaltExtensions
+    {
+        public static Stream WriteSalt(this Stream stream, string key)
+        {
+            byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+            stream.Write(keyBytes, 0, keyBytes.Length);
+            return stream;
+        }
 
-		public static Stream ReadSalt(this Stream stream, string key)
-		{
-			try
-			{
-				byte[] keyBytes = Encoding.UTF8.GetBytes(key);
-				byte[] readBytes = stream.ReadEntireBlock(keyBytes.Length);
-				if (!readBytes.SequenceEqual(keyBytes))
-				{
-					throw new InvalidDataException("The encrypted stream's salt was different than the expected salt.");
-				}
-				return stream;
+        public static Stream ReadSalt(this Stream stream, string key)
+        {
+            try
+            {
+                byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+                byte[] readBytes = stream.ReadEntireBlock(keyBytes.Length);
+                if (!readBytes.SequenceEqual(keyBytes))
+                {
+                    throw new InvalidDataException("The encrypted stream's salt was different than the expected salt.");
+                }
+                return stream;
 
-			}
-			catch (Exception ex)
-			{
-				throw new IOException("Encrypted stream is not correctly salted with the document key.", ex);
-			}
-		}
-	}
+            }
+            catch (Exception ex)
+            {
+                throw new IOException("Encrypted stream is not correctly salted with the document key.", ex);
+            }
+        }
+    }
 }

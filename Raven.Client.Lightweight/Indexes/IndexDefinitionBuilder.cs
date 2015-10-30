@@ -152,19 +152,19 @@ namespace Raven.Client.Indexes
 			SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
 			SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
             LockMode = IndexLockMode.Unlock;
-		}
+        }
 
-		/// <summary>
-		/// Toes the index definition.
-		/// </summary>
-		public IndexDefinition ToIndexDefinition(DocumentConvention convention, bool validateMap = true)
-		{
-			if (Map == null && validateMap)
-				throw new InvalidOperationException(
-					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", indexName));
+        /// <summary>
+        /// Toes the index definition.
+        /// </summary>
+        public IndexDefinition ToIndexDefinition(DocumentConvention convention, bool validateMap = true)
+        {
+            if (Map == null && validateMap)
+                throw new InvalidOperationException(
+                    string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", indexName));
 
-		    try
-		    {
+            try
+            {
                 if (Reduce != null)
                     IndexDefinitionHelper.ValidateReduce(Reduce);
 

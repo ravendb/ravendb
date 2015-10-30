@@ -17,35 +17,35 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Impl
 {
-	internal class ReplicationTopologyDiscoverer
-	{
-		private readonly DocumentDatabase database;
+    internal class ReplicationTopologyDiscoverer
+    {
+        private readonly DocumentDatabase database;
 
-		private readonly int ttl;
+        private readonly int ttl;
 
-		private readonly ILog log;
+        private readonly ILog log;
 
-		private readonly RavenJArray @from;
+        private readonly RavenJArray @from;
 
-		private readonly HttpRavenRequestFactory requestFactory;
+        private readonly HttpRavenRequestFactory requestFactory;
 
-		public ReplicationTopologyDiscoverer(DocumentDatabase database, RavenJArray @from, int ttl, ILog log)
-		{
-			this.database = database;
-			this.ttl = ttl;
-			this.log = log;
-			this.@from = @from;
-			requestFactory = new HttpRavenRequestFactory();
-		}
+        public ReplicationTopologyDiscoverer(DocumentDatabase database, RavenJArray @from, int ttl, ILog log)
+        {
+            this.database = database;
+            this.ttl = ttl;
+            this.log = log;
+            this.@from = @from;
+            requestFactory = new HttpRavenRequestFactory();
+        }
 
-		public ReplicationTopologyRootNode Discover()
-		{
-			var nextStart = 0;
+        public ReplicationTopologyRootNode Discover()
+        {
+            var nextStart = 0;
 
-			var root = new ReplicationTopologyRootNode(database.ServerUrl, database.TransactionalStorage.Id);
+            var root = new ReplicationTopologyRootNode(database.ServerUrl, database.TransactionalStorage.Id);
 
-			if (ttl <= 0)
-				return root;
+            if (ttl <= 0)
+                return root;
 
 			ConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>> configurationDocument = null;
 			try
@@ -143,59 +143,107 @@ namespace Raven.Database.Bundles.Replication.Impl
 			var destination = ReplicationTask.GetConnectionOptions(replicationDestination, database);
 
             string error;
-		    string targetServerUrl;
+            ReplicationTopologyRootNode rootNode;
+            if (TryGetSchema(source.Source, new RavenConnectionStringOptions(), out rootNode, out error))
+            {
+                var node = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+                node.Destinations = rootNode.Destinations;
+                node.Sources = rootNode.Sources;
+                node.Errors = rootNode.Errors;
+
+                return node;
+            }
+
+            var offline = ReplicationTopologySourceNode.Online(source.Source, source.ServerInstanceId, source.LastDocumentEtag, source.LastAttachmentEtag);
+
+            if (string.IsNullOrEmpty(error) == false)
+                offline.Errors.Add(error);
+
+            return offline;
+        }
+
+        private List<ReplicationTopologyDestinationNode> HandleDestinations(JsonDocument destinationsAsJson, ReplicationTopologyRootNode root)
+        {
+            var nodes = new List<ReplicationTopologyDestinationNode>();
+
+            if (destinationsAsJson == null)
+                return nodes;
+
+            ReplicationDocument destinations;
+            try
+            {
+                destinations = destinationsAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
+            }
+            catch (Exception)
+            {
+                root.Errors.Add(string.Format("Could not deserialize '{0}'.", Constants.RavenReplicationDestinations));
+
+                return nodes;
+            }
+
+            nodes.AddRange(destinations.Destinations.Select(HandleDestination));
+
+            return nodes;
+        }
+
+        private ReplicationTopologyDestinationNode HandleDestination(ReplicationDestination replicationDestination)
+        {
+            var destination = ReplicationTask.GetConnectionOptions(replicationDestination, database);
+
+            string error;
+            string targetServerUrl;
 
             // since each server can be addresses using both dns and ips we normalize connection string url by fetching target server url
             // it should give us consistent urls
-		    if (FetchTargetServerUrl(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions, out targetServerUrl, out error) == false)
-		    {
+            if (FetchTargetServerUrl(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions, out targetServerUrl, out error) == false)
+            {
                 var offlineNode = ReplicationTopologyDestinationNode.Offline(destination.ConnectionStringOptions.Url, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
                 if (string.IsNullOrEmpty(error) == false)
                     offlineNode.Errors.Add(error);
 
                 return offlineNode;
-		    }
+            }
 
-			if (replicationDestination.Disabled)
+            if (replicationDestination.Disabled)
                 return ReplicationTopologyDestinationNode.Disabled(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
-			if (from.Contains(targetServerUrl))
-			{
-				var state = CheckDestinationConnectionState(destination);
-				switch (state)
-				{
-					case ReplicatonNodeState.Online:
+            if (from.Contains(targetServerUrl))
+            {
+                var state = CheckDestinationConnectionState(destination);
+                switch (state)
+                {
+                    case ReplicatonNodeState.Online:
                         return ReplicationTopologyDestinationNode.Online(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
-					case ReplicatonNodeState.Offline:
+                    case ReplicatonNodeState.Offline:
                         return ReplicationTopologyDestinationNode.Offline(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
-					default:
-						throw new NotSupportedException(state.ToString());
-				}
-			}
+                    default:
+                        throw new NotSupportedException(state.ToString());
+                }
+            }
 
-			
-			ReplicationTopologyRootNode rootNode;
-			if (TryGetSchema(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions, out rootNode, out error))
-			{
+            
+            ReplicationTopologyRootNode rootNode;
+            if (TryGetSchema(destination.ConnectionStringOptions.Url, destination.ConnectionStringOptions, out rootNode, out error))
+            {
                 var node = ReplicationTopologyDestinationNode.Online(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
-				node.Destinations = rootNode.Destinations;
-				node.Sources = rootNode.Sources;
-				node.Errors = rootNode.Errors;
+                node.Destinations = rootNode.Destinations;
+                node.Sources = rootNode.Sources;
+                node.Errors = rootNode.Errors;
 
-				return node;
-			}
+                return node;
+            }
 
             var offline = ReplicationTopologyDestinationNode.Offline(targetServerUrl, database.TransactionalStorage.Id, destination.ReplicationOptionsBehavior);
 
-			if (string.IsNullOrEmpty(error) == false)
-				offline.Errors.Add(error);
+            if (string.IsNullOrEmpty(error) == false)
+                offline.Errors.Add(error);
 
-			return offline;
-		}
+            return offline;
+        }
 
-	    private bool FetchTargetServerUrl(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out string targetServerUrl, out string error)
-	    {
+        private bool FetchTargetServerUrl(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out string targetServerUrl, out string error)
+        {
             var url = string.Format("{0}/debug/config", serverUrl);
 
             try
@@ -216,22 +264,22 @@ namespace Raven.Database.Bundles.Replication.Impl
                 targetServerUrl = null;
                 return false;
             }
-	    }
+        }
 
-	    private bool TryGetSchema(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out ReplicationTopologyRootNode rootNode, out string error)
-		{
-			var url = string.Format("{0}/admin/replication/topology/discover?&ttl={1}", serverUrl, ttl - 1);
+        private bool TryGetSchema(string serverUrl, RavenConnectionStringOptions connectionStringOptions, out ReplicationTopologyRootNode rootNode, out string error)
+        {
+            var url = string.Format("{0}/admin/replication/topology/discover?&ttl={1}", serverUrl, ttl - 1);
 
 			try
 			{
 				var request = requestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
                 request.Write(from);
 
-				error = null;
-				rootNode = request.ExecuteRequest<ReplicationTopologyRootNode>();
+                error = null;
+                rootNode = request.ExecuteRequest<ReplicationTopologyRootNode>();
 
-			    var visitedNodes = new HashSet<string>();
-			    FindVisitedNodes(rootNode, visitedNodes);
+                var visitedNodes = new HashSet<string>();
+                FindVisitedNodes(rootNode, visitedNodes);
                 foreach (var visitedNode in visitedNodes)
                 {
                     if (@from.Contains(visitedNode) == false)
@@ -239,23 +287,23 @@ namespace Raven.Database.Bundles.Replication.Impl
                         @from.Add(visitedNode);
                     }
                 }
-				return true;
-			}
-			catch (Exception e)
-			{
-				error = e.Message;
-				rootNode = null;
-				return false;
-			}
-		}
+                return true;
+            }
+            catch (Exception e)
+            {
+                error = e.Message;
+                rootNode = null;
+                return false;
+            }
+        }
 
         private void FindVisitedNodes(ReplicationTopologyNodeBase rootNode, HashSet<string> visitedNodes)
-	    {
-	        visitedNodes.Add(rootNode.ServerUrl);
-	        foreach (var source in rootNode.Sources)
-	        {
-	            FindVisitedNodes(source, visitedNodes);
-	        }
+        {
+            visitedNodes.Add(rootNode.ServerUrl);
+            foreach (var source in rootNode.Sources)
+            {
+                FindVisitedNodes(source, visitedNodes);
+            }
             foreach (var destinationNode in rootNode.Destinations)
             {
                 FindVisitedNodes(destinationNode, visitedNodes);

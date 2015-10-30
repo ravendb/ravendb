@@ -26,36 +26,36 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Indexing
 {
-	public class IndexingExecuter : AbstractIndexingExecuter
-	{
-		private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
-		private readonly Prefetcher prefetcher;
-		private readonly PrefetchingBehavior defaultPrefetchingBehavior;
+    public class IndexingExecuter : AbstractIndexingExecuter
+    {
+        private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
+        private readonly Prefetcher prefetcher;
+        private readonly PrefetchingBehavior defaultPrefetchingBehavior;
 
-		public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
-			: base(context, indexReplacer)
-		{
-			autoTuner = new IndexBatchSizeAutoTuner(context);
-			this.prefetcher = prefetcher;
-			defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior");
-			defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
-			prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
-		}
+        public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
+            : base(context, indexReplacer)
+        {
+            autoTuner = new IndexBatchSizeAutoTuner(context);
+            this.prefetcher = prefetcher;
+            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior");
+            defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
+            prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
+        }
 
-		public List<PrefetchingBehavior> PrefetchingBehaviors
-		{
-			get { return prefetchingBehaviors.ToList(); }
-		}
+        public List<PrefetchingBehavior> PrefetchingBehaviors
+        {
+            get { return prefetchingBehaviors.ToList(); }
+        }
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
-		{
-		    var isStale = actions.Staleness.IsMapStale(indexesStat.Id);
-			var indexingPriority = indexesStat.Priority;
-			if (isStale == false)
-				return false;
+        protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
+        {
+            var isStale = actions.Staleness.IsMapStale(indexesStat.Id);
+            var indexingPriority = indexesStat.Priority;
+            if (isStale == false)
+                return false;
 
-			if (indexingPriority == IndexingPriority.None)
-				return true;
+            if (indexingPriority == IndexingPriority.None)
+                return true;
 
 
             if ((indexingPriority & IndexingPriority.Normal) == IndexingPriority.Normal)
@@ -477,7 +477,7 @@ namespace Raven.Database.Indexing
 
         public void IndexPrecomputedBatch(PrecomputedIndexingBatch precomputedBatch, CancellationToken token)
         {
-			token.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
 
 
             context.MetricsCounters.IndexedPerSecond.Mark(precomputedBatch.Documents.Count);
@@ -713,11 +713,9 @@ namespace Raven.Database.Indexing
 			var innerFilteredOutIndexes = new ConcurrentStack<IndexToWorkOn>();
 			var last = jsonDocs.Last();
 
-			Debug.Assert(last.Etag != null);
-			Debug.Assert(last.LastModified != null);
+            public Index Index { get; set; }
 
-			var lastEtag = last.Etag;
-			var lastModified = last.LastModified.Value;
+            public Etag LastIndexedEtag { get; set; }
 
 
 			var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);

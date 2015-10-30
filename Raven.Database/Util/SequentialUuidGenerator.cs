@@ -1,17 +1,17 @@
-﻿using System;
+using System;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Impl;
 
 namespace Raven.Database.Util
 {
-	public class SequentialUuidGenerator : IUuidGenerator
-	{
-		private byte[] ticksAsBytes;
-		private long sequentialUuidCounterDocuments;
+    public class SequentialUuidGenerator : IUuidGenerator
+    {
+        private byte[] ticksAsBytes;
+        private long sequentialUuidCounterDocuments;
 
         [Obsolete("Use RavenFS instead.")]
-		private long sequentialUuidCounterAttachments;
+        private long sequentialUuidCounterAttachments;
 
 		private long sequentialUuidCounterDocumentsTransactions;
 		private long sequentialUuidCounterMappedResults;
@@ -33,10 +33,10 @@ namespace Raven.Database.Util
 			}
 		}
 
-	    public long LastDocumentTransactionEtag
-	    {
-	        get { return Interlocked.Read(ref sequentialUuidCounterMappedResults); }
-	    }
+        public long LastDocumentTransactionEtag
+        {
+            get { return Interlocked.Read(ref sequentialUuidCounterMappedResults); }
+        }
 
 	
 		public Etag CreateSequentialUuid(UuidType type)
@@ -87,13 +87,13 @@ namespace Raven.Database.Util
 					throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);
 			}
 
-			var currentAsBytes = BitConverter.GetBytes(increment);
-			Array.Reverse(currentAsBytes);
-			var bytes = new byte[16];
-			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
-			Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
-			bytes[0] = (byte) type; // record the etag type, if we need it for debug later
-			return Etag.Parse(bytes);
-		}
-	}
+            var currentAsBytes = BitConverter.GetBytes(increment);
+            Array.Reverse(currentAsBytes);
+            var bytes = new byte[16];
+            Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
+            Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
+            bytes[0] = (byte) type; // record the etag type, if we need it for debug later
+            return Etag.Parse(bytes);
+        }
+    }
 }

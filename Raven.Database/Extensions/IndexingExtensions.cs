@@ -30,20 +30,20 @@ using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
 {
-	public static class IndexingExtensions
-	{
-		public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
-		{
-			var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
+    public static class IndexingExtensions
+    {
+        public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
+        {
+            var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
 
-			try
-			{
-				var assembly = analyzerType.Assembly;
+            try
+            {
+                var assembly = analyzerType.Assembly;
 
-				// try to get parameterless ctor
-				var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
-				if (ctors != null)
-					return (Analyzer)Activator.CreateInstance(assembly.FullName, analyzerType.FullName).Unwrap();
+                // try to get parameterless ctor
+                var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
+                if (ctors != null)
+                    return (Analyzer)Activator.CreateInstance(assembly.FullName, analyzerType.FullName).Unwrap();
 
                 ctors = analyzerType.GetConstructor(new[] { typeof(Lucene.Net.Util.Version) });
 				if (ctors != null) 
@@ -252,59 +252,56 @@ namespace Raven.Database.Extensions
 
                                         shape = new PointImpl(lng, lat, spatialField.GetContext());    
                                     }
-									var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
+                                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
                                     return new SortField(sortedField.Field, dsort, sortedField.Descending);
 								}
 
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field, self);
                                 
-								if (sortOptions == null || sortOptions == SortOptions.None)
-									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-							    
                                 if (sortOptions.Value == SortOptions.Short)
-							        sortOptions = SortOptions.Int;
-							    return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
+                                    sortOptions = SortOptions.Int;
+                                return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
 
-							})
-							.ToArray());
-		}
+                            })
+                            .ToArray());
+        }
 
         private const string _Range = "_Range";
         private const string _SortHint = "SortHint-";
         private static CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
-		public static SortOptions? GetSortOption(this IndexDefinition self, string name, IndexQuery query)
-		{
+        public static SortOptions? GetSortOption(this IndexDefinition self, string name, IndexQuery query)
+        {
             SortOptions value;
 
             if (InvariantCompare.IsSuffix(name, _Range, CompareOptions.None))
-			{
+            {
                 string nameWithoutRange = name.Substring(0, name.Length - _Range.Length);
-				if (self.SortOptions.TryGetValue(nameWithoutRange, out value))
-					return value;
+                if (self.SortOptions.TryGetValue(nameWithoutRange, out value))
+                    return value;
 
-				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
-					return value;
+                if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
+                    return value;
 
                 if (query != null && query.SortHints != null && query.SortHints.TryGetValue(_SortHint + nameWithoutRange, out value))
                     return value;
-			}
+            }
 
-			if (self.SortOptions.TryGetValue(name, out value))
-				return value;
+            if (self.SortOptions.TryGetValue(name, out value))
+                return value;
 
-			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
-				return value;
+            if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
+                return value;
 
-			if (query == null || query.SortHints == null)
-				return value;
+            if (query == null || query.SortHints == null)
+                return value;
 
             if (!query.SortHints.TryGetValue(_SortHint + name, out value))
                 return SortOptions.None;
 
             return value;
-		}
+        }
 
-		
-	}
+        
+    }
 }

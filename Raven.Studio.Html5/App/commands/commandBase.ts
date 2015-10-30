@@ -37,11 +37,11 @@ class commandBase {
         }
 
         return "?" + propNameAndValues.join("&");
-	}
+    }
 
-	getTimeToAlert(longWait: boolean) {
-		return longWait ? 60000 : 9000;
-	}
+    getTimeToAlert(longWait: boolean) {
+        return longWait ? 60000 : 9000;
+    }
 
     query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
         var ajax = this.ajax(relativeUrl, args, "GET", resource, options, timeToAlert);
@@ -201,7 +201,7 @@ class commandBase {
         }).done((results, status, xhr) => {
             ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {
-			var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
+            var dbBeingUpdated = request.getResponseHeader("Raven-Database-Load-In-Progress");
             if (dbBeingUpdated) {
                 ajaxTask.reject(request, status, error);
                 var currentDb = appUrl.getDatabase();
@@ -318,7 +318,7 @@ class commandBase {
         cipher.finish();
         var encrypted = cipher.output;
         return forge.util.encode64(keyAndIvEncrypted + encrypted.data);
-	}
+    }
 
     private static showSpin(timeToAlert: number, isBiggestTimeToAlertUpdated: boolean) {
         ko.postbox.publish("LoadProgress", alertType.warning);

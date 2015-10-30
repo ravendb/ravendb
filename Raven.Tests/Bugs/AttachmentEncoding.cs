@@ -12,23 +12,23 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AttachmentEncoding : RavenTest
-	{
-		[Fact]
-		public void Can_get_proper_attachment_names()
-		{
-			using (var store = NewRemoteDocumentStore())
-			{
-				store.DatabaseCommands.PutAttachment("test/hello/world", null, new MemoryStream(new byte[] {1, 2, 3}),
-					new RavenJObject());
+    public class AttachmentEncoding : RavenTest
+    {
+        [Fact]
+        public void Can_get_proper_attachment_names()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                store.DatabaseCommands.PutAttachment("test/hello/world", null, new MemoryStream(new byte[] {1, 2, 3}),
+                    new RavenJObject());
 
-				using (var wc = new WebClient())
-				{
+                using (var wc = new WebClient())
+                {
                     var staticJson = wc.DownloadString("http://localhost:8079/databases/Can_get_proper_attachment_names/static");
-					var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
-					Assert.Equal("test/hello/world", value);
-				}
-			}
-		}
-	}
+                    var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
+                    Assert.Equal("test/hello/world", value);
+                }
+            }
+        }
+    }
 }

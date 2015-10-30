@@ -8,18 +8,18 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Plugins
 {
-	[InheritedExport]
-	public abstract class AbstractDocumentReplicationConflictResolver
-	{
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+    [InheritedExport]
+    public abstract class AbstractDocumentReplicationConflictResolver
+    {
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		public bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
-										Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
-										out RavenJObject documentToSave)
-		{
-			var success = TryResolve(id, metadata, document, existingDoc, getDocument, out metadataToSave, out documentToSave);
-			if (success == false)
-				return false;
+        public bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
+                                        Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
+                                        out RavenJObject documentToSave)
+        {
+            var success = TryResolve(id, metadata, document, existingDoc, getDocument, out metadataToSave, out documentToSave);
+            if (success == false)
+                return false;
 
 			var docToSave = documentToSave;
 			var metaToSave = metadataToSave;
@@ -50,11 +50,11 @@ namespace Raven.Bundles.Replication.Plugins
 					return builder.ToString();
 				});
 
-			return true;
-		}
+            return true;
+        }
 
-		protected abstract bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
-										Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
-										out RavenJObject documentToSave);
-	}
+        protected abstract bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
+                                        Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
+                                        out RavenJObject documentToSave);
+    }
 }

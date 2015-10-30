@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FileTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -437,7 +437,7 @@ namespace Raven.Tests.FileSystem.Storage
 
 				storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
-				storage.Batch(accessor => accessor.RenameFile("FiLe1", "file2"));
+                storage.Batch(accessor => accessor.RenameFile("FiLe1", "file2"));
 
 				storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetFile("file1", 0, 10)));
 
@@ -471,7 +471,104 @@ namespace Raven.Tests.FileSystem.Storage
 
 				storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
 
-				storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
+                storage.Batch(accessor => accessor.RenameFile("file1", "file2"));
+
+                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetFile("file1", 0, 10)));
+
+                storage.Batch(accessor =>
+                {
+                    var file = accessor.GetFile("file2", 0, 10);
+
+                    Assert.NotNull(file);
+                    Assert.Equal("file2", file.Name);
+                    Assert.Equal(-10, file.TotalSize);
+                    Assert.Equal(10, file.UploadedSize);
+                    Assert.Equal(0, file.Start);
+
+                    Assert.Equal(1, file.Pages.Count);
+                    Assert.Equal(1, file.Pages[0].Id);
+                    Assert.Equal(10, file.Pages[0].Size);
+
+                    var fileMetadata = file.Metadata;
+
+                    Assert.NotNull(fileMetadata);
+                    Assert.Equal(1, fileMetadata.Count);
+                    Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetFileCaseSensitive(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.PutFile("FiLe1", null, new RavenJObject()));
+
+                storage.Batch(accessor =>
+                {
+                    var file1 = accessor.GetFile("file1", 0, 0);
+
+                    Assert.NotNull(file1);
+                    Assert.Equal("FiLe1", file1.Name);
+                    Assert.Equal(null, file1.TotalSize);
+                    Assert.Equal(0, file1.UploadedSize);
+                    Assert.Equal(0, file1.Start);
+                    Assert.Equal(0, file1.Pages.Count);
+
+                    var file1Metadata = file1.Metadata;
+
+                    Assert.NotNull(file1Metadata);
+                    Assert.Equal(1, file1Metadata.Count);
+                    Assert.Equal("00000000-0000-0000-0000-000000000001", file1Metadata.Value<string>(Constants.MetadataEtagField));
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetFileCaseSensitiveWithPages(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+                storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
+
+                storage.Batch(accessor =>
+                {
+                    var file = accessor.GetFile("FiLe1", 0, 10);
+
+                    Assert.NotNull(file);
+                    Assert.Equal("file1", file.Name);
+                    Assert.Equal(-10, file.TotalSize);
+                    Assert.Equal(10, file.UploadedSize);
+                    Assert.Equal(0, file.Start);
+
+                    Assert.Equal(1, file.Pages.Count);
+                    Assert.Equal(1, file.Pages[0].Id);
+                    Assert.Equal(10, file.Pages[0].Size);
+
+                    var fileMetadata = file.Metadata;
+
+                    Assert.NotNull(fileMetadata);
+                    Assert.Equal(1, fileMetadata.Count);
+                    Assert.Equal("00000000-0000-0000-0000-000000000001", fileMetadata.Value<string>(Constants.MetadataEtagField));
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void RenameFileWithPageCaseSensitive(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+
+                storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
+
+                storage.Batch(accessor => accessor.RenameFile("FiLe1", "file2"));
 
 				storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.GetFile("file1", 0, 10)));
 

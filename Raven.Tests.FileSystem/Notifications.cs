@@ -44,18 +44,18 @@ namespace Raven.Tests.FileSystem
 			Assert.True(response.IsSuccessStatusCode);
 		}
 
-		[Fact]
+        [Fact]
         public async Task NotificationReceivedWhenFileAdded()
         {
             var store = NewStore();
             var client = store.AsyncFilesCommands;
 
-			var changes = store.Changes();
-			var notificationTask = changes.ForFolder("/")
+            var changes = store.Changes();
+            var notificationTask = changes.ForFolder("/")
                                         .Timeout(TimeSpan.FromSeconds(2))
                                         .Take(1).ToTask();
 
-			changes.WaitForAllPendingSubscriptions();
+            changes.WaitForAllPendingSubscriptions();
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
@@ -65,20 +65,20 @@ namespace Raven.Tests.FileSystem
             Assert.Equal(FileChangeAction.Add, fileChange.Action);
         }
 
-		[Fact]
-		public async Task NotificationReceivedWhenFileDeleted()
+        [Fact]
+        public async Task NotificationReceivedWhenFileDeleted()
         {
             var store = NewStore();
             var client = store.AsyncFilesCommands;
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-			var changes = store.Changes();
-			var notificationTask = changes.ForFolder("/")
+            var changes = store.Changes();
+            var notificationTask = changes.ForFolder("/")
                                                .Timeout(TimeSpan.FromSeconds(2))
                                                .Take(1).ToTask();
 
-			changes.WaitForAllPendingSubscriptions();
+            changes.WaitForAllPendingSubscriptions();
 
             await client.DeleteAsync("abc.txt");
 
@@ -88,20 +88,20 @@ namespace Raven.Tests.FileSystem
             Assert.Equal(FileChangeAction.Delete, fileChange.Action);
         }
 
-		[Fact]
-		public async Task NotificationReceivedWhenFileUpdated()
+        [Fact]
+        public async Task NotificationReceivedWhenFileUpdated()
         {
             var store = NewStore();
             var client = store.AsyncFilesCommands;
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-			var changes = store.Changes();
-			var notificationTask = changes.ForFolder("/")
+            var changes = store.Changes();
+            var notificationTask = changes.ForFolder("/")
                                                 .Timeout(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
 
-			changes.WaitForAllPendingSubscriptions();
+            changes.WaitForAllPendingSubscriptions();
 
             await client.UpdateMetadataAsync("abc.txt", new RavenJObject { { "MyMetadata", "MyValue" } });
 
@@ -111,26 +111,26 @@ namespace Raven.Tests.FileSystem
             Assert.Equal(FileChangeAction.Update, fileChange.Action);
         }
 
-		[Fact]
-		public async Task NotificationsReceivedWhenFileRenamed()
+        [Fact]
+        public async Task NotificationsReceivedWhenFileRenamed()
         {
             var store = NewStore();
             var client = store.AsyncFilesCommands;
 
             await client.UploadAsync("abc.txt", new MemoryStream());
 
-			var changes = store.Changes();
-			var notificationTask = changes.ForFolder("/")
+            var changes = store.Changes();
+            var notificationTask = changes.ForFolder("/")
                                                 .Buffer(TimeSpan.FromSeconds(5))
                                                 .Take(1).ToTask();
 
-			changes.WaitForAllPendingSubscriptions();
+            changes.WaitForAllPendingSubscriptions();
 
-			await client.RenameAsync("abc.txt", "newName.txt");
+            await client.RenameAsync("abc.txt", "newName.txt");
 
             var fileChanges = await notificationTask;
 
-			Console.WriteLine("Notification count: " + fileChanges.Count);
+            Console.WriteLine("Notification count: " + fileChanges.Count);
             Assert.Equal("/abc.txt", fileChanges[0].File);
             Assert.Equal(FileChangeAction.Renaming, fileChanges[0].Action);
             Assert.Equal("/newName.txt", fileChanges[1].File);
@@ -168,22 +168,22 @@ namespace Raven.Tests.FileSystem
             var store = NewStore();
             var client = store.AsyncFilesCommands;
 
-			var changes = store.Changes();
-			var notificationTask = changes.ForFolder("/Folder")
+            var changes = store.Changes();
+            var notificationTask = changes.ForFolder("/Folder")
                                                 .Buffer(TimeSpan.FromSeconds(2))
                                                 .Take(1).ToTask();
 
-			changes.WaitForAllPendingSubscriptions();
+            changes.WaitForAllPendingSubscriptions();
 
-			await client.UploadAsync("AnotherFolder/abc.txt", new MemoryStream());
+            await client.UploadAsync("AnotherFolder/abc.txt", new MemoryStream());
 
             var notifications = await notificationTask;
 
             Assert.Equal(0, notifications.Count);
         }
 
-		[Fact]
-		public async Task NotificationsIsReceivedWhenConfigIsUpdated()
+        [Fact]
+        public async Task NotificationsIsReceivedWhenConfigIsUpdated()
         {
             var store = NewStore();
             var client = store.AsyncFilesCommands;
@@ -203,8 +203,8 @@ namespace Raven.Tests.FileSystem
             Assert.Equal(ConfigurationChangeAction.Set, configChange.Action);
         }
 
-		[Fact]
-		public async Task NotificationsIsReceivedWhenConfigIsDeleted()
+        [Fact]
+        public async Task NotificationsIsReceivedWhenConfigIsDeleted()
         {
             var store = NewStore();
             var client = store.AsyncFilesCommands;

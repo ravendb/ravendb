@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using System.Web.Http;
 
 using Raven.Database.Server.WebApi.Attributes;
@@ -9,12 +9,12 @@ namespace Raven.Database.FileSystem.Controllers
 	{
 		[HttpPost]
         [RavenRoute("fs/{fileSystemName}/storage/cleanup")]
-		public Task CleanUp()
-		{
-			return Files.CleanupDeletedFilesAsync();
-		}
+        public Task CleanUp()
+        {
+            return Files.CleanupDeletedFilesAsync();
+        }
 
-		[HttpPost]
+        [HttpPost]
         [RavenRoute("fs/{fileSystemName}/storage/retryRenaming")]
 		public Task RetryRenaming()
 		{

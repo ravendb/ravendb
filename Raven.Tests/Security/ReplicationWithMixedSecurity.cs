@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationWithMixedSecurity.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,93 +9,93 @@ using Raven.Tests.Common.Dto;
 
 namespace Raven.Tests.Security
 {
-	using System.Collections.Generic;
-	using System.Net;
-	using System.Threading.Tasks;
+    using System.Collections.Generic;
+    using System.Net;
+    using System.Threading.Tasks;
 
-	using Raven.Abstractions.Data;
-	using Raven.Client.Connection;
-	using Raven.Client.Document;
-	using Raven.Database.Server;
-	using Raven.Database.Server.Security;
-	using Raven.Database.Server.Security.Windows;
-	using Raven.Json.Linq;
+    using Raven.Abstractions.Data;
+    using Raven.Client.Connection;
+    using Raven.Client.Document;
+    using Raven.Database.Server;
+    using Raven.Database.Server.Security;
+    using Raven.Database.Server.Security.Windows;
+    using Raven.Json.Linq;
 
-	using Xunit;
+    using Xunit;
 
-	public class ReplicationWithMixedSecurity : ReplicationBase
-	{
-		private string apiKey = "test1/ThisIsMySecret";
+    public class ReplicationWithMixedSecurity : ReplicationBase
+    {
+        private string apiKey = "test1/ThisIsMySecret";
 
-		private string username = "test";
+        private string username = "test";
 
-		private string password = "test";
+        private string password = "test";
 
-		private string domain = "";
+        private string domain = "";
 
-		private int _storeCounter, _databaseCounter;
+        private int _storeCounter, _databaseCounter;
 
-		protected override void ModifyStore(DocumentStore store)
-		{
-			var isApiStore = _storeCounter % 2 == 0;
+        protected override void ModifyStore(DocumentStore store)
+        {
+            var isApiStore = _storeCounter % 2 == 0;
 
-			store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
+            store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 
-			if (isApiStore)
-			{
-				store.Credentials = null;
-				store.ApiKey = apiKey;
-			}
-			else
-			{
-				store.Credentials = new NetworkCredential(username, password, domain);
-				store.ApiKey = null;
-			}
+            if (isApiStore)
+            {
+                store.Credentials = null;
+                store.ApiKey = apiKey;
+            }
+            else
+            {
+                store.Credentials = new NetworkCredential(username, password, domain);
+                store.ApiKey = null;
+            }
 
-			_storeCounter++;
-		}
+            _storeCounter++;
+        }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
-		{
-			var isApiDatabase = _databaseCounter % 2 == 0;
+        {
+            var isApiDatabase = _databaseCounter % 2 == 0;
 
-			if (isApiDatabase)
-			{
-				database.Documents.Put(
-					"Raven/ApiKeys/" + apiKey.Split('/')[0],
-					null,
-					RavenJObject.FromObject(
-						new ApiKeyDefinition
-						{
-							Name = apiKey.Split('/')[0],
-							Secret = apiKey.Split('/')[1],
-							Enabled = true,
-							Databases =
-								new List<ResourceAccess>
-								{
-									new ResourceAccess { TenantId = "*" },
-									new ResourceAccess { TenantId = Constants.SystemDatabase },
+            if (isApiDatabase)
+            {
+                database.Documents.Put(
+                    "Raven/ApiKeys/" + apiKey.Split('/')[0],
+                    null,
+                    RavenJObject.FromObject(
+                        new ApiKeyDefinition
+                        {
+                            Name = apiKey.Split('/')[0],
+                            Secret = apiKey.Split('/')[1],
+                            Enabled = true,
+                            Databases =
+                                new List<ResourceAccess>
+                                {
+                                    new ResourceAccess { TenantId = "*" },
+                                    new ResourceAccess { TenantId = Constants.SystemDatabase },
                                     new ResourceAccess {TenantId = databaseName}
-								}
-						}),
-					new RavenJObject(),
-					null);
-			}
-			else
-			{
-				database.Documents.Put("Raven/Authorization/WindowsSettings", null,
-												   RavenJObject.FromObject(new WindowsAuthDocument
-												   {
-													   RequiredUsers = new List<WindowsAuthData>
-				                                   {
-					                                   new WindowsAuthData()
-					                                   {
-						                                   Name = username,
-						                                   Enabled = true,
-						                                   Databases = new List<ResourceAccess>
-						                                   {
-							                                   new ResourceAccess {TenantId = "*"},
-															   new ResourceAccess {TenantId = Constants.SystemDatabase},
+                                }
+                        }),
+                    new RavenJObject(),
+                    null);
+            }
+            else
+            {
+                database.Documents.Put("Raven/Authorization/WindowsSettings", null,
+                                                   RavenJObject.FromObject(new WindowsAuthDocument
+                                                   {
+                                                       RequiredUsers = new List<WindowsAuthData>
+                                                   {
+                                                       new WindowsAuthData()
+                                                       {
+                                                           Name = username,
+                                                           Enabled = true,
+                                                           Databases = new List<ResourceAccess>
+                                                           {
+                                                               new ResourceAccess {TenantId = "*"},
+                                                               new ResourceAccess {TenantId = Constants.SystemDatabase},
                                                                new ResourceAccess {TenantId = databaseName}
 						                                   }
 					                                   }

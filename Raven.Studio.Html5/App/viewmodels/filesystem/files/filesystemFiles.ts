@@ -1,4 +1,4 @@
-﻿import router = require("plugins/router");
+import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import changesContext = require("common/changesContext");
@@ -122,7 +122,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         this.collapseUploadQueuePanel();
     }
 
@@ -455,7 +455,7 @@ class filesystemFiles extends viewModelBase {
         return query.replace(/([ \-\_\.])/g, '\\$1');
     }
 
-	promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
+    promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
         var viewModel = new deleteFilesMatchingQueryConfirm(query, resultCount, this.activeFilesystem());
 		app.showDialog(viewModel);
         viewModel.deletionTask.done(() => this.loadFiles());

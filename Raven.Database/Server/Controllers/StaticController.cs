@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -8,7 +8,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	[RoutePrefix("")]
+    [RoutePrefix("")]
     [Obsolete("Use RavenFS instead.")]
 	public class StaticController : ClusterAwareRavenDbApiController
 	{

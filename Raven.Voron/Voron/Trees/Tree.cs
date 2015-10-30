@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -78,9 +78,9 @@ namespace Voron.Trees
 
         public static Tree Create(Transaction tx, bool keysPrefixing, TreeFlags flags = TreeFlags.None)
         {
-			var globalKeysPrefixingSetting = (CallContext.GetData("Voron/Trees/KeysPrefixing") as bool?);
-	        if (globalKeysPrefixingSetting != null)
-				keysPrefixing = globalKeysPrefixingSetting.Value;
+            var globalKeysPrefixingSetting = (CallContext.GetData("Voron/Trees/KeysPrefixing") as bool?);
+            if (globalKeysPrefixingSetting != null)
+                keysPrefixing = globalKeysPrefixingSetting.Value;
 
             var newRootPage = tx.AllocatePage(1, keysPrefixing ? PageFlags.Leaf | PageFlags.KeysPrefixed : PageFlags.Leaf);
             var tree = new Tree(tx, newRootPage.PageNumber)
@@ -302,7 +302,7 @@ namespace Voron.Trees
             overflowPageStart.OverflowSize = overflowSize;
             dataPos = overflowPageStart.Base + Constants.PageHeaderSize;
 
-			State.RecordNewPage(overflowPageStart, numberOfPages);
+            State.RecordNewPage(overflowPageStart, numberOfPages);
 
             return overflowPageStart.PageNumber;
         }
@@ -341,10 +341,10 @@ namespace Voron.Trees
                 if (p.IsBranch == false)
                     continue;
 
-				if (p.NumberOfEntries < 2)
-				{
-					throw new InvalidOperationException("The branch page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
-				}
+                if (p.NumberOfEntries < 2)
+                {
+                    throw new InvalidOperationException("The branch page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
+                }
 
                 for (int i = 0; i < p.NumberOfEntries; i++)
                 {
@@ -555,7 +555,7 @@ namespace Voron.Trees
         {
 			var page = _tx.AllocatePage(num, flags);
 
-			State.RecordNewPage(page, num);
+            State.RecordNewPage(page, num);
 
             return page;
         }
@@ -792,7 +792,7 @@ namespace Voron.Trees
                         _tx.FreePage(overflowPage.PageNumber + requestedOverflows + i);
                     }
 
-					State.RecordFreedPage(overflowPage, overflowsToFree); // we use overflowPage here just to have an instance of Page to properly update stats
+                    State.RecordFreedPage(overflowPage, overflowsToFree); // we use overflowPage here just to have an instance of Page to properly update stats
 
                     overflowPage.OverflowSize = len;
 

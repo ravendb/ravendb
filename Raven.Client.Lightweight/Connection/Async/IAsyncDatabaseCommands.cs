@@ -31,35 +31,35 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
 {
-	/// <summary>
-	///     An async database command operations
-	/// </summary>
-	public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
-	{
-		/// <summary>
-		///     Admin operations for current database
-		/// </summary>
-		IAsyncAdminDatabaseCommands Admin { get; }
+    /// <summary>
+    ///     An async database command operations
+    /// </summary>
+    public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
+    {
+        /// <summary>
+        ///     Admin operations for current database
+        /// </summary>
+        IAsyncAdminDatabaseCommands Admin { get; }
 
-		/// <summary>
-		///     Admin operations performed against system database, like create/delete database
-		/// </summary>
-		IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get; }
+        /// <summary>
+        ///     Admin operations performed against system database, like create/delete database
+        /// </summary>
+        IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get; }
 
-		/// <summary>
-		///     Info operations for current database
-		/// </summary>
-		IAsyncInfoDatabaseCommands Info { get; }
+        /// <summary>
+        ///     Info operations for current database
+        /// </summary>
+        IAsyncInfoDatabaseCommands Info { get; }
 
-		/// <summary>
-		///     Gets or sets the operations headers
-		/// </summary>
-		NameValueCollection OperationsHeaders { get; set; }
+        /// <summary>
+        ///     Gets or sets the operations headers
+        /// </summary>
+        NameValueCollection OperationsHeaders { get; set; }
 
-		/// <summary>
-		///     Primary credentials for access. Will be used also in replication context - for failovers
-		/// </summary>
-		OperationCredentials PrimaryCredentials { get; }
+        /// <summary>
+        ///     Primary credentials for access. Will be used also in replication context - for failovers
+        /// </summary>
+        OperationCredentials PrimaryCredentials { get; }
 
         /// <summary>
         ///     Sends multiple operations in a single request, reducing the number of remote calls and allowing several operations
@@ -98,7 +98,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
         /// <param name="token">The cancellation token.</param>
         [Obsolete("Use RavenFS instead.")]
-		Task DeleteAttachmentAsync(string key, Etag etag, CancellationToken token = default (CancellationToken));
+        Task DeleteAttachmentAsync(string key, Etag etag, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Perform a set based deletes using the specified index
@@ -123,10 +123,10 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task DeleteTransformerAsync(string name, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Disable all caching within the given scope
-		/// </summary>
-		IDisposable DisableAllCaching();
+        /// <summary>
+        ///     Disable all caching within the given scope
+        /// </summary>
+        IDisposable DisableAllCaching();
 
 		/// <summary>
 		///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
@@ -134,16 +134,16 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
-		/// <summary>
-		///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
-		///     with the default database
-		/// </summary>
-		IAsyncDatabaseCommands ForSystemDatabase();
+        /// <summary>
+        ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
+        ///     with the default database
+        /// </summary>
+        IAsyncDatabaseCommands ForSystemDatabase();
 
-		/// <summary>
-		///     Force the database commands to read directly from the master, unless there has been a failover.
-		/// </summary>
-		IDisposable ForceReadFromMaster();
+        /// <summary>
+        ///     Force the database commands to read directly from the master, unless there has been a failover.
+        /// </summary>
+        IDisposable ForceReadFromMaster();
 
         /// <summary>
         ///     Retrieve a single document for a specified key.
@@ -173,7 +173,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="key">key of the attachment you want to download</param>
         /// <param name="token">The cancellation token.</param>
         [Obsolete("Use RavenFS instead.")]
-		Task<Attachment> GetAttachmentAsync(string key, CancellationToken token = default (CancellationToken));
+        Task<Attachment> GetAttachmentAsync(string key, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Downloads attachment metadata for a multiple attachments.
@@ -183,7 +183,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="pageSize">maximum number of attachments that will be returned</param>
         /// <param name="token">The cancellation token.</param>
         [Obsolete("Use RavenFS instead.")]
-		Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize, CancellationToken token = default (CancellationToken));
+        Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Used to download attachment information for multiple attachments.
@@ -193,12 +193,12 @@ namespace Raven.Client.Connection.Async
         /// <param name="pageSize">maximum number of attachments that will be downloaded</param>
         /// <param name="token">The cancellation token.</param>
         [Obsolete("Use RavenFS instead.")]
-		Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize, CancellationToken token = default (CancellationToken));
+        Task<AttachmentInformation[]> GetAttachmentsAsync(int start, Etag startEtag, int pageSize, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Get the low level bulk insert operation
-		/// </summary>
-		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
+        /// <summary>
+        ///     Get the low level bulk insert operation
+        /// </summary>
+        ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 
         /// <summary>
         ///     Retrieves multiple documents.
@@ -286,15 +286,15 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<IndexDefinition[]> GetIndexesAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Gets the license status
-		/// </summary>
-		Task<LicensingStatus> GetLicenseStatusAsync(CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Gets the license status
+        /// </summary>
+        Task<LicensingStatus> GetLicenseStatusAsync(CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Gets the Logs
-		/// </summary>
-		Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Gets the Logs
+        /// </summary>
+        Task<LogItem[]> GetLogsAsync(bool errorsOnly, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Sends a multiple faceted queries in a single request and calculates the facet results for each of them
@@ -303,10 +303,10 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Retrieve the statistics for the database
-		/// </summary>
-		Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Retrieve the statistics for the database
+        /// </summary>
+        Task<DatabaseStatistics> GetStatisticsAsync(CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Get the all terms stored in the index for the specified field
@@ -359,7 +359,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="key">key of the attachment you want to download metadata for</param>
         /// <param name="token">The cancellation token.</param>
         [Obsolete("Use RavenFS instead.")]
-		Task<Attachment> HeadAttachmentAsync(string key, CancellationToken token = default(CancellationToken));
+        Task<Attachment> HeadAttachmentAsync(string key, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Lets you check if the given index definition differs from the one on a server.
@@ -388,15 +388,15 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Perform a single POST request containing multiple nested GET requests
-		/// </summary>
-		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests, CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Perform a single POST request containing multiple nested GET requests
+        /// </summary>
+        Task<GetResponse[]> MultiGetAsync(GetRequest[] requests, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Generate the next identity value from the server
-		/// </summary>
-		Task<long> NextIdentityForAsync(string name, CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Generate the next identity value from the server
+        /// </summary>
+        Task<long> NextIdentityForAsync(string name, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
@@ -479,10 +479,10 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Prepares the transaction on the server.
-		/// </summary>
-		Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null, CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Prepares the transaction on the server.
+        /// </summary>
+        Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Puts the document in the database with the specified key.
@@ -506,7 +506,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="metadata">attachment metadata</param>
         /// <param name="token">The cancellation token.</param>
         [Obsolete("Use RavenFS instead.")]
-		Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata, CancellationToken token = default(CancellationToken));
+        Task PutAttachmentAsync(string key, Etag etag, Stream data, RavenJObject metadata, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition
@@ -516,34 +516,34 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<string> PutIndexAsync(string name, IndexDefinition indexDef, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Creates multiple indexes with the specified name, using given index definitions and priorities
-		/// </summary>
-		/// <param name="indexesToAdd">indexes to add</param>
-		/// <param name="token">The cancellation token.</param>
-		Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Creates multiple indexes with the specified name, using given index definitions and priorities
+        /// </summary>
+        /// <param name="indexesToAdd">indexes to add</param>
+        /// <param name="token">The cancellation token.</param>
+        Task<string[]> PutIndexesAsync(IndexToAdd[] indexesToAdd, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Creates multiple side by side indexes with the specified name, using given index definitions and priorities
-		/// </summary>
-		/// <param name="indexesToAdd">indexes to add</param>
-		/// <param name="minimumEtagBeforeReplace">minimum index etag before replace</param>
-		/// <param name="replaceTimeUtc">replace time in utc</param>
-		/// <param name="token">The cancellation token.</param>
-		Task<string[]> PutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Creates multiple side by side indexes with the specified name, using given index definitions and priorities
+        /// </summary>
+        /// <param name="indexesToAdd">indexes to add</param>
+        /// <param name="minimumEtagBeforeReplace">minimum index etag before replace</param>
+        /// <param name="replaceTimeUtc">replace time in utc</param>
+        /// <param name="token">The cancellation token.</param>
+        Task<string[]> PutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Creates an index with the specified name, based on an index definition
-		/// </summary>
-		/// <param name="name">name of an index</param>
-		/// <param name="indexDef">definition of an index</param>
-		/// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
-		/// <param name="token">The cancellation token.</param>
-		Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Creates an index with the specified name, based on an index definition
+        /// </summary>
+        /// <param name="name">name of an index</param>
+        /// <param name="indexDef">definition of an index</param>
+        /// <param name="overwrite">if set to <c>true</c> [overwrite].</param>
+        /// <param name="token">The cancellation token.</param>
+        Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, CancellationToken token = default(CancellationToken));
 
-		Task SetIndexLockAsync(string name, IndexLockMode unLockMode, CancellationToken token = default(CancellationToken));
+        Task SetIndexLockAsync(string name, IndexLockMode unLockMode, CancellationToken token = default(CancellationToken));
 
-		Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken));
+        Task SetIndexPriorityAsync(string name, IndexingPriority priority, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition that is created by the supplied
@@ -604,10 +604,10 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task RollbackAsync(string txId, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Seeds the next identity value on the server
-		/// </summary>
-		Task<long> SeedIdentityForAsync(string name, long value, CancellationToken token = default(CancellationToken));
+        /// <summary>
+        ///     Seeds the next identity value on the server
+        /// </summary>
+        Task<long> SeedIdentityForAsync(string name, long value, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Retrieves documents for the specified key prefix.
@@ -687,7 +687,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="metadata">attachment metadata</param>
         /// <param name="token">The cancellation token.</param>
         [Obsolete("Use RavenFS instead.")]
-		Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata, CancellationToken token = default (CancellationToken));
+        Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Perform a set based update using the specified index
@@ -709,21 +709,21 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null, CancellationToken token = default(CancellationToken));
 
-		/// <summary>
-		///     Get the full URL for the given document key
-		/// </summary>
-		string UrlFor(string documentKey);
+        /// <summary>
+        ///     Get the full URL for the given document key
+        /// </summary>
+        string UrlFor(string documentKey);
 
-		/// <summary>
-		///     Returns a new <see cref="IAsyncDatabaseCommands" /> using the specified credentials
-		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
-		IAsyncDatabaseCommands With(ICredentials credentialsForSession);
-	}
+        /// <summary>
+        ///     Returns a new <see cref="IAsyncDatabaseCommands" /> using the specified credentials
+        /// </summary>
+        /// <param name="credentialsForSession">The credentials for session.</param>
+        IAsyncDatabaseCommands With(ICredentials credentialsForSession);
+    }
 
-	public interface IAsyncGlobalAdminDatabaseCommands
-	{
-		IAsyncDatabaseCommands Commands { get; }
+    public interface IAsyncGlobalAdminDatabaseCommands
+    {
+        IAsyncDatabaseCommands Commands { get; }
 
         /// <summary>
         ///     Sends an async command to compact a database. During the compaction the specified database will be offline.
@@ -732,10 +732,10 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<Operation> CompactDatabaseAsync(string databaseName, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Creates a database
-		/// </summary>
-		Task CreateDatabaseAsync(DatabaseDocument databaseDocument, CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Creates a database
+        /// </summary>
+        Task CreateDatabaseAsync(DatabaseDocument databaseDocument, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Used to delete a database from a server, with a possibility to remove all the data from hard drive.
@@ -749,25 +749,25 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Ensures that the database exists, creating it if needed
-		/// </summary>
-		Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false, CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Ensures that the database exists, creating it if needed
+        /// </summary>
+        Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Gets the build number
-		/// </summary>
-		Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Gets the build number
+        /// </summary>
+        Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Returns the names of all tenant databases on the RavenDB server
-		/// </summary>
-		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Returns the names of all tenant databases on the RavenDB server
+        /// </summary>
+        Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Gets server-wide statistics.
-		/// </summary>
-		Task<AdminStatistics> GetStatisticsAsync(CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Gets server-wide statistics.
+        /// </summary>
+        Task<AdminStatistics> GetStatisticsAsync(CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Begins a backup operation.
@@ -783,23 +783,23 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Begins a restore operation.
-		/// </summary>
-		Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest, CancellationToken token = default (CancellationToken));
-	}
+        /// <summary>
+        ///     Begins a restore operation.
+        /// </summary>
+        Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest, CancellationToken token = default (CancellationToken));
+    }
 
-	public interface IAsyncAdminDatabaseCommands
-	{
-		/// <summary>
-		///     Gets configuration for current database.
-		/// </summary>
-		Task<RavenJObject> GetDatabaseConfigurationAsync(CancellationToken token = default (CancellationToken));
+    public interface IAsyncAdminDatabaseCommands
+    {
+        /// <summary>
+        ///     Gets configuration for current database.
+        /// </summary>
+        Task<RavenJObject> GetDatabaseConfigurationAsync(CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Get the indexing status
-		/// </summary>
-		Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
+        /// <summary>
+        ///     Get the indexing status
+        /// </summary>
+        Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Enables indexing.
@@ -811,17 +811,17 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task StartIndexingAsync(int? maxNumberOfParallelIndexTasks = null, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		///     Disables all indexing.
-		/// </summary>
-		Task StopIndexingAsync(CancellationToken token = default (CancellationToken));
-	}
+        /// <summary>
+        ///     Disables all indexing.
+        /// </summary>
+        Task StopIndexingAsync(CancellationToken token = default (CancellationToken));
+    }
 
-	public interface IAsyncInfoDatabaseCommands
-	{
-		/// <summary>
-		///     Get replication info
-		/// </summary>
-		Task<ReplicationStatistics> GetReplicationInfoAsync(CancellationToken token = default (CancellationToken));
-	}
+    public interface IAsyncInfoDatabaseCommands
+    {
+        /// <summary>
+        ///     Get replication info
+        /// </summary>
+        Task<ReplicationStatistics> GetReplicationInfoAsync(CancellationToken token = default (CancellationToken));
+    }
 }

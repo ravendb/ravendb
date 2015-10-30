@@ -214,7 +214,7 @@ namespace Raven.Client.Connection
 		}
         public void SetIndexLock(string name, IndexLockMode unLockMode) 
         {
-			AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, unLockMode));
+            AsyncHelpers.RunSync(() => asyncServerClient.SetIndexLockAsync(name, unLockMode));
         }
         public void SetIndexPriority(string name, IndexingPriority priority )
         {

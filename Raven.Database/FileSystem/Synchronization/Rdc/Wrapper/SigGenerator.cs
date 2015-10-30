@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -153,175 +153,175 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 
                 foreach (var item in rdcBufferPointers)
                     Marshal.FreeCoTaskMem(item.Data);
-			}
-			result.Reverse();
-			signatureRepository.Flush(result);
-			return result;
-		}
+            }
+            result.Reverse();
+            signatureRepository.Flush(result);
+            return result;
+        }
 
-		private static RdcBufferPointer GetInputBuffer(Stream source, int inputBufferSize, RdcBufferPointer inputBuffer,
-													   ref bool eof)
-		{
-			if (eof)
-			{
-				inputBuffer.Size = 0;
-				inputBuffer.Used = 0;
-			}
-			else
-			{
-				var bytesRead = 0;
-				try
-				{
-					bytesRead = RdcBufferTools.IntPtrCopy(source, inputBuffer.Data, inputBufferSize);
-				}
-				catch (Exception ex)
-				{
-					throw new RdcException("Failed to read from the source stream.", ex);
-				}
+        private static RdcBufferPointer GetInputBuffer(Stream source, int inputBufferSize, RdcBufferPointer inputBuffer,
+                                                       ref bool eof)
+        {
+            if (eof)
+            {
+                inputBuffer.Size = 0;
+                inputBuffer.Used = 0;
+            }
+            else
+            {
+                var bytesRead = 0;
+                try
+                {
+                    bytesRead = RdcBufferTools.IntPtrCopy(source, inputBuffer.Data, inputBufferSize);
+                }
+                catch (Exception ex)
+                {
+                    throw new RdcException("Failed to read from the source stream.", ex);
+                }
 
-				inputBuffer.Size = (uint)bytesRead;
-				inputBuffer.Used = 0;
+                inputBuffer.Size = (uint)bytesRead;
+                inputBuffer.Used = 0;
 
-				if (bytesRead < inputBufferSize)
-				{
-					eof = true;
-				}
-			}
-			return inputBuffer;
-		}
+                if (bytesRead < inputBufferSize)
+                {
+                    eof = true;
+                }
+            }
+            return inputBuffer;
+        }
 
-		private static void RdcBufferTranslate(RdcBufferPointer[] source, IntPtr[] dest)
-		{
-			if (source.Length != dest.Length)
-			{
-				throw new ArgumentException("source and dest should have the same length");
-			}
-			// Marshal the managed structure to a native
-			// pointer and add it to our array.
-			for (var i = 0; i < dest.Length; i++)
-			{
-				dest[i] = Marshal.AllocCoTaskMem(Marshal.SizeOf(source[i]));
-				Marshal.StructureToPtr(source[i], dest[i], false);
-			}
-		}
+        private static void RdcBufferTranslate(RdcBufferPointer[] source, IntPtr[] dest)
+        {
+            if (source.Length != dest.Length)
+            {
+                throw new ArgumentException("source and dest should have the same length");
+            }
+            // Marshal the managed structure to a native
+            // pointer and add it to our array.
+            for (var i = 0; i < dest.Length; i++)
+            {
+                dest[i] = Marshal.AllocCoTaskMem(Marshal.SizeOf(source[i]));
+                Marshal.StructureToPtr(source[i], dest[i], false);
+            }
+        }
 
-		private static void RdcBufferTranslate(IntPtr[] source, RdcBufferPointer[] dest)
-		{
-			if (source.Length != dest.Length)
-			{
-				throw new ArgumentException("source and dest should have the same length");
-			}
-			// Marshal the native pointer back to the 
-			// managed structure.
-			for (var i = 0; i < dest.Length; i++)
-			{
-				dest[i] = (RdcBufferPointer)Marshal.PtrToStructure(source[i], typeof(RdcBufferPointer));
-				Marshal.FreeCoTaskMem(source[i]);
-			}
-		}
+        private static void RdcBufferTranslate(IntPtr[] source, RdcBufferPointer[] dest)
+        {
+            if (source.Length != dest.Length)
+            {
+                throw new ArgumentException("source and dest should have the same length");
+            }
+            // Marshal the native pointer back to the 
+            // managed structure.
+            for (var i = 0; i < dest.Length; i++)
+            {
+                dest[i] = (RdcBufferPointer)Marshal.PtrToStructure(source[i], typeof(RdcBufferPointer));
+                Marshal.FreeCoTaskMem(source[i]);
+            }
+        }
 
-		private static IntPtr[] PrepareOutputPointers(RdcBufferPointer[] rdcBufferPointers)
-		{
-			var result = new IntPtr[rdcBufferPointers.Length];
-			for (var i = 0; i < rdcBufferPointers.Length; i++)
-			{
-				result[i] = Marshal.AllocCoTaskMem(Marshal.SizeOf(rdcBufferPointers[i]));
-				Marshal.StructureToPtr(rdcBufferPointers[i], result[i], false);
-			}
-			return result;
-		}
+        private static IntPtr[] PrepareOutputPointers(RdcBufferPointer[] rdcBufferPointers)
+        {
+            var result = new IntPtr[rdcBufferPointers.Length];
+            for (var i = 0; i < rdcBufferPointers.Length; i++)
+            {
+                result[i] = Marshal.AllocCoTaskMem(Marshal.SizeOf(rdcBufferPointers[i]));
+                Marshal.StructureToPtr(rdcBufferPointers[i], result[i], false);
+            }
+            return result;
+        }
 
-		private RdcBufferPointer[] PrepareRdcBufferPointers()
-		{
-			var outputBuffers = PrepareOutputBuffers();
+        private RdcBufferPointer[] PrepareRdcBufferPointers()
+        {
+            var outputBuffers = PrepareOutputBuffers();
 
-			var result = new RdcBufferPointer[outputBuffers.Length];
-			for (var i = 0; i < outputBuffers.Length; i++)
-			{
-				result[i].Size = OutputBufferSize;
-				result[i].Data = outputBuffers[i];
-				result[i].Used = 0;
-			}
-			return result;
-		}
+            var result = new RdcBufferPointer[outputBuffers.Length];
+            for (var i = 0; i < outputBuffers.Length; i++)
+            {
+                result[i].Size = OutputBufferSize;
+                result[i].Data = outputBuffers[i];
+                result[i].Used = 0;
+            }
+            return result;
+        }
 
-		private IntPtr[] PrepareOutputBuffers()
-		{
-			var outputBuffers = new IntPtr[_recursionDepth];
-			for (var i = 0; i < _recursionDepth; i++)
-			{
-				outputBuffers[i] = Marshal.AllocCoTaskMem((int)OutputBufferSize + 16);
-			}
-			return outputBuffers;
-		}
+        private IntPtr[] PrepareOutputBuffers()
+        {
+            var outputBuffers = new IntPtr[_recursionDepth];
+            for (var i = 0; i < _recursionDepth; i++)
+            {
+                outputBuffers[i] = Marshal.AllocCoTaskMem((int)OutputBufferSize + 16);
+            }
+            return outputBuffers;
+        }
 
-		private IRdcGenerator InitializeRdcGenerator()
-		{
-			var generatorParameterses = InitializeGeneratorParameterses();
-			IRdcGenerator result;
-			var hr = _rdcLibrary.CreateGenerator((uint)_recursionDepth, generatorParameterses, out result);
-			if (hr != 0)
-			{
-				throw new RdcException("Failed to create the RdcGenerator.", hr);
-			}
+        private IRdcGenerator InitializeRdcGenerator()
+        {
+            var generatorParameterses = InitializeGeneratorParameterses();
+            IRdcGenerator result;
+            var hr = _rdcLibrary.CreateGenerator((uint)_recursionDepth, generatorParameterses, out result);
+            if (hr != 0)
+            {
+                throw new RdcException("Failed to create the RdcGenerator.", hr);
+            }
 
-			// Enable similarity
-			((IRdcSimilarityGenerator)result).EnableSimilarity();
-			return result;
-		}
+            // Enable similarity
+            ((IRdcSimilarityGenerator)result).EnableSimilarity();
+            return result;
+        }
 
-		public int EvaluateRecursionDepth(Stream source)
-		{
-			int result;
-			var hr = _rdcLibrary.ComputeDefaultRecursionDepth(source.Length, out result);
-			if (hr != 0)
-			{
-				throw new RdcException("Failed to compute the recursion depth.", hr);
-			}
-			return result;
-		}
+        public int EvaluateRecursionDepth(Stream source)
+        {
+            int result;
+            var hr = _rdcLibrary.ComputeDefaultRecursionDepth(source.Length, out result);
+            if (hr != 0)
+            {
+                throw new RdcException("Failed to compute the recursion depth.", hr);
+            }
+            return result;
+        }
 
-		private IRdcGeneratorParameters[] InitializeGeneratorParameterses()
-		{
-			var result = new IRdcGeneratorParameters[_recursionDepth];
-			for (var i = 0; i < _recursionDepth; i++)
-			{
-				_rdcLibrary.CreateGeneratorParameters(GeneratorParametersType.FilterMax, (uint)i + 1, out result[i]);
-				var maxParams = (IRdcGeneratorFilterMaxParameters)result[i];
+        private IRdcGeneratorParameters[] InitializeGeneratorParameterses()
+        {
+            var result = new IRdcGeneratorParameters[_recursionDepth];
+            for (var i = 0; i < _recursionDepth; i++)
+            {
+                _rdcLibrary.CreateGeneratorParameters(GeneratorParametersType.FilterMax, (uint)i + 1, out result[i]);
+                var maxParams = (IRdcGeneratorFilterMaxParameters)result[i];
 
-				// Set the default properties
-				maxParams.SetHashWindowSize(i == 0 ? Msrdc.DefaultHashwindowsize1 : Msrdc.DefaultHashwindowsizeN);
-				maxParams.SetHorizonSize(i == 0 ? Msrdc.DefaultHorizonsize1 : Msrdc.DefaultHorizonsizeN);
-			}
-			return result;
-		}
+                // Set the default properties
+                maxParams.SetHashWindowSize(i == 0 ? Msrdc.DefaultHashwindowsize1 : Msrdc.DefaultHashwindowsizeN);
+                maxParams.SetHorizonSize(i == 0 ? Msrdc.DefaultHorizonsize1 : Msrdc.DefaultHorizonsizeN);
+            }
+            return result;
+        }
 
-		~SigGenerator()
-		{
-			try
-			{
-				Trace.WriteLine("~SigGenerator: Disposing COM resources from finalizer! You should call Dispose() instead!");
-				DisposeInternal();
-			}
-			catch (Exception exception)
-			{
-				try
-				{
-					Trace.WriteLine("Failed to dispose COM instance from finalizer because: " + exception);
-				}
-				catch
-				{
-				}
-			}
-		}
+        ~SigGenerator()
+        {
+            try
+            {
+                Trace.WriteLine("~SigGenerator: Disposing COM resources from finalizer! You should call Dispose() instead!");
+                DisposeInternal();
+            }
+            catch (Exception exception)
+            {
+                try
+                {
+                    Trace.WriteLine("Failed to dispose COM instance from finalizer because: " + exception);
+                }
+                catch
+                {
+                }
+            }
+        }
 
-		private void DisposeInternal()
-		{
-			if (_rdcLibrary != null)
-			{
-				Marshal.ReleaseComObject(_rdcLibrary);
-				_rdcLibrary = null;
-			}
-		}
-	}
+        private void DisposeInternal()
+        {
+            if (_rdcLibrary != null)
+            {
+                Marshal.ReleaseComObject(_rdcLibrary);
+                _rdcLibrary = null;
+            }
+        }
+    }
 }

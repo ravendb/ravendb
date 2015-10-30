@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RDoc_391.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -308,24 +308,24 @@ namespace Raven.Tests.Issues
 
 
                 var index = new People_By_Name_With_Scripts();
-				index.Execute(store);
+                index.Execute(store);
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				var stats = store.DatabaseCommands.GetStatistics();
-				var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
-				var lastIndexedEtag = indexStats.LastIndexedEtag;
-				Assert.True(EtagUtil.IsGreaterThan(lastIndexedEtag, Etag.Empty));
+                var stats = store.DatabaseCommands.GetStatistics();
+                var indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
+                var lastIndexedEtag = indexStats.LastIndexedEtag;
+                Assert.True(EtagUtil.IsGreaterThan(lastIndexedEtag, Etag.Empty));
 
-				store.DatabaseCommands.Admin.StopIndexing();
+                store.DatabaseCommands.Admin.StopIndexing();
 
-				index.Execute(store);
+                index.Execute(store);
 
-				stats = store.DatabaseCommands.GetStatistics();
-				indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
-				Assert.True(indexStats.LastIndexedEtag.Equals(lastIndexedEtag) ||
+                stats = store.DatabaseCommands.GetStatistics();
+                indexStats = stats.Indexes.First(x => x.Name == index.IndexName);
+                Assert.True(indexStats.LastIndexedEtag.Equals(lastIndexedEtag) ||
                     EtagUtil.IsGreaterThan(indexStats.LastIndexedEtag, lastIndexedEtag));
-			}
-		}
-	}
+            }
+        }
+    }
 }

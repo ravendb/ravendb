@@ -148,7 +148,7 @@ class search extends viewModelBase {
 			});
 	}
 
-	promptDeleteFilesMatchingQuery(resultCount: number) {
+    promptDeleteFilesMatchingQuery(resultCount: number) {
         var viewModel = new deleteFilesMatchingQueryConfirm(this.searchText(), resultCount, this.activeFilesystem());
         app
             .showDialog(viewModel)

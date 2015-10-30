@@ -16,33 +16,33 @@ using Raven.Tests.Common;
 
 namespace Raven.Tests.Bundles.Authorization
 {
-	public abstract class AuthorizationTest : RavenTest
-	{
-		protected const string UserId = "Authorization/Users/Ayende";
-		protected readonly DocumentStore store;
-		protected readonly RavenDbServer server;
+    public abstract class AuthorizationTest : RavenTest
+    {
+        protected const string UserId = "Authorization/Users/Ayende";
+        protected readonly DocumentStore store;
+        protected readonly RavenDbServer server;
 
-	    protected readonly string DatabaseName = Raven.Abstractions.Data.Constants.SystemDatabase;
-		
-		protected AuthorizationTest()
-		{
-			RouteCacher.ClearCache();
+        protected readonly string DatabaseName = Raven.Abstractions.Data.Constants.SystemDatabase;
+        
+        protected AuthorizationTest()
+        {
+            RouteCacher.ClearCache();
 
             server = GetNewServer(configureConfig: configuration => configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly)));
             store = NewRemoteDocumentStore(ravenDbServer: server,  databaseName: DatabaseName);
-			
-			foreach (DictionaryEntry de in HttpRuntime.Cache)
-			{
-				HttpRuntime.Cache.Remove((string)de.Key);
-			}
-		}
+            
+            foreach (DictionaryEntry de in HttpRuntime.Cache)
+            {
+                HttpRuntime.Cache.Remove((string)de.Key);
+            }
+        }
 
-	    protected DocumentDatabase Database
-	    {
-	        get
-	        {
-	            return server.Server.GetDatabaseInternal(DatabaseName).Result;
-	        }
-	    }
-	}
+        protected DocumentDatabase Database
+        {
+            get
+            {
+                return server.Server.GetDatabaseInternal(DatabaseName).Result;
+            }
+        }
+    }
 }

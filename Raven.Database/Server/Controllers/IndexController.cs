@@ -271,14 +271,14 @@ namespace Raven.Database.Server.Controllers
             if (jsonIndex.ContainsKey("MaxIndexOutputsPerDocument") == false)
                 data.MaxIndexOutputsPerDocument = 16 * 1024;
 
-			try
-			{
-				Database.Indexes.PutIndex(index, data);
-				return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
-			}
-			catch (Exception ex)
-			{
-				var compilationException = ex as IndexCompilationException;
+            try
+            {
+                Database.Indexes.PutIndex(index, data);
+                return GetMessageWithObject(new { Index = index }, HttpStatusCode.Created);
+            }
+            catch (Exception ex)
+            {
+                var compilationException = ex as IndexCompilationException;
 
                 Log.ErrorException("Cannot create index.", ex);
 
@@ -323,8 +323,8 @@ namespace Raven.Database.Server.Controllers
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
                 Database.IndexStorage.ForceWriteToDiskAndWriteInMemoryIndexToDiskIfNecessary(index);
-				return GetEmptyMessage();
-			}
+                return GetEmptyMessage();
+            }
 
             if ("hasChanged".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
             {
@@ -448,63 +448,63 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpGet]
         [RavenRoute("c-sharp-index-definition/{*fullIndexName}")]
-		[RavenRoute("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
-		public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
-		{
-			var indexDefinition = Database.Indexes.GetIndexDefinition(fullIndexName);
-			if (indexDefinition == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+        [RavenRoute("databases/{databaseName}/c-sharp-index-definition/{*fullIndexName}")]
+        public HttpResponseMessage GenerateCSharpIndexDefinition(string fullIndexName)
+        {
+            var indexDefinition = Database.Indexes.GetIndexDefinition(fullIndexName);
+            if (indexDefinition == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-		    var text = new IndexDefinitionCodeGenerator(indexDefinition).Generate();
+            var text = new IndexDefinitionCodeGenerator(indexDefinition).Generate();
 
-		    return GetMessageWithObject(text);
-		}
+            return GetMessageWithObject(text);
+        }
 
-		private HttpResponseMessage GetIndexDefinition(string index)
-		{
-			var indexDefinition = Database.Indexes.GetIndexDefinition(index);
-			if (indexDefinition == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+        private HttpResponseMessage GetIndexDefinition(string index)
+        {
+            var indexDefinition = Database.Indexes.GetIndexDefinition(index);
+            if (indexDefinition == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			indexDefinition.Fields = Database.Indexes.GetIndexFields(index);
+            indexDefinition.Fields = Database.Indexes.GetIndexFields(index);
 
-			return GetMessageWithObject(new
-			{
-				Index = indexDefinition,
-			});
-		}
+            return GetMessageWithObject(new
+            {
+                Index = indexDefinition,
+            });
+        }
 
-		private HttpResponseMessage GetIndexSource(string index)
-		{
-			var viewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(index);
-			if (viewGenerator == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+        private HttpResponseMessage GetIndexSource(string index)
+        {
+            var viewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(index);
+            if (viewGenerator == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			return GetMessageWithString(viewGenerator.SourceCode);
-		}
+            return GetMessageWithString(viewGenerator.SourceCode);
+        }
 
-		private HttpResponseMessage DebugIndex(string index)
-		{
-			switch (GetQueryStringValue("debug").ToLowerInvariant())
-			{
+        private HttpResponseMessage DebugIndex(string index)
+        {
+            switch (GetQueryStringValue("debug").ToLowerInvariant())
+            {
                 case "docs":
-			        return GetDocsStartsWith(index);
-				case "map":
-					return GetIndexMappedResult(index);
-				case "reduce":
-					return GetIndexReducedResult(index);
-				case "schedules":
-					return GetIndexScheduledReduces(index);
-				case "keys":
-					return GetIndexKeysStats(index);
-				case "entries":
-					return GetIndexEntries(index);
-				case "stats":
-					return GetIndexStats(index);
-				default:
-					return GetMessageWithString("Unknown debug option " + GetQueryStringValue("debug"), HttpStatusCode.BadRequest);
-			}
-		}
+                    return GetDocsStartsWith(index);
+                case "map":
+                    return GetIndexMappedResult(index);
+                case "reduce":
+                    return GetIndexReducedResult(index);
+                case "schedules":
+                    return GetIndexScheduledReduces(index);
+                case "keys":
+                    return GetIndexKeysStats(index);
+                case "entries":
+                    return GetIndexEntries(index);
+                case "stats":
+                    return GetIndexStats(index);
+                default:
+                    return GetMessageWithString("Unknown debug option " + GetQueryStringValue("debug"), HttpStatusCode.BadRequest);
+            }
+        }
 
         private HttpResponseMessage GetDocsStartsWith(string index)
         {
@@ -519,24 +519,24 @@ namespace Raven.Database.Server.Controllers
                 keys = accessor.MapReduce.GetSourcesForIndexForDebug(definition.IndexId, prefix, GetPageSize(Database.Configuration.MaxPageSize))
                     .ToList(); 
             });
-	        return GetMessageWithObject(new {keys.Count, Results = keys});
+            return GetMessageWithObject(new {keys.Count, Results = keys});
         }
 
-		private HttpResponseMessage GetIndexMappedResult(string index)
-		{
-			var definition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
-			if (definition == null)
-				return GetEmptyMessage(HttpStatusCode.NotFound);
+        private HttpResponseMessage GetIndexMappedResult(string index)
+        {
+            var definition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
+            if (definition == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
 
-			var key = GetQueryStringValue("key");
-			if (string.IsNullOrEmpty(key))
-			{
-				var sourceId = GetQueryStringValue("sourceId");
-				var startsWith = GetQueryStringValue("startsWith");
+            var key = GetQueryStringValue("key");
+            if (string.IsNullOrEmpty(key))
+            {
+                var sourceId = GetQueryStringValue("sourceId");
+                var startsWith = GetQueryStringValue("startsWith");
 
-				List<string> keys = null;
-				Database.TransactionalStorage.Batch(accessor =>
-				{
+                List<string> keys = null;
+                Database.TransactionalStorage.Batch(accessor =>
+                {
                     keys = accessor.MapReduce.GetKeysForIndexForDebug(definition.IndexId, startsWith, sourceId, GetStart(), GetPageSize(Database.Configuration.MaxPageSize))
 						.ToList();
 				});

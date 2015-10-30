@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Replication;
+using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;

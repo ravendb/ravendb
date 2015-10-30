@@ -41,39 +41,39 @@ namespace Raven.Abstractions.Data
 	}
 
     public class RavenConnectionStringOptions : ConnectionStringOptions
-	{
-		public RavenConnectionStringOptions()
-		{
+    {
+        public RavenConnectionStringOptions()
+        {
 #if MONO
-			EnlistInDistributedTransactions = false;
+            EnlistInDistributedTransactions = false;
 #else
-			EnlistInDistributedTransactions = true;
+            EnlistInDistributedTransactions = true;
 #endif
-		}
+        }
 
         public Guid ResourceManagerId { get; set; }
 
-		public bool EnlistInDistributedTransactions { get; set; }
+        public bool EnlistInDistributedTransactions { get; set; }
         public string DefaultDatabase { get; set; }
 
-		
-		public FailoverServers FailoverServers { get; set; }
+        
+        public FailoverServers FailoverServers { get; set; }
 
         public override string ToString()
         {
             var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
             return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
         }
-	}
+    }
 
     public class EmbeddedRavenConnectionStringOptions : RavenConnectionStringOptions
     {
-		public bool AllowEmbeddedOptions { get; set; }
+        public bool AllowEmbeddedOptions { get; set; }
 
-		public string DataDirectory { get; set; }
+        public string DataDirectory { get; set; }
 
-		public bool RunInMemory { get; set; }
-	}
+        public bool RunInMemory { get; set; }
+    }
 
     public class FilesConnectionStringOptions : ConnectionStringOptions
     {
@@ -88,49 +88,49 @@ namespace Raven.Abstractions.Data
         }
     }
 
-	public class ConnectionStringParser<TConnectionString> where TConnectionString : ConnectionStringOptions, new()
-	{
-		public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
-		{
+    public class ConnectionStringParser<TConnectionString> where TConnectionString : ConnectionStringOptions, new()
+    {
+        public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
+        {
 #if !MONODROID
-			var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
-			if (connectionStringSettings == null)
-				throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
+            var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
+            if (connectionStringSettings == null)
+                throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
 
-		
-			return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
+        
+            return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
 #else
-			throw new ArgumentException(string.Format("Connection string not supported"));
+            throw new ArgumentException(string.Format("Connection string not supported"));
 #endif
-		}
+        }
 
-		public static ConnectionStringParser<TConnectionString> FromConnectionString(string connectionString)
-		{
-			return new ConnectionStringParser<TConnectionString>("code", connectionString);
-		}
+        public static ConnectionStringParser<TConnectionString> FromConnectionString(string connectionString)
+        {
+            return new ConnectionStringParser<TConnectionString>("code", connectionString);
+        }
 
-		private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)",
-		                                                                RegexOptions.Compiled |
-		                                                                RegexOptions.IgnorePatternWhitespace);
+        private static readonly Regex connectionStringRegex = new Regex(@"(\w+) \s* = \s* (.*)",
+                                                                        RegexOptions.Compiled |
+                                                                        RegexOptions.IgnorePatternWhitespace);
 
-		private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
-		                                                                                 RegexOptions.Compiled |
-		                                                                                 RegexOptions.IgnorePatternWhitespace);
+        private static readonly Regex connectionStringArgumentsSplitterRegex = new Regex(@"; (?=\s* \w+ \s* =)",
+                                                                                         RegexOptions.Compiled |
+                                                                                         RegexOptions.IgnorePatternWhitespace);
 
-		private readonly string connectionString;
-		private readonly string connectionStringName;
+        private readonly string connectionString;
+        private readonly string connectionStringName;
 
-		private bool setupPasswordInConnectionString;
-		private bool setupUsernameInConnectionString;
+        private bool setupPasswordInConnectionString;
+        private bool setupUsernameInConnectionString;
 
-		public TConnectionString ConnectionStringOptions { get; set; }
+        public TConnectionString ConnectionStringOptions { get; set; }
 
-		private ConnectionStringParser(string connectionStringName, string connectionString)
-		{
-			ConnectionStringOptions = new TConnectionString();
-			this.connectionString = connectionString;
-			this.connectionStringName = connectionStringName;
-		}
+        private ConnectionStringParser(string connectionStringName, string connectionString)
+        {
+            ConnectionStringOptions = new TConnectionString();
+            this.connectionString = connectionString;
+            this.connectionStringName = connectionStringName;
+        }
 
         /// <summary>
         /// Parse the connection string option strictly for the ConnectionStringOptions
@@ -156,10 +156,10 @@ namespace Raven.Abstractions.Data
                 case "domain":
                     networkCredentials.Domain = value;
                     break;
-		        case "url":
-					if (string.IsNullOrEmpty(options.Url))
-						options.Url = value;
-					break;
+                case "url":
+                    if (string.IsNullOrEmpty(options.Url))
+                        options.Url = value;
+                    break;
 
                 // Couldn't process the option.
                 default: return false;
@@ -185,8 +185,8 @@ namespace Raven.Abstractions.Data
                     break;
 
                case "enlist":
-					options.EnlistInDistributedTransactions = bool.Parse(value);
-					break;
+                    options.EnlistInDistributedTransactions = bool.Parse(value);
+                    break;
 
                 case "resourcemanagerid":
                     options.ResourceManagerId = new Guid(value);
@@ -236,7 +236,7 @@ namespace Raven.Abstractions.Data
 #if !MONODROID
                         throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 #else
-						throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));
+                        throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));
 #endif
                     }
                     options.RunInMemory = result;
@@ -279,16 +279,16 @@ namespace Raven.Abstractions.Data
         }
 
 
-		public void Parse()
-		{
-			string[] strings = connectionStringArgumentsSplitterRegex.Split(connectionString);
-			var networkCredential = new NetworkCredential();
-			foreach (string str in strings)
-			{
-				string arg = str.Trim(';');
-				Match match = connectionStringRegex.Match(arg);
-				if (match.Success == false)
-					throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed", connectionStringName));
+        public void Parse()
+        {
+            string[] strings = connectionStringArgumentsSplitterRegex.Split(connectionString);
+            var networkCredential = new NetworkCredential();
+            foreach (string str in strings)
+            {
+                string arg = str.Trim(';');
+                Match match = connectionStringRegex.Match(arg);
+                if (match.Success == false)
+                    throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed", connectionStringName));
 
                 string key = match.Groups[1].Value.ToLower();
                 string value = match.Groups[2].Value.Trim();
@@ -302,15 +302,15 @@ namespace Raven.Abstractions.Data
 
                 if ( ! processed )
                     throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));
-			}
+            }
 
-			if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false)
-				return;
+            if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false)
+                return;
 
-			if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
-				throw new ArgumentException(string.Format("User and Password must both be specified in the connection string: '{0}'", connectionStringName));
-			
+            if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
+                throw new ArgumentException(string.Format("User and Password must both be specified in the connection string: '{0}'", connectionStringName));
+            
             ConnectionStringOptions.Credentials = networkCredential;
-		}
-	}
+        }
+    }
 }

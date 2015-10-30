@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Tests.Common.Attributes;
@@ -30,9 +30,9 @@ namespace Raven.Tests.Bugs.Facets
             var exceptionThrown = false;
             try
             {
-				var facet =new List<Facet>{ new Facet<Camera>
-				{
-					Name = x => x.DateOfListing,
+                var facet =new List<Facet>{ new Facet<Camera>
+                {
+                    Name = x => x.DateOfListing,
                     Ranges =
                         {
                             x => x.DateOfListing <= dates[0],
@@ -43,7 +43,7 @@ namespace Raven.Tests.Bugs.Facets
                         }
                 }};
                 facet = new List<Facet>{new Facet<Camera>{
-					Name = x => x.DateOfListing,
+                    Name = x => x.DateOfListing,
                     Ranges =
                         {
                             x => x.DateOfListing <= now.AddDays(-10),
@@ -52,7 +52,7 @@ namespace Raven.Tests.Bugs.Facets
                             x => x.DateOfListing > now.AddDays(0) && x.DateOfListing < now.AddDays(7),
                             x => x.DateOfListing >= now.AddDays(7)
                         }
-				}};
+                }};
                 facet = new List<Facet>{new Facet<Camera>{
                     Name = x => x.Cost,
                     Ranges = {

@@ -58,9 +58,9 @@ namespace Raven.Database.Counters
 
 		public Guid ServerId { get; private set; }
 
-		public string Name { get; private set; }
+        public string Name { get; private set; }
 
-		public string ResourceName { get; private set; }
+        public string ResourceName { get; private set; }
 
 		public int ReplicationTimeoutInMs { get; private set; }
 
@@ -263,10 +263,10 @@ namespace Raven.Database.Counters
 			if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
 				throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
 
-			var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
-			var filePathFolder = new DirectoryInfo(directoryPath);
-			if (filePathFolder.Exists == false)
-				filePathFolder.Create();
+            var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
+            var filePathFolder = new DirectoryInfo(directoryPath);
+            if (filePathFolder.Exists == false)
+                filePathFolder.Create();
 
 			var tempPath = settings[Constants.Voron.TempPath];
 			var journalPath = settings[Constants.RavenTxJournalPath];

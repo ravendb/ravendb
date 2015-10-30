@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 
 // Used to make internal details that we don't want to make visible to everyone.

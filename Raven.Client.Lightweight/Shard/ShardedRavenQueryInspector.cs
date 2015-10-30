@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -75,78 +75,78 @@ namespace Raven.Client.Shard
 				Query = indexQuery
             }, (commands, i) => commands.GetFacetsAsync(AsyncIndexQueried, indexQuery, facetSetupDoc, start, pageSize, token)).ConfigureAwait(false);
 
-			return MergeFacets(results);
-		}
+            return MergeFacets(results);
+        }
 
-		private FacetResults MergeFacets(FacetResults[] results)
-		{
-			if (results == null)
-				return null;
-			if (results.Length == 0)
-				return null;
-			if (results.Length == 1)
-				return results[0];
+        private FacetResults MergeFacets(FacetResults[] results)
+        {
+            if (results == null)
+                return null;
+            if (results.Length == 0)
+                return null;
+            if (results.Length == 1)
+                return results[0];
 
-			var finalResult = new FacetResults();
+            var finalResult = new FacetResults();
 
-			var avgs = new Dictionary<FacetValue, List<double>>();
+            var avgs = new Dictionary<FacetValue, List<double>>();
 
-			foreach (var result in results.SelectMany(x=>x.Results))
-			{
-				FacetResult value;
-				if (finalResult.Results.TryGetValue(result.Key, out value) == false)
-				{
-					finalResult.Results[result.Key] = value = new FacetResult();
-				}
+            foreach (var result in results.SelectMany(x=>x.Results))
+            {
+                FacetResult value;
+                if (finalResult.Results.TryGetValue(result.Key, out value) == false)
+                {
+                    finalResult.Results[result.Key] = value = new FacetResult();
+                }
 
-				value.RemainingHits += result.Value.RemainingHits;
-				if (result.Value.RemainingTerms != null && result.Value.RemainingTerms.Count > 0)
-				{
-					value.RemainingTerms = value.RemainingTerms.Union(result.Value.RemainingTerms).ToList();
-				}
-				value.RemainingHits += result.Value.RemainingTermsCount;
+                value.RemainingHits += result.Value.RemainingHits;
+                if (result.Value.RemainingTerms != null && result.Value.RemainingTerms.Count > 0)
+                {
+                    value.RemainingTerms = value.RemainingTerms.Union(result.Value.RemainingTerms).ToList();
+                }
+                value.RemainingHits += result.Value.RemainingTermsCount;
 
-				foreach (var facetValue in result.Value.Values)
-				{
-					var match = value.Values.FirstOrDefault(x => x.Range == facetValue.Range);
-					if (match == null)
-					{
-						match = new FacetValue{Range = facetValue.Range};
-						value.Values.Add(facetValue);
-					}
-					
-					if(facetValue.Sum != null)
-						match.Sum += facetValue.Sum;
-					
-					if (match.Min != null || facetValue.Min != null)
-						match.Min = Math.Min(match.Min ?? double.MaxValue, facetValue.Min ?? double.MaxValue);
+                foreach (var facetValue in result.Value.Values)
+                {
+                    var match = value.Values.FirstOrDefault(x => x.Range == facetValue.Range);
+                    if (match == null)
+                    {
+                        match = new FacetValue{Range = facetValue.Range};
+                        value.Values.Add(facetValue);
+                    }
+                    
+                    if(facetValue.Sum != null)
+                        match.Sum += facetValue.Sum;
+                    
+                    if (match.Min != null || facetValue.Min != null)
+                        match.Min = Math.Min(match.Min ?? double.MaxValue, facetValue.Min ?? double.MaxValue);
 
-					if (match.Max != null || facetValue.Max != null)
-						match.Max = Math.Min(match.Max ?? double.MinValue, facetValue.Max ?? double.MinValue);
+                    if (match.Max != null || facetValue.Max != null)
+                        match.Max = Math.Min(match.Max ?? double.MinValue, facetValue.Max ?? double.MinValue);
 
-					match.Hits += facetValue.Hits;
+                    match.Hits += facetValue.Hits;
 
-					if (facetValue.Count != null)
-						match.Count += facetValue.Count;
+                    if (facetValue.Count != null)
+                        match.Count += facetValue.Count;
 
-					if (facetValue.Average != null)
-					{
-						List<double> list;
-						if (avgs.TryGetValue(match, out list) == false)
-						{
-							avgs[match] = list = new List<double>();
-						}
-						list.Add(facetValue.Average.Value);
-					}
-				}
-			}
+                    if (facetValue.Average != null)
+                    {
+                        List<double> list;
+                        if (avgs.TryGetValue(match, out list) == false)
+                        {
+                            avgs[match] = list = new List<double>();
+                        }
+                        list.Add(facetValue.Average.Value);
+                    }
+                }
+            }
 
-			foreach (var avg in avgs)
-			{
-				avg.Key.Average = avg.Value.Average();
-			}
+            foreach (var avg in avgs)
+            {
+                avg.Key.Average = avg.Value.Average();
+            }
 
-			return finalResult;
-		}
-	}
+            return finalResult;
+        }
+    }
 }

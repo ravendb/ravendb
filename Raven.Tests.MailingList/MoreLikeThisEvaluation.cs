@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -15,54 +15,54 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class MoreLikeThisEvaluation : RavenTestBase
-	{
-		private readonly IDocumentStore _store;
+    public class MoreLikeThisEvaluation : RavenTestBase
+    {
+        private readonly IDocumentStore _store;
 
-		public MoreLikeThisEvaluation()
-		{
-			_store = NewDocumentStore();
-			_store.Initialize();
-		}
+        public MoreLikeThisEvaluation()
+        {
+            _store = NewDocumentStore();
+            _store.Initialize();
+        }
 
-		public override void Dispose()
-		{
-			_store.Initialize();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            _store.Initialize();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void ShouldMatchTwoMoviesWithSameCast()
-		{
-			string id;
-			using (var session = _store.OpenSession())
-			{
-				new MovieIndex().Execute(_store);
-				var list = GetMovieList();
-				list.ForEach(session.Store);
-				session.SaveChanges();
-				id = session.Advanced.GetDocumentId(list.First());
-				WaitForIndexing(_store);
-			}
+        [Fact]
+        public void ShouldMatchTwoMoviesWithSameCast()
+        {
+            string id;
+            using (var session = _store.OpenSession())
+            {
+                new MovieIndex().Execute(_store);
+                var list = GetMovieList();
+                list.ForEach(session.Store);
+                session.SaveChanges();
+                id = session.Advanced.GetDocumentId(list.First());
+                WaitForIndexing(_store);
+            }
 
-			using (var session = _store.OpenSession())
-			{
-				var list = session
-					.Advanced
-					.MoreLikeThis<Movie, MovieIndex>(new MoreLikeThisQuery
-					{
-						DocumentId = id,
-						Fields = new[] { "Cast" },
-						MinimumTermFrequency = 1,
-						MinimumDocumentFrequency = 2
-					});
+            using (var session = _store.OpenSession())
+            {
+                var list = session
+                    .Advanced
+                    .MoreLikeThis<Movie, MovieIndex>(new MoreLikeThisQuery
+                    {
+                        DocumentId = id,
+                        Fields = new[] { "Cast" },
+                        MinimumTermFrequency = 1,
+                        MinimumDocumentFrequency = 2
+                    });
 
-				Assert.NotEmpty(list);
-			}
-		}
-		private static List<Movie> GetMovieList()
-		{
-			return new List<Movie> {
+                Assert.NotEmpty(list);
+            }
+        }
+        private static List<Movie> GetMovieList()
+        {
+            return new List<Movie> {
                                        new Movie
                                            {
                                                Title = "Star Wars Episode IV: A New Hope",
@@ -106,23 +106,23 @@ namespace Raven.Tests.MailingList
                                                           }
                                            }
                                    };
-		}
+        }
 
-		public class Movie
-		{
-			public string Id { get; set; }
-			public string Title { get; set; }
-			public string[] Cast { get; set; }
-		}
+        public class Movie
+        {
+            public string Id { get; set; }
+            public string Title { get; set; }
+            public string[] Cast { get; set; }
+        }
 
-		public class MovieIndex : AbstractIndexCreationTask<Movie>
-		{
-			public MovieIndex()
-			{
-				Map = docs => from doc in docs
-							  select new { doc.Cast };
+        public class MovieIndex : AbstractIndexCreationTask<Movie>
+        {
+            public MovieIndex()
+            {
+                Map = docs => from doc in docs
+                              select new { doc.Cast };
 
-				Analyzers = new Dictionary<Expression<Func<Movie, object>>, string>
+                Analyzers = new Dictionary<Expression<Func<Movie, object>>, string>
                             {
                                 {
                                     x => x.Cast,
@@ -130,19 +130,19 @@ namespace Raven.Tests.MailingList
                                     }
                             };
 
-				Stores = new Dictionary<Expression<Func<Movie, object>>, FieldStorage>
+                Stores = new Dictionary<Expression<Func<Movie, object>>, FieldStorage>
                          {
                              {
                                  x => x.Cast, FieldStorage.Yes
                              }
                          };
 
-				TermVector(x=>x.Cast, FieldTermVector.WithPositionsAndOffsets);
-			}
-		}
+                TermVector(x=>x.Cast, FieldTermVector.WithPositionsAndOffsets);
+            }
+        }
 
-	}
+    }
 
-	
+    
 
 }

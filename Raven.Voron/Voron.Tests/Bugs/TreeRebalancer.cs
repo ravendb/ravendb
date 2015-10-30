@@ -4,69 +4,69 @@ using Voron.Util;
 
 namespace Voron.Tests.Bugs
 {
-	using System;
-	using System.Collections.Generic;
-	using Xunit;
+    using System;
+    using System.Collections.Generic;
+    using Xunit;
 
-	public class TreeRebalancer : StorageTest
-	{
-		[PrefixesFact]
-		public void TreeRabalancerShouldCopyNodeFlagsWhenMultiValuePageRefIsSet()
-		{
-			var addedIds = new Dictionary<string, string>();
+    public class TreeRebalancer : StorageTest
+    {
+        [PrefixesFact]
+        public void TreeRabalancerShouldCopyNodeFlagsWhenMultiValuePageRefIsSet()
+        {
+            var addedIds = new Dictionary<string, string>();
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
-			{
-				var multiTrees = CreateTrees(env, 1, "multiTree");
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					for (var i = 0; i < 120; i++)
-					{
-						foreach (var multiTreeName in multiTrees)
-						{
-						    var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
-							var id = Guid.NewGuid().ToString();
-
-							addedIds.Add("test/0/user-" + i, id);
-
-							multiTree.MultiAdd("test/0/user-" + i, id);
-						}
-					}
-
-					foreach (var multiTreeName in multiTrees)
-					{
-                        var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
-						multiTree.MultiAdd("test/0/user-50", Guid.NewGuid().ToString());
-					}
-
-					tx.Commit();
-				}
-
-
-				for (var i = 119; i > 99; i--)
-				{
-					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-					{
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            {
+                var multiTrees = CreateTrees(env, 1, "multiTree");
+                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    for (var i = 0; i < 120; i++)
+                    {
                         foreach (var multiTreeName in multiTrees)
                         {
                             var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
-					
-							multiTree.MultiDelete("test/0/user-" + i, addedIds["test/0/user-" + i]);
-						}
+                            var id = Guid.NewGuid().ToString();
 
-						tx.Commit();
-					}
+                            addedIds.Add("test/0/user-" + i, id);
 
-					ValidateMulti(env, multiTrees);
-				}
+                            multiTree.MultiAdd("test/0/user-" + i, id);
+                        }
+                    }
 
-				for (var i = 0; i < 50; i++)
-				{
-					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						if (i == 29)
-						{
-						}
+                    foreach (var multiTreeName in multiTrees)
+                    {
+                        var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
+                        multiTree.MultiAdd("test/0/user-50", Guid.NewGuid().ToString());
+                    }
+
+                    tx.Commit();
+                }
+
+
+                for (var i = 119; i > 99; i--)
+                {
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        foreach (var multiTreeName in multiTrees)
+                        {
+                            var multiTree = tx.Environment.CreateTree(tx,multiTreeName);
+                    
+                            multiTree.MultiDelete("test/0/user-" + i, addedIds["test/0/user-" + i]);
+                        }
+
+                        tx.Commit();
+                    }
+
+                    ValidateMulti(env, multiTrees);
+                }
+
+                for (var i = 0; i < 50; i++)
+                {
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        if (i == 29)
+                        {
+                        }
 
                         foreach (var multiTreeName in multiTrees)
                         {
@@ -235,28 +235,28 @@ namespace Voron.Tests.Bugs
 					Assert.Equal(fKey, iterator.CurrentKey);
 					Assert.True(iterator.MoveNext());
 
-					Assert.Equal(gKey, iterator.CurrentKey);
-					Assert.True(iterator.MoveNext());
+                    Assert.Equal(gKey, iterator.CurrentKey);
+                    Assert.True(iterator.MoveNext());
 
-					Assert.Equal(hKey, iterator.CurrentKey);
-					Assert.True(iterator.MoveNext());
+                    Assert.Equal(hKey, iterator.CurrentKey);
+                    Assert.True(iterator.MoveNext());
 
-					Assert.Equal(iKey, iterator.CurrentKey);
-					Assert.True(iterator.MoveNext());
+                    Assert.Equal(iKey, iterator.CurrentKey);
+                    Assert.True(iterator.MoveNext());
 
-					Assert.Equal(jKey, iterator.CurrentKey);
-					Assert.True(iterator.MoveNext());
+                    Assert.Equal(jKey, iterator.CurrentKey);
+                    Assert.True(iterator.MoveNext());
 
-					Assert.Equal(kKey, iterator.CurrentKey);
-					Assert.True(iterator.MoveNext());
+                    Assert.Equal(kKey, iterator.CurrentKey);
+                    Assert.True(iterator.MoveNext());
 
-					Assert.Equal(lKey, iterator.CurrentKey);
-					Assert.True(iterator.MoveNext());
+                    Assert.Equal(lKey, iterator.CurrentKey);
+                    Assert.True(iterator.MoveNext());
 
-					Assert.Equal(mKey, iterator.CurrentKey);
-					Assert.False(iterator.MoveNext());
-				}
-			}
-		}
-	}
+                    Assert.Equal(mKey, iterator.CurrentKey);
+                    Assert.False(iterator.MoveNext());
+                }
+            }
+        }
+    }
 }

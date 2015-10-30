@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -102,7 +102,7 @@ namespace Raven.Abstractions.FileSystem
         {
             get
             {
-				return FileSystemPathExtentions.GetDirectoryName(this.FullPath)
+                return FileSystemPathExtentions.GetDirectoryName(this.FullPath)
                                      .Replace('\\', '/');
             }
         }      
@@ -133,9 +133,9 @@ namespace Raven.Abstractions.FileSystem
 
         private void SetFileSize()
         {
-			if (this.Metadata.Keys.Contains(Constants.FileSystem.RavenFsSize))
+            if (this.Metadata.Keys.Contains(Constants.FileSystem.RavenFsSize))
             {
-				var metadataTotalSize = this.Metadata[Constants.FileSystem.RavenFsSize].Value<long>();
+                var metadataTotalSize = this.Metadata[Constants.FileSystem.RavenFsSize].Value<long>();
                 if (metadataTotalSize > 0)
                     this._totalSize = metadataTotalSize;
             }

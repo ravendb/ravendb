@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -38,20 +38,20 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers
 {
     public abstract class RavenBaseApiController : ApiController
-	{
-		protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
+    {
+        protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
         
-		private HttpRequestMessage request;
+        private HttpRequestMessage request;
 
-		internal bool SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized{ get; set; }
+        internal bool SkipAuthorizationSinceThisIsMultiGetRequestAlreadyAuthorized{ get; set; }
 
-		public HttpRequestMessage InnerRequest
-		{
-			get
-			{
-				return Request ?? request;
-			}
-		}
+        public HttpRequestMessage InnerRequest
+        {
+            get
+            {
+                return Request ?? request;
+            }
+        }
 
         public bool IsInternalRequest
         {
@@ -108,14 +108,14 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-		public new IPrincipal User { get; set; }
+        public new IPrincipal User { get; set; }
 
         public bool WasAlreadyAuthorizedUsingSingleAuthToken { get; set; }
 
-		protected virtual void InnerInitialization(HttpControllerContext controllerContext)
-		{
-			request = controllerContext.Request;
-			User = controllerContext.RequestContext.Principal;
+        protected virtual void InnerInitialization(HttpControllerContext controllerContext)
+        {
+            request = controllerContext.Request;
+            User = controllerContext.RequestContext.Principal;
 
             landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
@@ -172,9 +172,9 @@ namespace Raven.Database.Server.Controllers
 		{
 			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
-			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
-				return streamReader.ReadToEnd();
-		}
+            using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
+                return streamReader.ReadToEnd();
+        }
 
 	    protected async Task<RavenJArray> ReadBsonArrayAsync()
 		{
@@ -245,13 +245,13 @@ namespace Raven.Database.Server.Controllers
 		    {
 		        Console.WriteLine(e.Message);
                 return Etag.InvalidEtag;
-		    }
-		}
+            }
+        }
 
-		public string GetQueryStringValue(string key)
-		{
-			return GetQueryStringValue(InnerRequest, key);
-		}
+        public string GetQueryStringValue(string key)
+        {
+            return GetQueryStringValue(InnerRequest, key);
+        }
 
 //		public static string GetQueryStringValue(HttpRequestMessage req, string key)
 //		{
@@ -360,7 +360,7 @@ namespace Raven.Database.Server.Controllers
                                     msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
                                 }                                    
                             }
-						}
+                        }
                         else if (header.Value.Type == JTokenType.Boolean)
                         {
                             msg.Content.Headers.Add(header.Key, header.Value.ToString());
@@ -437,158 +437,158 @@ namespace Raven.Database.Server.Controllers
 
             bool metadataOnly;
             if (bool.TryParse(GetQueryStringValue("metadata-only"), out metadataOnly) && metadataOnly)
-				token = Extensions.HttpExtensions.MinimizeToken(token);
+                token = Extensions.HttpExtensions.MinimizeToken(token);
             
-			var msg = new HttpResponseMessage(code)
-			{
-				Content = JsonContent(token),
-			};
+            var msg = new HttpResponseMessage(code)
+            {
+                Content = JsonContent(token),
+            };
 
-			WriteETag(etag, msg);
+            WriteETag(etag, msg);
 
-			return msg;
-		}
+            return msg;
+        }
 
-		public virtual HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var resMsg = new HttpResponseMessage(code)
-			{
+        public virtual HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var resMsg = new HttpResponseMessage(code)
+            {
                 Content = new MultiGetSafeStringContent(msg),
-			};
+            };
 
-			WriteETag(etag, resMsg);
+            WriteETag(etag, resMsg);
 
-			return resMsg;
-		}
+            return resMsg;
+        }
 
-		public virtual HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			var resMsg = new HttpResponseMessage(code)
-			{
-				Content = JsonContent()
-			};
-			WriteETag(etag, resMsg);
-			return resMsg;
-		}
+        public virtual HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            var resMsg = new HttpResponseMessage(code)
+            {
+                Content = JsonContent()
+            };
+            WriteETag(etag, resMsg);
+            return resMsg;
+        }
 
-		public virtual Task<HttpResponseMessage> GetMessageWithObjectAsTask(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-	    {
-			return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(item, code, etag));
-	    }
+        public virtual Task<HttpResponseMessage> GetMessageWithObjectAsTask(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(item, code, etag));
+        }
 
-		public Task<HttpResponseMessage> GetMessageWithStringAsTask(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			return new CompletedTask<HttpResponseMessage>(GetMessageWithString(msg, code, etag));
-		}
+        public Task<HttpResponseMessage> GetMessageWithStringAsTask(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            return new CompletedTask<HttpResponseMessage>(GetMessageWithString(msg, code, etag));
+        }
 
-		public Task<HttpResponseMessage> GetEmptyMessageAsTask(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
-		{
-			return new CompletedTask<HttpResponseMessage>(GetEmptyMessage(code, etag));
-		}
+        public Task<HttpResponseMessage> GetEmptyMessageAsTask(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+        {
+            return new CompletedTask<HttpResponseMessage>(GetEmptyMessage(code, etag));
+        }
 
-		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
-		{
-			if (msg == null)
-				msg = GetEmptyMessage(status);
+        public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
+        {
+            if (msg == null)
+                msg = GetEmptyMessage(status);
 
-			var jsonContent = ((JsonContent)msg.Content);
+            var jsonContent = ((JsonContent)msg.Content);
 
-			WriteHeaders(headers, etag, msg);
+            WriteHeaders(headers, etag, msg);
 
-			var jsonp = GetQueryStringValue("jsonp");
-			if (string.IsNullOrEmpty(jsonp) == false)
-				jsonContent.Jsonp = jsonp;
+            var jsonp = GetQueryStringValue("jsonp");
+            if (string.IsNullOrEmpty(jsonp) == false)
+                jsonContent.Jsonp = jsonp;
 
-			jsonContent.Data = data;
+            jsonContent.Data = data;
 
-			return msg;
-		}
+            return msg;
+        }
 
-		public Etag GetEtag()
-		{
-			var etagAsString = GetHeader("If-None-Match") ?? GetHeader("If-Match");
-			if (etagAsString != null)
-			{
-				// etags are usually quoted
-				if (etagAsString.StartsWith("\"") && etagAsString.EndsWith("\""))
-					etagAsString = etagAsString.Substring(1, etagAsString.Length - 2);
+        public Etag GetEtag()
+        {
+            var etagAsString = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            if (etagAsString != null)
+            {
+                // etags are usually quoted
+                if (etagAsString.StartsWith("\"") && etagAsString.EndsWith("\""))
+                    etagAsString = etagAsString.Substring(1, etagAsString.Length - 2);
 
-				Etag result;
-				if (Etag.TryParse(etagAsString, out result))
-					return result;
+                Etag result;
+                if (Etag.TryParse(etagAsString, out result))
+                    return result;
 
-				throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
-			}
+                throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
+            }
 
-			return null;
-		}
+            return null;
+        }
 
-		public string GetHeader(string key)
-		{
-		    IEnumerable<string> values;
-		    if (InnerRequest.Headers.TryGetValues(key, out values) ||
+        public string GetHeader(string key)
+        {
+            IEnumerable<string> values;
+            if (InnerRequest.Headers.TryGetValues(key, out values) ||
                 (InnerRequest.Content != null && InnerRequest.Content.Headers.TryGetValues(key, out values)))
-		        return values.FirstOrDefault();
-		    return null;
-		}
+                return values.FirstOrDefault();
+            return null;
+        }
 
-		public List<string> GetHeaders(string key)
-		{
+        public List<string> GetHeaders(string key)
+        {
             IEnumerable<string> values;
             if (InnerRequest.Headers.TryGetValues(key, out values) ||
                 InnerRequest.Content.Headers.TryGetValues(key, out values))
                 return values.ToList();
             return null;
-		}
+        }
 
-		public bool HasCookie(string key)
-		{
-			return InnerRequest.Headers.GetCookies(key).Count != 0;
-		}
+        public bool HasCookie(string key)
+        {
+            return InnerRequest.Headers.GetCookies(key).Count != 0;
+        }
 
-		public string GetCookie(string key)
-		{
-			var cookieHeaderValue = InnerRequest.Headers.GetCookies(key).FirstOrDefault();
-			if (cookieHeaderValue != null)
-			{
-				var cookie = cookieHeaderValue.Cookies.FirstOrDefault();
-				if (cookie != null)
-					return cookie.Value;
-			}
+        public string GetCookie(string key)
+        {
+            var cookieHeaderValue = InnerRequest.Headers.GetCookies(key).FirstOrDefault();
+            if (cookieHeaderValue != null)
+            {
+                var cookie = cookieHeaderValue.Cookies.FirstOrDefault();
+                if (cookie != null)
+                    return cookie.Value;
+            }
 
-			return null;
-		}
+            return null;
+        }
 
-		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string zipPath,  string docPath)
-		{
-			var filePath = Path.Combine(ravenPath, docPath);
-			if (File.Exists(filePath))
-				return WriteFile(filePath);
-			
+        public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string embeddedPath, string zipPath,  string docPath)
+        {
+            var filePath = Path.Combine(ravenPath, docPath);
+            if (File.Exists(filePath))
+                return WriteFile(filePath);
+            
             filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../Raven.Studio.Html5/", docPath);
-			if (File.Exists(filePath))
-				return WriteFile(filePath);
+            if (File.Exists(filePath))
+                return WriteFile(filePath);
 
-		    filePath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, docPath);
-		    if (File.Exists(filePath))
-		        return WriteFile(filePath);
+            filePath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, docPath);
+            if (File.Exists(filePath))
+                return WriteFile(filePath);
 
             filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
             if (File.Exists(filePath))
                 return WriteFile(filePath);
 
-			if (string.IsNullOrEmpty(zipPath) == false)
-			{
-			    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
+            if (string.IsNullOrEmpty(zipPath) == false)
+            {
+                var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
 
-				if (File.Exists(fullZipPath) == false)
-					fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
+                if (File.Exists(fullZipPath) == false)
+                    fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
 
-			    if (File.Exists(fullZipPath) == false)
-			        fullZipPath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, zipPath + ".zip");
+                if (File.Exists(fullZipPath) == false)
+                    fullZipPath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, zipPath + ".zip");
 
-				if (File.Exists(fullZipPath))
-				{
+                if (File.Exists(fullZipPath))
+                {
                     return WriteFileFromZip(fullZipPath, docPath);
 				}
 			}
@@ -642,68 +642,68 @@ namespace Raven.Database.Server.Controllers
                 etagValue = etagValue.Trim(new[] { '\"' });
             }
 
-			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
-			if (etagValue == fileEtag)
-				return GetEmptyMessage(HttpStatusCode.NotModified);
+            var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+            if (etagValue == fileEtag)
+                return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var msg = new HttpResponseMessage
-			{
-				Content = new CompressedStreamContent(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), false)
-			};
+            var msg = new HttpResponseMessage
+            {
+                Content = new CompressedStreamContent(new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), false)
+            };
 
-			WriteETag(fileEtag, msg);
+            WriteETag(fileEtag, msg);
 
-			var type = GetContentType(filePath);
-			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
+            var type = GetContentType(filePath);
+            msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
-			return msg;
-		}
+            return msg;
+        }
 
-		private HttpResponseMessage WriteEmbeddedFileOfType(string embeddedPath, string docPath)
-		{
-			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
-			var currentFileEtag = EmbeddedLastChangedDate + docPath;
-			if (etagValue == "\"" + currentFileEtag + "\"")
-				return GetEmptyMessage(HttpStatusCode.NotModified);
+        private HttpResponseMessage WriteEmbeddedFileOfType(string embeddedPath, string docPath)
+        {
+            var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
+            var currentFileEtag = EmbeddedLastChangedDate + docPath;
+            if (etagValue == "\"" + currentFileEtag + "\"")
+                return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			byte[] bytes;
-			var resourceName = embeddedPath + "." + docPath.Replace("/", ".");
+            byte[] bytes;
+            var resourceName = embeddedPath + "." + docPath.Replace("/", ".");
 
-			var resourceAssembly = typeof(RavenBaseApiController).Assembly;
-			var resourceNames = resourceAssembly.GetManifestResourceNames();
-			var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
-		    if (lowercasedResourceName == null)
-		    {
-				return EmbeddedFileNotFound(docPath);
-		    }
-			using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
-			{
-				if (resource == null)
-					return EmbeddedFileNotFound(docPath);
+            var resourceAssembly = typeof(RavenBaseApiController).Assembly;
+            var resourceNames = resourceAssembly.GetManifestResourceNames();
+            var lowercasedResourceName = resourceNames.FirstOrDefault(s => string.Equals(s, resourceName, StringComparison.OrdinalIgnoreCase));
+            if (lowercasedResourceName == null)
+            {
+                return EmbeddedFileNotFound(docPath);
+            }
+            using (var resource = resourceAssembly.GetManifestResourceStream(lowercasedResourceName))
+            {
+                if (resource == null)
+                    return EmbeddedFileNotFound(docPath);
 
-				bytes = resource.ReadData();
-			}
-			var msg = new HttpResponseMessage
-			{
-				Content = new ByteArrayContent(bytes),
-			};
+                bytes = resource.ReadData();
+            }
+            var msg = new HttpResponseMessage
+            {
+                Content = new ByteArrayContent(bytes),
+            };
 
-			WriteETag(currentFileEtag, msg);
+            WriteETag(currentFileEtag, msg);
 
-			var type = GetContentType(docPath);
-			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
+            var type = GetContentType(docPath);
+            msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 
-			return msg;
-		}
+            return msg;
+        }
 
-		private HttpResponseMessage EmbeddedFileNotFound(string docPath)
-		{
-			var message = "The following embedded file was not available: " + docPath +
-			              ". Please make sure that the Raven.Studio.Html5.zip file exist in the main directory (near to the Raven.Database.dll).";
-			return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
-		}
+        private HttpResponseMessage EmbeddedFileNotFound(string docPath)
+        {
+            var message = "The following embedded file was not available: " + docPath +
+                          ". Please make sure that the Raven.Studio.Html5.zip file exist in the main directory (near to the Raven.Database.dll).";
+            return GetMessageWithObject(new {Message = message}, HttpStatusCode.NotFound);
+        }
 
-		private static readonly string EmbeddedLastChangedDate =
+        private static readonly string EmbeddedLastChangedDate =
             File.GetLastWriteTime(AssemblyHelper.GetAssemblyLocationFor(typeof(HttpExtensions))).Ticks.ToString("G");
 
 		private static string GetContentType(string docPath)
@@ -746,11 +746,11 @@ namespace Raven.Database.Server.Controllers
 
         protected class Headers : HttpHeaders {}
 
-		public JsonContent JsonContent(RavenJToken data = null)
-		{
-			return new JsonContent(data)
-				.WithRequest(InnerRequest);
-		}
+        public JsonContent JsonContent(RavenJToken data = null)
+        {
+            return new JsonContent(data)
+                .WithRequest(InnerRequest);
+        }
 
         public string GetRequestUrl()
         {
@@ -758,10 +758,10 @@ namespace Raven.Database.Server.Controllers
             return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, SystemConfiguration);
         }
 
-	    public abstract InMemoryRavenConfiguration SystemConfiguration { get; }
+        public abstract InMemoryRavenConfiguration SystemConfiguration { get; }
 
 
-	    protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
+        protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
         {
             AddHeader(Constants.RavenServerBuild, DocumentDatabase.BuildVersion, msg);
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
@@ -775,18 +775,18 @@ namespace Raven.Database.Server.Controllers
 
         public int InnerRequestsCount { get { return innerRequestsCount;  } }
 
-		public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
+        public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
 
 	    protected void AddRequestTraceInfo(Action<StringBuilder> info)
 		{
 			if (info == null)
 				return;
 
-			if (CustomRequestTraceInfo == null)
-				CustomRequestTraceInfo = new List<Action<StringBuilder>>();
+            if (CustomRequestTraceInfo == null)
+                CustomRequestTraceInfo = new List<Action<StringBuilder>>();
 
-			CustomRequestTraceInfo.Add(info);
-		}
+            CustomRequestTraceInfo.Add(info);
+        }
 
 	    protected void IncrementInnerRequestsCount()
         {

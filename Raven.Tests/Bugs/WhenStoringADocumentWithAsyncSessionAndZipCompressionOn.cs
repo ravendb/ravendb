@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Tests.Common;

@@ -105,10 +105,10 @@ namespace Raven.Client.Connection.Implementation
 			{
 				Timeout = TimeSpan.FromSeconds(100); // default HttpClient timeout
 #if DEBUG
-				if (Debugger.IsAttached)
-				{
-					Timeout = TimeSpan.FromMinutes(5);
-				}
+                if (Debugger.IsAttached)
+                {
+                    Timeout = TimeSpan.FromMinutes(5);
+                }
 #endif
 			}
 
@@ -189,20 +189,20 @@ namespace Raven.Client.Connection.Implementation
 			if (result != null)
 				return result;
             return await ReadJsonInternalAsync().ConfigureAwait(false); 
-		}
+        }
 
         private Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
-		{
-			if (isRequestSentToServer && Debugger.IsAttached == false)
-				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
-			isRequestSentToServer = true;
+        {
+            if (isRequestSentToServer && Debugger.IsAttached == false)
+                throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
+            isRequestSentToServer = true;
 
-			return RunWithAuthRetry(async () =>
-			{
-				try
-				{
-					var requestMessage = getRequestMessage();
-					CopyHeadersToHttpRequestMessage(requestMessage);
+            return RunWithAuthRetry(async () =>
+            {
+                try
+                {
+                    var requestMessage = getRequestMessage();
+                    CopyHeadersToHttpRequestMessage(requestMessage);
                     Response = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
 					SetResponseHeaders(Response);
 				    AssertServerVersionSupported();
@@ -225,15 +225,15 @@ namespace Raven.Client.Connection.Implementation
 				// throw the conflict exception
                 return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString).ConfigureAwait(false);
             });
-		}
+        }
 
-	    private void AssertServerVersionSupported()
-	    {
-		    if ((CallContext.GetData(Constants.Smuggler.CallContext) as bool?) == true) // allow Raven.Smuggler to work against old servers
-			    return;
+        private void AssertServerVersionSupported()
+        {
+            if ((CallContext.GetData(Constants.Smuggler.CallContext) as bool?) == true) // allow Raven.Smuggler to work against old servers
+                return;
 
-		    var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
-	        int serverBuild;
+            var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
+            int serverBuild;
 
             // server doesn't return Raven-Server-Build in case of requests failures, thus we firstly check for header presence 
             if (string.IsNullOrEmpty(serverBuildString) == false && int.TryParse(serverBuildString, out serverBuild))
@@ -262,10 +262,10 @@ namespace Raven.Client.Connection.Implementation
 					if (++retries >= 3 || disabledAuthRetries)
 						throw;
 
-					if (e.StatusCode != HttpStatusCode.Unauthorized &&
-						e.StatusCode != HttpStatusCode.Forbidden &&
-						e.StatusCode != HttpStatusCode.PreconditionFailed)
-						throw;
+                    if (e.StatusCode != HttpStatusCode.Unauthorized &&
+                        e.StatusCode != HttpStatusCode.Forbidden &&
+                        e.StatusCode != HttpStatusCode.PreconditionFailed)
+                        throw;
 
 					responseException = e;
 				}
@@ -660,18 +660,18 @@ namespace Raven.Client.Connection.Implementation
 				SetResponseHeaders(Response);
                 AssertServerVersionSupported();
 
-			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
+                await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true).ConfigureAwait(false);
 
-				var stream = await Response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-				var observableLineStream = new ObservableLineStream(stream, () =>
-				{
-					Response.Dispose();
-					factory.HttpClientCache.ReleaseClient(httpClient, _credentials);
-				});
-				observableLineStream.Start();
-				return (IObservable<string>)observableLineStream;
-			}).ConfigureAwait(false);
-		}
+                var stream = await Response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                var observableLineStream = new ObservableLineStream(stream, () =>
+                {
+                    Response.Dispose();
+                    factory.HttpClientCache.ReleaseClient(httpClient, _credentials);
+                });
+                observableLineStream.Start();
+                return (IObservable<string>)observableLineStream;
+            }).ConfigureAwait(false);
+        }
 
         public Task WriteWithObjectAsync<T>(IEnumerable<T> data) 
         {
@@ -747,42 +747,42 @@ namespace Raven.Client.Connection.Implementation
 			});
 		}
         
-		public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
-		{
-			return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
-		}
+        public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
+        {
+            return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
+        }
 
-		public Task<HttpResponseMessage> ExecuteRawResponseAsync()
-		{
-			return ExecuteRawResponseInternalAsync(null);
-		}
+        public Task<HttpResponseMessage> ExecuteRawResponseAsync()
+        {
+            return ExecuteRawResponseInternalAsync(null);
+        }
 
-		private async Task<HttpResponseMessage> ExecuteRawResponseInternalAsync(HttpContent content)
-		{
+        private async Task<HttpResponseMessage> ExecuteRawResponseInternalAsync(HttpContent content)
+        {
             return await RunWithAuthRetry(async () =>
 		    {
                 var rawRequestMessage = new HttpRequestMessage(Method, Url);
 
-			    if (content != null)
-			    {
-				    rawRequestMessage.Content = content;
-			    }
+                if (content != null)
+                {
+                    rawRequestMessage.Content = content;
+                }
 
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
 
                 Response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-				ResponseStatusCode = Response.StatusCode;
-				if (Response.IsSuccessStatusCode == false &&
-					(Response.StatusCode == HttpStatusCode.PreconditionFailed ||
-					Response.StatusCode == HttpStatusCode.Forbidden ||
-					Response.StatusCode == HttpStatusCode.Unauthorized))
+                ResponseStatusCode = Response.StatusCode;
+                if (Response.IsSuccessStatusCode == false &&
+                    (Response.StatusCode == HttpStatusCode.PreconditionFailed ||
+                    Response.StatusCode == HttpStatusCode.Forbidden ||
+                    Response.StatusCode == HttpStatusCode.Unauthorized))
                 {
-					throw new ErrorResponseException(Response, "Failed request");
+                    throw new ErrorResponseException(Response, "Failed request");
                 }
 
-				return Response;
-		    }).ConfigureAwait(false);
-		}
+                return Response;
+            }).ConfigureAwait(false);
+        }
 
 		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(Action<Stream, TaskCompletionSource<object>> action)
 		{
@@ -797,52 +797,52 @@ namespace Raven.Client.Connection.Implementation
 
                 CopyHeadersToHttpRequestMessage(rawRequestMessage);
                 Response = await httpClient.SendAsync(rawRequestMessage).ConfigureAwait(false);
-				ResponseStatusCode = Response.StatusCode;
+                ResponseStatusCode = Response.StatusCode;
 
-				if (Response.IsSuccessStatusCode == false &&
-					(Response.StatusCode == HttpStatusCode.PreconditionFailed ||
-					Response.StatusCode == HttpStatusCode.Forbidden ||
-					Response.StatusCode == HttpStatusCode.Unauthorized))
+                if (Response.IsSuccessStatusCode == false &&
+                    (Response.StatusCode == HttpStatusCode.PreconditionFailed ||
+                    Response.StatusCode == HttpStatusCode.Forbidden ||
+                    Response.StatusCode == HttpStatusCode.Unauthorized))
                 {
-					throw new ErrorResponseException(Response, "Failed request");
+                    throw new ErrorResponseException(Response, "Failed request");
                 }
 
-				return Response;
+                return Response;
             }).ConfigureAwait(false);		
-		}
+        }
 
-		private class PushContent : HttpContent
-		{
-			private readonly Action<Stream, TaskCompletionSource<object>> action;
-			private readonly TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
+        private class PushContent : HttpContent
+        {
+            private readonly Action<Stream, TaskCompletionSource<object>> action;
+            private readonly TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
 
-			public PushContent(Action<Stream, TaskCompletionSource<object>> action)
-			{
-				this.action = action;
-			}
+            public PushContent(Action<Stream, TaskCompletionSource<object>> action)
+            {
+                this.action = action;
+            }
 
-			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{
-				action(stream, tcs);
-				return tcs.Task;
-			}
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            {
+                action(stream, tcs);
+                return tcs.Task;
+            }
 
-			protected override bool TryComputeLength(out long length)
-			{
-				length = -1;
-				return false;
-			}
-		}
+            protected override bool TryComputeLength(out long length)
+            {
+                length = -1;
+                return false;
+            }
+        }
 
-		public void AddHeader(string key, string val)
-		{
-			headers.Set(key, val);
-		}
+        public void AddHeader(string key, string val)
+        {
+            headers.Set(key, val);
+        }
 
-		public void AddRange(long @from, long? to = null)
-		{
-			httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(from, to);
-		}
+        public void AddRange(long @from, long? to = null)
+        {
+            httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(from, to);
+        }
 
         public void AddHeaders(RavenJObject headersToAdd)
         {
@@ -854,13 +854,13 @@ namespace Raven.Client.Connection.Implementation
                     case JTokenType.Array:
                         AddHeader(item.Key, item.Value.ToString(Formatting.None));
                         break;
-					case JTokenType.Date:
-							var rfc1123 = GetDateString(item.Value, "r");
-							var iso8601 = GetDateString(item.Value, "o");
-							AddHeader(item.Key, rfc1123);
-							if (item.Key.StartsWith("Raven-") == false)
-								AddHeader("Raven-" + item.Key, iso8601);
-						break;
+                    case JTokenType.Date:
+                            var rfc1123 = GetDateString(item.Value, "r");
+                            var iso8601 = GetDateString(item.Value, "o");
+                            AddHeader(item.Key, rfc1123);
+                            if (item.Key.StartsWith("Raven-") == false)
+                                AddHeader("Raven-" + item.Key, iso8601);
+                        break;
                     default:
                         AddHeader(item.Key, item.Value.Value<string>());
                         break;
@@ -868,49 +868,49 @@ namespace Raven.Client.Connection.Implementation
             }
         }
 
-		private string GetDateString(RavenJToken token, string format)
-		{
-			var value = token as RavenJValue;
-			if (value == null)
-				return token.ToString();
+        private string GetDateString(RavenJToken token, string format)
+        {
+            var value = token as RavenJValue;
+            if (value == null)
+                return token.ToString();
 
-			var obj = value.Value;
+            var obj = value.Value;
 
-			if (obj is DateTime)
-				return ((DateTime)obj).ToString(format);
+            if (obj is DateTime)
+                return ((DateTime)obj).ToString(format);
 
-			if (obj is DateTimeOffset)
-				return ((DateTimeOffset)obj).ToString(format);
+            if (obj is DateTimeOffset)
+                return ((DateTimeOffset)obj).ToString(format);
 
-			return obj.ToString();
-		}
+            return obj.ToString();
+        }
 
-		public void AddHeaders(NameValueCollection nameValueHeaders)
-		{
+        public void AddHeaders(NameValueCollection nameValueHeaders)
+        {
             foreach (var key in nameValueHeaders.AllKeys)
-			{
-				AddHeader(key, nameValueHeaders[key]);
-			}
-		}
+            {
+                AddHeader(key, nameValueHeaders[key]);
+            }
+        }
 
-		public void Dispose()
-		{
-			DisposeInternal();
-		}
+        public void Dispose()
+        {
+            DisposeInternal();
+        }
 
-		private void DisposeInternal()
-		{
-			if (Response != null)
-			{
-				Response.Dispose();
-				Response = null;
-			}
+        private void DisposeInternal()
+        {
+            if (Response != null)
+            {
+                Response.Dispose();
+                Response = null;
+            }
 
-			if (httpClient != null)
-			{
-				factory.httpClientCache.ReleaseClient(httpClient, _credentials);
-				httpClient = null;
-			}
-		}
-	}
+            if (httpClient != null)
+            {
+                factory.httpClientCache.ReleaseClient(httpClient, _credentials);
+                httpClient = null;
+            }
+        }
+    }
 }

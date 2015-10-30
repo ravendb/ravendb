@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 // -----------------------------------------------------------------------
 //  <copyright file="DefaultEncryptor.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -10,67 +10,67 @@ using System.Security.Cryptography;
 
 namespace Raven.Abstractions.Util.Encryptors
 {
-	public sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
-	{
-		public DefaultEncryptor()
-		{
-			Hash = new DefaultHashEncryptor(allowNonThreadSafeMethods: false);
-		}
+    public sealed class DefaultEncryptor : EncryptorBase<DefaultEncryptor.DefaultHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
+    {
+        public DefaultEncryptor()
+        {
+            Hash = new DefaultHashEncryptor(allowNonThreadSafeMethods: false);
+        }
 
-		public override IHashEncryptor Hash { get; protected set; }
+        public override IHashEncryptor Hash { get; protected set; }
 
-		public class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
-		{
+        public class DefaultHashEncryptor : HashEncryptorBase, IHashEncryptor
+        {
             private readonly ObjectPool<MD5> md5Pool = new ObjectPool<MD5>(() => MD5.Create(), 16);
             private readonly ObjectPool<SHA1> sha1Pool = new ObjectPool<SHA1>(() => SHA1.Create(), 16);
             private readonly ObjectPool<SHA256> sha256Pool = new ObjectPool<SHA256>(() => SHA256.Create(), 16);
 
-			public DefaultHashEncryptor()
-				: this(true)
-			{
-			}
+            public DefaultHashEncryptor()
+                : this(true)
+            {
+            }
 
-			public DefaultHashEncryptor(bool allowNonThreadSafeMethods)
-				: base(allowNonThreadSafeMethods)
-			{
-			}
+            public DefaultHashEncryptor(bool allowNonThreadSafeMethods)
+                : base(allowNonThreadSafeMethods)
+            {
+            }
 
-			public int StorageHashSize
-			{
-				get { return 32; }
-			}
+            public int StorageHashSize
+            {
+                get { return 32; }
+            }
 
-			private MD5 md5;
+            private MD5 md5;
 
-			public void TransformBlock(byte[] bytes, int offset, int length)
-			{
-				ThrowNotSupportedExceptionForNonThreadSafeMethod();
+            public void TransformBlock(byte[] bytes, int offset, int length)
+            {
+                ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-				if (md5 == null)
-					md5 = MD5.Create();
+                if (md5 == null)
+                    md5 = MD5.Create();
 
-				md5.TransformBlock(bytes, offset, length, null, 0);
-			}
+                md5.TransformBlock(bytes, offset, length, null, 0);
+            }
 
-			public byte[] TransformFinalBlock()
-			{
-				ThrowNotSupportedExceptionForNonThreadSafeMethod();
+            public byte[] TransformFinalBlock()
+            {
+                ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-				if (md5 == null)
-					md5 = MD5.Create();
+                if (md5 == null)
+                    md5 = MD5.Create();
 
-				md5.TransformFinalBlock(new byte[0], 0, 0);
-				return md5.Hash;
-			}
+                md5.TransformFinalBlock(new byte[0], 0, 0);
+                return md5.Hash;
+            }
 
-			public void Dispose()
-			{
-				if (md5 != null)
-					md5.Dispose();
-			}
+            public void Dispose()
+            {
+                if (md5 != null)
+                    md5.Dispose();
+            }
 
-			public byte[] ComputeForStorage(byte[] bytes)
-			{
+            public byte[] ComputeForStorage(byte[] bytes)
+            {
                 SHA256 algorithm = null;
                 try
                 {
@@ -82,10 +82,10 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.sha256Pool.Free(algorithm);
                 }                
-			}
+            }
 
-			public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
-			{
+            public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
+            {
                 SHA256 algorithm = null;
                 try
                 {
@@ -97,10 +97,10 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.sha256Pool.Free(algorithm);
                 }
-			}
+            }
 
-			public byte[] ComputeForOAuth(byte[] bytes)
-			{
+            public byte[] ComputeForOAuth(byte[] bytes)
+            {
                 SHA1 algorithm = null;
                 try
                 {
@@ -112,10 +112,10 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.sha1Pool.Free(algorithm);
                 }
-			}
+            }
 
-			public byte[] Compute16(byte[] bytes)
-			{
+            public byte[] Compute16(byte[] bytes)
+            {
                 if (bytes.Length < 512)
                     return MD5Core.GetHash(bytes);
 
@@ -130,10 +130,10 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.md5Pool.Free(algorithm);
                 }
-			}
+            }
 
             public byte[] Compute16(Stream stream)
-			{
+            {
                 MD5 algorithm = null;
                 try
                 {
@@ -145,10 +145,10 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.md5Pool.Free(algorithm);
                 }
-			}
+            }
 
-			public byte[] Compute16(byte[] bytes, int offset, int length)
-			{
+            public byte[] Compute16(byte[] bytes, int offset, int length)
+            {
                 if (bytes.Length < 512)
                     return MD5Core.GetHash(bytes, offset, length);
 
@@ -163,10 +163,10 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.md5Pool.Free(algorithm);
                 }
-			}
+            }
 
-			public byte[] Compute20(byte[] bytes)
-			{
+            public byte[] Compute20(byte[] bytes)
+            {
                 SHA1 algorithm = null;
                 try
                 {
@@ -178,10 +178,10 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.sha1Pool.Free(algorithm);
                 }
-			}
+            }
 
-			public byte[] Compute20(byte[] bytes, int offset, int length)
-			{
+            public byte[] Compute20(byte[] bytes, int offset, int length)
+            {
                 SHA1 algorithm = null;
                 try
                 {
@@ -193,7 +193,7 @@ namespace Raven.Abstractions.Util.Encryptors
                     if (algorithm != null)
                         this.sha1Pool.Free(algorithm);
                 }
-			}
-		}
-	}
+            }
+        }
+    }
 }

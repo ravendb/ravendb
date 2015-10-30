@@ -29,15 +29,15 @@ namespace Raven.Tests.Bugs
 					Assert.Throws<ErrorResponseException>(() => session.Load<User>("user/1"));
 				}
 
-				using (GetNewServer())
-				{
-					using (var session = store.OpenSession())
-					{
-						Assert.Null(session.Load<Item>("items/1"));
-					}
-				}
-			}
-		}
+                using (GetNewServer())
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Null(session.Load<Item>("items/1"));
+                    }
+                }
+            }
+        }
 
 		[Fact]
 		public async Task CanStartWithoutServerAsync()
@@ -49,14 +49,14 @@ namespace Raven.Tests.Bugs
 					await AssertAsync.Throws<ErrorResponseException>(async () => await session.LoadAsync<User>("user/1"));
 				}
 
-				using (GetNewServer())
-				{
-					using (var session = store.OpenAsyncSession())
-					{
-						Assert.Null(await session.LoadAsync<Item>("items/1"));
-					}
-				}
-			}
-		}
-	}
+                using (GetNewServer())
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        Assert.Null(await session.LoadAsync<Item>("items/1"));
+                    }
+                }
+            }
+        }
+    }
 }

@@ -47,7 +47,7 @@ namespace Raven.Tests.Bugs.Caching
         }
 
         [Fact]
-		public async Task Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheAsync()
+        public async Task Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheAsync()
         {
             using (var store = NewDocumentStore())
             {

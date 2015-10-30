@@ -12,27 +12,27 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Extensions
 {
-	public static class HttpExtensions
-	{
-		public static RavenJToken MinimizeToken(RavenJToken obj, int depth = 0)
-		{
-			switch (obj.Type)
-			{
-				case JTokenType.Array:
-					var array = new RavenJArray();
-					foreach (var item in ((RavenJArray)obj))
-					{
-						array.Add(MinimizeToken(item, depth + 1));
-					}
-					return array;
-				case JTokenType.Object:
-					var ravenJObject = ((RavenJObject)obj);
-					if (ravenJObject.ContainsKey(Constants.Metadata) == false)
-					{
-						// this might be a wrapper object, let check for first level arrays
-						if (depth == 0)
-						{
-							var newRootObj = new RavenJObject();
+    public static class HttpExtensions
+    {
+        public static RavenJToken MinimizeToken(RavenJToken obj, int depth = 0)
+        {
+            switch (obj.Type)
+            {
+                case JTokenType.Array:
+                    var array = new RavenJArray();
+                    foreach (var item in ((RavenJArray)obj))
+                    {
+                        array.Add(MinimizeToken(item, depth + 1));
+                    }
+                    return array;
+                case JTokenType.Object:
+                    var ravenJObject = ((RavenJObject)obj);
+                    if (ravenJObject.ContainsKey(Constants.Metadata) == false)
+                    {
+                        // this might be a wrapper object, let check for first level arrays
+                        if (depth == 0)
+                        {
+                            var newRootObj = new RavenJObject();
 
 							foreach (var prop in ravenJObject)
 							{

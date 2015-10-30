@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AdminFSController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -44,13 +44,13 @@ namespace Raven.Database.FileSystem.Controllers
 				}, nameFormatErrorMessage.ErrorCode);
 			}
 
-			if (Authentication.IsLicensedForRavenFs == false)
-	        {
-				return GetMessageWithObject(new
-				{
+            if (Authentication.IsLicensedForRavenFs == false)
+            {
+                return GetMessageWithObject(new
+                {
                     Error = "Your license does not allow the use of RavenFS!"
-				}, HttpStatusCode.BadRequest);
-	        }
+                }, HttpStatusCode.BadRequest);
+            }
 
             var docKey = Constants.FileSystem.Prefix + id;
            
@@ -66,18 +66,18 @@ namespace Raven.Database.FileSystem.Controllers
             var fsDoc = await ReadJsonObjectAsync<FileSystemDocument>().ConfigureAwait(false);
             EnsureFileSystemHasRequiredSettings(id, fsDoc);
 
-	        string bundles;
-	        if (fsDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
-			{
-				if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
-					!fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
-				{
-					return GetMessageWithString(string.Format("Failed to create '{0}' file system, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
-				}
-			}
+            string bundles;
+            if (fsDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
+            {
+                if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
+                    !fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+                {
+                    return GetMessageWithString(string.Format("Failed to create '{0}' file system, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
+                }
+            }
 
-			FileSystemsLandlord.Protect(fsDoc);
-			var json = RavenJObject.FromObject(fsDoc);
+            FileSystemsLandlord.Protect(fsDoc);
+            var json = RavenJObject.FromObject(fsDoc);
             json.Remove("Id");
 
             SystemDatabase.Documents.Put(docKey, null, json, new RavenJObject(), null);
@@ -236,7 +236,7 @@ namespace Raven.Database.FileSystem.Controllers
                 if (jsonDocument != null)
                 {
                     backupRequest.FileSystemDocument = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
-					FileSystemsLandlord.Unprotect(backupRequest.FileSystemDocument);
+                    FileSystemsLandlord.Unprotect(backupRequest.FileSystemDocument);
                     backupRequest.FileSystemDocument.Id = FileSystem.Name;
                 }
             }
@@ -315,7 +315,7 @@ namespace Raven.Database.FileSystem.Controllers
                     // as we perform compact async we don't catch exceptions here - they will be propagated to operation
 					var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetResourceInternal(fs));
                     FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
-			        {
+                    {
                         bool skipProgressReport = false;
                         bool isProgressReport = false;
                         if (IsUpdateMessage(msg))
@@ -338,20 +338,20 @@ namespace Raven.Database.FileSystem.Controllers
                             DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
                                 RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
                         }
-			        }));
+                    }));
                     compactStatus.State = CompactStatusState.Completed;
                     compactStatus.Messages.Add("File system compaction completed.");
                     DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
                         RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
                 }
                 catch (Exception e)
-			    {
+                {
                     compactStatus.Messages.Add("Unable to compact file system " + e.Message);
                     compactStatus.State = CompactStatusState.Faulted;
                     DatabasesLandlord.SystemDatabase.Documents.Put(CompactStatus.RavenFilesystemCompactStatusDocumentKey(fs), null,
                                                                        RavenJObject.FromObject(compactStatus), new RavenJObject(), null);
-			        throw;
-			    }
+                    throw;
+                }
                 return GetEmptyMessage();
             });
 

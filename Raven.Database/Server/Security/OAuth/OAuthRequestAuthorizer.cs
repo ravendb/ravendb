@@ -9,8 +9,8 @@ using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Security.OAuth
 {
-	public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
-	{
+    public class OAuthRequestAuthorizer : AbstractRequestAuthorizer
+    {
         public bool TryAuthorize(RavenBaseApiController controller, bool hasApiKey, bool ignoreDbAccess, out HttpResponseMessage msg)
 		{
 			var isGetRequest = IsGetRequest(controller);
@@ -83,91 +83,91 @@ namespace Raven.Database.Server.Security.OAuth
 			CurrentOperationContext.User.Value = controller.User;
 			msg = controller.GetEmptyMessage();
 
-			return true;
-		}
+            return true;
+        }
 
-		public List<string> GetApprovedResources(IPrincipal user)
-		{
-			var oAuthUser = user as OAuthPrincipal;
-			if (oAuthUser == null)
-				return new List<string>();
-			return oAuthUser.GetApprovedResources();
-		}
+        public List<string> GetApprovedResources(IPrincipal user)
+        {
+            var oAuthUser = user as OAuthPrincipal;
+            if (oAuthUser == null)
+                return new List<string>();
+            return oAuthUser.GetApprovedResources();
+        }
 
-		public override void Dispose()
-		{
+        public override void Dispose()
+        {
 
-		}
+        }
 
         static string GetToken(RavenBaseApiController controller)
-		{
-			const string bearerPrefix = "Bearer ";
+        {
+            const string bearerPrefix = "Bearer ";
 
-			var auth = controller.GetHeader("Authorization");
-			if (auth == null)
-			{
-				auth = controller.GetCookie("OAuth-Token");
-				if (auth != null)
-					auth = Uri.UnescapeDataString(auth);
-			}
-			if (auth == null || auth.Length <= bearerPrefix.Length ||
-				!auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
-				return null;
+            var auth = controller.GetHeader("Authorization");
+            if (auth == null)
+            {
+                auth = controller.GetCookie("OAuth-Token");
+                if (auth != null)
+                    auth = Uri.UnescapeDataString(auth);
+            }
+            if (auth == null || auth.Length <= bearerPrefix.Length ||
+                !auth.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+                return null;
 
-			var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
+            var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
 
-			return token;
-		}
+            return token;
+        }
 
         HttpResponseMessage WriteAuthorizationChallenge(RavenBaseApiController controller, int statusCode, string error, string errorDescription)
-		{
-			var msg = controller.GetEmptyMessage();
-			var systemConfiguration = controller.SystemConfiguration;
-			if (string.IsNullOrEmpty(systemConfiguration.OAuthTokenServer) == false)
-			{
-				if (systemConfiguration.UseDefaultOAuthTokenServer == false)
-				{
-					controller.AddHeader("OAuth-Source", systemConfiguration.OAuthTokenServer, msg);
-				}
-				else
-				{
-					controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuthTokenServer)
-					{
+        {
+            var msg = controller.GetEmptyMessage();
+            var systemConfiguration = controller.SystemConfiguration;
+            if (string.IsNullOrEmpty(systemConfiguration.OAuthTokenServer) == false)
+            {
+                if (systemConfiguration.UseDefaultOAuthTokenServer == false)
+                {
+                    controller.AddHeader("OAuth-Source", systemConfiguration.OAuthTokenServer, msg);
+                }
+                else
+                {
+                    controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuthTokenServer)
+                    {
                         Scheme = controller.InnerRequest.RequestUri.Scheme,
                         Host = controller.InnerRequest.RequestUri.Host,
-						Port = controller.InnerRequest.RequestUri.Port,
-					}.Uri.ToString(), msg);
-				}
-			}
-			msg.StatusCode = (HttpStatusCode)statusCode;
+                        Port = controller.InnerRequest.RequestUri.Port,
+                    }.Uri.ToString(), msg);
+                }
+            }
+            msg.StatusCode = (HttpStatusCode)statusCode;
  
-			msg.Headers.Add("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
-			msg.Headers.Add("Access-Control-Expose-Headers", "WWW-Authenticate, OAuth-Source");
-			return msg;
-		}
+            msg.Headers.Add("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
+            msg.Headers.Add("Access-Control-Expose-Headers", "WWW-Authenticate, OAuth-Source");
+            return msg;
+        }
 
 		public IPrincipal GetUser(RavenBaseApiController controller, bool hasApiKey)
 		{
 			var token = GetToken(controller);
 
-			if (token == null)
-			{
-				WriteAuthorizationChallenge(controller, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
+            if (token == null)
+            {
+                WriteAuthorizationChallenge(controller, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
 
-				return null;
-			}
+                return null;
+            }
 
-			AccessTokenBody tokenBody;
-			if (!AccessToken.TryParseBody(controller.DatabasesLandlord.SystemConfiguration.OAuthTokenKey, token, out tokenBody))
-			{
-				WriteAuthorizationChallenge(controller, 401, "invalid_token", "The access token is invalid");
+            AccessTokenBody tokenBody;
+            if (!AccessToken.TryParseBody(controller.DatabasesLandlord.SystemConfiguration.OAuthTokenKey, token, out tokenBody))
+            {
+                WriteAuthorizationChallenge(controller, 401, "invalid_token", "The access token is invalid");
 
-				return null;
-			}
+                return null;
+            }
 
-			return new OAuthPrincipal(tokenBody, null);
-		}
-	}
+            return new OAuthPrincipal(tokenBody, null);
+        }
+    }
 }
 
 public class OAuthPrincipal : IPrincipal, IIdentity

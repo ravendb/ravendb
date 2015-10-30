@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -69,9 +69,9 @@ namespace Raven.Database.FileSystem.Synchronization
 	        {
 				var report = await HandleConflict(synchronizationServerClient, conflict, log).ConfigureAwait(false);
 
-		        if (report != null)
-			        return report;
-	        }
+                if (report != null)
+                    return report;
+            }
 
             using (var localSignatureRepository = new StorageSignatureRepository(Storage, FileName, configuration))
             using (var remoteSignatureCache = new VolatileSignatureRepository(FileName, configuration))
@@ -183,34 +183,34 @@ namespace Raven.Database.FileSystem.Synchronization
 			return new DataInfo
 			{
                 LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.LastModified).ToUniversalTime(),
-				Length = fileAndPages.TotalSize ?? 0,
-				Name = fileAndPages.Name
-			};
-		}
+                Length = fileAndPages.TotalSize ?? 0,
+                Name = fileAndPages.Name
+            };
+        }
 
-		public override bool Equals(object obj)
-		{
-			if (ReferenceEquals(null, obj)) return false;
-			if (ReferenceEquals(this, obj)) return true;
-			if (obj.GetType() != typeof(ContentUpdateWorkItem)) return false;
-			return Equals((ContentUpdateWorkItem)obj);
-		}
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != typeof(ContentUpdateWorkItem)) return false;
+            return Equals((ContentUpdateWorkItem)obj);
+        }
 
-		public bool Equals(ContentUpdateWorkItem other)
-		{
-			if (ReferenceEquals(null, other)) return false;
-			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.FileName, FileName) && Equals(other.FileETag, FileETag);
-		}
+        public bool Equals(ContentUpdateWorkItem other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(other.FileName, FileName) && Equals(other.FileETag, FileETag);
+        }
 
-		public override int GetHashCode()
-		{
-			return (FileName != null ? GetType().Name.GetHashCode() ^ FileName.GetHashCode() ^ FileETag.GetHashCode() : 0);
-		}
+        public override int GetHashCode()
+        {
+            return (FileName != null ? GetType().Name.GetHashCode() ^ FileName.GetHashCode() ^ FileETag.GetHashCode() : 0);
+        }
 
-		public override string ToString()
-		{
-			return string.Format("Synchronization of a file content '{0}'", FileName);
-		}
-	}
+        public override string ToString()
+        {
+            return string.Format("Synchronization of a file content '{0}'", FileName);
+        }
+    }
 }

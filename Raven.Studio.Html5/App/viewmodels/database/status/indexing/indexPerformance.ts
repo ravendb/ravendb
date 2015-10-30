@@ -215,7 +215,7 @@ class metrics extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.createKeyboardShortcut("esc", nv.tooltip.cleanup, "body");
         this.updateHelpLink('QCVU81');
         $("#metricsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());

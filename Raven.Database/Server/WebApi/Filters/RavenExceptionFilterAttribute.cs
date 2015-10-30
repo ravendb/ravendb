@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -21,16 +21,16 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.WebApi.Filters
 {
-	public class RavenExceptionFilterAttribute : ExceptionFilterAttribute
-	{
-		private static readonly Dictionary<Type, Action<HttpActionExecutedContext, Exception>> handlers =
-				new Dictionary<Type, Action<HttpActionExecutedContext, Exception>>
-			{
-				{typeof (BadRequestException), (ctx, e) => HandleBadRequest(ctx, e as BadRequestException)},
-				{typeof (ConcurrencyException), (ctx, e) => HandleConcurrencyException(ctx, e as ConcurrencyException)},
-				{typeof (JavaScriptException), (ctx, e) => HandleJintException(ctx, e as JavaScriptException)},
-				{typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
-				{typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
+    public class RavenExceptionFilterAttribute : ExceptionFilterAttribute
+    {
+        private static readonly Dictionary<Type, Action<HttpActionExecutedContext, Exception>> handlers =
+                new Dictionary<Type, Action<HttpActionExecutedContext, Exception>>
+            {
+                {typeof (BadRequestException), (ctx, e) => HandleBadRequest(ctx, e as BadRequestException)},
+                {typeof (ConcurrencyException), (ctx, e) => HandleConcurrencyException(ctx, e as ConcurrencyException)},
+                {typeof (JavaScriptException), (ctx, e) => HandleJintException(ctx, e as JavaScriptException)},
+                {typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
+                {typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
                 {typeof (ImplicitFetchFieldsFromDocumentNotAllowedException), (ctx, e) => HandleImplicitFetchFieldsFromDocumentNotAllowedException(ctx, e as ImplicitFetchFieldsFromDocumentNotAllowedException)},
 				{typeof (SynchronizationException), (ctx, e) => HandleSynchronizationException(ctx, e as SynchronizationException)},
 				{typeof (FileNotFoundException), (ctx, e) => HandleFileNotFoundException(ctx, e as FileNotFoundException)},
@@ -227,49 +227,6 @@ namespace Raven.Database.Server.WebApi.Filters
                 Url = ctx.Request.RequestUri.PathAndQuery,
                 Error = e.Message
             });
-	    }
-
-
-		private static void HandleSynchronizationException(HttpActionExecutedContext ctx, SynchronizationException e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = (HttpStatusCode) 420
-			};
-
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.Message
-			});
-		}
-
-		private static void HandleFileNotFoundException(HttpActionExecutedContext ctx, FileNotFoundException e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = HttpStatusCode.NotFound
-			};
-
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.Message
-			});
-		}
-
-		private static void HandleSubscriptionException(HttpActionExecutedContext ctx, SubscriptionException e)
-		{
-			ctx.Response = new HttpResponseMessage
-			{
-				StatusCode = e.ResponseStatusCode
-			};
-
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RequestUri.PathAndQuery,
-				Error = e.Message
-			});
-		}
-	}
+        }
+    }
 }

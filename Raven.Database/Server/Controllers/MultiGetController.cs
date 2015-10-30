@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -72,103 +72,96 @@ namespace Raven.Database.Server.Controllers
 			    finally
 			    {
                     DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Release();
-			    }
+                }
 
-				for (int i = 0; i < results.Length; i++)
-				{
-					if (results[i] == null)
-						continue;
-					var index = i;
-					AddRequestTraceInfo(sb =>
-					{
-						var customInfo = results[index].Item2;
-						sb.Append("\t").Append(index).Append(": ").Append(requests[index].UrlAndQuery);
-						if (customInfo == null)
-							return;
-						foreach (var action in customInfo)
-						{
-							sb.Append("\t\t");
-							action(sb);
-						}
+                for (int i = 0; i < results.Length; i++)
+                {
+                    if (results[i] == null)
+                        continue;
+                    var index = i;
+                    AddRequestTraceInfo(sb =>
+                    {
+                        var customInfo = results[index].Item2;
+                        sb.Append("\t").Append(index).Append(": ").Append(requests[index].UrlAndQuery);
+                        if (customInfo == null)
+                            return;
+                        foreach (var action in customInfo)
+                        {
+                            sb.Append("\t\t");
+                            action(sb);
+                        }
 
-					});
-				}
+                    });
+                }
 
-				var result = new HttpResponseMessage(HttpStatusCode.OK)
-				{
-					Content = new MultiGetContent(results.Select(x=>x == null ? null : x.Item1))
-				};
+                var result = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new MultiGetContent(results.Select(x=>x == null ? null : x.Item1))
+                };
 
-				HandleReplication(result);
+                HandleReplication(result);
 
-				return result;
-			}
-			finally
-			{
-				recursive.Value = false;
-			}
-		}
+                return result;
+            }
+            finally
+            {
+                recursive.Value = false;
+            }
+        }
 
-		public class MultiGetContent : HttpContent
-		{
-			private readonly IEnumerable<HttpResponseMessage> results;
+        public class MultiGetContent : HttpContent
+        {
+            private readonly IEnumerable<HttpResponseMessage> results;
 
-			public MultiGetContent(IEnumerable<HttpResponseMessage> results)
-			{
-				this.results = results;
-			}
+            public MultiGetContent(IEnumerable<HttpResponseMessage> results)
+            {
+                this.results = results;
+            }
 
-			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-			{
-				var streamWriter = new StreamWriter(stream);
-				var writer = new JsonTextWriter(streamWriter);
-				writer.WriteStartArray();
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            {
+                var streamWriter = new StreamWriter(stream);
+                var writer = new JsonTextWriter(streamWriter);
+                writer.WriteStartArray();
 
-				foreach (var result in results)
-				{
-					if (result == null)
-					{
-						writer.WriteNull();
-						continue;
-					}
+                foreach (var result in results)
+                {
+                    if (result == null)
+                    {
+                        writer.WriteNull();
+                        continue;
+                    }
 
-					writer.WriteStartObject();
-					writer.WritePropertyName("Status");
-					writer.WriteValue((int)result.StatusCode);
-					writer.WritePropertyName("Headers");
-					writer.WriteStartObject();
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Status");
+                    writer.WriteValue((int)result.StatusCode);
+                    writer.WritePropertyName("Headers");
+                    writer.WriteStartObject();
 
-					foreach (var header in result.Headers.Concat(result.Content.Headers))
-					{
-						foreach (var val in header.Value)
-						{
-							writer.WritePropertyName(header.Key);
-							writer.WriteValue(val);
-						}
-					}
+                    foreach (var header in result.Headers.Concat(result.Content.Headers))
+                    {
+                        foreach (var val in header.Value)
+                        {
+                            writer.WritePropertyName(header.Key);
+                            writer.WriteValue(val);
+                        }
+                    }
 
-					writer.WriteEndObject();
-					writer.WritePropertyName("Result");
+                    writer.WriteEndObject();
+                    writer.WritePropertyName("Result");
 
                     var jsonContent = result.Content as JsonContent;
 
-					if (jsonContent != null && jsonContent.Data != null)
-						jsonContent.Data.WriteTo(writer, Default.Converters);
-					else
-					{
-					    var stringContent = result.Content as MultiGetSafeStringContent;
-					    if (stringContent != null)
-					    {
-					        writer.WriteStartObject();
-					        writer.WritePropertyName("Error");
-					        writer.WriteValue(stringContent.Content);
-					        writer.WriteEndObject();
-					    }
-					    else
-					    {
+                    if (jsonContent != null && jsonContent.Data != null)
+                        jsonContent.Data.WriteTo(writer, Default.Converters);
+                    else
+                    {
+                        var stringContent = result.Content as MultiGetSafeStringContent;
+                        if (stringContent != null)
+                        {
                             writer.WriteStartObject();
                             writer.WritePropertyName("Error");
-					        writer.WriteValue("Content not valid for multi_get " + result.Content);
+                            writer.WriteValue(stringContent.Content);
                             writer.WriteEndObject();
 					    }
 					}

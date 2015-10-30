@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmugglerEmbeddedDatabaseOperations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -22,30 +22,30 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Smuggler
 {
-	public class SmugglerEmbeddedDatabaseOperations : ISmugglerDatabaseOperations
-	{
-		private readonly DocumentDatabase database;
+    public class SmugglerEmbeddedDatabaseOperations : ISmugglerDatabaseOperations
+    {
+        private readonly DocumentDatabase database;
 
-		private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
+        private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
 		private readonly SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
 
-		public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
-		{
-			this.database = database;
-		}
+        public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
+        {
+            this.database = database;
+        }
 
-		public Action<string> Progress { get; set; }
+        public Action<string> Progress { get; set; }
 
 		public Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			return new CompletedTask<RavenJArray>(database.Indexes.GetIndexes(totalCount, 128));
 		}
 
-		public JsonDocument GetDocument(string key)
-		{
-			return database.Documents.Get(key, null);
-		}
+        public JsonDocument GetDocument(string key)
+        {
+            return database.Documents.Get(key, null);
+        }
 
 		public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
 		{
@@ -55,18 +55,18 @@ namespace Raven.Database.Smuggler
 				.Cast<RavenJObject>()
 				.GetEnumerator();
 
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
-		}
+            return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
+        }
 
         [Obsolete("Use RavenFS instead.")]
-		public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
-		{
-			var lastEtag = startAttachmentsDeletionEtag;
-			database.TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue))
-				{
-					var o = new RavenJObject
+        public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
+        {
+            var lastEtag = startAttachmentsDeletionEtag;
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, startAttachmentsDeletionEtag, maxAttachmentEtag, int.MaxValue))
+                {
+                    var o = new RavenJObject
                     {
                         {"Key", listItem.Key}
                     };
@@ -93,49 +93,49 @@ namespace Raven.Database.Smuggler
                     {
                         {"Key", listItem.Key}
                     };
-					o.WriteTo(jsonWriter);
-					lastEtag = listItem.Etag;
-				}
-			});
-			return new CompletedTask<Etag>(lastEtag);
-		}
+                    o.WriteTo(jsonWriter);
+                    lastEtag = listItem.Etag;
+                }
+            });
+            return new CompletedTask<Etag>(lastEtag);
+        }
 
-		public LastEtagsInfo FetchCurrentMaxEtags()
-		{
-			LastEtagsInfo result = null;
-			database.TransactionalStorage.Batch(accessor =>
-			{
-				result = new LastEtagsInfo
-				{
-					LastDocsEtag = accessor.Staleness.GetMostRecentDocumentEtag(),
-					LastAttachmentsEtag = accessor.Staleness.GetMostRecentAttachmentEtag()
-				};
+        public LastEtagsInfo FetchCurrentMaxEtags()
+        {
+            LastEtagsInfo result = null;
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                result = new LastEtagsInfo
+                {
+                    LastDocsEtag = accessor.Staleness.GetMostRecentDocumentEtag(),
+                    LastAttachmentsEtag = accessor.Staleness.GetMostRecentAttachmentEtag()
+                };
 
-				var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicExportsDocsTombstones);
-				if (lastDocumentTombstone != null)
-					result.LastDocDeleteEtag = lastDocumentTombstone.Etag;
+                var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicExportsDocsTombstones);
+                if (lastDocumentTombstone != null)
+                    result.LastDocDeleteEtag = lastDocumentTombstone.Etag;
 
-				var attachmentTombstones =
-					accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
-							.OrderBy(x => x.Etag).ToArray();
-				if (attachmentTombstones.Any())
-				{
-					result.LastAttachmentsDeleteEtag = attachmentTombstones.Last().Etag;
-				}
-			});
+                var attachmentTombstones =
+                    accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
+                            .OrderBy(x => x.Etag).ToArray();
+                if (attachmentTombstones.Any())
+                {
+                    result.LastAttachmentsDeleteEtag = attachmentTombstones.Last().Etag;
+                }
+            });
 
-			return result;
-		}
+            return result;
+        }
 
-		public Task PutIndex(string indexName, RavenJToken index)
-		{
-			if (index != null)
-			{
-				database.Indexes.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
-			}
+        public Task PutIndex(string indexName, RavenJToken index)
+        {
+            if (index != null)
+            {
+                database.Indexes.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+            }
 
-			return new CompletedTask();
-		}
+            return new CompletedTask();
+        }
 
         [Obsolete("Use RavenFS instead.")]
 		public Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
@@ -203,116 +203,116 @@ namespace Raven.Database.Smuggler
 		public SmugglerDatabaseOptions Options { get; private set; }
 
         [Obsolete("Use RavenFS instead.")]
-		public Task DeleteAttachment(string key)
-		{
-			database.Attachments.DeleteStatic(key, null);
-			return new CompletedTask();
-		}
+        public Task DeleteAttachment(string key)
+        {
+            database.Attachments.DeleteStatic(key, null);
+            return new CompletedTask();
+        }
 
-		public void PurgeTombstones(OperationState result)
-		{
-			database.TransactionalStorage.Batch(accessor =>
-			{
-				// since remove all before is inclusive, but we want last etag for function FetchCurrentMaxEtags we modify ranges
-				accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsDocsTombstones, result.LastDocDeleteEtag.IncrementBy(-1));
-				accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsAttachmentsTombstones, result.LastAttachmentsDeleteEtag.IncrementBy(-1));
-			});
-		}
+        public void PurgeTombstones(OperationState result)
+        {
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                // since remove all before is inclusive, but we want last etag for function FetchCurrentMaxEtags we modify ranges
+                accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsDocsTombstones, result.LastDocDeleteEtag.IncrementBy(-1));
+                accessor.Lists.RemoveAllBefore(Constants.RavenPeriodicExportsAttachmentsTombstones, result.LastAttachmentsDeleteEtag.IncrementBy(-1));
+            });
+        }
 
-		public Task<string> GetVersion(RavenConnectionStringOptions server)
-		{
-			return new CompletedTask<string>(DocumentDatabase.ProductVersion);
-		}
+        public Task<string> GetVersion(RavenConnectionStringOptions server)
+        {
+            return new CompletedTask<string>(DocumentDatabase.ProductVersion);
+        }
 
-		public Task<DatabaseStatistics> GetStats()
-		{
-			return new CompletedTask<DatabaseStatistics>(database.Statistics);
-		}
+        public Task<DatabaseStatistics> GetStats()
+        {
+            return new CompletedTask<DatabaseStatistics>(database.Statistics);
+        }
 
-		public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
-		{
-			return new CompletedTask<RavenJObject>(scriptedJsonPatcher.Transform(transformScript, document));
-		}
+        public Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+        {
+            return new CompletedTask<RavenJObject>(scriptedJsonPatcher.Transform(transformScript, document));
+        }
 
-		public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
-		{
-			if (metadata != null)
-			{
-				metadata.Remove(Constants.RavenReplicationHistory);
-				metadata.Remove(Constants.RavenReplicationSource);
-				metadata.Remove(Constants.RavenReplicationVersion);
-			}
+        public RavenJObject StripReplicationInformationFromMetadata(RavenJObject metadata)
+        {
+            if (metadata != null)
+            {
+                metadata.Remove(Constants.RavenReplicationHistory);
+                metadata.Remove(Constants.RavenReplicationSource);
+                metadata.Remove(Constants.RavenReplicationVersion);
+            }
 
-			return metadata;
-		}
+            return metadata;
+        }
 
-		public void Initialize(SmugglerDatabaseOptions databaseOptions)
-		{
-			Options = databaseOptions;
-			scriptedJsonPatcher.Initialize(databaseOptions);
-		}
+        public void Initialize(SmugglerDatabaseOptions databaseOptions)
+        {
+            Options = databaseOptions;
+            scriptedJsonPatcher.Initialize(databaseOptions);
+        }
 
-		public void Configure(SmugglerDatabaseOptions databaseOptions)
-		{
-			var current = databaseOptions.BatchSize;
-			var maxNumberOfItemsToProcessInSingleBatch = database.Configuration.MaxNumberOfItemsToProcessInSingleBatch;
+        public void Configure(SmugglerDatabaseOptions databaseOptions)
+        {
+            var current = databaseOptions.BatchSize;
+            var maxNumberOfItemsToProcessInSingleBatch = database.Configuration.MaxNumberOfItemsToProcessInSingleBatch;
 
-			databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
-		}
+            databaseOptions.BatchSize = Math.Min(current, maxNumberOfItemsToProcessInSingleBatch);
+        }
 
-		public Task<List<KeyValuePair<string, long>>> GetIdentities()
-		{
-			var start = 0;
-			const int pageSize = 1024;
+        public Task<List<KeyValuePair<string, long>>> GetIdentities()
+        {
+            var start = 0;
+            const int pageSize = 1024;
 
-			long totalCount = 0;
-			var identities = new List<KeyValuePair<string, long>>();
+            long totalCount = 0;
+            var identities = new List<KeyValuePair<string, long>>();
 
-			do
-			{
-				database.TransactionalStorage.Batch(accessor => identities.AddRange(accessor.General.GetIdentities(start, pageSize, out totalCount)));
-				start += pageSize;
-			} while (identities.Count < totalCount);
+            do
+            {
+                database.TransactionalStorage.Batch(accessor => identities.AddRange(accessor.General.GetIdentities(start, pageSize, out totalCount)));
+                start += pageSize;
+            } while (identities.Count < totalCount);
 
-			return new CompletedTask<List<KeyValuePair<string, long>>>(identities);
-		}
+            return new CompletedTask<List<KeyValuePair<string, long>>>(identities);
+        }
 
-		public Task SeedIdentityFor(string identityName, long identityValue)
-		{
-			if(identityName != null)
-				database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
+        public Task SeedIdentityFor(string identityName, long identityValue)
+        {
+            if(identityName != null)
+                database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(identityName, identityValue));
 
-			return new CompletedTask();
-		}
+            return new CompletedTask();
+        }
 
-		public RavenJToken DisableVersioning(RavenJObject metadata)
-		{
-			if (metadata != null)
-			{
-				metadata.Add(Constants.RavenIgnoreVersioning, true);
-			}
+        public RavenJToken DisableVersioning(RavenJObject metadata)
+        {
+            if (metadata != null)
+            {
+                metadata.Add(Constants.RavenIgnoreVersioning, true);
+            }
 
-			return metadata;
-		}
+            return metadata;
+        }
 
-		public void ShowProgress(string format, params object[] args)
-		{
-			if (Progress != null)
-			{
-				Progress(string.Format(format, args));
-			}
-		}
+        public void ShowProgress(string format, params object[] args)
+        {
+            if (Progress != null)
+            {
+                Progress(string.Format(format, args));
+            }
+        }
 
         [Obsolete("Use RavenFS instead.")]
-		public Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
-		{
-			var attachments = database
-				.Attachments
-				.GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10)
-				.ToList();
+        public Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
+        {
+            var attachments = database
+                .Attachments
+                .GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10)
+                .ToList();
 
-			return new CompletedTask<List<AttachmentInformation>>(attachments);
-		}
+            return new CompletedTask<List<AttachmentInformation>>(attachments);
+        }
 
         [Obsolete("Use RavenFS instead.")]
 		public Task<byte[]> GetAttachmentData(AttachmentInformation attachmentInformation)

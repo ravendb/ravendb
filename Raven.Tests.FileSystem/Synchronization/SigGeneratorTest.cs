@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -138,5 +138,5 @@ namespace Raven.Tests.FileSystem.Synchronization
                 Assert.Equal(2, signatures.Count());
             }
         }
-	}
+    }
 }

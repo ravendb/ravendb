@@ -41,7 +41,7 @@ class indexes extends viewModelBase {
 
     constructor() {
         super();
-		this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
+        this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
 
         this.sortedGroups = ko.computed(() => {
             var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
@@ -97,7 +97,7 @@ class indexes extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase()));
@@ -108,29 +108,29 @@ class indexes extends viewModelBase {
         });
     }
 
-	idlePriority(idx: index) {
-		this.setIndexPriority(idx, indexPriority.idleForced);
-	}
+    idlePriority(idx: index) {
+        this.setIndexPriority(idx, indexPriority.idleForced);
+    }
 
     disabledPriority(idx: index) {
-	    this.setIndexPriority(idx, indexPriority.disabledForced);
+        this.setIndexPriority(idx, indexPriority.disabledForced);
     }
 
     abandonedPriority(idx: index) {
-	    this.setIndexPriority(idx, indexPriority.abandonedForced);
+        this.setIndexPriority(idx, indexPriority.abandonedForced);
     }
 
     normalPriority(idx: index) {
-	    this.setIndexPriority(idx, indexPriority.normal);
+        this.setIndexPriority(idx, indexPriority.normal);
     }
 
-	private setIndexPriority(idx: index, newPriority: indexPriority) {
-		new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
-			.execute()
-			.done(() => {
-				this.fetchIndexes();
-			});
-	}
+    private setIndexPriority(idx: index, newPriority: indexPriority) {
+        new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
+            .execute()
+            .done(() => {
+                this.fetchIndexes();
+            });
+    }
 
     private fetchIndexes() {
         var deferred = $.Deferred();
@@ -157,21 +157,21 @@ class indexes extends viewModelBase {
         this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
     }
 
-	private filterIndexes() {
-		var filterLower = this.searchText().toLowerCase();
-		this.indexGroups().forEach(indexGroup => {
-			var hasAnyInGroup = false;
-			indexGroup.indexes().forEach(index => {
-				var match = index.name.toLowerCase().indexOf(filterLower) >= 0;
-				index.filteredOut(!match);
-				if (match) {
-					hasAnyInGroup = true;
-				}
-			});
+    private filterIndexes() {
+        var filterLower = this.searchText().toLowerCase();
+        this.indexGroups().forEach(indexGroup => {
+            var hasAnyInGroup = false;
+            indexGroup.indexes().forEach(index => {
+                var match = index.name.toLowerCase().indexOf(filterLower) >= 0;
+                index.filteredOut(!match);
+                if (match) {
+                    hasAnyInGroup = true;
+                }
+            });
 
-			indexGroup.groupHidden(!hasAnyInGroup);
-		});
-	}
+            indexGroup.groupHidden(!hasAnyInGroup);
+        });
+    }
 
     getRecentQueryUrl(query: storedQueryDto) {
         return appUrl.forQuery(this.activeDatabase(), query.Hash);
@@ -337,7 +337,7 @@ class indexes extends viewModelBase {
     }
 
     deleteAllIndexes() {
-		this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
+        this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
     }
 
     deleteIndex(i: index) {

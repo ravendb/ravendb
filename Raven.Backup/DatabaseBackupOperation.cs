@@ -56,7 +56,7 @@ namespace Raven.Backup
                 BackupLocation = parameters.BackupPath.Replace("\\", "\\\\"),
             };
 
-	       
+           
             var json = RavenJObject.FromObject(backupRequest).ToString();
 
             var url = "/admin/backup";
@@ -68,11 +68,11 @@ namespace Raven.Backup
 	            {
 					req.WriteAsync(json).Wait();
 
-					Console.WriteLine("Sending json {0} to {1}", json, parameters.ServerUrl);
+                    Console.WriteLine("Sending json {0} to {1}", json, parameters.ServerUrl);
 
-					var response = req.ReadResponseJson();
-					Console.WriteLine(response);
-	            }
+                    var response = req.ReadResponseJson();
+                    Console.WriteLine(response);
+                }
             }
             catch (Exception exc)
             {

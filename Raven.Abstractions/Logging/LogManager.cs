@@ -8,63 +8,63 @@ using Sparrow.Collections;
 
 namespace Raven.Abstractions.Logging
 {
-	public static class LogManager
-	{
+    public static class LogManager
+    {
         private static readonly ConcurrentSet<Target> Targets = new ConcurrentSet<Target>();
 
-		public static void EnsureValidLogger()
-		{
-			GetLogger(typeof (LogManager));
-		}
+        public static void EnsureValidLogger()
+        {
+            GetLogger(typeof (LogManager));
+        }
 
-		public static ILog GetCurrentClassLogger()
-		{
-			var stackFrame = new StackFrame(1, false);
-			return GetLogger(stackFrame.GetMethod().DeclaringType);
-		}
+        public static ILog GetCurrentClassLogger()
+        {
+            var stackFrame = new StackFrame(1, false);
+            return GetLogger(stackFrame.GetMethod().DeclaringType);
+        }
 
-		private static ILogManager currentLogManager;
-		public static ILogManager CurrentLogManager
-		{
-			get { return currentLogManager ?? (currentLogManager = ResolveExternalLogManager()); }
-			set { currentLogManager = value; }
-		}
+        private static ILogManager currentLogManager;
+        public static ILogManager CurrentLogManager
+        {
+            get { return currentLogManager ?? (currentLogManager = ResolveExternalLogManager()); }
+            set { currentLogManager = value; }
+        }
 
-		public static ILog GetLogger(Type type)
-		{
-			return GetLogger(type.FullName);
-		}
+        public static ILog GetLogger(Type type)
+        {
+            return GetLogger(type.FullName);
+        }
 
         public static bool EnableDebugLogForTargets { get; set; }
 
-		public static ILog GetLogger(string name)
-		{
-			ILogManager logManager = CurrentLogManager;
-			if (logManager == null)
-				return new LoggerExecutionWrapper(new NoOpLogger(), name, Targets);
-			
-			// This can throw in a case of invalid NLog.config file.
-			var log = logManager.GetLogger(name);
-			return new LoggerExecutionWrapper(log, name, Targets);
-		}
+        public static ILog GetLogger(string name)
+        {
+            ILogManager logManager = CurrentLogManager;
+            if (logManager == null)
+                return new LoggerExecutionWrapper(new NoOpLogger(), name, Targets);
+            
+            // This can throw in a case of invalid NLog.config file.
+            var log = logManager.GetLogger(name);
+            return new LoggerExecutionWrapper(log, name, Targets);
+        }
 
-		private static ILogManager ResolveExternalLogManager()
-		{
-			if (NLogLogManager.IsLoggerAvailable())
-			{
-				return new NLogLogManager();
-			}
-			if (Log4NetLogManager.IsLoggerAvailable())
-			{
-				return new Log4NetLogManager();
-			}
-			return null;
-		}
+        private static ILogManager ResolveExternalLogManager()
+        {
+            if (NLogLogManager.IsLoggerAvailable())
+            {
+                return new NLogLogManager();
+            }
+            if (Log4NetLogManager.IsLoggerAvailable())
+            {
+                return new Log4NetLogManager();
+            }
+            return null;
+        }
 
-		public static void RegisterTarget<T>() where T: Target, new()
-		{
-			if (Targets.OfType<T>().Any())
-				return;
+        public static void RegisterTarget<T>() where T: Target, new()
+        {
+            if (Targets.OfType<T>().Any())
+                return;
 
             Targets.Add(new T());
 		}
@@ -128,38 +128,38 @@ namespace Raven.Abstractions.Logging
                     return true;
             }
         }
-	}
+    }
 
-	public abstract class Target : IDisposable
-	{
-		public abstract void Write(LogEventInfo logEvent);
+    public abstract class Target : IDisposable
+    {
+        public abstract void Write(LogEventInfo logEvent);
 
         public abstract Boolean ShouldLog(ILog logger, LogLevel level);
 
-	    public virtual void Dispose()
-	    {
-	    }
-	}
+        public virtual void Dispose()
+        {
+        }
+    }
 
-	public class LogEventInfo
-	{
+    public class LogEventInfo
+    {
         public string Database { get; set; }
-		public LogLevel Level { get; set; }
-		public DateTime TimeStamp { get; set; }
-		public string FormattedMessage { get; set; }
-		public string LoggerName { get; set; }
-		public Exception Exception { get; set; }
-	    public StackTrace StackTrace { get; set; }
-	}
+        public LogLevel Level { get; set; }
+        public DateTime TimeStamp { get; set; }
+        public string FormattedMessage { get; set; }
+        public string LoggerName { get; set; }
+        public Exception Exception { get; set; }
+        public StackTrace StackTrace { get; set; }
+    }
 
     public class LogEventInfoFormatted
     {
         public String Level { get; set; }
         public string Database { get; set; }
-		public DateTime TimeStamp { get; set; }
-		public string Message { get; set; }
-		public string LoggerName { get; set; }
-		public string Exception { get; set; }
+        public DateTime TimeStamp { get; set; }
+        public string Message { get; set; }
+        public string LoggerName { get; set; }
+        public string Exception { get; set; }
         public string StackTrace { get; set; }
 
         public LogEventInfoFormatted(LogEventInfo eventInfo)

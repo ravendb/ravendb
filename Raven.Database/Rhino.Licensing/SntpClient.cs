@@ -8,50 +8,50 @@ using Raven.Abstractions.Util;
 
 namespace Rhino.Licensing
 {
-	public class SntpClient
-	{
-		private ILog log = LogManager.GetCurrentClassLogger();
+    public class SntpClient
+    {
+        private ILog log = LogManager.GetCurrentClassLogger();
 
-		private const byte SntpDataLength = 48;
-		private readonly string[] hosts;
-		private int index = -1;
+        private const byte SntpDataLength = 48;
+        private readonly string[] hosts;
+        private int index = -1;
 
-		public SntpClient(string[] hosts)
-		{
-			this.hosts = hosts;
-		}
+        public SntpClient(string[] hosts)
+        {
+            this.hosts = hosts;
+        }
 
-		private static bool GetIsServerMode(byte[] sntpData)
-		{
-			return (sntpData[0] & 0x7) == 4 /* server mode */;
-		}
+        private static bool GetIsServerMode(byte[] sntpData)
+        {
+            return (sntpData[0] & 0x7) == 4 /* server mode */;
+        }
 
-		private static DateTime GetTransmitTimestamp(byte[] sntpData)
-		{
-			var milliseconds = GetMilliseconds(sntpData, 40);
-			return ComputeDate(milliseconds);
-		}
+        private static DateTime GetTransmitTimestamp(byte[] sntpData)
+        {
+            var milliseconds = GetMilliseconds(sntpData, 40);
+            return ComputeDate(milliseconds);
+        }
 
-		private static DateTime ComputeDate(ulong milliseconds)
-		{
-			return new DateTime(1900, 1, 1).Add(TimeSpan.FromMilliseconds(milliseconds));
-		}
+        private static DateTime ComputeDate(ulong milliseconds)
+        {
+            return new DateTime(1900, 1, 1).Add(TimeSpan.FromMilliseconds(milliseconds));
+        }
 
-		private static ulong GetMilliseconds(byte[] sntpData, byte offset)
-		{
-			ulong intpart = 0, fractpart = 0;
+        private static ulong GetMilliseconds(byte[] sntpData, byte offset)
+        {
+            ulong intpart = 0, fractpart = 0;
 
-			for (var i = 0; i <= 3; i++)
-			{
-				intpart = 256 * intpart + sntpData[offset + i];
-			}
-			for (var i = 4; i <= 7; i++)
-			{
-				fractpart = 256 * fractpart + sntpData[offset + i];
-			}
-			var milliseconds = intpart * 1000 + (fractpart * 1000) / 0x100000000L;
-			return milliseconds;
-		}
+            for (var i = 0; i <= 3; i++)
+            {
+                intpart = 256 * intpart + sntpData[offset + i];
+            }
+            for (var i = 4; i <= 7; i++)
+            {
+                fractpart = 256 * fractpart + sntpData[offset + i];
+            }
+            var milliseconds = intpart * 1000 + (fractpart * 1000) / 0x100000000L;
+            return milliseconds;
+        }
 
 		public Task<DateTime> GetDateAsync()
 		{
@@ -132,9 +132,9 @@ namespace Rhino.Licensing
 				}).Unwrap();
 		}
 
-		private bool IsResponseValid(byte[] sntpData)
-		{
-			return sntpData.Length >= SntpDataLength && GetIsServerMode(sntpData);
-		}
-	}
+        private bool IsResponseValid(byte[] sntpData)
+        {
+            return sntpData.Length >= SntpDataLength && GetIsServerMode(sntpData);
+        }
+    }
 }

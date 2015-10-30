@@ -81,7 +81,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     }
 #endif
 
-	public static class ReflectionUtils
+    public static class ReflectionUtils
     {
         public static readonly Type[] EmptyTypes;
 
@@ -143,7 +143,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         {
             string fullyQualifiedTypeName;
 #if !(NET20 || NET35 || MONO)
-			if (binder != null)
+            if (binder != null)
             {
                 string assemblyName, typeName;
                 binder.BindToName(t, out assemblyName, out typeName);

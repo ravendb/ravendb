@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ConfigurationTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -195,22 +195,22 @@ namespace Raven.Tests.Core.Configuration
 			configurationComparer.Assert(expected => expected.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value, actual => actual.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
 			configurationComparer.Assert(expected => expected.Voron.AllowIncrementalBackups.Value, actual => actual.Storage.Voron.AllowIncrementalBackups);
             configurationComparer.Assert(expected => expected.Voron.AllowOn32Bits.Value, actual => actual.Storage.Voron.AllowOn32Bits);
-			configurationComparer.Assert(expected => expected.Voron.InitialFileSize.Value, actual => actual.Storage.Voron.InitialFileSize);
+            configurationComparer.Assert(expected => expected.Voron.InitialFileSize.Value, actual => actual.Storage.Voron.InitialFileSize);
             configurationComparer.Assert(expected => expected.Voron.ScratchBufferSizeNotificationThreshold.Value, actual => actual.Storage.Voron.ScratchBufferSizeNotificationThreshold);
             configurationComparer.Assert(expected => expected.Voron.MaxBufferPoolSize.Value, actual => actual.Storage.Voron.MaxBufferPoolSize);
-			configurationComparer.Assert(expected => expected.Voron.MaxScratchBufferSize.Value, actual => actual.Storage.Voron.MaxScratchBufferSize);
-			configurationComparer.Assert(expected => expected.Voron.TempPath.Value, actual => actual.Storage.Voron.TempPath);
-			configurationComparer.Assert(expected => expected.FileSystem.MaximumSynchronizationInterval.Value, actual => actual.FileSystem.MaximumSynchronizationInterval);
-			configurationComparer.Assert(expected => expected.Encryption.EncryptionKeyBitsPreference.Value, actual => actual.Encryption.EncryptionKeyBitsPreference);
-			configurationComparer.Assert(expected => expected.Encryption.UseFips.Value, actual => actual.Encryption.UseFips);
-			configurationComparer.Assert(expected => expected.Encryption.UseSsl.Value, actual => actual.Encryption.UseSsl);
-			configurationComparer.Assert(expected => expected.MaxConcurrentServerRequests.Value, actual => actual.MaxConcurrentServerRequests);
-			configurationComparer.Assert(expected => expected.PrefetchingDurationLimit.Value, actual => actual.PrefetchingDurationLimit);
-			configurationComparer.Assert(expected => expected.BulkImportBatchTimeout.Value, actual => actual.BulkImportBatchTimeout);
-			configurationComparer.Assert(expected => expected.DatbaseOperationTimeout.Value, actual => actual.DatabaseOperationTimeout);
-			configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningIdleIndexes.Value, actual => actual.TimeToWaitBeforeRunningIdleIndexes);
-			configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningAbandonedIndexes.Value, actual => actual.TimeToWaitBeforeRunningAbandonedIndexes);
-			configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value, actual => actual.TimeToWaitBeforeMarkingIdleIndexAsAbandoned);
+            configurationComparer.Assert(expected => expected.Voron.MaxScratchBufferSize.Value, actual => actual.Storage.Voron.MaxScratchBufferSize);
+            configurationComparer.Assert(expected => expected.Voron.TempPath.Value, actual => actual.Storage.Voron.TempPath);
+            configurationComparer.Assert(expected => expected.FileSystem.MaximumSynchronizationInterval.Value, actual => actual.FileSystem.MaximumSynchronizationInterval);
+            configurationComparer.Assert(expected => expected.Encryption.EncryptionKeyBitsPreference.Value, actual => actual.Encryption.EncryptionKeyBitsPreference);
+            configurationComparer.Assert(expected => expected.Encryption.UseFips.Value, actual => actual.Encryption.UseFips);
+            configurationComparer.Assert(expected => expected.Encryption.UseSsl.Value, actual => actual.Encryption.UseSsl);
+            configurationComparer.Assert(expected => expected.MaxConcurrentServerRequests.Value, actual => actual.MaxConcurrentServerRequests);
+            configurationComparer.Assert(expected => expected.PrefetchingDurationLimit.Value, actual => actual.PrefetchingDurationLimit);
+            configurationComparer.Assert(expected => expected.BulkImportBatchTimeout.Value, actual => actual.BulkImportBatchTimeout);
+            configurationComparer.Assert(expected => expected.DatbaseOperationTimeout.Value, actual => actual.DatabaseOperationTimeout);
+            configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningIdleIndexes.Value, actual => actual.TimeToWaitBeforeRunningIdleIndexes);
+            configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningAbandonedIndexes.Value, actual => actual.TimeToWaitBeforeRunningAbandonedIndexes);
+            configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value, actual => actual.TimeToWaitBeforeMarkingIdleIndexAsAbandoned);
 
             configurationComparer.Assert(expected => expected.WebSockets.InitialBufferPoolSize.Value, actual => actual.WebSockets.InitialBufferPoolSize);
 

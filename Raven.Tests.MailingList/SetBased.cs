@@ -13,16 +13,16 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class SetBased : RavenTest
-	{
-		[Fact]
-		public void CanSetPropertyOnArrayItem()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.Put("patrons/1", null,
-				                           RavenJObject.Parse(
-											@"{
+    public class SetBased : RavenTest
+    {
+        [Fact]
+        public void CanSetPropertyOnArrayItem()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.Put("patrons/1", null,
+                                           RavenJObject.Parse(
+                                            @"{
    'Privilege':[
       {
          'Level':'Silver',
@@ -40,44 +40,44 @@ namespace Raven.Tests.MailingList
    'MiddleName':'asdfasdfasdf',
    'FirstName':'asdfasdfasdf'
 }"),
-				                           new RavenJObject
-				                           {
-				                           	{Constants.RavenEntityName, "patrons"}
-				                           });
+                                           new RavenJObject
+                                           {
+                                            {Constants.RavenEntityName, "patrons"}
+                                           });
 
-				using(var session = store.OpenSession())
-				{
-					session.Query<object>("Raven/DocumentsByEntityName")
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToList();
-				}
+                using(var session = store.OpenSession())
+                {
+                    session.Query<object>("Raven/DocumentsByEntityName")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
+                }
 
-				store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName",
-				                                     new IndexQuery {Query = "Tag:patrons"},
-				                                     new[]
-				                                     {
-				                                     	new PatchRequest
-				                                     	{
-				                                     		Type = PatchCommandType.Modify,
-				                                     		Name = "Privilege",
-				                                     		Position = 0,
-				                                     		Nested = new[]
-				                                     		{
-				                                     			new PatchRequest
-				                                     			{
-				                                     				Type =
-				                                     					PatchCommandType.Set,
-				                                     				Name = "Level",
-				                                     				Value = "Gold"
-				                                     			},
-				                                     		}
-				                                     	}
-				                                     }, options: null).WaitForCompletion();
+                store.DatabaseCommands.UpdateByIndex("Raven/DocumentsByEntityName",
+                                                     new IndexQuery {Query = "Tag:patrons"},
+                                                     new[]
+                                                     {
+                                                        new PatchRequest
+                                                        {
+                                                            Type = PatchCommandType.Modify,
+                                                            Name = "Privilege",
+                                                            Position = 0,
+                                                            Nested = new[]
+                                                            {
+                                                                new PatchRequest
+                                                                {
+                                                                    Type =
+                                                                        PatchCommandType.Set,
+                                                                    Name = "Level",
+                                                                    Value = "Gold"
+                                                                },
+                                                            }
+                                                        }
+                                                     }, options: null).WaitForCompletion();
 
-				var document = store.DatabaseCommands.Get("patrons/1");
+                var document = store.DatabaseCommands.Get("patrons/1");
 
-				Assert.Equal("Gold", document.DataAsJson.Value<RavenJArray>("Privilege")[0].Value<string>("Level"));
-			}
-		}
-	}
+                Assert.Equal("Gold", document.DataAsJson.Value<RavenJArray>("Privilege")[0].Value<string>("Level"));
+            }
+        }
+    }
 }

@@ -9,33 +9,33 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Tasks
 {
-	public abstract class DatabaseTask
-	{
-		public int Index { get; set; }
+    public abstract class DatabaseTask
+    {
+        public int Index { get; set; }
 
         public abstract bool SeparateTasksByIndex { get; }
 
-		public abstract void Merge(DatabaseTask task);
-		public abstract void Execute(WorkContext context);
+        public abstract void Merge(DatabaseTask task);
+        public abstract void Execute(WorkContext context);
 
-		public byte[] AsBytes()
-		{
-			var memoryStream = new MemoryStream();
-			var streamWriter = new StreamWriter(memoryStream);
+        public byte[] AsBytes()
+        {
+            var memoryStream = new MemoryStream();
+            var streamWriter = new StreamWriter(memoryStream);
 
-			JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, this);
+            JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, this);
 
-			streamWriter.Flush();
+            streamWriter.Flush();
 
-			return memoryStream.ToArray();
-		}
+            return memoryStream.ToArray();
+        }
 
-		public static DatabaseTask ToTask(string taskType, byte[] task)
-		{
-			var type = typeof(DatabaseTask).Assembly.GetType(taskType);
-			return (DatabaseTask) JsonExtensions.CreateDefaultJsonSerializer().Deserialize(new StreamReader(new MemoryStream(task)), type);
-		}
+        public static DatabaseTask ToTask(string taskType, byte[] task)
+        {
+            var type = typeof(DatabaseTask).Assembly.GetType(taskType);
+            return (DatabaseTask) JsonExtensions.CreateDefaultJsonSerializer().Deserialize(new StreamReader(new MemoryStream(task)), type);
+        }
 
-		public abstract DatabaseTask Clone();
-	}
+        public abstract DatabaseTask Clone();
+    }
 }

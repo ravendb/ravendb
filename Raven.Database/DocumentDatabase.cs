@@ -52,45 +52,45 @@ using Raven.Json.Linq;
 
 namespace Raven.Database
 {
-	public class DocumentDatabase : IResourceStore, IDisposable
-	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+    public class DocumentDatabase : IResourceStore, IDisposable
+    {
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-		private static string buildVersion;
+        private static string buildVersion;
 
-		private static string productVersion;
+        private static string productVersion;
 
-		private readonly TaskScheduler backgroundTaskScheduler;
+        private readonly TaskScheduler backgroundTaskScheduler;
 
 		private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
-		private readonly object idleLocker = new object();
+        private readonly object idleLocker = new object();
 
-		private readonly InFlightTransactionalState inFlightTransactionalState;
+        private readonly InFlightTransactionalState inFlightTransactionalState;
 
-		private readonly IndexingExecuter indexingExecuter;
+        private readonly IndexingExecuter indexingExecuter;
 
-		private readonly LastCollectionEtags lastCollectionEtags;
+        private readonly LastCollectionEtags lastCollectionEtags;
 
-		private readonly Prefetcher prefetcher;
+        private readonly Prefetcher prefetcher;
 
-		private readonly SequentialUuidGenerator uuidGenerator;
+        private readonly SequentialUuidGenerator uuidGenerator;
 
-		private readonly List<IDisposable> toDispose = new List<IDisposable>();
+        private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
-		private readonly TransportState transportState;
+        private readonly TransportState transportState;
 
-		private readonly WorkContext workContext;
+        private readonly WorkContext workContext;
 
-		private volatile bool backgroundWorkersSpun;
+        private volatile bool backgroundWorkersSpun;
 
-		private volatile bool indexingWorkersStoppedManually;
+        private volatile bool indexingWorkersStoppedManually;
 
-		private volatile bool disposed;
+        private volatile bool disposed;
 
 		private readonly DocumentDatabaseInitializer initializer;
 
-		private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
+        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
 
 		private readonly CancellationTokenSource _tpCts = new CancellationTokenSource();
 
@@ -116,7 +116,7 @@ namespace Raven.Database
 				if (Log.IsDebugEnabled)
 					Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
-				initializer = new DocumentDatabaseInitializer(this, configuration);
+                initializer = new DocumentDatabaseInitializer(this, configuration);
                 initializer.ValidateLicense();
 
 				initializer.ValidateStorage();
@@ -176,13 +176,13 @@ namespace Raven.Database
                     var reason = initializer.InitializeIndexDefinitionStorage();
 					Indexes = new IndexActions(this, recentTouches, uuidGenerator, Log);
                     Attachments = new AttachmentActions(this, recentTouches, uuidGenerator, Log);
-					Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
-					Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
-					Subscriptions = new SubscriptionActions(this, Log);
-					Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
-					Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
-					Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
-					Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
+                    Maintenance = new MaintenanceActions(this, recentTouches, uuidGenerator, Log);
+                    Notifications = new NotificationActions(this, recentTouches, uuidGenerator, Log);
+                    Subscriptions = new SubscriptionActions(this, Log);
+                    Patches = new PatchActions(this, recentTouches, uuidGenerator, Log);
+                    Queries = new QueryActions(this, recentTouches, uuidGenerator, Log);
+                    Tasks = new TaskActions(this, recentTouches, uuidGenerator, Log);
+                    Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
                     ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
@@ -240,8 +240,8 @@ namespace Raven.Database
 	    {
 	        // this code is here to make sure that all index defs in the storage have
             // matching indexes.
-	        foreach (var index in IndexDefinitionStorage.IndexNames)
-	        {
+            foreach (var index in IndexDefinitionStorage.IndexNames)
+            {
                 if (IndexStorage.HasIndex(index))
                     continue;
 	            var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
@@ -277,80 +277,129 @@ namespace Raven.Database
 					return productVersion;
 				}
 
-				productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
-				return productVersion;
-			}
-		}
+        public event Action OnIndexingWiringComplete;
 
-		public long ApproximateTaskCount
-		{
-			get
-			{
-				long approximateTaskCount = 0;
-				TransactionalStorage.Batch(actions => { approximateTaskCount = actions.Tasks.ApproximateTaskCount; });
-				return approximateTaskCount;
-			}
-		}
+        public event Action<DocumentDatabase> OnBackupComplete;
 
-		[ImportMany]
-		[Obsolete("Use RavenFS instead.")]
-		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
+        public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
-		[ImportMany]
-		[Obsolete("Use RavenFS instead.")]
-		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
+        public static string BuildVersion
+        {
+            get { return buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture)); }
+        }
 
-		[ImportMany]
-		[Obsolete("Use RavenFS instead.")]
-		public OrderedPartCollection<AbstractAttachmentReadTrigger> AttachmentReadTriggers { get; set; }
+        public static string ProductVersion
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(productVersion))
+                {
+                    return productVersion;
+                }
 
-		internal PutSerialLock DocumentLock { get; private set; }
+                productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
+                return productVersion;
+            }
+        }
 
-		[Obsolete("Use RavenFS instead.")]
-		public AttachmentActions Attachments { get; private set; }
+        public long ApproximateTaskCount
+        {
+            get
+            {
+                long approximateTaskCount = 0;
+                TransactionalStorage.Batch(actions => { approximateTaskCount = actions.Tasks.ApproximateTaskCount; });
+                return approximateTaskCount;
+            }
+        }
 
-		public TaskScheduler BackgroundTaskScheduler
-		{
-			get { return backgroundTaskScheduler; }
-		}
+        [ImportMany]
+        [Obsolete("Use RavenFS instead.")]
+        public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
-		public InMemoryRavenConfiguration Configuration { get; private set; }
+        [ImportMany]
+        [Obsolete("Use RavenFS instead.")]
+        public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		public ConfigurationRetriever ConfigurationRetriever { get; private set; }
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractDeleteTrigger> DeleteTriggers { get; set; }
 
-		/// <summary>
-		///     Whatever this database has been disposed
-		/// </summary>
-		public bool Disposed
-		{
-			get { return disposed; }
-		}
+        internal PutSerialLock DocumentLock { get; private set; }
 
-		[ImportMany]
-		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
+        [Obsolete("Use RavenFS instead.")]
+        public AttachmentActions Attachments { get; private set; }
 
-		public DocumentActions Documents { get; private set; }
+        public TaskScheduler BackgroundTaskScheduler
+        {
+            get { return backgroundTaskScheduler; }
+        }
 
-		[ImportMany]
-		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
+        public InMemoryRavenConfiguration Configuration { get; private set; }
 
-		/// <summary>
-		///     This is used to hold state associated with this instance by external extensions
-		/// </summary>
-		public AtomicDictionary<object> ExtensionsState { get; private set; }
+        [ImportMany]
+        public OrderedPartCollection<AbstractDeleteTrigger> DeleteTriggers { get; set; }
 
-		public bool HasTasks
-		{
-			get
-			{
-				bool hasTasks = false;
-				TransactionalStorage.Batch(actions => { hasTasks = actions.Tasks.HasTasks; });
-				return hasTasks;
-			}
-		}
+        /// <summary>
+        ///     Whatever this database has been disposed
+        /// </summary>
+        public bool Disposed
+        {
+            get { return disposed; }
+        }
+
+        [ImportMany]
+        public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
+
+        public DocumentActions Documents { get; private set; }
+
+        [ImportMany]
+        public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
+
+        /// <summary>
+        ///     This is used to hold state associated with this instance by external extensions
+        /// </summary>
+        public AtomicDictionary<object> ExtensionsState { get; private set; }
+
+        public bool HasTasks
+        {
+            get
+            {
+                bool hasTasks = false;
+                TransactionalStorage.Batch(actions => { hasTasks = actions.Tasks.HasTasks; });
+                return hasTasks;
+            }
+        }
+
+        [CLSCompliant(false)]
+        public InFlightTransactionalState InFlightTransactionalState
+        {
+            get { return inFlightTransactionalState; }
+        }
+
+        [ImportMany]
+        public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
+
+        public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
+
+        [ImportMany]
+        public OrderedPartCollection<AbstractIndexQueryTrigger> IndexQueryTriggers { get; set; }
+
+        [ImportMany]
+        public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
+
+        public IndexStorage IndexStorage { get; set; }
+
+        [ImportMany]
+        public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
+
+        public IndexActions Indexes { get; private set; }
+
+        [CLSCompliant(false)]
+        public IndexingExecuter IndexingExecuter
+        {
+            get { return indexingExecuter; }
+        }
 
 		[CLSCompliant(false)]
 		public InFlightTransactionalState InFlightTransactionalState
@@ -1086,13 +1135,13 @@ namespace Raven.Database
 			StopMappingThreadPool();
 			StopReducingThreadPool();
 
-			backgroundWorkersSpun = false;
-		}
+            backgroundWorkersSpun = false;
+        }
 
-		public void StartIndexingWorkers()
-		{
-			workContext.StartIndexing();
-		}
+        public void StartIndexingWorkers()
+        {
+            workContext.StartIndexing();
+        }
 
 		public void StopIndexingWorkers(bool manualStop)
 		{
@@ -1289,11 +1338,201 @@ namespace Raven.Database
 				this.configuration = configuration;
 			}
 
-			public void ValidateStorage()
-			{
-				var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-				if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
-					&& configuration.Storage.Voron.AllowOn32Bits == false && 
+            workContext.StopIndexing();
+            try
+            {
+                indexingBackgroundTask.Wait();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background indexing", e);
+            }
+
+            try
+            {
+                reducingBackgroundTask.Wait();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background reducing", e);
+            }
+
+            backgroundWorkersSpun = false;
+            indexingWorkersStoppedManually = manualStop;
+        }
+
+        public void ForceLicenseUpdate()
+        {
+            initializer.validateLicense.ForceExecute(Configuration);
+        }
+
+        protected void RaiseIndexingWiringComplete()
+        {
+            Action indexingWiringComplete = OnIndexingWiringComplete;
+            OnIndexingWiringComplete = null; // we can only init once, release all actions
+            if (indexingWiringComplete != null)
+                indexingWiringComplete();
+        }
+
+        private static int GetBuildVersion()
+        {
+            string location = AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>();
+
+            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
+            if (fileVersionInfo.FilePrivatePart != 0)
+                return fileVersionInfo.FilePrivatePart;
+
+            return fileVersionInfo.FileBuildPart;
+        }
+
+        private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands, CancellationToken token)
+        {
+            int retries = 128;
+            Random rand = null;
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+
+                try
+                {
+                    BatchResult[] results = null;
+                    TransactionalStorage.Batch(_ => results = ProcessBatch(commands, token));
+                    return results;
+                }
+                catch (ConcurrencyException)
+                {
+                    if (retries-- >= 0)
+                    {
+                        if (rand == null)
+                            rand = new Random();
+
+                        Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
+                        continue;
+                    }
+
+                    throw;
+                }
+            }
+        }
+
+        private void CompleteWorkContextSetup()
+        {
+            workContext.RaiseIndexChangeNotification = Notifications.RaiseNotifications;
+            workContext.IndexStorage = IndexStorage;
+            workContext.TransactionalStorage = TransactionalStorage;
+            workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+            workContext.RecoverIndexingErrors();
+        }
+
+        private static decimal ConvertBytesToMBs(long bytes)
+        {
+            return Math.Round(bytes / 1024.0m / 1024.0m, 2);
+        }
+
+
+        private void ExecuteStartupTasks()
+        {
+            using (LogContext.WithDatabase(Name))
+            {
+                foreach (var task in StartupTasks)
+                {
+                    var disposable = task.Value as IDisposable;
+                    if (disposable != null)
+                    {
+                        toDispose.Add(disposable);
+                    }
+
+                    task.Value.Execute(this);
+                }
+            }
+        }
+
+        private void InitializeIndexCodecTriggers()
+        {
+            IndexCodecs.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+        }
+
+        private void InitializeTriggersExceptIndexCodecs()
+        {
+            DocumentCodecs // .Init(disableAllTriggers) // Document codecs should always be activated (RavenDB-576)
+                .OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            PutTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            DeleteTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            ReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            IndexQueryTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            AttachmentPutTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            AttachmentDeleteTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            AttachmentReadTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+            IndexUpdateTriggers.Init(disableAllTriggers).OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+        }
+
+        private static bool IsScriptedPatchCommandDataWithoutEtagProperty(ICommandData commandData)
+        {
+            var scriptedPatchCommandData = commandData as ScriptedPatchCommandData;
+
+            const string ScriptEtagKey = "'@etag':";
+            const string EtagKey = "etag";
+
+            return scriptedPatchCommandData != null && scriptedPatchCommandData.Patch.Script.Replace(" ", string.Empty).Contains(ScriptEtagKey) == false && scriptedPatchCommandData.Patch.Values.ContainsKey(EtagKey) == false;
+        }
+
+        private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
+        {
+            var results = new BatchResult[commands.Count];
+            var participatingIds = commands.Select(x => x.Key).ToArray();
+
+            for (int index = 0; index < commands.Count; index++)
+            {
+                token.ThrowIfCancellationRequested();
+
+                results[index] = commands[index].ExecuteBatch(this, participatingIds);
+            }
+
+            return results;
+        }
+
+        private void SecondStageInitialization()
+        {
+            DocumentCodecs
+                .OfType<IRequiresDocumentDatabaseInitialization>()
+                .Concat(PutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(DeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(IndexCodecs.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(IndexQueryTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(AttachmentPutTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(AttachmentDeleteTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(AttachmentReadTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Concat(IndexUpdateTriggers.OfType<IRequiresDocumentDatabaseInitialization>())
+                .Apply(initialization => initialization.SecondStageInit());
+        }
+
+        private class DocumentDatabaseInitializer
+        {
+            private readonly DocumentDatabase database;
+
+            private readonly InMemoryRavenConfiguration configuration;
+
+            internal ValidateLicense validateLicense;
+
+            public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
+            {
+                this.database = database;
+                this.configuration = configuration;
+            }
+
+            public void ValidateStorage()
+            {
+                var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+                if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
+                    && configuration.Storage.Voron.AllowOn32Bits == false && 
                     Environment.Is64BitProcess == false)
 				{
 					throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");

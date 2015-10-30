@@ -4,58 +4,58 @@ using System.Reflection;
 
 namespace Raven.Abstractions.Logging.LogProviders
 {
-	public class Log4NetLogManager : LogManagerBase
-	{
-		private static bool providerIsAvailableOverride = true;
-		private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerTypeStatic, true);
+    public class Log4NetLogManager : LogManagerBase
+    {
+        private static bool providerIsAvailableOverride = true;
+        private static readonly Lazy<Type> LazyGetLogManagerType = new Lazy<Type>(GetLogManagerTypeStatic, true);
 
-		public Log4NetLogManager()
-			: base(logger => new Log4NetLogger(logger))
-		{
-			if (!IsLoggerAvailable())
-			{
-				throw new InvalidOperationException("log4net.LogManager not found");
-			}
-		}
+        public Log4NetLogManager()
+            : base(logger => new Log4NetLogger(logger))
+        {
+            if (!IsLoggerAvailable())
+            {
+                throw new InvalidOperationException("log4net.LogManager not found");
+            }
+        }
 
-		public static bool ProviderIsAvailableOverride
-		{
-			get { return providerIsAvailableOverride; }
-			set { providerIsAvailableOverride = value; }
-		}
+        public static bool ProviderIsAvailableOverride
+        {
+            get { return providerIsAvailableOverride; }
+            set { providerIsAvailableOverride = value; }
+        }
 
-		public static bool IsLoggerAvailable()
-		{
-			return ProviderIsAvailableOverride && LazyGetLogManagerType.Value != null;
-		}
+        public static bool IsLoggerAvailable()
+        {
+            return ProviderIsAvailableOverride && LazyGetLogManagerType.Value != null;
+        }
 
-		protected override Type GetLogManagerType()
-		{
-			return GetLogManagerTypeStatic();
-		}
+        protected override Type GetLogManagerType()
+        {
+            return GetLogManagerTypeStatic();
+        }
 
-		protected static Type GetLogManagerTypeStatic()
-		{
-			Assembly log4NetAssembly = GetLog4NetAssembly();
-			return log4NetAssembly != null
-				       ? log4NetAssembly.GetType("log4net.LogManager")
-				       : Type.GetType("log4net.LogManager, log4net");
-		}
+        protected static Type GetLogManagerTypeStatic()
+        {
+            Assembly log4NetAssembly = GetLog4NetAssembly();
+            return log4NetAssembly != null
+                       ? log4NetAssembly.GetType("log4net.LogManager")
+                       : Type.GetType("log4net.LogManager, log4net");
+        }
 
-		protected override Type GetNdcType()
-		{
-			Assembly log4NetAssembly = GetLog4NetAssembly();
-			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.NDC") : Type.GetType("log4net.NDC, log4net");
-		}
+        protected override Type GetNdcType()
+        {
+            Assembly log4NetAssembly = GetLog4NetAssembly();
+            return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.NDC") : Type.GetType("log4net.NDC, log4net");
+        }
 
-		protected override Type GetMdcType()
-		{
-			Assembly log4NetAssembly = GetLog4NetAssembly();
-			return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.MDC") : Type.GetType("log4net.MDC, log4net");
-		}
+        protected override Type GetMdcType()
+        {
+            Assembly log4NetAssembly = GetLog4NetAssembly();
+            return log4NetAssembly != null ? log4NetAssembly.GetType("log4net.MDC") : Type.GetType("log4net.MDC, log4net");
+        }
 
-		private static Assembly GetLog4NetAssembly()
-		{
+        private static Assembly GetLog4NetAssembly()
+        {
             try
             {
                 return Assembly.Load("log4net");
@@ -185,6 +185,6 @@ namespace Raven.Abstractions.Logging.LogProviders
                         return logger.IsDebugEnabled;
                 }
             }
-		}
-	}
+        }
+    }
 }

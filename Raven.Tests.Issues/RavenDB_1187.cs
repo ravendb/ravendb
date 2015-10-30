@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1187.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,13 +8,13 @@ using Raven.Tests.Common;
 
 namespace Raven.Tests.Issues
 {
-	using System;
-	using System.Collections.Generic;
+    using System;
+    using System.Collections.Generic;
 
-	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Indexing;
+    using Raven.Abstractions.Data;
+    using Raven.Abstractions.Indexing;
 
-	using Xunit;
+    using Xunit;
 
 	public class RavenDB_1187 : RavenTest
 	{
@@ -31,15 +31,15 @@ namespace Raven.Tests.Issues
 							   SuggestionsOptions = new HashSet<string> { "Name" }
 						   });
 
-						   store.DatabaseCommands.Suggest("Test", new SuggestionQuery
-						   {
-							   Field = "Name",
-							   Term = "Oren",
-							   MaxSuggestions = 10,
-						   });
-					   }
-				   });
-		}
+                           store.DatabaseCommands.Suggest("Test", new SuggestionQuery
+                           {
+                               Field = "Name",
+                               Term = "Oren",
+                               MaxSuggestions = 10,
+                           });
+                       }
+                   });
+        }
 
 		[Fact]
 		public void QueryingForSuggestionsAgainstFieldWithSuggestionsTurnedOffShouldThrow()
@@ -54,16 +54,16 @@ namespace Raven.Tests.Issues
 								SuggestionsOptions = new HashSet<string> { "Name"}
 							});
 
-							store.DatabaseCommands.Suggest("Test", new SuggestionQuery
-							{
-								Field = "Other",
-								Term = "Oren",
-								MaxSuggestions = 10,
-							});
-						}
-					});
+                            store.DatabaseCommands.Suggest("Test", new SuggestionQuery
+                            {
+                                Field = "Other",
+                                Term = "Oren",
+                                MaxSuggestions = 10,
+                            });
+                        }
+                    });
 
-			Assert.Contains("Index 'Test' does not have suggestions configured for field 'Other'.", e.Message);
-		}
-	}
+            Assert.Contains("Index 'Test' does not have suggestions configured for field 'Other'.", e.Message);
+        }
+    }
 }

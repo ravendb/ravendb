@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationBehavior.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,42 +19,42 @@ using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document
 {
-	using Raven.Abstractions.Connection;
+    using Raven.Abstractions.Connection;
 
-	public class ReplicationBehavior
-	{
-		private readonly DocumentStore documentStore;
-		private readonly static ILog log = LogManager.GetCurrentClassLogger();
+    public class ReplicationBehavior
+    {
+        private readonly DocumentStore documentStore;
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
 
-		public ReplicationBehavior(DocumentStore documentStore)
-		{
-			this.documentStore = documentStore;
-		}
+        public ReplicationBehavior(DocumentStore documentStore)
+        {
+            this.documentStore = documentStore;
+        }
 
-		/// <summary>
-		/// Represents an replication operation to all destination servers of an item specified by ETag
-		/// </summary>
-		/// <param name="etag">ETag of an replicated item</param>
-		/// <param name="timeout">Optional timeout - by default, 30 seconds</param>
-		/// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
-		/// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
-		/// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
-		public async Task<int> WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
-		{
-			etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
-			if (etag == Etag.Empty || etag == null)
-				return replicas; // if the etag is empty, nothing to do
+        /// <summary>
+        /// Represents an replication operation to all destination servers of an item specified by ETag
+        /// </summary>
+        /// <param name="etag">ETag of an replicated item</param>
+        /// <param name="timeout">Optional timeout - by default, 30 seconds</param>
+        /// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
+        /// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
+        /// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
+        public async Task<int> WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
+        {
+            etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
+            if (etag == Etag.Empty || etag == null)
+                return replicas; // if the etag is empty, nothing to do
 
-			var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
-		    database = database ?? documentStore.DefaultDatabase;
+            var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
+            database = database ?? documentStore.DefaultDatabase;
             asyncDatabaseCommands = (AsyncServerClient)asyncDatabaseCommands.ForDatabase(database);
 
-			asyncDatabaseCommands.ForceReadFromMaster();
+            asyncDatabaseCommands.ForceReadFromMaster();
 
             var replicationDocument = await asyncDatabaseCommands.ExecuteWithReplication(HttpMethods.Get, 
 						operationMetadata => asyncDatabaseCommands.DirectGetReplicationDestinationsAsync(operationMetadata)).ConfigureAwait(false);
             if (replicationDocument == null)
-				return -1;
+                return -1;
 
 			var destinationsToCheck = replicationDocument.Destinations
 			                                             .Where(x => x.CanBeFailover())
@@ -64,9 +64,9 @@ namespace Raven.Client.Document
 			if (destinationsToCheck.Count == 0)
 				return 0;
 
-			int toCheck = Math.Min(replicas, destinationsToCheck.Count);
+            int toCheck = Math.Min(replicas, destinationsToCheck.Count);
 
-		    var cts = new CancellationTokenSource();
+            var cts = new CancellationTokenSource();
             cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
 
             var sp = Stopwatch.StartNew();
@@ -100,29 +100,29 @@ namespace Raven.Client.Document
 		        {
 		            // we have nothing to do here, we replicated to at least the 
                     // number we had to check, so that is good
-			        return successCount;
-		        }
-			   
-			    if (tasks.Any(x => x.IsFaulted) && successCount == 0)
-			    {
-				    // there was an error here, not just cancellation, let us just let it bubble up.
-				    throw;
-			    }
+                    return successCount;
+                }
+               
+                if (tasks.Any(x => x.IsFaulted) && successCount == 0)
+                {
+                    // there was an error here, not just cancellation, let us just let it bubble up.
+                    throw;
+                }
 
-			    // we have either completed (but not enough) or cancelled, meaning timeout
-		        var message = string.Format("Could only confirm that the specified Etag {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
+                // we have either completed (but not enough) or cancelled, meaning timeout
+                var message = string.Format("Could only confirm that the specified Etag {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
                     etag,
                     successCount,
                     destinationsToCheck.Count,
                     sp.Elapsed,
                     string.Join<ReplicatedEtagInfo>("; ", latestEtags));
 
-				if(e is OperationCanceledException)
-					throw new TimeoutException(message);
+                if(e is OperationCanceledException)
+                    throw new TimeoutException(message);
 
-			    throw new TimeoutException(message, e);
-		    }
-		}
+                throw new TimeoutException(message, e);
+            }
+        }
 
 		private void ThrowTimeoutIfCanceled(CancellationToken token)
 		{
@@ -140,9 +140,9 @@ namespace Raven.Client.Document
 
 					var etags = await GetReplicatedEtagsFor(url, sourceUrl, sourceDbId).ConfigureAwait(false);
 
-				    latestEtags[index] = etags;
+                    latestEtags[index] = etags;
 
-					var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
+                    var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
 
 					if (replicated)
 						return;
@@ -152,8 +152,8 @@ namespace Raven.Client.Document
 					if (log.IsDebugEnabled)
 					log.DebugException(string.Format("Failed to get replicated etags for '{0}'.", sourceUrl), e);
 
-					throw;
-				}
+                    throw;
+                }
 
 				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
 			}

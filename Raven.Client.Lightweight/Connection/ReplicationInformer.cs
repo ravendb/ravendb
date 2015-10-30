@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationInformation.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -126,14 +126,14 @@ namespace Raven.Client.Connection
 				FailureCounters.FailureCounts[replicationDestination.Url] = new FailureCounter();
             }
 
-			if (replicationDocument.ClientConfiguration != null)
-				Conventions.UpdateFrom(replicationDocument.ClientConfiguration);
+            if (replicationDocument.ClientConfiguration != null)
+                Conventions.UpdateFrom(replicationDocument.ClientConfiguration);
         }
 
-	    protected override string GetServerCheckUrl(string baseUrl)
-	    {
-	        return baseUrl + "/replication/topology?check-server-reachable";
-	    }
+        protected override string GetServerCheckUrl(string baseUrl)
+        {
+            return baseUrl + "/replication/topology?check-server-reachable";
+        }
 
 	    public void RefreshReplicationInformation(AsyncServerClient serverClient)
 		{

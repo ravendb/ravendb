@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyCompany("Hibernating Rhinos")]
-[assembly: AssemblyCopyright("© Hibernating Rhinos 2015 - All rights reserved.")]
+[assembly: AssemblyCopyright("� Hibernating Rhinos 2015 - All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 [assembly: CLSCompliant(false)]

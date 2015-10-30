@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -34,24 +34,24 @@ namespace Raven.Database.FileSystem.Controllers
             }
         }
 
-		[HttpGet]
+        [HttpGet]
         [RavenRoute("fs/{fileSystemName}/search")]
         public HttpResponseMessage Get(string query, [FromUri] string[] sort)
-		{
-			int results;
-			var keys = Search.Query(query, sort, Paging.Start, Paging.PageSize, out results);
+        {
+            int results;
+            var keys = Search.Query(query, sort, Paging.Start, Paging.PageSize, out results);
 
             var list = new List<FileHeader>();
 
-			Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
+            Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
 
-			var result = new SearchResults
-			{
-				Start = Paging.Start,
-				PageSize = Paging.PageSize,
-				Files = list,
-				FileCount = results
-			};
+            var result = new SearchResults
+            {
+                Start = Paging.Start,
+                PageSize = Paging.PageSize,
+                Files = list,
+                FileCount = results
+            };
 
             return GetMessageWithObject(result);
 		}

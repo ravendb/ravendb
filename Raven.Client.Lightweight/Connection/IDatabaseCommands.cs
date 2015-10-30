@@ -559,219 +559,219 @@ namespace Raven.Client.Connection
 
         void SetIndexPriority(string name, IndexingPriority priority);
 
-		/// <summary>
-		///     Rollbacks the specified tx id
-		/// </summary>
-		/// <param name="txId">transaction identifier</param>
-		void Rollback(string txId);
+        /// <summary>
+        ///     Rollbacks the specified tx id
+        /// </summary>
+        /// <param name="txId">transaction identifier</param>
+        void Rollback(string txId);
 
-		/// <summary>
-		///     Seeds the next identity value on the server
-		/// </summary>
-		long SeedIdentityFor(string name, long value);
+        /// <summary>
+        ///     Seeds the next identity value on the server
+        /// </summary>
+        long SeedIdentityFor(string name, long value);
 
-		/// <summary>
-		///     Retrieves documents for the specified key prefix.
-		/// </summary>
-		/// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>
-		/// <param name="matches">
-		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
-		///     any single character, '*' any characters)
-		/// </param>
-		/// <param name="start">number of documents that should be skipped</param>
-		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
-		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
-		/// <param name="metadataOnly">specifies if only document metadata should be returned</param>
-		/// <param name="exclude">
-		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
-		///     ('?' any single character, '*' any characters)
-		/// </param>
-		/// <param name="transformer">name of a transformer that should be used to transform the results</param>
-		/// <param name="transformerParameters">parameters that will be passed to transformer</param>
-		/// <param name="skipAfter">
-		///     skip document fetching until given key is found and return documents after that key (default:
-		///     null)
-		/// </param>
-		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, string skipAfter = null);
+        /// <summary>
+        ///     Retrieves documents for the specified key prefix.
+        /// </summary>
+        /// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>
+        /// <param name="matches">
+        ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
+        ///     any single character, '*' any characters)
+        /// </param>
+        /// <param name="start">number of documents that should be skipped</param>
+        /// <param name="pageSize">maximum number of documents that will be retrieved</param>
+        /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+        /// <param name="metadataOnly">specifies if only document metadata should be returned</param>
+        /// <param name="exclude">
+        ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
+        ///     ('?' any single character, '*' any characters)
+        /// </param>
+        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
+        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
+        /// <param name="skipAfter">
+        ///     skip document fetching until given key is found and return documents after that key (default:
+        ///     null)
+        /// </param>
+        JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, string skipAfter = null);
 
-		/// <summary>
-		///     Streams the documents by etag OR starts with the prefix and match the matches
-		///     Will return *all* results, regardless of the number of itmes that might be returned.
-		/// </summary>
-		/// <param name="fromEtag">ETag of a document from which stream should start (mutually exclusive with 'startsWith')</param>
-		/// <param name="startsWith">prefix for which documents should be streamed (mutually exclusive with 'fromEtag')</param>
-		/// <param name="matches">
-		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
-		///     any single character, '*' any characters)
-		/// </param>
-		/// <param name="start">number of documents that should be skipped</param>
-		/// <param name="pageSize">maximum number of documents that will be retrieved</param>
-		/// <param name="exclude">
-		///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
-		///     ('?' any single character, '*' any characters)
-		/// </param>
-		/// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
-		/// <param name="skipAfter">
-		///     skip document fetching until given key is found and return documents after that key (default:
-		///     null)
-		/// </param>
-		IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+        /// <summary>
+        ///     Streams the documents by etag OR starts with the prefix and match the matches
+        ///     Will return *all* results, regardless of the number of itmes that might be returned.
+        /// </summary>
+        /// <param name="fromEtag">ETag of a document from which stream should start (mutually exclusive with 'startsWith')</param>
+        /// <param name="startsWith">prefix for which documents should be streamed (mutually exclusive with 'fromEtag')</param>
+        /// <param name="matches">
+        ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should be matched ('?'
+        ///     any single character, '*' any characters)
+        /// </param>
+        /// <param name="start">number of documents that should be skipped</param>
+        /// <param name="pageSize">maximum number of documents that will be retrieved</param>
+        /// <param name="exclude">
+        ///     pipe ('|') separated values for which document keys (after 'keyPrefix') should not be matched
+        ///     ('?' any single character, '*' any characters)
+        /// </param>
+        /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
+        /// <param name="skipAfter">
+        ///     skip document fetching until given key is found and return documents after that key (default:
+        ///     null)
+        /// </param>
+        IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
-		/// <summary>
-		///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
-		///     of the number of items that might be returned.
-		/// </summary>
-		/// <param name="index">name of an index to query</param>
-		/// <param name="query">query definition containing all information required to query a specified index</param>
-		/// <param name="queryHeaderInfo">information about performed query</param>
-		IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo);
+        /// <summary>
+        ///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
+        ///     of the number of items that might be returned.
+        /// </summary>
+        /// <param name="index">name of an index to query</param>
+        /// <param name="query">query definition containing all information required to query a specified index</param>
+        /// <param name="queryHeaderInfo">information about performed query</param>
+        IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo);
 
-		/// <summary>
-		///     Returns a list of suggestions based on the specified suggestion query
-		/// </summary>
-		/// <param name="index">name of an index to query</param>
-		/// <param name="suggestionQuery">
-		///     suggestion query definition containing all information required to query a specified
-		///     index
-		/// </param>
-		SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
+        /// <summary>
+        ///     Returns a list of suggestions based on the specified suggestion query
+        /// </summary>
+        /// <param name="index">name of an index to query</param>
+        /// <param name="suggestionQuery">
+        ///     suggestion query definition containing all information required to query a specified
+        ///     index
+        /// </param>
+        SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery);
 
-		/// <summary>
-		///     Updates attachments metadata only.
-		/// </summary>
-		/// <param name="key">key under which attachment is stored</param>
-		/// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
-		/// <param name="metadata">attachment metadata</param>
-		[Obsolete("Use RavenFS instead.")]
-		void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
+        /// <summary>
+        ///     Updates attachments metadata only.
+        /// </summary>
+        /// <param name="key">key under which attachment is stored</param>
+        /// <param name="etag">current attachment etag, used for concurrency checks (null to skip check)</param>
+        /// <param name="metadata">attachment metadata</param>
+        [Obsolete("Use RavenFS instead.")]
+        void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata);
 
-		/// <summary>
-		///     Perform a set based update using the specified index
-		/// </summary>
-		/// <param name="indexName">name of an index to perform a query on</param>
-		/// <param name="queryToUpdate">query that will be performed</param>
-		/// <param name="patchRequests">array of patches that will be executed on a query results</param>
-		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
+        /// <summary>
+        ///     Perform a set based update using the specified index
+        /// </summary>
+        /// <param name="indexName">name of an index to perform a query on</param>
+        /// <param name="queryToUpdate">query that will be performed</param>
+        /// <param name="patchRequests">array of patches that will be executed on a query results</param>
+        /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null);
 
-		/// <summary>
-		///     Perform a set based update using the specified index
-		/// </summary>
-		/// <param name="indexName">name of an index to perform a query on</param>
-		/// <param name="queryToUpdate">query that will be performed</param>
-		/// <param name="patch">JavaScript patch that will be executed on query results</param>
-		/// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
-		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
+        /// <summary>
+        ///     Perform a set based update using the specified index
+        /// </summary>
+        /// <param name="indexName">name of an index to perform a query on</param>
+        /// <param name="queryToUpdate">query that will be performed</param>
+        /// <param name="patch">JavaScript patch that will be executed on query results</param>
+        /// <param name="options">various operation options e.g. AllowStale or MaxOpsPerSec</param>
+        Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null);
 
-		/// <summary>
-		///     Get the full URL for the given document key
-		/// </summary>
-		string UrlFor(string documentKey);
+        /// <summary>
+        ///     Get the full URL for the given document key
+        /// </summary>
+        string UrlFor(string documentKey);
 
-		/// <summary>
-		///     Returns a new <see cref="IDatabaseCommands" /> that use specified credentials
-		/// </summary>
-		/// <param name="credentialsForSession">credentials to use</param>
-		IDatabaseCommands With(ICredentials credentialsForSession);
-	}
+        /// <summary>
+        ///     Returns a new <see cref="IDatabaseCommands" /> that use specified credentials
+        /// </summary>
+        /// <param name="credentialsForSession">credentials to use</param>
+        IDatabaseCommands With(ICredentials credentialsForSession);
+    }
 
-	public interface IGlobalAdminDatabaseCommands
-	{
-		IDatabaseCommands Commands { get; }
+    public interface IGlobalAdminDatabaseCommands
+    {
+        IDatabaseCommands Commands { get; }
 
-		/// <summary>
-		///     Sends an async command to compact a database. During the compaction the specified database will be offline.
-		/// </summary>
-		/// <param name="databaseName">name of a database to compact</param>
-		Operation CompactDatabase(string databaseName);
+        /// <summary>
+        ///     Sends an async command to compact a database. During the compaction the specified database will be offline.
+        /// </summary>
+        /// <param name="databaseName">name of a database to compact</param>
+        Operation CompactDatabase(string databaseName);
 
-		/// <summary>
-		///     Creates a database
-		/// </summary>
-		void CreateDatabase(DatabaseDocument databaseDocument);
+        /// <summary>
+        ///     Creates a database
+        /// </summary>
+        void CreateDatabase(DatabaseDocument databaseDocument);
 
-		/// <summary>
-		///     Used to delete a database from a server, with a possibility to remove all the data from hard drive.
-		///     <para>
-		///         Warning: if hardDelete is set to <c>true</c> then ALL data will be removed from the data directory of a
-		///         database.
-		///     </para>
-		/// </summary>
-		/// <param name="databaseName">name of a database to delete</param>
-		/// <param name="hardDelete">should all data be removed (data files, indexing files, etc.). Default: false</param>
-		void DeleteDatabase(string databaseName, bool hardDelete = false);
+        /// <summary>
+        ///     Used to delete a database from a server, with a possibility to remove all the data from hard drive.
+        ///     <para>
+        ///         Warning: if hardDelete is set to <c>true</c> then ALL data will be removed from the data directory of a
+        ///         database.
+        ///     </para>
+        /// </summary>
+        /// <param name="databaseName">name of a database to delete</param>
+        /// <param name="hardDelete">should all data be removed (data files, indexing files, etc.). Default: false</param>
+        void DeleteDatabase(string databaseName, bool hardDelete = false);
 
-		/// <summary>
-		///     Ensures that the database exists, creating it if needed
-		/// </summary>
-		void EnsureDatabaseExists(string name, bool ignoreFailures = false);
+        /// <summary>
+        ///     Ensures that the database exists, creating it if needed
+        /// </summary>
+        void EnsureDatabaseExists(string name, bool ignoreFailures = false);
 
-		/// <summary>
-		///     Gets the build number
-		/// </summary>
-		BuildNumber GetBuildNumber();
+        /// <summary>
+        ///     Gets the build number
+        /// </summary>
+        BuildNumber GetBuildNumber();
 
-		/// <summary>
-		///     Returns the names of all tenant databases on the RavenDB server
-		/// </summary>
-		string[] GetDatabaseNames(int pageSize, int start = 0);
+        /// <summary>
+        ///     Returns the names of all tenant databases on the RavenDB server
+        /// </summary>
+        string[] GetDatabaseNames(int pageSize, int start = 0);
 
-		/// <summary>
-		///     Gets server-wide statistics.
-		/// </summary>
-		AdminStatistics GetStatistics();
+        /// <summary>
+        ///     Gets server-wide statistics.
+        /// </summary>
+        AdminStatistics GetStatistics();
 
-		/// <summary>
-		///     Begins a backup operation.
-		/// </summary>
-		/// <param name="backupLocation">path to directory where backup will be stored</param>
-		/// <param name="databaseDocument">
-		///     Database configuration document that will be stored with backup in 'Database.Document'
-		///     file. Pass <c>null</c> to use the one from system database. WARNING: Database configuration document may contain
-		///     sensitive data which will be decrypted and stored in backup.
-		/// </param>
-		/// <param name="incremental">indicates if backup is incremental</param>
-		/// <param name="databaseName">name of a database that will be backed up</param>
-		void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
+        /// <summary>
+        ///     Begins a backup operation.
+        /// </summary>
+        /// <param name="backupLocation">path to directory where backup will be stored</param>
+        /// <param name="databaseDocument">
+        ///     Database configuration document that will be stored with backup in 'Database.Document'
+        ///     file. Pass <c>null</c> to use the one from system database. WARNING: Database configuration document may contain
+        ///     sensitive data which will be decrypted and stored in backup.
+        /// </param>
+        /// <param name="incremental">indicates if backup is incremental</param>
+        /// <param name="databaseName">name of a database that will be backed up</param>
+        void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName);
 
-		/// <summary>
-		///     Begins a restore operation.
-		/// </summary>
-		Operation StartRestore(DatabaseRestoreRequest restoreRequest);
-	}
+        /// <summary>
+        ///     Begins a restore operation.
+        /// </summary>
+        Operation StartRestore(DatabaseRestoreRequest restoreRequest);
+    }
 
-	public interface IAdminDatabaseCommands
-	{
-		/// <summary>
-		///     Gets configuration for current database.
-		/// </summary>
-		RavenJObject GetDatabaseConfiguration();
+    public interface IAdminDatabaseCommands
+    {
+        /// <summary>
+        ///     Gets configuration for current database.
+        /// </summary>
+        RavenJObject GetDatabaseConfiguration();
 
-		/// <summary>
-		///     Get the indexing status
-		/// </summary>
-		string GetIndexingStatus();
+        /// <summary>
+        ///     Get the indexing status
+        /// </summary>
+        string GetIndexingStatus();
 
-		/// <summary>
-		///     Enables indexing.
-		/// </summary>
-		/// <param name="maxNumberOfParallelIndexTasks">
-		///     if set then maximum number of parallel indexing tasks will be set to this
-		///     value.
-		/// </param>
-		void StartIndexing(int? maxNumberOfParallelIndexTasks = null);
+        /// <summary>
+        ///     Enables indexing.
+        /// </summary>
+        /// <param name="maxNumberOfParallelIndexTasks">
+        ///     if set then maximum number of parallel indexing tasks will be set to this
+        ///     value.
+        /// </param>
+        void StartIndexing(int? maxNumberOfParallelIndexTasks = null);
 
-		/// <summary>
-		///     Disables all indexing.
-		/// </summary>
-		void StopIndexing();
-	}
+        /// <summary>
+        ///     Disables all indexing.
+        /// </summary>
+        void StopIndexing();
+    }
 
-	public interface IInfoDatabaseCommands
-	{
-		/// <summary>
-		///     Get replication info
-		/// </summary>
-		ReplicationStatistics GetReplicationInfo();
-	}
+    public interface IInfoDatabaseCommands
+    {
+        /// <summary>
+        ///     Get replication info
+        /// </summary>
+        ReplicationStatistics GetReplicationInfo();
+    }
 }

@@ -141,55 +141,55 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
 			    InvalidDataException invalidDataException = null;
                 try
-			    {
-			        using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-			        using(var reader = new BinaryReader(stream))
-			        {
-			            if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
-			            {
-			                invalidDataException = new InvalidDataException(string.Format("Document '{0}' is compressed, but the compression bundle is not enabled.\r\n" +
-			                                                                              "You have to enable the compression bundle when dealing with compressed documents.", key), e);
-			            }
-			        }
-			    }
-			    catch (Exception )
-			    {
-			        // we are already in error handling mode, just ignore this
-			    }
+                {
+                    using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+                    using(var reader = new BinaryReader(stream))
+                    {
+                        if (reader.ReadUInt32() == DocumentCompression.CompressFileMagic)
+                        {
+                            invalidDataException = new InvalidDataException(string.Format("Document '{0}' is compressed, but the compression bundle is not enabled.\r\n" +
+                                                                                          "You have to enable the compression bundle when dealing with compressed documents.", key), e);
+                        }
+                    }
+                }
+                catch (Exception )
+                {
+                    // we are already in error handling mode, just ignore this
+                }
                 if(invalidDataException != null)
                     throw invalidDataException;
 
-			    throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
-			}
-		}
+                throw new InvalidDataException("Failed to de-serialize a document: " + key, e);
+            }
+        }
 
-		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_etag");
-			Api.MoveAfterLast(session, Documents);
-			if (TryMoveTableRecords(Documents, start, backward: true))
-				return Enumerable.Empty<JsonDocument>();
-			if (take < 1024 * 4)
-			{
-				var optimizer = new OptimizedIndexReader();
-				while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
-				{
-					optimizer.Add(Session, Documents);
-				}
+        public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+            Api.MoveAfterLast(session, Documents);
+            if (TryMoveTableRecords(Documents, start, backward: true))
+                return Enumerable.Empty<JsonDocument>();
+            if (take < 1024 * 4)
+            {
+                var optimizer = new OptimizedIndexReader();
+                while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
+                {
+                    optimizer.Add(Session, Documents);
+                }
 
-				return optimizer.Select(Session, Documents, ReadCurrentDocument);
-			}
-			return GetDocumentsWithoutBuffering(take);
-		}
+                return optimizer.Select(Session, Documents, ReadCurrentDocument);
+            }
+            return GetDocumentsWithoutBuffering(take);
+        }
 
-		private IEnumerable<JsonDocument> GetDocumentsWithoutBuffering(int take)
-		{
-			while (Api.TryMovePrevious(session, Documents) && take >= 0)
-			{
-				take--;
-				yield return ReadCurrentDocument();
-			}
-		}
+        private IEnumerable<JsonDocument> GetDocumentsWithoutBuffering(int take)
+        {
+            while (Api.TryMovePrevious(session, Documents) && take >= 0)
+            {
+                take--;
+                yield return ReadCurrentDocument();
+            }
+        }
 
         private bool TryMoveTableRecords(Table table, int start, bool backward)
         {
@@ -255,12 +255,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return ReadCurrentDocument(key);
         }
 
-		public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
-			Reference<bool> earlyExit = null)
-		{
-			if (earlyExit != null)
-				earlyExit.Value = false;
-			Api.JetSetCurrentIndex(session, Documents, "by_etag");
+        public IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
+            Reference<bool> earlyExit = null)
+        {
+            if (earlyExit != null)
+                earlyExit.Value = false;
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
                 yield break;
@@ -284,12 +284,12 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 // We can skip many documents so the timeout should be at the start of the process to be executed.
                 if (timeout != null)
                 {
-	                if (duration.Elapsed > timeout.Value)
-	                {
-		                if (earlyExit != null)
-			                earlyExit.Value = true;
-		                break;
-	                }
+                    if (duration.Elapsed > timeout.Value)
+                    {
+                        if (earlyExit != null)
+                            earlyExit.Value = true;
+                        break;
+                    }
                 }                
 
                 if (untilEtag != null && fetchedDocumentCount > 0)
@@ -319,19 +319,19 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 lastDocEtag = docEtag;  
 
                 if (maxSize != null && totalSize > maxSize.Value)
-				{
-					if (untilEtag != null && earlyExit != null)
-						earlyExit.Value = true;
-					break;
-				}
+                {
+                    if (untilEtag != null && earlyExit != null)
+                        earlyExit.Value = true;
+                    break;
+                }
 
-	            if (fetchedDocumentCount >= take)
-	            {
-					if (untilEtag !=null && earlyExit != null)
-						earlyExit.Value = true;
-					break;
-				}
-			} 
+                if (fetchedDocumentCount >= take)
+                {
+                    if (untilEtag !=null && earlyExit != null)
+                        earlyExit.Value = true;
+                    break;
+                }
+            } 
             while (Api.TryMoveNext(session, Documents));
 
             // We notify the last that we considered.
@@ -340,41 +340,41 @@ namespace Raven.Database.Storage.Esent.StorageActions
         }
 
         public IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedOnFailure = null,
-			Reference<bool> earlyExit = null)
-		{
+            Reference<bool> earlyExit = null)
+        {
             return GetDocumentsAfterWithIdStartingWith(etag, null, take, cancellationToken, maxSize, untilEtag, timeout, lastProcessedOnFailure, earlyExit);
-		}
+        }
 
-		public Etag GetBestNextDocumentEtag(Etag etag)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_etag");
-			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
-				return etag;
+        public Etag GetBestNextDocumentEtag(Etag etag)
+        {
+            Api.JetSetCurrentIndex(session, Documents, "by_etag");
+            Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+                return etag;
 
 
-			var val = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
-										 RetrieveColumnGrbit.RetrieveFromIndex, null);
-			return Etag.Parse(val);
-		}
+            var val = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
+                                         RetrieveColumnGrbit.RetrieveFromIndex, null);
+            return Etag.Parse(val);
+        }
 
-	    public DebugDocumentStats GetDocumentStatsVerySlowly()
-	    {
-	        var sp = Stopwatch.StartNew();
+        public DebugDocumentStats GetDocumentStatsVerySlowly()
+        {
+            var sp = Stopwatch.StartNew();
             var stat = new DebugDocumentStats { Total = GetDocumentsCount() };
 
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
-			Api.MoveBeforeFirst(Session, Documents);
-	        while (Api.TryMoveNext(Session, Documents))
-	        {
-	            var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
-	                                                 Encoding.Unicode);
+            Api.MoveBeforeFirst(Session, Documents);
+            while (Api.TryMoveNext(Session, Documents))
+            {
+                var key = Api.RetrieveColumnAsString(Session, Documents, tableColumnsCache.DocumentsColumns["key"],
+                                                     Encoding.Unicode);
                
                 var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
                 var size = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? -1;
                 stat.TotalSize += size;
-	            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
-	            {
+                if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+                {
                     stat.System.Update(size, key);
 	            }
 
@@ -629,47 +629,47 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
             try 
             {
-			using (var update = new Update(session, Documents, prep))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
-				{
-					if (isUpdate)
-						columnStream.SetLength(0);
-					using (Stream stream = new BufferedStream(columnStream))
-					using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
-					{
-						data.WriteTo(finalStream);
-						finalStream.Flush();
-					}
-				}
-				Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				DateTime savedAt = SystemTime.UtcNow;
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+            using (var update = new Update(session, Documents, prep))
+            {
+                Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+                using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+                {
+                    if (isUpdate)
+                        columnStream.SetLength(0);
+                    using (Stream stream = new BufferedStream(columnStream))
+                    using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+                    {
+                        data.WriteTo(finalStream);
+                        finalStream.Flush();
+                    }
+                }
+                Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+                Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+                DateTime savedAt = SystemTime.UtcNow;
+                Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
-				{
-					if (isUpdate)
-						columnStream.SetLength(0);
-					using (Stream stream = new BufferedStream(columnStream))
-					{
-						metadata.WriteTo(stream);
-						stream.Flush();
-					}
-				}
+                using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
+                {
+                    if (isUpdate)
+                        columnStream.SetLength(0);
+                    using (Stream stream = new BufferedStream(columnStream))
+                    {
+                        metadata.WriteTo(stream);
+                        stream.Flush();
+                    }
+                }
 
-				update.Save();
+                update.Save();
 
-				return new AddDocumentResult
-				{
-					Etag = newEtag,
-					PrevEtag = existingETag,
-					SavedAt = savedAt,
-					Updated = isUpdate
-				};
-			}
-		}
+                return new AddDocumentResult
+                {
+                    Etag = newEtag,
+                    PrevEtag = existingETag,
+                    SavedAt = savedAt,
+                    Updated = isUpdate
+                };
+            }
+        }
             catch (EsentKeyDuplicateException e)
             {
                 throw new ConcurrencyException("Illegal duplicate key " + key, e);

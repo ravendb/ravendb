@@ -8,37 +8,37 @@ using Xunit;
 
 namespace Raven.SlowTests.Replication
 {
-	public class ReadStriping : ReplicationBase
-	{
-		[Fact]
-		public void When_replicating_can_do_read_striping()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+    public class ReadStriping : ReplicationBase
+    {
+        [Fact]
+        public void When_replicating_can_do_read_striping()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new Company());
-				session.SaveChanges();
-			}
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new Company());
+                session.SaveChanges();
+            }
 
             SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			WaitForDocument(store2.DatabaseCommands, "companies/1");
-			WaitForDocument(store3.DatabaseCommands, "companies/1");
+            WaitForDocument(store2.DatabaseCommands, "companies/1");
+            WaitForDocument(store3.DatabaseCommands, "companies/1");
 
             PauseReplicationAsync(0, store1.DefaultDatabase).Wait();
             PauseReplicationAsync(1, store2.DefaultDatabase).Wait();
             PauseReplicationAsync(2, store3.DefaultDatabase).Wait();
 
-			using(var store = new DocumentStore
-			{
-				Url = store1.Url,
-				Conventions =
-					{
-						FailoverBehavior = FailoverBehavior.ReadFromAllServers
-					},
+            using(var store = new DocumentStore
+            {
+                Url = store1.Url,
+                Conventions =
+                    {
+                        FailoverBehavior = FailoverBehavior.ReadFromAllServers
+                    },
                     DefaultDatabase = store1.DefaultDatabase
 			})
 			{
@@ -82,20 +82,20 @@ namespace Raven.SlowTests.Replication
 
             SetupReplication(store1.DatabaseCommands, store2, store3);
 
-			WaitForDocument(store2.DatabaseCommands, "companies/1");
-			WaitForDocument(store3.DatabaseCommands, "companies/1");
+            WaitForDocument(store2.DatabaseCommands, "companies/1");
+            WaitForDocument(store3.DatabaseCommands, "companies/1");
 
             PauseReplicationAsync(0, store1.DefaultDatabase).Wait();
             PauseReplicationAsync(1, store2.DefaultDatabase).Wait();
             PauseReplicationAsync(2, store3.DefaultDatabase).Wait();
 
-			using (var store = new DocumentStore
-			{
-				Url = store1.Url,
-				Conventions =
-				{
-					FailoverBehavior = FailoverBehavior.ReadFromAllServers
-				},
+            using (var store = new DocumentStore
+            {
+                Url = store1.Url,
+                Conventions =
+                {
+                    FailoverBehavior = FailoverBehavior.ReadFromAllServers
+                },
                 DefaultDatabase = store1.DefaultDatabase
 			})
 			{

@@ -17,122 +17,122 @@ using Raven.Database.Queries;
 
 namespace Raven.Tests.Bugs
 {
-	public class DynamicQuerySorting : RavenTest
-	{
-		public class GameServer
-		{
-			public string Id { get; set; }
-			public string Name { get; set; }
-		}
+    public class DynamicQuerySorting : RavenTest
+    {
+        public class GameServer
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
 
-		[Fact]
-		public void ShouldNotSortStringAsLong()
-		{
-			using (var store = NewDocumentStore())
-			{
-				RavenQueryStatistics stats;
-				using (var session = store.OpenSession())
-				{
-					session.Query<GameServer>()
-						.Statistics(out stats)
-						.OrderBy(x => x.Name)
-						.ToList();
-				}
+        [Fact]
+        public void ShouldNotSortStringAsLong()
+        {
+            using (var store = NewDocumentStore())
+            {
+                RavenQueryStatistics stats;
+                using (var session = store.OpenSession())
+                {
+                    session.Query<GameServer>()
+                        .Statistics(out stats)
+                        .OrderBy(x => x.Name)
+                        .ToList();
+                }
 
-				var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
-				Assert.Equal(SortOptions.String, indexDefinition.SortOptions["Name"]);
-			}
-		}
+                var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
+                Assert.Equal(SortOptions.String, indexDefinition.SortOptions["Name"]);
+            }
+        }
 
-		[Fact]
-		public void ShouldNotSortStringAsLongAfterRestart()
-		{
-			using (var store = NewDocumentStore())
-			{
-				RavenQueryStatistics stats;
-				using (var session = store.OpenSession())
-				{
-					session.Query<GameServer>()
-						.Statistics(out stats)
-						.OrderBy(x => x.Name)
-						.ToList();
-				}
+        [Fact]
+        public void ShouldNotSortStringAsLongAfterRestart()
+        {
+            using (var store = NewDocumentStore())
+            {
+                RavenQueryStatistics stats;
+                using (var session = store.OpenSession())
+                {
+                    session.Query<GameServer>()
+                        .Statistics(out stats)
+                        .OrderBy(x => x.Name)
+                        .ToList();
+                }
 
-				var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
-				Assert.Equal(SortOptions.String, indexDefinition.SortOptions["Name"]);
-			}
-		}
+                var indexDefinition = store.SystemDatabase.IndexDefinitionStorage.GetIndexDefinition(stats.IndexName);
+                Assert.Equal(SortOptions.String, indexDefinition.SortOptions["Name"]);
+            }
+        }
 
-		[Fact]
-		public void ShouldSelectIndexWhenNoSortingSpecified()
-		{
-			using (var store = NewDocumentStore())
-			{
-				RavenQueryStatistics stats;
-				using (var session = store.OpenSession())
-				{
-					session.Query<GameServer>()
-						.Statistics(out stats)
-						.OrderBy(x => x.Name)
-						.ToList();
-				}
-
-                CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
-				var documentDatabase = store.SystemDatabase;
-				var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
-				{
-					SortedFields = new[]
-					{
-						new SortedField("Name"),
-					}
-				});
-
-				Assert.Equal(stats.IndexName, findDynamicIndexName);
-			}
-		}
-
-		[Fact]
-		public void ShouldSelectIndexWhenStringSortingSpecified()
-		{
-			using (var store = NewDocumentStore())
-			{
-				RavenQueryStatistics stats;
-				using (var session = store.OpenSession())
-				{
-					session.Query<GameServer>()
-						.Statistics(out stats)
-						.OrderBy(x => x.Name)
-						.ToList();
-				}
+        [Fact]
+        public void ShouldSelectIndexWhenNoSortingSpecified()
+        {
+            using (var store = NewDocumentStore())
+            {
+                RavenQueryStatistics stats;
+                using (var session = store.OpenSession())
+                {
+                    session.Query<GameServer>()
+                        .Statistics(out stats)
+                        .OrderBy(x => x.Name)
+                        .ToList();
+                }
 
                 CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
-				CurrentOperationContext.Headers.Value.Value.Set("SortHint-Name", "String");
-				var documentDatabase = store.SystemDatabase;
-				var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
-				{
-					SortedFields = new[]
-					{
-						new SortedField("Name"),
-					}
-				});
+                var documentDatabase = store.SystemDatabase;
+                var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
+                {
+                    SortedFields = new[]
+                    {
+                        new SortedField("Name"),
+                    }
+                });
 
-				Assert.Equal(stats.IndexName, findDynamicIndexName);
-			}
-		}
+                Assert.Equal(stats.IndexName, findDynamicIndexName);
+            }
+        }
 
-		[Fact]
-		public void ShouldSelectIndexWhenStringSortingSpecifiedByUsingQueryString()
-		{
-			using (var store = NewRemoteDocumentStore())
-			{
-				RavenQueryStatistics stats;
-				using (var session = store.OpenSession())
-				{
-					session.Query<GameServer>()
-						.Statistics(out stats)
-						.OrderBy(x => x.Name)
-						.ToList();
-				}
+        [Fact]
+        public void ShouldSelectIndexWhenStringSortingSpecified()
+        {
+            using (var store = NewDocumentStore())
+            {
+                RavenQueryStatistics stats;
+                using (var session = store.OpenSession())
+                {
+                    session.Query<GameServer>()
+                        .Statistics(out stats)
+                        .OrderBy(x => x.Name)
+                        .ToList();
+                }
+
+                CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
+                CurrentOperationContext.Headers.Value.Value.Set("SortHint-Name", "String");
+                var documentDatabase = store.SystemDatabase;
+                var findDynamicIndexName = documentDatabase.FindDynamicIndexName("GameServers", new IndexQuery
+                {
+                    SortedFields = new[]
+                    {
+                        new SortedField("Name"),
+                    }
+                });
+
+                Assert.Equal(stats.IndexName, findDynamicIndexName);
+            }
+        }
+
+        [Fact]
+        public void ShouldSelectIndexWhenStringSortingSpecifiedByUsingQueryString()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                RavenQueryStatistics stats;
+                using (var session = store.OpenSession())
+                {
+                    session.Query<GameServer>()
+                        .Statistics(out stats)
+                        .OrderBy(x => x.Name)
+                        .ToList();
+                }
 
                 CurrentOperationContext.Headers.Value = new Lazy<NameValueCollection>(() => new NameValueCollection());
 

@@ -5,7 +5,7 @@ using NetTopologySuite.CoordinateSystems;
 // From: https://code.google.com/p/nettopologysuite/source/browse/#svn%2Ftrunk%2FNetTopologySuite.IO%2FNetTopologySuite.IO.GeoJSON
 namespace Raven.Tests.Spatial.JsonConverters.GeoJson
 {
-	/// <summary>
+    /// <summary>
     /// Converts ICRSObject object to its JSON representation.
     /// </summary>
     public class ICRSObjectConverter : JsonConverter

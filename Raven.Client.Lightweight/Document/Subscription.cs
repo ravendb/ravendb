@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Subscription.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -26,83 +26,83 @@ using Sparrow.Collections;
 
 namespace Raven.Client.Document
 {
-	public delegate void BeforeBatch();
+    public delegate void BeforeBatch();
 
-	public delegate void AfterBatch(int documentsProcessed);
+    public delegate void AfterBatch(int documentsProcessed);
 
-	public delegate bool BeforeAcknowledgment();
+    public delegate bool BeforeAcknowledgment();
 
-	public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
+    public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
 
-	public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
-	{
-		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
+    {
+        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
-		private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
-		private readonly IAsyncDatabaseCommands commands;
-		private readonly IDatabaseChanges changes;
-		private readonly DocumentConvention conventions;
-		private readonly Func<Task> ensureOpenSubscription;
-		private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
-		private readonly SubscriptionConnectionOptions options;
-		private readonly CancellationTokenSource cts = new CancellationTokenSource();
-		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-		private readonly bool isStronglyTyped;
-		private readonly long id;
-		private Task pullingTask;
-		private Task startPullingTask;
-		private IDisposable putDocumentsObserver;
-		private IDisposable endedBulkInsertsObserver;
-		private IDisposable dataSubscriptionReleasedObserver;
-		private bool completed;
-		private bool disposed;
-		private bool firstConnection = true;
+        private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
+        private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
+        private readonly IAsyncDatabaseCommands commands;
+        private readonly IDatabaseChanges changes;
+        private readonly DocumentConvention conventions;
+        private readonly Func<Task> ensureOpenSubscription;
+        private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
+        private readonly SubscriptionConnectionOptions options;
+        private readonly CancellationTokenSource cts = new CancellationTokenSource();
+        private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
+        private readonly bool isStronglyTyped;
+        private readonly long id;
+        private Task pullingTask;
+        private Task startPullingTask;
+        private IDisposable putDocumentsObserver;
+        private IDisposable endedBulkInsertsObserver;
+        private IDisposable dataSubscriptionReleasedObserver;
+        private bool completed;
+        private bool disposed;
+        private bool firstConnection = true;
 
-		public event BeforeBatch BeforeBatch = delegate { };
-		public event AfterBatch AfterBatch = delegate { };
-		public event BeforeAcknowledgment BeforeAcknowledgment = () => true;
-		public event AfterAcknowledgment AfterAcknowledgment = delegate { };
+        public event BeforeBatch BeforeBatch = delegate { };
+        public event AfterBatch AfterBatch = delegate { };
+        public event BeforeAcknowledgment BeforeAcknowledgment = () => true;
+        public event AfterAcknowledgment AfterAcknowledgment = delegate { };
 
-		internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, bool open, Func<Task> ensureOpenSubscription)
-		{
-			this.id = id;
-			this.options = options;
-			this.commands = commands;
-			this.changes = changes;
-			this.conventions = conventions;
-			this.ensureOpenSubscription = ensureOpenSubscription;
+        internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, bool open, Func<Task> ensureOpenSubscription)
+        {
+            this.id = id;
+            this.options = options;
+            this.commands = commands;
+            this.changes = changes;
+            this.conventions = conventions;
+            this.ensureOpenSubscription = ensureOpenSubscription;
 
-			if (typeof (T) != typeof (RavenJObject))
-			{
-				isStronglyTyped = true;
-				generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
-			}
+            if (typeof (T) != typeof (RavenJObject))
+            {
+                isStronglyTyped = true;
+                generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
+            }
 
-			if (open)
-				Start();
-			else
-			{
-				if (options.Strategy != SubscriptionOpeningStrategy.WaitForFree)
-					throw new InvalidOperationException("Subscription isn't open while its opening strategy is: " + options.Strategy);
-			}
+            if (open)
+                Start();
+            else
+            {
+                if (options.Strategy != SubscriptionOpeningStrategy.WaitForFree)
+                    throw new InvalidOperationException("Subscription isn't open while its opening strategy is: " + options.Strategy);
+            }
 
-			if (options.Strategy == SubscriptionOpeningStrategy.WaitForFree)
-				WaitForSubscriptionReleased();
-		}
+            if (options.Strategy == SubscriptionOpeningStrategy.WaitForFree)
+                WaitForSubscriptionReleased();
+        }
 
-		private void Start()
-		{
-			StartWatchingDocs();
-			startPullingTask = StartPullingDocs();
-		}
+        private void Start()
+        {
+            StartWatchingDocs();
+            startPullingTask = StartPullingDocs();
+        }
 
-		private Task PullDocuments()
-		{
-			return Task.Run(async () =>
-			{
-				try
-				{
+        private Task PullDocuments()
+        {
+            return Task.Run(async () =>
+            {
+                try
+                {
                     Etag lastProcessedEtagOnClient = null;
 
 					while (true)
@@ -225,7 +225,7 @@ namespace Raven.Client.Document
 							break;
 
                         if (lastProcessedEtagOnServer != null)
-						{
+                        {
                             if (pulledDocs)
                             {
                                 // This is an acknowledge when the server returns documents to the subscriber.
@@ -254,27 +254,27 @@ namespace Raven.Client.Document
                                     continue; // try to pull more documents from subscription
                                 }
                             }							
-						}
+                        }
 
-						while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
-						{
-							using (var clientAliveRequest = CreateClientAliveRequest())
-							{
-								clientAliveRequest.ExecuteRequest();
-							}
-						}
-					}
-				}
-				catch (ErrorResponseException e)
-				{
-					SubscriptionException subscriptionException;
-					if (AsyncDocumentSubscriptions.TryGetSubscriptionException(e, out subscriptionException))
-						throw subscriptionException;
+                        while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
+                        {
+                            using (var clientAliveRequest = CreateClientAliveRequest())
+                            {
+                                clientAliveRequest.ExecuteRequest();
+                            }
+                        }
+                    }
+                }
+                catch (ErrorResponseException e)
+                {
+                    SubscriptionException subscriptionException;
+                    if (AsyncDocumentSubscriptions.TryGetSubscriptionException(e, out subscriptionException))
+                        throw subscriptionException;
 
-					throw;
-				}
-			});
-		}
+                    throw;
+                }
+            });
+        }
 
         private void AcknowledgeBatchToServer(Etag lastProcessedEtagOnServer)
         {

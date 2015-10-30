@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1561.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,12 +20,12 @@ namespace Raven.Tests.Issues
     {
 
         private readonly IList<Camera> _data;
-		private const int NumCameras = 100;
+        private const int NumCameras = 100;
 
         public RavenDB_1561()
-		{
-			_data = GetCameras(NumCameras);
-		}
+        {
+            _data = GetCameras(NumCameras);
+        }
 
         [Fact]
         public void CanPerformFacetedLimitSearchOnNonSystemDatabase()

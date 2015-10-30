@@ -93,11 +93,11 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                 else
                 {
                     var etag = deleted == false ? existingEtag : null;
-					var resolvedItemJObject = resolvedItemToSave as RavenJObject;
-					if (resolvedItemJObject != null)
-						ExecuteRemoveConflictOnPutTrigger(id, metadata, resolvedItemJObject);
+                    var resolvedItemJObject = resolvedItemToSave as RavenJObject;
+                    if (resolvedItemJObject != null)
+                        ExecuteRemoveConflictOnPutTrigger(id, metadata, resolvedItemJObject);
 
-					AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
+                    AddWithoutConflict(id, etag, resolvedMetadataToSave, resolvedItemToSave);
 
                 }
                 return;
@@ -257,51 +257,51 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 				if (log.IsDebugEnabled)
 					log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 
-				// we have a new conflict  move the existing doc to a conflict and create a conflict document
-				var existingDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifierForCurrentDatabase();
-				createdConflict = CreateConflict(id, newConflictId, existingDocumentConflictId, existingItem, existingMetadata);
-			}
+                // we have a new conflict  move the existing doc to a conflict and create a conflict document
+                var existingDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifierForCurrentDatabase();
+                createdConflict = CreateConflict(id, newConflictId, existingDocumentConflictId, existingItem, existingMetadata);
+            }
 
-			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
-				Database.Notifications.RaiseNotifications(new ReplicationConflictNotification()
-														{
-															Id = id,
-															Etag = createdConflict.Etag,
-															Conflicts = createdConflict.ConflictedIds,
-															ItemType = ReplicationConflictTypes.DocumentReplicationConflict,
-															OperationType = ReplicationOperationTypes.Delete
-														}));
+            Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
+                Database.Notifications.RaiseNotifications(new ReplicationConflictNotification()
+                                                        {
+                                                            Id = id,
+                                                            Etag = createdConflict.Etag,
+                                                            Conflicts = createdConflict.ConflictedIds,
+                                                            ItemType = ReplicationConflictTypes.DocumentReplicationConflict,
+                                                            OperationType = ReplicationOperationTypes.Delete
+                                                        }));
 
-			}
+            }
 
-		protected abstract void DeleteItem(string id, Etag etag);
+        protected abstract void DeleteItem(string id, Etag etag);
 
-		protected abstract void MarkAsDeleted(string id, RavenJObject metadata);
+        protected abstract void MarkAsDeleted(string id, RavenJObject metadata);
 
-		protected abstract void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, TExternal incoming);
+        protected abstract void AddWithoutConflict(string id, Etag etag, RavenJObject metadata, TExternal incoming);
 
-		protected abstract CreatedConflict CreateConflict(string id, string newDocumentConflictId,
-			string existingDocumentConflictId, TInternal existingItem, RavenJObject existingMetadata);
+        protected abstract CreatedConflict CreateConflict(string id, string newDocumentConflictId,
+            string existingDocumentConflictId, TInternal existingItem, RavenJObject existingMetadata);
 
-		protected abstract CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId,
-			RavenJObject existingMetadata, TInternal existingItem);
+        protected abstract CreatedConflict AppendToCurrentItemConflicts(string id, string newConflictId,
+            RavenJObject existingMetadata, TInternal existingItem);
 
-		protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag,
-			out bool deleted);
+        protected abstract RavenJObject TryGetExisting(string id, out TInternal existingItem, out Etag existingEtag,
+            out bool deleted);
 
-		protected abstract bool TryResolveConflict(string id, RavenJObject metadata, TExternal document,
-			TInternal existing, out RavenJObject resolvedMetadataToSave,
-										out TExternal resolvedItemToSave);
+        protected abstract bool TryResolveConflict(string id, RavenJObject metadata, TExternal document,
+            TInternal existing, out RavenJObject resolvedMetadataToSave,
+                                        out TExternal resolvedItemToSave);
 
 
-		private static string GetReplicationIdentifier(RavenJObject metadata)
-		{
-			return metadata.Value<string>(Constants.RavenReplicationSource);
-			}
+        private static string GetReplicationIdentifier(RavenJObject metadata)
+        {
+            return metadata.Value<string>(Constants.RavenReplicationSource);
+            }
 
-		private string GetReplicationIdentifierForCurrentDatabase()
-		{
-			return Database.TransactionalStorage.Id.ToString();
-			}
-		}
-	}
+        private string GetReplicationIdentifierForCurrentDatabase()
+        {
+            return Database.TransactionalStorage.Id.ToString();
+            }
+        }
+    }

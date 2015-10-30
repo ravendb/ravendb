@@ -17,17 +17,17 @@ using Raven.Abstractions.Threading;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-	using Raven.Abstractions.Extensions;
+    using Raven.Abstractions.Extensions;
 
-	/// <summary>
-	/// We can't allow real deletes when using replication, because
-	/// then we won't have any way to replicate the delete. Instead
-	/// we allow the delete but don't do actual delete, we replace it 
-	/// with a delete marker instead
-	/// </summary>
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
-	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
+    /// <summary>
+    /// We can't allow real deletes when using replication, because
+    /// then we won't have any way to replicate the delete. Instead
+    /// we allow the delete but don't do actual delete, we replace it 
+    /// with a delete marker instead
+    /// </summary>
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10000)]
+    [InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
     [Obsolete("Use RavenFS instead.")]
 	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
 	{

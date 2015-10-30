@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -2007,12 +2007,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                         }
                         catch (Exception ex)
                         {
-							var newEx = new JsonSerializationException("Could not read value for property: " + memberName, ex);
-							TryClearErrorContext(); 
-							if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, newEx))
-								HandleError(reader, true, initialDepth);
-							else
-								throw newEx;
+                            var newEx = new JsonSerializationException("Could not read value for property: " + memberName, ex);
+                            TryClearErrorContext(); 
+                            if (IsErrorHandled(newObject, contract, memberName, reader as IJsonLineInfo, reader.Path, newEx))
+                                HandleError(reader, true, initialDepth);
+                            else
+                                throw newEx;
                         }
                         break;
                     }

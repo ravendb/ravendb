@@ -237,7 +237,7 @@ namespace Raven.Client.Document
 		public override void Dispose()
 		{
 #if DEBUG
-			GC.SuppressFinalize(this);
+            GC.SuppressFinalize(this);
 #endif
 
 			foreach (var observeChangesAndEvictItemsFromCacheForDatabase in observeChangesAndEvictItemsFromCacheForDatabases)
@@ -283,15 +283,15 @@ namespace Raven.Client.Document
 		private ServicePoint rootServicePoint;
 
 #if DEBUG
-		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
+        private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
 
 
-		~DocumentStore()
-		{
-			var buffer = e.ToString();
-			var stacktraceDebug = string.Format("StackTrace of un-disposed document store recorded. Please make sure to dispose any document store in the tests in order to avoid race conditions in tests.{0}{1}{0}{0}", Environment.NewLine, buffer);
-			Console.WriteLine(stacktraceDebug);
-		}
+        ~DocumentStore()
+        {
+            var buffer = e.ToString();
+            var stacktraceDebug = string.Format("StackTrace of un-disposed document store recorded. Please make sure to dispose any document store in the tests in order to avoid race conditions in tests.{0}{1}{0}{0}", Environment.NewLine, buffer);
+            Console.WriteLine(stacktraceDebug);
+        }
 #endif
 
 		/// <summary>
@@ -402,7 +402,7 @@ namespace Raven.Client.Document
 				initialized = true;
 
 #if !MONO
-				RecoverPendingTransactions();
+                RecoverPendingTransactions();
 #endif
 
 				if (ensureDatabaseExists &&
@@ -769,6 +769,6 @@ namespace Raven.Client.Document
 			var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;
-		}
-	}
+        }
+    }
 }

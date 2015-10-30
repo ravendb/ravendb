@@ -7,9 +7,9 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         public string TransformResults { get; set; }
 
-		/// <summary>
-		/// Transformer identifier (internal).
-		/// </summary>
+        /// <summary>
+        /// Transformer identifier (internal).
+        /// </summary>
         public int TransfomerId { get; set; }
 
 		/// <summary>
@@ -22,7 +22,7 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
         public string Name { get; set; }
 
-		public TransformerLockMode LockMode { get; set; } 
+        public TransformerLockMode LockMode { get; set; } 
 
         public bool Equals(TransformerDefinition other)
         {

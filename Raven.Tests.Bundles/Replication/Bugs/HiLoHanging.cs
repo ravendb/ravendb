@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="HiLoHanging.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,15 +14,15 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Replication.Bugs
 {
-	public class HiLoHanging : ReplicationBase
-	{
-		[Fact]
-		public void HiLo_Modified_InReplicated_Scenario()
-		{
-			const string key = "Raven/Hilo/managers";
+    public class HiLoHanging : ReplicationBase
+    {
+        [Fact]
+        public void HiLo_Modified_InReplicated_Scenario()
+        {
+            const string key = "Raven/Hilo/managers";
 
-			var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers);
-			var store2 = CreateStore();
+            var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromAllServers);
+            var store2 = CreateStore();
 
 			((DocumentStore) store1).GetReplicationInformerForDatabase()
 			                        .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store1.AsyncDatabaseCommands)
@@ -31,37 +31,37 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 			                        .UpdateReplicationInformationIfNeededAsync((AsyncServerClient) store2.AsyncDatabaseCommands)
 			                        .Wait();
 
-			TellFirstInstanceToReplicateToSecondInstance();
-			TellSecondInstanceToReplicateToFirstInstance();
+            TellFirstInstanceToReplicateToSecondInstance();
+            TellSecondInstanceToReplicateToFirstInstance();
 
-			var hiLoKeyGenerator = new HiLoKeyGenerator("managers", 2)
-			{
-				DisableCapacityChanges = true
-			};
-			for (long i = 0; i < 4; i++)
-			{
-				Assert.Equal(i + 1, hiLoKeyGenerator.NextId(store1.DatabaseCommands));
-			}
+            var hiLoKeyGenerator = new HiLoKeyGenerator("managers", 2)
+            {
+                DisableCapacityChanges = true
+            };
+            for (long i = 0; i < 4; i++)
+            {
+                Assert.Equal(i + 1, hiLoKeyGenerator.NextId(store1.DatabaseCommands));
+            }
 
-			WaitForReplication(store2, session =>
-			{
-				var load = session.Load<dynamic>(key);
-				return load != null && load.Max == 4;
-			});
+            WaitForReplication(store2, session =>
+            {
+                var load = session.Load<dynamic>(key);
+                return load != null && load.Max == 4;
+            });
 
-			var jsonDocument = store2.DatabaseCommands.Get(key);
-			store2.DatabaseCommands.Put(key, null, new RavenJObject
-			{
-				{"Max", 49}
-			}, jsonDocument.Metadata);
+            var jsonDocument = store2.DatabaseCommands.Get(key);
+            store2.DatabaseCommands.Put(key, null, new RavenJObject
+            {
+                {"Max", 49}
+            }, jsonDocument.Metadata);
 
-			WaitForReplication(store1, session => session.Load<dynamic>(key).Max == 49);
+            WaitForReplication(store1, session => session.Load<dynamic>(key).Max == 49);
 
-			for (long i = 0; i < 4; i++)
-			{
-				var nextId = hiLoKeyGenerator.NextId(store1.DatabaseCommands);
-				Assert.Equal(i + 50, nextId);
-			}
-		}
-	}
+            for (long i = 0; i < 4; i++)
+            {
+                var nextId = hiLoKeyGenerator.NextId(store1.DatabaseCommands);
+                Assert.Equal(i + 50, nextId);
+            }
+        }
+    }
 }

@@ -153,19 +153,19 @@ namespace Raven.Client.Document
 			}
             
 
-			var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
-			var tag = GetTypeTagName(type);
-			if (tag != null)
-			{
-				tag = TransformTypeTagNameToDocumentKeyPrefix(tag);
-				tag += IdentityPartsSeparator;
-			}
-			if (converter != null)
-			{
-				return converter.ConvertFrom(tag, id, allowNull);
-			}
-			return tag + id;
-		}
+            var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
+            var tag = GetTypeTagName(type);
+            if (tag != null)
+            {
+                tag = TransformTypeTagNameToDocumentKeyPrefix(tag);
+                tag += IdentityPartsSeparator;
+            }
+            if (converter != null)
+            {
+                return converter.ConvertFrom(tag, id, allowNull);
+            }
+            return tag + id;
+        }
 
         /// <summary>
         /// Tries to get the full document id/key from a "simple" id to the full id.
@@ -194,137 +194,137 @@ namespace Raven.Client.Document
             return null;
         }
 
-		/// <summary>
-		/// Register an action to customize the json serializer used by the <see cref="DocumentStore"/>
-		/// </summary>
-		public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
+        /// <summary>
+        /// Register an action to customize the json serializer used by the <see cref="DocumentStore"/>
+        /// </summary>
+        public Action<JsonSerializer> CustomizeJsonSerializer { get; set; }
 
-		/// <summary>
-		/// Disable all profiling support
-		/// </summary>
-		public bool DisableProfiling { get; set; }
+        /// <summary>
+        /// Disable all profiling support
+        /// </summary>
+        public bool DisableProfiling { get; set; }
 
-		///<summary>
-		/// A list of type converters that can be used to translate the document key (string)
-		/// to whatever type it is that is used on the entity, if the type isn't already a string
-		///</summary>
-		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
+        ///<summary>
+        /// A list of type converters that can be used to translate the document key (string)
+        /// to whatever type it is that is used on the entity, if the type isn't already a string
+        ///</summary>
+        public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
-		/// <summary>
-		/// Gets or sets the max length of Url of GET requests.
-		/// </summary>
-		/// <value>The max number of requests per session.</value>
-		public int MaxNumberOfRequestsPerSession { get; set; }
+        /// <summary>
+        /// Gets or sets the max length of Url of GET requests.
+        /// </summary>
+        /// <value>The max number of requests per session.</value>
+        public int MaxNumberOfRequestsPerSession { get; set; }
 
         /// <summary>
         /// Gets or sets the default max length of a query using the GET method against a server.
         /// </summary>
         public int MaxLengthOfQueryUsingGetUrl { get; set; }
 
-		/// <summary>
-		/// Whatever to allow queries on document id.
-		/// By default, queries on id are disabled, because it is far more efficient
-		/// to do a Load() than a Query() if you already know the id.
-		/// This is NOT recommended and provided for backward compatibility purposes only.
-		/// </summary>
-		public bool AllowQueriesOnId { get; set; }
+        /// <summary>
+        /// Whatever to allow queries on document id.
+        /// By default, queries on id are disabled, because it is far more efficient
+        /// to do a Load() than a Query() if you already know the id.
+        /// This is NOT recommended and provided for backward compatibility purposes only.
+        /// </summary>
+        public bool AllowQueriesOnId { get; set; }
 
-		/// <summary>
-		/// The consistency options used when querying the database by default
-		/// Note that this option impact only queries, since we have Strong Consistency model for the documents
-		/// </summary>
-		public ConsistencyOptions DefaultQueryingConsistency { get; set; }
+        /// <summary>
+        /// The consistency options used when querying the database by default
+        /// Note that this option impact only queries, since we have Strong Consistency model for the documents
+        /// </summary>
+        public ConsistencyOptions DefaultQueryingConsistency { get; set; }
 
 
-		/// <summary>
-		/// Whether UseOptimisticConcurrency is set to true by default for all opened sessions
-		/// </summary>
-		public bool DefaultUseOptimisticConcurrency { get; set; }
+        /// <summary>
+        /// Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+        /// </summary>
+        public bool DefaultUseOptimisticConcurrency { get; set; }
 
-		/// <summary>
-		/// Generates the document key using identity.
-		/// </summary>
-		/// <param name="conventions">The conventions.</param>
-		/// <param name="entity">The entity.</param>
-		/// <returns></returns>
-		public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
-		{
-			return conventions.GetDynamicTagName(entity) + "/";
-		}
+        /// <summary>
+        /// Generates the document key using identity.
+        /// </summary>
+        /// <param name="conventions">The conventions.</param>
+        /// <param name="entity">The entity.</param>
+        /// <returns></returns>
+        public static string GenerateDocumentKeyUsingIdentity(DocumentConvention conventions, object entity)
+        {
+            return conventions.GetDynamicTagName(entity) + "/";
+        }
 
-		private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
+        private static IDictionary<Type, string> cachedDefaultTypeTagNames = new Dictionary<Type, string>();
 
-		/// <summary>
-		/// Get the default tag name for the specified type.
-		/// </summary>
-		public static string DefaultTypeTagName(Type t)
-		{
-			string result;
-			if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
-				return result;
+        /// <summary>
+        /// Get the default tag name for the specified type.
+        /// </summary>
+        public static string DefaultTypeTagName(Type t)
+        {
+            string result;
+            if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
+                return result;
 
-			if (t.Name.Contains("<>"))
-				return null;
-			if (t.IsGenericType)
-			{
-				var name = t.GetGenericTypeDefinition().Name;
-				if (name.Contains('`'))
-				{
-					name = name.Substring(0, name.IndexOf('`'));
-				}
-				var sb = new StringBuilder(Inflector.Pluralize(name));
-				foreach (var argument in t.GetGenericArguments())
-				{
-					sb.Append("Of")
-						.Append(DefaultTypeTagName(argument));
-				}
-				result = sb.ToString();
-			}
-			else
-			{
-				result = Inflector.Pluralize(t.Name);
-			}
-			var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
-			temp[t] = result;
-			cachedDefaultTypeTagNames = temp;
-			return result;
-		}
+            if (t.Name.Contains("<>"))
+                return null;
+            if (t.IsGenericType)
+            {
+                var name = t.GetGenericTypeDefinition().Name;
+                if (name.Contains('`'))
+                {
+                    name = name.Substring(0, name.IndexOf('`'));
+                }
+                var sb = new StringBuilder(Inflector.Pluralize(name));
+                foreach (var argument in t.GetGenericArguments())
+                {
+                    sb.Append("Of")
+                        .Append(DefaultTypeTagName(argument));
+                }
+                result = sb.ToString();
+            }
+            else
+            {
+                result = Inflector.Pluralize(t.Name);
+            }
+            var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
+            temp[t] = result;
+            cachedDefaultTypeTagNames = temp;
+            return result;
+        }
 
-		/// <summary>
-		/// Gets the name of the type tag.
-		/// </summary>
-		/// <param name="type">The type.</param>
-		/// <returns></returns>
-		public string GetTypeTagName(Type type)
-		{
-			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
-		}
+        /// <summary>
+        /// Gets the name of the type tag.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns></returns>
+        public string GetTypeTagName(Type type)
+        {
+            return FindTypeTagName(type) ?? DefaultTypeTagName(type);
+        }
 
-	   /// <summary>
-	   /// If object is dynamic, try to load a tag name.
-	   /// </summary>
-	   /// <param name="entity">Current entity.</param>
-	   /// <returns>Dynamic tag name if available.</returns>
-	   public string GetDynamicTagName(object entity)
-	   {
-	      if (entity == null)
-	      {
-	         return null;
-	      }
+       /// <summary>
+       /// If object is dynamic, try to load a tag name.
+       /// </summary>
+       /// <param name="entity">Current entity.</param>
+       /// <returns>Dynamic tag name if available.</returns>
+       public string GetDynamicTagName(object entity)
+       {
+          if (entity == null)
+          {
+             return null;
+          }
 
-	      if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
-	      {
-	         try
-	         {
-	            return FindDynamicTagName(entity);
-	         }
-	         catch (RuntimeBinderException)
-	         {
-	         }
-	      }
+          if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+          {
+             try
+             {
+                return FindDynamicTagName(entity);
+             }
+             catch (RuntimeBinderException)
+             {
+             }
+          }
 
-	      return GetTypeTagName(entity.GetType());
-	   }
+          return GetTypeTagName(entity.GetType());
+       }
 
         /// <summary>
         /// Generates the document key.
@@ -334,66 +334,66 @@ namespace Raven.Client.Document
         /// <param name="databaseCommands">Low level database commands.</param>
         /// <returns></returns>
         public string GenerateDocumentKey(string dbName, IDatabaseCommands databaseCommands, object entity)
-		{
-			var type = entity.GetType();
-			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventions
-				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
-			{
-				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
-			}
+        {
+            var type = entity.GetType();
+            foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventions
+                .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
+            {
+                return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
+            }
 
-			if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
-			{
-				throw new InvalidOperationException("Id convention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
-			}
+            if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
+            {
+                throw new InvalidOperationException("Id convention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
+            }
 
-			return DocumentKeyGenerator(dbName, databaseCommands, entity);
-		}
+            return DocumentKeyGenerator(dbName, databaseCommands, entity);
+        }
 
-		public Task<string> GenerateDocumentKeyAsync(string dbName, IAsyncDatabaseCommands databaseCommands, object entity)
-		{
-			var type = entity.GetType();
-			foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventionsAsync
-				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
-			{
-				return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
-			}
+        public Task<string> GenerateDocumentKeyAsync(string dbName, IAsyncDatabaseCommands databaseCommands, object entity)
+        {
+            var type = entity.GetType();
+            foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventionsAsync
+                .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
+            {
+                return typeToRegisteredIdConvention.Item2(dbName, databaseCommands, entity);
+            }
 
-			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
-			{
-				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
-			}
+            if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
+            {
+                throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
+            }
 
-			return AsyncDocumentKeyGenerator(dbName, databaseCommands, entity);
-		}
+            return AsyncDocumentKeyGenerator(dbName, databaseCommands, entity);
+        }
 
-		/// <summary>
-		/// Gets or sets the function to find the clr type of a document.
-		/// </summary>
-		public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
+        /// <summary>
+        /// Gets or sets the function to find the clr type of a document.
+        /// </summary>
+        public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
 
-		/// <summary>
-		/// Gets or sets the function to find the clr type name from a clr type
-		/// </summary>
-		public Func<Type, string> FindClrTypeName { get; set; }
+        /// <summary>
+        /// Gets or sets the function to find the clr type name from a clr type
+        /// </summary>
+        public Func<Type, string> FindClrTypeName { get; set; }
 
-		/// <summary>
-		/// Gets or sets the function to find the full document key based on the type of a document
-		/// and the value type identifier (just the numeric part of the id).
-		/// </summary>
-		public Func<object, Type, bool, string> FindFullDocumentKeyFromNonStringIdentifier { get; set; }
+        /// <summary>
+        /// Gets or sets the function to find the full document key based on the type of a document
+        /// and the value type identifier (just the numeric part of the id).
+        /// </summary>
+        public Func<object, Type, bool, string> FindFullDocumentKeyFromNonStringIdentifier { get; set; }
 
-		/// <summary>
-		/// Gets or sets the json contract resolver.
-		/// </summary>
-		/// <value>The json contract resolver.</value>
-		public IContractResolver JsonContractResolver { get; set; }
+        /// <summary>
+        /// Gets or sets the json contract resolver.
+        /// </summary>
+        /// <value>The json contract resolver.</value>
+        public IContractResolver JsonContractResolver { get; set; }
 
-		/// <summary>
-		/// Gets or sets the function to find the type tag.
-		/// </summary>
-		/// <value>The name of the find type tag.</value>
-		public Func<Type, string> FindTypeTagName { get; set; }
+        /// <summary>
+        /// Gets or sets the function to find the type tag.
+        /// </summary>
+        /// <value>The name of the find type tag.</value>
+        public Func<Type, string> FindTypeTagName { get; set; }
 
       /// <summary>
       /// Gets or sets the function to find the tag name if the object is dynamic.
@@ -401,114 +401,114 @@ namespace Raven.Client.Document
       /// <value>The tag name.</value>
       public Func<dynamic, string> FindDynamicTagName { get; set; }
 
-		/// <summary>
-		/// Gets or sets the function to find the indexed property name
-		/// given the indexed document type, the index name, the current path and the property path.
-		/// </summary>
-		public Func<Type, string, string, string, string> FindPropertyNameForIndex { get; set; }
-
-		/// <summary>
-		/// Gets or sets the function to find the indexed property name
-		/// given the indexed document type, the index name, the current path and the property path.
-		/// </summary>
-		public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
-
-		/// <summary>
-		/// Get or sets the function to get the identity property name from the entity name
-		/// </summary>
-		public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
+        /// <summary>
+        /// Gets or sets the function to find the indexed property name
+        /// given the indexed document type, the index name, the current path and the property path.
+        /// </summary>
+        public Func<Type, string, string, string, string> FindPropertyNameForIndex { get; set; }
 
         /// <summary>
-		/// Gets or sets the document key generator.
-		/// </summary>
-		/// <value>The document key generator.</value>
-		public Func<string, IDatabaseCommands, object, string> DocumentKeyGenerator { get; set; }
+        /// Gets or sets the function to find the indexed property name
+        /// given the indexed document type, the index name, the current path and the property path.
+        /// </summary>
+        public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
 
-		/// <summary>
-		/// Gets or sets the document key generator.
-		/// </summary>
-		/// <value>The document key generator.</value>
-		public Func<string, IAsyncDatabaseCommands, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
+        /// <summary>
+        /// Get or sets the function to get the identity property name from the entity name
+        /// </summary>
+        public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
 
-		/// <summary>
-		/// Instruct RavenDB to parallel Multi Get processing 
-		/// when handling lazy requests
-		/// </summary>
-		public bool UseParallelMultiGet { get; set; }
+        /// <summary>
+        /// Gets or sets the document key generator.
+        /// </summary>
+        /// <value>The document key generator.</value>
+        public Func<string, IDatabaseCommands, object, string> DocumentKeyGenerator { get; set; }
 
-		/// <summary>
-		/// Whatever or not RavenDB should in the aggressive cache mode use Changes API to track
-		/// changes and rebuild the cache. This will make that outdated data will be revalidated
-		/// to make the cache more updated, however it is still possible to get a state result because of the time
-		/// needed to receive the notification and forcing to check for cached data.
-		/// </summary>
-		public bool ShouldAggressiveCacheTrackChanges { get; set; }
+        /// <summary>
+        /// Gets or sets the document key generator.
+        /// </summary>
+        /// <value>The document key generator.</value>
+        public Func<string, IAsyncDatabaseCommands, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
 
-		/// <summary>
-		/// Whatever or not RavenDB should in the aggressive cache mode should force the aggressive cache
-		/// to check with the server after we called SaveChanges() on a non empty data set.
-		/// This will make any outdated data revalidated, and will work nicely as long as you have just a 
-		/// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
-		/// </summary>
-		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
+        /// <summary>
+        /// Instruct RavenDB to parallel Multi Get processing 
+        /// when handling lazy requests
+        /// </summary>
+        public bool UseParallelMultiGet { get; set; }
 
-		/// <summary>
-		/// Register an id convention for a single type (and all of its derived types.
-		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
-		/// </summary>
-		public DocumentConvention RegisterIdConvention<TEntity>(Func<string, IDatabaseCommands, TEntity, string> func)
-		{
-			var type = typeof(TEntity);
-			var entryToRemove = listOfRegisteredIdConventions.FirstOrDefault(x => x.Item1 == type);
-			if (entryToRemove != null)
-			{
-				listOfRegisteredIdConventions.Remove(entryToRemove);
-			}
+        /// <summary>
+        /// Whatever or not RavenDB should in the aggressive cache mode use Changes API to track
+        /// changes and rebuild the cache. This will make that outdated data will be revalidated
+        /// to make the cache more updated, however it is still possible to get a state result because of the time
+        /// needed to receive the notification and forcing to check for cached data.
+        /// </summary>
+        public bool ShouldAggressiveCacheTrackChanges { get; set; }
 
-			int index;
-			for (index = 0; index < listOfRegisteredIdConventions.Count; index++)
-			{
-				var entry = listOfRegisteredIdConventions[index];
-				if (entry.Item1.IsAssignableFrom(type))
-				{
-					break;
-				}
-			}
+        /// <summary>
+        /// Whatever or not RavenDB should in the aggressive cache mode should force the aggressive cache
+        /// to check with the server after we called SaveChanges() on a non empty data set.
+        /// This will make any outdated data revalidated, and will work nicely as long as you have just a 
+        /// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
+        /// </summary>
+        public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
 
-			var item = new Tuple<Type, Func<string, IDatabaseCommands, object, string>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
-			listOfRegisteredIdConventions.Insert(index, item);
+        /// <summary>
+        /// Register an id convention for a single type (and all of its derived types.
+        /// Note that you can still fall back to the DocumentKeyGenerator if you want.
+        /// </summary>
+        public DocumentConvention RegisterIdConvention<TEntity>(Func<string, IDatabaseCommands, TEntity, string> func)
+        {
+            var type = typeof(TEntity);
+            var entryToRemove = listOfRegisteredIdConventions.FirstOrDefault(x => x.Item1 == type);
+            if (entryToRemove != null)
+            {
+                listOfRegisteredIdConventions.Remove(entryToRemove);
+            }
 
-			return this;
-		}
+            int index;
+            for (index = 0; index < listOfRegisteredIdConventions.Count; index++)
+            {
+                var entry = listOfRegisteredIdConventions[index];
+                if (entry.Item1.IsAssignableFrom(type))
+                {
+                    break;
+                }
+            }
 
-		/// <summary>
-		/// Register an async id convention for a single type (and all of its derived types.
-		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
-		/// </summary>
-		public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<string, IAsyncDatabaseCommands, TEntity, Task<string>> func)
-		{
-			var type = typeof(TEntity);
-			var entryToRemove = listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
-			if (entryToRemove != null)
-			{
-				listOfRegisteredIdConventionsAsync.Remove(entryToRemove);
-			}
+            var item = new Tuple<Type, Func<string, IDatabaseCommands, object, string>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
+            listOfRegisteredIdConventions.Insert(index, item);
 
-			int index;
-			for (index = 0; index < listOfRegisteredIdConventionsAsync.Count; index++)
-			{
-				var entry = listOfRegisteredIdConventionsAsync[index];
-				if (entry.Item1.IsAssignableFrom(type))
-				{
-					break;
-				}
-			}
+            return this;
+        }
 
-			var item = new Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
-			listOfRegisteredIdConventionsAsync.Insert(index, item);
+        /// <summary>
+        /// Register an async id convention for a single type (and all of its derived types.
+        /// Note that you can still fall back to the DocumentKeyGenerator if you want.
+        /// </summary>
+        public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<string, IAsyncDatabaseCommands, TEntity, Task<string>> func)
+        {
+            var type = typeof(TEntity);
+            var entryToRemove = listOfRegisteredIdConventionsAsync.FirstOrDefault(x => x.Item1 == type);
+            if (entryToRemove != null)
+            {
+                listOfRegisteredIdConventionsAsync.Remove(entryToRemove);
+            }
 
-			return this;
-		}
+            int index;
+            for (index = 0; index < listOfRegisteredIdConventionsAsync.Count; index++)
+            {
+                var entry = listOfRegisteredIdConventionsAsync[index];
+                if (entry.Item1.IsAssignableFrom(type))
+                {
+                    break;
+                }
+            }
+
+            var item = new Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>(typeof(TEntity), (dbName, commands, o) => func(dbName, commands, (TEntity)o));
+            listOfRegisteredIdConventionsAsync.Insert(index, item);
+
+            return this;
+        }
 
         /// <summary>
         /// Register an id convention for a single type (and all its derived types) to be used when calling session.Load{TEntity}(TId id)

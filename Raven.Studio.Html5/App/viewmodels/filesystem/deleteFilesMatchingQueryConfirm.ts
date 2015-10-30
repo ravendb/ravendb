@@ -1,4 +1,4 @@
-﻿import dialog = require("plugins/dialog");
+import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import filesystem = require("models/filesystem/filesystem");
 import deleteFilesMatchingQueryCommand = require("commands/filesystem/deleteFilesMatchingQueryCommand");

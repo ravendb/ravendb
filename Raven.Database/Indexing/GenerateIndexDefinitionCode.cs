@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="GenerateIndexDefinitionCode.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -36,25 +36,25 @@ namespace Raven.Database.Indexing
             {
                 Name = Regex.Replace(_indexDefinition.Name, @"[^\w\d]", ""),
                 BaseTypes =
-				{
-					new SimpleType("AbstractIndexCreationTask")
-				},
+                {
+                    new SimpleType("AbstractIndexCreationTask")
+                },
                 Modifiers = Modifiers.Public,
                 Members =
-				{
-					new PropertyDeclaration
-					{
-						Name = "IndexName",
-						ReturnType = new PrimitiveType("string"),
-						Modifiers = Modifiers.Public | Modifiers.Override, Getter = new Accessor
-						{
-							Body = new BlockStatement()
-							{
-								new ReturnStatement(new PrimitiveExpression(_indexDefinition.Name))
-							}
-						}
-					}
-				}
+                {
+                    new PropertyDeclaration
+                    {
+                        Name = "IndexName",
+                        ReturnType = new PrimitiveType("string"),
+                        Modifiers = Modifiers.Public | Modifiers.Override, Getter = new Accessor
+                        {
+                            Body = new BlockStatement()
+                            {
+                                new ReturnStatement(new PrimitiveExpression(_indexDefinition.Name))
+                            }
+                        }
+                    }
+                }
             };
 
             var objectCreateExpression = new ObjectCreateExpression(new SimpleType("IndexDefinition"))
@@ -125,25 +125,25 @@ namespace Raven.Database.Indexing
                 Modifiers = Modifiers.Public | Modifiers.Override,
                 ReturnType = new SimpleType("IndexDefinition"),
                 Body = new BlockStatement
-				{
-					new ReturnStatement(objectCreateExpression)
-				}
+                {
+                    new ReturnStatement(objectCreateExpression)
+                }
             };
             indexDeclaration.Members.Add(createIndexDefinition);
 
             var namespaces = new HashSet<string>
-				{
-					typeof (SystemTime).Namespace,
-					typeof (Enumerable).Namespace,
-					typeof (IEnumerable<>).Namespace,
-					typeof (IEnumerable).Namespace,
-					typeof (int).Namespace,
-					typeof (CultureInfo).Namespace,
-					typeof (Regex).Namespace,
-					typeof (AbstractIndexCreationTask).Namespace,
-					typeof (IndexDefinition).Namespace,
-					typeof (StringDistanceTypes).Namespace,
-				};
+                {
+                    typeof (SystemTime).Namespace,
+                    typeof (Enumerable).Namespace,
+                    typeof (IEnumerable<>).Namespace,
+                    typeof (IEnumerable).Namespace,
+                    typeof (int).Namespace,
+                    typeof (CultureInfo).Namespace,
+                    typeof (Regex).Namespace,
+                    typeof (AbstractIndexCreationTask).Namespace,
+                    typeof (IndexDefinition).Namespace,
+                    typeof (StringDistanceTypes).Namespace,
+                };
 
             var text = QueryParsingUtils.GenerateText(indexDeclaration, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), namespaces);
             return text;

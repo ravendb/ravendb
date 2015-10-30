@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -528,14 +528,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					var lastBatchSize = sourceReplicationInformation.LastBatchSize;
 					if (lastBatchSize.HasValue && maxNumberOfItemsToReceiveInSingleBatch.HasValue)
                         size = Math.Min(lastBatchSize.Value, maxNumberOfItemsToReceiveInSingleBatch.Value);
-					else if (lastBatchSize.HasValue)
+                    else if (lastBatchSize.HasValue)
                         size = lastBatchSize.Value;
-					else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
-					    size = maxNumberOfItemsToReceiveInSingleBatch.Value;
-					else
-					    size = 128;
+                    else if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
+                        size = maxNumberOfItemsToReceiveInSingleBatch.Value;
+                    else
+                        size = 128;
 
-				    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
+                    sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch =
                         Math.Max(size / 2, 64);
 				}
 				else

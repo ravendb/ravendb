@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="BackupStatus.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -8,33 +8,33 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	public class PeriodicExportSetup
-	{
-		public const string RavenDocumentKey = "Raven/Backup/Periodic/Setup";
+    public class PeriodicExportSetup
+    {
+        public const string RavenDocumentKey = "Raven/Backup/Periodic/Setup";
 
-		/// <summary>
-		/// Indicates if periodic export is disabled.
-		/// </summary>
-		public bool Disabled { get; set; }
+        /// <summary>
+        /// Indicates if periodic export is disabled.
+        /// </summary>
+        public bool Disabled { get; set; }
 
-		/// <summary>
-		/// Amazon Glacier Vaul name.
-		/// </summary>
-		public string GlacierVaultName { get; set; }
+        /// <summary>
+        /// Amazon Glacier Vaul name.
+        /// </summary>
+        public string GlacierVaultName { get; set; }
 
-		/// <summary>
-		/// Amazon S3 Bucket name.
-		/// </summary>
-		public string S3BucketName { get; set; }
+        /// <summary>
+        /// Amazon S3 Bucket name.
+        /// </summary>
+        public string S3BucketName { get; set; }
 
-		/// <summary>
-		/// Amazon Web Services (AWS) region.
-		/// </summary>
-		public string AwsRegionEndpoint { get; set; }
+        /// <summary>
+        /// Amazon Web Services (AWS) region.
+        /// </summary>
+        public string AwsRegionEndpoint { get; set; }
 
-		/// <summary>
-		/// Microsoft Azure Storage Container name.
-		/// </summary>
+        /// <summary>
+        /// Microsoft Azure Storage Container name.
+        /// </summary>
         public string AzureStorageContainer { get; set; }
 
 		/// <summary>
@@ -62,13 +62,13 @@ namespace Raven.Abstractions.Data
 		/// </summary>
         public long? FullBackupIntervalMilliseconds { get; set; }
 
-		protected bool Equals(PeriodicExportSetup other)
-		{
-			return string.Equals(Disabled, other.Disabled) &&
-				   string.Equals(GlacierVaultName, other.GlacierVaultName) && string.Equals(S3BucketName, other.S3BucketName) &&
-			       string.Equals(AwsRegionEndpoint, other.AwsRegionEndpoint) &&
-			       string.Equals(AzureStorageContainer, other.AzureStorageContainer) &&
-			       string.Equals(LocalFolderName, other.LocalFolderName) && 
+        protected bool Equals(PeriodicExportSetup other)
+        {
+            return string.Equals(Disabled, other.Disabled) &&
+                   string.Equals(GlacierVaultName, other.GlacierVaultName) && string.Equals(S3BucketName, other.S3BucketName) &&
+                   string.Equals(AwsRegionEndpoint, other.AwsRegionEndpoint) &&
+                   string.Equals(AzureStorageContainer, other.AzureStorageContainer) &&
+                   string.Equals(LocalFolderName, other.LocalFolderName) && 
                    IntervalMilliseconds == other.IntervalMilliseconds && FullBackupIntervalMilliseconds == other.FullBackupIntervalMilliseconds;
 		}
 
@@ -102,10 +102,10 @@ namespace Raven.Abstractions.Data
 		public const string RavenDocumentKey = "Raven/Backup/Periodic/Status";
 		public DateTime LastBackup { get; set; }
         public DateTime LastFullBackup { get; set; }
-		public Etag LastDocsEtag { get; set; }
+        public Etag LastDocsEtag { get; set; }
 
         [Obsolete("Use RavenFS instead.")]
-		public Etag LastAttachmentsEtag { get; set; }
+        public Etag LastAttachmentsEtag { get; set; }
 
         public Etag LastDocsDeletionEtag { get; set; }
 

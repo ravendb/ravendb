@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -63,127 +63,158 @@ namespace Voron
 
 		public long MaxScratchBufferSize { get; set; }
 
-		public long MaxNumberOfPagesInMergedTransaction { get; set; }
+            handler(this, new RecoveryErrorEventArgs(message, e));
+        }
 
-		public bool OwnsPagers { get; set; }
+        public Action<long> OnScratchBufferSizeChanged = delegate { };
 
-		public bool ManualFlushing { get; set; }
+        public long? InitialFileSize { get; set; }
 
-		public bool IncrementalBackupEnabled { get; set; }
+        public long MaxLogFileSize
+        {
+            get { return _maxLogFileSize; }
+            set
+            {
+                if (value < _initialLogFileSize)
+                    InitialLogFileSize = value;
+                _maxLogFileSize = value;
+            }
+        }
 
-		public abstract IVirtualPager DataPager { get; }
+        public long InitialLogFileSize
+        {
+            get { return _initialLogFileSize; }
+            set
+            {
+                if (value > MaxLogFileSize)
+                    MaxLogFileSize = value;
+                _initialLogFileSize = value;
+            }
+        }
+        
+        public long MaxScratchBufferSize { get; set; }
 
-		public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
+        public long MaxNumberOfPagesInMergedTransaction { get; set; }
 
-		public int IdleFlushTimeout { get; set; }
+        public bool OwnsPagers { get; set; }
 
-		public long? MaxStorageSize { get; set; }
-		public abstract string BasePath { get; }
+        public bool ManualFlushing { get; set; }
 
-		public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+        public bool IncrementalBackupEnabled { get; set; }
 
-		protected bool Disposed;
-		private long _initialLogFileSize;
-		private long _maxLogFileSize;
+        public abstract IVirtualPager DataPager { get; }
 
-	    public Func<string, bool> ShouldUseKeyPrefix { get; set; }
+        public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
 
-		protected StorageEnvironmentOptions()
-		{
+        public int IdleFlushTimeout { get; set; }
+
+        public long? MaxStorageSize { get; set; }
+        public abstract string BasePath { get; }
+
+        public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+
+        protected bool Disposed;
+        private long _initialLogFileSize;
+        private long _maxLogFileSize;
+
+        public Func<string, bool> ShouldUseKeyPrefix { get; set; }
+
+        protected StorageEnvironmentOptions()
+        {
             ShouldUseKeyPrefix = name => false;
-			MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
+            MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
 
-			IdleFlushTimeout = 5000; // 5 seconds
+            IdleFlushTimeout = 5000; // 5 seconds
 
-			MaxLogFileSize = 64 * 1024 * 1024;
+            MaxLogFileSize = 64 * 1024 * 1024;
 
-			InitialLogFileSize = 64 * 1024;
+            InitialLogFileSize = 64 * 1024;
 
-			MaxScratchBufferSize = 512 * 1024 * 1024;
+            MaxScratchBufferSize = 512 * 1024 * 1024;
 
-			ScratchBufferOverflowTimeout = 5000;
+            ScratchBufferOverflowTimeout = 5000;
 
-			MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB
+            MaxNumberOfPagesInMergedTransaction = 1024 * 128;// Ends up being 512 MB
 
-			OwnsPagers = true;
-			IncrementalBackupEnabled = false;
-		}
+            OwnsPagers = true;
+            IncrementalBackupEnabled = false;
+        }
 
-		public int ScratchBufferOverflowTimeout { get; set; }
+        public int ScratchBufferOverflowTimeout { get; set; }
 
-		public static StorageEnvironmentOptions CreateMemoryOnly()
-		{
-			return new PureMemoryStorageEnvironmentOptions();
-		}
+        public static StorageEnvironmentOptions CreateMemoryOnly()
+        {
+            return new PureMemoryStorageEnvironmentOptions();
+        }
 
-		public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
-		{
-			return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
-		}
+        public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
+        {
+            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
+        }
 
-		public IDisposable AllowManualFlushing()
-		{
-			var old = ManualFlushing;
-			ManualFlushing = true;
+        public IDisposable AllowManualFlushing()
+        {
+            var old = ManualFlushing;
+            ManualFlushing = true;
 
-			return new DisposableAction(() => ManualFlushing = old);
-		}
+            return new DisposableAction(() => ManualFlushing = old);
+        }
 
 
-		public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
-		{
-			private readonly string _journalPath;
-			private readonly string _basePath;
-			private readonly string _tempPath;
+        public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        {
+            private readonly string _journalPath;
+            private readonly string _basePath;
+            private readonly string _tempPath;
 
-			private readonly Lazy<IVirtualPager> _dataPager;
+            private readonly Lazy<IVirtualPager> _dataPager;
 
-			private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
-				new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
+            private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
+                new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
-			public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath)
-			{
-				_basePath = Path.GetFullPath(basePath);
-				_tempPath = !string.IsNullOrEmpty(tempPath) ? Path.GetFullPath(tempPath) : _basePath;
-				_journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
+            public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath)
+            {
+                _basePath = Path.GetFullPath(basePath);
+                _tempPath = !string.IsNullOrEmpty(tempPath) ? Path.GetFullPath(tempPath) : _basePath;
+                _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
 
-				if (Directory.Exists(_basePath) == false)
-					Directory.CreateDirectory(_basePath);
+                if (Directory.Exists(_basePath) == false)
+                    Directory.CreateDirectory(_basePath);
 
-				if (_basePath != tempPath && Directory.Exists(_tempPath) == false)
-					Directory.CreateDirectory(_tempPath);
+                if (_basePath != tempPath && Directory.Exists(_tempPath) == false)
+                    Directory.CreateDirectory(_tempPath);
 
-				if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
-					Directory.CreateDirectory(_journalPath);
+                if (_journalPath != tempPath && Directory.Exists(_journalPath) == false)
+                    Directory.CreateDirectory(_journalPath);
 
-				_dataPager = new Lazy<IVirtualPager>(() =>
-				{
-					FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
-					if (RunningOnPosix)
-						return new PosixMemoryMapPager(FilePath, InitialFileSize);
-					return new Win32MemoryMapPager(FilePath, InitialFileSize);
-				});
-			}
+                _dataPager = new Lazy<IVirtualPager>(() =>
+                {
+                    FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
+                    if (RunningOnPosix)
+                        return new PosixMemoryMapPager(FilePath, InitialFileSize);
+                    return new Win32MemoryMapPager(FilePath, InitialFileSize);
+                });
+            }
 
-			public string FilePath { get; private set; }
+            public string FilePath { get; private set; }
 
-			public override IVirtualPager DataPager
-			{
-				get
-				{
-					return _dataPager.Value;
-				}
-			}
+            public override IVirtualPager DataPager
+            {
+                get
+                {
+                    return _dataPager.Value;
+                }
+            }
 
-			public override string BasePath
-			{
-				get { return _basePath; }
-			}
+            public override string BasePath
+            {
+                get { return _basePath; }
+            }
 
-			public string TempPath
-			{
-				get { return _tempPath; }
-			}
+            public string TempPath
+            {
+                get { return _tempPath; }
+            }
 
             public override IVirtualPager OpenPager(string filename)
             {
@@ -301,116 +332,116 @@ namespace Voron
 					return new PosixMemoryMapPager(path);
 			    var win32MemoryMapPager = new Win32MemoryMapPager(path, access: Win32NativeFileAccess.GenericRead, 
                     options:Win32NativeFileAttributes.SequentialScan);
-			    win32MemoryMapPager.TryPrefetchingWholeFile();
-			    return win32MemoryMapPager;
-			}
-		}
+                win32MemoryMapPager.TryPrefetchingWholeFile();
+                return win32MemoryMapPager;
+            }
+        }
 
-		public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
-		{
-			private static int _counter;
+        public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        {
+            private static int _counter;
 
-			private readonly IVirtualPager _dataPager;
+            private readonly IVirtualPager _dataPager;
 
-			private readonly Dictionary<string, IJournalWriter> _logs =
-				new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, IJournalWriter> _logs =
+                new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
 
-			private readonly Dictionary<string, IntPtr> _headers =
-				new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
-			private int _instanceId;
+            private readonly Dictionary<string, IntPtr> _headers =
+                new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
+            private int _instanceId;
 
-			public PureMemoryStorageEnvironmentOptions()
-			{
-				_instanceId = Interlocked.Increment(ref _counter);
-				if (RunningOnPosix)
-					_dataPager = new PosixTempMemoryMapPager("_data.pager", InitialFileSize);
-				else
-					_dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
-			}
+            public PureMemoryStorageEnvironmentOptions()
+            {
+                _instanceId = Interlocked.Increment(ref _counter);
+                if (RunningOnPosix)
+                    _dataPager = new PosixTempMemoryMapPager("_data.pager", InitialFileSize);
+                else
+                    _dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
+            }
 
-			public override IVirtualPager DataPager
-			{
-				get { return _dataPager; }
-			}
+            public override IVirtualPager DataPager
+            {
+                get { return _dataPager; }
+            }
 
-			public override string BasePath
-			{
-				get { return ":memory:"; }
-			}
+            public override string BasePath
+            {
+                get { return ":memory:"; }
+            }
 
-			public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
-			{
-				var name = JournalName(journalNumber);
-				IJournalWriter value;
-				if (_logs.TryGetValue(name, out value))
-					return value;
-				value = new PureMemoryJournalWriter(journalSize);
-				_logs[name] = value;
-				return value;
-			}
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            {
+                var name = JournalName(journalNumber);
+                IJournalWriter value;
+                if (_logs.TryGetValue(name, out value))
+                    return value;
+                value = new PureMemoryJournalWriter(journalSize);
+                _logs[name] = value;
+                return value;
+            }
 
-			public override void Dispose()
-			{
-				if (Disposed)
-					return;
-				Disposed = true;
-				_dataPager.Dispose();
-				foreach (var virtualPager in _logs)
-				{
-					virtualPager.Value.Dispose();
-				}
+            public override void Dispose()
+            {
+                if (Disposed)
+                    return;
+                Disposed = true;
+                _dataPager.Dispose();
+                foreach (var virtualPager in _logs)
+                {
+                    virtualPager.Value.Dispose();
+                }
 
-				foreach (var headerSpace in _headers)
-				{
-					Marshal.FreeHGlobal(headerSpace.Value);
-				}
-				_headers.Clear();
-			}
+                foreach (var headerSpace in _headers)
+                {
+                    Marshal.FreeHGlobal(headerSpace.Value);
+                }
+                _headers.Clear();
+            }
 
-			public override bool TryDeleteJournal(long number)
-			{
-				var name = JournalName(number);
-				IJournalWriter value;
-				if (_logs.TryGetValue(name, out value) == false)
-					return false;
-				_logs.Remove(name);
-				value.Dispose();
-				return true;
-			}
+            public override bool TryDeleteJournal(long number)
+            {
+                var name = JournalName(number);
+                IJournalWriter value;
+                if (_logs.TryGetValue(name, out value) == false)
+                    return false;
+                _logs.Remove(name);
+                value.Dispose();
+                return true;
+            }
 
-			public unsafe override bool ReadHeader(string filename, FileHeader* header)
-			{
-				if(Disposed)
-					throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
-				IntPtr ptr;
-				if (_headers.TryGetValue(filename, out ptr) == false)
-				{
-					return false;
-				}
-				*header = *((FileHeader*)ptr);
-				return true;
-			}
+            public unsafe override bool ReadHeader(string filename, FileHeader* header)
+            {
+                if(Disposed)
+                    throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
+                IntPtr ptr;
+                if (_headers.TryGetValue(filename, out ptr) == false)
+                {
+                    return false;
+                }
+                *header = *((FileHeader*)ptr);
+                return true;
+            }
 
-			public override unsafe void WriteHeader(string filename, FileHeader* header)
-			{
-				if (Disposed)
-					throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
+            public override unsafe void WriteHeader(string filename, FileHeader* header)
+            {
+                if (Disposed)
+                    throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
 
-				IntPtr ptr;
-				if (_headers.TryGetValue(filename, out ptr) == false)
-				{
-					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
-					_headers[filename] = ptr;
-				}
+                IntPtr ptr;
+                if (_headers.TryGetValue(filename, out ptr) == false)
+                {
+                    ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
+                    _headers[filename] = ptr;
+                }
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
-			}
+            }
 
-			public override IVirtualPager CreateScratchPager(string name)
-			{
-				if (RunningOnPosix)
-					return new PosixTempMemoryMapPager(name, InitialFileSize);
-				return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
-			}
+            public override IVirtualPager CreateScratchPager(string name)
+            {
+                if (RunningOnPosix)
+                    return new PosixTempMemoryMapPager(name, InitialFileSize);
+                return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
+            }
 
             public override IVirtualPager OpenPager(string filename)
             {
@@ -429,54 +460,54 @@ namespace Voron
 			}
 		}
 
-		public static string JournalName(long number)
-		{
-			return string.Format("{0:D19}.journal", number);
-		}
+        public static string JournalName(long number)
+        {
+            return string.Format("{0:D19}.journal", number);
+        }
 
-		public static string JournalRecoveryName(long number)
-		{
-			return string.Format("{0:D19}.recovery", number);
-		}
+        public static string JournalRecoveryName(long number)
+        {
+            return string.Format("{0:D19}.recovery", number);
+        }
 
-		public static string ScratchBufferName(long number)
-		{
-			return string.Format("scratch.{0:D10}.buffers", number);
-		}
+        public static string ScratchBufferName(long number)
+        {
+            return string.Format("scratch.{0:D10}.buffers", number);
+        }
 
-		public abstract void Dispose();
+        public abstract void Dispose();
 
-		public abstract bool TryDeleteJournal(long number);
+        public abstract bool TryDeleteJournal(long number);
 
-		public unsafe abstract bool ReadHeader(string filename, FileHeader* header);
+        public unsafe abstract bool ReadHeader(string filename, FileHeader* header);
 
-		public unsafe abstract void WriteHeader(string filename, FileHeader* header);
+        public unsafe abstract void WriteHeader(string filename, FileHeader* header);
 
-		public abstract IVirtualPager CreateScratchPager(string name);
+        public abstract IVirtualPager CreateScratchPager(string name);
 
-		public abstract IVirtualPager OpenJournalPager(long journalNumber);
+        public abstract IVirtualPager OpenJournalPager(long journalNumber);
 
         public abstract IVirtualPager OpenPager(string filename);
 
-		public static bool RunningOnPosix
-		{
-			get
-			{
-				switch (Environment.OSVersion.Platform)
-				{
-					case PlatformID.Win32S:
-					case PlatformID.Win32Windows:
-					case PlatformID.Win32NT:
-					case PlatformID.WinCE:
-					case PlatformID.Xbox:
-						return false;
-					case PlatformID.Unix:
-					case PlatformID.MacOSX:
-						return true;
-					default:
-						return false; // we'll try the windows version here
-				}
-			}
-		}
-	}
+        public static bool RunningOnPosix
+        {
+            get
+            {
+                switch (Environment.OSVersion.Platform)
+                {
+                    case PlatformID.Win32S:
+                    case PlatformID.Win32Windows:
+                    case PlatformID.Win32NT:
+                    case PlatformID.WinCE:
+                    case PlatformID.Xbox:
+                        return false;
+                    case PlatformID.Unix:
+                    case PlatformID.MacOSX:
+                        return true;
+                    default:
+                        return false; // we'll try the windows version here
+                }
+            }
+        }
+    }
 }

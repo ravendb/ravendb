@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DebugInfoProvider.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -40,8 +40,8 @@ namespace Raven.Database.Util
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 
-			var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
-			jsonSerializer.Formatting=Formatting.Indented;
+            var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+            jsonSerializer.Formatting=Formatting.Indented;
 
             if (database.StartupTasks.OfType<ReplicationTask>().Any())
             {
@@ -264,116 +264,33 @@ namespace Raven.Database.Util
 			}
         }
 
-	    internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
-		{
-			return requestManager.GetRecentRequests(databaseName).Select(x =>
-			{
-				var dic = new Dictionary<String, String>();
-				foreach (var httpHeader in x.Headers.Value)
-				{
-					dic[httpHeader.Key] = httpHeader.Value.First();
-				}
-				dic.Remove("Authorization");
-				dic.Remove("Proxy-Authorization");
-				dic.Remove("WWW-Authenticate");
-				dic.Remove("Proxy-Authenticate");
-				
-				return new
-				{
-					Uri = x.RequestUri,
-					Method = x.HttpMethod,
-					StatusCode = x.ResponseStatusCode,
-					RequestHeaders = dic.Select(z=>new{Name = z.Key, Values= new[]{z.Value}}),
-					ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
-					AdditionalInfo = x.CustomInfo ?? string.Empty
-				};
-			});
-		}
+        internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
+        {
+            var result = new List<object>();
 
-		internal static RavenJObject GetConfigForDebug(DocumentDatabase database)
-		{
-			var cfg = RavenJObject.FromObject(database.Configuration);
-			cfg["OAuthTokenKey"] = "<not shown>";
-			var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+            foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
+            {
+                var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
+                var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
 
-			if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-				cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
+                var compareToCollection = new Dictionary<Etag, int>();
 
-			return cfg;
-		}
+                for (int i = 1; i < prefetcherDocs.Length; i++)
+                    compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
 
-		internal static IList<TaskMetadata> GetTasksForDebug(DocumentDatabase database)
-		{
-			IList<TaskMetadata> tasks = null;
-			database.TransactionalStorage.Batch(accessor =>
-			{
-				tasks = accessor.Tasks
-					.GetPendingTasksForDebug()
-					.ToList();
-			});
-
-			foreach (var taskMetadata in tasks)
-			{
-				var indexInstance = database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
-				if (indexInstance != null)
-					taskMetadata.IndexName = indexInstance.PublicName;
-			}
-			return tasks;
-		}
-
-		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
-		{
-			var indexingWork = database .IndexingExecuter.GetCurrentlyProcessingIndexes();
-			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
-
-			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-			return new
-			{
-				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-				Indexes = uniqueIndexesBeingProcessed.Select(x =>				
-				new
-				{
-					IndexName = x.PublicName,
-					IsMapReduce = x.IsMapReduce,
-					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new {p.Operation, NumberOfProcessingItems = p.InputCount}),
-					Priority = x.Priority,
-					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
-					{
-						Operation = g.Key,
-						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds)/g.Sum(z => z.InputCount))
-					})
-				}
-				)
-			};
-		}
-
-		internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
-		{
-			var result = new List<object>();
-
-			foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
-			{
-				var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
-				var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
-
-				var compareToCollection = new Dictionary<Etag, int>();
-
-				for (int i = 1; i < prefetcherDocs.Length; i++)
-					compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
-
-				if (compareToCollection.Any(x => x.Value < 0))
-				{
-				    result.Add(new
-				    {
-						AdditionaInfo = prefetchingBehavior.AdditionalInfo,
+                if (compareToCollection.Any(x => x.Value < 0))
+                {
+                    result.Add(new
+                    {
+                        AdditionaInfo = prefetchingBehavior.AdditionalInfo,
                         HasCorrectlyOrderedEtags = false,
                         IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
                         EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key),
-						FutureBatches = futureBatches
-				    });
-				}
-				else
-				{
+                        FutureBatches = futureBatches
+                    });
+                }
+                else
+                {
                     var prefetcherDocsToTake = Math.Min(5, prefetcherDocs.Count());
                     var etagsWithKeysTail = Enumerable.Range(0, prefetcherDocsToTake).Select(
                         i => prefetcherDocs[prefetcherDocs.Count() - prefetcherDocsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
@@ -385,12 +302,12 @@ namespace Raven.Database.Util
                         EtagsWithKeysHead = prefetcherDocs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
                         EtagsWithKeysTail = etagsWithKeysTail,
                         EtagsWithKeysCount = prefetcherDocs.Count(),
-						FutureBatches = futureBatches
+                        FutureBatches = futureBatches
                     });
-				}
-			}
+                }
+            }
 
-			return result;
-		}
-	}
+            return result;
+        }
+    }
 }

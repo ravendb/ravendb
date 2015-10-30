@@ -11,12 +11,12 @@ using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Shard
 {
-	/// <summary>
-	/// Apply an operation to all the shard session in sequence
-	/// </summary>
-	public class SequentialShardAccessStrategy : IShardAccessStrategy
-	{
-		public event ShardingErrorHandle<IDatabaseCommands> OnError;
+    /// <summary>
+    /// Apply an operation to all the shard session in sequence
+    /// </summary>
+    public class SequentialShardAccessStrategy : IShardAccessStrategy
+    {
+        public event ShardingErrorHandle<IDatabaseCommands> OnError;
 
 		/// <summary>
 		/// Applies the specified action for all shard sessions.
@@ -49,62 +49,62 @@ namespace Raven.Client.Shard
 				}
 			}
 
-			// if ALL nodes failed, we still throw
-			if (errors.Count == commands.Count)
-				throw new AggregateException(errors);
+            // if ALL nodes failed, we still throw
+            if (errors.Count == commands.Count)
+                throw new AggregateException(errors);
 
-			return list.ToArray();
-		}
+            return list.ToArray();
+        }
 
-		public event ShardingErrorHandle<IAsyncDatabaseCommands> OnAsyncError;
+        public event ShardingErrorHandle<IAsyncDatabaseCommands> OnAsyncError;
 
-		public Task<T[]> ApplyAsync<T>(IList<IAsyncDatabaseCommands> commands, ShardRequestData request, Func<IAsyncDatabaseCommands, int, Task<T>> operation)
-		{
-			var resultsTask = new TaskCompletionSource<List<T>>();
-			var results = new List<T>();
-			var errors = new List<Exception>();
+        public Task<T[]> ApplyAsync<T>(IList<IAsyncDatabaseCommands> commands, ShardRequestData request, Func<IAsyncDatabaseCommands, int, Task<T>> operation)
+        {
+            var resultsTask = new TaskCompletionSource<List<T>>();
+            var results = new List<T>();
+            var errors = new List<Exception>();
 
-			Action<int> executer = null;
-			executer = index =>
-				{
-					if (index >= commands.Count)
-					{
-						if (errors.Count == commands.Count)
-							throw new AggregateException(errors);
-						// finished all commands successfully
-						resultsTask.SetResult(results);
-						return;
-					}
+            Action<int> executer = null;
+            executer = index =>
+                {
+                    if (index >= commands.Count)
+                    {
+                        if (errors.Count == commands.Count)
+                            throw new AggregateException(errors);
+                        // finished all commands successfully
+                        resultsTask.SetResult(results);
+                        return;
+                    }
 
-					operation(commands[index], index).ContinueWith(task =>
-					{
-						if (task.IsFaulted)
-						{
-							var error = OnAsyncError;
-							if (error == null)
-							{
-								resultsTask.SetException(task.Exception);
-								return;
-							}
-							if (error(commands[index], request, task.Exception) == false)
-							{
-								resultsTask.SetException(task.Exception);
-								return;
-							}
-							errors.Add(task.Exception);
-						}
-						else
-						{
-							results.Add(task.Result);
-						}
+                    operation(commands[index], index).ContinueWith(task =>
+                    {
+                        if (task.IsFaulted)
+                        {
+                            var error = OnAsyncError;
+                            if (error == null)
+                            {
+                                resultsTask.SetException(task.Exception);
+                                return;
+                            }
+                            if (error(commands[index], request, task.Exception) == false)
+                            {
+                                resultsTask.SetException(task.Exception);
+                                return;
+                            }
+                            errors.Add(task.Exception);
+                        }
+                        else
+                        {
+                            results.Add(task.Result);
+                        }
 
-						// After we've dealt with one result, we call the operation on the next shard
-						executer(index + 1);
-					});
-				};
+                        // After we've dealt with one result, we call the operation on the next shard
+                        executer(index + 1);
+                    });
+                };
 
-			executer(0);
-			return resultsTask.Task.ContinueWith(task => task.Result.ToArray());
-		}
-	}
+            executer(0);
+            return resultsTask.Task.ContinueWith(task => task.Result.ToArray());
+        }
+    }
 }

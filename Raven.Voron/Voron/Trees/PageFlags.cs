@@ -1,6 +1,6 @@
-﻿namespace Voron.Trees
+namespace Voron.Trees
 {
-	using System;
+    using System;
 
 	[Flags]
 	public enum PageFlags : byte

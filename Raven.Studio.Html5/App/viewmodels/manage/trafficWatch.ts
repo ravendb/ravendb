@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
 import trafficWatchClient = require("common/trafficWatchClient");
@@ -73,7 +73,7 @@ class trafficWatch extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.showLogDetails.subscribe(x => {
                 $(".logRecords").toggleClass("logRecords-small");
         });

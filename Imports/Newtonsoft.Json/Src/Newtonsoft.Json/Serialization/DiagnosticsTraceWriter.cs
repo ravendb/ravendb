@@ -1,4 +1,4 @@
-﻿#if !(PORTABLE40 || PORTABLE || NETFX_CORE || MONO)
+#if !(PORTABLE40 || PORTABLE || NETFX_CORE || MONO)
 using System;
 using System.Diagnostics;
 using DiagnosticsTrace = System.Diagnostics.Trace;
