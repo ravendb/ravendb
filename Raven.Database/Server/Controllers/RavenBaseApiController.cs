@@ -150,7 +150,7 @@ namespace Raven.Database.Server.Controllers
 
 	    protected async Task<RavenJObject> ReadJsonAsync()
 		{
-			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
 			using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))

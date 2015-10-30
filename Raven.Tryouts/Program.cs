@@ -1,8 +1,9 @@
-﻿namespace ConsoleApplication4
+﻿namespace Raven.Tryouts
 {
-	public class Program
-	{
-		public static void Main()
-		{
-		        }
-		    }
+    public class Program
+    {
+        public static void Main()
+        {
+        }
+    }
+}

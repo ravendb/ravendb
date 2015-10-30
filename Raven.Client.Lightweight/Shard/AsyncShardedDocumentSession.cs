@@ -417,7 +417,7 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						async (dbCmd, i) =>
 						{
-                            var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters);
+                            var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters).ConfigureAwait(false);
                             var items = new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 
                             if (items.Length > currentShardIds.Length)

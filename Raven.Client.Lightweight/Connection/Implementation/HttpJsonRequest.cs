@@ -690,21 +690,20 @@ namespace Raven.Client.Connection.Implementation
         {
             writeCalled = true;
 
-	        return SendRequestInternal(() => 
-            {                    
+            return SendRequestInternal(() =>
+            {
                 HttpContent content = new JsonContent(tokenToWrite);
-                if (!factory.DisableRequestCompression)
-                    content = new CompressedContent(content, "gzip");
+                if (!factory.DisableRequestCompression) content = new CompressedContent(content, "gzip");
 
-                return new HttpRequestMessage(new HttpMethod(Method), Url)
-	        {
+                return new HttpRequestMessage(Method, Url)
+                {
                     Content = content,
-		        Headers =
-		        {
-						TransferEncodingChunked = !EnvironmentUtils.RunningOnPosix
-		        }
+                    Headers =
+                    {
+                        TransferEncodingChunked = !EnvironmentUtils.RunningOnPosix
+                    }
                 };
-	        });
+            });
         }
 
 		public Task WriteAsync(Stream streamToWrite)

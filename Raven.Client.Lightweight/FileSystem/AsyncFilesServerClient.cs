@@ -703,16 +703,7 @@ namespace Raven.Client.FileSystem
 
 		        AddHeaders(metadata, request);
 				AsyncFilesServerClientExtension.AddEtagHeader(request, etag);
-	            Stream sentStream;
-	            if (source.CanSeek == false)
-	            {
-                    sentStream = new MemoryStream();
-	                source.CopyTo(sentStream);
-	            }
-	            else
-	            {
-	                sentStream = source;
-	            }
+
 		        var response = await request.ExecuteRawRequestAsync((netStream, t) =>
 				{
 					try
