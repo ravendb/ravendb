@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Voron.Data.RawData;
+using Voron.Tests.FixedSize;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Voron.Tests.RawData
 {
@@ -32,6 +35,82 @@ namespace Voron.Tests.RawData
                 var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
                 
                 AssertValueMatches(section,id, "Hello There");
+            }
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed()]
+        public void CanAllocateMultipleValues(int seed)
+        {
+            var random = new Random(seed);
+
+            long pageNumber;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = RawDataSmallSection.Create(tx.LowLevelTransaction);
+                pageNumber = section.PageNumber;
+                tx.Commit();
+            }
+            var dic = new Dictionary<long, int>();
+            for (int i = 0; i < 100; i++)
+            {
+                long id;
+                using (var tx = Env.WriteTransaction())
+                {
+                    var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    Assert.True(section.TryAllocate(random.Next(16,256), out id));
+                    WriteValue(section, id, i.ToString("0000000000000"));
+                    dic[id] = i;
+                    tx.Commit();
+                }
+
+                using (var tx = Env.WriteTransaction())
+                {
+                    var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    AssertValueMatches(section, id, i.ToString("0000000000000"));
+                }
+            }
+
+            foreach (var kvp in dic)
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    AssertValueMatches(section, kvp.Key, kvp.Value.ToString("0000000000000"));
+                }
+            }
+        }
+
+        [Fact]
+        public void CanAllocateEnoughToFillEntireSection()
+        {
+            long pageNumber;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = RawDataSmallSection.Create(tx.LowLevelTransaction);
+                pageNumber = section.PageNumber;
+                tx.Commit();
+            }
+
+            long id, idToFree = -1;
+            using (var tx = Env.WriteTransaction())
+            {
+                var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                for (int i = 0; i < 1536; i++)
+                {
+                    Assert.True(section.TryAllocate(1020, out id));
+                    if (i%77 == 0)
+                    {
+                        idToFree = id;
+                    }
+                }
+
+
+                Assert.False(section.TryAllocate(1020, out id));
+
+                section.Free(idToFree);
+
+                Assert.True(section.TryAllocate(1020, out id));
             }
         }
 

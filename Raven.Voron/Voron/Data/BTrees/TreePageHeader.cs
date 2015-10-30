@@ -63,10 +63,7 @@ namespace Voron.Data.BTrees
         public long PageNumber;
 
         [FieldOffset(8)]
-        public ushort NumberOfEntries;
-
-        [FieldOffset(10)]
-        public ushort LastUsedPage;
+        public int NumberOfEntries;
 
         [FieldOffset(12)]
         public PageFlags Flags;
@@ -75,10 +72,14 @@ namespace Voron.Data.BTrees
         public RawDataPageFlags RawDataFlags;
 
         [FieldOffset(14)]
-        public int NumberOfEntriesInSection;
+        public ushort LastUsedPage;
 
-        [FieldOffset(18)]
+        [FieldOffset(16)]
+        public int AllocatedSize;
+
+        [FieldOffset(20)]
         public ushort NumberOfPages;
+
     }
 
     [StructLayout(LayoutKind.Explicit, Pack = 1)]

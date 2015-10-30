@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -10,7 +11,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.RawData
 {
-    public unsafe delegate void DataMovedDelegate(long previousId, long newId, byte* data);
+    public unsafe delegate void DataMovedDelegate(long previousId, long newId, byte* data, int size);
 
     /// <summary>
     /// Handles small values (lt 2Kb) by packing them into pages
@@ -34,7 +35,39 @@ namespace Voron.Data.RawData
 
         const ushort ReservedHeaderSpace = 96;
 
+        public int AllocatedSize => _sectionHeader->AllocatedSize;
 
+        public int Size => _sectionHeader->NumberOfPages * _pageSize;
+
+        public int NumberOfEntries => _sectionHeader->NumberOfEntries;
+
+        public int OverheadSize
+            => _pageSize /* header page*/+
+            _sectionHeader->NumberOfEntries * (sizeof(ushort) * 2) /*per entry*/+
+            _sectionHeader->NumberOfPages * sizeof(RawDataSmallPageHeader);
+
+        public double Density
+        {
+            get
+            {
+                var total = 0;
+                for (int i = 0; i < _sectionHeader->NumberOfPages; i++)
+                {
+                    total += AvailableSpace[i];
+                }
+                return 1 - (total/(double) (_sectionHeader->NumberOfPages*_pageSize));
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"PageNumber: {PageNumber}; " +
+                   $"AllocatedSize: {AllocatedSize:#,#;;0}; " +
+                   $"Size: {Size:#,#;;0}; " +
+                   $"Entries: {NumberOfEntries:#,#;;0}; " +
+                   $"Overhead: {OverheadSize:#,#;;0}; " +
+                   $"Density: {Density:P}";
+        }
 
         public RawDataSmallSection(LowLevelTransaction tx, long pageNumber)
         {
@@ -47,10 +80,11 @@ namespace Voron.Data.RawData
             _sectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(pageNumber).Pointer;
         }
 
+
         public bool TryWrite(long id, byte* data, int size)
         {
             var posInPage = (int)(id % _pageSize);
-            var pageNumberInSection = (id - posInPage)/_pageSize;
+            var pageNumberInSection = (id - posInPage) / _pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException("Asked to load a past the allocated values: " + id + " from page " +
@@ -70,7 +104,7 @@ namespace Voron.Data.RawData
             if (sizes[0] < size)
                 return false; // can't write here
 
-           
+
             pageHeader = ModifyPage(pageHeader);
             var writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
             // note that we have to do this calc again, pageHeader might have changed
@@ -103,6 +137,31 @@ namespace Voron.Data.RawData
             return ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
         }
 
+        public void Free(long id)
+        {
+            var posInPage = (int)(id % _pageSize);
+            var pageNumberInSection = (id - posInPage) / _pageSize;
+            var pageHeader = PageHeaderFor(pageNumberInSection);
+            pageHeader = ModifyPage(pageHeader);
+            if (posInPage >= pageHeader->NextAllocation)
+                throw new InvalidDataException("Asked to load a past the allocated values: " + id + " from page " +
+                                               pageHeader->PageNumber);
+
+            var sizes = (short*)((byte*)pageHeader + posInPage);
+            if (sizes[1] < 0)
+                throw new InvalidDataException("Asked to free a value that was already freed: " + id + " from page " +
+                                               pageHeader->PageNumber);
+
+            sizes[1] = -1;
+            pageHeader->NumberOfEntries--;
+            
+            EnsureHeaderModified();
+            _sectionHeader->NumberOfEntries--;
+            var sizeFreed = sizes[0] + (sizeof(short)*2);
+            _sectionHeader->AllocatedSize -= sizeFreed;
+            AvailableSpace[pageHeader->PageNumber - _sectionHeader->PageNumber] += (ushort)sizeFreed;
+        }
+
         /// <summary>
         /// Try allocating some space in the section, defrag if needed (including moving other valid entries)
         /// Once a section returned false for try allocation, it should be retired as an actively allocating
@@ -113,6 +172,9 @@ namespace Voron.Data.RawData
             var allocatedSize = (short)size;
             size += sizeof(short) /*allocated size */+ sizeof(short) /*actual size*/;
             // we need to have the size value here, so we add that
+
+            if(allocatedSize<=0)
+                throw new ArgumentException("size must be greater than zero, but was " + allocatedSize);
 
             if (size > MaxItemSize || size > short.MaxValue)
                 throw new ArgumentException("Cannot allocate an item of " + size +
@@ -129,12 +191,14 @@ namespace Voron.Data.RawData
                 // best case, we have enough space, and we don't need to defrag
                 pageHeader = ModifyPage(pageHeader);
                 id = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
-                ((short*) ((byte*) pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
+                ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
                 pageHeader->NextAllocation += (ushort)size;
                 pageHeader->NumberOfEntries++;
                 EnsureHeaderModified();
-                _sectionHeader->NumberOfEntriesInSection++;
+                AvailableSpace[i] -= (ushort)size;
+                _sectionHeader->NumberOfEntries++;
                 _sectionHeader->LastUsedPage = i;
+                _sectionHeader->AllocatedSize += size;
                 return true;
             }
 
@@ -148,13 +212,17 @@ namespace Voron.Data.RawData
                 // we have space, but we need to defrag
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
                 pageHeader = DefragPage(pageHeader);
+
                 id = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
                 ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
                 pageHeader->NextAllocation += (ushort)size;
                 pageHeader->NumberOfEntries++;
                 EnsureHeaderModified();
-                _sectionHeader->NumberOfEntriesInSection++;
+                _sectionHeader->NumberOfEntries++;
                 _sectionHeader->LastUsedPage = i;
+                _sectionHeader->AllocatedSize += size;
+                AvailableSpace[i] = (ushort)(_pageSize - pageHeader->NextAllocation);
+
                 return true;
             }
 
@@ -172,6 +240,7 @@ namespace Voron.Data.RawData
             }
         }
 
+
         private unsafe RawDataSmallPageHeader* DefragPage(RawDataSmallPageHeader* pageHeader)
         {
             pageHeader = ModifyPage(pageHeader);
@@ -181,11 +250,7 @@ namespace Voron.Data.RawData
             {
                 var maxUsedPos = pageHeader->NextAllocation;
                 Memory.Copy(tmp.TempPagePointer, (byte*)pageHeader, _pageSize);
-                pageHeader->NextAllocation = (ushort)(
-                    _sectionHeader->PageNumber == pageHeader->PageNumber
-                        ? sizeof(RawDataSmallSectionPageHeader)
-                        : sizeof(RawDataSmallPageHeader)
-                    );
+                pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
                 Memory.Set((byte*)pageHeader + pageHeader->NextAllocation, 0,
                     _pageSize - pageHeader->NextAllocation);
 
@@ -195,13 +260,13 @@ namespace Voron.Data.RawData
                 {
                     var sizes = ((short*)(tmp.TempPagePointer + pos));
                     var allocatedSize = sizes[0];
-                    if (allocatedSize < 0)
-                        throw new InvalidDataException("Allocated size cannot be negative, but was " + allocatedSize +
+                    if (allocatedSize <= 0)
+                        throw new InvalidDataException("Allocated size cannot be zero or negative, but was " + allocatedSize +
                                                        " in page " + pageHeader->PageNumber);
                     var usedSize = sizes[1]; // used size
                     if (usedSize < 0)
                     {
-                        pos += (ushort)allocatedSize;
+                        pos += (ushort)(allocatedSize + sizeof(short) + sizeof(short));
                         continue; // this was freed
                     }
 
@@ -211,20 +276,20 @@ namespace Voron.Data.RawData
                         var newId = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
                         if (prevId != newId)
                         {
-                            DataMoved(prevId, newId, tmp.TempPagePointer + pos);
+                            DataMoved(prevId, newId, tmp.TempPagePointer + pos, usedSize);
                         }
                     }
 
                     sizes = (short*)(((byte*)pageHeader) + pageHeader->NextAllocation);
-                    sizes[0] = usedSize; // allocated
+                    sizes[0] = allocatedSize; // allocated
                     sizes[1] = usedSize; // used
                     pageHeader->NextAllocation += sizeof(short) + sizeof(short);
-
+                    pageHeader->NumberOfEntries++;
                     Memory.Copy(((byte*)pageHeader) + pageHeader->NextAllocation, tmp.TempPagePointer + pos,
                         usedSize);
 
-                    pageHeader->NextAllocation += (ushort)usedSize;
-                    pos += (ushort)allocatedSize;
+                    pageHeader->NextAllocation += (ushort)allocatedSize;
+                    pos += (ushort) (allocatedSize + sizeof (short) + sizeof (short));
                 }
             }
             return pageHeader;
@@ -274,7 +339,6 @@ namespace Voron.Data.RawData
             sectionHeader->RawDataFlags = RawDataPageFlags.Header;
             sectionHeader->Flags = PageFlags.RawData | PageFlags.Single;
             sectionHeader->NumberOfEntries = 0;
-            sectionHeader->NumberOfEntriesInSection = 0;
             sectionHeader->NumberOfPages = numberOfPagesInSmallSection;
             sectionHeader->LastUsedPage = 0;
 
