@@ -41,9 +41,12 @@ namespace Raven.Tests.Counters
 
 		protected CounterStorage NewCounterStorage()
 		{
-			var newCounterStorage = new CounterStorage(String.Empty, DefaultCounterStorageName, new InMemoryRavenConfiguration
+			var newCounterStorage = new CounterStorage(string.Empty, DefaultCounterStorageName, new InMemoryRavenConfiguration
 			{
-				RunInMemory = true
+				Core =
+				{
+				    RunInMemory = true
+				}
 			});
 
 			disposables.Add(newCounterStorage);

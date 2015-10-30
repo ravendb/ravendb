@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;

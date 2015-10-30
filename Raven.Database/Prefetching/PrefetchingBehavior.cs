@@ -511,11 +511,11 @@ namespace Raven.Database.Prefetching
 				return; // already have too much in memory
 			}
 			// don't keep _too_ much in memory
-			if (prefetchingQueue.Count > context.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 2)
+			if (prefetchingQueue.Count > context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch * 2)
 			{
 				log.Info("Skipping background prefetching because we already have {0:#,#;;0} documents in the prefetching queue and our limit is {1:#,#;;0}",
 					prefetchingQueue.Count,
-					context.Configuration.MaxNumberOfItemsToProcessInSingleBatch * 2);
+					context.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch * 2);
 				return;
 			}
 
@@ -535,11 +535,11 @@ namespace Raven.Database.Prefetching
 			}) + prefetchingQueue.LoadedSize;
 
 			var alreadyLoadedSizeInMb = alreadyLoadedSizeInBytes / 1024 / 1024;
-			if (alreadyLoadedSizeInMb > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+			if (alreadyLoadedSizeInMb > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
 			{
 				log.Info("Skipping background prefetching because we already have {0:#,#;;0} kb in the future tasks and prefetcher queue and our limit is {1:#,#;;0} kb",
 					alreadyLoadedSizeInMb / 1024,
-					context.Configuration.AvailableMemoryForRaisingBatchSizeLimit / 1024);
+					context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Kilobytes);
 				return;
 			}
 
@@ -564,10 +564,10 @@ namespace Raven.Database.Prefetching
 
 			// ensure we don't do TOO much future caching
 			if (MemoryStatistics.AvailableMemoryInMb <
-				context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
+				context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
 			{
 				log.Info("Skipping background prefetching because we have {0}mb of availiable memory and the availiable memory for raising the batch size limit is: {1}mb",
-						MemoryStatistics.AvailableMemoryInMb, context.Configuration.AvailableMemoryForRaisingBatchSizeLimit / 1024 / 1024);
+						MemoryStatistics.AvailableMemoryInMb, context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes);
 				return;
 			}
 			// we loaded the maximum amount, there are probably more items to read now.
@@ -613,7 +613,7 @@ namespace Raven.Database.Prefetching
 
 				int numberOfSplitTasks = Math.Max(2, Environment.ProcessorCount / 2);
 				var numOfDocsToTakeInEachSplit = Math.Max(
-					context.Configuration.InitialNumberOfItemsToProcessInSingleBatch,
+					context.Configuration.Core.InitialNumberOfItemsToProcessInSingleBatch,
 					(int)Math.Min((autoTuner.FetchingDocumentsFromDiskTimeout.TotalMilliseconds * 0.7) / loadTimePerDocMs,
 						(autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes * 0.7) / largestDocSize));
 

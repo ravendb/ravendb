@@ -2,12 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -26,6 +24,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Common;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
@@ -34,7 +33,6 @@ using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Smuggler;
 using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database;
@@ -122,7 +120,7 @@ for(var customFunction in customFunctions) {{
 		[HttpPost]
 		[RavenRoute("studio-tasks/import")]
 		[RavenRoute("databases/{databaseName}/studio-tasks/import")]
-		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+		public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, DatabaseItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
 		{
 			if (!Request.Content.IsMimeMultipartContent())
 			{
@@ -197,7 +195,7 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = e.Message;
                     }
-                    else if (e is Imports.Newtonsoft.Json.JsonReaderException)
+                    else if (e is JsonReaderException)
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }

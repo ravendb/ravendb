@@ -16,7 +16,7 @@ namespace Raven.Database.Smuggler.Embedded
         protected Task InitializeBatchSizeAsync(DocumentDatabase database, DatabaseSmugglerOptions options)
         {
             var current = options.BatchSize;
-            options.BatchSize = Math.Min(current, database.Configuration.MaxNumberOfItemsToProcessInSingleBatch);
+            options.BatchSize = Math.Min(current, database.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch);
             return new CompletedTask();
         }
     }

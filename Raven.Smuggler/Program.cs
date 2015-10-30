@@ -16,6 +16,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 //using Raven.Database.Smuggler;
 using Raven.Smuggler.Helpers;
