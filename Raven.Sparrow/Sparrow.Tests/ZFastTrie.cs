@@ -1,4 +1,4 @@
-﻿using Sparrow.Binary;
+using Sparrow.Binary;
 using Sparrow.Collections;
 using System;
 using System.Collections.Generic;
@@ -41,12 +41,12 @@ namespace Sparrow.Tests
             string value;
             Assert.True(tree.TryGet(key, out value));
 
-            // x+ = min{y ∈ S | y ≥ x} (the successor of x in S) - Page 160 of [1]
+            // x+ = min{y ? S | y = x} (the successor of x in S) - Page 160 of [1]
             // Therefore the successor of the key "oren" is greater or equal to "oren"
             Assert.Equal(key, tree.SuccessorOrDefault(key));
             Assert.Null(tree.SuccessorOrDefault("qu"));
 
-            // x− = max{y ∈ S | y < x} (the predecessor of x in S) - Page 160 of [1] 
+            // x- = max{y ? S | y < x} (the predecessor of x in S) - Page 160 of [1] 
             // Therefore the predecessor of the key "oren" is strictly less than "oren".
             Assert.Null(tree.PredecessorOrDefault(key));
             Assert.Null(tree.PredecessorOrDefault("aq"));
@@ -112,14 +112,14 @@ namespace Sparrow.Tests
             Assert.False(tree.TryGet(greaterKey + "1", out value));
             Assert.False(tree.TryGet("1", out value));
 
-            // x+ = min{y ∈ S | y ≥ x} (the successor of x in S) - Page 160 of [1]
+            // x+ = min{y ? S | y = x} (the successor of x in S) - Page 160 of [1]
             // Therefore the successor of the key "oren" is greater or equal to "oren"
             Assert.Equal(lesserKey, tree.SuccessorOrDefault(lesserKey));
             Assert.Equal(greaterKey, tree.SuccessorOrDefault(greaterKey));
             Assert.Equal(greaterKey, tree.SuccessorOrDefault(lesserKey + "1"));
             Assert.Null(tree.SuccessorOrDefault(greatestKey));
 
-            // x− = max{y ∈ S | y < x} (the predecessor of x in S) - Page 160 of [1] 
+            // x- = max{y ? S | y < x} (the predecessor of x in S) - Page 160 of [1] 
             // Therefore the predecessor of the key "oren" is strictly less than "oren".
             Assert.Equal(lesserKey, tree.PredecessorOrDefault(greaterKey));
             Assert.Null(tree.PredecessorOrDefault(lesserKey));

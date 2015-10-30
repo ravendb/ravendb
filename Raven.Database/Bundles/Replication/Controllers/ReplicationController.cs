@@ -737,7 +737,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 ReplicationConflictResolvers = conflictResolvers,
                 Src = src
             }.Replicate(id, metadata, document);
-        }
+        }		
 
         private ReplicationConfig GetReplicationConfig()
         {

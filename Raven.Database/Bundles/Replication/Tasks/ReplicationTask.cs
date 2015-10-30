@@ -542,6 +542,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
             }
         }
+    
 
         private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
         {
@@ -981,6 +982,7 @@ namespace Raven.Bundles.Replication.Tasks
 
             return results.ToList();
         }
+
 
         internal SourceReplicationInformationWithBatchInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
         {

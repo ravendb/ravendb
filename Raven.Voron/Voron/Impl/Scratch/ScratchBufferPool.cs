@@ -25,10 +25,10 @@ namespace Voron.Impl.Scratch
     public unsafe class ScratchBufferPool : IDisposable
     {
         private readonly long _sizeLimit;
-        private StorageEnvironmentOptions _options;
         private ScratchBufferFile _current;
-        private long _oldestTransactionWhenFlushWasForced = -1;
+        private StorageEnvironmentOptions _options;
         private int _currentScratchNumber = -1;
+        private long _oldestTransactionWhenFlushWasForced = -1;
         private readonly Dictionary<int, ScratchBufferFile> _scratchBuffers = new Dictionary<int, ScratchBufferFile>(NumericEqualityComparer.Instance);
 
         public ScratchBufferPool(StorageEnvironment env)
@@ -291,7 +291,9 @@ namespace Voron.Impl.Scratch
                 this.File = file;
             }
         }
+
         private const int InvalidScratchFileNumber = -1;
+        private ScratchBufferCacheItem lastScratchBuffer = new ScratchBufferCacheItem( InvalidScratchFileNumber, null );
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TreePage ReadPage(int scratchNumber, long p, PagerState pagerState = null)
@@ -310,7 +312,6 @@ namespace Voron.Impl.Scratch
 
             return bufferFile.ReadPage(p, pagerState);
         }
-        private ScratchBufferCacheItem lastScratchBuffer = new ScratchBufferCacheItem( InvalidScratchFileNumber, null );
 
         public byte* AcquirePagePointer(int scratchNumber, long p)
         {

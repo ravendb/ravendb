@@ -16,7 +16,6 @@ namespace Sparrow.Tests
             var r2 = Hashing.XXHash64.CalculateRaw(new string("Public".ToCharArray()));
 
             Assert.Equal(r1, r2);
-
         }
 
         [Fact]
@@ -26,7 +25,6 @@ namespace Sparrow.Tests
             var r2 = Hashing.XXHash32.CalculateRaw(new string("Public".ToCharArray()));
 
             Assert.Equal(r1, r2);
-
         }
 
 
@@ -136,6 +134,7 @@ namespace Sparrow.Tests
             expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.Equal(expected, result);
         }
+
 
         [Fact]
         public void XXHash32_NotEquivalenceOfBytesWithString()
@@ -389,6 +388,5 @@ namespace Sparrow.Tests
             }
             while (blockSize <= bufferSize);
         }
-
     }
 }

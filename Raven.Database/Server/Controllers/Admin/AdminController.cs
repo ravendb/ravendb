@@ -22,6 +22,7 @@ using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
+
 using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
@@ -636,7 +637,9 @@ namespace Raven.Database.Server.Controllers.Admin
 
             return false;
         }
+
         private static TimeSpan ReportProgressInterval = TimeSpan.FromSeconds(1);
+
         private static string VoronProgressString = "Copied";
 
         [HttpGet]

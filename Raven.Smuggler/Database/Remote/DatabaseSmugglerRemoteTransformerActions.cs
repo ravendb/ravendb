@@ -6,22 +6,22 @@ using Raven.Client;
 
 namespace Raven.Smuggler.Database.Remote
 {
-	public class DatabaseSmugglerRemoteTransformerActions : IDatabaseSmugglerTransformerActions
-	{
-		private readonly IDocumentStore _store;
+    public class DatabaseSmugglerRemoteTransformerActions : IDatabaseSmugglerTransformerActions
+    {
+        private readonly IDocumentStore _store;
 
-		public DatabaseSmugglerRemoteTransformerActions(IDocumentStore store)
-		{
-			_store = store;
-		}
+        public DatabaseSmugglerRemoteTransformerActions(IDocumentStore store)
+        {
+            _store = store;
+        }
 
-		public void Dispose()
-		{
-		}
+        public void Dispose()
+        {
+        }
 
-		public Task WriteTransformerAsync(TransformerDefinition transformer, CancellationToken cancellationToken)
-		{
-			return _store.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer, cancellationToken);
-		}
-	}
+        public Task WriteTransformerAsync(TransformerDefinition transformer, CancellationToken cancellationToken)
+        {
+            return _store.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer, cancellationToken);
+        }
+    }
 }

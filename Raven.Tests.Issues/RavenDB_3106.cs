@@ -84,6 +84,6 @@ namespace Raven.Tests.Issues
                     Assert.Equal(lastId, items.First().Id);
                 }
             }
-        }
+        }	
     }
 }

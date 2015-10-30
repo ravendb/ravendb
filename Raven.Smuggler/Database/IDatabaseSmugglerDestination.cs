@@ -7,32 +7,32 @@ using Raven.Abstractions.Exceptions;
 
 namespace Raven.Smuggler.Database
 {
-	public interface IDatabaseSmugglerDestination : IDisposable
-	{
-		bool SupportsOperationState { get; }
+    public interface IDatabaseSmugglerDestination : IDisposable
+    {
+        bool SupportsOperationState { get; }
 
-		bool SupportsWaitingForIndexing { get; }
+        bool SupportsWaitingForIndexing { get; }
 
-		Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken);
+        Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken);
 
-		IDatabaseSmugglerIndexActions IndexActions();
+        IDatabaseSmugglerIndexActions IndexActions();
 
-		IDatabaseSmugglerDocumentActions DocumentActions();
+        IDatabaseSmugglerDocumentActions DocumentActions();
 
-		IDatabaseSmugglerTransformerActions TransformerActions();
+        IDatabaseSmugglerTransformerActions TransformerActions();
 
-		IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions();
+        IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions();
 
-		IDatabaseSmugglerIdentityActions IdentityActions();
+        IDatabaseSmugglerIdentityActions IdentityActions();
 
-		Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
+        Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
 
-		Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken);
+        Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken);
 
-		Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken);
+        Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken);
 
-	    Task AfterExecuteAsync(DatabaseSmugglerOperationState state);
+        Task AfterExecuteAsync(DatabaseSmugglerOperationState state);
 
-	    void OnException(SmugglerException exception);
-	}
+        void OnException(SmugglerException exception);
+    }
 }

@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-
 using Voron.Exceptions;
 
 namespace Raven.Database.Storage

@@ -195,6 +195,6 @@ namespace Raven.Tests.Bundles.Replication
                 Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible",
                              conflictException.Message);
             }
-        }
+        }	
     }
 }

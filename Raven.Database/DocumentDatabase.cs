@@ -36,6 +36,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Impl.BackgroundTaskExecuter;
+
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
@@ -64,6 +65,7 @@ namespace Raven.Database
         private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
         private readonly object idleLocker = new object();
+
 
         private readonly IndexingExecuter indexingExecuter;
 
@@ -285,6 +287,7 @@ namespace Raven.Database
             }
         }
 
+
         internal PutSerialLock DocumentLock { get; private set; }
 
         public TaskScheduler BackgroundTaskScheduler
@@ -329,6 +332,7 @@ namespace Raven.Database
                 return hasTasks;
             }
         }
+
 
         [ImportMany]
         public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
@@ -644,7 +648,7 @@ namespace Raven.Database
                 return results;
             }
         }
-
+        
         public DatabaseMetrics CreateMetrics()
         {
             MetricsCountersManager metrics = WorkContext.MetricsCounters;

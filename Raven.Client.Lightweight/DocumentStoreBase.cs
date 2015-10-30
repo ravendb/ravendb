@@ -1,21 +1,20 @@
-using Raven.Abstractions.Util.Encryptors;
-
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
-
 using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Client.Document;
+using Raven.Client.Util;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Collections.Specialized;
 using System.Collections.ObjectModel;
-using Raven.Client.Util;
+using System.Collections.Specialized;
 using System.Configuration;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Raven.Client
 {
@@ -217,6 +216,7 @@ namespace Raven.Client
         /// Whenever or not we will use FIPS compliant encryption algorithms (must match server settings).
         /// </summary>
         public bool UseFipsEncryptionAlgorithms { get; set; }
+
         /// <summary>
         /// The resource manager id for the document store.
         /// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set
@@ -381,6 +381,6 @@ namespace Raven.Client
         }
 
         public abstract void InitializeProfiling();
+
     }
 }
-using System.Linq;

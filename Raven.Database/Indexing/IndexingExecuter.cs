@@ -734,7 +734,7 @@ namespace Raven.Database.Indexing
                 });
 
             if ( Log.IsDebugEnabled ) 
-            Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
+                Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
 
             var results = new ConcurrentQueue<IndexingBatchForIndex>();

@@ -189,7 +189,7 @@ namespace Raven.Tests.Counters
 
                 var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
                 Assert.Equal(total, delta);
-                
+
                 AsyncHelpers.RunSync(() => store.DeleteAsync(counterGroupName, CounterName));
             }
         }

@@ -92,6 +92,7 @@ namespace Raven.Abstractions.Data
         public const string RejectClientsModeEnabled = "Raven/RejectClientsModeEnabled";
 
         public const string RavenServerBuild = "Raven-Server-Build";
+
         public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
 
         public const string IndexingDisabled = "Raven/IndexingDisabled";

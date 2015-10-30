@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;

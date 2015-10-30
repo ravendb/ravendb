@@ -225,6 +225,7 @@ namespace Voron
             throw new NotSupportedException("Cannot compare because of unknown slice type: " + other.GetType());
         }      
 
+
         public static implicit operator Slice(string s)
         {
             return new Slice(Encoding.UTF8.GetBytes(s));

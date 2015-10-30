@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TimeSetting.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,49 +7,49 @@ using System;
 
 namespace Raven.Database.Config.Settings
 {
-	public struct TimeSetting
-	{
-		public static readonly Type TypeOf = typeof (TimeSetting);
+    public struct TimeSetting
+    {
+        public static readonly Type TypeOf = typeof (TimeSetting);
 
-		private readonly long value;
-		private readonly TimeUnit unit;
+        private readonly long value;
+        private readonly TimeUnit unit;
 
-		public TimeSetting(long value, TimeUnit unit)
-		{
-			this.value = value;
-			this.unit = unit;
-			
-			switch (unit)
-			{
-				case TimeUnit.Milliseconds:
-					AsTimeSpan = TimeSpan.FromMilliseconds(value);
-					break;
-				case TimeUnit.Seconds:
-					AsTimeSpan = TimeSpan.FromSeconds(value);
-					break;
-				case TimeUnit.Minutes:
-					AsTimeSpan = TimeSpan.FromMinutes(value);
-					break;
-				case TimeUnit.Hours:
-					AsTimeSpan = TimeSpan.FromHours(value);
-					break;
-				case TimeUnit.Days:
-					AsTimeSpan = TimeSpan.FromDays(value);
-					break;
-				default:
-					throw new ArgumentOutOfRangeException("unit", unit, "Unknown TimeUnit value");
-			}
-		}
+        public TimeSetting(long value, TimeUnit unit)
+        {
+            this.value = value;
+            this.unit = unit;
+            
+            switch (unit)
+            {
+                case TimeUnit.Milliseconds:
+                    AsTimeSpan = TimeSpan.FromMilliseconds(value);
+                    break;
+                case TimeUnit.Seconds:
+                    AsTimeSpan = TimeSpan.FromSeconds(value);
+                    break;
+                case TimeUnit.Minutes:
+                    AsTimeSpan = TimeSpan.FromMinutes(value);
+                    break;
+                case TimeUnit.Hours:
+                    AsTimeSpan = TimeSpan.FromHours(value);
+                    break;
+                case TimeUnit.Days:
+                    AsTimeSpan = TimeSpan.FromDays(value);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("unit", unit, "Unknown TimeUnit value");
+            }
+        }
 
-		public TimeSpan AsTimeSpan { get; private set; }
-	}
+        public TimeSpan AsTimeSpan { get; private set; }
+    }
 
-	public enum TimeUnit
-	{
-		Milliseconds,
-		Seconds,
-		Minutes,
-		Hours,
-		Days
-	}
+    public enum TimeUnit
+    {
+        Milliseconds,
+        Seconds,
+        Minutes,
+        Hours,
+        Days
+    }
 }

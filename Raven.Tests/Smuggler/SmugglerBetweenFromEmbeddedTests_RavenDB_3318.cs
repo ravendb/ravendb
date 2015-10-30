@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Database.Smuggler.Database;
@@ -14,6 +15,7 @@ using Raven.Database.Smuggler.Embedded;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Smuggler

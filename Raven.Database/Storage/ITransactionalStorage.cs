@@ -48,6 +48,7 @@ namespace Raven.Database.Storage
         Guid ChangeId();
         void ClearCaches();
         void DumpAllStorageTables();
+        
         IList<string> ComputeDetailedStorageInformation(bool computeExactSizes = false);
 
         ConcurrentDictionary<int, RemainingReductionPerLevel> GetScheduledReductionsPerViewAndLevel();

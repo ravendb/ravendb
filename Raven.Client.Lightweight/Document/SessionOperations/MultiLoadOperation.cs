@@ -20,6 +20,7 @@ namespace Raven.Client.Document.SessionOperations
         JsonDocument[] results;
         JsonDocument[] includeResults;
 
+
         public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string[] ids, KeyValuePair<string, Type>[] includes)
         {
             this.sessionOperations = sessionOperations;

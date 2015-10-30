@@ -84,7 +84,7 @@ namespace Raven.Bundles.Replication.Tasks
                     return true;
             }
             return false;
-        }
+        }     
 
         public Dictionary<string, string> SpecifiedCollections { get; set; }
 

@@ -152,5 +152,6 @@ namespace Raven.Tests.Issues
             }
             base.Dispose();
         }
+
     }
 }

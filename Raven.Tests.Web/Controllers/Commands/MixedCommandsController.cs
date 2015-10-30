@@ -47,6 +47,7 @@ namespace Raven.Tests.Web.Controllers.Commands
             return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
         }
 
+
         [Route("api/mixed/commands/deleteByIndex")]
         public Task<HttpResponseMessage> DeleteByIndex()
         {

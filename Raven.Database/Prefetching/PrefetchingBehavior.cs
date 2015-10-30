@@ -974,7 +974,7 @@ namespace Raven.Database.Prefetching
 
         public void SoftMemoryRelease()
         {
-
+            
         }
 
         public LowMemoryHandlerStatistics GetStats()

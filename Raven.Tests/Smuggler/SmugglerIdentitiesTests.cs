@@ -64,7 +64,7 @@ namespace Raven.Tests.Smuggler
                     new DatabaseSmugglerFileDestination(backupPath));
 
                 await smuggler.ExecuteAsync();
-                        }
+            }
 
             using (var documentStore = NewDocumentStore())
             {
@@ -222,7 +222,7 @@ namespace Raven.Tests.Smuggler
 
                 var smuggler = new DatabaseSmuggler(
                     new DatabaseSmugglerOptions
-                {
+                    {
                         StripReplicationInformation = true
                     },
                     new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
@@ -251,7 +251,7 @@ namespace Raven.Tests.Smuggler
                     new DatabaseSmugglerOptions(),
                     new DatabaseSmugglerFileSource(backupPath),
                     new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                {
+                    {
                         Url = store.Url,
                         Database = "N2"
                     }));
@@ -280,7 +280,7 @@ namespace Raven.Tests.Smuggler
                     new DatabaseSmugglerOptions(),
                     new DatabaseSmugglerFileSource(backupPath),
                     new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                {
+                    {
                         Url = store.Url,
                         Database = "N3"
                     }));
@@ -324,7 +324,7 @@ namespace Raven.Tests.Smuggler
                 {
                     var smuggler = new DatabaseSmuggler(
                         new DatabaseSmugglerOptions
-                    {
+                        {
                             StripReplicationInformation = true
                         },
                         new DatabaseSmugglerStreamSource(stream),
@@ -344,7 +344,7 @@ namespace Raven.Tests.Smuggler
                 {
                     var smuggler = new DatabaseSmuggler(
                         new DatabaseSmugglerOptions
-                    {
+                        {
                             StripReplicationInformation = true
                         },
                         new DatabaseSmugglerStreamSource(stream),

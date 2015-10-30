@@ -68,13 +68,13 @@ namespace Raven.Tests.Smuggler
                     options,
                     new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
                     {
-                            Url = store.Url,
+                        Url = store.Url,
                         Database = store.DefaultDatabase
                     }),
                     new DatabaseSmugglerFileDestination(file));
 
                 await smuggler.ExecuteAsync();
-                        }
+            }
 
             using (var documentStore = NewRemoteDocumentStore())
             {
@@ -92,7 +92,7 @@ namespace Raven.Tests.Smuggler
                     new DatabaseSmugglerFileSource(file), 
                     new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
                     {
-                            Url = documentStore.Url,
+                        Url = documentStore.Url,
                         Database = documentStore.DefaultDatabase
                     }));
 
@@ -137,7 +137,7 @@ namespace Raven.Tests.Smuggler
                     options,
                     new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
                     {
-                            Url = store.Url,
+                        Url = store.Url,
                         Database = store.DefaultDatabase
                     }),
                     new DatabaseSmugglerFileDestination(file));

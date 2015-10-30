@@ -1,4 +1,4 @@
-﻿using Sparrow.Binary;
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -851,7 +851,7 @@ namespace Sparrow.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Leaf PredecessorInternal(TKey key)
         {            
-            // x− = max{y ∈ S | y < x} (the predecessor of x in S) - Page 160 of [1]
+            // x- = max{y ? S | y < x} (the predecessor of x in S) - Page 160 of [1]
 
             // We look for the exit node for the key
             var exitFound = FindExitNode(key);
@@ -874,7 +874,7 @@ namespace Sparrow.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Leaf SuccessorInternal(TKey key)
         {
-            // x+ = min{y ∈ S | y ≥ x} (the successor of x in S) - Page 160 of [1]
+            // x+ = min{y ? S | y = x} (the successor of x in S) - Page 160 of [1]
 
             // We look for the exit node for the key
             var exitFound = FindExitNode(key);
@@ -924,7 +924,7 @@ namespace Sparrow.Collections
             if ( ! isRightChild )
             {
                 // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
-                // need to update only pointers to nodes that are left descendant of β.
+                // need to update only pointers to nodes that are left descendant of �.
 
                 while ( stack.Count != 0 )
                 {
@@ -940,7 +940,7 @@ namespace Sparrow.Collections
             else
             {
                 // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
-                // need to update only pointers to nodes that are right descendant of β.
+                // need to update only pointers to nodes that are right descendant of �.
 
                 while( stack.Count != 0 )
                 {
@@ -980,7 +980,7 @@ namespace Sparrow.Collections
             if ( isRightChild )
             {
                 // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
-                // need to update only pointers to nodes that are right descendant of β.
+                // need to update only pointers to nodes that are right descendant of �.
 
                 while ( stack.Count != 0 )
                 {
@@ -996,7 +996,7 @@ namespace Sparrow.Collections
             else
             {
                 // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
-                // need to update only pointers to nodes that are left descendant of β.
+                // need to update only pointers to nodes that are left descendant of �.
 
                 while ( stack.Count != 0 )
                 {

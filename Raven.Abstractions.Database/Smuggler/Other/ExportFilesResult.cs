@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Database.Smuggler.Database;
 
 namespace Raven.Abstractions.Database.Smuggler.Other
 {

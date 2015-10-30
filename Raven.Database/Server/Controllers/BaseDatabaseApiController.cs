@@ -99,7 +99,7 @@ namespace Raven.Database.Server.Controllers
             RequestManager.AddAccessControlHeaders(this, result);
             HandleReplication(result);
             return result;
-        }
+        }		
 
         protected virtual IndexQuery GetIndexQuery(int maxPageSize)
         {

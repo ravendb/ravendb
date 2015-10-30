@@ -17,9 +17,9 @@ namespace Voron.Impl.Journal
         {
             get
             {
-                if(_copiedPages == null)
+                if (_copiedPages == null)
                     CreatePagesSnapshot();
-                
+
                 return _copiedPages;
             }
         }

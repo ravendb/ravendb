@@ -1,15 +1,14 @@
 using Raven.Abstractions.Data;
-
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
-using System;
 using Raven.Database.Extensions;
-using System.Collections.Generic;
 using Raven.Database.FileSystem.Infrastructure;
-using System.Collections.Specialized;
 using Raven.Database.FileSystem.Plugins;
-using System.IO;
 using Raven.Database.FileSystem.Storage;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
 using System.Threading;
 
 namespace Raven.Tests.FileSystem.Storage

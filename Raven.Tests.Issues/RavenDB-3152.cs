@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Common;
 using Raven.Abstractions.Database.Smuggler.Database;
@@ -14,6 +15,7 @@ using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Helpers;
+
 using Xunit;
 
 namespace Raven.Tests.Issues

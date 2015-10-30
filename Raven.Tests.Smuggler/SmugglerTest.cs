@@ -1,8 +1,8 @@
-﻿using Raven.Tests.Common;
+using Raven.Tests.Common;
 
 namespace Raven.Tests.Smuggler
 {
-	public class SmugglerTest : ReplicationBase
-	{
-	}
+    public class SmugglerTest : ReplicationBase
+    {
+    }
 }

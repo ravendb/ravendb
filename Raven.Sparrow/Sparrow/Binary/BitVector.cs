@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
@@ -21,7 +21,7 @@ namespace Sparrow.Binary
         public const int BytesPerWord = sizeof(ulong) / sizeof(byte);        
         public const uint Log2BitsPerWord = 6; // Math.Log( BitsPerWord, 2 )
         
-	    public const uint WordMask = BitsPerWord - 1;
+        public const uint WordMask = BitsPerWord - 1;
         public const ulong Ones = 0xFFFFFFFFFFFFFFFFL;
 
         public const uint FirstBitPosition = BitsPerWord - 1;

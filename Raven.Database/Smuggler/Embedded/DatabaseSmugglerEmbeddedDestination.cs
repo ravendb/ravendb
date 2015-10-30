@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DatabaseSmugglerEmbeddedDestination.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,79 +14,79 @@ using Raven.Smuggler.Database;
 
 namespace Raven.Database.Smuggler.Embedded
 {
-	public class DatabaseSmugglerEmbeddedDestination : DatabaseSmugglerEmbeddedBase, IDatabaseSmugglerDestination
+    public class DatabaseSmugglerEmbeddedDestination : DatabaseSmugglerEmbeddedBase, IDatabaseSmugglerDestination
     {
-		private readonly DocumentDatabase _database;
+        private readonly DocumentDatabase _database;
 
-		private DatabaseSmugglerOptions _globalOptions;
+        private DatabaseSmugglerOptions _globalOptions;
 
-		public DatabaseSmugglerEmbeddedDestination(DocumentDatabase database)
-		{
-			_database = database;
-		}
+        public DatabaseSmugglerEmbeddedDestination(DocumentDatabase database)
+        {
+            _database = database;
+        }
 
-		public void Dispose()
-		{
-		}
+        public void Dispose()
+        {
+        }
 
-		public bool SupportsOperationState => false;
+        public bool SupportsOperationState => false;
 
-		public bool SupportsWaitingForIndexing => false;
+        public bool SupportsWaitingForIndexing => false;
 
-		public async Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
-		{
-			_globalOptions = options;
+        public async Task InitializeAsync(DatabaseSmugglerOptions options, DatabaseSmugglerNotifications notifications, CancellationToken cancellationToken)
+        {
+            _globalOptions = options;
 
-		    await InitializeBatchSizeAsync(_database, _globalOptions).ConfigureAwait(false);
-		}
+            await InitializeBatchSizeAsync(_database, _globalOptions).ConfigureAwait(false);
+        }
 
-		public IDatabaseSmugglerIndexActions IndexActions()
-		{
-			return new DatabaseSmugglerEmbeddedIndexActions(_database);
-		}
+        public IDatabaseSmugglerIndexActions IndexActions()
+        {
+            return new DatabaseSmugglerEmbeddedIndexActions(_database);
+        }
 
-		public IDatabaseSmugglerDocumentActions DocumentActions()
-		{
-			return new DatabaseSmugglerEmbeddedDocumentActions(_globalOptions, _database);
-		}
+        public IDatabaseSmugglerDocumentActions DocumentActions()
+        {
+            return new DatabaseSmugglerEmbeddedDocumentActions(_globalOptions, _database);
+        }
 
-		public IDatabaseSmugglerTransformerActions TransformerActions()
-		{
-			return new DatabaseSmugglerEmbeddedTransformerActions(_database);
-		}
+        public IDatabaseSmugglerTransformerActions TransformerActions()
+        {
+            return new DatabaseSmugglerEmbeddedTransformerActions(_database);
+        }
 
-		public IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions()
-		{
-			return new DatabaseSmugglerEmbeddedDocumentDeletionActions(_database);
-		}
+        public IDatabaseSmugglerDocumentDeletionActions DocumentDeletionActions()
+        {
+            return new DatabaseSmugglerEmbeddedDocumentDeletionActions(_database);
+        }
 
-		public IDatabaseSmugglerIdentityActions IdentityActions()
-		{
-			return new DatabaseSmugglerEmbeddedIdentityActions(_database);
-		}
+        public IDatabaseSmugglerIdentityActions IdentityActions()
+        {
+            return new DatabaseSmugglerEmbeddedIdentityActions(_database);
+        }
 
-		public Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
-		{
-			throw new NotSupportedException();
-		}
+        public Task<DatabaseSmugglerOperationState> LoadOperationStateAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
-		public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
-		{
-			throw new NotSupportedException();
-		}
+        public Task SaveOperationStateAsync(DatabaseSmugglerOptions options, DatabaseSmugglerOperationState state, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
-		public Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken)
-		{
-			throw new NotSupportedException();
-		}
+        public Task WaitForIndexingAsOfLastWriteAsync(CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
-	    public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
-	    {
-	        return new CompletedTask();
-	    }
+        public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
+        {
+            return new CompletedTask();
+        }
 
-	    public void OnException(SmugglerException exception)
-	    {
-	    }
+        public void OnException(SmugglerException exception)
+        {
+        }
     }
 }

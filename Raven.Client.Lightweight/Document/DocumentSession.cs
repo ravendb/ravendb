@@ -807,10 +807,10 @@ namespace Raven.Client.Document
         /// Dynamically query RavenDB using Lucene syntax
         /// </summary>
         public IDocumentQuery<T> DocumentQuery<T>()
-            {
+        {
             var indexName = CreateDynamicIndexName<T>();
             return Advanced.DocumentQuery<T>(indexName);
-            }
+        }
 
 
 

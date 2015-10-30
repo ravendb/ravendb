@@ -421,7 +421,7 @@ namespace Raven.Tests.Common
             }
             return document;
         }
-
+   
         protected void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null, CancellationToken? token = null)
         {
             if (afterEtag != null)

@@ -1,4 +1,4 @@
-﻿using BenchmarkDotNet;
+using BenchmarkDotNet;
 using BenchmarkDotNet.Tasks;
 using Sparrow.Binary;
 using System;

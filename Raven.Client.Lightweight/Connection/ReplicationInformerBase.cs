@@ -56,7 +56,7 @@ namespace Raven.Client.Connection
             }
         }
 
-        public int DelayTimeInMiliSec { get; set; }
+        public int DelayTimeInMiliSec { get;  set; }
 
         public List<OperationMetadata> ReplicationDestinations { get; protected set; }
 

@@ -156,7 +156,6 @@ namespace Raven.Tests.Bundles.CascadeDelete
                 Assert.NotNull(session.Load<CascadeTester>(child2.Id));
             }
 
-
             using (var session = documentStore.OpenSession())
             {
                 session.Delete<CascadeTester>(session.Load<CascadeTester>(master.Id));
@@ -168,8 +167,7 @@ namespace Raven.Tests.Bundles.CascadeDelete
                 // assert child 2 deleted
                 Assert.Null(session.Load<CascadeTester>(child1.Id));
             }
-
-        }
+        }	
 
         [Fact]
         public void Can_cascade_delete_documents_that_specify_each_other_as_cascade_deletes()

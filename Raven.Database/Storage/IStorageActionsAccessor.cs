@@ -15,7 +15,7 @@ namespace Raven.Database.Storage
         IListsStorageActions Lists { get; }
         ITasksStorageActions Tasks { get; }
         IStalenessStorageActions Staleness { get; }
-        
+                
         IIndexingStorageActions Indexing { get; }
         IGeneralStorageActions General { get; }
         IMappedResultsStorageAction MapReduce { get; }

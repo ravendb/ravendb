@@ -26,6 +26,7 @@ using Raven.Client.Document.Async;
 using Raven.Client.Metrics;
 using Raven.Client.Util;
 
+
 namespace Raven.Client.Document
 {
     /// <summary>
@@ -434,6 +435,7 @@ namespace Raven.Client.Document
                 profilingContext.RecordAction(sender, args);
             };
         }
+
 
         /// <summary>
         /// validate the configuration for the document store

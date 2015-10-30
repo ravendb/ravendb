@@ -12,56 +12,56 @@ using Raven.Json.Linq;
 
 namespace Raven.Smuggler.Database
 {
-	public interface IDatabaseSmugglerSource : IDisposable
-	{
-		string DisplayName { get; }
+    public interface IDatabaseSmugglerSource : IDisposable
+    {
+        string DisplayName { get; }
 
-		bool SupportsMultipleSources { get; }
+        bool SupportsMultipleSources { get; }
 
-		IReadOnlyList<IDatabaseSmugglerSource> Sources { get; }
+        IReadOnlyList<IDatabaseSmugglerSource> Sources { get; }
 
-		Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
+        Task InitializeAsync(DatabaseSmugglerOptions options, CancellationToken cancellationToken);
 
-		Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken);
+        Task<List<IndexDefinition>> ReadIndexesAsync(int start, int pageSize, CancellationToken cancellationToken);
 
-		Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken);
+        Task<DatabaseLastEtagsInfo> FetchCurrentMaxEtagsAsync(CancellationToken cancellationToken);
 
-		Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAfterAsync(Etag afterEtag, int pageSize, CancellationToken cancellationToken);
+        Task<IAsyncEnumerator<RavenJObject>> ReadDocumentsAfterAsync(Etag afterEtag, int pageSize, CancellationToken cancellationToken);
 
-		Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken);
+        Task<RavenJObject> ReadDocumentAsync(string key, CancellationToken cancellationToken);
 
-		bool SupportsReadingHiLoDocuments { get; }
+        bool SupportsReadingHiLoDocuments { get; }
 
-		bool SupportsDocumentDeletions { get; }
+        bool SupportsDocumentDeletions { get; }
 
-		bool SupportsPaging { get; }
+        bool SupportsPaging { get; }
 
-		bool SupportsRetries { get; }
+        bool SupportsRetries { get; }
 
-		Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int pageSize, CancellationToken cancellationToken);
+        Task<List<TransformerDefinition>> ReadTransformersAsync(int start, int pageSize, CancellationToken cancellationToken);
 
-		Task<List<KeyValuePair<string, Etag>>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken);
+        Task<List<KeyValuePair<string, Etag>>> ReadDocumentDeletionsAsync(Etag fromEtag, Etag maxEtag, CancellationToken cancellationToken);
 
-		Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken);
+        Task<List<KeyValuePair<string, long>>> ReadIdentitiesAsync(CancellationToken cancellationToken);
 
-		Task<SmuggleType> GetNextSmuggleTypeAsync(CancellationToken cancellationToken);
+        Task<SmuggleType> GetNextSmuggleTypeAsync(CancellationToken cancellationToken);
 
-		Task SkipDocumentsAsync(CancellationToken cancellationToken);
+        Task SkipDocumentsAsync(CancellationToken cancellationToken);
 
-		Task SkipIndexesAsync(CancellationToken cancellationToken);
+        Task SkipIndexesAsync(CancellationToken cancellationToken);
 
-		Task SkipTransformersAsync(CancellationToken cancellationToken);
+        Task SkipTransformersAsync(CancellationToken cancellationToken);
 
-		Task SkipDocumentDeletionsAsync(CancellationToken cancellationToken);
+        Task SkipDocumentDeletionsAsync(CancellationToken cancellationToken);
 
-		Task SkipIdentitiesAsync(CancellationToken cancellationToken);
+        Task SkipIdentitiesAsync(CancellationToken cancellationToken);
 
-		Task SkipAttachmentsAsync(CancellationToken cancellationToken);
+        Task SkipAttachmentsAsync(CancellationToken cancellationToken);
 
-		Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken);
+        Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken);
 
-	    Task AfterExecuteAsync(DatabaseSmugglerOperationState state);
+        Task AfterExecuteAsync(DatabaseSmugglerOperationState state);
 
-	    void OnException(SmugglerException exception);
-	}
+        void OnException(SmugglerException exception);
+    }
 }

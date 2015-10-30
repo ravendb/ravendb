@@ -104,6 +104,3 @@
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>
-   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
-   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
-</Project>

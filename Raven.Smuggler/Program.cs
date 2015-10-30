@@ -386,10 +386,10 @@ namespace Raven.Smuggler
                 else
                 {
                     var errorResponseException = e as ErrorResponseException;
-                    Console.WriteLine(errorResponseException != null ?
+                    Console.WriteLine(errorResponseException != null ? 
                         String.Format("{0} \n\r {1}", errorResponseException.SimplifyError(), errorResponseException.Response) : e.Message);
                 }
-
+            
                 Environment.Exit(-1);
             }            
         }

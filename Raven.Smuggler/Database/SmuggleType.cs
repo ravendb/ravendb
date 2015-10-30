@@ -1,26 +1,26 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmuggleType.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 namespace Raven.Smuggler.Database
 {
-	public enum SmuggleType
-	{
-		None,
+    public enum SmuggleType
+    {
+        None,
 
-		Index,
+        Index,
 
-		Document,
+        Document,
 
-		Transformer,
+        Transformer,
 
-		DocumentDeletion,
+        DocumentDeletion,
 
-		Identity,
+        Identity,
 
-		Attachment,
+        Attachment,
 
-		AttachmentDeletion
-	}
+        AttachmentDeletion
+    }
 }

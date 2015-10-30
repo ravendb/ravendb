@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Indexing;
@@ -6,22 +6,22 @@ using Raven.Client;
 
 namespace Raven.Smuggler.Database.Remote
 {
-	public class DatabaseSmugglerRemoteIndexActions : IDatabaseSmugglerIndexActions
-	{
-		private readonly IDocumentStore _store;
+    public class DatabaseSmugglerRemoteIndexActions : IDatabaseSmugglerIndexActions
+    {
+        private readonly IDocumentStore _store;
 
-		public DatabaseSmugglerRemoteIndexActions(IDocumentStore store)
-		{
-			_store = store;
-		}
+        public DatabaseSmugglerRemoteIndexActions(IDocumentStore store)
+        {
+            _store = store;
+        }
 
-		public void Dispose()
-		{
-		}
+        public void Dispose()
+        {
+        }
 
-		public Task WriteIndexAsync(IndexDefinition index, CancellationToken cancellationToken)
-		{
-			return _store.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, overwrite: true, token: cancellationToken);
-		}
-	}
+        public Task WriteIndexAsync(IndexDefinition index, CancellationToken cancellationToken)
+        {
+            return _store.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, overwrite: true, token: cancellationToken);
+        }
+    }
 }

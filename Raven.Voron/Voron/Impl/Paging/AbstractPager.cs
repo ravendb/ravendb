@@ -54,7 +54,6 @@ namespace Voron.Impl.Paging
         }
 
         public int PageSize { get; private set; }
-
         public int PageMinSpace { get; private set; }
 
         public bool DeleteOnClose { get; set; }
@@ -64,6 +63,7 @@ namespace Voron.Impl.Paging
         public int PageMaxSpace { get; private set; }
 
         public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
+
 
         private PagerState _pagerState;
         private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();

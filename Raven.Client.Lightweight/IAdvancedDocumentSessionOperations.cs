@@ -20,7 +20,6 @@ namespace Raven.Client
     /// </summary>
     public interface IAdvancedDocumentSessionOperations
     {
-
         /// <summary>
         ///     The document store associated with this session
         /// </summary>

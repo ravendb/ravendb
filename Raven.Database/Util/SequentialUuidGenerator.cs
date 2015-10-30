@@ -9,7 +9,6 @@ namespace Raven.Database.Util
     {
         private byte[] ticksAsBytes;
         private long sequentialUuidCounterDocuments;
-
         private long sequentialUuidCounterDocumentsTransactions;
         private long sequentialUuidCounterMappedResults;
         private long sequentialUuidCounterReduceResults;

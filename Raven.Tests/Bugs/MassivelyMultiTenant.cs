@@ -8,7 +8,7 @@ using Xunit.Extensions;
 namespace Raven.Tests.Bugs
 {
     public class MassivelyMultiTenant : RavenTest
-        {
+    {
         [Theory]
         [PropertyData("Storages")]
         public void CanHaveLotsOf_ACTIVE_Tenants(string storage)

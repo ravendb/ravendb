@@ -19,8 +19,6 @@ namespace Voron.Platform.Win32
     public unsafe class Win32FileJournalWriter : IJournalWriter
     {
         private readonly StorageEnvironmentOptions _options;
-
-
         private readonly string _filename;
         private readonly SafeFileHandle _handle;
         private SafeFileHandle _readHandle;

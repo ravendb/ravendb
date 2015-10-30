@@ -96,7 +96,7 @@ namespace Raven.Client.Document.SessionOperations
             if (log.IsDebugEnabled)
             log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
                                           indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
-            }
+        }
 
         public IDisposable EnterQueryContext()
         {

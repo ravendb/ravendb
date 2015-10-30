@@ -13,10 +13,10 @@ using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Server;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
-using Raven.Server;
 using Raven.Tests.Common;
 
 using Xunit;

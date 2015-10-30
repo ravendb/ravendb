@@ -11,91 +11,91 @@ using Raven.Json.Linq;
 
 namespace Raven.Smuggler.Database.Remote
 {
-	public class DatabaseSmugglerRemoteDocumentActions : IDatabaseSmugglerDocumentActions
-	{
-		private readonly DatabaseSmugglerRemoteDestinationOptions _options;
+    public class DatabaseSmugglerRemoteDocumentActions : IDatabaseSmugglerDocumentActions
+    {
+        private readonly DatabaseSmugglerRemoteDestinationOptions _options;
 
-		private readonly DatabaseSmugglerNotifications _notifications;
+        private readonly DatabaseSmugglerNotifications _notifications;
 
-		private readonly BulkInsertOperation _bulkInsert;
+        private readonly BulkInsertOperation _bulkInsert;
 
-		private readonly Stopwatch _timeSinceLastWrite;
+        private readonly Stopwatch _timeSinceLastWrite;
 
-		private readonly object _locker = new object();
+        private readonly object _locker = new object();
 
-		public DatabaseSmugglerRemoteDocumentActions(DatabaseSmugglerOptions globalOptions, DatabaseSmugglerRemoteDestinationOptions options, DatabaseSmugglerNotifications notifications, DocumentStore store)
-		{
-			_options = options;
-			_notifications = notifications;
-			_bulkInsert = store.BulkInsert(store.DefaultDatabase, new BulkInsertOptions
-			{
-				BatchSize = globalOptions.BatchSize,
-				OverwriteExisting = true,
-				Compression = options.DisableCompression ? BulkInsertCompression.None : BulkInsertCompression.GZip,
-				ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
-				{
-					MaxChunkVolumeInBytes = options.TotalDocumentSizeInChunkLimitInBytes,
-					MaxDocumentsPerChunk = options.ChunkSize
-				}
-			});
+        public DatabaseSmugglerRemoteDocumentActions(DatabaseSmugglerOptions globalOptions, DatabaseSmugglerRemoteDestinationOptions options, DatabaseSmugglerNotifications notifications, DocumentStore store)
+        {
+            _options = options;
+            _notifications = notifications;
+            _bulkInsert = store.BulkInsert(store.DefaultDatabase, new BulkInsertOptions
+            {
+                BatchSize = globalOptions.BatchSize,
+                OverwriteExisting = true,
+                Compression = options.DisableCompression ? BulkInsertCompression.None : BulkInsertCompression.GZip,
+                ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
+                {
+                    MaxChunkVolumeInBytes = options.TotalDocumentSizeInChunkLimitInBytes,
+                    MaxDocumentsPerChunk = options.ChunkSize
+                }
+            });
 
-			_notifications.OnDocumentRead += DocumentFound;
-			_timeSinceLastWrite = Stopwatch.StartNew();
-		}
+            _notifications.OnDocumentRead += DocumentFound;
+            _timeSinceLastWrite = Stopwatch.StartNew();
+        }
 
-		public void Dispose()
-		{
-			_notifications.OnDocumentRead -= DocumentFound;
-			_bulkInsert?.Dispose();
-		}
+        public void Dispose()
+        {
+            _notifications.OnDocumentRead -= DocumentFound;
+            _bulkInsert?.Dispose();
+        }
 
-		public Task WriteDocumentAsync(RavenJObject document, CancellationToken cancellationToken)
-		{
-			var metadata = document.Value<RavenJObject>("@metadata");
-			document.Remove("@metadata");
+        public Task WriteDocumentAsync(RavenJObject document, CancellationToken cancellationToken)
+        {
+            var metadata = document.Value<RavenJObject>("@metadata");
+            document.Remove("@metadata");
 
-			var id = metadata.Value<string>("@id");
+            var id = metadata.Value<string>("@id");
 
-			_bulkInsert.Store(document, metadata, id);
-			return new CompletedTask();
-		}
+            _bulkInsert.Store(document, metadata, id);
+            return new CompletedTask();
+        }
 
-		private async void DocumentFound(object sender, string key)
-		{
-			if (_timeSinceLastWrite.Elapsed <= _options.HeartbeatLatency)
-				return;
+        private async void DocumentFound(object sender, string key)
+        {
+            if (_timeSinceLastWrite.Elapsed <= _options.HeartbeatLatency)
+                return;
 
-			Monitor.Enter(_locker);
-			try
-			{
-				if (_timeSinceLastWrite.Elapsed <= _options.HeartbeatLatency)
-					return;
+            Monitor.Enter(_locker);
+            try
+            {
+                if (_timeSinceLastWrite.Elapsed <= _options.HeartbeatLatency)
+                    return;
 
-				var buildSkipDocument = BuildSkipDocument();
-				await WriteDocumentAsync(buildSkipDocument, CancellationToken.None).ConfigureAwait(false);
-				_timeSinceLastWrite.Restart();
-			}
-			finally
-			{
-				Monitor.Exit(_locker);
-			}
-		}
+                var buildSkipDocument = BuildSkipDocument();
+                await WriteDocumentAsync(buildSkipDocument, CancellationToken.None).ConfigureAwait(false);
+                _timeSinceLastWrite.Restart();
+            }
+            finally
+            {
+                Monitor.Exit(_locker);
+            }
+        }
 
-		private static RavenJObject BuildSkipDocument()
-		{
-			var metadata = new RavenJObject();
-			metadata.Add("@id", Constants.BulkImportHeartbeatDocKey);
-			var skipDoc = new JsonDocument
-			{
-				Key = Constants.BulkImportHeartbeatDocKey,
-				DataAsJson = RavenJObject.FromObject(new
-				{
-					LastHearbeatSent = SystemTime.UtcNow
-				}),
-				Metadata = metadata
-			};
+        private static RavenJObject BuildSkipDocument()
+        {
+            var metadata = new RavenJObject();
+            metadata.Add("@id", Constants.BulkImportHeartbeatDocKey);
+            var skipDoc = new JsonDocument
+            {
+                Key = Constants.BulkImportHeartbeatDocKey,
+                DataAsJson = RavenJObject.FromObject(new
+                {
+                    LastHearbeatSent = SystemTime.UtcNow
+                }),
+                Metadata = metadata
+            };
 
-			return skipDoc.ToJson();
-		}
-	}
+            return skipDoc.ToJson();
+        }
+    }
 }

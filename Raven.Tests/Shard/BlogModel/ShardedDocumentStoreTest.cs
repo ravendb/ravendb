@@ -27,7 +27,9 @@ namespace Raven.Tests.Shard.BlogModel
             {
                 Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.DisableAggressiveCaching());
                 Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
+
                 shardedDocumentStore.Initialize();
+
                 Assert.DoesNotThrow(() => shardedDocumentStore.DisableAggressiveCaching());
                 Assert.DoesNotThrow(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
             }

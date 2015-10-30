@@ -1,4 +1,4 @@
-﻿using Sparrow.Binary;
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -82,12 +82,14 @@ namespace Raven.Tests.Issues
                 var index = new People_By_Name_With_Scripts();
                 index.Execute(store);
                 WaitForIndexing(store);
+
                 var statsBefore = store.DatabaseCommands.GetStatistics();
                 var indexStats = statsBefore.Indexes.First(x => x.Name == index.IndexName);
                 var lastIndexedEtag = indexStats.LastIndexedEtag;
 
                 var statsAfter = store.DatabaseCommands.GetStatistics();
                 indexStats = statsAfter.Indexes.First(x => x.Name == index.IndexName);
+
                 Assert.Equal(lastIndexedEtag, indexStats.LastIndexedEtag);
             }
         }

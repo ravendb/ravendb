@@ -38,7 +38,8 @@ namespace Raven.Tests.Document
             documentStore.Dispose();
             base.Dispose();
         }
-    [Fact]
+
+        [Fact]
         public void CanGetIndexNames()
         {
             Assert.Contains("Raven/DocumentsByEntityName", documentStore.DatabaseCommands.GetIndexNames(0, 25));
@@ -49,7 +50,7 @@ namespace Raven.Tests.Document
         {
             documentStore.SystemDatabase.Indexes.ResetIndex("Raven/DocumentsByEntityName");
         }
-
+    
         
         [Fact]
         public void CanRefreshEntityFromDatabase()
@@ -215,6 +216,7 @@ namespace Raven.Tests.Document
                 Assert.Equal("companies/1", company.Id);
             }
         }
+
 
         [Fact]
         public void ShouldLoadEntityBackWithDocumentIdMappedToId()

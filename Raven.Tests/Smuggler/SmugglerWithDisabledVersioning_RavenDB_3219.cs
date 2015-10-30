@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Client.Bundles.Versioning;
@@ -15,6 +16,7 @@ using Raven.Smuggler.Database.Remote;
 using Raven.Smuggler.Database.Streams;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
+
 using Xunit;
 
 namespace Raven.Tests.Smuggler

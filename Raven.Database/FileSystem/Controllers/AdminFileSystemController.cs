@@ -372,7 +372,9 @@ namespace Raven.Database.FileSystem.Controllers
 
             return false;
         }
+
         private static TimeSpan ReportProgressInterval = TimeSpan.FromSeconds(1);
+
         private static string VoronProgressString = "Copied";
 
 

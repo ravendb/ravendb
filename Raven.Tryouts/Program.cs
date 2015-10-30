@@ -1,5 +1,6 @@
 using System;
 using Raven.Tests.Issues;
+
 namespace Raven.Tryouts
 {
     public class Program

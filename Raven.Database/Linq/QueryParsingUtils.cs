@@ -6,7 +6,6 @@
 using ICSharpCode.NRefactory.CSharp;
 using ICSharpCode.NRefactory.PatternMatching;
 using Lucene.Net.Documents;
-
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
@@ -20,7 +19,6 @@ using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Sparrow;
-
 using System;
 using System.CodeDom.Compiler;
 using System.Collections;

@@ -1,4 +1,4 @@
-﻿using Sparrow.Binary;
+using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Tests;
 using System;

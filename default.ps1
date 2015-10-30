@@ -127,7 +127,7 @@ task Test -depends Compile {
         "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
         "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
         "$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
-        
+                
     Write-Host $test_prjs
     
     $xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"

@@ -191,7 +191,7 @@ namespace Raven.Tests.Helpers
                     {
                         RunInMemory = runInMemory,
                         DataDirectory = Path.Combine(dataDirectory, "System"),
-                    Port = port ?? 8079,
+                        Port = port ?? 8079,
                     },
                     AnonymousUserAccessMode = anonymousUserAccessMode
                 },
@@ -423,7 +423,7 @@ namespace Raven.Tests.Helpers
             {
                 Core =
                 {
-                RunInMemory = runInMemory,
+                    RunInMemory = runInMemory,
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
                 },
@@ -500,7 +500,7 @@ namespace Raven.Tests.Helpers
                 Core =
                 {
                     RunInMemory = runInMemory ?? true,
-                DataDirectory = dataDirectory,
+                    DataDirectory = dataDirectory,
                 },
             };
 
@@ -512,8 +512,8 @@ namespace Raven.Tests.Helpers
                 if (onCommit != null)
                     onCommit();
             };
-
-                newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, onCommitNotification, () => { }, () => { }, () => { });
+            
+            newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, onCommitNotification, () => { }, () => { }, () => { });
             newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
             return newTransactionalStorage;
         }

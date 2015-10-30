@@ -1,4 +1,4 @@
-﻿using Sparrow.Binary;
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace Sparrow.Tests
             get
             {
                 return new[]
-				{
+                {
                     new object[] {1},
                     new object[] {4},
                     new object[] {7},
@@ -28,7 +28,7 @@ namespace Sparrow.Tests
                     new object[] {90},
                     new object[] {244},
                     new object[] {513},
-				};
+                };
             }
         }
 

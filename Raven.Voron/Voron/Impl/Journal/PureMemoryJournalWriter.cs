@@ -13,6 +13,7 @@ namespace Voron.Impl.Journal
     public unsafe class PureMemoryJournalWriter : IJournalWriter
     {
         private readonly StorageEnvironmentOptions _options;
+
         internal class Buffer
         {
             public byte* Pointer;

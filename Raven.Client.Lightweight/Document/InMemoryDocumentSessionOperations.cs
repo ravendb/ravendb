@@ -75,6 +75,7 @@ namespace Raven.Client.Document
             get { return externalState ?? (externalState = new Dictionary<string, object>()); }
         }
 
+
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
@@ -998,8 +999,6 @@ more responsive application.
                 }
                 else
                 {
-
-
                     Etag etag = null;
                     object existingEntity;
                     DocumentMetadata metadata = null;
