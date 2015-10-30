@@ -61,6 +61,7 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\RawData\RawDataSection.cs" />
     <Compile Include="Debugging\StorageReport.cs" />
     <Compile Include="Debugging\StorageReportGenerator.cs" />
     <Compile Include="Exceptions\InvalidJournalFlushRequestException.cs" />

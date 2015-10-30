@@ -338,5 +338,11 @@ namespace Voron.Impl.Scratch
             ScratchBufferFile bufferFile = item.File;
             return bufferFile.AcquirePagePointer(p);
         }
+
+        public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
+        {
+            var item = _scratchBuffers[value.ScratchFileNumber];
+            item.File.BreakLargeAllocationToSeparatePages(value);
+        }
     }
 }

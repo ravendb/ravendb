@@ -59,8 +59,6 @@ namespace Voron.Data.BTrees
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public unsafe struct RawDataSmallSectionPageHeader
     {
-        public const int NumberOfPagesInSmallSection = 128;
-
         [FieldOffset(0)]
         public long PageNumber;
 
@@ -68,7 +66,7 @@ namespace Voron.Data.BTrees
         public ushort NumberOfEntries;
 
         [FieldOffset(10)]
-        public ushort NextAllocation;
+        public ushort LastUsedPage;
 
         [FieldOffset(12)]
         public PageFlags Flags;
@@ -76,10 +74,11 @@ namespace Voron.Data.BTrees
         [FieldOffset(13)]
         public RawDataPageFlags RawDataFlags;
 
-        [FieldOffset(14)] public int NumberOfEntriesInSection;
+        [FieldOffset(14)]
+        public int NumberOfEntriesInSection;
 
         [FieldOffset(18)]
-        public fixed ushort AvailableSpace [NumberOfPagesInSmallSection];
+        public ushort NumberOfPages;
     }
 
     [StructLayout(LayoutKind.Explicit, Pack = 1)]

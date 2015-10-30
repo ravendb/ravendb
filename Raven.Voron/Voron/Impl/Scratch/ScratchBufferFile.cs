@@ -168,6 +168,9 @@ namespace Voron.Impl.Scratch
 
             _allocatedPagesUsedSize -= value.NumberOfPages;
 			_allocatedPages.Remove(page);
+
+		    if (value.Size == 0)
+		        return;// this value was broken up to smaller sections, only the first page there is valid for space allocations
 			
 			if (asOfTxId == -1)
 			{
@@ -253,5 +256,21 @@ namespace Voron.Impl.Scratch
 		{
 			_scratchPager.Dispose();
 		}
+
+	    public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
+	    {
+	        if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
+	            throw new InvalidOperationException("Attempt to break up a page that wasn't currently allocated: " +
+	                                                value.PositionInScratchBuffer);
+
+            _allocatedPages.Add(value.PositionInScratchBuffer,
+                       new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer, value.Size, 1));
+
+            for (int i = 1; i < value.NumberOfPages; i++)
+	        {
+	            _allocatedPages.Add(value.PositionInScratchBuffer + i,
+	                new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 0, 1));
+	        }
+        }
 	}
 }

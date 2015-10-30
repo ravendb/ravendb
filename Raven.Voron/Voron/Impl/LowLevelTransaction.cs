@@ -199,7 +199,6 @@ namespace Voron.Impl
             return _freedPages;
         }
 
-
         internal Page ModifyPage(long num)
         {
             _env.AssertFlushingNotFailed();
@@ -318,8 +317,38 @@ namespace Voron.Impl
             VerifyNoDuplicateScratchPages();
 
             return newPage;
-
         }
+
+        internal void BreakLargeAllocationToSeparatePages(long pageNumber)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException("Transaction");
+
+            PageFromScratchBuffer value;
+            if(_scratchPagesTable.TryGetValue(pageNumber,out value)==false)
+                throw new InvalidOperationException("The page " + pageNumber + " was not previous allocated in this transaction");
+
+            if (value.NumberOfPages == 1)
+                return;
+
+            _transactionPages.Remove(value);
+            _env.ScratchBufferPool.BreakLargeAllocationToSeparatePages(value);
+            for (int i = 0; i < value.NumberOfPages; i++)
+            {
+                var pageFromScratchBuffer = new PageFromScratchBuffer(value.ScratchFileNumber,
+                    value.PositionInScratchBuffer + i, 1, 1);
+                _transactionPages.Add(pageFromScratchBuffer);
+                _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
+                _dirtyOverflowPages.Remove(pageNumber + i);
+                _dirtyPages.Add(pageNumber + 1);
+
+                var newPage = _env.ScratchBufferPool.ReadPage(value.ScratchFileNumber,
+                    value.PositionInScratchBuffer + i);
+                newPage.PageNumber = pageNumber + i;
+                newPage.Flags = PageFlags.Single;
+            }
+        }
+
 
         [Conditional("VALIDATE")]
         public void VerifyNoDuplicateScratchPages()
@@ -421,7 +450,7 @@ namespace Voron.Impl
             if (RolledBack)
                 throw new InvalidOperationException("Cannot commit rolled-back transaction.");
 
-     
+
             _txHeader->LastPageNumber = _state.NextPageNumber - 1;
             _txHeader->PageCount = _allocatedPagesInTransaction;
             _txHeader->OverflowPageCount = _overflowPagesInTransaction;

@@ -130,6 +130,7 @@
     <Compile Include="MultiValueTree.cs" />
     <Compile Include="Optimizations\Writes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RawData\SmallDataSection.cs" />
     <Compile Include="ScratchBuffer\MutipleScratchBuffersUsage.cs" />
     <Compile Include="ScratchBuffer\ScratchCanForceToFlushOldPages.cs" />
     <Compile Include="StorageTest.cs" />
