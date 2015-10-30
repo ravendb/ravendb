@@ -307,6 +307,47 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
+        public void Touch(string name, string key, UuidType uuidType, out Etag preTouchEtag, out Etag afterTouchEtag)
+        {
+            var item = Read(name, key);
+            if (item == null)
+            {
+                afterTouchEtag = null;
+                preTouchEtag = null;
+                return;
+            }
+
+            preTouchEtag = item.Etag;
+
+            Remove(name, key);
+
+            afterTouchEtag = generator.CreateSequentialUuid(uuidType);
+            var internalKey = afterTouchEtag.ToString();
+            var internalKeyAsSlice = (Slice) internalKey;
+
+            tableStorage.Lists.Add(
+                writeBatch.Value,
+                internalKeyAsSlice,
+                new RavenJObject
+                {
+                    {"name", name},
+                    {"key", key},
+                    {"etag", afterTouchEtag.ToByteArray()},
+                    {"data", item.Data},
+                    {"createdAt", item.CreatedAt}
+                });
+
+            var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
+            var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
+
+            var nameKey = CreateKey(name);
+            var nameKeySlice = (Slice) nameKey;
+            var nameAndKeySlice = (Slice) AppendToKey(nameKey, key);
+
+            listsByName.MultiAdd(writeBatch.Value, nameKeySlice, internalKeyAsSlice);
+            listsByNameAndKey.Add(writeBatch.Value, nameAndKeySlice, internalKey);
+        }
+
         private ListItem ReadInternal(string id)
         {
             ushort version;

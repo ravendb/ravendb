@@ -277,6 +277,7 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTaskContext.cs" />
     <Compile Include="FileSystem\Util\RandomProvider.cs" />
+    <Compile Include="Impl\DTC\ItemsToTouch.cs" />
     <Compile Include="Indexing\PropertyAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />

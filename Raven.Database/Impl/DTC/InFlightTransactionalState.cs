@@ -26,6 +26,7 @@ namespace Raven.Database.Impl.DTC
 
         protected readonly Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> DatabasePut;
         protected readonly Func<string, Etag, TransactionInformation, bool> DatabaseDelete;
+        private readonly bool replicationEnabled;
 
         protected class TransactionState
         {
@@ -69,10 +70,11 @@ namespace Raven.Database.Impl.DTC
             return new { changedInTransaction, transactionStates };
         }
 
-        protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete)
+        protected InFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut, Func<string, Etag, TransactionInformation, bool> databaseDelete, bool replicationEnabled)
         {
             this.DatabasePut = databasePut;
             this.DatabaseDelete = databaseDelete;
+            this.replicationEnabled = replicationEnabled;
         }
 
         public Etag AddDocumentInTransaction(
@@ -315,7 +317,7 @@ namespace Raven.Database.Impl.DTC
             return transactionStates.ContainsKey(txId);
         }
 
-        protected HashSet<string> RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
+        protected ItemsToTouch RunOperationsInTransaction(string id, out List<DocumentInTransactionData> changes)
         {
             changes = null;
             TransactionState value;
@@ -332,7 +334,8 @@ namespace Raven.Database.Impl.DTC
                 currentlyCommittingTransaction.Value = id;
                 try
                 {
-                    var documentIdsToTouch = new HashSet<string>();
+                    var itemsToTouch = new ItemsToTouch();
+
                     foreach (var change in value.Changes)
                     {
                         var doc = new DocumentInTransactionData
@@ -352,15 +355,20 @@ namespace Raven.Database.Impl.DTC
                         if (doc.Delete)
                         {
                             DatabaseDelete(doc.Key, null /* etag might have been changed by a touch */, null);
-                            documentIdsToTouch.RemoveWhere(x => x.Equals(doc.Key));
+                            itemsToTouch.Documents.RemoveWhere(x => x.Equals(doc.Key));
+
+                            if (replicationEnabled)
+                            {
+                                itemsToTouch.DocumentTombstones.Add(doc.Key);
+                            }
                         }
                         else
                         {
                             DatabasePut(doc.Key, null /* etag might have been changed by a touch */, doc.Data, doc.Metadata, null);
-                            documentIdsToTouch.Add(doc.Key);
+                            itemsToTouch.Documents.Add(doc.Key);
                         }
                     }
-                    return documentIdsToTouch;
+                    return itemsToTouch;
                 }
                 finally
                 {
