@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CustomAnalyzers.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -24,11 +24,11 @@ namespace Raven.Tests.Core.Indexing
                 {
                     session.Store(new Company { Name = "C" });
                     session.Store(new Company { Name = "a" });
-                    session.Store(new Company { Name = "c" });
-                    session.Store(new Company { Name = "a" });
+                    session.Store(new Company { Name = "ć" });
+                    session.Store(new Company { Name = "ą" });
                     session.Store(new Company { Name = "A" });
                     session.Store(new Company { Name = "c" });
-                    session.Store(new Company { Name = "A" });
+                    session.Store(new Company { Name = "Ą" });
                     session.Store(new Company { Name = "D" });
                     session.Store(new Company { Name = "d" });
                     session.Store(new Company { Name = "b" });
@@ -41,12 +41,12 @@ namespace Raven.Tests.Core.Indexing
                     Assert.Equal(10, companies.Length);
                     Assert.Equal("a", companies[0].Name);
                     Assert.Equal("A", companies[1].Name);
-                    Assert.Equal("a", companies[2].Name);
-                    Assert.Equal("A", companies[3].Name);
+                    Assert.Equal("ą", companies[2].Name);
+                    Assert.Equal("Ą", companies[3].Name);
                     Assert.Equal("b", companies[4].Name);
                     Assert.Equal("c", companies[5].Name);
                     Assert.Equal("C", companies[6].Name);
-                    Assert.Equal("c", companies[7].Name);
+                    Assert.Equal("ć", companies[7].Name);
                     Assert.Equal("d", companies[8].Name);
                     Assert.Equal("D", companies[9].Name);
                 }
