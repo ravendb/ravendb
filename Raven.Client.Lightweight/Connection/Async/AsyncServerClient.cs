@@ -789,7 +789,10 @@ namespace Raven.Client.Connection.Async
                 path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
             }
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention).AddOperationHeaders(OperationsHeaders)).AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, path, method, metadata, operationMetadata.Credentials, convention)
+                .AddOperationHeaders(OperationsHeaders);
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
+                .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges))
             {
                 if (isGet == false)
                 {

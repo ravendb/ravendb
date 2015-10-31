@@ -7,7 +7,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Database.Actions;
@@ -74,9 +74,21 @@ namespace Raven.Tests.Issues
                 action();
                 Assert.True(false);
             }
+            catch (ErrorResponseException e)
+            {
+                Assert.Contains("Timeout", e.Message);
+            }
             catch (AggregateException e)
             {
-                Assert.True(e.ExtractSingleInnerException() is OperationCanceledException);
+                var extractSingleInnerException = e.ExtractSingleInnerException();
+                var errorResponseException = extractSingleInnerException as ErrorResponseException;
+                if (errorResponseException != null)
+                {
+                    Assert.Contains("Timeout", errorResponseException.Message);
+                    return;
+                }
+                Assert.True(extractSingleInnerException is OperationCanceledException,
+                    e.ToString());
             }
             catch (OperationCanceledException)
             {
