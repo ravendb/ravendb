@@ -37,7 +37,7 @@ namespace Raven.Client.Indexes
         private readonly bool translateIdentityProperty;
         private ExpressionOperatorPrecedence _currentPrecedence;
         private Dictionary<object, int> _ids;
-        private Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase); 
+        private Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         private bool castLambdas;
 
 
@@ -274,7 +274,7 @@ namespace Raven.Client.Indexes
                 switch (instance.NodeType)
                 {
                     case ExpressionType.MemberAccess:
-                        var memberExpression = ((MemberExpression) instance);
+                        var memberExpression = ((MemberExpression)instance);
                         if (memberName == null)
                         {
                             memberName = memberExpression.Member.Name;
@@ -282,7 +282,7 @@ namespace Raven.Client.Indexes
                         instance = memberExpression.Expression;
                         break;
                     case ExpressionType.Parameter:
-                        var parameterExpression = ((ParameterExpression) instance);
+                        var parameterExpression = ((ParameterExpression)instance);
                         if (memberName == null)
                         {
                             memberName = parameterExpression.Name;
@@ -312,7 +312,7 @@ namespace Raven.Client.Indexes
                 {
                     string propName;
                     var customAttributeType = customAttribute.GetType();
-                    if (typeof (JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
+                    if (typeof(JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
                         continue;
                     switch (customAttributeType.Name)
                     {
@@ -647,18 +647,45 @@ namespace Raven.Client.Indexes
 
             SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
             {
-                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+                var needsCasting = (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing) && TypeExistsOnServer(rightOp.Type);
+                if (needsCasting)
                 {
                     Out("((");
                     Out(ConvertTypeToCSharpKeyword(rightOp.Type));
                     Out(")(");
+                }
+                if (rightOp.NodeType == ExpressionType.Constant)
+                {
+                    // on the server side, double is treated as decimal, so we have
+                    // to force this coercion so the constants would work
+                    if (rightOp.Type == typeof(double))
+                    {
+                        Out("(double?)");
+                    }
+                    else if(rightOp.Type == typeof(float))
+                    {
+                        Out("(float?)");
+                    }
                 }
                 Visit(leftOp, innerPrecedence);
                 Out(' ');
                 Out(str);
                 Out(' ');
                 Visit(rightOp, innerPrecedence);
-                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+                if(rightOp.NodeType == ExpressionType.Constant)
+                {
+                    // on the server side, double is treated as decimal, so we have
+                    // to force this coercion so the constants would work
+                    if (rightOp.Type == typeof(double))
+                    {
+                        Out("D");
+                    }
+                    else if (rightOp.Type == typeof(float))
+                    {
+                        Out("F");
+                    }
+                }
+                if (needsCasting)
                 {
                     Out("))");
                 }
@@ -693,7 +720,7 @@ namespace Raven.Client.Indexes
                                     : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
                     }
-                break;
+                    break;
             }
 
             while (true)
@@ -800,7 +827,7 @@ namespace Raven.Client.Indexes
             if (node.Value == null)
             {
                 // Avoid converting/casting the type, if it already converted/casted.
-                if(_currentPrecedence == ExpressionOperatorPrecedence.Assignment)
+                if (_currentPrecedence == ExpressionOperatorPrecedence.Assignment)
                     ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
                 Out("null");
                 return node;
@@ -1029,7 +1056,7 @@ namespace Raven.Client.Indexes
             if (type.Assembly() == typeof(object).Assembly()) // mscorlib
                 return true;
 
-            if (type.Assembly == typeof (Uri).Assembly()) // System assembly
+            if (type.Assembly == typeof(Uri).Assembly()) // System assembly
                 return true;
 
             if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core
@@ -1330,17 +1357,17 @@ namespace Raven.Client.Indexes
             if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null)
             {
                 switch (node.Member.Name)
-            {
+                {
                     case "HasValue":
                         // we don't have nullable type on the server side, we just compare to null
                         Out("(");
-                Visit(node.Expression);
+                        Visit(node.Expression);
                         Out(" != null)");
                         return node;
                     case "Value":
                         Visit(node.Expression);
-                return node; // we don't have nullable type on the server side, we can safely ignore this.
-            }
+                        return node; // we don't have nullable type on the server side, we can safely ignore this.
+                }
             }
 
             var exprType = node.Expression != null ? node.Member.DeclaringType : node.Type;
@@ -2160,8 +2187,8 @@ namespace Raven.Client.Indexes
                     }
                     else
                     {
-                    Out("(");
-                    ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
+                        Out("(");
+                        ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
                     }
                     break;
                 case ExpressionType.ArrayLength:
