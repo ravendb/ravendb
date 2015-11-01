@@ -32,15 +32,14 @@ namespace Raven.Tests.Counters
 		public async Task Smuggler_export_with_ApiKey_should_work()
 		{
 			using (var server = GetNewServer(port: 8010,configureConfig: ConfigureServerForAuth))
-			using (var documentStore = NewRemoteDocumentStore(ravenDbServer: server))
 			{
-				using (var counterStore = NewRemoteCountersStore("storeX", ravenStore: documentStore))
+				using (var counterStore = NewRemoteCountersStore("storeX", ravenServer: server))
 				{
 					await counterStore.IncrementAsync("G", "C");
 					await counterStore.DecrementAsync("G", "C2");
 				}
 
-				using (var counterStore = NewRemoteCountersStore("storeX", ravenStore: documentStore))
+				using (var counterStore = NewRemoteCountersStore("storeX", ravenServer: server))
 				{
 					ConfigureApiKey(server.SystemDatabase, "test", "ThisIsMySecret", counterStore.Name, true);
 					var smugglerApi = new SmugglerCounterApi();
@@ -61,17 +60,15 @@ namespace Raven.Tests.Counters
 		{
 			using (var serverA = GetNewServer(port: 8010,configureConfig: ConfigureServerForAuth))
 			using (var serverB = GetNewServer(port: 8011, configureConfig: ConfigureServerForAuth))
-			using (var ravenStoreA = NewRemoteDocumentStore(ravenDbServer: serverA))
-			using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
 			{
-				using (var counterStoreA = NewRemoteCountersStore("storeX", ravenStore: ravenStoreA))
+				using (var counterStoreA = NewRemoteCountersStore("storeX", ravenServer: serverA))
 				{
 					await counterStoreA.IncrementAsync("G", "C");
 					await counterStoreA.DecrementAsync("G", "C2");
 				}
 
-				using (var counterStoreA = NewRemoteCountersStore("storeX", ravenStore: ravenStoreA))
-				using (var counterStoreB = NewRemoteCountersStore("storeY", ravenStore: ravenStoreB))
+				using (var counterStoreA = NewRemoteCountersStore("storeX", ravenServer: serverA))
+				using (var counterStoreB = NewRemoteCountersStore("storeY", ravenServer: serverB))
 				{
 					ConfigureApiKey(serverA.SystemDatabase, "test", "ThisIsMySecret", counterStoreA.Name, true);
 					ConfigureApiKey(serverA.SystemDatabase, "test2", "ThisIsNotMySecret", counterStoreA.Name + "FooBar", true);

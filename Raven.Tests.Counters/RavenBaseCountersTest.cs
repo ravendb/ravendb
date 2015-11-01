@@ -18,14 +18,15 @@ using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
+using Raven.Server;
 using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Counters
 {
 	public class RavenBaseCountersTest : RavenTestBase
 	{
-		protected readonly Lazy<IDocumentStore> ravenStore;
-		private readonly ConcurrentDictionary<string, int> storeCount;
+		protected readonly Lazy<RavenDbServer> RavenDbServer;
+		private readonly ConcurrentDictionary<string, int> serverCount;
 		private readonly List<IDisposable> disposables = new List<IDisposable>();
 		protected readonly string DefaultCounterStorageName = "ThisIsRelativelyUniqueCounterName";
 
@@ -34,9 +35,9 @@ namespace Raven.Tests.Counters
 			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueCounterName*"))
 				IOExtensions.DeleteDirectory(folder);
 
-			ravenStore = new Lazy<IDocumentStore>(() => NewRemoteDocumentStore(fiddler: true));
+            RavenDbServer = new Lazy<RavenDbServer>(() => GetNewServer(requestedStorage: "voron"));
 			DefaultCounterStorageName += Guid.NewGuid();
-			storeCount = new ConcurrentDictionary<string, int>();
+			serverCount = new ConcurrentDictionary<string, int>();
 		}
 
 		protected CounterStorage NewCounterStorage()
@@ -80,16 +81,17 @@ namespace Raven.Tests.Counters
 		}
 
 
-		protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, IDocumentStore ravenStore = null)
+		protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, RavenDbServer ravenServer = null)
 		{
-			ravenStore = ravenStore ?? this.ravenStore.Value;
-			storeCount.AddOrUpdate(ravenStore.Identifier, id => 1, (id, val) => val++);		
+            ravenServer = ravenServer ?? this.RavenDbServer.Value;
+		    var serverUrl = ravenServer.SystemDatabase.ServerUrl;
+		    serverCount.AddOrUpdate(serverUrl, id => 1, (id, val) => val++);		
 	
 			var counterStore = new CounterStore
 			{
-				Url = ravenStore.Url,
+				Url = GetServerUrl(true, serverUrl),
 				Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
-				Name = counterStorageName + storeCount[ravenStore.Identifier]
+				Name = counterStorageName + serverCount[serverUrl]
 			};
 			counterStore.Initialize(createDefaultCounter);
 			return counterStore;
@@ -97,7 +99,8 @@ namespace Raven.Tests.Counters
 
 		public override void Dispose()
 		{
-			if (ravenStore.IsValueCreated && ravenStore.Value != null) ravenStore.Value.Dispose();
+			if (RavenDbServer.IsValueCreated && RavenDbServer.Value != null)
+                RavenDbServer.Value.Dispose();
 
 			try
 			{
