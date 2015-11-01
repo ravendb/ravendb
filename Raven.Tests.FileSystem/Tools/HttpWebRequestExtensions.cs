@@ -23,11 +23,11 @@ namespace Raven.Tests.FileSystem.Tools
             }
         }
 
-		public static HttpWebRequest WithRange(this HttpWebRequest request, int range)
-		{
-			request.AddRange(range);
-			return request;
-		}
+        public static HttpWebRequest WithRange(this HttpWebRequest request, int range)
+        {
+            request.AddRange(range);
+            return request;
+        }
 
         public static HttpWebRequest WithBasicCredentials(this HttpWebRequest request, string url, string username, string password)
         {
@@ -66,15 +66,15 @@ namespace Raven.Tests.FileSystem.Tools
             return request;
         }
 
-		public static byte[] ReadData(this HttpWebResponse response)
-		{
-			using (var sr = response.GetResponseStream())
-			{
-				var memoryStream = new MemoryStream();
-				sr.CopyTo(memoryStream);
-				return memoryStream.ToArray();
-			}
-		}
+        public static byte[] ReadData(this HttpWebResponse response)
+        {
+            using (var sr = response.GetResponseStream())
+            {
+                var memoryStream = new MemoryStream();
+                sr.CopyTo(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
 
         public static string ReadToEnd(this HttpWebResponse response)
         {

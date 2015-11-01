@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Threading;
@@ -47,13 +47,13 @@ namespace Raven.Tests.Indexes
             }
         }
 
-		private class NewIndex2 : AbstractIndexCreationTask<Person>
-		{
-			public NewIndex2()
-			{
-				Map = persons => from person in persons select new { person.FirstName, person.LastName, person.Id };
-			}
-		}
+        private class NewIndex2 : AbstractIndexCreationTask<Person>
+        {
+            public NewIndex2()
+            {
+                Map = persons => from person in persons select new { person.FirstName, person.LastName, person.Id };
+            }
+        }
 
         [Fact]
         public void ReplaceAfterNonStale()
@@ -79,9 +79,9 @@ namespace Raven.Tests.Indexes
                
                 WaitForIndexing(store);
 
-				var indexReplaceDocId = Constants.IndexReplacePrefix + Constants.SideBySideIndexNamePrefix + new NewIndex().IndexName;
+                var indexReplaceDocId = Constants.IndexReplacePrefix + Constants.SideBySideIndexNamePrefix + new NewIndex().IndexName;
 
-				Assert.True(SpinWait.SpinUntil(() => store.DatabaseCommands.Get(indexReplaceDocId) == null, TimeSpan.FromSeconds(30))); // wait for index replacement
+                Assert.True(SpinWait.SpinUntil(() => store.DatabaseCommands.Get(indexReplaceDocId) == null, TimeSpan.FromSeconds(30))); // wait for index replacement
 
                 using (var session = store.OpenSession())
                 {
@@ -93,15 +93,15 @@ namespace Raven.Tests.Indexes
             }
         }
 
-		[Fact]
-		public void ShouldNotReplaceIndexIfSameDefinition()
-		{
-			using (var store = NewDocumentStore())
-			{
-				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(OldIndex))), store);
-				WaitForIndexing(store);
+        [Fact]
+        public void ShouldNotReplaceIndexIfSameDefinition()
+        {
+            using (var store = NewDocumentStore())
+            {
+                IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(OldIndex))), store);
+                WaitForIndexing(store);
 
-				var e = Assert.Throws<InvalidOperationException>(() =>
+                var e = Assert.Throws<InvalidOperationException>(() =>
                 {
                     using (var session = store.OpenSession())
                     {
@@ -110,60 +110,60 @@ namespace Raven.Tests.Indexes
                     }
                 });
 
-				var error = "The field 'LastName' is not indexed, cannot query on fields that are not indexed";
-				Assert.Contains(error, e.InnerException.Message);
+                var error = "The field 'LastName' is not indexed, cannot query on fields that are not indexed";
+                Assert.Contains(error, e.InnerException.Message);
 
-				IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof(OldIndex))), store);
-				WaitForIndexing(store);
+                IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof(OldIndex))), store);
+                WaitForIndexing(store);
 
-				Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
+                Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
 
-				e = Assert.Throws<InvalidOperationException>(() =>
-				{
-					using (var session = store.OpenSession())
-					{
-						var count = session.Query<Person, OldIndex>()
-							.Count(x => x.LastName == "Doe");
-					}
-				});
+                e = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var count = session.Query<Person, OldIndex>()
+                            .Count(x => x.LastName == "Doe");
+                    }
+                });
 
-				Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
-			}
-		}
+                Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+            }
+        }
 
-		[Fact]
-		public void SideBySideIndexCreated()
-		{
-			using (var store = NewDocumentStore())
-			{
-			    IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof (OldIndex))), store);
+        [Fact]
+        public void SideBySideIndexCreated()
+        {
+            using (var store = NewDocumentStore())
+            {
+                IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof (OldIndex))), store);
 
-			    WaitForIndexing(store);
+                WaitForIndexing(store);
 
-			    var e = Assert.Throws<InvalidOperationException>(() =>
-			    {
-			        using (var session = store.OpenSession())
-			        {
-			            var count = session.Query<Person, OldIndex>()
-			                .Count(x => x.LastName == "Doe");
-			        }
-			    });
+                var e = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var count = session.Query<Person, OldIndex>()
+                            .Count(x => x.LastName == "Doe");
+                    }
+                });
 
-			    Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+                Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
 
-			    var mre = new ManualResetEventSlim(false);
-			    var documentDatabase = store.ServerIfEmbedded.Server.GetDatabaseInternal(store.DefaultDatabase).Result;
-			    documentDatabase.IndexReplacer.IndexReplaced += s =>
-			    {
-			        mre.Set();
-			    };
-			    IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof (NewIndex))), store);
-				WaitForUserToContinueTheTest(store);
+                var mre = new ManualResetEventSlim(false);
+                var documentDatabase = store.ServerIfEmbedded.Server.GetDatabaseInternal(store.DefaultDatabase).Result;
+                documentDatabase.IndexReplacer.IndexReplaced += s =>
+                {
+                    mre.Set();
+                };
+                IndexCreation.SideBySideCreateIndexes(new CompositionContainer(new TypeCatalog(typeof (NewIndex))), store);
+                WaitForUserToContinueTheTest(store);
 
-			    Assert.True(mre.Wait(10000));
-			    Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
-			}
-		}
+                Assert.True(mre.Wait(10000));
+                Assert.Equal(2, store.DatabaseCommands.GetStatistics().CountOfIndexes);
+            }
+        }
 
     }
 }

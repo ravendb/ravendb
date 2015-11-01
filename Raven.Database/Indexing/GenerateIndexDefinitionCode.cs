@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="GenerateIndexDefinitionCode.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,6 +20,7 @@ using Raven.Database.Plugins;
 
 namespace Raven.Database.Indexing
 {
+    //TODO: test me!
     public class IndexDefinitionCodeGenerator
     {
         private readonly IndexDefinition _indexDefinition;
@@ -35,25 +36,25 @@ namespace Raven.Database.Indexing
             {
                 Name = Regex.Replace(_indexDefinition.Name, @"[^\w\d]", ""),
                 BaseTypes =
-				{
-					new SimpleType("AbstractIndexCreationTask")
-				},
+                {
+                    new SimpleType("AbstractIndexCreationTask")
+                },
                 Modifiers = Modifiers.Public,
                 Members =
-				{
-					new PropertyDeclaration
-					{
-						Name = "IndexName",
-						ReturnType = new PrimitiveType("string"),
-						Modifiers = Modifiers.Public | Modifiers.Override, Getter = new Accessor
-						{
-							Body = new BlockStatement()
-							{
-								new ReturnStatement(new PrimitiveExpression(_indexDefinition.Name))
-							}
-						}
-					}
-				}
+                {
+                    new PropertyDeclaration
+                    {
+                        Name = "IndexName",
+                        ReturnType = new PrimitiveType("string"),
+                        Modifiers = Modifiers.Public | Modifiers.Override, Getter = new Accessor
+                        {
+                            Body = new BlockStatement()
+                            {
+                                new ReturnStatement(new PrimitiveExpression(_indexDefinition.Name))
+                            }
+                        }
+                    }
+                }
             };
 
             var objectCreateExpression = new ObjectCreateExpression(new SimpleType("IndexDefinition"))
@@ -108,9 +109,9 @@ namespace Raven.Database.Indexing
                 objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Analyzers", CreateAnalizersExpression(_indexDefinition)));
             }
 
-            if (_indexDefinition.Suggestions.Count > 0)
+            if (_indexDefinition.SuggestionsOptions.Count > 0)
             {
-                objectCreateExpression.Initializer.Elements.Add(new NamedExpression("Suggestions", CreateSuggestionsExpression(_indexDefinition)));
+                objectCreateExpression.Initializer.Elements.Add(new NamedExpression("SuggestionsOptions", CreateSuggestionsExpression(_indexDefinition)));
             }
 
             if (_indexDefinition.SpatialIndexes.Count > 0)
@@ -124,25 +125,25 @@ namespace Raven.Database.Indexing
                 Modifiers = Modifiers.Public | Modifiers.Override,
                 ReturnType = new SimpleType("IndexDefinition"),
                 Body = new BlockStatement
-				{
-					new ReturnStatement(objectCreateExpression)
-				}
+                {
+                    new ReturnStatement(objectCreateExpression)
+                }
             };
             indexDeclaration.Members.Add(createIndexDefinition);
 
             var namespaces = new HashSet<string>
-				{
-					typeof (SystemTime).Namespace,
-					typeof (Enumerable).Namespace,
-					typeof (IEnumerable<>).Namespace,
-					typeof (IEnumerable).Namespace,
-					typeof (int).Namespace,
-					typeof (CultureInfo).Namespace,
-					typeof (Regex).Namespace,
-					typeof (AbstractIndexCreationTask).Namespace,
-					typeof (IndexDefinition).Namespace,
-					typeof (StringDistanceTypes).Namespace,
-				};
+                {
+                    typeof (SystemTime).Namespace,
+                    typeof (Enumerable).Namespace,
+                    typeof (IEnumerable<>).Namespace,
+                    typeof (IEnumerable).Namespace,
+                    typeof (int).Namespace,
+                    typeof (CultureInfo).Namespace,
+                    typeof (Regex).Namespace,
+                    typeof (AbstractIndexCreationTask).Namespace,
+                    typeof (IndexDefinition).Namespace,
+                    typeof (StringDistanceTypes).Namespace,
+                };
 
             var text = QueryParsingUtils.GenerateText(indexDeclaration, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), namespaces);
             return text;
@@ -183,21 +184,9 @@ namespace Raven.Database.Indexing
         {
             var suggestions = new ArrayInitializerExpression();
 
-            indexDefinition.Suggestions.ForEach(suggestion =>
+            indexDefinition.SuggestionsOptions.ForEach(suggestion =>
             {
-                var property = new ArrayInitializerExpression();
-                property.Elements.Add(new StringLiteralExpression(suggestion.Key));
-
-                var value = suggestion.Value;
-                property.Elements.Add(new ObjectCreateExpression
-                {
-                    Type = new PrimitiveType("SuggestionOptions"),
-                    Initializer = new ArrayInitializerExpression(
-                        new NamedExpression("Distance", new MemberReferenceExpression(new TypeReferenceExpression(new PrimitiveType("StringDistanceTypes")), value.Distance.ToString())),
-                        new NamedExpression("Accuracy", new PrimitiveExpression(value.Accuracy))
-                    )
-                });
-                suggestions.Elements.Add(property);
+                suggestions.Elements.Add(new StringLiteralExpression(suggestion));
             });
 
             return suggestions;

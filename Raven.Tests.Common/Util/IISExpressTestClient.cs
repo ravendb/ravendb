@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -12,105 +12,109 @@ using Xunit;
 
 namespace Raven.Tests.Common.Util
 {
-	public class IisExpressTestClient : IDisposable
-	{
-		private const string WebDirectory = @".\RavenIISTestWeb\";
-		public static int Port = 8084;
-		private IISExpressDriver iisExpress;
+    public class IisExpressTestClient : IDisposable
+    {
+        private const string WebDirectory = @".\RavenIISTestWeb\";
+        public static int Port = 8084;
+        private IISExpressDriver iisExpress;
 
-		private static string DeployWebProjectToTestDirectory()
-		{
-			IOExtensions.DeleteDirectory(Path.GetFullPath(WebDirectory));
+        private static string DeployWebProjectToTestDirectory()
+        {
+            IOExtensions.DeleteDirectory(Path.GetFullPath(WebDirectory));
 
-			IOExtensions.CopyDirectory(GetRavenWebSource(), WebDirectory);
+            IOExtensions.CopyDirectory(GetRavenWebSource(), WebDirectory);
 
-			if (Directory.Exists(Path.Combine(WebDirectory, "Data")))
-			{
-				IOExtensions.DeleteDirectory(Path.Combine(WebDirectory, "Data"));
-			}
+            if (Directory.Exists(Path.Combine(WebDirectory, "Data")))
+            {
+                IOExtensions.DeleteDirectory(Path.Combine(WebDirectory, "Data"));
+            }
 
-			return Path.GetFullPath(WebDirectory);
-		}
+            return Path.GetFullPath(WebDirectory);
+        }
 
-		private static string GetRavenWebSource()
-		{
-			foreach (var path in new[] { @".\..\..\..\Raven.Web", @".\_PublishedWebsites\Raven.Web" })
-			{
-				var fullPath = Path.GetFullPath(path);
+        private static string GetRavenWebSource()
+        {
+            foreach (var path in new[] { @".\..\..\..\Raven.Web", @".\_PublishedWebsites\Raven.Web" })
+            {
+                var fullPath = Path.GetFullPath(path);
 
-				if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "web.config")))
-				{
-					var combine = Path.Combine(fullPath, "bin");
-					if (!Directory.Exists(combine) || Directory.GetFiles(combine, "Raven.Web.dll").Length == 0)
-						throw new Exception("Raven.Web\\bin at " + fullPath + " was nonexistent or empty, you need to build Raven.Web.");
+                if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "web.config")))
+                {
+                    var combine = Path.Combine(fullPath, "bin");
+                    if (!Directory.Exists(combine) || Directory.GetFiles(combine, "Raven.Web.dll").Length == 0)
+                        throw new Exception("Raven.Web\\bin at " + fullPath + " was nonexistent or empty, you need to build Raven.Web.");
 
-					return fullPath;
-				}
-			}
+                    return fullPath;
+                }
+            }
 
-			throw new FileNotFoundException("Could not find source directory for Raven.Web");
-		}
+            throw new FileNotFoundException("Could not find source directory for Raven.Web");
+        }
 
-		public IDocumentStore NewDocumentStore(bool fiddler = false, Dictionary<string, string> settings = null)
-		{
-			if (iisExpress == null)
-			{
-				iisExpress = new IISExpressDriver();
-				var iisTestWebDirectory = DeployWebProjectToTestDirectory();
+        public IDocumentStore NewDocumentStore(bool fiddler = false, Dictionary<string, string> settings = null)
+        {
+            if (iisExpress == null)
+            {
+                iisExpress = new IISExpressDriver();
+                var iisTestWebDirectory = DeployWebProjectToTestDirectory();
 
-				if (settings != null)
-				{
-					ModifyWebConfig(Path.Combine(iisTestWebDirectory, "web.config"), settings);
-				}
+                if (settings == null)
+                    settings = new Dictionary<string, string>();
 
-				iisExpress.Start(iisTestWebDirectory, 8084);
-			}
+                settings["Raven/Voron/AllowOn32Bits"] = "true";
 
-			var url = iisExpress.Url;
-			if (fiddler)
-				url = url.Replace("localhost", "localhost.fiddler");
-			return new DocumentStore {Url = url}.Initialize();
-		}
+                ModifyWebConfig(Path.Combine(iisTestWebDirectory, "web.config"), settings);
 
-		private void ModifyWebConfig(string webConfigPath, Dictionary<string, string> settings)
-		{
-			var webConfig = new XmlDocument();
+                iisExpress.Start(iisTestWebDirectory, 8084);
+            }
 
-			webConfig.Load(webConfigPath);
+            var url = iisExpress.Url;
+            if (fiddler)
+                url = url.Replace("localhost", "localhost.fiddler");
 
-			var appSettingsNode = webConfig.SelectSingleNode("/configuration/appSettings");
 
-			if (appSettingsNode == null)
-				throw new InvalidOperationException("Web.config file does not contains <appSettings> section");
+            return new DocumentStore {Url = url}.Initialize();
+        }
 
-			foreach (var setting in settings)
-			{
-				var newElement = webConfig.CreateElement("add");
-				newElement.SetAttribute("key", setting.Key);
-				newElement.SetAttribute("value", setting.Value);
-				appSettingsNode.AppendChild(newElement);
-			}
+        private void ModifyWebConfig(string webConfigPath, Dictionary<string, string> settings)
+        {
+            var webConfig = new XmlDocument();
 
-			webConfig.Save(webConfigPath);
-		}
+            webConfig.Load(webConfigPath);
 
-		protected void WaitForIndexing(IDocumentStore store, string db = null)
-		{
-			var databaseCommands = store.DatabaseCommands;
-			if (db != null)
-				databaseCommands = databaseCommands.ForDatabase(db);
-			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(10)));
-		}
+            var appSettingsNode = webConfig.SelectSingleNode("/configuration/appSettings");
 
-		public void Dispose()
-		{
-			if (iisExpress != null)
-			{
-				iisExpress.Dispose();
-				iisExpress = null;
-			}
+            if (appSettingsNode == null)
+                throw new InvalidOperationException("Web.config file does not contains <appSettings> section");
 
-			IOExtensions.DeleteDirectory(Path.GetFullPath(WebDirectory));
-		}
-	}
+            foreach (var setting in settings)
+            {
+                var newElement = webConfig.CreateElement("add");
+                newElement.SetAttribute("key", setting.Key);
+                newElement.SetAttribute("value", setting.Value);
+                appSettingsNode.AppendChild(newElement);
+            }
+
+            webConfig.Save(webConfigPath);
+        }
+
+        protected void WaitForIndexing(IDocumentStore store, string db = null)
+        {
+            var databaseCommands = store.DatabaseCommands;
+            if (db != null)
+                databaseCommands = databaseCommands.ForDatabase(db);
+            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(10)));
+        }
+
+        public void Dispose()
+        {
+            if (iisExpress != null)
+            {
+                iisExpress.Dispose();
+                iisExpress = null;
+            }
+
+            IOExtensions.DeleteDirectory(Path.GetFullPath(WebDirectory));
+        }
+    }
 }

@@ -19,39 +19,39 @@ using System.Linq;
 
 namespace Raven.Tests.Triggers
 {
-	public class IndexTriggers : RavenTest
-	{
-		private readonly EmbeddableDocumentStore store;
+    public class IndexTriggers : RavenTest
+    {
+        private readonly EmbeddableDocumentStore store;
 
-		public IndexTriggers()
-		{
-			store = NewDocumentStore(catalog:(new TypeCatalog(typeof(IndexToDataTable))));
-		}
+        public IndexTriggers()
+        {
+            store = NewDocumentStore(catalog:(new TypeCatalog(typeof(IndexToDataTable))));
+        }
 
-		public override void Dispose()
-		{
-			store.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            store.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void CanReplicateValuesFromIndexToDataTable()
-		{
-			store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
-			{
-				Map = "from doc in docs from prj in doc.Projects select new{Project = prj}",
-				Stores = { { "Project", FieldStorage.Yes } }
-			});
-			store.SystemDatabase.Documents.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
+        [Fact]
+        public void CanReplicateValuesFromIndexToDataTable()
+        {
+            store.SystemDatabase.Indexes.PutIndex("test", new IndexDefinition
+            {
+                Map = "from doc in docs from prj in doc.Projects select new{Project = prj}",
+                Stores = { { "Project", FieldStorage.Yes } }
+            });
+            store.SystemDatabase.Documents.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
 
-			QueryResult queryResult;
-			do
-			{
-				queryResult = store.SystemDatabase.Queries.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" }, CancellationToken.None);
-			} while (queryResult.IsStale);
+            QueryResult queryResult;
+            do
+            {
+                queryResult = store.SystemDatabase.Queries.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" }, CancellationToken.None);
+            } while (queryResult.IsStale);
 
-			var indexToDataTable = store.SystemDatabase.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();
-			Assert.Equal(2, indexToDataTable.DataTable.Rows.Count);
-		}
-	}
+            var indexToDataTable = store.SystemDatabase.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();
+            Assert.Equal(2, indexToDataTable.DataTable.Rows.Count);
+        }
+    }
 }

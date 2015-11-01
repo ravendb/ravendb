@@ -8,8 +8,8 @@ class extensions {
         extensions.installObservableExtensions();
         extensions.installStringExtension();
         extensions.installStorageExtension();
-        
         extensions.installBindingHandlers();
+        extensions.installJqueryExtensions();
 
         // Want Intellisense for your extensions?
         // Go to extensionInterfaces.ts and add the function signature there.
@@ -19,7 +19,7 @@ class extensions {
         var datePrototype: any = Date.prototype;
 
         var formatNumber = (num) => {
-            return num < 10 ? '0' + num : num;
+            return num < 10 ? "0" + num : num;
         }
 
         datePrototype.getUTCDateFormatted = function () {
@@ -121,8 +121,9 @@ class extensions {
     }
 
     private static installArrayExtensions() {
-        // Array.remove
         var arrayPrototype: any = Array.prototype;
+
+        // Array.remove
         arrayPrototype.remove = function (item) {
             var self: any[] = this;
             var index = self.indexOf(item);
@@ -205,7 +206,7 @@ class extensions {
             return self.length;
         };
 
-        // Array.count
+        // Array.distinct
         arrayPrototype.distinct = function () {
             var distinctElements = [];
             for (var i = 0; i < this.length; i++) {
@@ -216,6 +217,13 @@ class extensions {
             }
 
             return distinctElements;
+        };
+
+        // Array.distinct
+        arrayPrototype.concatUnique = function (values) {
+            for (var i = 0; i < values.length; i++)
+                if (this.indexOf(values[i]) === -1)
+                    this.push(values[i]);
         };
     }
 
@@ -242,8 +250,26 @@ class extensions {
 
         String.prototype.getSizeInBytesAsUTF8 = function () {
             var result = 0;
+            var isQuoted = false;
+            var prevChar : any = 0;
             for (var n = 0; n < this.length; n++) {
+
                 var charCode = this.fixedCharCodeAt(n);
+
+                if (charCode === 34 /*quates*/) {
+                    if (!(isQuoted === true && prevChar === 92 /*backslash*/)) {
+                        isQuoted = !isQuoted;
+                    }
+                }
+
+                prevChar = charCode;
+
+                // whiteSpaceCharacters list from : https://en.wikipedia.org/wiki/Whitespace_character
+                var whiteSpaceCharacters = [9, 10, 11, 12, 13, 32, 133, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288, 6158, 8203, 8204, 8205, 8288, 65279];
+                if (isQuoted === false && $.inArray(charCode, whiteSpaceCharacters) > -1) {
+                    continue;
+                }
+
                 if (typeof charCode === "number") {
                     if (charCode < 128) {
                         result = result + 1;
@@ -345,18 +371,18 @@ class extensions {
         functionPrototype.memoize = function (thisVal) {
             var self = this;
             var cache = {};
-            return (arg) => {
-                if (arg in cache) {
-                    return cache[arg];
+            return (arg1, arg2) => {
+                if (arg2 in cache) {
+                    return cache[arg2];
                 } else {
-                    return cache[arg] = self.call(thisVal, arg);
+                    return cache[arg2] = self.call(thisVal, arg1, arg2);
                 }
             };
         };
     }
 
     private static installBindingHandlers() {
-        ko.bindingHandlers['numericValue'] = {
+        ko.bindingHandlers["numericValue"] = {
             init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
                 var underlyingObservable = valueAccessor();
                 var interceptor = ko.computed({
@@ -373,12 +399,100 @@ class extensions {
             update: ko.bindingHandlers.value.update
         };
 
-        ko.bindingHandlers['customValidity'] = {
+        ko.bindingHandlers["customValidity"] = {
             update: (element, valueAccessor) => {
                 var errorMessage = ko.unwrap(valueAccessor()); //unwrap to get subscription
                 element.setCustomValidity(errorMessage);
             }
         };
+
+        ko.bindingHandlers["bsChecked"] = {
+            init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+                var value = valueAccessor();
+                var newValueAccessor = () => {
+                    return {
+                        change() {
+                            value(element.value);
+                        }
+                    }
+                };
+                if ($(element).val() === ko.unwrap(valueAccessor())) {
+                    $(element).closest(".btn").button("toggle");
+                }
+                ko.bindingHandlers.event.init(element, newValueAccessor, allBindingsAccessor, viewModel, bindingContext);
+            }
+        };
+
+        var key = "_my_init_key_";
+        ko.bindingHandlers["updateHighlighting"] = {
+            init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+                ko.utils.domData.set(element, key, true);
+            },
+            update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+                var value = valueAccessor();
+                var isInit = ko.utils.domData.get(element, key);
+                var data = ko.dataFor(element);
+                var skip = !!data.isAllDocuments || !!data.isSystemDocuments || !!data.isAllGroupsGroup;
+                if (skip === false && isInit === false) {
+                    $($(element).parents("li")).highlight();
+                } else {
+                    ko.utils.domData.set(element, key, false);
+                }
+            }
+        };
+
+        ko.bindingHandlers["checkbox"] = {
+            update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+                var checked: boolean = ko.unwrap(valueAccessor());
+                
+                var src = checked ? "content/images/checked.png" : "content/images/unchecked.png";
+                $(element).attr("src", src);
+                var needOpacity = ko.utils.unwrapObservable(allBindings().needOpacity);
+                var opactity = !!needOpacity ? 0.25 : 1;
+                $(element).css("opacity", opactity);
+            }
+        };
+
+        ko.bindingHandlers["checkboxTriple"] = {
+            update(element, valueAccessor, allBindings, viewModel, bindingContext) {
+                var checkboxValue: checkbox = ko.unwrap(valueAccessor());
+                var src;
+                switch (checkboxValue) {
+                    case checkbox.Checked:
+                        src = "content/images/checked.png";
+                        break;
+                    case checkbox.SomeChecked:
+                        src = "content/images/some-checked.png";
+                        break;
+                    case checkbox.UnChecked:
+                    default:
+                        src = "content/images/unchecked.png";
+                }
+
+                $(element).attr("src", src);
+                var needOpacity = ko.utils.unwrapObservable(allBindings().needOpacity);
+                var opactity = !!needOpacity ? 0.25 : 1;
+                $(element).css("opacity", opactity);
+            }
+        };
+    }
+
+    static installJqueryExtensions() {
+        jQuery.fn.highlight = function() {
+            $(this).each(function() {
+                var el = $(this);
+                el.before("<div/>");
+                el.prev()
+                    .width(el.width())
+                    .height(el.height())
+                    .css({
+                        "position": "absolute",
+                        "background-color": "#ffff99",
+                        "opacity": ".9"
+                    })
+                    .fadeOut(1500);
+            });
+        }
     }
 }
 

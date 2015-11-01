@@ -1,5 +1,3 @@
-import moment = require("moment");
-
 class synchronizationConfig {
 
     fileConflictResolution = ko.observable<string>();

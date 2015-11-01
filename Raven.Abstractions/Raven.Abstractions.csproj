@@ -1,10 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -26,6 +24,8 @@
     <NoWarn>1591, 618</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CodeAnalysisRuleSet>
+    </CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -38,6 +38,8 @@
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <NoWarn>1591, 618</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CodeAnalysisRuleSet>
+    </CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -54,30 +56,39 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>
+    </CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ICSharpCode.NRefactory">
+    <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="ICSharpCode.NRefactory.CSharp">
+    <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="ICSharpCode.NRefactory.Xml">
+    <Reference Include="ICSharpCode.NRefactory.Xml, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.dll</HintPath>
+    <Reference Include="Mono.Cecil, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Mono.Cecil.Mdb">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Mdb.dll</HintPath>
+    <Reference Include="Mono.Cecil.Mdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Mdb.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Mono.Cecil.Pdb">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Pdb.dll</HintPath>
+    <Reference Include="Mono.Cecil.Pdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Pdb.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Mono.Cecil.Rocks">
-      <HintPath>..\packages\Mono.Cecil.0.9.5.4\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
+    <Reference Include="Mono.Cecil.Rocks, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Rocks.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -100,6 +111,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
+      <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\*.cs">
       <Link>Imports\Newtonsoft.Json\Bson\%(FileName)</Link>
     </Compile>
@@ -121,13 +135,13 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Utilities\*.cs">
       <Link>Imports\Newtonsoft.Json\Utilities\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\*.cs">
-      <Link>Imports\Newtonsoft.Json\%(FileName)</Link>
-    </Compile>
+    <Compile Include="Cluster\ClusterBehavior.cs" />
+    <Compile Include="Cluster\ClusterInformation.cs" />
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Connection\CompressedContent.cs" />
     <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\CountingStream.cs" />
     <Compile Include="Connection\ErrorResponseException.cs" />
@@ -140,28 +154,38 @@
     <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
-    <Compile Include="Counters\CountersDocument.cs" />
+    <Compile Include="Counters\Counter.cs" />
+    <Compile Include="Counters\CounterNameGroupPair.cs" />
+    <Compile Include="Counters\CounterState.cs" />
+    <Compile Include="Counters\CounterBackupRequest.cs" />
+    <Compile Include="Counters\CounterRestoreRequest.cs" />
+    <Compile Include="Counters\CountersBatchOptions.cs" />
+    <Compile Include="Counters\CounterStorageDocument.cs" />
     <Compile Include="Counters\CounterStorageStats.cs" />
-    <Compile Include="Counters\CounterChanges.cs" />
-    <Compile Include="Counters\CounterStorageReplicationDestination.cs" />
-    <Compile Include="Counters\CounterStorageReplicationDocument.cs" />
-    <Compile Include="Counters\CounterView.cs" />
+    <Compile Include="Counters\CounterChange.cs" />
+    <Compile Include="Counters\CounterReplicationDestination.cs" />
+    <Compile Include="Counters\CountersReplicationDocument.cs" />
+    <Compile Include="Counters\CounterSummary.cs" />
+    <Compile Include="Counters\CounterUtils.cs" />
+    <Compile Include="Counters\Notifications\BulkOperationNotification.cs" />
+    <Compile Include="Counters\Notifications\ChangeNotification.cs" />
+    <Compile Include="Counters\Notifications\CounterStorageNotification.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
     <Compile Include="Data\AbstractRestoreRequest.cs" />
     <Compile Include="Data\BulkOperationOptions.cs" />
     <Compile Include="Data\CompactStatus.cs" />
     <Compile Include="Data\DatabaseOperationsStatus.cs" />
     <Compile Include="Data\EtagJsonConverter.cs" />
+    <Compile Include="Data\CounterStorageBackupRequest.cs" />
     <Compile Include="Data\FilesystemRestoreRequest.cs" />
     <Compile Include="Data\FilesystemBackupRequest.cs" />
-    <Compile Include="Data\EsentStorageStats.cs" />
+    <Compile Include="Data\FilteredOutIndexStat.cs" />
     <Compile Include="Data\GCInfo.cs" />
     <Compile Include="Data\IndexingBatchInfo.cs" />
     <Compile Include="Data\AdminStatistics.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
-    <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\DatabaseBackupRequest.cs" />
     <Compile Include="Data\DatabaseMetrics.cs" />
     <Compile Include="Data\DocumentsChanges.cs" />
@@ -174,6 +198,8 @@
     <Compile Include="Data\BulkInsertOptions.cs" />
     <Compile Include="Data\Etag.cs" />
     <Compile Include="Data\IndexFailureInformation.cs" />
+    <Compile Include="Data\IndexingPerformanceStatistics.cs" />
+    <Compile Include="Data\IndexingPerformanceStats.cs" />
     <Compile Include="Data\SideBySideIndexes.cs" />
     <Compile Include="Data\IndexToAdd.cs" />
     <Compile Include="Data\IOperationState.cs" />
@@ -189,7 +215,6 @@
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
-    <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BackupStatus.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\BoostedValue.cs" />
@@ -236,19 +261,19 @@
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TaskBasedOperationState.cs" />
-    <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
     <Compile Include="Data\UserInfo.cs" />
+    <Compile Include="Data\UserPermission.cs" />
     <Compile Include="Data\UuidType.cs" />
     <Compile Include="Data\VoronActiveTransaction.cs" />
     <Compile Include="Data\VoronStorageStats.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
-    <Compile Include="Exceptions\ClientNotSupportedException.cs" />
+    <Compile Include="Exceptions\ServerVersionNotSuppportedException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
     <Compile Include="Exceptions\ImplicitFetchFieldsFromDocumentNotAllowedException.cs" />
     <Compile Include="Exceptions\InvalidSpatialShapeException.cs" />
     <Compile Include="Exceptions\SmugglerException.cs" />
-    <Compile Include="Exceptions\SmugglerExportException.cs" />
+    <Compile Include="Exceptions\StorageNotSupportedException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionClosedException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionDoesNotExistException.cs" />
     <Compile Include="Exceptions\Subscriptions\SubscriptionInUseException.cs" />
@@ -258,13 +283,13 @@
     <Compile Include="Exceptions\IndexDisabledException.cs" />
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Exceptions\OperationVetoedException.cs" />
-    <Compile Include="Extensions\AttachmentExtensions.cs" />
     <Compile Include="Extensions\CharExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\Buffers.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
+    <Compile Include="Extensions\Internal\SetExtensions.cs" />
     <Compile Include="Extensions\FilesystemPathExtentions.cs" />
     <Compile Include="Extensions\Internal\DictionaryExtensions.cs" />
     <Compile Include="Extensions\DisposableAction.cs" />
@@ -275,6 +300,7 @@
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
     <Compile Include="FileSystem\FileHeader.cs" />
@@ -365,7 +391,7 @@
     <Compile Include="FileSystem\FileSystemMetrics.cs" />
     <Compile Include="FileSystem\HistoryItem.cs" />
     <Compile Include="FileSystem\ItemsPage.cs" />
-    <Compile Include="FileSystem\Notification.cs" />
+    <Compile Include="FileSystem\FileSystemNotification.cs" />
     <Compile Include="FileSystem\RdcStats.cs" />
     <Compile Include="FileSystem\FileSystemInfo.cs" />
     <Compile Include="FileSystem\FileSystemStats.cs" />
@@ -389,33 +415,39 @@
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
     <Compile Include="Replication\SideBySideReplicationInfo.cs" />
-    <Compile Include="Smuggler\Data\AttachmentExportInfo.cs" />
-    <Compile Include="Smuggler\Data\OperationState.cs" />
-    <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
-    <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
-    <Compile Include="Smuggler\Data\Tombstone.cs" />
-    <Compile Include="Smuggler\ISmugglerApi.cs" />
-    <Compile Include="Smuggler\ISmugglerDatabaseOperations.cs" />
-    <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
-    <Compile Include="Smuggler\ISmugglerFilesOperations.cs" />
-    <Compile Include="Smuggler\SmugglerAction.cs" />
-    <Compile Include="Smuggler\SmugglerDatabaseApiBase.cs" />
-    <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
-    <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
-    <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
-    <Compile Include="Smuggler\SmugglerHelper.cs" />
-    <Compile Include="Smuggler\SmugglerMode.cs" />
-    <Compile Include="Smuggler\SmugglerOptions.cs" />
+    <Compile Include="ServerSmugglerRequest.cs" />
     <Compile Include="Spatial\ShapeConverter.cs" />
     <Compile Include="Spatial\GeoJsonWktConverter.cs" />
     <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
+    <Compile Include="TimeSeries\AggregationDuration.cs" />
+    <Compile Include="TimeSeries\AggregationDurationType.cs" />
+    <Compile Include="TimeSeries\AggregatedPoint.cs" />
+    <Compile Include="TimeSeries\TimeSeriesBackupRequest.cs" />
+    <Compile Include="TimeSeries\TimeSeriesChange.cs" />
+    <Compile Include="TimeSeries\TimeSeriesKey.cs" />
+    <Compile Include="TimeSeries\TimeSeriesPoint.cs" />
+    <Compile Include="TimeSeries\TimeSeriesReplicationDestination.cs" />
+    <Compile Include="TimeSeries\TimeSeriesRestoreRequest.cs" />
+    <Compile Include="TimeSeries\TimeSeriesBatchOptions.cs" />
+    <Compile Include="TimeSeries\TimeSeriesReplicationDocument.cs" />
+    <Compile Include="TimeSeries\TimeSeriesType.cs" />
+    <Compile Include="TimeSeries\TimeSeriesView.cs" />
+    <Compile Include="TimeSeries\Notifications\BulkOperationNotification.cs" />
+    <Compile Include="TimeSeries\Notifications\TimeSeriesKeyChangeNotification.cs" />
+    <Compile Include="TimeSeries\Notifications\TimeSeriesNotification.cs" />
+    <Compile Include="TimeSeries\TimeSeriesDestinationStats.cs" />
+    <Compile Include="TimeSeries\TimeSeriesMetrics.cs" />
+    <Compile Include="TimeSeries\TimeSeriesReplicationStats.cs" />
+    <Compile Include="TimeSeries\TimeSeriesStats.cs" />
+    <Compile Include="TimeSeries\TimeSeriesDocument.cs" />
     <Compile Include="Util\AssemblyHelper.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
     <Compile Include="Util\AsyncHelpers.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
+    <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\DocumentHelpers.cs" />
@@ -428,11 +460,13 @@
     <Compile Include="Util\Encryptors\IEncryptor.cs" />
     <Compile Include="Util\EscapingHelper.cs" />
     <Compile Include="Util\EtagUtil.cs" />
+    <Compile Include="Util\HttpMethods.cs" />
     <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\IndexPrettyPrinter.cs" />
     <Compile Include="Util\IndexPrettyPrinterEqualityComparer.cs" />
     <Compile Include="Util\MD5.cs" />
+    <Compile Include="Util\NetworkUtil.cs" />
     <Compile Include="Util\PinnableBufferCache.cs" />
     <Compile Include="Util\PositionWrapperStream.cs" />
     <Compile Include="Util\RavenQuery.cs" />
@@ -443,6 +477,11 @@
     <Compile Include="Util\Streams\IBufferPool.cs" />
     <Compile Include="Util\Streams\NoBufferPool.cs" />
     <Compile Include="Util\Streams\Substream.cs" />
+    <Compile Include="Util\RavenTextFieldParser.cs" />
+    <Compile Include="Util\MalformedLineException.cs" />
+    <Compile Include="Util\EnvironmentUtils.cs" />
+    <Compile Include="Threading\ThreadLocal.cs" />
+    <Compile Include="Util\UndisposableStream.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
@@ -451,6 +490,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -463,7 +503,7 @@
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -474,4 +514,8 @@
   -->
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <ItemGroup>
+    <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
+  </ItemGroup>
+  <ItemGroup />
 </Project>

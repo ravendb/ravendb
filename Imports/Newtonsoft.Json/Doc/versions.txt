@@ -1,4 +1,4 @@
-﻿Versions:
+Versions:
 
 Json.NET comes in different versions for the various .NET frameworks.
 

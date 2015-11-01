@@ -1,4 +1,4 @@
-﻿
+
 class idGenerator {
     public static generateId(idLength = 5) {
         var text = "";

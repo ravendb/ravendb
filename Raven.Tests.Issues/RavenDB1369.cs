@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB1369.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -86,10 +86,9 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore(runInMemory: false, configureStore: documentStore =>
             {
-                documentStore.Configuration.DataDirectory = dataDir;
-                documentStore.Configuration.IndexStoragePath = indexesDir;
-                documentStore.Configuration.Storage.Esent.JournalsStoragePath = jouranlDir;
-				documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
+                documentStore.Configuration.Core.DataDirectory = dataDir;
+                documentStore.Configuration.Core.IndexStoragePath = indexesDir;
+                documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
             }))
             {
                 using (var sesion = store.OpenSession())
@@ -133,14 +132,16 @@ namespace Raven.Tests.Issues
             var ravenConfiguration = new RavenConfiguration
             {
                 DefaultStorageTypeName = storage,
-                DataDirectory = dataDir,
-                IndexStoragePath = indexesDir
+                Core =
+                {
+                    DataDirectory = dataDir,
+                    IndexStoragePath = indexesDir
+                }
             };
 
-			ravenConfiguration.Storage.Esent.JournalsStoragePath = jouranlDir;
-			ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
+            ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
 
-            using (var db = new DocumentDatabase(ravenConfiguration))
+            using (var db = new DocumentDatabase(ravenConfiguration, null))
             {
                 //db.SpinBackgroundWorkers(); -- indexing disabled here
 
@@ -210,7 +211,6 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {Constants.Esent.CircularLog, "false"},
                         {Constants.Voron.AllowIncrementalBackups, "true"}
                     }
                 });
@@ -225,8 +225,8 @@ namespace Raven.Tests.Issues
 
                     store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), true, "DB1");
                     WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
-					
-					Thread.Sleep(1000); // incremental tag has seconds precision
+                    
+                    Thread.Sleep(1000); // incremental tag has seconds precision
                 }
 
                 store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest

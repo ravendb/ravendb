@@ -54,23 +54,23 @@ namespace Raven.Abstractions.Extensions
             stream.Write(buffer, 0, buffer.Length);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    private static void PartialRead(this Stream stream, byte[] buffer, int size)
-	    {
-		    var totalRead = 0;
-			while (totalRead < size)
-		    {
-				var bytesRead = stream.Read(buffer, totalRead, size - totalRead);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void PartialRead(this Stream stream, byte[] buffer, int size)
+        {
+            var totalRead = 0;
+            while (totalRead < size)
+            {
+                var bytesRead = stream.Read(buffer, totalRead, size - totalRead);
                 if (bytesRead == 0)
                     throw new EndOfStreamException();
-			    totalRead += bytesRead;
-		    }
-	    }
+                totalRead += bytesRead;
+            }
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long ReadInt64(this Stream stream)
         {
-	        var buffer = new byte[sizeof(long)];
+            var buffer = new byte[sizeof(long)];
             var bytesRead = stream.Read(buffer, 0, sizeof(long));
             if (bytesRead == 0)
                 throw new EndOfStreamException();
@@ -78,8 +78,8 @@ namespace Raven.Abstractions.Extensions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static ulong ReadUInt64(this Stream stream)
-		{
+        public static ulong ReadUInt64(this Stream stream)
+        {
             var buffer = new byte[sizeof(ulong)];
             var bytesRead = stream.Read(buffer, 0, sizeof(ulong));
             if (bytesRead == 0)
@@ -152,7 +152,7 @@ namespace Raven.Abstractions.Extensions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Etag ReadEtag(this Stream stream)
         {
-	        const int EtagSize = 16;
+            const int EtagSize = 16;
 
             var buffer = new byte[EtagSize]; //etag size is 16 bytes
             var bytesRead = stream.Read(buffer, 0, EtagSize);
@@ -225,7 +225,7 @@ namespace Raven.Abstractions.Extensions
             {
                 var currentOffset = 0;
                 int read;
-                while ((read = await stream.ReadAsync(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
+                while ((read = await stream.ReadAsync(buffer, currentOffset, buffer.Length - currentOffset).ConfigureAwait(false)) != 0)
                 {
                     currentOffset += read;
                     if (currentOffset == buffer.Length)

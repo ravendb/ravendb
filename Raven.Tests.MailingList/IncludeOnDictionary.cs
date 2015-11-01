@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IncludeOnDictionary.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -44,7 +44,7 @@ namespace Raven.Tests.MailingList
         public void UsingValue()
         {
             Expression<Func<Item, object>> expr = item => item.Products.Select(x => x.Value.IdRef);
-			Assert.Equal("Products,IdRef", expr.ToPropertyPath());
+            Assert.Equal("Products,IdRef", expr.ToPropertyPath());
         }
     }
 

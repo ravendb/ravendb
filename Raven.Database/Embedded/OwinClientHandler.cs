@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
+// Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
 using System;
 using System.Collections.Generic;
@@ -21,14 +21,14 @@ namespace Raven.Database.Embedded
     {
         private readonly Func<IDictionary<string, object>, Task> _next;
 
-		private readonly bool _enableLogging;
+        private readonly bool _enableLogging;
 
-	    /// <summary>
-	    /// Create a new handler.
-	    /// </summary>
-	    /// <param name="next">The OWIN pipeline entry point.</param>
-	    /// <param name="enableLogging"></param>
-	    public OwinClientHandler(Func<IDictionary<string, object>, Task> next, bool enableLogging)
+        /// <summary>
+        /// Create a new handler.
+        /// </summary>
+        /// <param name="next">The OWIN pipeline entry point.</param>
+        /// <param name="enableLogging"></param>
+        public OwinClientHandler(Func<IDictionary<string, object>, Task> next, bool enableLogging)
         {
             if (next == null)
             {
@@ -36,7 +36,7 @@ namespace Raven.Database.Embedded
             }
 
             _next = next;
-		    _enableLogging = enableLogging;
+            _enableLogging = enableLogging;
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace Raven.Database.Embedded
                 throw new ArgumentNullException("request");
             }
 
-			var state = new RequestState(request, cancellationToken, _enableLogging && request.Headers.AcceptEncoding.Any(x => x.Value == "gzip") == false);
+            var state = new RequestState(request, cancellationToken, _enableLogging && request.Headers.AcceptEncoding.Any(x => x.Value == "gzip") == false);
             HttpContent requestContent = request.Content ?? new StreamContent(Stream.Null);
             Stream body = await requestContent.ReadAsStreamAsync().ConfigureAwait(false);
             if (body.CanSeek)
@@ -71,7 +71,7 @@ namespace Raven.Database.Embedded
             {
                 try
                 {
-                    await _next(state.Environment);
+                    await _next(state.Environment).ConfigureAwait(false);
                     state.CompleteResponse();
                 }
                 catch (Exception ex)
@@ -94,7 +94,7 @@ namespace Raven.Database.Embedded
             private Action _sendingHeaders;
             private TaskCompletionSource<HttpResponseMessage> _responseTcs;
             private ResponseStream _responseStream;
-			private volatile bool _responseCompletionTaskRunning;
+            private volatile bool _responseCompletionTaskRunning;
 
             internal RequestState(HttpRequestMessage request, CancellationToken cancellationToken, bool enableLogging)
             {
@@ -144,7 +144,7 @@ namespace Raven.Database.Embedded
                     }
                 }
 
-				_responseStream = new ResponseStream(CompleteResponse, enableLogging);
+                _responseStream = new ResponseStream(CompleteResponse, enableLogging);
                 OwinContext.Response.Body = _responseStream;
                 OwinContext.Response.StatusCode = 500;
             }
@@ -163,22 +163,22 @@ namespace Raven.Database.Embedded
 
             internal void CompleteResponse()
             {
-				lock (this)
-				{
-					if (_responseCompletionTaskRunning)
-						return;
+                lock (this)
+                {
+                    if (_responseCompletionTaskRunning)
+                        return;
 
-					if (_responseTcs.Task.IsCompleted)
-						return;
+                    if (_responseTcs.Task.IsCompleted)
+                        return;
 
-					HttpResponseMessage response = GenerateResponse();
+                    HttpResponseMessage response = GenerateResponse();
 
-					// Dispatch, as TrySetResult will synchronously execute the waiters callback and block our Write.
-					_responseCompletionTaskRunning = true;
-					Task.Factory
-						.StartNew(() => _responseTcs.TrySetResult(response))
-						.ContinueWith(t => _responseCompletionTaskRunning = false);
-				}
+                    // Dispatch, as TrySetResult will synchronously execute the waiters callback and block our Write.
+                    _responseCompletionTaskRunning = true;
+                    Task.Factory
+                        .StartNew(() => _responseTcs.TrySetResult(response))
+                        .ContinueWith(t => _responseCompletionTaskRunning = false);
+                }
             }
 
             internal HttpResponseMessage GenerateResponse()

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TertiaryOperator.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,7 +20,7 @@ namespace Raven.Tests.MailingList
            using (var store = NewDocumentStore())
            {
                store.ExecuteIndex(new BadIndex());
-			   store.ExecuteTransformer(new BadTransformer());
+               store.ExecuteTransformer(new BadTransformer());
            }
         }
 
@@ -30,7 +30,7 @@ namespace Raven.Tests.MailingList
             using (var store = NewDocumentStore())
             {
                 store.ExecuteIndex(new GoodIndex());
-				store.ExecuteTransformer(new GoodTransformer());
+                store.ExecuteTransformer(new GoodTransformer());
             }
         }
 
@@ -48,18 +48,18 @@ namespace Raven.Tests.MailingList
             }
         }
 
-		public class BadTransformer : AbstractTransformerCreationTask<Widget>
-		{
-			public BadTransformer()
-			{
-				TransformResults = widgets => from widget in widgets
-													let container = LoadDocument<Container>(widget.ContainerId)
-													select new
-													{
-														ContainedWidgetIds = container.ContainedWidgetIds[widget.Category] ?? new List<string>()
-													};
-			}
-		}
+        public class BadTransformer : AbstractTransformerCreationTask<Widget>
+        {
+            public BadTransformer()
+            {
+                TransformResults = widgets => from widget in widgets
+                                                    let container = LoadDocument<Container>(widget.ContainerId)
+                                                    select new
+                                                    {
+                                                        ContainedWidgetIds = container.ContainedWidgetIds[widget.Category] ?? new List<string>()
+                                                    };
+            }
+        }
 
         public class Container
         {
@@ -81,19 +81,19 @@ namespace Raven.Tests.MailingList
             }
         }
 
-		public class GoodTransformer : AbstractTransformerCreationTask<Widget>
-		{
-			public GoodTransformer()
-			{
-				TransformResults = widgets => from widget in widgets
-													let container = LoadDocument<Container>(widget.ContainerId)
-													select new
-													{
-														ContainedWidgetIds =
-														container.ContainedWidgetIds[widget.Category]
-													};
-			}
-		}
+        public class GoodTransformer : AbstractTransformerCreationTask<Widget>
+        {
+            public GoodTransformer()
+            {
+                TransformResults = widgets => from widget in widgets
+                                                    let container = LoadDocument<Container>(widget.ContainerId)
+                                                    select new
+                                                    {
+                                                        ContainedWidgetIds =
+                                                        container.ContainedWidgetIds[widget.Category]
+                                                    };
+            }
+        }
 
         public class Widget
         {

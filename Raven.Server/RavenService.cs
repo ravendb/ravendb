@@ -13,132 +13,132 @@ using Raven.Database.Config;
 
 namespace Raven.Server
 {
-	internal partial class RavenService : ServiceBase
-	{
-		private const int SERVICE_ACCEPT_PRESHUTDOWN = 0x100;
-		private const int SERVICE_CONTROL_PRESHUTDOWN = 0xf;
+    internal partial class RavenService : ServiceBase
+    {
+        private const int SERVICE_ACCEPT_PRESHUTDOWN = 0x100;
+        private const int SERVICE_CONTROL_PRESHUTDOWN = 0xf;
 
-		private RavenDbServer server;
-		private Task startTask;
+        private RavenDbServer server;
+        private Task startTask;
 
-		public RavenService()
-		{
-			InitializeComponent();
-			AcceptPreShutdown();
-		}
+        public RavenService()
+        {
+            InitializeComponent();
+            AcceptPreShutdown();
+        }
 
-		protected override void OnStart(string[] args)
-		{
-			startTask = Task.Factory.StartNew(() =>
-			{
-				try
-				{
-					LogManager.EnsureValidLogger();
+        protected override void OnStart(string[] args)
+        {
+            startTask = Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    LogManager.EnsureValidLogger();
                     server = new RavenDbServer(new RavenConfiguration()) { UseEmbeddedHttpServer = true }.Initialize();
-				}
-				catch (Exception e)
-				{
-					EventLog.WriteEntry("RavenDB service failed to start because of an error" + Environment.NewLine + e, EventLogEntryType.Error);
-					Task.Factory.StartNew(Stop);
-				}
-			});
+                }
+                catch (Exception e)
+                {
+                    EventLog.WriteEntry("RavenDB service failed to start because of an error" + Environment.NewLine + e, EventLogEntryType.Error);
+                    Task.Factory.StartNew(Stop);
+                }
+            });
 
-			if (startTask.Wait(TimeSpan.FromSeconds(20)) == false)
-			{
-				EventLog.WriteEntry(
-					"Startup for RavenDB service seems to be taking longer than usual, moving initialization to a background thread",
-					EventLogEntryType.Warning);
-			}
-		}
+            if (startTask.Wait(TimeSpan.FromSeconds(20)) == false)
+            {
+                EventLog.WriteEntry(
+                    "Startup for RavenDB service seems to be taking longer than usual, moving initialization to a background thread",
+                    EventLogEntryType.Warning);
+            }
+        }
 
-		protected override void OnStop()
-		{
-			var shutdownTask = startTask.ContinueWith(task =>
-			{
-				if (server != null)
-				{
-					try
-					{
-						server.Dispose();
-					}
-					catch (Exception e)
-					{
-						var message =
-							string.Format(
-								"Unhandled exception was thrown during stopping RavenDB service. Ignoring it to properly stop the service. Exception: {0}",
-								e.ToString());
+        protected override void OnStop()
+        {
+            var shutdownTask = startTask.ContinueWith(task =>
+            {
+                if (server != null)
+                {
+                    try
+                    {
+                        server.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        var message =
+                            string.Format(
+                                "Unhandled exception was thrown during stopping RavenDB service. Ignoring it to properly stop the service. Exception: {0}",
+                                e.ToString());
 
-						LogManager.GetCurrentClassLogger().Error(message);
+                        LogManager.GetCurrentClassLogger().Error(message);
 
-						EventLog.WriteEntry(
-							message,
-							EventLogEntryType.Error);
-					}
-				}
-				return task;
-			});
+                        EventLog.WriteEntry(
+                            message,
+                            EventLogEntryType.Error);
+                    }
+                }
+                return task;
+            });
 
-			var keepAliveTask = Task.Factory.StartNew(() =>
-			{
-				if (shutdownTask.Wait(9000))
-					return;
-				do
-				{
-					RequestAdditionalTime(10000);
-				} while (!shutdownTask.Wait(9000));
-			});
+            var keepAliveTask = Task.Factory.StartNew(() =>
+            {
+                if (shutdownTask.Wait(9000))
+                    return;
+                do
+                {
+                    RequestAdditionalTime(10000);
+                } while (!shutdownTask.Wait(9000));
+            });
 
-			Task.WaitAll(shutdownTask, keepAliveTask);
-		}
+            Task.WaitAll(shutdownTask, keepAliveTask);
+        }
 
-		protected override void OnShutdown()
-		{
-			var shutdownTask = startTask.ContinueWith(task =>
-			{
-				if (server != null)
-				{
-					try
-					{
-						server.Dispose();
-					}
-					catch (Exception e)
-					{
-						var message =
-							string.Format(
-								"Unhandled exception was thrown during shutting down RavenDB service. Ignoring it to properly shutdown the service. Exception: {0}",
-								e.ToString());
+        protected override void OnShutdown()
+        {
+            var shutdownTask = startTask.ContinueWith(task =>
+            {
+                if (server != null)
+                {
+                    try
+                    {
+                        server.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        var message =
+                            string.Format(
+                                "Unhandled exception was thrown during shutting down RavenDB service. Ignoring it to properly shutdown the service. Exception: {0}",
+                                e.ToString());
 
-						LogManager.GetCurrentClassLogger().Error(message);
+                        LogManager.GetCurrentClassLogger().Error(message);
 
-						EventLog.WriteEntry(message, EventLogEntryType.Error);
-					}
-				}
-				return task;
-			});
-			Task.WaitAll(shutdownTask);
-		}
+                        EventLog.WriteEntry(message, EventLogEntryType.Error);
+                    }
+                }
+                return task;
+            });
+            Task.WaitAll(shutdownTask);
+        }
 
-		protected override void OnCustomCommand(int command)
-		{
-			base.OnCustomCommand(command);
+        protected override void OnCustomCommand(int command)
+        {
+            base.OnCustomCommand(command);
 
-			if (command != SERVICE_CONTROL_PRESHUTDOWN) return;
+            if (command != SERVICE_CONTROL_PRESHUTDOWN) return;
 
-			Stop();
-		}
+            Stop();
+        }
 
-		private void AcceptPreShutdown()
-		{
-			if (Environment.OSVersion.Version.Major == 5)
-				return; // XP & 2003 does not support this.
+        private void AcceptPreShutdown()
+        {
+            if (Environment.OSVersion.Version.Major == 5)
+                return; // XP & 2003 does not support this.
 
-			// http://www.sivachandran.in/2012/03/handling-pre-shutdown-notification-in-c.html
-			FieldInfo acceptedCommandsFieldInfo = typeof (ServiceBase).GetField("acceptedCommands", BindingFlags.Instance | BindingFlags.NonPublic);
-			if (acceptedCommandsFieldInfo == null)
-				return;
+            // http://www.sivachandran.in/2012/03/handling-pre-shutdown-notification-in-c.html
+            FieldInfo acceptedCommandsFieldInfo = typeof (ServiceBase).GetField("acceptedCommands", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (acceptedCommandsFieldInfo == null)
+                return;
 
-			var value = (int) acceptedCommandsFieldInfo.GetValue(this);
-			acceptedCommandsFieldInfo.SetValue(this, value | SERVICE_ACCEPT_PRESHUTDOWN);
-		}
-	}
+            var value = (int) acceptedCommandsFieldInfo.GetValue(this);
+            acceptedCommandsFieldInfo.SetValue(this, value | SERVICE_ACCEPT_PRESHUTDOWN);
+        }
+    }
 }

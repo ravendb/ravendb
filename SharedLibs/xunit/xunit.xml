@@ -2477,7 +2477,7 @@
             </summary>
             <param name="type">The type.</param>
             <returns>
-            	<c>true</c> if the specified type is abstract; otherwise, <c>false</c>.
+                <c>true</c> if the specified type is abstract; otherwise, <c>false</c>.
             </returns>
         </member>
         <member name="M:Xunit.Sdk.TypeUtility.IsStatic(Xunit.Sdk.ITypeInfo)">
@@ -2486,7 +2486,7 @@
             </summary>
             <param name="type">The type.</param>
             <returns>
-            	<c>true</c> if the specified type is static; otherwise, <c>false</c>.
+                <c>true</c> if the specified type is static; otherwise, <c>false</c>.
             </returns>
         </member>
         <member name="M:Xunit.Sdk.TypeUtility.IsTestClass(Xunit.Sdk.ITypeInfo)">

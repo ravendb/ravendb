@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;

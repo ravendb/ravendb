@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SynchronizationWithOAuth.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,42 +19,42 @@ namespace Raven.Tests.FileSystem.Auth
 {
     public class SynchronizationWithOAuth : RavenFilesTestWithLogs
     {
-		private const string Name = "test";
-		private const string Secret = "ThisIsMySecret";
-		private const string ApiKey = Name + "/" + Secret;
+        private const string Name = "test";
+        private const string Secret = "ThisIsMySecret";
+        private const string ApiKey = Name + "/" + Secret;
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
-            if (server.SystemDatabase.Configuration.Port == Ports[1]) // setup only for destination
+            if (server.SystemDatabase.Configuration.Core.Port == Ports[1]) // setup only for destination
             {
                 server.SystemDatabase.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
                 {
-					Name = Name,
-					Secret = Secret,
+                    Name = Name,
+                    Secret = Secret,
                     Enabled = true,
                     Databases = new List<ResourceAccess>
                     {
                         new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system
-						new ResourceAccess {TenantId = fileSystemName}
+                        new ResourceAccess {TenantId = fileSystemName}
                     }
-                }), new RavenJObject(), null);
+                }), new RavenJObject());
             }
         }
 
         [Fact]
         public async Task CanSynchronizeFileContent()
         {
-			var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
-		    var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: ApiKey);
+            var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
+            var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: ApiKey);
 
-		    var ms = new MemoryStream(new byte[] {3, 2, 1});
+            var ms = new MemoryStream(new byte[] {3, 2, 1});
 
-		    await sourceClient.UploadAsync("ms.bin", ms);
+            await sourceClient.UploadAsync("ms.bin", ms);
 
-		    var result = await sourceClient.Synchronization.StartAsync("ms.bin", destination);
+            var result = await sourceClient.Synchronization.StartAsync("ms.bin", destination);
 
-		    Assert.Null(result.Exception);
-		    Assert.Equal(SynchronizationType.ContentUpdate, result.Type);
+            Assert.Null(result.Exception);
+            Assert.Equal(SynchronizationType.ContentUpdate, result.Type);
         }
 
         [Fact]
@@ -109,21 +109,21 @@ namespace Raven.Tests.FileSystem.Auth
         [Fact]
         public async Task CanSynchronizeFileDelete()
         {
-			var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
-		    var destination = NewAsyncClient(2);
+            var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
+            var destination = NewAsyncClient(2);
 
-		    await sourceClient.UploadAsync("test.bin", new RandomStream(1));
+            await sourceClient.UploadAsync("test.bin", new RandomStream(1));
 
-		    var report = await sourceClient.Synchronization.StartAsync("test.bin", destination);
+            var report = await sourceClient.Synchronization.StartAsync("test.bin", destination);
 
-		    Assert.Null(report.Exception);
+            Assert.Null(report.Exception);
 
-		    await sourceClient.DeleteAsync("test.bin");
+            await sourceClient.DeleteAsync("test.bin");
 
-		    var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destination);
+            var synchronizationReport = await sourceClient.Synchronization.StartAsync("test.bin", destination);
 
-		    Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
-		    Assert.Null(synchronizationReport.Exception);
+            Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
+            Assert.Null(synchronizationReport.Exception);
         }
     }
 }

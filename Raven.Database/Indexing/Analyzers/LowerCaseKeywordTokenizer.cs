@@ -8,56 +8,56 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Database.Indexing
 {
-	public class LowerCaseKeywordTokenizer : Tokenizer
-	{
+    public class LowerCaseKeywordTokenizer : Tokenizer
+    {
         private static readonly bool isAsciiCasingSameAsInvariant = CultureInfo.InvariantCulture.CompareInfo.Compare("abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", CompareOptions.IgnoreCase) == 0;
         private static readonly TextInfo invariantTextInfo = CultureInfo.InvariantCulture.TextInfo;   
 
-		public LowerCaseKeywordTokenizer(System.IO.TextReader input)
-			: base(input)
-		{
+        public LowerCaseKeywordTokenizer(System.IO.TextReader input)
+            : base(input)
+        {
             offsetAtt = AddAttribute<IOffsetAttribute>();
             termAtt = AddAttribute<ITermAttribute>();            
-		}
+        }
 
-		protected LowerCaseKeywordTokenizer(AttributeSource source, System.IO.TextReader input)
-			: base(source, input)
-		{
+        protected LowerCaseKeywordTokenizer(AttributeSource source, System.IO.TextReader input)
+            : base(source, input)
+        {
             offsetAtt = AddAttribute<IOffsetAttribute>();
             termAtt = AddAttribute<ITermAttribute>();
-		}
+        }
 
-		protected LowerCaseKeywordTokenizer(AttributeFactory factory, System.IO.TextReader input)
-			: base(factory, input)
-		{
+        protected LowerCaseKeywordTokenizer(AttributeFactory factory, System.IO.TextReader input)
+            : base(factory, input)
+        {
             offsetAtt = AddAttribute<IOffsetAttribute>();
             termAtt = AddAttribute<ITermAttribute>();
-		}
+        }
 
-		private int offset = 0, bufferIndex = 0, dataLen = 0;
+        private int offset = 0, bufferIndex = 0, dataLen = 0;
 
-		private const int IO_BUFFER_SIZE = 4096;
+        private const int IO_BUFFER_SIZE = 4096;
         private static ObjectPool<char[]> bufferPool = new ObjectPool<char[]>(() => new char[IO_BUFFER_SIZE], 10);
 
         private readonly ITermAttribute termAtt;
         private readonly IOffsetAttribute offsetAtt;
 
-		/// <summary>Returns true iff a character should be included in a token.  This
-		/// tokenizer generates as tokens adjacent sequences of characters which
-		/// satisfy this predicate.  Characters for which this is false are used to
-		/// define token boundaries and are not included in tokens. 
-		/// </summary>
-		protected virtual internal bool IsTokenChar(char c)
-		{
-			return true;
-		}
+        /// <summary>Returns true iff a character should be included in a token.  This
+        /// tokenizer generates as tokens adjacent sequences of characters which
+        /// satisfy this predicate.  Characters for which this is false are used to
+        /// define token boundaries and are not included in tokens. 
+        /// </summary>
+        protected virtual internal bool IsTokenChar(char c)
+        {
+            return true;
+        }
 
-		/// <summary>Called on each token character to normalize it before it is added to the
-		/// token.  The default implementation does nothing. Subclasses may use this
-		/// to, e.g., lowercase tokens. 
-		/// </summary>
-		protected internal virtual char Normalize(char c)
-		{
+        /// <summary>Called on each token character to normalize it before it is added to the
+        /// token.  The default implementation does nothing. Subclasses may use this
+        /// to, e.g., lowercase tokens. 
+        /// </summary>
+        protected internal virtual char Normalize(char c)
+        {
             int cInt = (int)c;
 
             if (c < 128 && isAsciiCasingSameAsInvariant)
@@ -71,14 +71,14 @@ namespace Raven.Database.Indexing
             {
                 return invariantTextInfo.ToLower(c);
             }                
-		}        
+        }        
 
-		public override bool IncrementToken()
-		{
-			ClearAttributes();
+        public override bool IncrementToken()
+        {
+            ClearAttributes();
 
-			int length = 0;
-			int start = bufferIndex;
+            int length = 0;
+            int start = bufferIndex;
 
             char[] ioBuffer = bufferPool.Allocate();
             try
@@ -128,22 +128,22 @@ namespace Raven.Database.Indexing
                     bufferPool.Free(ioBuffer);
             }           
 
-			return true;
-		}
+            return true;
+        }
 
-		public override void End()
-		{
-			// set final offset
-			int finalOffset = CorrectOffset(offset);
-			offsetAtt.SetOffset(finalOffset, finalOffset);
-		}
+        public override void End()
+        {
+            // set final offset
+            int finalOffset = CorrectOffset(offset);
+            offsetAtt.SetOffset(finalOffset, finalOffset);
+        }
 
-		public override void Reset(System.IO.TextReader input)
-		{
-			base.Reset(input);
-			bufferIndex = 0;
-			offset = 0;
-			dataLen = 0;
-		}
-	}
+        public override void Reset(System.IO.TextReader input)
+        {
+            base.Reset(input);
+            bufferIndex = 0;
+            offset = 0;
+            dataLen = 0;
+        }
+    }
 }

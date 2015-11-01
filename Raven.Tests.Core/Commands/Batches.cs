@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Commands;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
@@ -22,31 +22,31 @@ namespace Raven.Tests.Core.Commands
                 }
 
                 await store.AsyncDatabaseCommands.BatchAsync(new ICommandData[]
-				{
-					new PutCommandData
-					{
-						Document = new RavenJObject {{"Name", "James"}},
-						Metadata = new RavenJObject(),
-						Key = "users/3"
-					},
-					new PatchCommandData()
-					{
-						Key = "users/1",
-						Patches = new[]
-						{
-							new PatchRequest
-							{
-								Name = "Name",
-								Type = PatchCommandType.Set,
-								Value = "Nhoj"
-							}
-						}
-					},
-					new DeleteCommandData()
-					{
-						Key = "users/2"
-					},
-				});
+                {
+                    new PutCommandData
+                    {
+                        Document = new RavenJObject {{"Name", "James"}},
+                        Metadata = new RavenJObject(),
+                        Key = "users/3"
+                    },
+                    new PatchCommandData()
+                    {
+                        Key = "users/1",
+                        Patches = new[]
+                        {
+                            new PatchRequest
+                            {
+                                Name = "Name",
+                                Type = PatchCommandType.Set,
+                                Value = "Nhoj"
+                            }
+                        }
+                    },
+                    new DeleteCommandData()
+                    {
+                        Key = "users/2"
+                    },
+                });
 
 
                 var multiLoadResult = await store.AsyncDatabaseCommands.GetAsync(new[] { "users/1", "users/2", "users/3" }, null);

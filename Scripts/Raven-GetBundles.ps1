@@ -1,4 +1,4 @@
-﻿param([string[]]$bundles)
+param([string[]]$bundles)
 
 $appConfigFileName = "Raven.Server.exe.config"
 $webConfigFileName = "web.config"

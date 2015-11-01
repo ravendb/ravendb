@@ -1,4 +1,4 @@
-﻿/// <reference path="ace.d.ts" />
+/// <reference path="ace.d.ts" />
 
 declare module 'ace/ext/language_tools' {
     

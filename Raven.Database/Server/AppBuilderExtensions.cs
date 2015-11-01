@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,9 +12,13 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using Microsoft.Owin;
+using Rachis;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Raven.Database.DiskIO;
+using Raven.Database.Raft;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -26,190 +30,192 @@ using Raven.Database.Server.WebApi.Filters;
 using Raven.Database.Server.WebApi.Handlers;
 
 // ReSharper disable once CheckNamespace
+using Raven.Abstractions.Logging;
 namespace Owin
 {
-	public static class AppBuilderExtensions
-	{
-		private const string HostOnAppDisposing = "host.OnAppDisposing";
+    public static class AppBuilderExtensions
+    {
+        private const string HostOnAppDisposing = "host.OnAppDisposing";
 
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app)
-		{
-			return UseRavenDB(app, new RavenConfiguration());
-		}
+        public static IAppBuilder UseRavenDB(this IAppBuilder app)
+        {
+            return UseRavenDB(app, new RavenConfiguration());
+        }
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)
-		{
-			return UseRavenDB(app, new RavenDBOptions(configuration));
-		}
+        public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)
+        {
+            return UseRavenDB(app, new RavenDBOptions(configuration));
+        }
 
-		private static IAppBuilder UseInterceptor(this IAppBuilder app)
-		{
-			return app.Use(typeof(InterceptMiddleware));
-		}
+        private static IAppBuilder UseInterceptor(this IAppBuilder app)
+        {
+            return app.Use(typeof(InterceptMiddleware));
+        }
 
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOptions options)
-		{
-			if (options == null)
-			{
-				throw new ArgumentNullException("options");
-			}
+        public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOptions options)
+        {
+            if (options == null)
+            {
+                throw new ArgumentNullException("options");
+            }
 
-			if (app.Properties.ContainsKey(HostOnAppDisposing))
-			{
-				// This is a katana specific key (i.e. not a standard OWIN key) to be notified
-				// when the host in being shut down. Works both in HttpListener and SystemWeb hosting
-				// Until owin spec is officially updated, there is no other way to know the host
-				// is shutting down / disposing
-				var appDisposing = app.Properties[HostOnAppDisposing] as CancellationToken?;
-				if (appDisposing.HasValue)
-				{
-					appDisposing.Value.Register(options.Dispose);
-				}
-			}
+            if (app.Properties.ContainsKey(HostOnAppDisposing))
+            {
+                // This is a katana specific key (i.e. not a standard OWIN key) to be notified
+                // when the host in being shut down. Works both in HttpListener and SystemWeb hosting
+                // Until owin spec is officially updated, there is no other way to know the host
+                // is shutting down / disposing
+                var appDisposing = app.Properties[HostOnAppDisposing] as CancellationToken?;
+                if (appDisposing.HasValue)
+                {
+                    appDisposing.Value.Register(options.Dispose);
+                }
+            }
 
-			AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
+            AssemblyExtractor.ExtractEmbeddedAssemblies(options.SystemDatabase.Configuration);
 
 #if DEBUG
-			app.UseInterceptor();
+            app.UseInterceptor();
 #endif
 
-			app.Use((context, func) => UpgradeToWebSockets(options, context, func));
+            app.Use((context, func) => UpgradeToWebSockets(options, context, func));
 
-			app.UseWebApi(CreateHttpCfg(options));
+            app.Use<CustomExceptionMiddleware>().UseWebApi(CreateHttpCfg(options));
 
 
-			return app;
-		}
+            return app;
+        }
 
-		private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
-		{
-			var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
-			if (accept == null)
-			{
-				// Not a websocket request
-				await next();
-				return;
-			}
+        private static async Task UpgradeToWebSockets(RavenDBOptions options, IOwinContext context, Func<Task> next)
+        {
+            var accept = context.Get<Action<IDictionary<string, object>, Func<IDictionary<string, object>, Task>>>("websocket.Accept");
+            if (accept == null)
+            {
+                // Not a websocket request
+                await next().ConfigureAwait(false);
+                return;
+            }
 
-			WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
+            WebSocketsTransport webSocketsTrasport = WebSocketTransportFactory.CreateWebSocketTransport(options, context);
 
-			if (webSocketsTrasport != null)
-			{
-				if (await webSocketsTrasport.TrySetupRequest())
-				{
-					accept(new Dictionary<string, object>()
-					{
-						{"websocket.ReceiveBufferSize", 256},
-						{"websocket.Buffer", webSocketsTrasport.PreAllocatedBuffer},
-						{"websocket.KeepAliveInterval", WebSocket.DefaultKeepAliveInterval}
-					}, webSocketsTrasport.Run);
-				}
-			}
-		}
+            if (webSocketsTrasport != null)
+            {
+                if (await webSocketsTrasport.TrySetupRequest().ConfigureAwait(false))
+                {
+                    accept(new Dictionary<string, object>()
+                    {
+                        {"websocket.ReceiveBufferSize", 256},
+                        {"websocket.Buffer", webSocketsTrasport.PreAllocatedBuffer},
+                        {"websocket.KeepAliveInterval", WebSocket.DefaultKeepAliveInterval}
+                    }, webSocketsTrasport.Run);
+            }
+        }
+        }
 
-		private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
-		{
-			var cfg = new HttpConfiguration();
+        private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
+        {
+            var cfg = new HttpConfiguration();
 
-			cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
-			cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
-			cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
-			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
-			cfg.Properties[typeof(RequestManager)] = options.RequestManager;
-			cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
-            cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
-			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
-			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
-			cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());
-			cfg.Filters.Add(new RavenExceptionFilterAttribute());
+            cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
+            cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
+            cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
+            cfg.Properties[typeof(TimeSeriesLandlord)] = options.TimeSeriesLandlord;
+            cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
+            cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+            cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
+            cfg.Properties[InMemoryRavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)] = new SemaphoreSlim(options.SystemDatabase.Configuration.Server.MaxConcurrentRequestsForDatabaseDuringLoad);
+            cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
+            cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
+            cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());
+            cfg.Filters.Add(new RavenExceptionFilterAttribute());
 
-			cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.MaxConcurrentServerRequests));
-			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
+            cfg.MessageHandlers.Add(new ThrottlingHandler(options.SystemDatabase.Configuration.Server.MaxConcurrentRequests));
+            cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
-			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+            cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 
-			if (RouteCacher.TryAddRoutesFromCache(cfg) == false)
-				AddRoutes(cfg);
+            if (RouteCacher.TryAddRoutesFromCache(cfg) == false)
+                AddRoutes(cfg);
 
-			cfg.EnsureInitialized();
+            cfg.EnsureInitialized();
 
-			RouteCacher.CacheRoutesIfNecessary(cfg);
+            RouteCacher.CacheRoutesIfNecessary(cfg);
 
-			return cfg;
-		}
+            return cfg;
+        }
 
-		private static void AddRoutes(HttpConfiguration cfg)
-		{
-			cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
+        private static void AddRoutes(HttpConfiguration cfg)
+        {
+            cfg.MapHttpAttributeRoutes(new RavenInlineConstraintResolver());
 
-			cfg.Routes.MapHttpRoute(
-				"RavenFs", "fs/{controller}/{action}",
-				new { id = RouteParameter.Optional });
+            cfg.Routes.MapHttpRoute(
+                "RavenFs", "fs/{controller}/{action}",
+                new { id = RouteParameter.Optional });
 
-			cfg.Routes.MapHttpRoute(
-				"API Default", "{controller}/{action}",
-				new { id = RouteParameter.Optional });
+            cfg.Routes.MapHttpRoute(
+                "API Default", "{controller}/{action}",
+                new { id = RouteParameter.Optional });
 
-			cfg.Routes.MapHttpRoute(
-				"Database Route", "databases/{databaseName}/{controller}/{action}",
-				new { id = RouteParameter.Optional });
-		}
+            cfg.Routes.MapHttpRoute(
+                "Database Route", "databases/{databaseName}/{controller}/{action}",
+                new { id = RouteParameter.Optional });
+        }
 
-		private class RavenAssemblyResolver : IAssembliesResolver
-		{
-			public ICollection<Assembly> GetAssemblies()
-			{
-				return AppDomain.CurrentDomain.GetAssemblies()
+        private class RavenAssemblyResolver : IAssembliesResolver
+        {
+            public ICollection<Assembly> GetAssemblies()
+            {
+                return AppDomain.CurrentDomain.GetAssemblies()
                     .Where(IsRavenAssembly)
-					.ToArray();
-			}
+                    .ToArray();
+            }
 
-		    private static bool IsRavenAssembly(Assembly assembly)
-		    {
-		        if (assembly.IsDynamic)
-		            return false;
+            private static bool IsRavenAssembly(Assembly assembly)
+            {
+                if (assembly.IsDynamic)
+                    return false;
 
-			    try
-			    {
-				    return assembly.ExportedTypes.Any(t => t.IsSubclassOf(typeof (RavenBaseApiController)));
-			    }
-			    catch (FileLoadException)
-			    {
-					// if we can't figure out, this proably isn't it
-				    return false;
-			    }
-		        catch (FileNotFoundException)
-		        {
+                try
+                {
+                    return assembly.ExportedTypes.Any(t => t.IsSubclassOf(typeof (RavenBaseApiController)));
+                }
+                catch (FileLoadException)
+                {
+                    // if we can't figure out, this proably isn't it
+                    return false;
+                }
+                catch (FileNotFoundException)
+                {
                     //ExportedTypes will throw a FileNotFoundException if the assembly references another assembly which cannot be loaded/found
-		            return false;
-		        }
-		    }
-		}
+                    return false;
+                }
+            }
+        }
 
-		public class SelectiveBufferPolicySelector : IHostBufferPolicySelector
-		{
-			public bool UseBufferedInputStream(object hostContext)
-			{
-				var context = hostContext as IOwinContext;
+        public class SelectiveBufferPolicySelector : IHostBufferPolicySelector
+        {
+            public bool UseBufferedInputStream(object hostContext)
+            {
+                var context = hostContext as IOwinContext;
 
                 if (context != null)
-				{
+                {
                     var pathString = context.Request.Path;
-				    if (pathString.HasValue)
-				    {
+                    if (pathString.HasValue)
+                    {
                         var localPath = pathString.Value;
-				        var length = localPath.Length;
-				        if (length < 10)
-				            return true;
-				        var prev = localPath[length - 2];
-				        switch (localPath[length-1])
-				        {
-				            case 't':
+                        var length = localPath.Length;
+                        if (length < 10)
+                            return true;
+                        var prev = localPath[length - 2];
+                        switch (localPath[length-1])
+                        {
+                            case 't':
                             case 'T':
-				                switch (prev)
-				                {
+                                switch (prev)
+                                {
                                     case 'R':
                                     case 'r':
                                         return (
@@ -217,76 +223,104 @@ namespace Owin
                                             localPath.EndsWith("studio-tasks/import", StringComparison.OrdinalIgnoreCase)
                                             ) == false;
                                     default:
-				                        return true;
-				                        
-				                }
+                                        return true;
+                                        
+                                }
                             case 'e':
                             case 'E':
-				                switch (prev)
-				                {
+                                switch (prev)
+                                {
                                     case 'l':
                                     case 'L':
                                         return localPath.EndsWith("studio-tasks/loadCsvFile", StringComparison.OrdinalIgnoreCase) == false;
                                     default:
-				                        return true;
-				                }    
+                                        return true;
+                                }    
                             case 's':
                             case 'S':
-				                switch (prev)
-				                {
-                                    case 'T':
-                                    case 't':
-                                        return localPath.EndsWith("replication/replicateAttachments", StringComparison.OrdinalIgnoreCase) == false;
+                                switch (prev)
+                                {
                                     case 'o':
                                     case 'O':
                                         if (localPath[length - 4] == '/')
-				                        return true;
-				                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
+                                        return true;
+                                        return localPath.EndsWith("replication/replicateDocs", StringComparison.OrdinalIgnoreCase) == false;
                                     default:
-				                        return true;
-				                }
+                                        return true;
+                                }
                             default:
-				                return true;
-				        }
-				    }
-				}
+                                return true;
+                        }
+                    }
+                }
 
-				return true;
-			}
+                return true;
+            }
 
-			public bool UseBufferedOutputStream(HttpResponseMessage response)
-			{
-				var content = response.Content;
-				var compressedContent = content as GZipToJsonAndCompressHandler.CompressedContent;
-				if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
-					return ShouldBuffer(compressedContent.OriginalContent);
-				return ShouldBuffer(content);
-			}
+            public bool UseBufferedOutputStream(HttpResponseMessage response)
+            {
+                var content = response.Content;
+                var compressedContent = content as CompressedContent;
+                if (compressedContent != null && response.StatusCode != HttpStatusCode.NoContent)
+                    return ShouldBuffer(compressedContent.OriginalContent);
+                return ShouldBuffer(content);
+            }
 
-			private bool ShouldBuffer(HttpContent content)
-			{
-				return (content is IEventsTransport ||
-						content is StreamsController.StreamQueryContent ||
-						content is StreamContent ||
-						content is PushStreamContent ||
-						content is JsonContent ||
-						content is MultiGetController.MultiGetContent) == false;
-			}
-		}
+            private bool ShouldBuffer(HttpContent content)
+            {
+                return (content is IEventsTransport ||
+                        content is StreamsController.StreamQueryContent ||
+                        content is StreamContent ||
+                        content is PushStreamContent ||
+                        content is JsonContent ||
+                        content is MultiGetController.MultiGetContent) == false;
+            }
+        }
 
-		private class InterceptMiddleware : OwinMiddleware
-		{
-			public InterceptMiddleware(OwinMiddleware next)
-				: base(next)
-			{
-			}
+        private class InterceptMiddleware : OwinMiddleware
+        {
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-			public override async Task Invoke(IOwinContext context)
-			{
-				// Pre request stuff
-				await Next.Invoke(context);
-				// Post request stuff
-			}
-		}
-	}
+            public InterceptMiddleware(OwinMiddleware next)
+                : base(next)
+            {
+            }
+
+            public override async Task Invoke(IOwinContext context)
+            {
+                // Pre request stuff
+                try
+                {
+                    await Next.Invoke(context).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+                }
+                // Post request stuff
+            }
+        }
+
+        private class CustomExceptionMiddleware : OwinMiddleware
+        {
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
+            public CustomExceptionMiddleware(OwinMiddleware next) : base(next)
+            {}
+
+            public override async Task Invoke(IOwinContext context)
+            {
+                try
+                {
+                    await Next.Invoke(context).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+                }
+            }
+        }
+    }
 }

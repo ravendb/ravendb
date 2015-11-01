@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CoreTestServer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,31 +19,31 @@ using Raven.Client.Extensions;
 
 namespace Raven.Tests.Core.Commands
 {
-	public class Other : RavenCoreTestBase
-	{
-		[Fact]
-		public async Task CanGetBuildNumber()
-		{
-			using (var store = GetDocumentStore())
-			{
-				var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
+    public class Other : RavenCoreTestBase
+    {
+        [Fact]
+        public async Task CanGetBuildNumber()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
 
-				Assert.NotNull(buildNumber);
-			}
-		}
+                Assert.NotNull(buildNumber);
+            }
+        }
 
-		[Fact]
-		public async Task CanGetStatistics()
-		{
-			using (var store = GetDocumentStore())
-			{
-				var databaseStatistics = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+        [Fact]
+        public async Task CanGetStatistics()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var databaseStatistics = await store.AsyncDatabaseCommands.GetStatisticsAsync();
 
-				Assert.NotNull(databaseStatistics);
+                Assert.NotNull(databaseStatistics);
 
-				Assert.Equal(0, databaseStatistics.CountOfDocuments);
-			}
-		}
+                Assert.Equal(0, databaseStatistics.CountOfDocuments);
+            }
+        }
 
         [Fact]
         public async Task CanGetBuildVersion()
@@ -55,15 +55,15 @@ namespace Raven.Tests.Core.Commands
             }
         }
 
-		[Fact]
-		public async Task CanGetAListOfDatabasesAsync()
-		{
-			using (var store = GetDocumentStore())
-			{
-				var names = await store.AsyncDatabaseCommands.GlobalAdmin.GetDatabaseNamesAsync(25);
-				Assert.Contains(store.DefaultDatabase, names);
-			}
-		}
+        [Fact]
+        public async Task CanGetAListOfDatabasesAsync()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var names = await store.AsyncDatabaseCommands.GlobalAdmin.GetDatabaseNamesAsync(25);
+                Assert.Contains(store.DefaultDatabase, names);
+            }
+        }
 
         [Fact]
         public void CanSwitchDatabases()
@@ -142,5 +142,5 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
             }
         }
-	}
+    }
 }

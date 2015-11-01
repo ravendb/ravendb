@@ -8,104 +8,106 @@ using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Indexing
 {
-	public class CurrentIndexingScope : IDisposable
-	{
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+    public class CurrentIndexingScope : IDisposable
+    {
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		private readonly DocumentDatabase database;
-		private readonly string index;
+        private readonly DocumentDatabase database;
+        private readonly string index;
 
-		public int LoadDocumentCount { get; private set; }
-		public Stopwatch LoadDocumentDuration { get; private set; }
+        public int LoadDocumentCount { get; private set; }
+        public Stopwatch LoadDocumentDuration { get; private set; }
 
-		[ThreadStatic]
-		private static CurrentIndexingScope current;
+        [ThreadStatic]
+        private static CurrentIndexingScope current;
 
-		public static CurrentIndexingScope Current
-		{
-			get { return current; }
-			set { current = value; }
-		}
+        public static CurrentIndexingScope Current
+        {
+            get { return current; }
+            set { current = value; }
+        }
 
-		public CurrentIndexingScope(DocumentDatabase database, string index)
-		{
-		    this.database = database;
-		    this.index = index;
-			LoadDocumentCount = 0;
-			LoadDocumentDuration = new Stopwatch();
-		}
+        public CurrentIndexingScope(DocumentDatabase database, string index)
+        {
+            this.database = database;
+            this.index = index;
+            LoadDocumentCount = 0;
+            LoadDocumentDuration = new Stopwatch();
+        }
 
         public IDictionary<string, HashSet<string>> ReferencedDocuments
-		{
-			get { return referencedDocuments; }
-		}
-		public IDictionary<string, Etag> ReferencesEtags
-		{
-			get { return referencesEtags; }
-		}
+        {
+            get { return referencedDocuments; }
+        }
+        public IDictionary<string, Etag> ReferencesEtags
+        {
+            get { return referencesEtags; }
+        }
 
-		public dynamic Source { get; set; }
+        public dynamic Source { get; set; }
 
-		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-		private readonly IDictionary<string, Etag> referencesEtags = new Dictionary<string, Etag>();
-		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.OrdinalIgnoreCase);
+        private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        private readonly IDictionary<string, Etag> referencesEtags = new Dictionary<string, Etag>();
+        private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.OrdinalIgnoreCase);
 
-		public dynamic LoadDocument(string key)
-		{
-			if (key == null)
-				return new DynamicNullObject();
+        public dynamic LoadDocument(string key)
+        {
+            if (key == null)
+                return new DynamicNullObject();
 
-			var source = Source;
-			if (source == null)
-				throw new ArgumentException(
-					"LoadDocument can only be called as part of the Map stage of the index, but was called with " + key +
-					" without a source.");
-			var id = source.__document_id as string;
-			if (string.IsNullOrEmpty(id))
-				throw new ArgumentException(
-					"LoadDocument can only be called as part of the Map stage of the index, but was called with " + key +
-					" without a document. Current source: " + source);
+            var source = Source;
+            if (source == null)
+                throw new ArgumentException(
+                    "LoadDocument can only be called as part of the Map stage of the index, but was called with " + key +
+                    " without a source.");
+            var id = source.__document_id as string;
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException(
+                    "LoadDocument can only be called as part of the Map stage of the index, but was called with " + key +
+                    " without a document. Current source: " + source);
 
-			if (string.Equals(key, id))
-				return source;
+            if (string.Equals(key, id))
+                return source;
 
-			HashSet<string> set;
-			if(ReferencedDocuments.TryGetValue(id, out set) == false)
-				ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-			set.Add(key);
+            HashSet<string> set;
+            if(ReferencedDocuments.TryGetValue(id, out set) == false)
+                ReferencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            set.Add(key);
 
-			dynamic value;
-			if (docsCache.TryGetValue(key, out value))
-				return value;
+            dynamic value;
+            if (docsCache.TryGetValue(key, out value))
+                return value;
 
-			LoadDocumentDuration.Start();
-			var doc = database.Documents.Get(key, null);
-			LoadDocumentDuration.Stop();
-			LoadDocumentCount++;
+            LoadDocumentDuration.Start();
+            var doc = database.Documents.Get(key);
+            LoadDocumentDuration.Stop();
+            LoadDocumentCount++;
 
-			if (doc == null)
+            if (doc == null)
             {
-			    log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
+                if (log.IsDebugEnabled)
+                    log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
 
-				ReferencesEtags.Add(key, Etag.Empty);
-				value = new DynamicNullObject();
+                ReferencesEtags.Add(key, Etag.Empty);
+                value = new DynamicNullObject();
             }
-			else
-			{
-				log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
+            else
+            {
+                if (log.IsDebugEnabled)
+                    log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
 
-				ReferencesEtags.Add(key, doc.Etag);
-				value = new DynamicJsonObject(doc.ToJson());
-			}
+                ReferencesEtags.Add(key, doc.Etag);
+                value = new DynamicJsonObject(doc.ToJson());
+            }
 
-			docsCache[key] = value;
+            docsCache[key] = value;
 
-			return value;
-		}
+            return value;
+        }
 
-		public void Dispose()
-		{
-			current = null;
-		}
-	}
+        public void Dispose()
+        {
+            current = null;
+        }
+    }
 }

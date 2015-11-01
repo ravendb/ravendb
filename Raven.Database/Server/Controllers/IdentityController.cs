@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -7,7 +7,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class IdentityController : RavenDbApiController
+    public class IdentityController : ClusterAwareRavenDbApiController
     {
         [HttpPost]
         [RavenRoute("identity/next")]

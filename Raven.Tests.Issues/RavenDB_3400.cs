@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Indexes;
@@ -9,36 +9,36 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_3400 :RavenTestBase
     {
-	    [Fact]
-	    public void To_Facet_Lazy_Async()
-	    {
-		    using (var store = NewDocumentStore())
-		    {
-				new PostsIndex().Execute(store);
-				new PostsTransformer().Execute(store);
+        [Fact]
+        public void To_Facet_Lazy_Async()
+        {
+            using (var store = NewDocumentStore())
+            {
+                new PostsIndex().Execute(store);
+                new PostsTransformer().Execute(store);
 
-			    using (var documentSession = store.OpenSession())
-			    {
-				    var post = new Post()
-				    {
-					    DateTime = DateTime.UtcNow,
-					    Comments = new List<Comment> {new Comment() {Text = "Test comment", Likes = new List<string> {"users/1", "users/2"}}}
-				    };
-				    documentSession.Store(post);
-				    documentSession.SaveChanges();
-			    }
+                using (var documentSession = store.OpenSession())
+                {
+                    var post = new Post()
+                    {
+                        DateTime = DateTime.UtcNow,
+                        Comments = new List<Comment> {new Comment() {Text = "Test comment", Likes = new List<string> {"users/1", "users/2"}}}
+                    };
+                    documentSession.Store(post);
+                    documentSession.SaveChanges();
+                }
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-			    using (var documentSession = store.OpenSession())
-			    {
-				    var posts = documentSession.Query<PostsIndex.Result, PostsIndex>()
-					    .TransformWith<PostsTransformer, PostsTransformer.Result>()
-					    .ToList();
-					Assert.Equal(1, posts.Count);
-			    }
-		    }
-	    }
+                using (var documentSession = store.OpenSession())
+                {
+                    var posts = documentSession.Query<PostsIndex.Result, PostsIndex>()
+                        .TransformWith<PostsTransformer, PostsTransformer.Result>()
+                        .ToList();
+                    Assert.Equal(1, posts.Count);
+                }
+            }
+        }
 
 
         public class PostsTransformer : AbstractTransformerCreationTask<PostsIndex.Result>

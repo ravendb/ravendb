@@ -1,26 +1,28 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationAlerts.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Json.Linq;
-using Raven.Smuggler;
-using Raven.Tests.Bundles.Replication;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
     public class ReplicationAlerts : ReplicationBase
     {
-		protected string DumpFile = "dump.ravendump";
+        protected string DumpFile = "dump.ravendump";
 
         public ReplicationAlerts()
         {
@@ -30,69 +32,71 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.DefaultStorageTypeName = GetDefaultStorageType("esent");
-            configuration.RunInMemory = false;
+            configuration.Core.RunInMemory = false;
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public void ImportingReplicationDestinationsDocumentWithInvalidSourceShouldReportOneAlertOnly()
+        [Trait("Category", "Smuggler")]
+        [Theory]
+        [PropertyData("Storages")]
+
+        public void ImportingReplicationDestinationsDocumentWithInvalidSourceShouldReportOneAlertOnly(string storage)
         {
-            var store1 = CreateStore();
-            var store2 = CreateStore();
-            var store3 = CreateStore();
+            using (var store1 = CreateStore(requestedStorage: storage))
+            using (var store2 = CreateStore(requestedStorage: storage))
+            using (var store3 = CreateStore(requestedStorage: storage))
+            {
 
-            TellFirstInstanceToReplicateToSecondInstance();
+                TellFirstInstanceToReplicateToSecondInstance();
 
-            store2.Dispose();
+                store2.Dispose();
 
-            store1.DatabaseCommands.Put("1", null, new RavenJObject(), new RavenJObject());
-            store1.DatabaseCommands.Put("2", null, new RavenJObject(), new RavenJObject());
+                store1.DatabaseCommands.Put("1", null, new RavenJObject(), new RavenJObject());
+                store1.DatabaseCommands.Put("2", null, new RavenJObject(), new RavenJObject());
 
-            var smuggler = new SmugglerDatabaseApi();
+                var smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                                                     {
+                                                         Database = store1.DefaultDatabase,
+                        Url = store1.Url
+                                                     }),
+                    new DatabaseSmugglerFileDestination(DumpFile));
 
-	        smuggler.ExportData(
-                new SmugglerExportOptions<RavenConnectionStringOptions>
-		        {
-			        ToFile = DumpFile,
-			        From = new RavenConnectionStringOptions
-			        {
-				        Url = store1.Url,
-				        DefaultDatabase = store1.DefaultDatabase
-			        }
-		        }).Wait(TimeSpan.FromSeconds(15));
-            Assert.True(File.Exists(DumpFile));
+                smuggler.Execute();
 
-            smuggler = new SmugglerDatabaseApi();
-	        smuggler.ImportData(
-                new SmugglerImportOptions<RavenConnectionStringOptions>
-		        {
-			        FromFile = DumpFile,
-			        To = new RavenConnectionStringOptions
-			        {
-				        Url = store3.Url,
-				        DefaultDatabase = store3.DefaultDatabase
-			        }
-		        }).Wait(TimeSpan.FromSeconds(15));
+                Assert.True(File.Exists(DumpFile));
 
-            Assert.NotNull(store3.DatabaseCommands.Get("1"));
-            Assert.NotNull(store3.DatabaseCommands.Get("2"));
+                smuggler = new DatabaseSmuggler(
+                    new DatabaseSmugglerOptions(),
+                    new DatabaseSmugglerFileSource(DumpFile),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = store3.Url,
+                        Database = store3.DefaultDatabase
+                    }));
 
-	        int retries = 5;
-	        JsonDocument container = null;
-			while (container == null && retries-- >0)
-	        {
-		        container = store3.DatabaseCommands.Get("Raven/Alerts");
-				if(container == null)
-					Thread.Sleep(100);
-	        }
-	        Assert.NotNull(container);
+                smuggler.Execute();
 
-            var alerts = container.DataAsJson["Alerts"].Values<RavenJObject>()
-                .ToList();
-            Assert.Equal(1, alerts.Count);
+                Assert.NotNull(store3.DatabaseCommands.Get("1"));
+                Assert.NotNull(store3.DatabaseCommands.Get("2"));
 
-            var alert = alerts.First();
-            Assert.True(alert["Title"].ToString().StartsWith("Wrong replication source:"));
+                int retries = 5;
+                JsonDocument container = null;
+                while (container == null && retries-- > 0)
+                {
+                    container = store3.DatabaseCommands.Get("Raven/Alerts");
+                    if (container == null)
+                        Thread.Sleep(100);
+                }
+                Assert.NotNull(container);
+
+                var alerts = container.DataAsJson["Alerts"].Values<RavenJObject>()
+                    .ToList();
+                Assert.Equal(1, alerts.Count);
+
+                var alert = alerts.First();
+                Assert.True(alert["Title"].ToString().StartsWith("Wrong replication source:"));
+            }
         }
     }
 }

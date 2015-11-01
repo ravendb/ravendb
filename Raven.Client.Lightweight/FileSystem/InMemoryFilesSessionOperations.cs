@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem.Impl;
@@ -42,7 +42,7 @@ namespace Raven.Client.FileSystem
         /// <summary>
         /// The files waiting to be deleted
         /// </summary>
-		protected readonly HashSet<string> deletedEntities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        protected readonly HashSet<string> deletedEntities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Entities whose filename we already know do not exist, because they were registered for deletion, etc.
@@ -81,20 +81,20 @@ namespace Raven.Client.FileSystem
         /// <value></value>
         public int NumberOfRequests { get; private set; }
 
-		public bool UseOptimisticConcurrency { get; set; }
+        public bool UseOptimisticConcurrency { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryFilesSessionOperations"/> class.
-		/// </summary>
+        /// </summary>
         protected InMemoryFilesSessionOperations( FilesStore filesStore, FilesSessionListeners listeners, Guid id)
-		{
+        {
             Id = id;
             this.filesStore = filesStore;
             theListeners = listeners;            
 
             MaxNumberOfRequestsPerSession = filesStore.Conventions.MaxNumberOfRequestsPerSession;
-	        UseOptimisticConcurrency = filesStore.Conventions.DefaultUseOptimisticConcurrency;
-		}
+            UseOptimisticConcurrency = filesStore.Conventions.DefaultUseOptimisticConcurrency;
+        }
 
         /// <summary>
         /// Gets the store identifier for this session.
@@ -132,53 +132,51 @@ namespace Raven.Client.FileSystem
 
         public void RegisterUpload(string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
         {
-			RegisterUploadInternal(path, stream.Length, stream.CopyTo, metadata, etag);
+            RegisterUploadInternal(new UploadFileOperation(this, path, stream, metadata, etag));
         }
 
         public void RegisterUpload(FileHeader file, Stream stream, Etag etag = null)
         {
-			RegisterUploadInternal(file.FullPath, stream.Length, stream.CopyTo, file.Metadata, etag);
+            RegisterUploadInternal(new UploadFileOperation(this, file.FullPath, stream, file.Metadata, etag));
         }
 
         public void RegisterUpload(string path, long size, Action<Stream> write, RavenJObject metadata = null, Etag etag = null)
         {
-			RegisterUploadInternal(path, size, write, metadata, etag);
+            RegisterUploadInternal(new UploadFileOperation(this, path, size, write, metadata, etag));
         }
 
         public void RegisterUpload(FileHeader file, long size, Action<Stream> write, Etag etag = null)
         {
-            RegisterUploadInternal(file.FullPath, size, write, file.Metadata, etag);
+            RegisterUploadInternal(new UploadFileOperation(this, file.FullPath, size, write, file.Metadata, etag));
         }
 
-	    internal void RegisterUploadInternal(string path, long size, Action<Stream> content, RavenJObject metadata, Etag etag)
-	    {
-			if (deletedEntities.Contains(path))
-				throw new InvalidOperationException("The file '" + path + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
+        internal void RegisterUploadInternal(UploadFileOperation operation)
+        {
+            if (deletedEntities.Contains(operation.FileName))
+                throw new InvalidOperationException("The file '" + operation.FileName + "' was already marked for deletion in this session, we do not allow delete and upload on the same session");
 
-			FileHeader existingEntity;
-		    if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))
-		    {
-			    if (IsDeleted(path) == false) // do not set etag if we already know that file was deleted
-				    etag = existingEntity.Etag;
-		    }
+            FileHeader existingEntity;
+            if (operation.Etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(operation.FileName, out existingEntity))
+            {
+                if (IsDeleted(operation.FileName) == false) // do not set etag if we already know that file was deleted
+                    operation.Etag = existingEntity.Etag;
+            }
+            
+            IncrementRequestCount();
 
-			var operation = new UploadFileOperation(this, path, size, content, metadata, etag);
-
-			IncrementRequestCount();
-
-			registeredOperations.Enqueue(operation); 
-	    }
+            registeredOperations.Enqueue(operation);
+        }
 
         public void RegisterFileDeletion(string path, Etag etag = null)
         {
-			FileHeader existingEntity;
-			if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))
-			{
-				if (IsDeleted(path) == false) // do not set etag if we already know that file was deleted
-					etag = existingEntity.Etag;
-			}
+            FileHeader existingEntity;
+            if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(path, out existingEntity))
+            {
+                if (IsDeleted(path) == false) // do not set etag if we already know that file was deleted
+                    etag = existingEntity.Etag;
+            }
 
-	        deletedEntities.Add(path);
+            deletedEntities.Add(path);
 
             var operation = new DeleteFileOperation(this, path, etag);
 
@@ -189,26 +187,26 @@ namespace Raven.Client.FileSystem
 
         public void RegisterFileDeletion(FileHeader file, Etag etag = null)
         {
-			RegisterFileDeletion(file.FullPath, etag);
+            RegisterFileDeletion(file.FullPath, etag);
         }
 
-		public void RegisterDeletionQuery(string query)
-	    {
-			var operation = new DeleteByQueryOperation(query);
+        public void RegisterDeletionQuery(string query)
+        {
+            var operation = new DeleteByQueryOperation(query);
 
-			IncrementRequestCount();
+            IncrementRequestCount();
 
-			registeredOperations.Enqueue(operation);
-	    }
+            registeredOperations.Enqueue(operation);
+        }
 
         public void RegisterRename(string sourceFile, string destinationFile, Etag etag = null)
         {
-			FileHeader existingEntity;
-			if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(sourceFile, out existingEntity))
-			{
-				if (IsDeleted(sourceFile) == false) // do not set etag if we already know that file was deleted
-					etag = existingEntity.Etag;
-			}
+            FileHeader existingEntity;
+            if (etag == null && UseOptimisticConcurrency && entitiesByKey.TryGetValue(sourceFile, out existingEntity))
+            {
+                if (IsDeleted(sourceFile) == false) // do not set etag if we already know that file was deleted
+                    etag = existingEntity.Etag;
+            }
 
             var operation = new RenameFileOperation(this, sourceFile, destinationFile, etag);
 
@@ -281,8 +279,8 @@ namespace Raven.Client.FileSystem
             try
             {
                 var results = new List<FileHeader>();
-	            
-				foreach (var op in changes.Operations)
+                
+                foreach (var op in changes.Operations)
                 {
                     AssertConflictsAreNotAffectingOperation(op);
                     var operationResult = await op.Execute((IAsyncFilesSession)this).ConfigureAwait(false);
@@ -313,7 +311,7 @@ namespace Raven.Client.FileSystem
             }
         }
 
-		private void PrepareForDeletion(SaveChangesData changes, List<IFilesOperation> operations)
+        private void PrepareForDeletion(SaveChangesData changes, List<IFilesOperation> operations)
         {
             var deleteOperations = operations.OfType<DeleteFileOperation>().ToList();
             foreach (var op in deleteOperations)
@@ -322,11 +320,11 @@ namespace Raven.Client.FileSystem
                 deletedEntities.Add(op.FileName);
             }
 
-	        var deleteByQueryOperations = operations.OfType<DeleteByQueryOperation>().ToList();
-			foreach (var op in deleteByQueryOperations)
-			{
-				changes.Operations.Add(op);
-			}
+            var deleteByQueryOperations = operations.OfType<DeleteByQueryOperation>().ToList();
+            foreach (var op in deleteByQueryOperations)
+            {
+                changes.Operations.Add(op);
+            }
         }
 
         private void PrepareForUpdate(SaveChangesData changes, List<IFilesOperation> operations)
@@ -350,23 +348,23 @@ namespace Raven.Client.FileSystem
 
         private void ProcessResults(IList<FileHeader> results, SaveChangesData data)
         {
-			for (var i = 0; i < results.Count; i++)
-			{
-				var result = results[i];
+            for (var i = 0; i < results.Count; i++)
+            {
+                var result = results[i];
                 var savedEntity = data.Entities[i];
 
-				FileHeader existingEntity;
-				if (entitiesByKey.TryGetValue(savedEntity, out existingEntity) == false)
-				{
-					var operation = data.Operations[i];
+                FileHeader existingEntity;
+                if (entitiesByKey.TryGetValue(savedEntity, out existingEntity) == false)
+                {
+                    var operation = data.Operations[i];
 
-					if (operation is UploadFileOperation || operation is RenameFileOperation)
-					{
-						AddToCache(result.Name, result);
-					}
-					
-					continue;
-				}
+                    if (operation is UploadFileOperation || operation is RenameFileOperation)
+                    {
+                        AddToCache(result.Name, result);
+                    }
+                    
+                    continue;
+                }
 
                 var existingFileHeader = existingEntity;
                 existingFileHeader.Metadata = result.Metadata;
@@ -384,7 +382,7 @@ namespace Raven.Client.FileSystem
                 }
 
                 AddToCache(existingFileHeader.FullPath, existingFileHeader);
-			}
+            }
         }
 
         private void AssertConflictsAreNotAffectingOperation(IFilesOperation operation)

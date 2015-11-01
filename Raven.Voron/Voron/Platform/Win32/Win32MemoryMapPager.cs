@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -40,10 +40,11 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
-        public Win32MemoryMapPager(string file,
+        public Win32MemoryMapPager(int pageSize,string file,
             long? initialFileSize = null,
                                    Win32NativeFileAttributes options = Win32NativeFileAttributes.Normal,
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
+            :base(pageSize)
         {
             Win32NativeMethods.SYSTEM_INFO systemInfo;
             Win32NativeMethods.GetSystemInfo(out systemInfo);
@@ -298,7 +299,7 @@ namespace Voron.Platform.Win32
                    (os.Version.Major > 6 || (os.Version.Major == 6 && os.Version.Minor >= 2));
         }
 
-        public override void MaybePrefetchMemory(List<Page> sortedPages)
+        public override void MaybePrefetchMemory(List<TreePage> sortedPages)
         {
             if (sortedPages.Count == 0)
                 return;
@@ -339,7 +340,7 @@ namespace Voron.Platform.Win32
 
                 list.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
                 {
-                    NumberOfBytes = (IntPtr)(sizeInPages * AbstractPager.PageSize),
+                    NumberOfBytes = (IntPtr)(sizeInPages * PageSize),
                     VirtualAddress = AcquirePagePointer(lastPage)
                 });
                 lastPage = page.PageNumber;

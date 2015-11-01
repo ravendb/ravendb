@@ -1,42 +1,23 @@
-﻿using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Client.Changes;
 using System;
 using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Changes
 {
-    public class FilesConnectionState : IChangesConnectionState
+    public class FilesConnectionState : ConnectionStateBase
     {
-        private readonly Action onZero;
-        private readonly Task task;
-        private int value;
-        public Task Task
+        private readonly Func<FilesConnectionState, Task> ensureConnection;
+
+        public FilesConnectionState(Action onZero, Func<FilesConnectionState, Task> ensureConnection, Task task)
+            : base(onZero, task)
         {
-            get { return task; }
+            this.ensureConnection = ensureConnection;
         }
 
-        public FilesConnectionState(Action onZero, Task task)
+        protected override Task EnsureConnection()
         {
-            value = 0;
-            this.onZero = onZero;
-            this.task = task;
-        }
-
-        public void Inc()
-        {
-            lock (this)
-            {
-                value++;
-            }
-        }
-
-        public void Dec()
-        {
-            lock (this)
-            {
-                if (--value == 0)
-                    onZero();
-            }
+            return ensureConnection(this);
         }
 
         public event Action<ConfigurationChangeNotification> OnConfigurationChangeNotification = (x) => { };
@@ -69,15 +50,6 @@ namespace Raven.Client.FileSystem.Changes
             var onFileChangeNotification = OnFileChangeNotification;
             if (onFileChangeNotification != null)
                 onFileChangeNotification(fileChangeNotification);
-        }
-
-        public event Action<Exception> OnError;
-
-        public void Error(Exception e)
-        {
-            var onOnError = OnError;
-            if (onOnError != null)
-                onOnError(e);
         }
     }
 }

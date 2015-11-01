@@ -1,18 +1,19 @@
 import appUrl = require("common/appUrl");
-import database = require("models/database");
-import resource = require("models/resource");
+import database = require("models/resources/database");
+import resource = require("models/resources/resource");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
+import timeSeries = require("models/timeSeries/timeSeries");
 import router = require("plugins/router");
 import app = require("durandal/app");
-import viewSystemDatabaseConfirm = require("viewmodels/viewSystemDatabaseConfirm");
-import changeSubscription = require("models/changeSubscription");
+import viewSystemDatabaseConfirm = require("viewmodels/common/viewSystemDatabaseConfirm");
+import changeSubscription = require("common/changeSubscription");
 import oauthContext = require("common/oauthContext");
 import changesContext = require("common/changesContext");
 import messagePublisher = require("common/messagePublisher");
-import confirmationDialog = require("viewmodels/confirmationDialog");
-import saveDocumentCommand = require("commands/saveDocumentCommand");
-import document = require("models/document");
+import confirmationDialog = require("viewmodels/common/confirmationDialog");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import document = require("models/database/documents/document");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -21,19 +22,21 @@ class viewModelBase {
     public activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     public activeFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     public activeCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
+    public activeTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
     public lastActivatedResource = ko.observable<resource>()
         .subscribeTo("ActivateDatabase", true)
         .subscribeTo("ActivateFilesystem", true)
-        .subscribeTo("ActivateCounterStorage", true);
+        .subscribeTo("ActivateCounterStorage", true)
+        .subscribeTo("ActivateTimeSeries", true);
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     notifications: Array<changeSubscription> = [];
-	appUrls: computedAppUrls;
+    appUrls: computedAppUrls;
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
-	static isConfirmedUsingSystemDatabase: boolean = false;
-	static showSplash = ko.observable<boolean>(false);
-	private isAttached = false;
+    static isConfirmedUsingSystemDatabase: boolean = false;
+    static showSplash = ko.observable<boolean>(false);
+    private isAttached = false;
     dirtyFlag = new ko.DirtyFlag([]);
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
@@ -42,9 +45,9 @@ class viewModelBase {
     static clientVersion = ko.observable<string>();
     static hasContinueTestOption = ko.observable<boolean>(false);
 
-	constructor() {
-		this.appUrls = appUrl.forCurrentDatabase();
-	}
+    constructor() {
+        this.appUrls = appUrl.forCurrentDatabase();
+    }
 
     /*
      * Called by Durandal when checking whether this navigation is allowed. 
@@ -54,9 +57,10 @@ class viewModelBase {
      * p.s. from Judah: a big scary prompt when loading the system DB is a bit heavy-handed, no? 
      */
     canActivate(args: any): any {
-	    setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
+        var self = this;
+        setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
 
-		var resource = appUrl.getResource();
+        var resource = appUrl.getResource();
         if (resource instanceof filesystem) {
             var fs = this.activeFilesystem();
 
@@ -69,6 +73,13 @@ class viewModelBase {
 
             if (!!cs && cs.disabled()) {
                 messagePublisher.reportError("Counter Storage '" + cs.name + "' is disabled!", "You can't access any section of the counter storage while it's disabled.");
+                return { redirect: appUrl.forResources() };
+            }
+        } else if (resource instanceof timeSeries) {
+            var ts = this.activeTimeSeries();
+
+            if (!!ts && ts.disabled()) {
+                messagePublisher.reportError("Time Series '" + ts.name + "' is disabled!", "You can't access any section of the time series while it's disabled.");
                 return { redirect: appUrl.forResources() };
             }
         } else { //it's a database
@@ -99,19 +110,19 @@ class viewModelBase {
             ko.postbox.publish("ActivateDatabaseWithName", db.name);
         }
 
-		oauthContext.enterApiKeyTask.done(() => {
-			// we have to wait for changes api to connect as well
-			// as obtaining changes api connection might take a while, we have to spin until connection is read
-			var createNotifySpinFunction = () => {
-				if (isShell || this.appUrls.isAreaActive("admin")())
-					return;
-				if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
-					this.notifications = this.createNotifications();
-				} else {
-					setTimeout(createNotifySpinFunction, 50);
-				}
-			}
-			createNotifySpinFunction();
+        oauthContext.enterApiKeyTask.done(() => {
+            // we have to wait for changes api to connect as well
+            // as obtaining changes api connection might take a while, we have to spin until connection is read
+            var createNotifySpinFunction = () => {
+                if (isShell || this.appUrls.isAreaActive("admin")())
+                    return;
+                if (changesContext.currentResourceChangesApi && changesContext.currentResourceChangesApi()) {
+                    this.notifications = this.createNotifications();
+                } else {
+                    setTimeout(createNotifySpinFunction, 50);
+                }
+            }
+            createNotifySpinFunction();
         });
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();
@@ -123,10 +134,10 @@ class viewModelBase {
         this.updateHelpLink(null); // clean link
     }
 
-	attached() {
-		this.isAttached = true;
-		viewModelBase.showSplash(false);
-	}
+    attached() {
+        this.isAttached = true;
+        viewModelBase.showSplash(false);
+    }
 
     /*
      * Called by Durandal when the view model is loaded and after the view is inserted into the DOM.
@@ -146,6 +157,9 @@ class viewModelBase {
             var discardStayResult = $.Deferred();
             var confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", [discard, stay], true);
             confirmation.done((result: { can: boolean; }) => {
+                if (!result.can) {
+                    this.dirtyFlag().reset();    
+                }
                 result.can = !result.can;
                 discardStayResult.resolve(result);
             });
@@ -163,12 +177,13 @@ class viewModelBase {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
         this.activeFilesystem.unsubscribeFrom("ActivateFilesystem");
         this.activeCounterStorage.unsubscribeFrom("ActivateCounterStorage");
+        this.activeTimeSeries.unsubscribeFrom("ActivateTimeSeries");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
         window.removeEventListener("beforeunload", this.beforeUnloadListener, false);
 
-		this.isAttached = true;
-		viewModelBase.showSplash(false);
+        this.isAttached = true;
+        viewModelBase.showSplash(false);
     }
 
     /*
@@ -178,8 +193,8 @@ class viewModelBase {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
 
-		this.isAttached = true;
-		viewModelBase.showSplash(false);
+        this.isAttached = true;
+        viewModelBase.showSplash(false);
     }
 
     createNotifications(): Array<changeSubscription> {
@@ -268,7 +283,7 @@ class viewModelBase {
         viewModelBase.modelPollingHandle = null;
     }
 
-    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ['No', 'Yes'], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
+    confirmationMessage(title: string, confirmationMessage: string, options: string[]= ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<any> {
         var viewTask = $.Deferred();
         var confirmTask = app.showDialog(new confirmationDialog(confirmationMessage, title, options));
 

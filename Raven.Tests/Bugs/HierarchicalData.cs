@@ -17,53 +17,53 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class HierarchicalData : RavenTest
-	{
-		private readonly EmbeddableDocumentStore store;
-		private readonly DocumentDatabase db;
+    public class HierarchicalData : RavenTest
+    {
+        private readonly EmbeddableDocumentStore store;
+        private readonly DocumentDatabase db;
 
-		public HierarchicalData()
-		{
-			store = NewDocumentStore();
-			db = store.SystemDatabase;
-		}
+        public HierarchicalData()
+        {
+            store = NewDocumentStore();
+            db = store.SystemDatabase;
+        }
 
-		public override void Dispose()
-		{
-			store.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            store.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void CanCreateHierarchicalIndexes()
-		{
-			db.Indexes.PutIndex("test", new IndexDefinition
-			{
-				Map = @"
+        [Fact]
+        public void CanCreateHierarchicalIndexes()
+        {
+            db.Indexes.PutIndex("test", new IndexDefinition
+            {
+                Map = @"
 from post in docs.Posts
 from comment in Recurse(post, ((Func<dynamic,dynamic>)(x=>x.Comments)))
 select new { comment.Text }"
-			});
+            });
 
-			db.Documents.Put("abc", null, RavenJObject.Parse(@"
+            db.Documents.Put("abc", null, RavenJObject.Parse(@"
 {
-	'Name': 'Hello Raven',
-	'Comments': [
-		{ 'Author': 'Ayende', 'Text': 'def',	'Comments': [ { 'Author': 'Rahien', 'Text': 'abc' } ] }
-	]
+    'Name': 'Hello Raven',
+    'Comments': [
+        { 'Author': 'Ayende', 'Text': 'def',	'Comments': [ { 'Author': 'Rahien', 'Text': 'abc' } ] }
+    ]
 }
 "), RavenJObject.Parse("{'Raven-Entity-Name': 'Posts'}"), null);
 
-			QueryResult queryResult;
-			do
-			{
-				queryResult = db.Queries.Query("test", new IndexQuery
-				{
-					Query = "Text:abc"
+            QueryResult queryResult;
+            do
+            {
+                queryResult = db.Queries.Query("test", new IndexQuery
+                {
+                    Query = "Text:abc"
                 }, CancellationToken.None);
-			} while (queryResult.IsStale);
+            } while (queryResult.IsStale);
 
-			Assert.Equal(1, queryResult.Results.Count);
-		}
-	}
+            Assert.Equal(1, queryResult.Results.Count);
+        }
+    }
 }

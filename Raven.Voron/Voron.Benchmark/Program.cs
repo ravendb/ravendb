@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -84,10 +84,10 @@ namespace Voron.Benchmark
 
         private static void Time(string name, Action<Stopwatch> action, bool delete = true)
         {
-	        if (delete)
-		        DeleteDirectory(Path);
-			else
-				FlushOsBuffer();
+            if (delete)
+                DeleteDirectory(Path);
+            else
+                FlushOsBuffer();
             var sp = new Stopwatch();
             Console.Write("{0,-35}: running...", name);
             action(sp);
@@ -95,30 +95,30 @@ namespace Voron.Benchmark
             Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions * ItemsPerTransaction / sp.Elapsed.TotalSeconds);
         }
 
-		private static void DeleteDirectory(string dir)
-		{
-			if (Directory.Exists(dir) == false)
-				return;
+        private static void DeleteDirectory(string dir)
+        {
+            if (Directory.Exists(dir) == false)
+                return;
 
-			for (int i = 0; i < 10; i++)
-			{
-				try
-				{
-					Directory.Delete(dir, true);
-					return;
-				}
-				catch (DirectoryNotFoundException)
-				{
-					return;
-				}
-				catch (Exception)
-				{
-					Thread.Sleep(13);
-				}
-			}
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    Directory.Delete(dir, true);
+                    return;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    return;
+                }
+                catch (Exception)
+                {
+                    Thread.Sleep(13);
+                }
+            }
 
-			Directory.Delete(dir, true);
-		}
+            Directory.Delete(dir, true);
+        }
 
         private static void FillRandomOneTransaction(Stopwatch sw)
         {
@@ -283,42 +283,42 @@ namespace Voron.Benchmark
             }
         }
 
-		private static void FillBatchReadBatchOneTransaction(Stopwatch sw, int iterations)
-		{
+        private static void FillBatchReadBatchOneTransaction(Stopwatch sw, int iterations)
+        {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
-			{
-				sw.Start();
-				using (var tx = env.NewTransaction(TransactionFlags.Read))
-				{
-					var ms = new byte[100];
+            {
+                sw.Start();
+                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                {
+                    var ms = new byte[100];
 
-					var batch = new WriteBatch();
-					for (int i = 0; i < iterations; i++)
-					{
-						var key = i.ToString("0000000000000000");
-						batch.Add(key, new MemoryStream(), null);
-					}
+                    var batch = new WriteBatch();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        var key = i.ToString("0000000000000000");
+                        batch.Add(key, new MemoryStream(), null);
+                    }
 
-					using (var snapshot = env.CreateSnapshot())
-					{
-						for (int i = 0; i < iterations; i++)
-						{
-							var key = i.ToString("0000000000000000");
+                    using (var snapshot = env.CreateSnapshot())
+                    {
+                        for (int i = 0; i < iterations; i++)
+                        {
+                            var key = i.ToString("0000000000000000");
 
-							var read = snapshot.Read(null, key, batch).Reader;
-							{
-								while (read.Read(ms, 0, ms.Length) != 0)
-								{
-								}
-							}
-						}
-					}
+                            var read = snapshot.Read(null, key, batch).Reader;
+                            {
+                                while (read.Read(ms, 0, ms.Length) != 0)
+                                {
+                                }
+                            }
+                        }
+                    }
 
-					tx.Commit();
-				}
-				sw.Stop();
-			}
-		}
+                    tx.Commit();
+                }
+                sw.Stop();
+            }
+        }
 
         private static void ReadOneTransaction(Stopwatch sw)
         {

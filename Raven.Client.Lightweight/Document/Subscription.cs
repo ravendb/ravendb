@@ -1,10 +1,12 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Subscription.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -24,187 +26,206 @@ using Sparrow.Collections;
 
 namespace Raven.Client.Document
 {
-	public delegate void BeforeBatch();
+    public delegate void BeforeBatch();
 
-	public delegate void AfterBatch(int documentsProcessed);
+    public delegate void AfterBatch(int documentsProcessed);
 
-	public delegate bool BeforeAcknowledgment();
+    public delegate bool BeforeAcknowledgment();
 
-	public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
+    public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
 
-	public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
-	{
-		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
+    {
+        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
-		private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
-		private readonly IAsyncDatabaseCommands commands;
-		private readonly IDatabaseChanges changes;
-		private readonly DocumentConvention conventions;
-		private readonly Func<Task> ensureOpenSubscription;
-		private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
-		private readonly SubscriptionConnectionOptions options;
-		private readonly CancellationTokenSource cts = new CancellationTokenSource();
-		private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-		private readonly bool isStronglyTyped;
-		private readonly long id;
-		private Task pullingTask;
-		private Task startPullingTask;
-		private IDisposable putDocumentsObserver;
-		private IDisposable endedBulkInsertsObserver;
-		private IDisposable dataSubscriptionReleasedObserver;
-		private bool completed;
-		private bool disposed;
-		private bool firstConnection = true;
+        private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
+        private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
+        private readonly IAsyncDatabaseCommands commands;
+        private readonly IDatabaseChanges changes;
+        private readonly DocumentConvention conventions;
+        private readonly Func<Task> ensureOpenSubscription;
+        private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
+        private readonly SubscriptionConnectionOptions options;
+        private readonly CancellationTokenSource cts = new CancellationTokenSource();
+        private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
+        private readonly bool isStronglyTyped;
+        private readonly long id;
+        private Task pullingTask;
+        private Task startPullingTask;
+        private IDisposable putDocumentsObserver;
+        private IDisposable endedBulkInsertsObserver;
+        private IDisposable dataSubscriptionReleasedObserver;
+        private bool completed;
+        private bool disposed;
+        private bool firstConnection = true;
 
-		public event BeforeBatch BeforeBatch = delegate { };
-		public event AfterBatch AfterBatch = delegate { };
-		public event BeforeAcknowledgment BeforeAcknowledgment = () => true;
-		public event AfterAcknowledgment AfterAcknowledgment = delegate { };
+        public event BeforeBatch BeforeBatch = delegate { };
+        public event AfterBatch AfterBatch = delegate { };
+        public event BeforeAcknowledgment BeforeAcknowledgment = () => true;
+        public event AfterAcknowledgment AfterAcknowledgment = delegate { };
 
-		internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, bool open, Func<Task> ensureOpenSubscription)
-		{
-			this.id = id;
-			this.options = options;
-			this.commands = commands;
-			this.changes = changes;
-			this.conventions = conventions;
-			this.ensureOpenSubscription = ensureOpenSubscription;
+        internal Subscription(long id, string database, SubscriptionConnectionOptions options, IAsyncDatabaseCommands commands, IDatabaseChanges changes, DocumentConvention conventions, bool open, Func<Task> ensureOpenSubscription)
+        {
+            this.id = id;
+            this.options = options;
+            this.commands = commands;
+            this.changes = changes;
+            this.conventions = conventions;
+            this.ensureOpenSubscription = ensureOpenSubscription;
 
-			if (typeof (T) != typeof (RavenJObject))
-			{
-				isStronglyTyped = true;
-				generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
-			}
+            if (typeof (T) != typeof (RavenJObject))
+            {
+                isStronglyTyped = true;
+                generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
+            }
 
-			if (open)
-				Start();
-			else
-			{
-				if (options.Strategy != SubscriptionOpeningStrategy.WaitForFree)
-					throw new InvalidOperationException("Subscription isn't open while its opening strategy is: " + options.Strategy);
-			}
+            if (open)
+                Start();
+            else
+            {
+                if (options.Strategy != SubscriptionOpeningStrategy.WaitForFree)
+                    throw new InvalidOperationException("Subscription isn't open while its opening strategy is: " + options.Strategy);
+            }
 
-			if (options.Strategy == SubscriptionOpeningStrategy.WaitForFree)
-				WaitForSubscriptionReleased();
-		}
+            if (options.Strategy == SubscriptionOpeningStrategy.WaitForFree)
+                WaitForSubscriptionReleased();
+        }
 
-		private void Start()
-		{
-			StartWatchingDocs();
-			startPullingTask = StartPullingDocs();
-		}
+        private void Start()
+        {
+            StartWatchingDocs();
+            startPullingTask = StartPullingDocs();
+        }
 
-		private Task PullDocuments()
-		{
-			return Task.Run(async () =>
-			{
-				try
-				{
+        private Task PullDocuments()
+        {
+            return Task.Run(async () =>
+            {
+                try
+                {
                     Etag lastProcessedEtagOnClient = null;
 
-					while (true)
-					{
-						anySubscriber.WaitOne();
+                    while (true)
+                    {
+                        anySubscriber.WaitOne();
 
-						cts.Token.ThrowIfCancellationRequested();
+                        cts.Token.ThrowIfCancellationRequested();
 
-						var pulledDocs = false;
+                        var pulledDocs = false;
 
-						Etag lastProcessedEtagOnServer = null;
-						int processedDocs = 0;
+                        Etag lastProcessedEtagOnServer = null;
+                        int processedDocs = 0;
 
-						using (var subscriptionRequest = CreatePullingRequest())
-						using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
-						{
-							await response.AssertNotFailingResponse().ConfigureAwait(false);
+                        var queue = new BlockingCollection<T>();
+                        Task processingTask = null;
 
-							using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
-							{
-								cts.Token.ThrowIfCancellationRequested();
+                        using (var subscriptionRequest = CreatePullingRequest())
+                        using (var response = await subscriptionRequest.ExecuteRawResponseAsync().ConfigureAwait(false))
+                        {
+                            await response.AssertNotFailingResponse().ConfigureAwait(false);
 
-								using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
-								{
-									if (Equals("LastProcessedEtag", reader.Value) == false)
-										return false;
+                            using (var responseStream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+                            {
+                                cts.Token.ThrowIfCancellationRequested();
 
-									lastProcessedEtagOnServer = Etag.Parse(AsyncHelpers.RunSync(reader.ReadAsString));
+                                using (var streamedDocs = new AsyncServerClient.YieldStreamResults(subscriptionRequest, responseStream, customizedEndResult: reader =>
+                                {
+                                    if (Equals("LastProcessedEtag", reader.Value) == false)
+                                        return false;
 
-									return true;
-								}))
-								{
-									while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
-									{
-										if (pulledDocs == false) // first doc in batch
-											BeforeBatch();
+                                    lastProcessedEtagOnServer = Etag.Parse(AsyncHelpers.RunSync(reader.ReadAsString));
 
-										pulledDocs = true;
+                                    return true;
+                                }))
+                                {
+                                    while (await streamedDocs.MoveNextAsync().ConfigureAwait(false))
+                                    {
+                                        if (pulledDocs == false) // first doc in batch
+                                        {
+                                            BeforeBatch();
 
-										cts.Token.ThrowIfCancellationRequested();
+                                            processingTask = Task.Run(() =>
+                                            {
+                                                T doc;
+                                                while (queue.TryTake(out doc, Timeout.Infinite))
+                                                {
+                                                    cts.Token.ThrowIfCancellationRequested();
 
-										var jsonDoc = streamedDocs.Current;
+                                                    foreach (var subscriber in subscribers)
+                                                    {
+                                                        try
+                                                        {
+                                                            subscriber.OnNext(doc);
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            logger.WarnException(string.Format("Subscription #{0}. Subscriber threw an exception", id), ex);
 
-										T instance = null;
+                                                            if (options.IgnoreSubscribersErrors == false)
+                                                            {
+                                                                IsErroredBecauseOfSubscriber = true;
+                                                                LastSubscriberException = ex;
 
-										foreach (var subscriber in subscribers)
-										{
-											try
-											{
-												if (isStronglyTyped)
-												{
-													if (instance == null)
-													{
-														instance = jsonDoc.Deserialize<T>(conventions);
+                                                                try
+                                                                {
+                                                                    subscriber.OnError(ex);
+                                                                }
+                                                                catch (Exception)
+                                                                {
+                                                                    // can happen if a subscriber doesn't have an onError handler - just ignore it
+                                                                }
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
 
-														var docId = jsonDoc[Constants.Metadata].Value<string>("@id");
+                                                    if (IsErroredBecauseOfSubscriber)
+                                                        break;
 
-														if (string.IsNullOrEmpty(docId) == false)
-															generateEntityIdOnTheClient.TrySetIdentity(instance, docId);
-													}
-												
-													subscriber.OnNext(instance);
-												}
-												else
-												{
-													subscriber.OnNext((T) (object) jsonDoc);
-												}
-											}
-											catch (Exception ex)
-											{
-												logger.WarnException("Subscriber threw an exception", ex);
+                                                    processedDocs++;
+                                                }
+                                            });
+                                        }
 
-												if (options.IgnoreSubscribersErrors == false)
-												{
-													IsErroredBecauseOfSubscriber = true;
-													LastSubscriberException = ex;
+                                        pulledDocs = true;
 
-													try
-													{
-														subscriber.OnError(ex);
-													}
-													catch (Exception)
-													{
-														// can happen if a subscriber doesn't have an onError handler - just ignore it
-													}
-													break;
-												}
-											}
-										}
+                                        cts.Token.ThrowIfCancellationRequested();
 
-										processedDocs++;
+                                        var jsonDoc = streamedDocs.Current;
 
-										if (IsErroredBecauseOfSubscriber)
-											break;
-									}
-								}
-							}
-						}
+                                        if (isStronglyTyped)
+                                        {
+                                            var instance = jsonDoc.Deserialize<T>(conventions);
 
-						if (IsErroredBecauseOfSubscriber)
-							break;
+                                            var docId = jsonDoc[Constants.Metadata].Value<string>("@id");
+
+                                            if (string.IsNullOrEmpty(docId) == false)
+                                                generateEntityIdOnTheClient.TrySetIdentity(instance, docId);
+
+                                            queue.Add(instance);
+                                        }
+                                        else
+                                        {
+                                            queue.Add((T) (object) jsonDoc);
+                                        }
+
+                                        if (IsErroredBecauseOfSubscriber)
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+
+                        queue.CompleteAdding();
+
+                        if (processingTask != null)
+                            await processingTask.ConfigureAwait(false);
+
+                        if (IsErroredBecauseOfSubscriber)
+                            break;
 
                         if (lastProcessedEtagOnServer != null)
-						{
+                        {
                             if (pulledDocs)
                             {
                                 // This is an acknowledge when the server returns documents to the subscriber.
@@ -233,27 +254,27 @@ namespace Raven.Client.Document
                                     continue; // try to pull more documents from subscription
                                 }
                             }							
-						}
+                        }
 
-						while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
-						{
-							using (var clientAliveRequest = CreateClientAliveRequest())
-							{
-								clientAliveRequest.ExecuteRequest();
-							}
-						}
-					}
-				}
-				catch (ErrorResponseException e)
-				{
-					SubscriptionException subscriptionException;
-					if (AsyncDocumentSubscriptions.TryGetSubscriptionException(e, out subscriptionException))
-						throw subscriptionException;
+                        while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
+                        {
+                            using (var clientAliveRequest = CreateClientAliveRequest())
+                            {
+                                clientAliveRequest.ExecuteRequest();
+                            }
+                        }
+                    }
+                }
+                catch (ErrorResponseException e)
+                {
+                    SubscriptionException subscriptionException;
+                    if (AsyncDocumentSubscriptions.TryGetSubscriptionException(e, out subscriptionException))
+                        throw subscriptionException;
 
-					throw;
-				}
-			});
-		}
+                    throw;
+                }
+            });
+        }
 
         private void AcknowledgeBatchToServer(Etag lastProcessedEtagOnServer)
         {
@@ -272,302 +293,312 @@ namespace Raven.Client.Document
         }
 
 
-		/// <summary>
-		/// It indicates if the subscription is in errored state because one of subscribers threw an exception.
-		/// </summary>
-		public bool IsErroredBecauseOfSubscriber { get; private set; }
+        /// <summary>
+        /// It indicates if the subscription is in errored state because one of subscribers threw an exception.
+        /// </summary>
+        public bool IsErroredBecauseOfSubscriber { get; private set; }
 
-		/// <summary>
-		/// The last exception thrown by one of subscribers.
-		/// </summary>
-		public Exception LastSubscriberException { get; private set; }
+        /// <summary>
+        /// The last exception thrown by one of subscribers.
+        /// </summary>
+        public Exception LastSubscriberException { get; private set; }
 
-		/// <summary>
-		/// The last subscription connection exception.
-		/// </summary>
-		public Exception SubscriptionConnectionException { get; private set; }
+        /// <summary>
+        /// The last subscription connection exception.
+        /// </summary>
+        public Exception SubscriptionConnectionException { get; private set; }
 
-		/// <summary>
-		/// It determines if the subscription connection is closed.
-		/// </summary>
-		public bool IsConnectionClosed { get; private set; }
+        /// <summary>
+        /// It determines if the subscription connection is closed.
+        /// </summary>
+        public bool IsConnectionClosed { get; private set; }
 
-		private async Task StartPullingDocs()
-		{
-			SubscriptionConnectionException = null;
+        private async Task StartPullingDocs()
+        {
+            SubscriptionConnectionException = null;
 
-			pullingTask = PullDocuments().ObserveException();
+            pullingTask = PullDocuments().ObserveException();
 
-			try
-			{
-				await pullingTask.ConfigureAwait(false);
-			}
-			catch (Exception ex)
-			{
-				if (cts.Token.IsCancellationRequested)
-					return;
+            try
+            {
+                await pullingTask.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                if (cts.Token.IsCancellationRequested)
+                    return;
 
-				if (TryHandleRejectedConnection(ex))
-					return;
+                logger.WarnException(string.Format("Subscription #{0}. Pulling task threw the following exception", id), ex);
 
-				RestartPullingTask().ConfigureAwait(false);
-			}
+                if (TryHandleRejectedConnection(ex, reopenTried: false))
+                {
+                    if (logger.IsDebugEnabled)
+                        logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
+                    return;
+                }
 
-			if (IsErroredBecauseOfSubscriber)
-			{
-				try
-				{
-					startPullingTask = null; // prevent from calling Wait() on this in Dispose because we are already inside this task
-					await DisposeAsync().ConfigureAwait(false);
-				}
-				catch (Exception e)
-				{
-					logger.WarnException("Exception happened during an attempt to close subscription after it had become faulted", e);
-				}
-			}
-		}
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                RestartPullingTask().ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            }
 
-		private async Task RestartPullingTask()
-		{
-			await Time.Delay(options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
-			try
-			{
-				await ensureOpenSubscription().ConfigureAwait(false);
-			}
-			catch (Exception ex)
-			{
-				if (TryHandleRejectedConnection(ex))
-					return;
+            if (IsErroredBecauseOfSubscriber)
+            {
+                try
+                {
+                    startPullingTask = null; // prevent from calling Wait() on this in Dispose because we are already inside this task
+                    await DisposeAsync().ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    logger.WarnException(string.Format("Subscription #{0}. Exception happened during an attempt to close subscription after it had become faulted", id), e);
+                }
+            }
+        }
 
-				RestartPullingTask().ConfigureAwait(false);
-				return;
-			}
+        private async Task RestartPullingTask()
+        {
+            await Time.Delay(options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+            try
+            {
+                await ensureOpenSubscription().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                if (TryHandleRejectedConnection(ex, reopenTried: true))
+                    return;
 
-			startPullingTask = StartPullingDocs().ObserveException();
-		}
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                RestartPullingTask().ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                return;
+            }
 
-		private bool TryHandleRejectedConnection(Exception ex)
-		{
-			SubscriptionConnectionException = ex;
+            startPullingTask = StartPullingDocs().ObserveException();
+        }
 
-			if (ex is SubscriptionInUseException || // another client has connected to the subscription
-				ex is SubscriptionDoesNotExistException ||  // subscription has been deleted meanwhile
-			    ex is SubscriptionClosedException) // someone forced us to drop the connection by calling Subscriptions.Release
-			{
-				IsConnectionClosed = true;
+        private bool TryHandleRejectedConnection(Exception ex, bool reopenTried)
+        {
+            SubscriptionConnectionException = ex;
 
-				startPullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
-				pullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
+            if (ex is SubscriptionInUseException || // another client has connected to the subscription
+                ex is SubscriptionDoesNotExistException ||  // subscription has been deleted meanwhile
+                (ex is SubscriptionClosedException && reopenTried)) // someone forced us to drop the connection by calling Subscriptions.Release
+            {
+                IsConnectionClosed = true;
 
-				Dispose();
+                startPullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
+                pullingTask = null; // prevent from calling Wait() on this in Dispose because we can be already inside this task
 
-				return true;
-			}
+                Dispose();
 
-			return false;
-		}
+                return true;
+            }
 
-		private void StartWatchingDocs()
-		{
-			changes.ConnectionStatusChanged += ChangesApiConnectionChanged;
+            return false;
+        }
 
-			var allDocsObservable = changes.ForAllDocuments();
+        private void StartWatchingDocs()
+        {
+            changes.ConnectionStatusChanged += ChangesApiConnectionChanged;
 
-			putDocumentsObserver = allDocsObservable.Subscribe(notification =>
-			{
-				if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
-				{
-					newDocuments.Set();
-				}
-			});
+            var allDocsObservable = changes.ForAllDocuments();
 
-			var bulkInsertObservable = changes.ForBulkInsert();
-			endedBulkInsertsObserver = bulkInsertObservable.Subscribe(notification =>
-			{
-				if (notification.Type == DocumentChangeTypes.BulkInsertEnded)
-				{
-					newDocuments.Set();
-				}
-			});
+            putDocumentsObserver = allDocsObservable.Subscribe(notification =>
+            {
+                if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    newDocuments.Set();
+                }
+            });
 
-			Task.WaitAll(new Task[]
-			{
-				allDocsObservable.Task, bulkInsertObservable.Task
-			});
-		}
+            var bulkInsertObservable = changes.ForBulkInsert();
+            endedBulkInsertsObserver = bulkInsertObservable.Subscribe(notification =>
+            {
+                if (notification.Type == DocumentChangeTypes.BulkInsertEnded)
+                {
+                    newDocuments.Set();
+                }
+            });
 
-		private void WaitForSubscriptionReleased()
-		{
-			var dataSubscriptionObservable = changes.ForDataSubscription(id);
+            Task.WaitAll(new Task[]
+            {
+                allDocsObservable.Task, bulkInsertObservable.Task
+            });
+        }
 
-			dataSubscriptionReleasedObserver = dataSubscriptionObservable.Subscribe(notification =>
-			{
-				if (notification.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
-				{
-					try
-					{
-						ensureOpenSubscription().Wait();
-					}
-					catch (Exception)
-					{
-						return;
-					}
+        private void WaitForSubscriptionReleased()
+        {
+            var dataSubscriptionObservable = changes.ForDataSubscription(id);
 
-					// succeeded in opening the subscription
-					
-					// no longer need to be notified about subscription status changes
-					dataSubscriptionReleasedObserver.Dispose();
-					dataSubscriptionReleasedObserver = null;
+            dataSubscriptionReleasedObserver = dataSubscriptionObservable.Subscribe(notification =>
+            {
+                if (notification.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
+                {
+                    try
+                    {
+                        ensureOpenSubscription().Wait();
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
 
-					// start standard stuff
-					Start();
-				}
-			});
+                    // succeeded in opening the subscription
+                    
+                    // no longer need to be notified about subscription status changes
+                    dataSubscriptionReleasedObserver.Dispose();
+                    dataSubscriptionReleasedObserver = null;
 
-			dataSubscriptionObservable.Task.Wait();
-		}
+                    // start standard stuff
+                    Start();
+                }
+            });
 
-		private void ChangesApiConnectionChanged(object sender, EventArgs e)
-		{
-			if (firstConnection)
-			{
-				firstConnection = false;
-				return;
-			}
+            dataSubscriptionObservable.Task.Wait();
+        }
 
-			var changesApi = (RemoteDatabaseChanges) sender;
+        private void ChangesApiConnectionChanged(object sender, EventArgs e)
+        {
+            if (firstConnection)
+            {
+                firstConnection = false;
+                return;
+            }
 
-			if (changesApi.Connected)
-				newDocuments.Set();
-		}
+            var changesApi = (RemoteDatabaseChanges) sender;
 
-		public IDisposable Subscribe(IObserver<T> observer)
-		{
-			if(IsErroredBecauseOfSubscriber)
-				throw new InvalidOperationException("Subscription encountered errors and stopped. Cannot add any subscriber.");
+            if (changesApi.Connected)
+                newDocuments.Set();
+        }
 
-			if (subscribers.TryAdd(observer))
-			{
-				if (subscribers.Count == 1)
-					anySubscriber.Set();
-			}
+        public IDisposable Subscribe(IObserver<T> observer)
+        {
+            if(IsErroredBecauseOfSubscriber)
+                throw new InvalidOperationException("Subscription encountered errors and stopped. Cannot add any subscriber.");
 
-			return new DisposableAction(() =>
-			{
-				subscribers.TryRemove(observer);
-				if (subscribers.Count == 0)
-					anySubscriber.Reset();
-			});
-		}
+            if (subscribers.TryAdd(observer))
+            {
+                if (subscribers.Count == 1)
+                    anySubscriber.Set();
+            }
 
-		private HttpJsonRequest CreateAcknowledgmentRequest(Etag lastProcessedEtag)
-		{
-			return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), "POST");
-		}
+            return new DisposableAction(() =>
+            {
+                subscribers.TryRemove(observer);
+                if (subscribers.Count == 0)
+                    anySubscriber.Reset();
+            });
+        }
 
-		private HttpJsonRequest CreatePullingRequest()
-		{
-			return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), "GET", timeout: options.PullingRequestTimeout);
-		}
+        private HttpJsonRequest CreateAcknowledgmentRequest(Etag lastProcessedEtag)
+        {
+            return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), HttpMethods.Post);
+        }
 
-		private HttpJsonRequest CreateClientAliveRequest()
-		{
-			return commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, options.ConnectionId), "PATCH");
-		}
+        private HttpJsonRequest CreatePullingRequest()
+        {
+            return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethod.Get, timeout: options.PullingRequestTimeout);
+        }
 
-		private HttpJsonRequest CreateCloseRequest()
-		{
-			return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), "POST");
-		}
+        private HttpJsonRequest CreateClientAliveRequest()
+        {
+            return commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Patch);
+        }
 
-		private void OnCompletedNotification()
-		{
-			if(completed)
-				return;
+        private HttpJsonRequest CreateCloseRequest()
+        {
+            return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Post);
+        }
 
-			foreach (var subscriber in subscribers)
-			{
-				subscriber.OnCompleted();
-			}
+        private void OnCompletedNotification()
+        {
+            if(completed)
+                return;
 
-			completed = true;
-		}
+            foreach (var subscriber in subscribers)
+            {
+                subscriber.OnCompleted();
+            }
 
-		public void Dispose()
-		{
-			if (disposed)
-				return;
+            completed = true;
+        }
 
-			DisposeAsync().Wait();
-		}
+        public void Dispose()
+        {
+            if (disposed)
+                return;
 
-		public Task DisposeAsync()
-		{
-			if (disposed)
-				return new CompletedTask();
+            DisposeAsync().Wait();
+        }
 
-			disposed = true;
+        public Task DisposeAsync()
+        {
+            if (disposed)
+                return new CompletedTask();
 
-			OnCompletedNotification();
+            disposed = true;
 
-			subscribers.Clear();
+            OnCompletedNotification();
 
-			if (putDocumentsObserver != null)
-				putDocumentsObserver.Dispose();
+            subscribers.Clear();
 
-			if(endedBulkInsertsObserver != null)
-				endedBulkInsertsObserver.Dispose();
+            if (putDocumentsObserver != null)
+                putDocumentsObserver.Dispose();
 
-			if(dataSubscriptionReleasedObserver != null)
-				dataSubscriptionReleasedObserver.Dispose();
+            if(endedBulkInsertsObserver != null)
+                endedBulkInsertsObserver.Dispose();
 
-			cts.Cancel();
+            if(dataSubscriptionReleasedObserver != null)
+                dataSubscriptionReleasedObserver.Dispose();
 
-			newDocuments.Set();
-			anySubscriber.Set();
+            cts.Cancel();
 
-			changes.ConnectionStatusChanged -= ChangesApiConnectionChanged;
+            newDocuments.Set();
+            anySubscriber.Set();
 
-			foreach (var task in new []{pullingTask, startPullingTask})
-			{
-				if (task == null) 
-					continue;
-				
-				switch (task.Status)
-				{
-					case TaskStatus.RanToCompletion:
-					case TaskStatus.Canceled:
-						break;
-					default:
-						try
-						{
-							task.Wait();
-						}
-						catch (AggregateException ae)
-						{
-							if (ae.InnerException is OperationCanceledException == false)
-							{
-								throw;
-							}
-						}
+            changes.ConnectionStatusChanged -= ChangesApiConnectionChanged;
 
-						break;
-				}
-			}
+            foreach (var task in new []{pullingTask, startPullingTask})
+            {
+                if (task == null) 
+                    continue;
+                
+                switch (task.Status)
+                {
+                    case TaskStatus.RanToCompletion:
+                    case TaskStatus.Canceled:
+                        break;
+                    default:
+                        try
+                        {
+                            task.Wait();
+                        }
+                        catch (AggregateException ae)
+                        {
+                            if (ae.InnerException is OperationCanceledException == false)
+                            {
+                                throw;
+                            }
+                        }
 
-			if (IsConnectionClosed)
-				return new CompletedTask();
+                        break;
+                }
+            }
 
-			return CloseSubscription();
-		}
+            if (IsConnectionClosed)
+                return new CompletedTask();
 
-		private async Task CloseSubscription()
-		{
-			using (var closeRequest = CreateCloseRequest())
-			{
-				await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
-				IsConnectionClosed = true;
-			}
-		}
-	}
+            return CloseSubscription();
+        }
+
+        private async Task CloseSubscription()
+        {
+            using (var closeRequest = CreateCloseRequest())
+            {
+                await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
+                IsConnectionClosed = true;
+            }
+        }
+    }
 }

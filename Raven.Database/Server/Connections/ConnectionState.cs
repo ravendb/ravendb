@@ -10,78 +10,86 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Server.Connections
 {
-	public class ConnectionState
-	{
-		private readonly ConcurrentSet<string> matchingIndexes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocuments = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocumentPrefixes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocumentsInCollection = 	new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingDocumentsOfType = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingBulkInserts = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly ConcurrentSet<string> matchingFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+    public class ConnectionState
+    {
+        private readonly ConcurrentSet<string> matchingIndexes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingDocuments = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingDocumentPrefixes = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingDocumentsInCollection = 	new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingDocumentsOfType = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingBulkInserts = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> matchingFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentSet<long> matchingDataSubscriptions =
-			new ConcurrentSet<long>();
+        private IEventsTransport eventsTransport;
 
-		private IEventsTransport eventsTransport;
+        private int watchAllDocuments;
+        private int watchAllIndexes;
+        private int watchAllTransformers;
+        private int watchAllReplicationConflicts;
+        private int watchConfig;
+        private int watchConflicts;
+        private int watchSync;
 
-		private int watchAllDocuments;
-		private int watchAllIndexes;
-	    private int watchAllTransformers;
-		private int watchAllReplicationConflicts;
-		private int watchConfig;
-		private int watchConflicts;
-		private int watchSync;
-		private int watchAllDataSubscriptions;
+        public ConnectionState(IEventsTransport eventsTransport)
+        {
+            this.eventsTransport = eventsTransport;
+            DocumentStore = new DocumentsConnectionState(Enqueue);
+            FileSystem = new FileSystemConnectionState(Enqueue);
+            CounterStorage = new CounterStorageConnectionState(Enqueue);
+            TimeSeries = new TimeSeriesConnectionState(Enqueue);
+        }
 
-		public ConnectionState(IEventsTransport eventsTransport)
-		{
-			this.eventsTransport = eventsTransport;
-		}
+        public DocumentsConnectionState DocumentStore { get; private set; }
+        public FileSystemConnectionState FileSystem { get; private set; }
+        public CounterStorageConnectionState CounterStorage { get; private set; }
+        public TimeSeriesConnectionState TimeSeries { get; private set; }
 
-		public object DebugStatus
-		{
-			get
-			{
-				return new
-				{
-					eventsTransport.Id,
-					eventsTransport.Connected,
-					eventsTransport.Age,
-					WatchAllDocuments = watchAllDocuments > 0,
-					WatchAllIndexes = watchAllIndexes > 0,
+        public object DebugStatus
+        {
+            get
+            {
+                return new
+                {
+                    eventsTransport.Id,
+                    eventsTransport.Connected,
+                    eventsTransport.Age,
+                    WatchAllDocuments = watchAllDocuments > 0,
+                    WatchAllIndexes = watchAllIndexes > 0,
                     WatchAllTransformers = watchAllTransformers > 0,
-					WatchConfig = watchConfig > 0,
-					WatchConflicts = watchConflicts > 0,
-					WatchSync = watchSync > 0,
-					WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
-					WatchDocumentsInCollection = matchingDocumentsInCollection.ToArray(),
-					WatchIndexes = matchingIndexes.ToArray(),
-					WatchDocuments = matchingDocuments.ToArray(),
-					WatchedFolders = matchingFolders.ToArray()
-				};
-			}
-		}
+                    WatchConfig = watchConfig > 0,
+                    WatchConflicts = watchConflicts > 0,
+                    WatchSync = watchSync > 0,
+                    WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
+                    WatchDocumentsInCollection = matchingDocumentsInCollection.ToArray(),
+                    WatchIndexes = matchingIndexes.ToArray(),
+                    WatchDocuments = matchingDocuments.ToArray(),
+                    WatchedFolders = matchingFolders.ToArray(),
+                    DocumentStore = DocumentStore.DebugStatus,
+                    FileSystem = FileSystem.DebugStatus,
+                    CounterStorage = CounterStorage.DebugStatus
+                };
+            }
+        }
 
-		public void WatchIndex(string name)
-		{
-			matchingIndexes.TryAdd(name);
-		}
+        public void WatchIndex(string name)
+        {
+            matchingIndexes.TryAdd(name);
+        }
 
-		public void UnwatchIndex(string name)
-		{
-			matchingIndexes.TryRemove(name);
-		}
+        public void UnwatchIndex(string name)
+        {
+            matchingIndexes.TryRemove(name);
+        }
 
-		public void WatchBulkInsert(string operationId)
-		{
-			matchingBulkInserts.TryAdd(operationId);
-		}
+        public void WatchBulkInsert(string operationId)
+        {
+            matchingBulkInserts.TryAdd(operationId);
+        }
 
-		public void UnwatchBulkInsert(string operationId)
-		{
-			matchingBulkInserts.TryRemove(operationId);
-		}
+        public void UnwatchBulkInsert(string operationId)
+        {
+            matchingBulkInserts.TryRemove(operationId);
+        }
 
         public void WatchTransformers()
         {
@@ -93,127 +101,127 @@ namespace Raven.Database.Server.Connections
             Interlocked.Decrement(ref watchAllTransformers);
         }
 
-		public void WatchAllIndexes()
-		{
-			Interlocked.Increment(ref watchAllIndexes);
-		}
+        public void WatchAllIndexes()
+        {
+            Interlocked.Increment(ref watchAllIndexes);
+        }
 
-		public void UnwatchAllIndexes()
-		{
-			Interlocked.Decrement(ref watchAllIndexes);
-		}
+        public void UnwatchAllIndexes()
+        {
+            Interlocked.Decrement(ref watchAllIndexes);
+        }
 
-		public void WatchConflicts()
-		{
-			Interlocked.Increment(ref watchConflicts);
-		}
+        public void WatchConflicts()
+        {
+            Interlocked.Increment(ref watchConflicts);
+        }
 
-		public void UnwatchConflicts()
-		{
-			Interlocked.Decrement(ref watchConflicts);
-		}
+        public void UnwatchConflicts()
+        {
+            Interlocked.Decrement(ref watchConflicts);
+        }
 
-		public void WatchSync()
-		{
-			Interlocked.Increment(ref watchSync);
-		}
+        public void WatchSync()
+        {
+            Interlocked.Increment(ref watchSync);
+        }
 
-		public void UnwatchSync()
-		{
-			Interlocked.Decrement(ref watchSync);
-		}
+        public void UnwatchSync()
+        {
+            Interlocked.Decrement(ref watchSync);
+        }
 
-		public void WatchFolder(string folder)
-		{
-			matchingFolders.TryAdd(folder);
-		}
+        public void WatchFolder(string folder)
+        {
+            matchingFolders.TryAdd(folder);
+        }
 
-		public void UnwatchFolder(string folder)
-		{
-			matchingFolders.TryRemove(folder);
-		}
+        public void UnwatchFolder(string folder)
+        {
+            matchingFolders.TryRemove(folder);
+        }
 
-		public void WatchConfig()
-		{
-			Interlocked.Increment(ref watchConfig);
-		}
+        public void WatchConfig()
+        {
+            Interlocked.Increment(ref watchConfig);
+        }
 
-		public void UnwatchConfig()
-		{
-			Interlocked.Decrement(ref watchConfig);
-		}
+        public void UnwatchConfig()
+        {
+            Interlocked.Decrement(ref watchConfig);
+        }
 
-		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
-		{
-		    if (!matchingBulkInserts.Contains(string.Empty) && 
+        public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+        {
+            if (!matchingBulkInserts.Contains(string.Empty) && 
                 !matchingBulkInserts.Contains(bulkInsertChangeNotification.OperationId.ToString())) 
                 return;
-		    Enqueue(new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" });
-		}
+            Enqueue(new { Value = bulkInsertChangeNotification, Type = "BulkInsertChangeNotification" });
+        }
 
-	    public void Send(DocumentChangeNotification documentChangeNotification)
-		{
-			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
-			if (watchAllDocuments > 0)
-			{
-				Enqueue(value);
-				return;
-			}
+        public void Send(DocumentChangeNotification documentChangeNotification)
+        {
+            var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
+            if (watchAllDocuments > 0)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			if (documentChangeNotification.Id != null && matchingDocuments.Contains(documentChangeNotification.Id))
-			{
-				Enqueue(value);
-				return;
-			}
+            if (documentChangeNotification.Id != null && matchingDocuments.Contains(documentChangeNotification.Id))
+            {
+                Enqueue(value);
+                return;
+            }
 
-			var hasPrefix = documentChangeNotification.Id != null && matchingDocumentPrefixes
-				.Any(x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
+            var hasPrefix = documentChangeNotification.Id != null && matchingDocumentPrefixes
+                .Any(x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
 
-			if (hasPrefix)
-			{
-				Enqueue(value);
-				return;
-			}
+            if (hasPrefix)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			var hasCollection = documentChangeNotification.CollectionName != null && matchingDocumentsInCollection
-				.Any(x => string.Equals(x, documentChangeNotification.CollectionName, StringComparison.InvariantCultureIgnoreCase));
+            var hasCollection = documentChangeNotification.CollectionName != null && matchingDocumentsInCollection
+                .Any(x => string.Equals(x, documentChangeNotification.CollectionName, StringComparison.InvariantCultureIgnoreCase));
 
-			if (hasCollection)
-			{
-				Enqueue(value);
-				return;
-			}
+            if (hasCollection)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			var hasType = documentChangeNotification.TypeName != null && matchingDocumentsOfType
-				.Any(x => string.Equals(x, documentChangeNotification.TypeName, StringComparison.InvariantCultureIgnoreCase));
+            var hasType = documentChangeNotification.TypeName != null && matchingDocumentsOfType
+                .Any(x => string.Equals(x, documentChangeNotification.TypeName, StringComparison.InvariantCultureIgnoreCase));
 
-			if (hasType)
-			{
-				Enqueue(value);
-				return;
-			}
+            if (hasType)
+            {
+                Enqueue(value);
+                return;
+            }
 
-			if (documentChangeNotification.Id != null || documentChangeNotification.CollectionName != null || documentChangeNotification.TypeName != null)
-			{
-				return;
-			}
+            if (documentChangeNotification.Id != null || documentChangeNotification.CollectionName != null || documentChangeNotification.TypeName != null)
+            {
+                return;
+            }
 
-			Enqueue(value);
-		}
+            Enqueue(value);
+        }
 
-		public void Send(IndexChangeNotification indexChangeNotification)
-		{
-		    if (watchAllIndexes > 0)
-			{
-				Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
-				return;
-			}
+        public void Send(IndexChangeNotification indexChangeNotification)
+        {
+            if (watchAllIndexes > 0)
+            {
+                Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
+                return;
+            }
 
-			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
-				return;
+            if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
+                return;
 
-			Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
-		}
+            Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
+        }
 
         public void Send(TransformerChangeNotification transformerChangeNotification)
         {
@@ -223,166 +231,95 @@ namespace Raven.Database.Server.Connections
             }
         }
 
-		public void Send(ReplicationConflictNotification replicationConflictNotification)
-		{
-		    if (watchAllReplicationConflicts <= 0)
-			{
-				return;
-			}
+        public void Send(ReplicationConflictNotification replicationConflictNotification)
+        {
+            if (watchAllReplicationConflicts <= 0)
+            {
+                return;
+            }
 
-			Enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
-		}
+            Enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
+        }
 
-		public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
-		{
-			if (watchAllDataSubscriptions > 0)
-			{
-				Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
-				return;
-			}
+        private void Enqueue(object msg)
+        {
+            if (eventsTransport == null || eventsTransport.Connected == false)
+            {
+                return;
+            }
 
-			if (matchingDataSubscriptions.Contains(dataSubscriptionChangeNotification.Id) == false)
-				return;
+            eventsTransport.SendAsync(msg);
+        }
 
-			Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
-		}
+        public void WatchAllDocuments()
+        {
+            Interlocked.Increment(ref watchAllDocuments);
+        }
 
-		public void Send(Notification notification)
-		{
-			if (ShouldSend(notification))
-			{
-				var value = new { Value = notification, Type = notification.GetType().Name };
+        public void UnwatchAllDocuments()
+        {
+            Interlocked.Decrement(ref watchAllDocuments);
+        }
 
-				Enqueue(value);
-			}
-		}
+        public void WatchDocument(string name)
+        {
+            matchingDocuments.TryAdd(name);
+        }
 
-		private bool ShouldSend(Notification notification)
-		{
-			if (notification is FileChangeNotification &&
-				matchingFolders.Any(
-					f => ((FileChangeNotification)notification).File.StartsWith(f, StringComparison.InvariantCultureIgnoreCase)))
-			{
-				return true;
-			}
+        public void UnwatchDocument(string name)
+        {
+            matchingDocuments.TryRemove(name);
+        }
 
-			if (notification is ConfigurationChangeNotification && watchConfig > 0)
-			{
-				return true;
-			}
+        public void WatchDocumentPrefix(string name)
+        {
+            matchingDocumentPrefixes.TryAdd(name);
+        }
 
-			if (notification is ConflictNotification && watchConflicts > 0)
-			{
-				return true;
-			}
+        public void UnwatchDocumentPrefix(string name)
+        {
+            matchingDocumentPrefixes.TryRemove(name);
+        }
 
-			if (notification is SynchronizationUpdateNotification && watchSync > 0)
-			{
-				return true;
-			}
+        public void WatchDocumentInCollection(string name)
+        {
+            matchingDocumentsInCollection.TryAdd(name);
+        }
 
-			return false;
-		}
+        public void UnwatchDocumentInCollection(string name)
+        {
+            matchingDocumentsInCollection.TryRemove(name);
+        }
 
-		private void Enqueue(object msg)
-		{
-			if (eventsTransport == null || eventsTransport.Connected == false)
-			{
-				return;
-			}
+        public void WatchDocumentOfType(string name)
+        {
+            matchingDocumentsOfType.TryAdd(name);
+        }
 
-			eventsTransport.SendAsync(msg);
-		}
+        public void UnwatchDocumentOfType(string name)
+        {
+            matchingDocumentsOfType.TryRemove(name);
+        }
 
-		public void WatchAllDocuments()
-		{
-			Interlocked.Increment(ref watchAllDocuments);
-		}
+        public void WatchAllReplicationConflicts()
+        {
+            Interlocked.Increment(ref watchAllReplicationConflicts);
+        }
 
-		public void UnwatchAllDocuments()
-		{
-			Interlocked.Decrement(ref watchAllDocuments);
-		}
+        public void UnwatchAllReplicationConflicts()
+        {
+            Interlocked.Decrement(ref watchAllReplicationConflicts);
+        }
 
-		public void WatchDocument(string name)
-		{
-			matchingDocuments.TryAdd(name);
-		}
+        public void Reconnect(IEventsTransport transport)
+        {
+            eventsTransport = transport;
+        }
 
-		public void UnwatchDocument(string name)
-		{
-			matchingDocuments.TryRemove(name);
-		}
-
-		public void WatchDocumentPrefix(string name)
-		{
-			matchingDocumentPrefixes.TryAdd(name);
-		}
-
-		public void UnwatchDocumentPrefix(string name)
-		{
-			matchingDocumentPrefixes.TryRemove(name);
-		}
-
-		public void WatchDocumentInCollection(string name)
-		{
-			matchingDocumentsInCollection.TryAdd(name);
-		}
-
-		public void UnwatchDocumentInCollection(string name)
-		{
-			matchingDocumentsInCollection.TryRemove(name);
-		}
-
-		public void WatchDocumentOfType(string name)
-		{
-			matchingDocumentsOfType.TryAdd(name);
-		}
-
-		public void UnwatchDocumentOfType(string name)
-		{
-			matchingDocumentsOfType.TryRemove(name);
-		}
-
-		public void WatchAllReplicationConflicts()
-		{
-			Interlocked.Increment(ref watchAllReplicationConflicts);
-		}
-
-		public void UnwatchAllReplicationConflicts()
-		{
-			Interlocked.Decrement(ref watchAllReplicationConflicts);
-		}
-
-		public void WatchAllDataSubscriptions()
-		{
-			Interlocked.Increment(ref watchAllDataSubscriptions);
-		}
-
-		public void UnwatchAllDataSubscriptions()
-		{
-			Interlocked.Decrement(ref watchAllDataSubscriptions);
-		}
-
-		public void WatchDataSubscription(long id)
-		{
-			matchingDataSubscriptions.TryAdd(id);
-		}
-
-		public void UnwatchDataSubscription(long id)
-		{
-			matchingDataSubscriptions.TryRemove(id);
-		}
-
-		public void Reconnect(IEventsTransport transport)
-		{
-			eventsTransport = transport;
-		}
-
-		public void Dispose()
-		{
-			if (eventsTransport != null)
-				eventsTransport.Dispose();
-		}
-	}
+        public void Dispose()
+        {
+            if (eventsTransport != null)
+                eventsTransport.Dispose();
+        }
+    }
 }

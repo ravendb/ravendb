@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -88,6 +88,30 @@ namespace Raven.Json.Linq
             }
 
             return token;
+        }
+
+        /// <summary>
+        /// Creates the specified .NET type from the <see cref="JToken"/> using the specified <see cref="JsonSerializer"/>.
+        /// </summary>
+        /// <typeparam name="T">The object type that the token will be deserialized to.</typeparam>
+        /// <returns>The new object created from the JSON value.</returns>
+        /// <remarks>Creates new instance of JsonSerializer for each call!</remarks>
+        public T ToObject<T>()
+            where T : class
+        {
+            return ToObject<T>(JsonExtensions.CreateDefaultJsonSerializer());
+        }
+
+        /// <summary>
+        /// Creates the specified .NET type from the <see cref="JToken"/> using the specified <see cref="JsonSerializer"/>.
+        /// </summary>
+        /// <typeparam name="T">The object type that the token will be deserialized to.</typeparam>
+        /// <param name="jsonSerializer">The <see cref="JsonSerializer"/> that will be used when creating the object.</param>
+        /// <returns>The new object created from the JSON value.</returns>
+        public T ToObject<T>(JsonSerializer jsonSerializer)
+            where T : class
+        {
+            return jsonSerializer.Deserialize<T>(new RavenJTokenReader(this));
         }
 
         /// <summary>
@@ -248,11 +272,11 @@ namespace Raven.Json.Linq
         public static async Task<RavenJToken> TryLoadAsync(Stream stream)
         {
             var jsonTextReader = new JsonTextReaderAsync(new StreamReader(stream));
-            if (await jsonTextReader.ReadAsync() == false || jsonTextReader.TokenType == JsonToken.None)
+            if (await jsonTextReader.ReadAsync().ConfigureAwait(false) == false || jsonTextReader.TokenType == JsonToken.None)
             {
                 return null;
             }
-            return await ReadFromAsync(jsonTextReader);
+            return await ReadFromAsync(jsonTextReader).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -550,18 +574,18 @@ namespace Raven.Json.Linq
             return SelectToken(path, false);
         }
 
-		/// <summary>
-		///     Selects the token that matches the object path.
-		/// </summary>
-		/// <param name="path">
-		///     The object path from the current <see cref="RavenJToken" /> to the <see cref="RavenJToken" />
-		///     to be returned. This must be a string of property names or array indexes separated
-		///     by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
-		///     <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
-		/// </param>
-		/// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
-		/// <param name="createSnapshots">A flag to indicate whether token snapshots should be created.</param>
-		/// <returns>The <see cref="RavenJToken" /> that matches the object path.</returns>
+        /// <summary>
+        ///     Selects the token that matches the object path.
+        /// </summary>
+        /// <param name="path">
+        ///     The object path from the current <see cref="RavenJToken" /> to the <see cref="RavenJToken" />
+        ///     to be returned. This must be a string of property names or array indexes separated
+        ///     by periods, such as <code>Tables[0].DefaultView[0].Price</code> in C# or
+        ///     <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
+        /// </param>
+        /// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
+        /// <param name="createSnapshots">A flag to indicate whether token snapshots should be created.</param>
+        /// <returns>The <see cref="RavenJToken" /> that matches the object path.</returns>
         public RavenJToken SelectToken(string path, bool errorWhenNoMatch, bool createSnapshots = false)
         {
             var p = new RavenJPath(path);
@@ -593,7 +617,7 @@ namespace Raven.Json.Linq
         ///     <code>Tables(0).DefaultView(0).Price</code> in Visual Basic.
         /// </param>
         /// <param name="errorWhenNoMatch">A flag to indicate whether an error should be thrown if no token is found.</param>
-		/// <param name="createSnapshots">A flag to indicate whether token snapshots should be created.</param>
+        /// <param name="createSnapshots">A flag to indicate whether token snapshots should be created.</param>
         /// <returns>The <see cref="RavenJToken" /> that matches the object path.</returns>
         public RavenJToken SelectToken(RavenJPath path, bool errorWhenNoMatch, bool createSnapshots = false)
         {
@@ -922,9 +946,9 @@ namespace Raven.Json.Linq
             switch (reader.TokenType)
             {
                 case JsonToken.StartObject:
-					return await RavenJObject.LoadAsync(reader).ConfigureAwait(false);
+                    return await RavenJObject.LoadAsync(reader).ConfigureAwait(false);
                 case JsonToken.StartArray:
-					return await RavenJArray.LoadAsync(reader).ConfigureAwait(false);
+                    return await RavenJArray.LoadAsync(reader).ConfigureAwait(false);
                 case JsonToken.String:
                 case JsonToken.Integer:
                 case JsonToken.Float:

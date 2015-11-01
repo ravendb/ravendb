@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,7 +21,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class FilesStreamsController : RavenFsApiController
+    public class FilesStreamsController : BaseFileSystemApiController
     {
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -31,7 +31,7 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage Get()
         {
             var etag = GetEtagFromQueryString();
-            var pageSize = GetPageSize(FileSystem.Configuration.MaxPageSize);
+            var pageSize = GetPageSize(FileSystem.Configuration.Core.MaxPageSize);
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -45,12 +45,12 @@ namespace Raven.Database.FileSystem.Controllers
         private void StreamToClient(Stream stream, int pageSize, Etag etag)
         {
             using (var cts = new CancellationTokenSource())
-			using (var timeout = cts.TimeoutAfter(FileSystemsLandlord.SystemConfiguration.DatabaseOperationTimeout))
-			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
-			{
-			    writer.WriteStartObject();
-			    writer.WritePropertyName("Results");
-			    writer.WriteStartArray();
+            using (var timeout = cts.TimeoutAfter(FileSystemsLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (var writer = new JsonTextWriter(new StreamWriter(stream)))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
 
                 Storage.Batch(accessor =>
                 {
@@ -68,7 +68,7 @@ namespace Raven.Database.FileSystem.Controllers
                 writer.WriteEndArray();
                 writer.WriteEndObject();
                 writer.Flush();
-			}
+            }
         }
 
     }

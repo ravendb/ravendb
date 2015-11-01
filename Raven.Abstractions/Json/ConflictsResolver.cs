@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,9 +54,9 @@ namespace Raven.Abstractions.Json
         private bool TryHandleArrayValue(int index, Dictionary<string, object> result, KeyValuePair<string, RavenJToken> prop)
         {
             var arrays = new List<RavenJArray>
-			{
-				(RavenJArray)prop.Value
-			};
+            {
+                (RavenJArray)prop.Value
+            };
 
             for (var i = 0; i < docs.Length; i++)
             {
@@ -68,15 +68,15 @@ namespace Raven.Abstractions.Json
                     return false;
                 if (token == null)
                     continue;
-	            if (token.IsSnapshot)
-					token = token.CreateSnapshot();
-				arrays.Add((RavenJArray)token);
+                if (token.IsSnapshot)
+                    token = token.CreateSnapshot();
+                arrays.Add((RavenJArray)token);
             }
 
             var mergedArray = new RavenJArray();
             while (arrays.Count > 0)
             {
-				var set = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
+                var set = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
                 for (var i = 0; i < arrays.Count; i++)
                 {
                     if (arrays[i].Length == 0)
@@ -95,7 +95,7 @@ namespace Raven.Abstractions.Json
                 }
             }
 
-			if (RavenJTokenEqualityComparer.Default.Equals(mergedArray, prop.Value))
+            if (RavenJTokenEqualityComparer.Default.Equals(mergedArray, prop.Value))
             {
                 result.Add(prop.Key, mergedArray);
                 return true;
@@ -108,9 +108,9 @@ namespace Raven.Abstractions.Json
         private bool TryHandleObjectValue(int index, Dictionary<string, object> result, KeyValuePair<string, RavenJToken> prop)
         {
             var others = new List<RavenJObject>
-			{
-				(RavenJObject)prop.Value
-			};
+            {
+                (RavenJObject)prop.Value
+            };
             for (var i = 0; i < docs.Length; i++)
             {
                 if (i == index)
@@ -144,7 +144,7 @@ namespace Raven.Abstractions.Json
                 RavenJToken otherVal;
                 if (other.TryGetValue(prop.Key, out otherVal) == false)
                     continue;
-				if (RavenJTokenEqualityComparer.Default.Equals(prop.Value, otherVal) == false)
+                if (RavenJTokenEqualityComparer.Default.Equals(prop.Value, otherVal) == false)
                     conflicted.Values.Add(otherVal);
             }
 
@@ -201,7 +201,7 @@ namespace Raven.Abstractions.Json
 
         private void WriteRawData(JsonTextWriter writer, String data, int indent)
         {
-	        var sb = new StringBuilder();
+            var sb = new StringBuilder();
             using (var stringReader = new StringReader(data))
             {
                 var first = true;
@@ -210,37 +210,37 @@ namespace Raven.Abstractions.Json
                 {
                     if (first == false)
                     {
-	                    sb.AppendLine();
+                        sb.AppendLine();
                         for (var i = 0; i < indent; i++)
                         {
-	                        sb.Append(writer.IndentChar, writer.Indentation);
+                            sb.Append(writer.IndentChar, writer.Indentation);
                         }
                     }
 
-	                sb.Append(line);
+                    sb.Append(line);
 
                     first = false;
                 }
             }
-			writer.WriteRawValue(sb.ToString());
+            writer.WriteRawValue(sb.ToString());
         }
 
         private void WriteConflictResolver(string name, JsonTextWriter documentWriter, JsonTextWriter metadataWriter, ConflictsResolver resolver, int indent)
         {
             MergeResult result = resolver.Resolve(indent);
 
-	        if (resolver.isMetadataResolver)
-	        {
-				if(name != "@metadata")
-					metadataWriter.WritePropertyName(name);
+            if (resolver.isMetadataResolver)
+            {
+                if(name != "@metadata")
+                    metadataWriter.WritePropertyName(name);
 
-		        WriteRawData(metadataWriter, result.Document, indent);
-	        }
-	        else
-	        {
-				documentWriter.WritePropertyName(name);
-				WriteRawData(documentWriter, result.Document, indent);
-	        }
+                WriteRawData(metadataWriter, result.Document, indent);
+            }
+            else
+            {
+                documentWriter.WritePropertyName(name);
+                WriteRawData(documentWriter, result.Document, indent);
+            }
         }
 
         private MergeResult GenerateOutput(Dictionary<string, object> result, int indent)
@@ -285,7 +285,7 @@ namespace Raven.Abstractions.Json
 
         private class Conflicted
         {
-			public readonly HashSet<RavenJToken> Values = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
+            public readonly HashSet<RavenJToken> Values = new HashSet<RavenJToken>(RavenJTokenEqualityComparer.Default);
         }
 
         private class ArrayWithWarning

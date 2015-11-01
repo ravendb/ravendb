@@ -1,25 +1,23 @@
-﻿import commandBase = require("commands/commandBase");
-import counter = require("models/counter/counter");
+import commandBase = require("commands/commandBase");
 import counterStorage = require("models/counter/counterStorage");
 
 class resetCounterCommand extends commandBase {
 
-    /**
-    * @param counterStorage - the counter storage that is being used
-    * @param editedCounter - the edited counter
-    */
-    constructor(private storage: counterStorage, private counterToReset: counter) {
+    constructor(private cs: counterStorage, private groupName: string, private counterName: string) {
         super();
     }
 
-    execute(): JQueryPromise<counter[]> {
+    execute(): JQueryPromise<any> {
         var args = {
-            group: this.counterToReset.group(),
-            counterName: this.counterToReset.id()
+            groupName: this.groupName,
+            counterName: this.counterName
         };
 
         var url = "/reset" + this.urlEncodeArgs(args);
-        return this.post(url, null, this.storage, { dataType: undefined });
+        var action = this.post(url, args, this.cs, { dataType: undefined });
+        action.done(() => this.reportSuccess("Successfully reset counter!"));
+        action.fail((response: JQueryXHR) => this.reportError("Failed to reset counter!", response.responseText, response.statusText));
+        return action;
     }
 }
 

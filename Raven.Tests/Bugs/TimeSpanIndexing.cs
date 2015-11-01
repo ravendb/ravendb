@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TimeSpanIndexing.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,12 +14,12 @@ namespace Raven.Tests.Bugs
 {
     public class TimeSpanIndexing : RavenTest
     {
-	    private readonly IDocumentStore store;
+        private readonly IDocumentStore store;
         public TimeSpanIndexing()
         {
             store = NewDocumentStore();
             new SimpleIndex().Execute(store);
-			new SimpleTransformer().Execute(store);
+            new SimpleTransformer().Execute(store);
             var indexes = store.DatabaseCommands.GetIndexNames(0, int.MaxValue);
             Assert.NotEmpty(indexes);
         }
@@ -34,10 +34,10 @@ namespace Raven.Tests.Bugs
                 session.Store(new Simple {Id = id, Value = value});
                 session.SaveChanges();
 
-	            var result = session.Query<Simple, SimpleIndex>()
-									.TransformWith<SimpleTransformer, Simple>()
-	                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-	                                .FirstOrDefault(x => x.Id == id);
+                var result = session.Query<Simple, SimpleIndex>()
+                                    .TransformWith<SimpleTransformer, Simple>()
+                                    .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                    .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
                 Assert.Equal(value, result.Value);
             }
@@ -53,10 +53,10 @@ namespace Raven.Tests.Bugs
                 session.Store(new Simple {Id = id, Value = value});
                 session.SaveChanges();
 
-	            var result = session.Query<Simple, SimpleIndex>()
-		            .TransformWith<SimpleTransformer, Simple>()
-		            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-		            .FirstOrDefault(x => x.Id == id);
+                var result = session.Query<Simple, SimpleIndex>()
+                    .TransformWith<SimpleTransformer, Simple>()
+                    .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                    .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
                 Assert.Equal(value, result.Value);
             }
@@ -72,10 +72,10 @@ namespace Raven.Tests.Bugs
                 session.Store(new Simple {Id = id, Value = value});
                 session.SaveChanges();
 
-	            var result = session.Query<Simple, SimpleIndex>()
-									.TransformWith<SimpleTransformer, Simple>()
-	                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-	                                .FirstOrDefault(x => x.Id == id);
+                var result = session.Query<Simple, SimpleIndex>()
+                                    .TransformWith<SimpleTransformer, Simple>()
+                                    .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                                    .FirstOrDefault(x => x.Id == id);
                 Assert.NotNull(result);
                 Assert.Equal(value, result.Value);
             }
@@ -99,18 +99,18 @@ namespace Raven.Tests.Bugs
             }
         }
 
-		public class SimpleTransformer : AbstractTransformerCreationTask<Simple>
-		{
-			public SimpleTransformer()
-			{
-				TransformResults = results => from r in results
-													let s = LoadDocument<Simple>(r.Id)
-													select new
-													{
-														r.Id,
-														s.Value
-													};
-			}
-		}
+        public class SimpleTransformer : AbstractTransformerCreationTask<Simple>
+        {
+            public SimpleTransformer()
+            {
+                TransformResults = results => from r in results
+                                                    let s = LoadDocument<Simple>(r.Id)
+                                                    select new
+                                                    {
+                                                        r.Id,
+                                                        s.Value
+                                                    };
+            }
+        }
     }
 }

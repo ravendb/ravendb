@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
@@ -9,8 +9,8 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3420 : RavenTestBase
-	{
+    public class RavenDB_3420 : RavenTestBase
+    {
         [InlineData(null, null)]
         [InlineData("ShardedDatabase", "ShardedDatabase")]
         [InlineData("ShardedDatabase1", "ShardedDatabase2")]
@@ -20,10 +20,10 @@ namespace Raven.Tests.Issues
             var server1 = GetNewServer(8079);
             var server2 = GetNewServer(8078);
             var shards = new Dictionary<string, IDocumentStore>
-			{
-				{"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrl, DefaultDatabase = databaseName1}},
-				{"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrl, DefaultDatabase = databaseName2}}
-			};
+            {
+                {"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrl, DefaultDatabase = databaseName1}},
+                {"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrl, DefaultDatabase = databaseName2}}
+            };
             var shardStrategy = new ShardStrategy(shards);
             shardStrategy.ShardingOn<Profile>(x => x.Location);
 
@@ -80,10 +80,10 @@ namespace Raven.Tests.Issues
             var server1 = GetNewServer(8079);
             var server2 = GetNewServer(8078);
             var shards = new Dictionary<string, IDocumentStore>
-			{
-				{"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrl}},
-				{"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrl}}
-			};
+            {
+                {"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrl}},
+                {"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrl}}
+            };
             var shardStrategy = new ShardStrategy(shards);
             shardStrategy.ShardingOn<Profile>(x => x.Location);
 
@@ -135,22 +135,22 @@ namespace Raven.Tests.Issues
             }
         }
 
-	    private static void EnsureDatabaseExists(string databaseName, string serverUrl)
-	    {
+        private static void EnsureDatabaseExists(string databaseName, string serverUrl)
+        {
             using (var store = new DocumentStore { Url = serverUrl }.Initialize())
             {
                 if (databaseName != null)
                     store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(databaseName);
             }
-	    }
+        }
 
-	    private class Profile
-		{
-			public string Id { get; set; }
+        private class Profile
+        {
+            public string Id { get; set; }
 
-			public string Name { get; set; }
+            public string Name { get; set; }
 
-			public string Location { get; set; }
-		}
-	}
+            public string Location { get; set; }
+        }
+    }
 }

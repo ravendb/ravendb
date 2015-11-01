@@ -20,46 +20,46 @@ using System;
 namespace SpellChecker.Net.Search.Spell
 {
 
-	/// <summary>  SuggestWord Class, used in suggestSimilar method in SpellChecker class.
-	/// 
-	/// </summary>
-	/// <author>  Nicolas Maisonneuve
-	/// </author>
-	sealed class SuggestWord
-	{
-		/// <summary> the score of the word</summary>
-		public float score;
+    /// <summary>  SuggestWord Class, used in suggestSimilar method in SpellChecker class.
+    /// 
+    /// </summary>
+    /// <author>  Nicolas Maisonneuve
+    /// </author>
+    sealed class SuggestWord
+    {
+        /// <summary> the score of the word</summary>
+        public float score;
 
-		/// <summary> The freq of the word</summary>
-		public int freq;
+        /// <summary> The freq of the word</summary>
+        public int freq;
 
-		/// <summary> the suggested word</summary>
-		public System.String termString;
+        /// <summary> the suggested word</summary>
+        public System.String termString;
 
-		public int CompareTo(SuggestWord a)
-		{
-			//first criteria: the edit distance
-			if (score > a.score)
-			{
-				return 1;
-			}
-			if (score < a.score)
-			{
-				return -1;
-			}
+        public int CompareTo(SuggestWord a)
+        {
+            //first criteria: the edit distance
+            if (score > a.score)
+            {
+                return 1;
+            }
+            if (score < a.score)
+            {
+                return -1;
+            }
 
-			//second criteria (if first criteria is equal): the popularity
-			if (freq > a.freq)
-			{
-				return 1;
-			}
+            //second criteria (if first criteria is equal): the popularity
+            if (freq > a.freq)
+            {
+                return 1;
+            }
 
-			if (freq < a.freq)
-			{
-				return -1;
-			}
+            if (freq < a.freq)
+            {
+                return -1;
+            }
 
-			return 0;
-		}
-	}
+            return 0;
+        }
+    }
 }

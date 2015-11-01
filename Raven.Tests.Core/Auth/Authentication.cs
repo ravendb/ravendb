@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security.Windows;
@@ -78,7 +78,7 @@ namespace Raven.Tests.Core.Auth
                                             }
                                     }
                             }
-                    }), new RavenJObject(), null);
+                    }), new RavenJObject());
 
             using (var store = new DocumentStore
                 {

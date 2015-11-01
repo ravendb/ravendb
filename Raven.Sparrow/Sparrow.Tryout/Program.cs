@@ -1,251 +1,289 @@
-﻿using BenchmarkDotNet;
-using BenchmarkDotNet.Tasks;
-using Sparrow;
+using Sparrow.Binary;
+using Sparrow.Collections;
+using Sparrow.Tests;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Sparrow.Tryout
 {
-
-    [Task(platform: BenchmarkPlatform.X64, jitVersion: BenchmarkJitVersion.LegacyJit)]
-    [Task(platform: BenchmarkPlatform.X64, jitVersion: BenchmarkJitVersion.RyuJit)]
-    public class HashingBenchmark
+    class Program
     {
-        public byte[] buffer = new byte[4096 * 4096];
+        private static readonly Func<string, BitVector> binarize = x => BitVector.Of(x, true);
+        private static readonly Func<long, BitVector> binarizeLong = x => BitVector.Of(true, x);
+        private static readonly Func<BitVector, BitVector> binarizeIdentity = x => x;
 
-        public HashingBenchmark()
+
+        private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+
+        [Serializable]
+        public class JavaRandom
         {
-            Random generator = new Random();
-            generator.NextBytes(buffer);
+            public JavaRandom(ulong seed)
+            {
+                this.seed = (seed ^ 0x5DEECE66DUL) & ((1UL << 48) - 1);
+            }
+
+            public int NextInt(int n)
+            {
+                if (n <= 0) throw new ArgumentException("n must be positive");
+
+                if ((n & -n) == n)  // i.e., n is a power of 2
+                    return (int)((n * (long)Next(31)) >> 31);
+
+                long bits, val;
+                do
+                {
+                    bits = Next(31);
+                    val = bits % (uint)n;
+                }
+                while (bits - val + (n - 1) < 0);
+
+                return (int)val;
+            }
+
+            protected uint Next(int bits)
+            {
+                seed = (seed * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+
+                return (uint)(seed >> (48 - bits));
+            }
+
+            private ulong seed;
+        }    
+
+        private static string GenerateRandomString(Random generator, int size)
+        {
+            var stringChars = new char[size];
+            for (int i = 0; i < stringChars.Length; i++)
+                stringChars[i] = chars[generator.Next(chars.Length)];
+                
+            return new String(stringChars);
+        }        
+
+        private class Operation
+        {
+            public bool IsInsert;
+            public string Key;
+            public BitVector KeyAsBinary;
         }
 
-        [Benchmark]
-        public uint HashHuge()
+        static unsafe void Main(string[] args)
         {
-            unsafe
+            int keySize = 8;
+            int keysToInsert = 1000000;
+            //var generator = new Random(100);
+            var generator = new Random();
+
+            var values = new HashSet<string>();
+            var valuesAsBitVectors = new HashSet<BitVector>();
+
+            var withDeletes = new List<string>();
+            var operations = new List<Operation>();
+
+            for (int i = 0; i < keysToInsert; i++)
             {
-                fixed (byte* bufferPtr = buffer)
+                if ( generator.Next(5) == 0 )
                 {
-                    return Hashing.XXHash32.CalculateInline(bufferPtr, buffer.Length);
+                    if (withDeletes.Count == 0)
+                        continue;
+
+                    int position = generator.Next(withDeletes.Count);
+                    
+                    var key = withDeletes[position];
+                    operations.Add(new Operation { IsInsert = false, Key = key, KeyAsBinary = binarize(key) });                    
+                    withDeletes.RemoveAt(position);
+                }
+                else
+                {
+                    //long key = generator.Next() << 32 | generator.Next();
+                    string key = GenerateRandomString(generator, keySize);
+                    withDeletes.Add(key);
+                    operations.Add(new Operation { IsInsert = true, Key = key, KeyAsBinary = binarize(key) });
+
+                    values.Add(key);
+                    valuesAsBitVectors.Add(binarize(key));
                 }
             }
-        }
 
-        [Benchmark]
-        public uint HashBlock()
-        {
-            unsafe
+            var watch = Stopwatch.StartNew();
+            TimeSpan totalTime = TimeSpan.Zero;
+
+            var tree = new ZFastTrieSortedSet<BitVector, string>(binarizeIdentity);
+
+            int count = 0;
+            foreach (var op in operations)
             {
-                fixed (byte* bufferPtr = buffer)
+                if ( op.IsInsert )
                 {
-                    return Hashing.XXHash32.CalculateInline(bufferPtr, 512);
+                    tree.Add(op.KeyAsBinary, op.Key);
                 }
-            }
-        }
+                else
+                {
+                    tree.Remove(op.KeyAsBinary);
+                }                
 
-        [Benchmark]
-        public uint HashSmall()
-        {
-            unsafe
+                count++;
+            }
+            watch.Stop();
+
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("ZFAST: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+
+            watch = Stopwatch.StartNew();
+            foreach (var key in valuesAsBitVectors)
             {
-                fixed (byte* bufferPtr = buffer)
-                {
-                    return Hashing.XXHash32.CalculateInline(bufferPtr, 64);
-                }
+                tree.Contains(key);
             }
-        }
+            watch.Stop();
 
-        [Benchmark]
-        public uint HashVerySmall()
-        {
-            unsafe
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("ZFAST: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+            Console.WriteLine(string.Format("ZFAST: Full course with {0} keys in {1} or {2} per second.", values.Count, totalTime, ((double)values.Count) / totalTime.TotalMilliseconds * 1000));
+
+            //tree.NodesTable.VerifyStructure();
+
+            //var list = new SortedList<string, string>();
+
+            //watch = Stopwatch.StartNew();
+            //foreach (var op in operations)
+            //{
+            //    if( op.IsInsert )
+            //    {
+            //        list.Add(op.Key, op.Key);
+            //    }
+            //    else
+            //    {
+            //        list.Remove(op.Key);
+            //    }                
+            //}
+            //watch.Stop();
+            //Console.WriteLine(string.Format("SortedList: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+
+
+            //watch = Stopwatch.StartNew();
+            //foreach (var key in values)
+            //{
+            //    list.ContainsKey(key);
+            //}
+            //watch.Stop();
+            //Console.WriteLine(string.Format("SortedList: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+
+            var dictionary = new SortedDictionary<string, string>();
+
+            totalTime = TimeSpan.Zero;
+
+            watch = Stopwatch.StartNew();
+            foreach (var op in operations)
             {
-                fixed (byte* bufferPtr = buffer)
+                if ( op.IsInsert )
                 {
-                    return Hashing.XXHash32.CalculateInline(bufferPtr, 16);
+                    dictionary.Add(op.Key, op.Key);
                 }
+                else
+                {
+                    dictionary.Remove(op.Key);
+                }                
             }
-        }
+            watch.Stop();
 
-        [Benchmark]
-        public uint HashTiny()
-        {
-            unsafe
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("SortedDictionary: Inserting {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+
+
+            watch = Stopwatch.StartNew();
+            foreach (var key in values)
             {
-                fixed (byte* bufferPtr = buffer)
-                {
-                    return Hashing.XXHash32.CalculateInline(bufferPtr, 6);
-                }
+                dictionary.ContainsKey(key);
             }
-        }
-    }
+            watch.Stop();
+
+            totalTime += watch.Elapsed;
+            Console.WriteLine(string.Format("SortedDictionary: Contains {0} keys in {1} or {2} per second.", values.Count, watch.Elapsed, ((double)values.Count) / watch.ElapsedMilliseconds * 1000));
+            Console.WriteLine(string.Format("SortedDictionary: Full course with {0} keys in {1} or {2} per second.", values.Count, totalTime, ((double)values.Count) / totalTime.TotalMilliseconds * 1000));
 
 
-    [Task(platform: BenchmarkPlatform.X64, jitVersion: BenchmarkJitVersion.LegacyJit)]
-    [Task(platform: BenchmarkPlatform.X64, jitVersion: BenchmarkJitVersion.RyuJit)]
-    public class MemoryCompareBenchmark
-    {
-        public byte[] bufferSrc = new byte[4096 * 4096];
-        public byte[] bufferDest = new byte[4096 * 4096];
-
-        public MemoryCompareBenchmark()
-        {
-            Random generator = new Random();
-            generator.NextBytes(bufferSrc);
-
-            for (int i = 0; i < bufferSrc.Length; i++)
-                bufferDest[i] = bufferSrc[i];
-        }
-
-        [Benchmark]
-        public void CompareHuge()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CompareInline(bufferSrcPtr, bufferDestPtr, bufferSrc.Length);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CompareBlock()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CompareInline(bufferSrcPtr, bufferDestPtr, 4096);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CompareSmall()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CompareInline(bufferSrcPtr, bufferDestPtr, 64);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CompareVerySmall()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CompareInline(bufferSrcPtr, bufferDestPtr, 16);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CompareTiny()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CompareInline(bufferSrcPtr, bufferDestPtr, 6);
-                }
-            }
-        }
-    }
-
-    [Task(platform: BenchmarkPlatform.X64, jitVersion: BenchmarkJitVersion.LegacyJit)]
-    [Task(platform: BenchmarkPlatform.X64, jitVersion: BenchmarkJitVersion.RyuJit)]
-    public class MemoryCopyBenchmark
-    {
-        public byte[] bufferSrc = new byte[4096 * 4096];
-        public byte[] bufferDest = new byte[4096 * 4096];
-
-        [Benchmark]
-        public void CopyHuge()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CopyInline(bufferDestPtr, bufferSrcPtr, bufferSrc.Length);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CopyBlock()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CopyInline(bufferDestPtr, bufferSrcPtr, 512);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CopySmall()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CopyInline(bufferDestPtr, bufferSrcPtr, 64);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CopyVerySmall()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CopyInline(bufferDestPtr, bufferSrcPtr, 16);
-                }
-            }
-        }
-
-        [Benchmark]
-        public void CopyTiny()
-        {
-            unsafe
-            {
-                fixed (byte* bufferSrcPtr = bufferSrc)
-                fixed (byte* bufferDestPtr = bufferDest)
-                {
-                    Memory.CopyInline(bufferDestPtr, bufferSrcPtr, 6);
-                }
-            }
-        }
-    }
+            //Exception smallerEx = null;
+            //List<string> smallerRemoveSet = null;
+            //List<string> smallerInsertSet = null;
+            //ZFastTrieSortedSet<string, string> smallerTree = null;
 
 
-    public unsafe class Program
-    {
-        public static void Main(string[] args)
-        {
-            var competitionSwitch = new BenchmarkCompetitionSwitch(new[] {               
-                typeof(MemoryCompareBenchmark),
-                typeof(MemoryCopyBenchmark),
-                typeof(HashingBenchmark)
-            });
-            competitionSwitch.Run(args);
+            //for (int i = 0; i < 100; i++)
+            //{
+            //    var insertKeys = new List<string>();
+            //    var removedKeys = new List<string>();
+
+            //    var tree = new ZFastTrieSortedSet<string, string>(binarize);
+            //    //var tree = new ZFastTrieSortedSet<long, long>(binarizeLong);
+
+            //    if (i % 1000 == 0)
+            //        Console.WriteLine("Try: " + i);
+
+            //    try
+            //    {                    
+
+            //        var values = new HashSet<string>();
+            //        for (int j = 0; j < keysToInsert; j++)
+            //        {
+            //            //long key = generator.Next() << 32 | generator.Next();                        
+            //            string key = GenerateRandomString(generator, keySize);
+                                                
+            //            if (values.Add(key))
+            //            {
+            //                insertKeys.Add(key);
+            //                tree.Add(key, key);
+            //            }
+                            
+            //        }
+
+            //        foreach ( var key in values )
+            //        {
+            //            removedKeys.Add(key); // Add it before trying it.
+
+            //            var removed = tree.Remove(key);
+            //            ZFastTrieDebugHelpers.StructuralVerify(tree);
+
+            //            if (!removed) throw new Exception("Fail!");
+            //        }                    
+
+                    
+            //    }
+            //    catch (Exception ex)
+            //    {                    
+            //        Console.WriteLine("Failed: " + removedKeys.Count);
+
+            //        if (smallerRemoveSet == null || smallerRemoveSet.Count > removedKeys.Count)
+            //        {
+            //            smallerInsertSet = insertKeys;
+            //            smallerRemoveSet = removedKeys;
+            //            smallerTree = tree;
+            //            smallerEx = ex;
+            //        }
+            //    }
+            //}
+
+            //if (smallerRemoveSet != null)
+            //{
+            //    Console.WriteLine();
+            //    Console.WriteLine("--- Insert order --- ");
+            //    foreach (var key in smallerInsertSet)
+            //        Console.WriteLine(key);
+
+            //    Console.WriteLine();
+            //    Console.WriteLine("--- Removed order --- ");
+            //    foreach (var key in smallerRemoveSet)
+            //        Console.WriteLine(key);
+
+            //    Console.WriteLine();
+            //    ZFastTrieDebugHelpers.DumpKeys(smallerTree);
+
+            //    Console.WriteLine(smallerEx.StackTrace);
+            //}
         }
     }
 }

@@ -7,24 +7,24 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Mark2 : RavenTest
-	{
-		[Fact]
-		public void ShouldNotGetErrors()
-		{
-			using(var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.PutIndex("test", new IndexDefinition
-				{
-					Map = @"from brief in docs.TestCases
+    public class Mark2 : RavenTest
+    {
+        [Fact]
+        public void ShouldNotGetErrors()
+        {
+            using(var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                {
+                    Map = @"from brief in docs.TestCases
  select new {
  _tWarnings_AccessoryWarnings_Value = brief.Warnings.AccessoryWarnings.Select(y=>y.Value)
  }"
-				});
+                });
 
-				store.DatabaseCommands.Put("TestCases/TST00001", null,
-				                           RavenJObject.Parse(
-				                           	@"{
+                store.DatabaseCommands.Put("TestCases/TST00001", null,
+                                           RavenJObject.Parse(
+                                            @"{
  ""Warnings"": {
    ""AccessoryWarnings"": [
      {
@@ -38,21 +38,21 @@ namespace Raven.Tests.MailingList
    ]
  }
 }"),
-				                           new RavenJObject {{Constants.RavenEntityName, "TestCases"}});
+                                           new RavenJObject {{Constants.RavenEntityName, "TestCases"}});
 
-				store.DatabaseCommands.Put("TestCases/TST00002", null,
-										   RavenJObject.Parse(
-											@"{
+                store.DatabaseCommands.Put("TestCases/TST00002", null,
+                                           RavenJObject.Parse(
+                                            @"{
  ""Warnings"": {
    ""AccessoryWarnings"": []
  }
 }"),
-										   new RavenJObject { { Constants.RavenEntityName, "TestCases" } });
+                                           new RavenJObject { { Constants.RavenEntityName, "TestCases" } });
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				Assert.Empty(store.SystemDatabase.Statistics.Errors);
-			}
-		}
-	}
+                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+            }
+        }
+    }
 }

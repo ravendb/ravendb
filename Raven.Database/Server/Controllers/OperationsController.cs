@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -15,27 +15,27 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	[RoutePrefix("")]
-	public class OperationsController : RavenDbApiController
-	{
-		[HttpGet]
-		[RavenRoute("operation/status")]
-		[RavenRoute("databases/{databaseName}/operation/status")]
-		public HttpResponseMessage OperationStatusGet()
-		{
-			var idStr = GetQueryStringValue("id");
-			long id;
-			if (long.TryParse(idStr, out id) == false)
-			{
-				return GetMessageWithObject(new
-				{
-					Error = "Query string variable id must be a valid int64"
-				}, HttpStatusCode.BadRequest);
-			}
+    [RoutePrefix("")]
+    public class OperationsController : BaseDatabaseApiController
+    {
+        [HttpGet]
+        [RavenRoute("operation/status")]
+        [RavenRoute("databases/{databaseName}/operation/status")]
+        public HttpResponseMessage OperationStatusGet()
+        {
+            var idStr = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStr, out id) == false)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Query string variable id must be a valid int64"
+                }, HttpStatusCode.BadRequest);
+            }
 
-			var status = Database.Tasks.GetTaskState(id);
-			return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
-		}
+            var status = Database.Tasks.GetTaskState(id);
+            return status == null ? GetEmptyMessage(HttpStatusCode.NotFound) : GetMessageWithObject(status);
+        }
 
         [HttpGet]
         [RavenRoute("operation/kill")]
@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/operation/alerts")]
         public HttpResponseMessage Alerts()
         {
-            var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
+            var jsonDocument = Database.Documents.Get("Raven/Alerts");
             if (jsonDocument == null)
             {
                 return GetMessageWithObject(new Alert[0]);
@@ -93,9 +93,9 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/operation/alert/dismiss")]
         public async Task<HttpResponseMessage> AlertDismiss()
         {
-            var request = await ReadJsonObjectAsync<RavenJObject>();
+            var request = await ReadJsonObjectAsync<RavenJObject>().ConfigureAwait(false);
             var key = request.Value<string>("key");
-            var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
+            var jsonDocument = Database.Documents.Get("Raven/Alerts");
             if (jsonDocument == null)
             {
                 return GetMessageWithString("Unable to find Raven/Alerts document", HttpStatusCode.BadRequest);
@@ -113,5 +113,5 @@ namespace Raven.Database.Server.Controllers
             Database.Documents.Put("Raven/Alerts", null, RavenJObject.FromObject(alerts), jsonDocument.Metadata, null);
             return GetEmptyMessage();
         }
-	}
+    }
 };

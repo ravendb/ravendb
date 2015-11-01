@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Json.Linq;
@@ -15,19 +15,19 @@ namespace Raven.Client.FileSystem
         private IDisposable conflictCacheRemoval; 
 
         /// <summary>
-		/// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
-		/// </summary>
+        /// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
+        /// </summary>
         public AsyncFilesSession(FilesStore filesStore,
                                  IAsyncFilesCommands asyncFilesCommands,
-								 FilesSessionListeners listeners,
-								 Guid id)
-			: base(filesStore, listeners, id)
-		{
+                                 FilesSessionListeners listeners,
+                                 Guid id)
+            : base(filesStore, listeners, id)
+        {
             Commands = asyncFilesCommands;
             conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
                                              .ForConflicts()
                                              .Subscribe<ConflictNotification>(this.OnFileConflict);
-		}
+        }
 
         /// <summary>
         /// Gets the async files commands.
@@ -55,7 +55,7 @@ namespace Raven.Client.FileSystem
             if (string.IsNullOrWhiteSpace(filename))
                 throw new ArgumentNullException("filename", "The filename cannot be null, empty or whitespace.");
 
-			FileHeader existingEntity;
+            FileHeader existingEntity;
             if (entitiesByKey.TryGetValue(filename, out existingEntity))
             {
                 // Check if the file is not currently been scheduled for deletion or known to be non-existent.
@@ -68,7 +68,7 @@ namespace Raven.Client.FileSystem
             IncrementRequestCount();            
 
             // Check if the file exists on the server.
-            var metadata = await Commands.GetMetadataForAsync(filename);
+            var metadata = await Commands.GetMetadataForAsync(filename).ConfigureAwait(false);
             if (metadata == null)
                 return null;
 
@@ -96,7 +96,7 @@ namespace Raven.Client.FileSystem
             {
                 IncrementRequestCount();
 
-                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray());                                
+                var fileHeaders = await Commands.GetAsync(idsOfNotExistingObjects.ToArray()).ConfigureAwait(false);                                
                 foreach( var header in fileHeaders )
                     AddToCache(header.FullPath, header);                
             }
@@ -104,7 +104,7 @@ namespace Raven.Client.FileSystem
             var result = new List<FileHeader>();
             foreach ( var file in filenames )
             {
-				FileHeader obj = null;
+                FileHeader obj = null;
                 entitiesByKey.TryGetValue(file, out obj);
                 result.Add( obj as FileHeader );
             }
@@ -139,7 +139,7 @@ namespace Raven.Client.FileSystem
 
             // TODO: Check this.
             var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
-            var searchResults = await Commands.SearchOnDirectoryAsync(directory);
+            var searchResults = await Commands.SearchOnDirectoryAsync(directory).ConfigureAwait(false);
             return searchResults.Files.ToArray();
         }
 

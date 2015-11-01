@@ -6,67 +6,74 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using System.IO.Compression;
+using Raven.Abstractions.Util;
 
 namespace Raven.Client.Connection
 {
-	public class CompressedStreamContent : HttpContent
-	{
-	    private readonly bool disposeStream;
+    public class CompressedStreamContent : HttpContent
+    {
+        private readonly bool disposeStream;
         private readonly Stream data;
-		private readonly bool disableRequestCompression;
+        private readonly bool disableRequestCompression;
 
-		public CompressedStreamContent(Stream data, bool disableRequestCompression, bool disposeStream = true)
-		{
-		    if (data == null) throw new ArgumentNullException("data");
-		    this.data = data;
-			this.disableRequestCompression = disableRequestCompression;
-		    this.disposeStream = disposeStream;
+        public CompressedStreamContent(Stream data, bool disableRequestCompression, bool disposeStream = true)
+        {
+            if (data == null) throw new ArgumentNullException("data");
+            this.data = data;
+            this.disableRequestCompression = disableRequestCompression;
+            this.disposeStream = disposeStream;
 
-			if (disableRequestCompression == false)
-			{
-				Headers.ContentEncoding.Add("gzip");
-			}
+            if (disableRequestCompression == false)
+            {
+                Headers.ContentEncoding.Add("gzip");
+            }
 
-			Disposables = new List<IDisposable>();
-		}
+            Disposables = new List<IDisposable>();
+        }
 
-		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
-		{
-			try
-			{
-				if (disableRequestCompression == false)
-					stream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        {
+            using (var uncloseableStream = new UndisposableStream(stream))
+            using (var bufferedStream = new BufferedStream(uncloseableStream))
+            {
+                Stream innerStream = bufferedStream;
+                try
+                {
 
-			    await data.CopyToAsync(stream).ConfigureAwait(false);
-			    await stream.FlushAsync().ConfigureAwait(false);
-			}
-			finally
-			{
-				if (disableRequestCompression == false)
-					stream.Dispose();
-			}
-		}
+                    if (disableRequestCompression == false)
+                        innerStream = new GZipStream(innerStream, CompressionMode.Compress, leaveOpen: true);                
 
-		protected override bool TryComputeLength(out long length)
-		{
-		    length = -1;
-		    return false;
-		}
+                    await data.CopyToAsync(innerStream).ConfigureAwait(false);
+                    await innerStream.FlushAsync().ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (disableRequestCompression == false)
+                        innerStream.Dispose();
+                }
+            }
+        }
 
-		protected override void Dispose(bool disposing)
-		{
-			if (disposeStream && data != null)
-				data.Dispose();
+        protected override bool TryComputeLength(out long length)
+        {
+            length = -1;
+            return false;
+        }
 
-			if (Disposables != null)
-			foreach (var dispose in Disposables)
-			{
-				dispose.Dispose();
-			}
+        protected override void Dispose(bool disposing)
+        {
+            if (disposeStream && data != null)
+                data.Dispose();
 
-			base.Dispose(disposing);
-		}
+            if (Disposables != null)
+            foreach (var dispose in Disposables)
+            {
+                dispose.Dispose();
+            }
 
-		public List<IDisposable> Disposables { get; private set; }
-	}
+            base.Dispose(disposing);
+        }
+
+        public List<IDisposable> Disposables { get; private set; }
+    }
 }

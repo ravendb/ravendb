@@ -1036,7 +1036,7 @@
             Gets a value indicating whether this instance has errors.
             </summary>
             <value>
-            	<c>true</c> if this instance has errors; otherwise, <c>false</c>.
+                <c>true</c> if this instance has errors; otherwise, <c>false</c>.
             </value>
         </member>
         <member name="M:Rhino.Etl.Core.Pipelines.AbstractPipelineExecuter.Execute(System.String,System.Collections.Generic.ICollection{Rhino.Etl.Core.Operations.IOperation},System.Func{System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row},System.Collections.Generic.IEnumerable{Rhino.Etl.Core.Row}})">
@@ -1086,7 +1086,7 @@
             Gets a value indicating whether this instance has errors.
             </summary>
             <value>
-            	<c>true</c> if this instance has errors; otherwise, <c>false</c>.
+                <c>true</c> if this instance has errors; otherwise, <c>false</c>.
             </value>
         </member>
         <member name="T:Rhino.Etl.Core.ConventionOperations.ConventionInputCommandOperation">

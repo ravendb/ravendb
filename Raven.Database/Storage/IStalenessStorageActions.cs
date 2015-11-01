@@ -4,27 +4,24 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage
 {
-	public interface IStalenessStorageActions
-	{
-	    bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag);
+    public interface IStalenessStorageActions
+    {
+        bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag);
 
-		bool IsIndexStaleByTask(int view, DateTime? cutOff);
+        bool IsIndexStaleByTask(int view, DateTime? cutOff);
 
-		bool IsReduceStale(int view);
-		bool IsMapStale(int view);
+        bool IsReduceStale(int view);
 
-		Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
-		Etag GetMostRecentDocumentEtag();
+        bool IsMapStale(int view);
 
-        [Obsolete("Use RavenFS instead.")]
-		Etag GetMostRecentAttachmentEtag();
-		
+        Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
+
+        Etag GetMostRecentDocumentEtag();
+        
         int GetIndexTouchCount(int view);
-	}
+    }
 }

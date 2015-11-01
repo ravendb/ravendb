@@ -1,4 +1,4 @@
-﻿using Raven.Database.Impl.Generators;
+using Raven.Database.Impl.Generators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +13,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class GeneratorsController : RavenDbApiController
+    public class GeneratorsController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("generate/code")]
@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Controllers
                 msg.StatusCode = HttpStatusCode.NotFound;
                 return msg;
             }
-            var document = Database.Documents.Get(docId, GetRequestTransaction());
+            var document = Database.Documents.Get(docId);
             if (document == null)
             {
                 msg.StatusCode = HttpStatusCode.NotFound;
@@ -45,10 +45,10 @@ namespace Raven.Database.Server.Controllers
             var code = generator.Execute(document);
 
             return GetMessageWithObject(new
-	        {
-				Document = docId,
-				Code = code
-	        });
+            {
+                Document = docId,
+                Code = code
+            });
         }
 
 

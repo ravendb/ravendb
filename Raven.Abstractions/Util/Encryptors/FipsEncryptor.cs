@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FipsEncryptor.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,329 +9,329 @@ using System.Security.Cryptography;
 
 namespace Raven.Abstractions.Util.Encryptors
 {
-	public sealed class FipsEncryptor : EncryptorBase<FipsEncryptor.FipsHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
-	{
-		public FipsEncryptor()
-		{
-			Hash = new FipsHashEncryptor(allowNonThreadSafeMethods: false);
-		}
+    public sealed class FipsEncryptor : EncryptorBase<FipsEncryptor.FipsHashEncryptor, FipsEncryptor.FipsSymmetricalEncryptor, FipsEncryptor.FipsAsymmetricalEncryptor>
+    {
+        public FipsEncryptor()
+        {
+            Hash = new FipsHashEncryptor(allowNonThreadSafeMethods: false);
+        }
 
-		public override IHashEncryptor Hash { get; protected set; }
+        public override IHashEncryptor Hash { get; protected set; }
 
-		public class FipsHashEncryptor : HashEncryptorBase, IHashEncryptor
-		{
-			public FipsHashEncryptor()
-				: this(true)
-			{
-			}
+        public class FipsHashEncryptor : HashEncryptorBase, IHashEncryptor
+        {
+            public FipsHashEncryptor()
+                : this(true)
+            {
+            }
 
-			public FipsHashEncryptor(bool allowNonThreadSafeMethods)
-				: base(allowNonThreadSafeMethods)
-			{
-			}
+            public FipsHashEncryptor(bool allowNonThreadSafeMethods)
+                : base(allowNonThreadSafeMethods)
+            {
+            }
 
-			public void Dispose()
-			{
-				//no-op
-			}
+            public void Dispose()
+            {
+                //no-op
+            }
 
-			ABCDStruct abcdStruct = MD5Core.GetInitialStruct();
-			private readonly byte[] remainingBuffer = new byte[BufferSize];
-			private int remainingCount;
-			private int totalLength;
+            ABCDStruct abcdStruct = MD5Core.GetInitialStruct();
+            private readonly byte[] remainingBuffer = new byte[BufferSize];
+            private int remainingCount;
+            private int totalLength;
 
-			private const int BufferSize = 64;
+            private const int BufferSize = 64;
 
-			public byte[] Compute16(Stream stream)
-			{
-				ThrowNotSupportedExceptionForNonThreadSafeMethod();
+            public byte[] Compute16(Stream stream)
+            {
+                ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-				var buffer = new byte[4096];
-				int bytesRead;
-				do
-				{
-					bytesRead = stream.Read(buffer, 0, 4096);
-					if (bytesRead > 0)
-					{
-						TransformBlock(buffer, 0, bytesRead);
-					}
-				} while (bytesRead > 0);
+                var buffer = new byte[4096];
+                int bytesRead;
+                do
+                {
+                    bytesRead = stream.Read(buffer, 0, 4096);
+                    if (bytesRead > 0)
+                    {
+                        TransformBlock(buffer, 0, bytesRead);
+                    }
+                } while (bytesRead > 0);
 
-				return TransformFinalBlock();
-			}
+                return TransformFinalBlock();
+            }
 
-			public byte[] TransformFinalBlock()
-			{
-				ThrowNotSupportedExceptionForNonThreadSafeMethod();
+            public byte[] TransformFinalBlock()
+            {
+                ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-				totalLength += remainingCount;
-				return MD5Core.GetHashFinalBlock(remainingBuffer, 0, remainingCount, abcdStruct, (Int64)totalLength * 8);
-			}
+                totalLength += remainingCount;
+                return MD5Core.GetHashFinalBlock(remainingBuffer, 0, remainingCount, abcdStruct, (Int64)totalLength * 8);
+            }
 
-			public void TransformBlock(byte[] bytes, int offset, int length)
-			{
-				ThrowNotSupportedExceptionForNonThreadSafeMethod();
+            public void TransformBlock(byte[] bytes, int offset, int length)
+            {
+                ThrowNotSupportedExceptionForNonThreadSafeMethod();
 
-				int start = offset;
-				if (remainingCount > 0)
-				{
-					if (remainingCount + length < BufferSize)
-					{
-						// just append to remaining buffer
-						Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount, length);
-						remainingCount += length;
-						return;
-					}
+                int start = offset;
+                if (remainingCount > 0)
+                {
+                    if (remainingCount + length < BufferSize)
+                    {
+                        // just append to remaining buffer
+                        Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount, length);
+                        remainingCount += length;
+                        return;
+                    }
 
-					// fill up buffer
-					Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount, BufferSize - remainingCount);
-					start += BufferSize - remainingCount;
-					// now we have 64 bytes in buffer
-					MD5Core.GetHashBlock(remainingBuffer, ref abcdStruct, 0);
-					totalLength += BufferSize;
-					remainingCount = 0;
-				}
+                    // fill up buffer
+                    Buffer.BlockCopy(bytes, offset, remainingBuffer, remainingCount, BufferSize - remainingCount);
+                    start += BufferSize - remainingCount;
+                    // now we have 64 bytes in buffer
+                    MD5Core.GetHashBlock(remainingBuffer, ref abcdStruct, 0);
+                    totalLength += BufferSize;
+                    remainingCount = 0;
+                }
 
-				// while has 64 bytes blocks
-				while (start <= length - BufferSize)
-				{
-					MD5Core.GetHashBlock(bytes, ref abcdStruct, start);
-					totalLength += BufferSize;
-					start += BufferSize;
-				}
+                // while has 64 bytes blocks
+                while (start <= length - BufferSize)
+                {
+                    MD5Core.GetHashBlock(bytes, ref abcdStruct, start);
+                    totalLength += BufferSize;
+                    start += BufferSize;
+                }
 
-				// save rest (if any)
-				if (start != length)
-				{
-					remainingCount = length - start;
-					Buffer.BlockCopy(bytes, start, remainingBuffer, 0, remainingCount);
-				}
+                // save rest (if any)
+                if (start != length)
+                {
+                    remainingCount = length - start;
+                    Buffer.BlockCopy(bytes, start, remainingBuffer, 0, remainingCount);
+                }
 
-			}
+            }
 
-			public int StorageHashSize
-			{
-				get
-				{
-					return 20;
-				}
-			}
+            public int StorageHashSize
+            {
+                get
+                {
+                    return 20;
+                }
+            }
 
-			//SHA1
-			public byte[] ComputeForStorage(byte[] bytes)
-			{
-				if (StorageHashSize == 20)
-					return Compute20(bytes);
-				return Compute16(bytes);
-			}
+            //SHA1
+            public byte[] ComputeForStorage(byte[] bytes)
+            {
+                if (StorageHashSize == 20)
+                    return Compute20(bytes);
+                return Compute16(bytes);
+            }
 
-			public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
-			{
-				if (StorageHashSize == 20)
-					return Compute20(bytes, offset, length);
-				return Compute16(bytes, offset, length);
-			}
+            public byte[] ComputeForStorage(byte[] bytes, int offset, int length)
+            {
+                if (StorageHashSize == 20)
+                    return Compute20(bytes, offset, length);
+                return Compute16(bytes, offset, length);
+            }
 
-			public byte[] ComputeForOAuth(byte[] bytes)
-			{
-				return Compute20(bytes);
-			}
+            public byte[] ComputeForOAuth(byte[] bytes)
+            {
+                return Compute20(bytes);
+            }
 
-			public byte[] Compute16(byte[] bytes)
-			{
-				return MD5Core.GetHash(bytes);
-			}
+            public byte[] Compute16(byte[] bytes)
+            {
+                return MD5Core.GetHash(bytes);
+            }
 
-			public byte[] Compute16(byte[] bytes, int offset, int length)
-			{
-				return MD5Core.GetHash(bytes, offset, length);
-			}
+            public byte[] Compute16(byte[] bytes, int offset, int length)
+            {
+                return MD5Core.GetHash(bytes, offset, length);
+            }
 
-			public byte[] Compute20(byte[] bytes)
-			{
-				return ComputeHash(SHA1.Create(), bytes, 20);
-			}
+            public byte[] Compute20(byte[] bytes)
+            {
+                return ComputeHash(SHA1.Create(), bytes, 20);
+            }
 
-			public byte[] Compute20(byte[] bytes, int offset, int length)
-			{
-				return ComputeHash(SHA1.Create(), bytes, offset, length, 20);
-			}
-		}
+            public byte[] Compute20(byte[] bytes, int offset, int length)
+            {
+                return ComputeHash(SHA1.Create(), bytes, offset, length, 20);
+            }
+        }
 
-		public class FipsSymmetricalEncryptor : ISymmetricalEncryptor
-		{
-			private readonly SymmetricAlgorithm algorithm;
+        public class FipsSymmetricalEncryptor : ISymmetricalEncryptor
+        {
+            private readonly SymmetricAlgorithm algorithm;
 
-			public FipsSymmetricalEncryptor()
-			{
-				algorithm = new AesCryptoServiceProvider();
-			}
+            public FipsSymmetricalEncryptor()
+            {
+                algorithm = new AesCryptoServiceProvider();
+            }
 
-			public byte[] Key
-			{
-				get
-				{
-					return algorithm.Key;
-				}
+            public byte[] Key
+            {
+                get
+                {
+                    return algorithm.Key;
+                }
 
-				set
-				{
-					algorithm.Key = value;
-				}
-			}
+                set
+                {
+                    algorithm.Key = value;
+                }
+            }
 
-			public byte[] IV
-			{
-				get
-				{
-					return algorithm.IV;
-				}
+            public byte[] IV
+            {
+                get
+                {
+                    return algorithm.IV;
+                }
 
-				set
-				{
-					algorithm.IV = value;
-				}
-			}
+                set
+                {
+                    algorithm.IV = value;
+                }
+            }
 
-			public int KeySize
-			{
-				get
-				{
-					return algorithm.KeySize;
-				}
+            public int KeySize
+            {
+                get
+                {
+                    return algorithm.KeySize;
+                }
 
-				set
-				{
-					algorithm.KeySize = value;
-				}
-			}
+                set
+                {
+                    algorithm.KeySize = value;
+                }
+            }
 
-			public void GenerateKey()
-			{
-				algorithm.GenerateKey();
-			}
+            public void GenerateKey()
+            {
+                algorithm.GenerateKey();
+            }
 
-			public void GenerateIV()
-			{
-				algorithm.GenerateIV();
-			}
+            public void GenerateIV()
+            {
+                algorithm.GenerateIV();
+            }
 
-			public ICryptoTransform CreateEncryptor()
-			{
-				return algorithm.CreateEncryptor();
-			}
+            public ICryptoTransform CreateEncryptor()
+            {
+                return algorithm.CreateEncryptor();
+            }
 
-			public ICryptoTransform CreateDecryptor()
-			{
-				return algorithm.CreateDecryptor();
-			}
+            public ICryptoTransform CreateDecryptor()
+            {
+                return algorithm.CreateDecryptor();
+            }
 
-			public ICryptoTransform CreateDecryptor(byte[] key, byte[] iv)
-			{
-				return algorithm.CreateDecryptor(key, iv);
-			}
+            public ICryptoTransform CreateDecryptor(byte[] key, byte[] iv)
+            {
+                return algorithm.CreateDecryptor(key, iv);
+            }
 
-			public void Dispose()
-			{
-				if (algorithm != null)
-					algorithm.Dispose();
-			}
-		}
-		public class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
-		{
-			private readonly RSACryptoServiceProvider algorithm;
+            public void Dispose()
+            {
+                if (algorithm != null)
+                    algorithm.Dispose();
+            }
+        }
+        public class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
+        {
+            private readonly RSACryptoServiceProvider algorithm;
 
-			public FipsAsymmetricalEncryptor()
-			{
-				algorithm = new RSACryptoServiceProvider();
-			}
+            public FipsAsymmetricalEncryptor()
+            {
+                algorithm = new RSACryptoServiceProvider();
+            }
 
-			public FipsAsymmetricalEncryptor(int keySize)
-			{
-				algorithm = new RSACryptoServiceProvider(keySize);
-			}
+            public FipsAsymmetricalEncryptor(int keySize)
+            {
+                algorithm = new RSACryptoServiceProvider(keySize);
+            }
 
-			public int KeySize
-			{
-				get
-				{
-					return algorithm.KeySize;
-				}
+            public int KeySize
+            {
+                get
+                {
+                    return algorithm.KeySize;
+                }
 
-				set
-				{
-					algorithm.KeySize = value;
-				}
-			}
+                set
+                {
+                    algorithm.KeySize = value;
+                }
+            }
 
-			public AsymmetricAlgorithm Algorithm
-			{
-				get
-				{
-					return algorithm;
-				}
-			}
+            public AsymmetricAlgorithm Algorithm
+            {
+                get
+                {
+                    return algorithm;
+                }
+            }
 
-			public void ImportParameters(byte[] exponent, byte[] modulus)
-			{
-				algorithm.ImportParameters(new RSAParameters
-										   {
-											   Modulus = modulus,
-											   Exponent = exponent
-										   });
-			}
+            public void ImportParameters(byte[] exponent, byte[] modulus)
+            {
+                algorithm.ImportParameters(new RSAParameters
+                                           {
+                                               Modulus = modulus,
+                                               Exponent = exponent
+                                           });
+            }
 
-			public byte[] Encrypt(byte[] bytes, bool fOAEP)
-			{
-				return algorithm.Encrypt(bytes, fOAEP);
-			}
+            public byte[] Encrypt(byte[] bytes, bool fOAEP)
+            {
+                return algorithm.Encrypt(bytes, fOAEP);
+            }
 
-			public byte[] Decrypt(byte[] bytes, bool fOAEP)
-			{
-				return algorithm.Decrypt(bytes, fOAEP);
-			}
+            public byte[] Decrypt(byte[] bytes, bool fOAEP)
+            {
+                return algorithm.Decrypt(bytes, fOAEP);
+            }
 
-			public void FromXmlString(string xml)
-			{
-				algorithm.FromXmlString(xml);
-			}
+            public void FromXmlString(string xml)
+            {
+                algorithm.FromXmlString(xml);
+            }
 
-			public void ImportCspBlob(byte[] keyBlob)
-			{
-				algorithm.ImportCspBlob(keyBlob);
-			}
+            public void ImportCspBlob(byte[] keyBlob)
+            {
+                algorithm.ImportCspBlob(keyBlob);
+            }
 
-			public byte[] ExportCspBlob(bool includePrivateParameters)
-			{
-				return algorithm.ExportCspBlob(includePrivateParameters);
-			}
+            public byte[] ExportCspBlob(bool includePrivateParameters)
+            {
+                return algorithm.ExportCspBlob(includePrivateParameters);
+            }
 
-			public byte[] SignHash(byte[] hash, string str)
-			{
-				return algorithm.SignHash(hash, str);
-			}
+            public byte[] SignHash(byte[] hash, string str)
+            {
+                return algorithm.SignHash(hash, str);
+            }
 
-			public bool VerifyHash(byte[] hash, string str, byte[] signature)
-			{
-				return algorithm.VerifyHash(hash, str, signature);
-			}
+            public bool VerifyHash(byte[] hash, string str, byte[] signature)
+            {
+                return algorithm.VerifyHash(hash, str, signature);
+            }
 
-			public void ImportParameters(RSAParameters parameters)
-			{
-				algorithm.ImportParameters(parameters);
-			}
+            public void ImportParameters(RSAParameters parameters)
+            {
+                algorithm.ImportParameters(parameters);
+            }
 
-			public RSAParameters ExportParameters(bool includePrivateParameters)
-			{
-				return algorithm.ExportParameters(includePrivateParameters);
-			}
+            public RSAParameters ExportParameters(bool includePrivateParameters)
+            {
+                return algorithm.ExportParameters(includePrivateParameters);
+            }
 
-			public void Dispose()
-			{
-				if (algorithm != null)
-					algorithm.Dispose();
-			}
-		}
-	}
+            public void Dispose()
+            {
+                if (algorithm != null)
+                    algorithm.Dispose();
+            }
+        }
+    }
 
 }

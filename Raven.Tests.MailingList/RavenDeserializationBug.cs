@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
@@ -37,15 +37,15 @@ namespace Raven.Tests.MailingList
                     session.SaveChanges();
                 }
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
                     var results = session
                         .Query<TypeWithUriProperty, IndexChildren>()
                         .Customize(q => q.WaitForNonStaleResults())
-						.OrderBy(x=>x.Name)
-						.ProjectFromIndexFieldsInto<TypeWithUriProperty>()
+                        .OrderBy(x=>x.Name)
+                        .ProjectFromIndexFieldsInto<TypeWithUriProperty>()
                         .ToList();
 //The previous block will blow up in Raven 2, but not in the previous version. If the TypeWithUriProperty.Address is changed
 //to be a string rather than a URI, the test will pass in both versions of RavenDB.
@@ -72,13 +72,13 @@ namespace Raven.Tests.MailingList
 //   at Tests.RavenDeserializationBug.ShouldBeAbleToIndexChildrenWithUris()
 
                     Assert.Equal("bar", results[0].Name);
-					Assert.Equal(null, results[0].Address);
+                    Assert.Equal(null, results[0].Address);
 
-					Assert.Equal("foo", results[1].Name);
-					Assert.Equal(new Uri("http://foo"), results[1].Address);
+                    Assert.Equal("foo", results[1].Name);
+                    Assert.Equal(new Uri("http://foo"), results[1].Address);
 
-					Assert.Equal("goo", results[2].Name);
-					Assert.Equal(new Uri("http://www.google.com"), results[2].Address);
+                    Assert.Equal("goo", results[2].Name);
+                    Assert.Equal(new Uri("http://www.google.com"), results[2].Address);
                 }
             }
         }

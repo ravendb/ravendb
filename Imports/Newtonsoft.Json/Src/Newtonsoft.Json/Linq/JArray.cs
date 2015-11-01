@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -198,15 +198,15 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
             writer.WriteEndArray();
         }
 
-		/// <summary>
-		/// Writes this token to a <see cref="JsonWriter"/>.
-		/// </summary>
-		/// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
-		/// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
-		{
-			WriteTo(writer, new JsonConverterCollection(converters));
-		}
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        {
+            WriteTo(writer, new JsonConverterCollection(converters));
+        }
 
         /// <summary>
         /// Gets the <see cref="JToken"/> with the specified key.

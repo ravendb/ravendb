@@ -5,11 +5,11 @@
 //-----------------------------------------------------------------------
 namespace Raven.Database.Server
 {
-	public enum AnonymousUserAccessMode
-	{
-		All,
-		Get,
-		None,
-		Admin
-	}
+    public enum AnonymousUserAccessMode
+    {
+        All,
+        Get,
+        None,
+        Admin
+    }
 }

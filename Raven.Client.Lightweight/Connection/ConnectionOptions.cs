@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ConnectionOptions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,18 +9,18 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {
-	public class ConnectionOptions
-	{
-		public static IDisposable Expect100Continue(Uri uri)
-		{
-			var servicePoint = ServicePointManager.FindServicePoint(uri);
-			servicePoint.Expect100Continue = true;
-			return new DisposableAction(() => servicePoint.Expect100Continue = false);
-		}
+    public static class ConnectionOptions
+    {
+        private static IDisposable Expect100Continue(Uri uri)
+        {
+            var servicePoint = ServicePointManager.FindServicePoint(uri);
+            servicePoint.Expect100Continue = true;
+            return new DisposableAction(() => servicePoint.Expect100Continue = false);
+        }
 
-		public static IDisposable Expect100Continue(string url)
-		{
-			return Expect100Continue(new Uri(url));
-		}
-	}
+        public static IDisposable Expect100Continue(string url)
+        {
+            return Expect100Continue(new Uri(url));
+        }
+    }
 }

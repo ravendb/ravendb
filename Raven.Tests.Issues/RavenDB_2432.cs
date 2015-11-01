@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2432.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -25,15 +25,15 @@ namespace Raven.Tests.Issues
                
                 store.DatabaseCommands.Admin.StopIndexing();
                 store.DatabaseCommands.Admin.StartIndexing(7);
-                Assert.Equal(7, store.SystemDatabase.Configuration.MaxNumberOfParallelProcessingTasks);
+                Assert.Equal(7, store.SystemDatabase.Configuration.Core.MaxNumberOfParallelProcessingTasks);
 
                 store.DatabaseCommands.Admin.StopIndexing();
                 store.AsyncDatabaseCommands.Admin.StartIndexingAsync(9).Wait();
-                Assert.Equal(9, store.SystemDatabase.Configuration.MaxNumberOfParallelProcessingTasks);
+                Assert.Equal(9, store.SystemDatabase.Configuration.Core.MaxNumberOfParallelProcessingTasks);
 
                 store.DatabaseCommands.Admin.StopIndexing();
                 store.DatabaseCommands.Admin.StartIndexing();
-                Assert.Equal(9, store.SystemDatabase.Configuration.MaxNumberOfParallelProcessingTasks);
+                Assert.Equal(9, store.SystemDatabase.Configuration.Core.MaxNumberOfParallelProcessingTasks);
             }
         }
     }

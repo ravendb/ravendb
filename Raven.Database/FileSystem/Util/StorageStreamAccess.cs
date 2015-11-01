@@ -1,8 +1,8 @@
-﻿namespace Raven.Database.FileSystem.Util
+namespace Raven.Database.FileSystem.Util
 {
-	public enum StorageStreamAccess
-	{
-		Read,
-		CreateAndWrite
-	}
+    public enum StorageStreamAccess
+    {
+        Read,
+        CreateAndWrite
+    }
 }

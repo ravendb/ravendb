@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Http;
 
 using Raven.Database.Server.Connections;
@@ -14,14 +9,14 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class HttpTraceController : RavenDbApiController
+    public class HttpTraceController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("traffic-watch/events")]
         [RavenRoute("databases/{databaseName}/traffic-watch/events")]
         public HttpResponseMessage HttpTrace()
         {
-            var traceTransport = new HttpTracePushContent(this);
+            var traceTransport = new HttpTracePushContent();
             traceTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
 
             if (DatabaseName != null)

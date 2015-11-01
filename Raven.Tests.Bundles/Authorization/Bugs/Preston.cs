@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 
 using Raven.Client.Exceptions;
 using Raven.Client.Linq;
@@ -51,7 +51,7 @@ namespace Raven.Tests.Bundles.Authorization.Bugs
                     .Customize(c => c.WaitForNonStaleResults())
                     .ToList();
 
-				Assert.Equal(companyListNoTransform.Count, companyListTransform.Count(x=>x.Name != null));
+                Assert.Equal(companyListNoTransform.Count, companyListTransform.Count(x=>x.Name != null));
 
                 var readVetoException = Assert.Throws<ReadVetoException>(
                     () =>
@@ -84,7 +84,7 @@ No one may perform operation Company/Bid on companies/1
         public class TransformedCompany
         {
             public string CompanyId { get; set; }
-	        public string Name { get; set; }
+            public string Name { get; set; }
         }
         public CompanyTransformer()
         {
@@ -93,7 +93,7 @@ No one may perform operation Company/Bid on companies/1
                 select new TransformedCompany
                 {
                     CompanyId = company.Id,
-					Name = company.Name
+                    Name = company.Name
                 };
         }
     }

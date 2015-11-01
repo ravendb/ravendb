@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1761.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,15 +15,17 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1761 : RavenTestBase
+    public class RavenDB_1761 : RavenTest
     {
-        [Fact]
-        public void DateFacetTest()
+        [Theory]
+        [PropertyData("Storages")]
+        public void DateFacetTest(string storage)
         {
-            using (var store = NewDocumentStore(requestedStorage: "esent"))
+            using (var store = NewDocumentStore(requestedStorage: storage))
             {
                 new SampleData_Index().Execute(store);
 

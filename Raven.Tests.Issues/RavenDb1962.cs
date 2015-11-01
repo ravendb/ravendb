@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,7 +24,7 @@ namespace Raven.Tests.Issues
                     await StoreDataAsync(store, session);
 
                     var userFetchTasks = LazyLoadAsync(store, session);
-					var i = 1;
+                    var i = 1;
                     foreach (var lazy in userFetchTasks)
                     {
                         var user = await lazy.Value;
@@ -47,10 +47,10 @@ namespace Raven.Tests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
 
-					LazyLoadAsync(store, session);
+                    LazyLoadAsync(store, session);
 
                     var requestTimes = await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
-					Assert.Equal(1, session.Advanced.NumberOfRequests); 
+                    Assert.Equal(1, session.Advanced.NumberOfRequests); 
                     Assert.NotNull(requestTimes.TotalClientDuration);
                     Assert.NotNull(requestTimes.TotalServerDuration);
                     Assert.Equal(Cntr, requestTimes.DurationBreakdown.Count);
@@ -91,9 +91,9 @@ namespace Raven.Tests.Issues
 
         public async Task StoreDataAsync(DocumentStore store, IAsyncDocumentSession session)
         {
-			for (var i = 1; i <= Cntr; i++)
+            for (var i = 1; i <= Cntr; i++)
            {
-				await session.StoreAsync(new User {Name = "Test User #" + i}, "users/" + i);
+                await session.StoreAsync(new User {Name = "Test User #" + i}, "users/" + i);
            }
             await session.SaveChangesAsync();
         }
@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
         public List<Lazy<Task<User>>> LazyLoadAsync(DocumentStore store, IAsyncDocumentSession session)
         {
             var listTasks = new List<Lazy<Task<User>>>();
-			for (var i = 1; i <= Cntr; i++)
+            for (var i = 1; i <= Cntr; i++)
             {
                 var userFetchTask = session.Advanced.Lazily.LoadAsync<User>("users/" + i);
 

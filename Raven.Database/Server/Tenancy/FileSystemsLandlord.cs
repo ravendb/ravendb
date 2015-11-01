@@ -1,8 +1,12 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FileSystemsLandlord.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -11,24 +15,21 @@ using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using System.Collections.Specialized;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Raven.Database.Server.Tenancy
 {
     public class FileSystemsLandlord : AbstractLandlord<RavenFileSystem>
     {
-		private bool initialized;
+        private bool initialized;
 
         public override string ResourcePrefix { get { return Constants.FileSystem.Prefix; } }
 
@@ -39,10 +40,10 @@ namespace Raven.Database.Server.Tenancy
             get { return systemDatabase.Configuration; }
         }
 
-	    public FileSystemsLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
-		{
+        public FileSystemsLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
+        {
             Init();
-		}
+        }
 
         public void Init()
         {
@@ -63,11 +64,11 @@ namespace Raven.Database.Server.Tenancy
 
                 Logger.Info("Shutting down filesystem {0} because the tenant file system document has been updated or removed", dbName);
 
-				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
+                Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 
-		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
+        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
@@ -84,36 +85,36 @@ namespace Raven.Database.Server.Tenancy
                                 string folderPropName,
                                 InMemoryRavenConfiguration parentConfiguration)
         {
-	        var config = new InMemoryRavenConfiguration
-	        {
-		        Settings = new NameValueCollection(parentConfiguration.Settings),
-	        };
+            var config = new InMemoryRavenConfiguration
+            {
+                Settings = new NameValueCollection(parentConfiguration.Settings),
+            };
 
-	        SetupTenantConfiguration(config);
+            SetupTenantConfiguration(config);
 
-	        config.CustomizeValuesForFileSystemTenant(tenantId);
+            config.CustomizeValuesForFileSystemTenant(tenantId);
             config.Settings[Constants.FileSystem.Storage] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
-	        foreach (var setting in document.Settings)
-	        {
-		        config.Settings[setting.Key] = setting.Value;
-	        }
-	        Unprotect(document);
+            foreach (var setting in document.Settings)
+            {
+                config.Settings[setting.Key] = setting.Value;
+            }
+            Unprotect(document);
 
-			foreach (var securedSetting in document.SecuredSettings)
-			{
-				config.Settings[securedSetting.Key] = securedSetting.Value;
-			}
+            foreach (var securedSetting in document.SecuredSettings)
+            {
+                config.Settings[securedSetting.Key] = securedSetting.Value;
+            }
 
-	        config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
-	        config.FileSystemName = tenantId;
+            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+            config.FileSystemName = tenantId;
 
-	        config.Initialize();
-	        config.CopyParentSettings(parentConfiguration);
-	        return config;
+            config.Initialize();
+            config.CopyParentSettings(parentConfiguration);
+            return config;
         }
 
-	    public void Unprotect(FileSystemDocument configDocument)
+        public void Unprotect(FileSystemDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -164,7 +165,7 @@ namespace Raven.Database.Server.Tenancy
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
             {
-                jsonDocument = systemDatabase.Documents.Get(Constants.FileSystem.Prefix + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get(Constants.FileSystem.Prefix + tenantId);
             }
 
             if (jsonDocument == null || jsonDocument.Metadata == null ||
@@ -174,9 +175,9 @@ namespace Raven.Database.Server.Tenancy
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
             if (document.Settings.Keys.Contains(Constants.FileSystem.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find Raven/FileSystem/DataDir");
+                throw new InvalidOperationException("Could not find " + Constants.FileSystem.DataDirectory);
 
-			if (document.Disabled && !ignoreDisabledFileSystem)
+            if (document.Disabled && !ignoreDisabledFileSystem)
                 throw new InvalidOperationException("The file system has been disabled.");
 
             return document;
@@ -187,17 +188,25 @@ namespace Raven.Database.Server.Tenancy
             return ResourcesStoresCache.TryGetValue(tenantId, out fileSystem);
         }
 
-        public bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
+        public override async Task<RavenFileSystem> GetResourceInternal(string resourceName)
         {
-			if (Locks.Contains(DisposingLock))
-				throw new ObjectDisposedException("FileSystem", "Server is shutting down, can't access any file systems");
+            Task<RavenFileSystem> db;
+            if (TryGetOrCreateResourceStore(resourceName, out db))
+                return await db.ConfigureAwait(false);
+            return null;
+        }
 
-			if (Locks.Contains(tenantId))
-				throw new InvalidOperationException("FileSystem '" + tenantId + "' is currently locked and cannot be accessed");
+        public override bool TryGetOrCreateResourceStore(string tenantId, out Task<RavenFileSystem> fileSystem)
+        {
+            if (Locks.Contains(DisposingLock))
+                throw new ObjectDisposedException("FileSystem", "Server is shutting down, can't access any file systems");
 
-			ManualResetEvent cleanupLock;
-			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad) == false)
-				throw new InvalidOperationException(string.Format("File system '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
+            if (Locks.Contains(tenantId))
+                throw new InvalidOperationException("FileSystem '" + tenantId + "' is currently locked and cannot be accessed");
+
+            ManualResetEvent cleanupLock;
+            if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
+                throw new InvalidOperationException(string.Format("File system '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out fileSystem))
             {
@@ -220,10 +229,10 @@ namespace Raven.Database.Server.Tenancy
 
             fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
-				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-				AssertLicenseParameters(config);
-				var fs = new RavenFileSystem(config, tenantId, transportState);
+                AssertLicenseParameters(config);
+                var fs = new RavenFileSystem(config, tenantId, transportState);
                 fs.Initialize();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
@@ -242,12 +251,12 @@ namespace Raven.Database.Server.Tenancy
 
         private void AssertLicenseParameters(InMemoryRavenConfiguration config)
         {
-			string maxFileSystmes;
-			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxFileSystmes))
+            string maxFileSystmes;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxFileSystmes))
             {
                 if (string.Equals(maxFileSystmes, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
                 {
-					var numberOfAllowedFileSystems = int.Parse(maxFileSystmes);
+                    var numberOfAllowedFileSystems = int.Parse(maxFileSystmes);
 
                     int nextPageStart = 0;
                     var fileSystems =
@@ -261,34 +270,17 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-	        if (Authentication.IsLicensedForRavenFs == false)
-	        {
-				throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
-	        }
+            if (Authentication.IsLicensedForRavenFs == false)
+            {
+                throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
+            }
 
-			foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
-			{
-				string value;
-				if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
-				{
-					bool active;
-					if (bool.TryParse(value, out active) && active == false)
-						throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
-				}
-			}
+            Authentication.AssertLicensedBundles(config.ActiveBundles);
         }
 
-	    protected override DateTime LastWork(RavenFileSystem resource)
+        protected override DateTime LastWork(RavenFileSystem resource)
         {
             return resource.SynchronizationTask.Context.LastSuccessfulSynchronizationTime;
-        }
-
-        public async Task<RavenFileSystem> GetFileSystemInternal(string name)
-        {
-            Task<RavenFileSystem> db;
-            if (TryGetOrCreateResourceStore(name, out db))
-                return await db;
-            return null;
         }
 
         public void ForAllFileSystems(Action<RavenFileSystem> action)
@@ -301,13 +293,13 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-	    public bool IsFileSystemLoaded(string tenantName)
-	    {
-			Task<RavenFileSystem> dbTask;
-			if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
-				return false;
+        public bool IsFileSystemLoaded(string tenantName)
+        {
+            Task<RavenFileSystem> dbTask;
+            if (ResourcesStoresCache.TryGetValue(tenantName, out dbTask) == false)
+                return false;
 
-			return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
-	    }
+            return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1595.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
             store1.DatabaseCommands.ForDatabase("Northwind").Get("force/load/of/db");
 
             Assert.True(
-                Directory.Exists(Path.Combine(server1.SystemDatabase.Configuration.DataDirectory,
+                Directory.Exists(Path.Combine(server1.SystemDatabase.Configuration.Core.DataDirectory,
                                               "N")));
 
 
@@ -55,15 +55,18 @@ namespace Raven.Tests.Issues
             var serverConfiguration = new Database.Config.RavenConfiguration
             {
                 AnonymousUserAccessMode = Database.Server.AnonymousUserAccessMode.Admin,
-                DataDirectory = dataDirectory,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                RunInMemory = false,
-                Port = port,
-                DefaultStorageTypeName = "esent"
+                Core =
+                {
+                    RunInMemory = false,
+                    DataDirectory = dataDirectory,
+                    Port = port,
+                },
+                DefaultStorageTypeName = "voron"
             };
 
             if (removeDataDirectory)
-                IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
+                IOExtensions.DeleteDirectory(serverConfiguration.Core.DataDirectory);
 
             var server = new RavenDbServer(serverConfiguration)
             {
@@ -80,7 +83,7 @@ namespace Raven.Tests.Issues
             {
                 server1.Dispose();
                 if (server1.SystemDatabase != null)
-                    IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.DataDirectory);
+                    IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.Core.DataDirectory);
             }
 
             if (store1 != null)

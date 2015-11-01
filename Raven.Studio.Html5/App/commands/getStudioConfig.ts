@@ -1,6 +1,6 @@
 import pagedResultSet = require("common/pagedResultSet");
 import commandBase = require("commands/commandBase");
-import database = require("models/database");
+import database = require("models/resources/database");
 
 class getStudioConfig extends commandBase {
 

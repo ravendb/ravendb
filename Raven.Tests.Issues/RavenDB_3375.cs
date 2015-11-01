@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using System.Linq;
 using System.Threading;
@@ -32,7 +32,7 @@ namespace Bug
         {
             using (var store = new EmbeddableDocumentStore())
             {
-                store.Configuration.RunInMemory = true;
+                store.Configuration.Core.RunInMemory = true;
                 store.Initialize();
                 store.DatabaseCommands.PutIndex("TagsIndex", new TagsIndex().CreateIndexDefinition());
 

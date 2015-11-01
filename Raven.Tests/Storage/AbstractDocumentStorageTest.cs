@@ -15,57 +15,57 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public abstract class AbstractDocumentStorageTest : IDisposable
-	{
-		protected const string DataDir = "raven.db.test.esent";
-		protected const string BackupDir = "raven.db.test.backup";
+    public abstract class AbstractDocumentStorageTest : IDisposable
+    {
+        protected const string DataDir = "raven.db.test.esent";
+        protected const string BackupDir = "raven.db.test.backup";
 
-		protected AbstractDocumentStorageTest()
-		{
-			Delete();	 
-		}
+        protected AbstractDocumentStorageTest()
+        {
+            Delete();	 
+        }
 
-		public virtual void Dispose()
-		{
-			Delete();
-		}
+        public virtual void Dispose()
+        {
+            Delete();
+        }
 
-		private static void Delete()
-		{
-			IOExtensions.DeleteDirectory(DataDir);
-			DeleteIfExists(BackupDir);
-		}
+        private static void Delete()
+        {
+            IOExtensions.DeleteDirectory(DataDir);
+            DeleteIfExists(BackupDir);
+        }
 
-		protected static void DeleteIfExists(string directoryName)
-		{
-			string directoryFullName = Path.IsPathRooted(directoryName)
-										? directoryName
-										: Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directoryName);
+        protected static void DeleteIfExists(string directoryName)
+        {
+            string directoryFullName = Path.IsPathRooted(directoryName)
+                                        ? directoryName
+                                        : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directoryName);
 
-			IOExtensions.DeleteDirectory(directoryFullName);
-		}
+            IOExtensions.DeleteDirectory(directoryFullName);
+        }
 
-		protected void WaitForBackup(DocumentDatabase db, bool checkError)
-		{
-			while (true)
-			{
-				var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
-				if (jsonDocument == null)
-					break;
-				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
-				if (backupStatus.IsRunning == false)
-				{
-					if (checkError)
-					{
-						var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
-						if (firstOrDefault != null)
-							Assert.False(true, firstOrDefault.Message);
-					}
+        protected void WaitForBackup(DocumentDatabase db, bool checkError)
+        {
+            while (true)
+            {
+                var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                if (jsonDocument == null)
+                    break;
+                var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+                if (backupStatus.IsRunning == false)
+                {
+                    if (checkError)
+                    {
+                        var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+                        if (firstOrDefault != null)
+                            Assert.False(true, firstOrDefault.Message);
+                    }
 
-					return;
-				}
-				Thread.Sleep(50);
-			}
-		}
-	}
+                    return;
+                }
+                Thread.Sleep(50);
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SqlServerTest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -70,14 +70,14 @@ namespace Performance.Comparison.SQLServer
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[SQL Server] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
 
             return ReadParallel(string.Format("[SQL Server] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }

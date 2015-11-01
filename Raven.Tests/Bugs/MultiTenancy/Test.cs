@@ -1,8 +1,8 @@
-﻿namespace Raven.Tests.Bugs.MultiTenancy
+namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class Test
-	{
-		public string Id { get; set; }
-		public string Name { get; set; }
-	}
+    public class Test
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
 }

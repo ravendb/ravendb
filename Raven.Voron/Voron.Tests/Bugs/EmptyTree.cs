@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Voron.Impl;
 using Xunit;
 
@@ -6,7 +6,7 @@ namespace Voron.Tests.Bugs
 {
     public class EmptyTree : StorageTest
     {
-        [PrefixesFact]
+        [Fact]
         public void ShouldBeEmpty()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -26,7 +26,7 @@ namespace Voron.Tests.Bugs
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void SurviveRestart()
         {
             using (var options = StorageEnvironmentOptions.CreateMemoryOnly())

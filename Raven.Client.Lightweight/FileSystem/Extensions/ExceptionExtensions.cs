@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -16,17 +16,17 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.FileSystem.Extensions
 {
-	/// <summary>
-	///     Extension methods to handle common scenarios
-	/// </summary>
-	public static class ExceptionExtensions
-	{
-		public static Task TryThrowBetterError(this Task self)
-		{
-			return self.ContinueWith(task =>
-			{
-				if (task.Status != TaskStatus.Faulted)
-					return task;
+    /// <summary>
+    ///     Extension methods to handle common scenarios
+    /// </summary>
+    public static class ExceptionExtensions
+    {
+        public static Task TryThrowBetterError(this Task self)
+        {
+            return self.ContinueWith(task =>
+            {
+                if (task.Status != TaskStatus.Faulted)
+                    return task;
 
                 var innerException = task.Exception.ExtractSingleInnerException();
 
@@ -35,69 +35,69 @@ namespace Raven.Client.FileSystem.Extensions
                     throw errorResponseException.SimplifyException();
 
                 throw innerException;
-			}).Unwrap();
-		}
+            }).Unwrap();
+        }
 
-		public static Exception SimplifyException(this ErrorResponseException errorResposeException)
-		{
-			if (errorResposeException.StatusCode == (HttpStatusCode) 420)
-			{
-				var text = errorResposeException.ResponseString;
-				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-				{
-					url = (string) null,
-					error = (string) null
-				});
+        public static Exception SimplifyException(this ErrorResponseException errorResposeException)
+        {
+            if (errorResposeException.StatusCode == (HttpStatusCode) 420)
+            {
+                var text = errorResposeException.ResponseString;
+                var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+                {
+                    url = (string) null,
+                    error = (string) null
+                });
 
-				return new SynchronizationException(errorResults.error);
-			}
+                return new SynchronizationException(errorResults.error);
+            }
 
-			if (errorResposeException.StatusCode == HttpStatusCode.MethodNotAllowed)
-			{
-				var text = errorResposeException.ResponseString;
-				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-				{
-					url = (string) null,
-					actualETag = Etag.Empty,
-					expectedETag = Etag.Empty,
-					error = (string) null
-				});
+            if (errorResposeException.StatusCode == HttpStatusCode.MethodNotAllowed)
+            {
+                var text = errorResposeException.ResponseString;
+                var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+                {
+                    url = (string) null,
+                    actualETag = Etag.Empty,
+                    expectedETag = Etag.Empty,
+                    error = (string) null
+                });
 
-				return new ConcurrencyException(errorResults.error)
-				{
-					ActualETag = errorResults.actualETag,
-					ExpectedETag = errorResults.expectedETag
-				};
-			}
-			if (errorResposeException.StatusCode == HttpStatusCode.NotFound)
-			{
-				var text = errorResposeException.ResponseString;
+                return new ConcurrencyException(errorResults.error)
+                {
+                    ActualETag = errorResults.actualETag,
+                    ExpectedETag = errorResults.expectedETag
+                };
+            }
+            if (errorResposeException.StatusCode == HttpStatusCode.NotFound)
+            {
+                var text = errorResposeException.ResponseString;
 
-				if(string.IsNullOrEmpty(text))
-					return new FileNotFoundException();
+                if(string.IsNullOrEmpty(text))
+                    return new FileNotFoundException();
 
-				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-				{
-					url = (string) null,
-					error = (string) null
-				});
+                var errorResults = JsonConvert.DeserializeAnonymousType(text, new
+                {
+                    url = (string) null,
+                    error = (string) null
+                });
 
-				return new FileNotFoundException(errorResults.error);
-			}
+                return new FileNotFoundException(errorResults.error);
+            }
             if (errorResposeException.StatusCode == HttpStatusCode.BadRequest)
             {
                 return new BadRequestException();
             }
 
-			return errorResposeException;
-		}
+            return errorResposeException;
+        }
 
-		public static Task<T> TryThrowBetterError<T>(this Task<T> self)
-		{
-			return self.ContinueWith(task =>
-			{
-				if (task.Status != TaskStatus.Faulted)
-					return task;
+        public static Task<T> TryThrowBetterError<T>(this Task<T> self)
+        {
+            return self.ContinueWith(task =>
+            {
+                if (task.Status != TaskStatus.Faulted)
+                    return task;
 
                 var innerException = task.Exception.ExtractSingleInnerException();
 
@@ -106,37 +106,37 @@ namespace Raven.Client.FileSystem.Extensions
                     throw errorResponseException.SimplifyException();
 
                 throw innerException;
-			}).Unwrap();
-		}
+            }).Unwrap();
+        }
 
-		///<summary>
-		/// Turn an expression like x=&lt; x.User.Name to "User.Name"
-		///</summary>
-		public static string ToPropertyPath(this LambdaExpression expr,
-			char propertySeparator = '.',
-			char collectionSeparator = ',')
-		{
-			var expression = expr.Body;
+        ///<summary>
+        /// Turn an expression like x=&lt; x.User.Name to "User.Name"
+        ///</summary>
+        public static string ToPropertyPath(this LambdaExpression expr,
+            char propertySeparator = '.',
+            char collectionSeparator = ',')
+        {
+            var expression = expr.Body;
 
-			return expression.ToPropertyPath(propertySeparator, collectionSeparator);
-		}
+            return expression.ToPropertyPath(propertySeparator, collectionSeparator);
+        }
 
-		public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', char collectionSeparator = ',')
-		{
-			var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(CultureInfo.InvariantCulture), collectionSeparator.ToString(CultureInfo.InvariantCulture));
-			propertyPathExpressionVisitor.Visit(expression);
+        public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', char collectionSeparator = ',')
+        {
+            var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(CultureInfo.InvariantCulture), collectionSeparator.ToString(CultureInfo.InvariantCulture));
+            propertyPathExpressionVisitor.Visit(expression);
 
-			var builder = new StringBuilder();
-			foreach (var result in propertyPathExpressionVisitor.Results)
-			{
-				builder.Append(result);
-			}
-			return builder.ToString().Trim(propertySeparator, collectionSeparator);
-		}
+            var builder = new StringBuilder();
+            foreach (var result in propertyPathExpressionVisitor.Results)
+            {
+                builder.Append(result);
+            }
+            return builder.ToString().Trim(propertySeparator, collectionSeparator);
+        }
 
 
         public static Exception SimplifyException(this Exception exception)
-		{
+        {
             var aggregateException = exception as AggregateException;
             if (aggregateException != null)
             {
@@ -150,55 +150,55 @@ namespace Raven.Client.FileSystem.Extensions
                 return errorResponseException.SimplifyException();
 
             return exception;
-		}
+        }
 
-		/// <summary>
-		///     Extracts a portion of an exception for a user friendly display
-		/// </summary>
-		/// <param name="e">The exception.</param>
-		/// <returns>The primary portion of the exception message.</returns>
-		public static string SimplifyError(this Exception e)
-		{
-			var parts = e.Message.Split(new[] { "\r\n   " }, StringSplitOptions.None);
-			var firstLine = parts.First();
-			var index = firstLine.IndexOf(':');
-			return index > 0
-					   ? firstLine.Remove(0, index + 2)
-					   : firstLine;
-		}
+        /// <summary>
+        ///     Extracts a portion of an exception for a user friendly display
+        /// </summary>
+        /// <param name="e">The exception.</param>
+        /// <returns>The primary portion of the exception message.</returns>
+        public static string SimplifyError(this Exception e)
+        {
+            var parts = e.Message.Split(new[] { "\r\n   " }, StringSplitOptions.None);
+            var firstLine = parts.First();
+            var index = firstLine.IndexOf(':');
+            return index > 0
+                       ? firstLine.Remove(0, index + 2)
+                       : firstLine;
+        }
 
-		public class PropertyPathExpressionVisitor : ExpressionVisitor
-		{
-			private readonly string propertySeparator;
-			private readonly string collectionSeparator;
-			public Stack<string> Results = new Stack<string>();
+        public class PropertyPathExpressionVisitor : ExpressionVisitor
+        {
+            private readonly string propertySeparator;
+            private readonly string collectionSeparator;
+            public Stack<string> Results = new Stack<string>();
 
-			public PropertyPathExpressionVisitor(string propertySeparator, string collectionSeparator)
-			{
-				this.propertySeparator = propertySeparator;
-				this.collectionSeparator = collectionSeparator;
-			}
+            public PropertyPathExpressionVisitor(string propertySeparator, string collectionSeparator)
+            {
+                this.propertySeparator = propertySeparator;
+                this.collectionSeparator = collectionSeparator;
+            }
 
-			protected override Expression VisitMember(MemberExpression node)
-			{
-				Results.Push(propertySeparator);
-				Results.Push(node.Member.Name);
-				return base.VisitMember(node);
-			}
+            protected override Expression VisitMember(MemberExpression node)
+            {
+                Results.Push(propertySeparator);
+                Results.Push(node.Member.Name);
+                return base.VisitMember(node);
+            }
 
-			protected override Expression VisitMethodCall(MethodCallExpression node)
-			{
-				if (node.Method.Name != "Select" && node.Arguments.Count != 2)
-					throw new InvalidOperationException("Not idea how to deal with convert " + node + " to a member expression");
-
-
-				Visit(node.Arguments[1]);
-				Results.Push(collectionSeparator);
-				Visit(node.Arguments[0]);
+            protected override Expression VisitMethodCall(MethodCallExpression node)
+            {
+                if (node.Method.Name != "Select" && node.Arguments.Count != 2)
+                    throw new InvalidOperationException("Not idea how to deal with convert " + node + " to a member expression");
 
 
-				return node;
-			}
-		}
-	}
+                Visit(node.Arguments[1]);
+                Results.Push(collectionSeparator);
+                Visit(node.Arguments[0]);
+
+
+                return node;
+            }
+        }
+    }
 }

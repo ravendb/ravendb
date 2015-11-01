@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +9,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Extensions
 {
-	internal static class MetricExtensions
+    internal static class MetricExtensions
     {
         public static HistogramData CreateHistogramData(this HistogramMetric self)
         {

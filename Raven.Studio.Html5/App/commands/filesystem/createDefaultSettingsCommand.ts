@@ -1,4 +1,4 @@
-﻿import filesystem = require("models/filesystem/filesystem");
+import filesystem = require("models/filesystem/filesystem");
 
 import versioningEntry = require("models/filesystem/versioningEntry");
 

@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
             this.log = log;
         }
 
-		public IEnumerable<AbstractField> Index(object val, PropertyAccessor accessor, Field.Store defaultStorage)
+        public IEnumerable<AbstractField> Index(object val, PropertyAccessor accessor, Field.Store defaultStorage)
         {
             return from property in accessor.Properies
                    where property.Key != Constants.DocumentIdFieldName
@@ -128,46 +128,13 @@ namespace Raven.Database.Indexing
 
             CheckIfSortOptionsAndInputTypeMatch(name, value);
 
-            var attachmentFoIndexing = value as AttachmentForIndexing;
-            if (attachmentFoIndexing != null)
-            {
-                if (database == null)
-                    throw new InvalidOperationException(
-                        "Cannot use attachment for indexing if the database parameter is null. This is probably a RavenDB bug");
-
-                var attachment = database.Attachments.GetStatic(attachmentFoIndexing.Key);
-                if (attachment == null)
-                {
-                    yield break;
-                }
-
-                var fieldWithCaching = CreateFieldWithCaching(name, string.Empty, Field.Store.NO, fieldIndexingOptions, termVector);
-
-                if (database.TransactionalStorage.IsAlreadyInBatch)
-                {
-                    var streamReader = new StreamReader(attachment.Data());
-                    fieldWithCaching.SetValue(streamReader);
-                }
-                else
-                {
-                    // we are not in batch operation so we have to create it be able to read attachment's data
-                    database.TransactionalStorage.Batch(accessor =>
-                    {
-                        var streamReader = new StreamReader(attachment.Data());
-                        // we have to read it into memory because we after exiting the batch an attachment's data stream will be closed
-                        fieldWithCaching.SetValue(streamReader.ReadToEnd());
-                    });
-                }
-
-                yield return fieldWithCaching;
-                yield break;
-            }
             if (Equals(value, string.Empty))
             {
                 yield return CreateFieldWithCaching(name, Constants.EmptyString, storage,
                              Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                 yield break;
             }
+
             var dynamicNullObject = value as DynamicNullObject;
             if (ReferenceEquals(dynamicNullObject, null) == false)
             {
@@ -175,8 +142,8 @@ namespace Raven.Database.Indexing
                 {
                     var sortOptions = indexDefinition.GetSortOption(name, query: null);
                     if (sortOptions == null ||
-                        sortOptions.Value == SortOptions.String ||
                         sortOptions.Value == SortOptions.None ||
+                        sortOptions.Value == SortOptions.String ||
                         sortOptions.Value == SortOptions.StringVal ||
                         sortOptions.Value == SortOptions.Custom)
                     {

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="PatchActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -27,22 +27,21 @@ namespace Raven.Database.Actions
         }
 
         public PatchResultData ApplyPatch(string docId, Etag etag, PatchRequest[] patchDoc,
-								  TransactionInformation transactionInformation, bool debugMode = false, string[] participatingIds = null)
+                                  bool debugMode = false, string[] participatingIds = null)
         {
             if (docId == null)
                 throw new ArgumentNullException("docId");
-            return ApplyPatchInternal(docId, etag, transactionInformation,
-                                      jsonDoc => new JsonPatcher(jsonDoc.ToJson()).Apply(patchDoc),
-									  () => null, () => null, () => null, debugMode, participatingIds: participatingIds);
+            return ApplyPatchInternal(docId, etag, jsonDoc => new JsonPatcher(jsonDoc.ToJson()).Apply(patchDoc),
+                                      () => null, () => null, () => null, debugMode, participatingIds: participatingIds);
         }
 
         public PatchResultData ApplyPatch(string docId, Etag etag,
                                           PatchRequest[] patchExistingDoc, PatchRequest[] patchDefaultDoc, RavenJObject defaultMetadata,
-										  TransactionInformation transactionInformation, bool debugMode = false, bool skipPatchIfEtagMismatch = false, string[] participatingIds = null)
+                                          bool debugMode = false, bool skipPatchIfEtagMismatch = false, string[] participatingIds = null)
         {
             if (docId == null)
                 throw new ArgumentNullException("docId");
-            return ApplyPatchInternal(docId, etag, transactionInformation,
+            return ApplyPatchInternal(docId, etag,
                                       jsonDoc => new JsonPatcher(jsonDoc.ToJson()).Apply(patchExistingDoc),
                                       () =>
                                       {
@@ -54,21 +53,20 @@ namespace Raven.Database.Actions
                                           return new JsonPatcher(jsonDoc).Apply(patchDefaultDoc);
                                       },
                                       () => null,
-									  () => null,
-									  debugMode,
-									  skipPatchIfEtagMismatch,
-									  participatingIds);
+                                      () => null,
+                                      debugMode,
+                                      skipPatchIfEtagMismatch,
+                                      participatingIds);
         }
 
         private PatchResultData ApplyPatchInternal(string docId, Etag etag,
-                                       TransactionInformation transactionInformation,
                                        Func<JsonDocument, RavenJObject> patcher,
                                        Func<RavenJObject> patcherIfMissing,
                                        Func<IList<JsonDocument>> getDocsCreatedInPatch,
-									   Func<RavenJObject> getDebugActions,
+                                       Func<RavenJObject> getDebugActions,
                                        bool debugMode,
-									   bool skipPatchIfEtagMismatch = false,
-									   string[] participatingIds = null)
+                                       bool skipPatchIfEtagMismatch = false,
+                                       string[] participatingIds = null)
         {
             if (docId == null) throw new ArgumentNullException("docId");
             docId = docId.Trim();
@@ -82,33 +80,37 @@ namespace Raven.Database.Actions
             Random rand = null;
             do
             {
-                var doc = Database.Documents.Get(docId, transactionInformation);
-                Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", docId, doc != null));
+                var doc = Database.Documents.Get(docId);
+                if (Log.IsDebugEnabled)
+                    Log.Debug(() => string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", docId, doc != null));
 
                 if (etag != null && doc != null && doc.Etag != etag)
                 {
                     Debug.Assert(doc.Etag != null);
 
-	                if (skipPatchIfEtagMismatch)
-	                {
-		                result.PatchResult = PatchResult.Skipped;
-		                return result;
-	                }
+                    if (skipPatchIfEtagMismatch)
+                    {
+                        result.PatchResult = PatchResult.Skipped;
+                        return result;
+                    }
 
-                    Log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
+                    if (Log.IsDebugEnabled)
+                        Log.Debug(() => string.Format("Got concurrent exception while tried to patch the following document ID: {0}", docId));
+
                     throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
                     {
                         ActualETag = doc.Etag,
                         ExpectedETag = etag,
                     };
                 }
-				var documentBeforePatching = doc != null ? doc.ToJson().CloneToken() : null;
+                var documentBeforePatching = doc != null ? doc.ToJson().CloneToken() : null;
 
                 var jsonDoc = (doc != null ? patcher(doc) : patcherIfMissing());
 
-	            if (jsonDoc == null)
+                if (jsonDoc == null)
                 {
-                    Log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
+                    if (Log.IsDebugEnabled)
+                        Log.Debug(() => string.Format("Preparing to apply patch on ({0}). DocumentDoesNotExists.", docId));
                     result.PatchResult = PatchResult.DocumentDoesNotExists;
                 }
                 else
@@ -117,35 +119,35 @@ namespace Raven.Database.Actions
                     {
                         result.Document = jsonDoc;
                         result.PatchResult = PatchResult.Tested;
-						result.DebugActions = getDebugActions();
+                        result.DebugActions = getDebugActions();
                     }
                     else
                     {
                         try
                         {
-	                        var notModified = false;
+                            var notModified = false;
 
-	                        if (doc == null)
-		                        Database.Documents.Put(docId, null, jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation, participatingIds);
-	                        else
-	                        {
-		                        if (IsNotModified(jsonDoc.CloneToken(), documentBeforePatching))
-			                        notModified = true;
-		                        else
-			                        Database.Documents.Put(doc.Key, (doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation, participatingIds);
-	                        }
+                            if (doc == null)
+                                Database.Documents.Put(docId, null, jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), participatingIds);
+                            else
+                            {
+                                if (IsNotModified(jsonDoc.CloneToken(), documentBeforePatching))
+                                    notModified = true;
+                                else
+                                    Database.Documents.Put(doc.Key, (doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), participatingIds);
+                            }
 
-	                        var docsCreatedInPatch = getDocsCreatedInPatch();
+                            var docsCreatedInPatch = getDocsCreatedInPatch();
                             if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
                             {
                                 foreach (var docFromPatch in docsCreatedInPatch)
                                 {
                                     Database.Documents.Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
-                                        docFromPatch.Metadata, transactionInformation, participatingIds);
+                                        docFromPatch.Metadata, participatingIds);
                                 }
                             }
                             shouldRetry = false;
-							result.PatchResult = notModified ? PatchResult.NotModified : PatchResult.Patched;
+                            result.PatchResult = notModified ? PatchResult.NotModified : PatchResult.Patched;
                         }
                         catch (ConcurrencyException)
                         {
@@ -173,106 +175,105 @@ namespace Raven.Database.Actions
             return result;
         }
 
-		private static bool IsNotModified(RavenJToken patchedDocClone, RavenJToken existingDocClone)
-		{
-			patchedDocClone.Value<RavenJObject>(Constants.Metadata).Remove(Constants.LastModified);
-			existingDocClone.Value<RavenJObject>(Constants.Metadata).Remove(Constants.LastModified);
+        private static bool IsNotModified(RavenJToken patchedDocClone, RavenJToken existingDocClone)
+        {
+            patchedDocClone.Value<RavenJObject>(Constants.Metadata).Remove(Constants.LastModified);
+            existingDocClone.Value<RavenJObject>(Constants.Metadata).Remove(Constants.LastModified);
 
-		    return RavenJToken.DeepEquals(patchedDocClone, existingDocClone);
-	    }
+            return RavenJToken.DeepEquals(patchedDocClone, existingDocClone);
+        }
 
-	    public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
-													   TransactionInformation transactionInformation, bool debugMode = false)
-		{
-			ScriptedJsonPatcher scriptedJsonPatcher = null;
-			DefaultScriptedJsonPatcherOperationScope scope = null;
-			try
-			{
-				var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-					jsonDoc =>
-					{
-						scope = new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
-						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-						return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patch, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
-					},
-					() => null,
-					() =>
-					{
-						if (scope == null)
-							return null;
-						return scope
-							.GetPutOperations()
-							.ToList();
-					}, 
-					() =>
-					{
-						if (scope == null)
-							return null;
+        public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch, bool debugMode = false)
+        {
+            ScriptedJsonPatcher scriptedJsonPatcher = null;
+            DefaultScriptedJsonPatcherOperationScope scope = null;
+            try
+            {
+                var applyPatchInternal = ApplyPatchInternal(docId, etag, 
+                    jsonDoc =>
+                    {
+                        scope = new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
+                        scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
+                        return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patch, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
+                    },
+                    () => null,
+                    () =>
+                    {
+                        if (scope == null)
+                            return null;
+                        return scope
+                            .GetPutOperations()
+                            .ToList();
+                    }, 
+                    () =>
+                    {
+                        if (scope == null)
+                            return null;
 
-						return scope.DebugActions;
-					},
-					debugMode);
+                        return scope.DebugActions;
+                    },
+                    debugMode);
 
-				return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
-			}
-			finally
-			{
-				if (scope != null)
-					scope.Dispose();
-			}
-		}
+                return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
+            }
+            finally
+            {
+                if (scope != null)
+                    scope.Dispose();
+            }
+        }
 
-		public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
-															   ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata,
-															   TransactionInformation transactionInformation, bool debugMode = false, string[] participatingIds = null)
-		{
-			ScriptedJsonPatcher scriptedJsonPatcher = null;
-			DefaultScriptedJsonPatcherOperationScope scope = null;
+        public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
+                                                               ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata,
+                                                               bool debugMode = false, string[] participatingIds = null)
+        {
+            ScriptedJsonPatcher scriptedJsonPatcher = null;
+            DefaultScriptedJsonPatcherOperationScope scope = null;
 
-			try
-			{
-				var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
-					jsonDoc =>
-					{
-						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
-						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-						return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patchExisting, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
-					},
-					() =>
-					{
-						if (patchDefault == null)
-							return null;
+            try
+            {
+                var applyPatchInternal = ApplyPatchInternal(docId, etag, 
+                    jsonDoc =>
+                    {
+                        scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
+                        scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
+                        return scriptedJsonPatcher.Apply(scope, jsonDoc.ToJson(), patchExisting, jsonDoc.SerializedSizeOnDisk, jsonDoc.Key);
+                    },
+                    () =>
+                    {
+                        if (patchDefault == null)
+                            return null;
 
-						scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
+                        scope = scope ?? new DefaultScriptedJsonPatcherOperationScope(Database, debugMode);
 
-						scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
-						var jsonDoc = new RavenJObject();
-						jsonDoc[Constants.Metadata] = defaultMetadata.CloneToken() ?? new RavenJObject();
-						return scriptedJsonPatcher.Apply(scope, jsonDoc, patchDefault, 0, docId);
-					},
-					() =>
-					{
-						if (scope == null)
-							return null;
-						return scope
-							.GetPutOperations()
-							.ToList();
-					},
-					() =>
-					{
-						if (scope == null)
-							return null;
+                        scriptedJsonPatcher = new ScriptedJsonPatcher(Database);
+                        var jsonDoc = new RavenJObject();
+                        jsonDoc[Constants.Metadata] = defaultMetadata.CloneToken() ?? new RavenJObject();
+                        return scriptedJsonPatcher.Apply(scope, jsonDoc, patchDefault, 0, docId);
+                    },
+                    () =>
+                    {
+                        if (scope == null)
+                            return null;
+                        return scope
+                            .GetPutOperations()
+                            .ToList();
+                    },
+                    () =>
+                    {
+                        if (scope == null)
+                            return null;
 
-						return scope.DebugActions;
-					},
-					debugMode, participatingIds: participatingIds);
-				return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
-			}
-			finally
-			{
-				if (scope != null)
-					scope.Dispose();
-			}
-		}
+                        return scope.DebugActions;
+                    },
+                    debugMode, participatingIds: participatingIds);
+                return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
+            }
+            finally
+            {
+                if (scope != null)
+                    scope.Dispose();
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
@@ -10,7 +10,7 @@ namespace Voron.Tests.Trees
     public class Basic : StorageTest
     {
 
-        [PrefixesFact]
+        [Fact]
         public void CanAddVeryLargeValue()
         {
             var random = new Random();
@@ -33,7 +33,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanAdd()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -42,7 +42,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanAddAndRead()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -57,7 +57,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanAddAndReadStats()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -72,7 +72,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanAddEnoughToCausePageSplit()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -87,7 +87,7 @@ namespace Voron.Tests.Trees
                 }
 
                 tx.Commit();
-                if (AbstractPager.PageSize != 4096)
+                if (Env.Options.PageSize != 4096)
 #pragma warning disable 162
                     return;
 #pragma warning restore 162
@@ -99,7 +99,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void AfterPageSplitAllDataIsValid()
         {
             const int count = 256;
@@ -124,7 +124,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void PageSplitsAllAround()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

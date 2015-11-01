@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Impl.DTC;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -36,7 +35,6 @@ namespace Raven.Database.Impl
         private readonly InMemoryRavenConfiguration configuration;
         private readonly IStorageActionsAccessor actions;
         private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
-        private readonly InFlightTransactionalState inFlightTransactionalState;
         private readonly Dictionary<string, RavenJToken> transformerParameters;
         private readonly HashSet<string> itemsToInclude;
         private bool disableCache;
@@ -44,33 +42,30 @@ namespace Raven.Database.Impl
         public Etag Etag = Etag.Empty;
 
         public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
-            InFlightTransactionalState inFlightTransactionalState,
             Dictionary<string, RavenJToken> transformerParameters = null,
             HashSet<string> itemsToInclude = null)
         {
             this.configuration = configuration;
             this.actions = actions;
             this.triggers = triggers;
-            this.inFlightTransactionalState = inFlightTransactionalState;
             this.transformerParameters = transformerParameters ?? new Dictionary<string, RavenJToken>();
             this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
         }
 
         public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch, bool skipDuplicateCheck)
         {
-            return ExecuteReadTriggers(ProcessReadVetoes(
-                RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, skipDuplicateCheck),
-                null, ReadOperation.Query), null, ReadOperation.Query);
+            return ExecuteReadTriggers(
+                        ProcessReadVetoes( 
+                            RetrieveDocumentInternal(queryResult, loadedIdsForRetrieval, fieldsToFetch, indexDefinition, skipDuplicateCheck), ReadOperation.Query), ReadOperation.Query);
         }
 
 
-        public JsonDocument ExecuteReadTriggers(JsonDocument document, TransactionInformation transactionInformation, ReadOperation operation)
+        public JsonDocument ExecuteReadTriggers(JsonDocument document, ReadOperation operation)
         {
-            return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, transactionInformation, operation),
-                                             transactionInformation, operation);
+            return ExecuteReadTriggersOnRead(ProcessReadVetoes(document, operation), operation);
         }
 
-        private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, TransactionInformation transactionInformation, ReadOperation operation)
+        private JsonDocument ExecuteReadTriggersOnRead(JsonDocument resultingDocument, ReadOperation operation)
         {
             if (resultingDocument == null)
                 return null;
@@ -81,23 +76,19 @@ namespace Raven.Database.Impl
                 Etag = resultingDocument.Etag,
                 LastModified = resultingDocument.LastModified,
                 SerializedSizeOnDisk = resultingDocument.SerializedSizeOnDisk,
-                SkipDeleteFromIndex = resultingDocument.SkipDeleteFromIndex,
-                NonAuthoritativeInformation = resultingDocument.NonAuthoritativeInformation,
+                SkipDeleteFromIndex = resultingDocument.SkipDeleteFromIndex,  
                 TempIndexScore = resultingDocument.TempIndexScore,
-                DataAsJson =
-                    resultingDocument.DataAsJson.IsSnapshot
-                        ? (RavenJObject)resultingDocument.DataAsJson.CreateSnapshot()
-                        : resultingDocument.DataAsJson,
-                Metadata =
-                    resultingDocument.Metadata.IsSnapshot
-                        ? (RavenJObject)resultingDocument.Metadata.CreateSnapshot()
-                        : resultingDocument.Metadata,
+                DataAsJson = resultingDocument.DataAsJson.IsSnapshot
+                                    ? (RavenJObject)resultingDocument.DataAsJson.CreateSnapshot()
+                                    : resultingDocument.DataAsJson,
+                Metadata = resultingDocument.Metadata.IsSnapshot
+                                ? (RavenJObject)resultingDocument.Metadata.CreateSnapshot()
+                                : resultingDocument.Metadata,
             };
 
             triggers.Apply(
                 trigger =>
-                trigger.OnRead(doc.Key, doc.DataAsJson, doc.Metadata, operation,
-                               transactionInformation));
+                trigger.OnRead(doc.Key, doc.DataAsJson, doc.Metadata, operation));
 
             return doc;
         }
@@ -176,7 +167,8 @@ namespace Raven.Database.Impl
                                 var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
                                 foreach (var property in result)
                                 {
-                                    if (property.Value == null || property.Value.Type == JTokenType.Null) continue;
+                                    if (property.Value == null ) continue;
+
                                     queryResult.Projection[property.Key] = property.Value;
                                 }
                             }
@@ -254,11 +246,10 @@ namespace Raven.Database.Impl
             if (doc != null && doc.Metadata != null)
                 doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
 
-            var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
-            if (nonAuthoritativeInformationBehavior != null)
-                doc = nonAuthoritativeInformationBehavior(doc);
+
             if (disableCache == false)
                 cache[key] = doc;
+
             if (cache.Count > 2048)
             {
                 // we are probably doing a stream here, no point in trying to cache things, we might be
@@ -285,18 +276,18 @@ namespace Raven.Database.Impl
 
             if (doc == null)
                 return false;
-            doc = ProcessReadVetoes(doc, null, ReadOperation.Query);
+            doc = ProcessReadVetoes(doc, ReadOperation.Query);
             return doc != null;
         }
 
-        public T ProcessReadVetoes<T>(T document, TransactionInformation transactionInformation, ReadOperation operation)
+        public T ProcessReadVetoes<T>(T document, ReadOperation operation)
             where T : class, IJsonDocumentMetadata, new()
         {
             if (document == null)
                 return null;
             foreach (var readTrigger in triggers)
             {
-                var readVetoResult = readTrigger.Value.AllowRead(document.Key, document.Metadata, operation, transactionInformation);
+                var readVetoResult = readTrigger.Value.AllowRead(document.Key, document.Metadata, operation);
                 switch (readVetoResult.Veto)
                 {
                     case ReadVetoResult.ReadAllow.Allow:
@@ -306,7 +297,6 @@ namespace Raven.Database.Impl
                         {
                             Etag = Etag.Empty,
                             LastModified = DateTime.MinValue,
-                            NonAuthoritativeInformation = false,
                             Key = document.Key,
                             Metadata = new RavenJObject
                                                       {
@@ -320,7 +310,8 @@ namespace Raven.Database.Impl
                                                       }
                         };
                     case ReadVetoResult.ReadAllow.Ignore:
-                        log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
+                        if (log.IsDebugEnabled)
+                            log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
                         return null;
                     default:
                         throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
@@ -370,7 +361,7 @@ namespace Raven.Database.Impl
         public dynamic Load(string id)
         {
             var document = GetDocumentWithCaching(id);
-            document = ProcessReadVetoes(document, null, ReadOperation.Load);
+            document = ProcessReadVetoes(document,  ReadOperation.Load);
             if (document == null)
             {
                 Etag = Etag.HashWith(Etag.Empty);

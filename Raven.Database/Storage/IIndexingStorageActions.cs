@@ -12,33 +12,33 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage
 {
-	public interface IIndexingStorageActions : IDisposable
-	{
-		IEnumerable<IndexStats> GetIndexesStats();
+    public interface IIndexingStorageActions : IDisposable
+    {
+        IEnumerable<IndexStats> GetIndexesStats();
 
-		IndexStats GetIndexStats(int index);
-		void AddIndex(int id, bool createMapReduce);
-	    void PrepareIndexForDeletion(int id);
-		void DeleteIndex(int id, CancellationToken cancellationToken);
+        IndexStats GetIndexStats(int index);
+        void AddIndex(int id, bool createMapReduce);
+        void PrepareIndexForDeletion(int id);
+        void DeleteIndex(int id, CancellationToken cancellationToken);
 
-	    void SetIndexPriority(int id, IndexingPriority priority);
+        void SetIndexPriority(int id, IndexingPriority priority);
 
-		void SetIndexesPriority(int[] ids, IndexingPriority[] priorities);
+        void SetIndexesPriority(int[] ids, IndexingPriority[] priorities);
 
-		IndexFailureInformation GetFailureRate(int id);
+        IndexFailureInformation GetFailureRate(int id);
 
-		void UpdateLastIndexed(int id, Etag etag, DateTime timestamp);
-		void UpdateLastReduced(int id, Etag etag, DateTime timestamp);
-		void TouchIndexEtag(int id);
-		void UpdateIndexingStats(int id, IndexingWorkStats stats);
-		void UpdateReduceStats(int id, IndexingWorkStats stats);
+        void UpdateLastIndexed(int id, Etag etag, DateTime timestamp);
+        void UpdateLastReduced(int id, Etag etag, DateTime timestamp);
+        void TouchIndexEtag(int id);
+        void UpdateIndexingStats(int id, IndexingWorkStats stats);
+        void UpdateReduceStats(int id, IndexingWorkStats stats);
 
-		void RemoveAllDocumentReferencesFrom(string key);
-		void UpdateDocumentReferences(int id, string key, HashSet<string> references);
-		IEnumerable<string> GetDocumentsReferencing(string key);
-		int GetCountOfDocumentsReferencing(string key);
-		Dictionary<string, int> GetDocumentReferencesStats();
-		IEnumerable<string> GetDocumentsReferencesFrom(string key);
+        void RemoveAllDocumentReferencesFrom(string key);
+        void UpdateDocumentReferences(int id, string key, HashSet<string> references);
+        IEnumerable<string> GetDocumentsReferencing(string key);
+        int GetCountOfDocumentsReferencing(string key);
+        Dictionary<string, int> GetDocumentReferencesStats();
+        IEnumerable<string> GetDocumentsReferencesFrom(string key);
         void DumpAllReferancesToCSV(StreamWriter writer, int numberOfSampleDocs);
-	}
+    }
 }

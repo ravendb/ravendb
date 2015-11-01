@@ -1,4 +1,4 @@
-﻿import filesystem = require('models/filesystem/filesystem');
+import filesystem = require('models/filesystem/filesystem');
 import commandBase = require("commands/commandBase");
 import saveConfigurationCommand = require('commands/filesystem/saveConfigurationCommand');
 import configurationKey = require('models/filesystem/configurationKey');

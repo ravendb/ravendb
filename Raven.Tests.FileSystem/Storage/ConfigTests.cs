@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ConfigTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -263,6 +263,30 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.Contains("config4", names);
                     Assert.Contains("config5", names);
                     Assert.Contains("config6", names);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetConfigNamesStartingWithPrefix2(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                int total;
+
+                storage.Batch(accessor => accessor.SetConfig("a-config1", new RavenJObject()));
+                storage.Batch(accessor => accessor.SetConfig("b-config2", new RavenJObject()));
+                storage.Batch(accessor => accessor.SetConfig("c-config3", new RavenJObject()));
+
+                storage.Batch(accessor =>
+                {
+                    var names = accessor
+                        .GetConfigNamesStartingWithPrefix("a-config", 0, 10, out total)
+                        .ToList();
+
+                    Assert.Equal(1, names.Count);
+
                 });
             }
         }
