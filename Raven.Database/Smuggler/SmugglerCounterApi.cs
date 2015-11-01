@@ -53,13 +53,7 @@ namespace Raven.Database.Smuggler
 
         }
 
-        public CancellationToken CancellationToken
-        {
-            get
-            {
-                return (Options == null || Options.CancelToken == null) ? CancellationToken.None : Options.CancelToken.Token;
-            }
-        }
+        public CancellationToken CancellationToken => Options?.CancelToken?.Token ?? CancellationToken.None;
 
         /// <summary>
         /// Export counter data to specified destination (a file or a stream)
@@ -74,11 +68,11 @@ namespace Raven.Database.Smuggler
             if(exportOptions.From == null)
                 throw new ArgumentNullException("exportOptions.From");
 
-            if(String.IsNullOrWhiteSpace(exportOptions.ToFile) && exportOptions.ToStream == null)
+            if(string.IsNullOrWhiteSpace(exportOptions.ToFile) && exportOptions.ToStream == null)
                 throw new ArgumentException("ToFile or ToStream property in options must be non-null");
 
             var result = new CounterOperationState();
-            var exportFolder = String.Empty;
+            var exportFolder = string.Empty;
             if (Options.Incremental)
             {
                 ShowProgress("Starting incremental export..");

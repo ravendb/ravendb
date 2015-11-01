@@ -132,7 +132,7 @@ namespace Raven.Tests.Counters
                 {
                     var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
                     var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
-                    if (sourceValue == targetValue)
+                    if (sourceValue.IsExists && targetValue.IsExists && sourceValue.Total == targetValue.Total)
                     {
                         hasReplicated = true;
                         break;

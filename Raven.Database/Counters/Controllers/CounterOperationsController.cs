@@ -51,7 +51,7 @@ namespace Raven.Database.Counters.Controllers
                 return verificationResult;
 
             CounterChangeAction counterChangeAction;
-            long total = 0;
+            long? total = 0;
             using (var writer = CounterStorage.CreateWriter())
             {
                 counterChangeAction = writer.Store(groupName, counterName, delta);
@@ -59,7 +59,13 @@ namespace Raven.Database.Counters.Controllers
                     return GetEmptyMessage();
 
                 writer.Commit();
-                total = writer.GetCounterTotal(groupName, counterName);
+	            if (!writer.TryGetCounterTotal(groupName, counterName,out total))
+	            {
+		            return GetMessageWithObject(new
+		            {
+			            Message = $"Could not find a counter with groupName = {groupName}, counterName = {counterName}"
+		            },HttpStatusCode.NotFound);
+	            }
             }
 
             CounterStorage.MetricsCounters.ClientRequests.Mark();
@@ -69,7 +75,7 @@ namespace Raven.Database.Counters.Controllers
                 CounterName = counterName,
                 Action = counterChangeAction,
                 Delta = delta,
-                Total = total
+                Total = total.Value
             });
 
             return GetEmptyMessage();
@@ -418,14 +424,15 @@ namespace Raven.Database.Counters.Controllers
             {
                 try
                 {
-                    var overallTotal = reader.GetCounterTotal(groupName, counterName);
-                    return Request.CreateResponse(HttpStatusCode.OK, overallTotal);
-                }
-                catch (InvalidDataException e)
-                {
-                    if (e.Data.Contains("DoesntExist"))
-                        return Request.CreateResponse(HttpStatusCode.NotFound, "Counter with specified group and name wasn't found");
+	                long? total;
+	                if (!reader.TryGetCounterTotal(groupName, counterName, out total))
+		                return GetMessageWithObject(new CounterTotal {IsExists = false},HttpStatusCode.NotFound);
 
+					Debug.Assert(total.HasValue);
+					return GetMessageWithObject(new CounterTotal { IsExists = true, Total = total.Value});
+				}
+				catch (Exception e)
+                {
                     return Request.CreateErrorResponse(HttpStatusCode.BadRequest, e);
                 }
             }

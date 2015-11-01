@@ -39,7 +39,7 @@ namespace Raven.Client.Counters
 
         Task DeleteAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
-        Task<long> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
+        Task<CounterTotal> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken));
 
         Task<CounterStorageStats> GetCounterStatsAsync(CancellationToken token = default (CancellationToken));
 
