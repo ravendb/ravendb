@@ -1,8 +1,8 @@
-﻿namespace Raven.Tests.Bugs.LiveProjections
+namespace Raven.Tests.Bugs.LiveProjections
 {
-	public class Person
-	{
-		public string Name { get; set; }
-		public string[] Children { get; set; }
-	}
+    public class Person
+    {
+        public string Name { get; set; }
+        public string[] Children { get; set; }
+    }
 }

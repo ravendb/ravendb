@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
 import trafficWatchClient = require("common/trafficWatchClient");
@@ -42,7 +42,7 @@ class trafficWatch extends viewModelBase {
             if (!!this.startTraceTime()) {
                 return this.parseHumanReadableTimeString(this.startTraceTime().toString(), true, false);
             }
-			return "";
+            return "";
         });
         this.filter.throttle(250).subscribe(() => this.filterEntries());
         this.filterDuration.throttle(250).subscribe(() => this.filterEntries());
@@ -73,7 +73,7 @@ class trafficWatch extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.showLogDetails.subscribe(x => {
                 $(".logRecords").toggleClass("logRecords-small");
         });

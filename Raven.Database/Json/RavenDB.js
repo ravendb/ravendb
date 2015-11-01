@@ -1,4 +1,4 @@
-﻿var debug_outputs = [];
+var debug_outputs = [];
 
 function output(msg) {
     if (msg instanceof Object) {
@@ -14,7 +14,7 @@ function dump(obj) {
 }
 
 function clear_debug_outputs() {
-	debug_outputs = [];
+    debug_outputs = [];
 }
 
 String.prototype.trim = String.prototype.trim || function () {

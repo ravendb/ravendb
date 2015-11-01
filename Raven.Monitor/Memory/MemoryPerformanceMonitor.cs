@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -13,47 +13,47 @@ using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsTCPIP;
 
 namespace Raven.Monitor.Memory
 {
-	internal class MemoryPerformanceMonitor : IMonitor
-	{
-		public MemoryPerformanceMonitor(MonitorOptions options)
+    internal class MemoryPerformanceMonitor : IMonitor
+    {
+        public MemoryPerformanceMonitor(MonitorOptions options)
 
-		{
-			_pid = options.ProcessId;
-		}
+        {
+            _pid = options.ProcessId;
+        }
 
-		private MemoryUssageReportDoc reportDoc;
-		public void Start()
-		{
-			reportDoc = new MemoryUssageReportDoc(){StartTime = DateTime.UtcNow, Sampling = new List<MemoryUssageSample>()};
-		}
+        private MemoryUssageReportDoc reportDoc;
+        public void Start()
+        {
+            reportDoc = new MemoryUssageReportDoc(){StartTime = DateTime.UtcNow, Sampling = new List<MemoryUssageSample>()};
+        }
 
-		public void Stop()
-		{
-			reportDoc.EndTime = DateTime.UtcNow;
-			using (var session = RavenDocumentStore.DocumentStore.OpenSession())
-			{
-				session.Store(reportDoc);
-				session.SaveChanges();
-			}
-		}
+        public void Stop()
+        {
+            reportDoc.EndTime = DateTime.UtcNow;
+            using (var session = RavenDocumentStore.DocumentStore.OpenSession())
+            {
+                session.Store(reportDoc);
+                session.SaveChanges();
+            }
+        }
 
-		public void OnTimerTick()
-		{
-			var sample = new MemoryUssageSample() {Time = DateTime.UtcNow, UsedMemoryInBytes = GetCurrentWorkingSet()};
-			reportDoc.Sampling.Add(sample);
-		}
+        public void OnTimerTick()
+        {
+            var sample = new MemoryUssageSample() {Time = DateTime.UtcNow, UsedMemoryInBytes = GetCurrentWorkingSet()};
+            reportDoc.Sampling.Add(sample);
+        }
 
-		public long GetCurrentWorkingSet()
+        public long GetCurrentWorkingSet()
         {
             PROCESS_MEMORY_COUNTERS pr;
 
-			if (GetProcessMemoryInfo(Process.GetProcessById(_pid).Handle, out pr, 40) == false)
+            if (GetProcessMemoryInfo(Process.GetProcessById(_pid).Handle, out pr, 40) == false)
                 throw new Win32Exception();
 
             return (long)pr.WorkingSetSize.ToUInt64();
         }
 
-		[DllImport("psapi.dll", SetLastError = true)]
+        [DllImport("psapi.dll", SetLastError = true)]
         static extern bool GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS counters, uint size);
 
         [StructLayout(LayoutKind.Sequential, Size = 40)]
@@ -72,10 +72,10 @@ namespace Raven.Monitor.Memory
             public UIntPtr PeakPagefileUsage;      // The peak value in bytes of the Commit Charge during the lifetime of this process (SIZE_T).
         }
 
-		private readonly int _pid;
-		public void Dispose()
-		{
-			reportDoc = null;
-		}
-	}
+        private readonly int _pid;
+        public void Dispose()
+        {
+            reportDoc = null;
+        }
+    }
 }

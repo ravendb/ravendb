@@ -26,10 +26,10 @@ class appUrl {
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
     private static currentTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
     
-	// Stores some computed values that update whenever the current database updates.
+    // Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
-		adminSettings: ko.computed(() => appUrl.forAdminSettings()),
-		adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
+        adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+        adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
 
         hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
 
@@ -47,7 +47,7 @@ class appUrl {
         editTransformer: (transformerName?: string) => ko.computed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.computed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
-		exploration: ko.computed(() => appUrl.forExploration(appUrl.currentDatabase())),
+        exploration: ko.computed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
@@ -72,7 +72,7 @@ class appUrl {
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
-		hotSpare: ko.computed(() => appUrl.forHotSpare()),
+        hotSpare: ko.computed(() => appUrl.forHotSpare()),
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.computed((sqlReplicationName: string) => appUrl.forEditSqlReplication(sqlReplicationName, appUrl.currentDatabase())),
@@ -237,11 +237,11 @@ class appUrl {
 
     static forGlobalConfig(): string {
         return '#admin/settings/globalConfig';
-	}
+    }
 
-	static forServerSmugging(): string {
-		return "#admin/settings/serverSmuggling";
-	}
+    static forServerSmugging(): string {
+        return "#admin/settings/serverSmuggling";
+    }
 
     static forGlobalConfigPeriodicExport(): string {
         return '#admin/settings/globalConfig';
@@ -271,7 +271,7 @@ class appUrl {
         return "#admin/settings/backup";
     }
 
-	static forHotSpare(): string {
+    static forHotSpare(): string {
         return "#admin/settings/hotSpare";
     }
 
@@ -295,9 +295,9 @@ class appUrl {
         return "#admin/settings/trafficWatch";
     }
 
-	static forLicenseInformation(): string {
-		return "#admin/settings/licenseInformation";
-	}
+    static forLicenseInformation(): string {
+        return "#admin/settings/licenseInformation";
+    }
 
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
@@ -311,9 +311,9 @@ class appUrl {
         return "#admin/settings/diskIoViewer";
     }
 
-	static forAdminJsConsole(): string {
-		return "#admin/settings/console";
-	}
+    static forAdminJsConsole(): string {
+        return "#admin/settings/console";
+    }
 
     static forStudioConfig(): string {
         return "#admin/settings/studioConfig";
@@ -336,16 +336,16 @@ class appUrl {
     }
 
     /**
-	* Gets the URL for edit document.
-	* @param id The ID of the document to edit, or null to edit a new document.
-	* @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
-	* @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
-	* @param database The database to use in the URL. If null, the current database will be used.
-	*/
+    * Gets the URL for edit document.
+    * @param id The ID of the document to edit, or null to edit a new document.
+    * @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
+    * @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
+    * @param database The database to use in the URL. If null, the current database will be used.
+    */
     static forEditDoc(id: string, collectionName: string, docIndexInCollection: number, db: database): string {
-		var databaseUrlPart = appUrl.getEncodedDbPart(db);
-		var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
-		var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
+        var databaseUrlPart = appUrl.getEncodedDbPart(db);
+        var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
+        var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
     }
 
@@ -358,11 +358,11 @@ class appUrl {
         return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-	static forEditCounter(rs: resource, groupName: string, counterName: string) {
-		var urlPart = appUrl.getEncodedResourcePart(rs);
+    static forEditCounter(rs: resource, groupName: string, counterName: string) {
+        var urlPart = appUrl.getEncodedResourcePart(rs);
         var itemIdUrlPart = "&groupName=" + encodeURIComponent(groupName) + "&counterName=" + encodeURIComponent(counterName);    
         return "#counterstorages/edit?" + itemIdUrlPart + urlPart;
-	}
+    }
 
     static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
         var databaseUrlPart = appUrl.getEncodedResourcePart(res);
@@ -652,7 +652,7 @@ class appUrl {
         return "#databases/query/reporting" + indexPart + "?" + databasePart;
     }
 
-	static forExploration(db: database): string {
+    static forExploration(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/query/exploration?" + databasePart;
     }
@@ -844,9 +844,9 @@ class appUrl {
         }
     }
 
-	/**
-	* Gets the database from the current web browser address. Returns the system database if no database name was found.
-	*/
+    /**
+    * Gets the database from the current web browser address. Returns the system database if no database name was found.
+    */
     static getDatabase(): database {
 
         // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
@@ -1027,11 +1027,11 @@ class appUrl {
         }
     }
 
-	/**
-	* Gets an object containing computed URLs that update when the current database updates.
-	*/
-	static forCurrentDatabase(): computedAppUrls {
-		return appUrl.currentDbComputeds;
+    /**
+    * Gets an object containing computed URLs that update when the current database updates.
+    */
+    static forCurrentDatabase(): computedAppUrls {
+        return appUrl.currentDbComputeds;
     }
 
     static forCurrentFilesystem(): computedAppUrls {
@@ -1053,19 +1053,19 @@ class appUrl {
         if (res instanceof filesystem) {
             return appUrl.getEncodedFsPart(res);
         }
-		if (res instanceof counterStorage) {
-			return appUrl.getEncodedCounterStoragePart(res);
-		}
-		if (res instanceof timeSeries) {
-			return appUrl.getEncodedTimeSeriesPart(res);
-		}
+        if (res instanceof counterStorage) {
+            return appUrl.getEncodedCounterStoragePart(res);
+        }
+        if (res instanceof timeSeries) {
+            return appUrl.getEncodedTimeSeriesPart(res);
+        }
         else {
             return appUrl.getEncodedDbPart(<database>res);
         }
     }
 
-	private static getEncodedDbPart(db?: database) {
-		return db ? "&database=" + encodeURIComponent(db.name) : "";
+    private static getEncodedDbPart(db?: database) {
+        return db ? "&database=" + encodeURIComponent(db.name) : "";
     }
     
     private static getEncodedFsPart(fs?: filesystem) {

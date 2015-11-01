@@ -1518,7 +1518,7 @@
             </summary>
             <param name="enumerable">The enumerable.</param>
             <returns>
-            	<c>true</c> if the specified enumerable is empty; otherwise, <c>false</c>.
+                <c>true</c> if the specified enumerable is empty; otherwise, <c>false</c>.
             </returns>
         </member>
         <member name="M:NUnit.Framework.Constraints.CollectionConstraint.Matches(System.Object)">
@@ -1978,7 +1978,7 @@
             Gets a value indicating whether this instance is resolvable.
             </summary>
             <value>
-            	<c>true</c> if this instance is resolvable; otherwise, <c>false</c>.
+                <c>true</c> if this instance is resolvable; otherwise, <c>false</c>.
             </value>
         </member>
         <member name="T:NUnit.Framework.Constraints.ConstraintBuilder.OperatorStack">

@@ -124,8 +124,8 @@ class changesApi {
         var connectionOpened: boolean = false;
 
         var wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-	    var url = wsProtocol + window.location.host + this.resourcePath + "/changes/websocket?" + connectionString;
-	    this.webSocket = new WebSocket(url);
+        var url = wsProtocol + window.location.host + this.resourcePath + "/changes/websocket?" + connectionString;
+        this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => this.onMessage(e);
         this.webSocket.onerror = (e) => {
@@ -557,7 +557,7 @@ class changesApi {
         });
     }
 
-	watchAllTimeSeries(onChange: (e: timeSeriesKeyChangeNotification) => void) {
+    watchAllTimeSeries(onChange: (e: timeSeriesKeyChangeNotification) => void) {
         var callback = new changesCallback<timeSeriesKeyChangeNotification>(onChange);
         if (this.allDocsHandlers().length === 0) {
             this.send("watch-time-series");
@@ -570,7 +570,7 @@ class changesApi {
             }
         });
     }
-	
+    
     watchTimeSeriesBulkOperation(onChange: (e: timeSeriesBulkOperationNotificationDto) => void) {
         var callback = new changesCallback<timeSeriesBulkOperationNotificationDto>(onChange);
         if (this.allTimeSeriesBulkOperationsHandlers().length === 0) {

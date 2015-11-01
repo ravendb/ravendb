@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3484.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -16,357 +16,357 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3484 : RavenTest
-	{
-		private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
+    public class RavenDB_3484 : RavenTest
+    {
+        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
 
-		[Fact]
-		public void OpenIfFree_ShouldBeDefaultStrategy()
-		{
-			Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionConnectionOptions().Strategy);
-		}
+        [Fact]
+        public void OpenIfFree_ShouldBeDefaultStrategy()
+        {
+            Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionConnectionOptions().Strategy);
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void ShouldRejectWhen_OpenIfFree_StrategyIsUsed(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria());
-				store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
-				store.Changes().WaitForAllPendingSubscriptions();
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria());
+                store.Subscriptions.Open(id, new SubscriptionConnectionOptions());
+                store.Changes().WaitForAllPendingSubscriptions();
 
-				Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
-				{
-					Strategy = SubscriptionOpeningStrategy.OpenIfFree
-				}));
-			}
-		}
+                Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open(id, new SubscriptionConnectionOptions()
+                {
+                    Strategy = SubscriptionOpeningStrategy.OpenIfFree
+                }));
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void ShouldReplaceActiveClientWhen_TakeOver_StrategyIsUsed(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
-				
-				const int numberOfClients = 4;
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                
+                const int numberOfClients = 4;
 
-				var subscriptions = new Subscription<User>[numberOfClients];
-				var items = new BlockingCollection<User>[numberOfClients];
+                var subscriptions = new Subscription<User>[numberOfClients];
+                var items = new BlockingCollection<User>[numberOfClients];
 
-				for (int i = 0; i < numberOfClients; i++)
-				{
-					subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = i > 0 ? SubscriptionOpeningStrategy.TakeOver : SubscriptionOpeningStrategy.OpenIfFree
-					});
+                for (int i = 0; i < numberOfClients; i++)
+                {
+                    subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = i > 0 ? SubscriptionOpeningStrategy.TakeOver : SubscriptionOpeningStrategy.OpenIfFree
+                    });
 
-					store.Changes().WaitForAllPendingSubscriptions();
+                    store.Changes().WaitForAllPendingSubscriptions();
 
-					items[i] = new BlockingCollection<User>();
+                    items[i] = new BlockingCollection<User>();
 
-					subscriptions[i].Subscribe(items[i].Add);
+                    subscriptions[i].Subscribe(items[i].Add);
 
-					bool batchAcknowledged = false;
+                    bool batchAcknowledged = false;
 
-					subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
+                    subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
 
-					using (var s = store.OpenSession())
-					{
-						s.Store(new User());
-						s.Store(new User());
-						
-						s.SaveChanges();
-					}
-					
-					User user;
+                    using (var s = store.OpenSession())
+                    {
+                        s.Store(new User());
+                        s.Store(new User());
+                        
+                        s.SaveChanges();
+                    }
+                    
+                    User user;
 
-					Assert.True(items[i].TryTake(out user, waitForDocTimeout));
-					Assert.True(items[i].TryTake(out user, waitForDocTimeout));
+                    Assert.True(items[i].TryTake(out user, waitForDocTimeout));
+                    Assert.True(items[i].TryTake(out user, waitForDocTimeout));
 
-					SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
+                    SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
 
-					if (i > 0)
-					{
-						Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)));
-						Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)));
-						Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException);
-					}
-				}
-			}
-		}
+                    if (i > 0)
+                    {
+                        Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)));
+                        Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)));
+                        Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException);
+                    }
+                }
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void ShouldReplaceActiveClientWhen_ForceAndKeep_StrategyIsUsed(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				foreach (var strategyToReplace in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.WaitForFree })
-				{
-					var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
-					var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = strategyToReplace
-					});
+            {
+                foreach (var strategyToReplace in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.WaitForFree })
+                {
+                    var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                    var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = strategyToReplace
+                    });
 
-					var items = new BlockingCollection<User>();
+                    var items = new BlockingCollection<User>();
 
-					subscription.Subscribe(items.Add);
+                    subscription.Subscribe(items.Add);
 
-					var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = SubscriptionOpeningStrategy.ForceAndKeep
-					});
+                    var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = SubscriptionOpeningStrategy.ForceAndKeep
+                    });
 
-					store.Changes().WaitForAllPendingSubscriptions();
+                    store.Changes().WaitForAllPendingSubscriptions();
 
-					var forcedItems = new BlockingCollection<User>();
+                    var forcedItems = new BlockingCollection<User>();
 
-					forcedSubscription.Subscribe(forcedItems.Add);
+                    forcedSubscription.Subscribe(forcedItems.Add);
 
-					using (var s = store.OpenSession())
-					{
-						s.Store(new User());
-						s.Store(new User());
+                    using (var s = store.OpenSession())
+                    {
+                        s.Store(new User());
+                        s.Store(new User());
 
-						s.SaveChanges();
-					}
+                        s.SaveChanges();
+                    }
 
-					User user;
+                    User user;
 
-					Assert.True(forcedItems.TryTake(out user, waitForDocTimeout));
-					Assert.True(forcedItems.TryTake(out user, waitForDocTimeout));
+                    Assert.True(forcedItems.TryTake(out user, waitForDocTimeout));
+                    Assert.True(forcedItems.TryTake(out user, waitForDocTimeout));
 
-					Assert.True(SpinWait.SpinUntil(() => subscription.IsConnectionClosed, TimeSpan.FromSeconds(5)));
-					Assert.True(subscription.SubscriptionConnectionException is SubscriptionInUseException);
-				}
-			}
-		}
+                    Assert.True(SpinWait.SpinUntil(() => subscription.IsConnectionClosed, TimeSpan.FromSeconds(5)));
+                    Assert.True(subscription.SubscriptionConnectionException is SubscriptionInUseException);
+                }
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void OpenIfFree_And_TakeOver_StrategiesCannotDropClientWith_ForceAndKeep_Strategy(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
-				var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-				{
-					Strategy = SubscriptionOpeningStrategy.ForceAndKeep
-				});
+                var forcedSubscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                {
+                    Strategy = SubscriptionOpeningStrategy.ForceAndKeep
+                });
 
-				foreach (var strategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver })
-				{
-					Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = strategy
-					}));
-				}
-			}
-		}
+                foreach (var strategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver })
+                {
+                    Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = strategy
+                    }));
+                }
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void ForceAndKeep_StrategyUsageCanTakeOverAnotherClientWith_ForceAndKeep_Strategy(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
-				const int numberOfClients = 4;
+                const int numberOfClients = 4;
 
-				var subscriptions = new Subscription<User>[numberOfClients];
-				var items = new BlockingCollection<User>[numberOfClients];
+                var subscriptions = new Subscription<User>[numberOfClients];
+                var items = new BlockingCollection<User>[numberOfClients];
 
-				for (int i = 0; i < numberOfClients; i++)
-				{
-					subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = SubscriptionOpeningStrategy.ForceAndKeep
-					});
+                for (int i = 0; i < numberOfClients; i++)
+                {
+                    subscriptions[i] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = SubscriptionOpeningStrategy.ForceAndKeep
+                    });
 
-					store.Changes().WaitForAllPendingSubscriptions();
+                    store.Changes().WaitForAllPendingSubscriptions();
 
-					items[i] = new BlockingCollection<User>();
+                    items[i] = new BlockingCollection<User>();
 
-					subscriptions[i].Subscribe(items[i].Add);
+                    subscriptions[i].Subscribe(items[i].Add);
 
-					bool batchAcknowledged = false;
+                    bool batchAcknowledged = false;
 
-					subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
+                    subscriptions[i].AfterAcknowledgment += x => batchAcknowledged = true;
 
-					using (var s = store.OpenSession())
-					{
-						s.Store(new User());
-						s.Store(new User());
+                    using (var s = store.OpenSession())
+                    {
+                        s.Store(new User());
+                        s.Store(new User());
 
-						s.SaveChanges();
-					}
+                        s.SaveChanges();
+                    }
 
-					User user;
+                    User user;
 
-					Assert.True(items[i].TryTake(out user, waitForDocTimeout));
-					Assert.True(items[i].TryTake(out user, waitForDocTimeout));
+                    Assert.True(items[i].TryTake(out user, waitForDocTimeout));
+                    Assert.True(items[i].TryTake(out user, waitForDocTimeout));
 
-					SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
+                    SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5)); // let it acknowledge the processed batch before we open another subscription
 
-					if (i > 0)
-					{
-						Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)));
-						Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)));
-						Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException);
-					}
-				}
-			}
-		}
+                    if (i > 0)
+                    {
+                        Assert.False(items[i - 1].TryTake(out user, TimeSpan.FromSeconds(2)));
+                        Assert.True(SpinWait.SpinUntil(() => subscriptions[i - 1].IsConnectionClosed, TimeSpan.FromSeconds(5)));
+                        Assert.True(subscriptions[i - 1].SubscriptionConnectionException is SubscriptionInUseException);
+                    }
+                }
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void ShouldOpenSubscriptionWith_WaitForFree_StrategyWhenItIsNotInUseByAnotherClient(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
-				var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-				{
-					Strategy = SubscriptionOpeningStrategy.WaitForFree
-				});
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscription = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                {
+                    Strategy = SubscriptionOpeningStrategy.WaitForFree
+                });
 
-				var items = new BlockingCollection<User>();
+                var items = new BlockingCollection<User>();
 
-				subscription.Subscribe(items.Add);
+                subscription.Subscribe(items.Add);
 
-				using (var s = store.OpenSession())
-				{
-					s.Store(new User());
-					s.Store(new User());
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new User());
+                    s.Store(new User());
 
-					s.SaveChanges();
-				}
+                    s.SaveChanges();
+                }
 
-				User user;
+                User user;
 
-				Assert.True(items.TryTake(out user, waitForDocTimeout));
-				Assert.True(items.TryTake(out user, waitForDocTimeout));
-			}
-		}
+                Assert.True(items.TryTake(out user, waitForDocTimeout));
+                Assert.True(items.TryTake(out user, waitForDocTimeout));
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void ShouldProcessSubscriptionAfterItGetsReleasedWhen_WaitForFree_StrategyIsSet(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
-				var userId = 0;
+                var userId = 0;
 
-				foreach (var activeClientStrategy in new []{SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.ForceAndKeep})
-				{
-					var active = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = activeClientStrategy
-					});
+                foreach (var activeClientStrategy in new []{SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.ForceAndKeep})
+                {
+                    var active = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = activeClientStrategy
+                    });
 
-					var pending = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = SubscriptionOpeningStrategy.WaitForFree
-					});
+                    var pending = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = SubscriptionOpeningStrategy.WaitForFree
+                    });
 
-					Assert.Null(pending.SubscriptionConnectionException);
-					Assert.False(pending.IsConnectionClosed);
+                    Assert.Null(pending.SubscriptionConnectionException);
+                    Assert.False(pending.IsConnectionClosed);
 
-					bool batchAcknowledged = false;
-					pending.AfterAcknowledgment += x => batchAcknowledged = true;
+                    bool batchAcknowledged = false;
+                    pending.AfterAcknowledgment += x => batchAcknowledged = true;
 
-					var items = new BlockingCollection<User>();
+                    var items = new BlockingCollection<User>();
 
-					pending.Subscribe(items.Add);
+                    pending.Subscribe(items.Add);
 
-					active.Dispose(); // disconnect the active client, the pending one should be notified the the subscription is free and retry to open it
+                    active.Dispose(); // disconnect the active client, the pending one should be notified the the subscription is free and retry to open it
 
-					using (var s = store.OpenSession())
-					{
-						s.Store(new User(), "users/" + userId++);
-						s.Store(new User(), "users/" + userId++);
+                    using (var s = store.OpenSession())
+                    {
+                        s.Store(new User(), "users/" + userId++);
+                        s.Store(new User(), "users/" + userId++);
 
-						s.SaveChanges();
-					}
+                        s.SaveChanges();
+                    }
 
-					User user;
+                    User user;
 
-					Assert.True(items.TryTake(out user, waitForDocTimeout));
-					Assert.Equal("users/" + (userId - 2), user.Id);
-					Assert.True(items.TryTake(out user, waitForDocTimeout));
-					Assert.Equal("users/" + (userId - 1), user.Id);
+                    Assert.True(items.TryTake(out user, waitForDocTimeout));
+                    Assert.Equal("users/" + (userId - 2), user.Id);
+                    Assert.True(items.TryTake(out user, waitForDocTimeout));
+                    Assert.Equal("users/" + (userId - 1), user.Id);
 
-					Assert.True(SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5))); // let it acknowledge the processed batch before we open another subscription
+                    Assert.True(SpinWait.SpinUntil(() => batchAcknowledged, TimeSpan.FromSeconds(5))); // let it acknowledge the processed batch before we open another subscription
 
-					pending.Dispose();
-				}
-			}
-		}
+                    pending.Dispose();
+                }
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
         public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription(string storage)
         {
             using (var store = NewDocumentStore(requestedStorage: storage))
-			{
-				var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+            {
+                var id = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
-				const int numberOfClients = 4;
+                const int numberOfClients = 4;
 
-				var subscriptions = new Subscription<User>[numberOfClients];
-				var processed = new bool[numberOfClients];
+                var subscriptions = new Subscription<User>[numberOfClients];
+                var processed = new bool[numberOfClients];
 
-				int? processedClient = null;
+                int? processedClient = null;
 
-				for (int i = 0; i < numberOfClients; i++)
-				{
-					var clientNumber = i;
+                for (int i = 0; i < numberOfClients; i++)
+                {
+                    var clientNumber = i;
 
-					subscriptions[clientNumber] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
-					{
-						Strategy = SubscriptionOpeningStrategy.WaitForFree
-					});
+                    subscriptions[clientNumber] = store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()
+                    {
+                        Strategy = SubscriptionOpeningStrategy.WaitForFree
+                    });
 
-					subscriptions[clientNumber].AfterBatch += x =>
-					{
-						processed[clientNumber] = true;
-					};
+                    subscriptions[clientNumber].AfterBatch += x =>
+                    {
+                        processed[clientNumber] = true;
+                    };
 
-					subscriptions[clientNumber].Subscribe(x =>
-					{
-						processedClient = clientNumber;
-					});
-				}
+                    subscriptions[clientNumber].Subscribe(x =>
+                    {
+                        processedClient = clientNumber;
+                    });
+                }
 
-				for (int i = 0; i < numberOfClients; i++)
-				{
-					using (var s = store.OpenSession())
-					{
-						s.Store(new User());
-						s.SaveChanges();
-					}
+                for (int i = 0; i < numberOfClients; i++)
+                {
+                    using (var s = store.OpenSession())
+                    {
+                        s.Store(new User());
+                        s.SaveChanges();
+                    }
 
-					Assert.True(SpinWait.SpinUntil(() => processedClient != null, waitForDocTimeout));
-					Assert.True(SpinWait.SpinUntil(() => processed[processedClient.Value], waitForDocTimeout));
+                    Assert.True(SpinWait.SpinUntil(() => processedClient != null, waitForDocTimeout));
+                    Assert.True(SpinWait.SpinUntil(() => processed[processedClient.Value], waitForDocTimeout));
 
-					subscriptions[processedClient.Value].Dispose();
+                    subscriptions[processedClient.Value].Dispose();
 
-					processedClient = null;
-				}
+                    processedClient = null;
+                }
 
-				for (int i = 0; i < numberOfClients; i++)
-				{
-					Assert.True(processed[i]);
-				}
-			}
-		}
-	}
+                for (int i = 0; i < numberOfClients; i++)
+                {
+                    Assert.True(processed[i]);
+                }
+            }
+        }
+    }
 }

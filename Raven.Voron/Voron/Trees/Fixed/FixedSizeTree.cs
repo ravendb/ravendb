@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FixedSizeTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -195,19 +195,19 @@ namespace Voron.Trees.Fixed
             }
 
 #if DEBUG
-			if (page.LastMatch == 0 && _cursor.Count > 0)
-	        {
-		        var firstKey = KeyFor(page, 0);
-		        var parentPage = _cursor.Peek();
-		        var separatorKey = GetSeparatorKeyAtPosition(parentPage, parentPage.LastSearchPosition)[0];
-		        if (separatorKey != firstKey && (separatorKey != long.MinValue || parentPage.LastSearchPosition != 0))
-		        {
-			        throw new InvalidOperationException(string.Format("Separator key ({0}) must be the same as the first key ({1}) in the page", separatorKey, firstKey));
-		        }
-	        }
+            if (page.LastMatch == 0 && _cursor.Count > 0)
+            {
+                var firstKey = KeyFor(page, 0);
+                var parentPage = _cursor.Peek();
+                var separatorKey = GetSeparatorKeyAtPosition(parentPage, parentPage.LastSearchPosition)[0];
+                if (separatorKey != firstKey && (separatorKey != long.MinValue || parentPage.LastSearchPosition != 0))
+                {
+                    throw new InvalidOperationException(string.Format("Separator key ({0}) must be the same as the first key ({1}) in the page", separatorKey, firstKey));
+                }
+            }
 #endif
 
-			BinarySearch(page, key);
+            BinarySearch(page, key);
             return page;
         }
 
@@ -225,7 +225,7 @@ namespace Voron.Trees.Fixed
                     (FixedSizeTreeHeader.Large*)_parent.DirectAdd(_treeName, sizeof(FixedSizeTreeHeader.Large));
                 largePtr->RootPageNumber = parentPage.PageNumber;
                 largePtr->Depth++;
-				var dataStart = GetSeparatorKeyAtPosition(parentPage);
+                var dataStart = GetSeparatorKeyAtPosition(parentPage);
                 dataStart[0] = long.MinValue;
                 dataStart[1] = page.PageNumber;
             }
@@ -270,9 +270,9 @@ namespace Voron.Trees.Fixed
                 // need to add past end of pageNum, optimized
                 if (page.LastSearchPosition >= page.FixedSize_NumberOfEntries)
                 {
-					// here we steal the last entry from the current page so we maintain the implicit null left entry
+                    // here we steal the last entry from the current page so we maintain the implicit null left entry
 
-					var dataStart = GetSeparatorKeyAtPosition(newPage);
+                    var dataStart = GetSeparatorKeyAtPosition(newPage);
                     dataStart[0] = KeyFor(page, page.FixedSize_NumberOfEntries - 1);
                     dataStart[1] = PageValueFor(page, page.FixedSize_NumberOfEntries - 1);
 
@@ -304,7 +304,7 @@ namespace Voron.Trees.Fixed
 
         private void AddLeafKey(Page page, int position, long key)
         {
-	        SetSeparatorKeyAtPosition(page, key, position);
+            SetSeparatorKeyAtPosition(page, key, position);
             page.FixedSize_NumberOfEntries++;
         }
 
@@ -543,14 +543,14 @@ namespace Voron.Trees.Fixed
             {
                 case null:
                     // nothing to do
-		            return new DeletionResult();
-				case FixedSizeTreeHeader.OptionFlags.Embedded:
+                    return new DeletionResult();
+                case FixedSizeTreeHeader.OptionFlags.Embedded:
                     return RemoveEmbeddedEntry(key);
-	            case FixedSizeTreeHeader.OptionFlags.Large:
+                case FixedSizeTreeHeader.OptionFlags.Large:
                     return RemoveLargeEntry(key);
             }
 
-	        throw new InvalidOperationException("Flags has invalid value: " + _flags);
+            throw new InvalidOperationException("Flags has invalid value: " + _flags);
         }
 
         public struct DeletionResult
@@ -592,16 +592,16 @@ namespace Voron.Trees.Fixed
             var header = (FixedSizeTreeHeader.Embedded*)ptr;
             var startingEntryCount = header->NumberOfEntries;
             var startPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, start, _entrySize);
-	        if (_lastMatch > 0)
-		        startPos++;
-			var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
-			if (_lastMatch < 0)
-				endPos--;
+            if (_lastMatch > 0)
+                startPos++;
+            var endPos = BinarySearch(ptr + sizeof(FixedSizeTreeHeader.Embedded), startingEntryCount, end, _entrySize);
+            if (_lastMatch < 0)
+                endPos--;
 
-			if (startPos > endPos)
-				return 0;
+            if (startPos > endPos)
+                return 0;
 
-	        byte entriesDeleted = (byte)(endPos - startPos + 1);
+            byte entriesDeleted = (byte)(endPos - startPos + 1);
 
             if (entriesDeleted == header->NumberOfEntries)
             {
@@ -733,10 +733,10 @@ namespace Voron.Trees.Fixed
             var endPos = page.LastSearchPosition;
             if (page.LastMatch < 0)
                 endPos--;
-	        if (endPos == -1)
-	        {
-		        return 0;
-	        }
+            if (endPos == -1)
+            {
+                return 0;
+            }
             if (startPos == endPos)
             {
                 var key = KeyFor(page, startPos);
@@ -744,42 +744,42 @@ namespace Voron.Trees.Fixed
                     return 0;
             }
 
-			page = _tx.ModifyPage(page.PageNumber, _parent, page);
-			var entriesDeleted = (endPos - startPos + 1);
-			if (startPos == 0)
-	        {
-				// if this is the very first item in the page, we can just change the start position
-				page.FixedSize_StartPosition += (ushort)(_entrySize * entriesDeleted);
-			}
-	        else
-	        {
-		        UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos*_entrySize),
-			        page.Base + page.FixedSize_StartPosition + ((endPos + 1)*_entrySize),
-			        ((page.FixedSize_NumberOfEntries - endPos - 1)*_entrySize)
-			        );
-	        }
-	        page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
+            page = _tx.ModifyPage(page.PageNumber, _parent, page);
+            var entriesDeleted = (endPos - startPos + 1);
+            if (startPos == 0)
+            {
+                // if this is the very first item in the page, we can just change the start position
+                page.FixedSize_StartPosition += (ushort)(_entrySize * entriesDeleted);
+            }
+            else
+            {
+                UnmanagedMemory.Move(page.Base + page.FixedSize_StartPosition + (startPos*_entrySize),
+                    page.Base + page.FixedSize_StartPosition + ((endPos + 1)*_entrySize),
+                    ((page.FixedSize_NumberOfEntries - endPos - 1)*_entrySize)
+                    );
+            }
+            page.FixedSize_NumberOfEntries -= (ushort)entriesDeleted;
 
-	        if (page.FixedSize_NumberOfEntries == 0)
+            if (page.FixedSize_NumberOfEntries == 0)
             {
                 if (RemoveEntirePage(page, largeHeader))
                     return entriesDeleted;
             }
             else
             {
-	            if (startPos == 0 && _cursor.Count > 0)
-	            {
-		            var parentPage = _cursor.Pop();
-					var separatorKey = KeyFor(page, 0);
-					if (parentPage.LastSearchPosition > 0 || separatorKey != long.MinValue)
-		            {
-			            parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
-			            SetSeparatorKeyAtPosition(parentPage, separatorKey, parentPage.LastSearchPosition);
-		            }
-					_cursor.Push(parentPage);
-	            }
+                if (startPos == 0 && _cursor.Count > 0)
+                {
+                    var parentPage = _cursor.Pop();
+                    var separatorKey = KeyFor(page, 0);
+                    if (parentPage.LastSearchPosition > 0 || separatorKey != long.MinValue)
+                    {
+                        parentPage = _tx.ModifyPage(parentPage.PageNumber, _parent, parentPage);
+                        SetSeparatorKeyAtPosition(parentPage, separatorKey, parentPage.LastSearchPosition);
+                    }
+                    _cursor.Push(parentPage);
+                }
 
-	            while (page != null)
+                while (page != null)
                 {
                     page = RebalancePage(page, largeHeader);
                 }
@@ -787,22 +787,22 @@ namespace Voron.Trees.Fixed
             return entriesDeleted;
         }
 
-	    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-	    private long* GetSeparatorKeyAtPosition(Page page, int position = 0)
-	    {
-			var dataStart = (long*)(page.Base + page.FixedSize_StartPosition + (BranchEntrySize * position));
-		    return dataStart;
-	    }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private long* GetSeparatorKeyAtPosition(Page page, int position = 0)
+        {
+            var dataStart = (long*)(page.Base + page.FixedSize_StartPosition + (BranchEntrySize * position));
+            return dataStart;
+        }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private long* SetSeparatorKeyAtPosition(Page page, long key, int position = 0)
-	    {
-			var dataStart = GetSeparatorKeyAtPosition(page, position);
-			dataStart[0] = key;
-			return dataStart;
-		}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private long* SetSeparatorKeyAtPosition(Page page, long key, int position = 0)
+        {
+            var dataStart = GetSeparatorKeyAtPosition(page, position);
+            dataStart[0] = key;
+            return dataStart;
+        }
 
-		private bool RemoveEntirePage(Page page, FixedSizeTreeHeader.Large* largeHeader)
+        private bool RemoveEntirePage(Page page, FixedSizeTreeHeader.Large* largeHeader)
         {
             _tx.FreePage(page.PageNumber);
             if (_cursor.Count == 0) //remove the root page
@@ -839,7 +839,7 @@ namespace Voron.Trees.Fixed
                 page = RebalancePage(page, largeHeader);
             }
 
-	        return new DeletionResult {NumberOfEntriesDeleted = 1};
+            return new DeletionResult {NumberOfEntriesDeleted = 1};
         }
 
         private void RemoveEntryFromPage(Page page, int pos)
@@ -887,10 +887,10 @@ namespace Voron.Trees.Fixed
                     Memory.Copy(page.Base, _tx.GetReadOnlyPage(childPage).Base, AbstractPager.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
 
-	                if (largeTreeHeader != null)
-		                largeTreeHeader->Depth--;
+                    if (largeTreeHeader != null)
+                        largeTreeHeader->Depth--;
 
-	                _tx.FreePage(childPage);
+                    _tx.FreePage(childPage);
                 }
 
                 return null;
@@ -920,7 +920,7 @@ namespace Voron.Trees.Fixed
                     // remove the first value
                     parentPage.FixedSize_StartPosition += BranchEntrySize;
                     // set the next value (now the first), to be smaller than everything
-					SetSeparatorKeyAtPosition(parentPage, long.MinValue);
+                    SetSeparatorKeyAtPosition(parentPage, long.MinValue);
                 }
                 else
                 {
@@ -932,9 +932,9 @@ namespace Voron.Trees.Fixed
 
             if (page.IsBranch && page.FixedSize_NumberOfEntries == 1)
             {
-				// we can just collapse this to the parent
+                // we can just collapse this to the parent
                 // write the page value to the parent
-				SetSeparatorKeyAtPosition(parentPage, PageValueFor(page, 0), parentPage.LastSearchPosition);
+                SetSeparatorKeyAtPosition(parentPage, PageValueFor(page, 0), parentPage.LastSearchPosition);
                 // then delete the page
                 _tx.FreePage(page.PageNumber);
                 return parentPage;
@@ -991,7 +991,7 @@ namespace Voron.Trees.Fixed
 
                 // now update the new separator in the sibling position in the parent
                 var newSeparator = KeyFor(siblingPage, 0);
-				SetSeparatorKeyAtPosition(parentPage, newSeparator, 1);
+                SetSeparatorKeyAtPosition(parentPage, newSeparator, 1);
 
                 return parentPage;
             }
@@ -999,7 +999,7 @@ namespace Voron.Trees.Fixed
             {
                 var siblingNum = PageValueFor(parentPage, parentPage.LastSearchPosition - 1);
                 var siblingPage = _tx.GetReadOnlyPage(siblingNum);
-	            siblingPage = _tx.ModifyPage(siblingPage.PageNumber, _parent, siblingPage);
+                siblingPage = _tx.ModifyPage(siblingPage.PageNumber, _parent, siblingPage);
                 if (siblingPage.Flags != page.Flags)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
@@ -1036,9 +1036,9 @@ namespace Voron.Trees.Fixed
                 page.FixedSize_NumberOfEntries += (ushort)entriesToTake;
                 siblingPage.FixedSize_NumberOfEntries -= (ushort)entriesToTake;
 
-				// now update the new separator in the parent
-				var newSeparator = KeyFor(page, 0);
-				SetSeparatorKeyAtPosition(parentPage, newSeparator, parentPage.LastSearchPosition);
+                // now update the new separator in the parent
+                var newSeparator = KeyFor(page, 0);
+                SetSeparatorKeyAtPosition(parentPage, newSeparator, parentPage.LastSearchPosition);
 
                 return parentPage;
             }
@@ -1074,10 +1074,10 @@ namespace Voron.Trees.Fixed
             header->NumberOfEntries--;
             header->ValueSize = _valSize;
             header->Flags = FixedSizeTreeHeader.OptionFlags.Embedded;
-	        return new DeletionResult {NumberOfEntriesDeleted = 1};
+            return new DeletionResult {NumberOfEntriesDeleted = 1};
         }
 
-		public Slice Read(long key)
+        public Slice Read(long key)
         {
             switch (_flags)
             {

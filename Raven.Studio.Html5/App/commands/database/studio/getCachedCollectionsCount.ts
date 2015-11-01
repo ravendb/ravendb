@@ -4,8 +4,8 @@ import database = require("models/resources/database");
 class getCachedCollectionsCount extends commandBase {
 
     /**
-	* @param ownerDb The database the collections will belong to.
-	*/
+    * @param ownerDb The database the collections will belong to.
+    */
     constructor(private ownerDb: database, private lastQueryDate: string) {
         super();
 

@@ -33,11 +33,11 @@ interface counterGroupDto {
 }
 
 interface counterDto {
-	ServerValues: serverValueDto[];
-	LocalServerId: string;
-	LastUpdateByServer: string;
-	Total: number;
-	NumOfServers: number;
+    ServerValues: serverValueDto[];
+    LocalServerId: string;
+    LastUpdateByServer: string;
+    Total: number;
+    NumOfServers: number;
 }
 
 interface serverValueDto {

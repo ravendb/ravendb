@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -31,8 +31,8 @@ namespace Raven.Tests.Core.Smuggler
 
         public SmugglerApiTests()
         {
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
             IOExtensions.DeleteDirectory(BackupDir);
         }
 
@@ -119,9 +119,9 @@ namespace Raven.Tests.Core.Smuggler
         }
 
         [Theory]
-		[InlineData(true)]
-		[InlineData(false)]
-		public async Task CanExportAndImportData(bool disableCompressionOnImport)
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanExportAndImportData(bool disableCompressionOnImport)
         {
             using (var server1 = new RavenDbServer(new RavenConfiguration
             {
@@ -156,10 +156,10 @@ namespace Raven.Tests.Core.Smuggler
 
                     var smugglerApi = new SmugglerDatabaseApi
                     (
-	                    new SmugglerDatabaseOptions
-	                    {
-		                    DisableCompressionOnImport = disableCompressionOnImport
-	                    }
+                        new SmugglerDatabaseOptions
+                        {
+                            DisableCompressionOnImport = disableCompressionOnImport
+                        }
                     );
 
                     await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> 

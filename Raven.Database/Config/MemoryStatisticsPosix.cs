@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 
 namespace Raven.Database
 {
-	public class MemoryStatisticsPosix
-	{
-		public MemoryStatisticsPosix ()
-		{
-		}
-	}
+    public class MemoryStatisticsPosix
+    {
+        public MemoryStatisticsPosix ()
+        {
+        }
+    }
 }
 

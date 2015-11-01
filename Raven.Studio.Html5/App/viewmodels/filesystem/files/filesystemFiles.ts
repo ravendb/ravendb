@@ -1,4 +1,4 @@
-﻿import router = require("plugins/router");
+import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import app = require("durandal/app");
 import changesContext = require("common/changesContext");
@@ -33,20 +33,20 @@ class filesystemFiles extends viewModelBase {
     filesCount: KnockoutComputed<number>;
 
     selectedFolder = ko.observable<string>();
-	selectedFolderName: KnockoutComputed<string>;
+    selectedFolderName: KnockoutComputed<string>;
     addedFolder = ko.observable<folderNodeDto>();
     currentLevelSubdirectories = ko.observableArray<string>();
     uploadFiles = ko.observable<FileList>();
     uploadQueue = ko.observableArray<uploadItem>();
     folderNotificationSubscriptions = {};
-	hasFiles: KnockoutComputed<boolean>;
-	hasAnyFilesSelected: KnockoutComputed<boolean>;
+    hasFiles: KnockoutComputed<boolean>;
+    hasAnyFilesSelected: KnockoutComputed<boolean>;
     hasAllFilesSelected: KnockoutComputed<boolean>;
-	isAnyFilesAutoSelected = ko.observable<boolean>(false);
+    isAnyFilesAutoSelected = ko.observable<boolean>(false);
     isAllFilesAutoSelected = ko.observable<boolean>(false);
     inRevisionsFolder = ko.observable<boolean>(false);
 
-	showLoadingIndicator = ko.observable<boolean>(false);
+    showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
 
     private activeFilesystemSubscription: any;
@@ -75,20 +75,20 @@ class filesystemFiles extends viewModelBase {
             return "";
         });
 
-		this.filesCount = ko.computed(() => {
+        this.filesCount = ko.computed(() => {
             if (!!this.allFilesPagedItems()) {
-				var p: pagedList = this.allFilesPagedItems();
-			    return p.totalResultCount();
-		    }
-		    return 0;
+                var p: pagedList = this.allFilesPagedItems();
+                return p.totalResultCount();
+            }
+            return 0;
         });
 
-	    this.selectedFolderName = ko.computed(() => {
-		    if (!this.selectedFolder())
-			    return "Root Folder";
-		    var splittedName = this.selectedFolder().split("/");
-		    return splittedName.last();
-	    });
+        this.selectedFolderName = ko.computed(() => {
+            if (!this.selectedFolder())
+                return "Root Folder";
+            var splittedName = this.selectedFolder().split("/");
+            return splittedName.last();
+        });
 
         this.hasFiles = ko.computed(() => {
             if (!!this.allFilesPagedItems()) {
@@ -98,10 +98,10 @@ class filesystemFiles extends viewModelBase {
             return false;
         });
 
-	    this.hasAllFilesSelected = ko.computed(() => {
-		    var filesCount = this.filesCount();
-		    return filesCount > 0 && filesCount === this.selectedFilesIndices().length;
-	    });
+        this.hasAllFilesSelected = ko.computed(() => {
+            var filesCount = this.filesCount();
+            return filesCount > 0 && filesCount === this.selectedFilesIndices().length;
+        });
     }
 
     activate(args) {
@@ -122,7 +122,7 @@ class filesystemFiles extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         this.collapseUploadQueuePanel();
     }
 
@@ -255,26 +255,26 @@ class filesystemFiles extends viewModelBase {
     }
 
     toggleSelectAll() {
-		var filesGrid = this.getFilesGrid();
+        var filesGrid = this.getFilesGrid();
         if (!!filesGrid) {
             if (this.hasAnyFilesSelected()) {
                 filesGrid.selectNone();
             } else {
                 filesGrid.selectSome();
-				this.isAnyFilesAutoSelected(this.hasAllFilesSelected() === false);
+                this.isAnyFilesAutoSelected(this.hasAllFilesSelected() === false);
             }
         }
     }
 
-	selectAll() {
+    selectAll() {
         var filesGrid = this.getFilesGrid();
-		if (!!filesGrid && !!this.allFilesPagedItems()) {
-			var p: pagedList = this.allFilesPagedItems();
-			filesGrid.selectAll(p.totalResultCount());
-		}
+        if (!!filesGrid && !!this.allFilesPagedItems()) {
+            var p: pagedList = this.allFilesPagedItems();
+            filesGrid.selectAll(p.totalResultCount());
+        }
     }
 
-	selectNone() {
+    selectNone() {
         var filesGrid = this.getFilesGrid();
         if (!!filesGrid) {
             filesGrid.selectNone();
@@ -307,23 +307,23 @@ class filesystemFiles extends viewModelBase {
         app.showDialog(createFolderVm);
     }
 
-	refresh() {
-		var grid = this.getFilesGrid();
+    refresh() {
+        var grid = this.getFilesGrid();
         if (grid) {
             grid.refreshCollectionData();
         }
-		this.selectNone();
-	}
+        this.selectNone();
+    }
 
     deleteSelectedFiles() {
-		if (this.hasAllFilesSelected()) {
-			this.deleteFolder(false);
-		} else {
-			var grid = this.getFilesGrid();
-			if (grid) {
-				grid.deleteSelectedItems();
-			}
-		}
+        if (this.hasAllFilesSelected()) {
+            this.deleteFolder(false);
+        } else {
+            var grid = this.getFilesGrid();
+            if (grid) {
+                grid.deleteSelectedItems();
+            }
+        }
     }
 
     downloadSelectedFiles() {
@@ -420,44 +420,44 @@ class filesystemFiles extends viewModelBase {
         $(".upload-queue").addClass("upload-queue-min");
     }
 
-	deleteFolder(recursive = true) {
-		if (!this.selectedFolder() && recursive) {
-			// delete all files from filesystem
-			new getFileSystemStatsCommand(this.activeFilesystem())
-				.execute()
-				.done((fs: filesystemStatisticsDto) => {
-					this.promptDeleteFilesMatchingQuery(fs.FileCount, "");
-				});
-		} else {
-			// Run the query so that we have an idea of what we'll be deleting.
-			var query: string;
-			if (recursive) {
-				query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
-			}else{
-				var folder = !this.selectedFolder() ? "/" : this.selectedFolder();
-				query = "__directory:" + this.escapeQueryString(folder);
-			}
+    deleteFolder(recursive = true) {
+        if (!this.selectedFolder() && recursive) {
+            // delete all files from filesystem
+            new getFileSystemStatsCommand(this.activeFilesystem())
+                .execute()
+                .done((fs: filesystemStatisticsDto) => {
+                    this.promptDeleteFilesMatchingQuery(fs.FileCount, "");
+                });
+        } else {
+            // Run the query so that we have an idea of what we'll be deleting.
+            var query: string;
+            if (recursive) {
+                query = "__directoryName:" + this.escapeQueryString(this.selectedFolder());
+            }else{
+                var folder = !this.selectedFolder() ? "/" : this.selectedFolder();
+                query = "__directory:" + this.escapeQueryString(folder);
+            }
 
-			new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
-				.execute()
-				.done((results: pagedResultSet) => {
-				if (results.totalResultCount === 0) {
-					app.showMessage("There are no files matching your query.", "Nothing to do");
-				} else {
-					this.promptDeleteFilesMatchingQuery(results.totalResultCount, query);
-				}
-			});
-		}
-	}
+            new searchByQueryCommand(this.activeFilesystem(), query, 0, 1)
+                .execute()
+                .done((results: pagedResultSet) => {
+                if (results.totalResultCount === 0) {
+                    app.showMessage("There are no files matching your query.", "Nothing to do");
+                } else {
+                    this.promptDeleteFilesMatchingQuery(results.totalResultCount, query);
+                }
+            });
+        }
+    }
 
-	private escapeQueryString(query: string): string {
-		if (!query) return null;
+    private escapeQueryString(query: string): string {
+        if (!query) return null;
         return query.replace(/([ \-\_\.])/g, '\\$1');
     }
 
-	promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
+    promptDeleteFilesMatchingQuery(resultCount: number, query: string) {
         var viewModel = new deleteFilesMatchingQueryConfirm(query, resultCount, this.activeFilesystem());
-		app.showDialog(viewModel);
+        app.showDialog(viewModel);
         viewModel.deletionTask.done(() => this.loadFiles());
     }
 }

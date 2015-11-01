@@ -26,8 +26,8 @@ class dialogViewModelBase {
         jwerty.key("esc", e => this.escapeKeyPressed(e), this, this.dialogSelectorName === "" ? dialogViewModelBase.dialogSelector : this.dialogSelectorName);
         jwerty.key("enter", () => this.enterKeyPressed(), this, dialogViewModelBase.dialogSelector);
 
-		var width = $(".messageBox").width();
-		$(".messageBox").width(width + 2);
+        var width = $(".messageBox").width();
+        $(".messageBox").width(width + 2);
     }
 
     deactivate(args) {

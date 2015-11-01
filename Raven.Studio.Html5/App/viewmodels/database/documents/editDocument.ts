@@ -1,4 +1,4 @@
-﻿/// <reference path="../../../../Scripts/typings/ace/ace.amd.d.ts" />
+/// <reference path="../../../../Scripts/typings/ace/ace.amd.d.ts" />
 
 import app = require("durandal/app");
 import router = require("plugins/router");
@@ -297,7 +297,7 @@ class editDocument extends viewModelBase {
 
     // Called when the view is attached to the DOM.
     attached() {
-		super.attached();
+        super.attached();
         this.setupKeyboardShortcuts();
         $("#docEditor").resize();
         this.isNewLineFriendlyMode.subscribe(val => {
@@ -777,27 +777,27 @@ class editDocument extends viewModelBase {
     pageToItem(index: number, newTotalResultCount?: number) {
         var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to continue?');
         canContinue.done(() => {
-	        var list = this.docsList();
-	        if (list) {
-	            list.getNthItem(index)
-	                .done((doc: document) => {
-	                    if (this.isInDocMode() === true) {
-		                    this.loadDocument(doc.getId());
-		                    list.currentItemIndex(index);
-		                    this.updateUrl(doc.getId());
-	                    }
-	                    else {
-	                        this.document(doc);
-	                        this.lodaedDocumentName("");
+            var list = this.docsList();
+            if (list) {
+                list.getNthItem(index)
+                    .done((doc: document) => {
+                        if (this.isInDocMode() === true) {
+                            this.loadDocument(doc.getId());
+                            list.currentItemIndex(index);
+                            this.updateUrl(doc.getId());
+                        }
+                        else {
+                            this.document(doc);
+                            this.lodaedDocumentName("");
                             this.dirtyFlag().reset(); //Resync Changes
-	                    }
+                        }
 
-	                    if (!!newTotalResultCount) {
-	                        list.totalResultCount(newTotalResultCount);
-	                    }
-	                });
-	        }
-		});
+                        if (!!newTotalResultCount) {
+                            list.totalResultCount(newTotalResultCount);
+                        }
+                    });
+            }
+        });
     }
 
     navigateToCollection(collectionName: string) {
@@ -844,7 +844,7 @@ class editDocument extends viewModelBase {
             this.metaPropsToRestoreOnSave.length = 0;
             var metaDto = this.metadata().toDto();
 
-	        documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
+            documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
 
             var metaString = this.stringify(metaDto);
             this.metadataText(metaString);

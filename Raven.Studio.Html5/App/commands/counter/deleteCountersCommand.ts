@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import counterStorage = require("models/counter/counterStorage");
 
 class deleteCountersCommand extends commandBase {
@@ -29,9 +29,9 @@ class deleteCountersCommand extends commandBase {
         return this.del(url, null, this.cs, { dataType: undefined }, 9000);
     }
 
-	getCounterDeleteText(groupAndName: {groupName: string; counterName: string}): string {
-		return "counter name: " + groupAndName.counterName + ", group: " + groupAndName.groupName;
-	}
+    getCounterDeleteText(groupAndName: {groupName: string; counterName: string}): string {
+        return "counter name: " + groupAndName.counterName + ", group: " + groupAndName.groupName;
+    }
 }
 
 export = deleteCountersCommand;

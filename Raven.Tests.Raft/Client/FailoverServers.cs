@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FailoverServers.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,7 +19,7 @@ namespace Raven.Tests.Raft.Client
         {
             var clusterStores = CreateRaftCluster(1, activeBundles: "Replication");
 
-			SetupClusterConfiguration(clusterStores);
+            SetupClusterConfiguration(clusterStores);
 
             using (var store = new DocumentStore
                         {
@@ -36,7 +36,7 @@ namespace Raven.Tests.Raft.Client
                                                                            new ReplicationDestination
                                                                            {
                                                                                Url = clusterStores[0].Url,
-																			   Database = clusterStores[0].DefaultDatabase
+                                                                               Database = clusterStores[0].DefaultDatabase
                                                                            }
                                                                        }
                                               }
@@ -47,7 +47,7 @@ namespace Raven.Tests.Raft.Client
                 store.DatabaseCommands.Put("key/1", null, new RavenJObject(), new RavenJObject());
             }
 
-			clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "key/1"));
+            clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands, "key/1"));
         }
     }
 }

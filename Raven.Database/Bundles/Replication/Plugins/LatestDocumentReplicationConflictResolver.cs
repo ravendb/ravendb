@@ -11,30 +11,30 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Plugins
 {
-	[PartNotDiscoverable]
-	public class LatestDocumentReplicationConflictResolver : AbstractDocumentReplicationConflictResolver
-	{
-		public static LatestDocumentReplicationConflictResolver Instance = new LatestDocumentReplicationConflictResolver();
+    [PartNotDiscoverable]
+    public class LatestDocumentReplicationConflictResolver : AbstractDocumentReplicationConflictResolver
+    {
+        public static LatestDocumentReplicationConflictResolver Instance = new LatestDocumentReplicationConflictResolver();
 
-		protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
-		                                Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
-		                                out RavenJObject documentToSave)
-		{
-			var remoteDocLastModified = metadata.Value<DateTime>(Constants.LastModified);
-			var existingDocLastModified = existingDoc.LastModified;
+        protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
+                                        Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
+                                        out RavenJObject documentToSave)
+        {
+            var remoteDocLastModified = metadata.Value<DateTime>(Constants.LastModified);
+            var existingDocLastModified = existingDoc.LastModified;
 
-			if (remoteDocLastModified > existingDocLastModified)
-			{
-				metadataToSave = metadata;
-				documentToSave = document;
-			}
-			else
-			{
-				metadataToSave = existingDoc.Metadata;
-				documentToSave = existingDoc.DataAsJson;
-			}
-			
-			return true;
-		}
-	}
+            if (remoteDocLastModified > existingDocLastModified)
+            {
+                metadataToSave = metadata;
+                documentToSave = document;
+            }
+            else
+            {
+                metadataToSave = existingDoc.Metadata;
+                documentToSave = existingDoc.DataAsJson;
+            }
+            
+            return true;
+        }
+    }
 }

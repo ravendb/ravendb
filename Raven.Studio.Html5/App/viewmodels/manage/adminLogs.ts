@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import adminLogsClient = require("common/adminLogsClient");
 import fileDownloader = require("common/fileDownloader");
@@ -146,7 +146,7 @@ class adminLogs extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         this.logsContainer = document.getElementById("rawLogsContainer");
     }
 

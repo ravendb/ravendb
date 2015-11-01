@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DebugInfoProvider.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -28,11 +28,11 @@ using System.Management;
 
 namespace Raven.Database.Util
 {
-	public static class DebugInfoProvider
-	{
-		private const CompressionLevel CompressionLevel = System.IO.Compression.CompressionLevel.Optimal;
+    public static class DebugInfoProvider
+    {
+        private const CompressionLevel CompressionLevel = System.IO.Compression.CompressionLevel.Optimal;
 
-		public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, ClusterManager clusterManager, string zipEntryPrefix = null)
+        public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, ClusterManager clusterManager, string zipEntryPrefix = null)
         {
             zipEntryPrefix = zipEntryPrefix ?? string.Empty;
 
@@ -40,8 +40,8 @@ namespace Raven.Database.Util
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 
-			var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
-			jsonSerializer.Formatting=Formatting.Indented;
+            var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+            jsonSerializer.Formatting=Formatting.Indented;
 
             if (database.StartupTasks.OfType<ReplicationTask>().Any())
             {
@@ -77,14 +77,14 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-			var indexingPerformanceStats = package.CreateEntry(zipEntryPrefix + "indexing_performance_stats.json", CompressionLevel);
+            var indexingPerformanceStats = package.CreateEntry(zipEntryPrefix + "indexing_performance_stats.json", CompressionLevel);
 
-			using (var statsStream = indexingPerformanceStats.Open())
-			using (var streamWriter = new StreamWriter(statsStream))
-			{
-				jsonSerializer.Serialize(streamWriter, database.IndexingPerformanceStatistics);
-				streamWriter.Flush();
-			}
+            using (var statsStream = indexingPerformanceStats.Open())
+            using (var streamWriter = new StreamWriter(statsStream))
+            {
+                jsonSerializer.Serialize(streamWriter, database.IndexingPerformanceStatistics);
+                streamWriter.Flush();
+            }
 
             var metrics = package.CreateEntry(zipEntryPrefix + "metrics.json", CompressionLevel);
 
@@ -196,184 +196,184 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-			var systemUtilization = package.CreateEntry(zipEntryPrefix + "system-utilization.json", CompressionLevel);
+            var systemUtilization = package.CreateEntry(zipEntryPrefix + "system-utilization.json", CompressionLevel);
 
-			using (var systemUtilizationStream = systemUtilization.Open())
-			using (var streamWriter = new StreamWriter(systemUtilizationStream))
-			{
-				long totalPhysicalMemory = -1;
-				long availableMemory = -1;
-				object cpuTimes;
+            using (var systemUtilizationStream = systemUtilization.Open())
+            using (var streamWriter = new StreamWriter(systemUtilizationStream))
+            {
+                long totalPhysicalMemory = -1;
+                long availableMemory = -1;
+                object cpuTimes;
 
-				try
-				{
-					totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
-					availableMemory = MemoryStatistics.AvailableMemoryInMb;
+                try
+                {
+                    totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
+                    availableMemory = MemoryStatistics.AvailableMemoryInMb;
 
-					using (var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor"))
-					{
-						cpuTimes = searcher.Get()
-							.Cast<ManagementObject>()
-							.Select(mo => new
-							{
-								Name = mo["Name"],
-								Usage = string.Format("{0} %", mo["PercentProcessorTime"])
-							}).ToArray();	
-					}
-				}
-				catch (Exception e)
-				{
-					cpuTimes = "Could not get CPU times" + Environment.NewLine + e;
-				}
+                    using (var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor"))
+                    {
+                        cpuTimes = searcher.Get()
+                            .Cast<ManagementObject>()
+                            .Select(mo => new
+                            {
+                                Name = mo["Name"],
+                                Usage = string.Format("{0} %", mo["PercentProcessorTime"])
+                            }).ToArray();	
+                    }
+                }
+                catch (Exception e)
+                {
+                    cpuTimes = "Could not get CPU times" + Environment.NewLine + e;
+                }
 
-				jsonSerializer.Serialize(streamWriter, new
-				{
-					TotalPhysicalMemory = string.Format("{0:#,#.##;;0} MB", totalPhysicalMemory),
-					AvailableMemory = string.Format("{0:#,#.##;;0} MB", availableMemory),
-					CurrentCpuUsage = cpuTimes
-				});
+                jsonSerializer.Serialize(streamWriter, new
+                {
+                    TotalPhysicalMemory = string.Format("{0:#,#.##;;0} MB", totalPhysicalMemory),
+                    AvailableMemory = string.Format("{0:#,#.##;;0} MB", availableMemory),
+                    CurrentCpuUsage = cpuTimes
+                });
 
-				streamWriter.Flush();
-			}
+                streamWriter.Flush();
+            }
 
-			if (clusterManager != null && database.IsSystemDatabase())
-			{
-				var clusterTopology = package.CreateEntry(zipEntryPrefix + "cluster-topology.json", CompressionLevel);
+            if (clusterManager != null && database.IsSystemDatabase())
+            {
+                var clusterTopology = package.CreateEntry(zipEntryPrefix + "cluster-topology.json", CompressionLevel);
 
-				using (var stream = clusterTopology.Open())
-				using (var streamWriter = new StreamWriter(stream))
-				{
-					jsonSerializer.Serialize(streamWriter, clusterManager.GetTopology());
-					streamWriter.Flush();
+                using (var stream = clusterTopology.Open())
+                using (var streamWriter = new StreamWriter(stream))
+                {
+                    jsonSerializer.Serialize(streamWriter, clusterManager.GetTopology());
+                    streamWriter.Flush();
         }
 
-				var configurationJson = database.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
-				if (configurationJson == null)
-					return;
+                var configurationJson = database.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
+                if (configurationJson == null)
+                    return;
 
-				var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+                var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
 
-				var clusterConfiguration = package.CreateEntry(zipEntryPrefix + "cluster-configuration.json", CompressionLevel);
+                var clusterConfiguration = package.CreateEntry(zipEntryPrefix + "cluster-configuration.json", CompressionLevel);
 
-				using (var stream = clusterConfiguration.Open())
-				using (var streamWriter = new StreamWriter(stream))
-				{
-					jsonSerializer.Serialize(streamWriter, configuration);
-					streamWriter.Flush();
-				}
-			}
+                using (var stream = clusterConfiguration.Open())
+                using (var streamWriter = new StreamWriter(stream))
+                {
+                    jsonSerializer.Serialize(streamWriter, configuration);
+                    streamWriter.Flush();
+                }
+            }
         }
 
-	    internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
-		{
-			return requestManager.GetRecentRequests(databaseName).Select(x =>
-			{
-				var dic = new Dictionary<String, String>();
-				foreach (var httpHeader in x.Headers.Value)
-				{
-					dic[httpHeader.Key] = httpHeader.Value.First();
-				}
-				dic.Remove("Authorization");
-				dic.Remove("Proxy-Authorization");
-				dic.Remove("WWW-Authenticate");
-				dic.Remove("Proxy-Authenticate");
-				
-				return new
-				{
-					Uri = x.RequestUri,
-					Method = x.HttpMethod,
-					StatusCode = x.ResponseStatusCode,
-					RequestHeaders = dic.Select(z=>new{Name = z.Key, Values= new[]{z.Value}}),
-					ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
-					AdditionalInfo = x.CustomInfo ?? string.Empty
-				};
-			});
-		}
+        internal static object GetRequestTrackingForDebug(RequestManager requestManager, string databaseName)
+        {
+            return requestManager.GetRecentRequests(databaseName).Select(x =>
+            {
+                var dic = new Dictionary<String, String>();
+                foreach (var httpHeader in x.Headers.Value)
+                {
+                    dic[httpHeader.Key] = httpHeader.Value.First();
+                }
+                dic.Remove("Authorization");
+                dic.Remove("Proxy-Authorization");
+                dic.Remove("WWW-Authenticate");
+                dic.Remove("Proxy-Authenticate");
+                
+                return new
+                {
+                    Uri = x.RequestUri,
+                    Method = x.HttpMethod,
+                    StatusCode = x.ResponseStatusCode,
+                    RequestHeaders = dic.Select(z=>new{Name = z.Key, Values= new[]{z.Value}}),
+                    ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
+                    AdditionalInfo = x.CustomInfo ?? string.Empty
+                };
+            });
+        }
 
-		internal static RavenJObject GetConfigForDebug(DocumentDatabase database)
-		{
-			var cfg = RavenJObject.FromObject(database.Configuration);
-			cfg["OAuthTokenKey"] = "<not shown>";
-			var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+        internal static RavenJObject GetConfigForDebug(DocumentDatabase database)
+        {
+            var cfg = RavenJObject.FromObject(database.Configuration);
+            cfg["OAuthTokenKey"] = "<not shown>";
+            var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
 
-			if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-				cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
+            if (string.IsNullOrWhiteSpace(changesAllowed) == false)
+                cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
 
-			return cfg;
-		}
+            return cfg;
+        }
 
-		internal static IList<TaskMetadata> GetTasksForDebug(DocumentDatabase database)
-		{
-			IList<TaskMetadata> tasks = null;
-			database.TransactionalStorage.Batch(accessor =>
-			{
-				tasks = accessor.Tasks
-					.GetPendingTasksForDebug()
-					.ToList();
-			});
+        internal static IList<TaskMetadata> GetTasksForDebug(DocumentDatabase database)
+        {
+            IList<TaskMetadata> tasks = null;
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                tasks = accessor.Tasks
+                    .GetPendingTasksForDebug()
+                    .ToList();
+            });
 
-			foreach (var taskMetadata in tasks)
-			{
-				var indexInstance = database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
-				if (indexInstance != null)
-					taskMetadata.IndexName = indexInstance.PublicName;
-			}
-			return tasks;
-		}
+            foreach (var taskMetadata in tasks)
+            {
+                var indexInstance = database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
+                if (indexInstance != null)
+                    taskMetadata.IndexName = indexInstance.PublicName;
+            }
+            return tasks;
+        }
 
-		internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
-		{
-			var indexingWork = database .IndexingExecuter.GetCurrentlyProcessingIndexes();
-			var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
+        internal static object GetCurrentlyIndexingForDebug(DocumentDatabase database)
+        {
+            var indexingWork = database .IndexingExecuter.GetCurrentlyProcessingIndexes();
+            var reduceWork = database.ReducingExecuter.GetCurrentlyProcessingIndexes();
 
-			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
-			return new
-			{
-				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
-				Indexes = uniqueIndexesBeingProcessed.Select(x =>				
-				new
-				{
-					IndexName = x.PublicName,
-					IsMapReduce = x.IsMapReduce,
-					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new {p.Operation, NumberOfProcessingItems = p.InputCount}),
-					Priority = x.Priority,
-					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
-					{
-						Operation = g.Key,
-						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds)/g.Sum(z => z.InputCount))
-					})
-				}
-				)
-			};
-		}
+            var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
+            return new
+            {
+                NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
+                Indexes = uniqueIndexesBeingProcessed.Select(x =>				
+                new
+                {
+                    IndexName = x.PublicName,
+                    IsMapReduce = x.IsMapReduce,
+                    CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new {p.Operation, NumberOfProcessingItems = p.InputCount}),
+                    Priority = x.Priority,
+                    OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
+                    {
+                        Operation = g.Key,
+                        Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds)/g.Sum(z => z.InputCount))
+                    })
+                }
+                )
+            };
+        }
 
-		internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
-		{
-			var result = new List<object>();
+        internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
+        {
+            var result = new List<object>();
 
-			foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
-			{
-				var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
-				var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
+            foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
+            {
+                var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
+                var futureBatches = prefetchingBehavior.DebugGetDocumentsInFutureBatches();
 
-				var compareToCollection = new Dictionary<Etag, int>();
+                var compareToCollection = new Dictionary<Etag, int>();
 
-				for (int i = 1; i < prefetcherDocs.Length; i++)
-					compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
+                for (int i = 1; i < prefetcherDocs.Length; i++)
+                    compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
 
-				if (compareToCollection.Any(x => x.Value < 0))
-				{
-				    result.Add(new
-				    {
-						AdditionaInfo = prefetchingBehavior.AdditionalInfo,
+                if (compareToCollection.Any(x => x.Value < 0))
+                {
+                    result.Add(new
+                    {
+                        AdditionaInfo = prefetchingBehavior.AdditionalInfo,
                         HasCorrectlyOrderedEtags = false,
                         IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
                         EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key),
-						FutureBatches = futureBatches
-				    });
-				}
-				else
-				{
+                        FutureBatches = futureBatches
+                    });
+                }
+                else
+                {
                     var prefetcherDocsToTake = Math.Min(5, prefetcherDocs.Count());
                     var etagsWithKeysTail = Enumerable.Range(0, prefetcherDocsToTake).Select(
                         i => prefetcherDocs[prefetcherDocs.Count() - prefetcherDocsToTake + i]).ToDictionary(x => x.Etag, x => x.Key);
@@ -385,12 +385,12 @@ namespace Raven.Database.Util
                         EtagsWithKeysHead = prefetcherDocs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
                         EtagsWithKeysTail = etagsWithKeysTail,
                         EtagsWithKeysCount = prefetcherDocs.Count(),
-						FutureBatches = futureBatches
+                        FutureBatches = futureBatches
                     });
-				}
-			}
+                }
+            }
 
-			return result;
-		}
-	}
+            return result;
+        }
+    }
 }

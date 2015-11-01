@@ -1,4 +1,4 @@
-﻿import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
+import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
 import dialog = require("plugins/dialog");
 
 class fieldStringFilter extends searchDialogViewModel {

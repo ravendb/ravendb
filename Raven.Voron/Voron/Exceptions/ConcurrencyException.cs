@@ -1,12 +1,12 @@
-﻿namespace Voron.Exceptions
+namespace Voron.Exceptions
 {
-	using System;
+    using System;
 
-	public class ConcurrencyException : Exception
-	{
-		public ConcurrencyException(string message)
-			: base(message)
-		{
-		}
-	}
+    public class ConcurrencyException : Exception
+    {
+        public ConcurrencyException(string message)
+            : base(message)
+        {
+        }
+    }
 }

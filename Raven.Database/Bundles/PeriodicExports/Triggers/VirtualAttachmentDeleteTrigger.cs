@@ -12,21 +12,21 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.PeriodicExports.Triggers
 {
-	[ExportMetadata("Bundle", "PeriodicExport")]
-	[ExportMetadata("Order", 10001)]
-	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
+    [ExportMetadata("Bundle", "PeriodicExport")]
+    [ExportMetadata("Order", 10001)]
+    [InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
     [Obsolete("Use RavenFS instead.")]
-	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
-	{
-		public override void AfterDelete(string key)
-		{
+    public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
+    {
+        public override void AfterDelete(string key)
+        {
             var metadata = new RavenJObject
-			{
-				{Constants.RavenDeleteMarker, true},
-			};
+            {
+                {Constants.RavenDeleteMarker, true},
+            };
 
             Database.TransactionalStorage.Batch(accessor =>
                 accessor.Lists.Set(Constants.RavenPeriodicExportsAttachmentsTombstones, key, metadata, UuidType.Attachments));
-		}
-	}
+        }
+    }
 }

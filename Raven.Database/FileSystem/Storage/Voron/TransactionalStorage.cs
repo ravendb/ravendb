@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TransactionalStorage.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -37,16 +37,16 @@ namespace Raven.Database.FileSystem.Storage.Voron
 {
     public class TransactionalStorage : ITransactionalStorage
     {
-	    private readonly InMemoryRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
 
-	    private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly string path;
 
         private readonly NameValueCollection settings;
 
         private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
-		private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
         private volatile bool disposed;
 
@@ -57,16 +57,16 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private TableStorage tableStorage;
 
         private IdGenerator idGenerator;
-	    private OrderedPartCollection<AbstractFileCodec> fileCodecs;
-	    private UuidGenerator uuidGenerator;
+        private OrderedPartCollection<AbstractFileCodec> fileCodecs;
+        private UuidGenerator uuidGenerator;
 
-	    public TransactionalStorage(InMemoryRavenConfiguration configuration)
+        public TransactionalStorage(InMemoryRavenConfiguration configuration)
         {
-	        this.configuration = configuration;
-	        path = configuration.FileSystem.DataDirectory.ToFullPath();
-	        settings = configuration.Settings;
+            this.configuration = configuration;
+            path = configuration.FileSystem.DataDirectory.ToFullPath();
+            settings = configuration.Settings;
 
-			RecoverFromFailedCompact(path);
+            RecoverFromFailedCompact(path);
 
             bufferPool = new BufferPool(2L * 1024 * 1024 * 1024, int.MaxValue); // 2GB max buffer size (voron limit)
         }
@@ -118,13 +118,13 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return options;
         }
 
-		public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs)
+        public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs)
         {
-			if (codecs == null)
-				throw new ArgumentNullException("codecs");
+            if (codecs == null)
+                throw new ArgumentNullException("codecs");
 
-			fileCodecs = codecs;
-			uuidGenerator = generator;
+            fileCodecs = codecs;
+            uuidGenerator = generator;
 
             bool runInMemory;
             bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
@@ -133,10 +133,10 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 CreateStorageOptionsFromConfiguration(path, settings);
 
             tableStorage = new TableStorage(persistenceSource, bufferPool);
-	        var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
-			schemaCreator.CreateSchema();
-			schemaCreator.SetupDatabaseIdAndSchemaVersion();
-			schemaCreator.UpdateSchemaIfNecessary();
+            var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
+            schemaCreator.CreateSchema();
+            schemaCreator.SetupDatabaseIdAndSchemaVersion();
+            schemaCreator.UpdateSchemaIfNecessary();
 
             SetupDatabaseId();
             idGenerator = new IdGenerator(tableStorage);
@@ -144,30 +144,30 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         private void SetupDatabaseId()
         {
-	        Id = tableStorage.Id;
+            Id = tableStorage.Id;
         }
 
-		public IDisposable DisableBatchNesting()
-		{
-			disableBatchNesting.Value = new object();
-			return new DisposableAction(() => disableBatchNesting.Value = null);
-		}
+        public IDisposable DisableBatchNesting()
+        {
+            disableBatchNesting.Value = new object();
+            return new DisposableAction(() => disableBatchNesting.Value = null);
+        }
 
         public void Batch(Action<IStorageActionsAccessor> action)
         {
             if (Id == Guid.Empty)
                 throw new InvalidOperationException("Cannot use Storage before Initialize was called");
 
-			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
-			{
-				if (current.Value != null) // check again, just to be sure
-				{
-					current.Value.IsNested = true;
-					action(current.Value);
-					current.Value.IsNested = false;
-					return;
-				}
-			}
+            if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
+            {
+                if (current.Value != null) // check again, just to be sure
+                {
+                    current.Value.IsNested = true;
+                    action(current.Value);
+                    current.Value.IsNested = false;
+                    return;
+                }
+            }
 
             disposerLock.EnterReadLock();
             try
@@ -184,7 +184,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             {
                 if (disposed)
                 {
-					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
+                    Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.\r\n" + e);
                     return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
                 }
 
@@ -196,37 +196,37 @@ namespace Raven.Database.FileSystem.Storage.Voron
             finally
             {
                 disposerLock.ExitReadLock();
-				if (disposed == false && disableBatchNesting.Value == null)
-					current.Value = null;
+                if (disposed == false && disableBatchNesting.Value == null)
+                    current.Value = null;
             }
         }
 
         private void ExecuteBatch(Action<IStorageActionsAccessor> action)
         {
-			var snapshotRef = new Reference<SnapshotReader>();
-			var writeBatchRef = new Reference<WriteBatch>();
+            var snapshotRef = new Reference<SnapshotReader>();
+            var writeBatchRef = new Reference<WriteBatch>();
 
-	        try
-	        {
-				snapshotRef.Value = tableStorage.CreateSnapshot();
+            try
+            {
+                snapshotRef.Value = tableStorage.CreateSnapshot();
                 writeBatchRef.Value = new WriteBatch { DisposeAfterWrite = false }; // prevent from disposing after write to allow read from batch OnStorageCommit
                 var storageActionsAccessor = new StorageActionsAccessor(tableStorage, writeBatchRef, snapshotRef, idGenerator, bufferPool, uuidGenerator, fileCodecs);
-				if (disableBatchNesting.Value == null)
+                if (disableBatchNesting.Value == null)
                     current.Value = storageActionsAccessor;
 
                 action(storageActionsAccessor);
                 storageActionsAccessor.Commit();
 
-				tableStorage.Write(writeBatchRef.Value);
-	        }
-	        finally
-	        {
-				if (snapshotRef.Value != null)
-					snapshotRef.Value.Dispose();
+                tableStorage.Write(writeBatchRef.Value);
+            }
+            finally
+            {
+                if (snapshotRef.Value != null)
+                    snapshotRef.Value.Dispose();
 
-				if (writeBatchRef.Value != null)
-					writeBatchRef.Value.Dispose();
-	        }
+                if (writeBatchRef.Value != null)
+                    writeBatchRef.Value.Dispose();
+            }
         }
 
         public void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup,
@@ -253,114 +253,114 @@ namespace Raven.Database.FileSystem.Storage.Voron
         }
 
         public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
-		{
-			bool runInMemory;
-			bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
+        {
+            bool runInMemory;
+            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
 
-			if (runInMemory)
-				throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
+            if (runInMemory)
+                throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
 
-			tableStorage.Dispose();
+            tableStorage.Dispose();
 
-			var sourcePath = path;
-			var compactPath = Path.Combine(path, "Voron.Compaction");
+            var sourcePath = path;
+            var compactPath = Path.Combine(path, "Voron.Compaction");
 
-			if (Directory.Exists(compactPath))
-				Directory.Delete(compactPath, true);
+            if (Directory.Exists(compactPath))
+                Directory.Delete(compactPath, true);
 
-			RecoverFromFailedCompact(sourcePath);
+            RecoverFromFailedCompact(sourcePath);
 
-			var sourceOptions = CreateStorageOptionsFromConfiguration(path, settings);
-			var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath);
+            var sourceOptions = CreateStorageOptionsFromConfiguration(path, settings);
+            var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath);
 
             output("Executing storage compaction");
  
-	        StorageCompaction.Execute(sourceOptions, compactOptions,
+            StorageCompaction.Execute(sourceOptions, compactOptions,
                              x => output(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
 
-			var sourceDir = new DirectoryInfo(sourcePath);
-			var sourceFiles = new List<FileInfo>();
+            var sourceDir = new DirectoryInfo(sourcePath);
+            var sourceFiles = new List<FileInfo>();
 
-			foreach (var pattern in new[] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename })
-			{
-				sourceFiles.AddRange(sourceDir.GetFiles(pattern));
-			}
+            foreach (var pattern in new[] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename })
+            {
+                sourceFiles.AddRange(sourceDir.GetFiles(pattern));
+            }
 
-			var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
+            var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
 
-			if (Directory.Exists(compactionBackup))
-			{
+            if (Directory.Exists(compactionBackup))
+            {
                 Directory.Delete(compactionBackup, true);
                 output("Removing existing compaction backup directory");
-			}
+            }
 
-			Directory.CreateDirectory(compactionBackup);
+            Directory.CreateDirectory(compactionBackup);
 
             output("Backing up original data files");
-			foreach (var file in sourceFiles)
-			{
-				File.Move(file.FullName, Path.Combine(compactionBackup, file.Name));
-			}
+            foreach (var file in sourceFiles)
+            {
+                File.Move(file.FullName, Path.Combine(compactionBackup, file.Name));
+            }
 
-			var compactedFiles = new DirectoryInfo(compactPath).GetFiles();
+            var compactedFiles = new DirectoryInfo(compactPath).GetFiles();
 
             output("Moving compacted files into target location");
-			foreach (var file in compactedFiles)
-			{
-				File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
-			}
+            foreach (var file in compactedFiles)
+            {
+                File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
+            }
 
             output("Deleting original data backup");
-			Directory.Delete(compactionBackup, true);
-			Directory.Delete(compactPath, true);
-		}
+            Directory.Delete(compactionBackup, true);
+            Directory.Delete(compactPath, true);
+        }
 
-		private static void RecoverFromFailedCompact(string sourcePath)
-		{
-			var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
+        private static void RecoverFromFailedCompact(string sourcePath)
+        {
+            var compactionBackup = Path.Combine(sourcePath, "Voron.Compaction.Backup");
 
-			if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
-				return;
+            if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
+                return;
 
-			if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
-				File.Exists(Path.Combine(sourcePath, "headers.one")) &&
-				File.Exists(Path.Combine(sourcePath, "headers.two")) &&
-				Directory.EnumerateFiles(sourcePath, "*.journal").Any() == false) // after a successful compaction there is no journal file
-			{
-				// we successfully moved new files and crashed before we could remove the old backup
-				// just complete the op and we are good (committed)
-				Directory.Delete(compactionBackup, true);
-			}
-			else
-			{
-				// just undo the op and we are good (rollback)
+            if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
+                File.Exists(Path.Combine(sourcePath, "headers.one")) &&
+                File.Exists(Path.Combine(sourcePath, "headers.two")) &&
+                Directory.EnumerateFiles(sourcePath, "*.journal").Any() == false) // after a successful compaction there is no journal file
+            {
+                // we successfully moved new files and crashed before we could remove the old backup
+                // just complete the op and we are good (committed)
+                Directory.Delete(compactionBackup, true);
+            }
+            else
+            {
+                // just undo the op and we are good (rollback)
 
-				var sourceDir = new DirectoryInfo(sourcePath);
+                var sourceDir = new DirectoryInfo(sourcePath);
 
-				foreach (var pattern in new[] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename })
-				{
-					foreach (var file in sourceDir.GetFiles(pattern))
-					{
-						File.Delete(file.FullName);
-					}
-				}
+                foreach (var pattern in new[] { "*.journal", "headers.one", "headers.two", VoronConstants.DatabaseFilename })
+                {
+                    foreach (var file in sourceDir.GetFiles(pattern))
+                    {
+                        File.Delete(file.FullName);
+                    }
+                }
 
-				var backupFiles = new DirectoryInfo(compactionBackup).GetFiles();
+                var backupFiles = new DirectoryInfo(compactionBackup).GetFiles();
 
-				foreach (var file in backupFiles)
-				{
-					File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
-				}
+                foreach (var file in backupFiles)
+                {
+                    File.Move(file.FullName, Path.Combine(sourcePath, file.Name));
+                }
 
-				Directory.Delete(compactionBackup, true);
-			}
-		}
+                Directory.Delete(compactionBackup, true);
+            }
+        }
 
         private void Output(string message)
-		{
-			Log.Info(message);
-			Console.Write(message);
-			Console.WriteLine();
-		}
+        {
+            Log.Info(message);
+            Console.Write(message);
+            Console.WriteLine();
+        }
     }
 }

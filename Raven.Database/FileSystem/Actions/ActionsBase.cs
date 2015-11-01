@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ActionsBase.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,56 +14,56 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 
 namespace Raven.Database.FileSystem.Actions
 {
-	public abstract class ActionsBase
-	{
-		protected RavenFileSystem FileSystem { get; private set; }
+    public abstract class ActionsBase
+    {
+        protected RavenFileSystem FileSystem { get; private set; }
 
-		protected NotificationPublisher Publisher
-		{
-			get { return FileSystem.Publisher; }
-		}
+        protected NotificationPublisher Publisher
+        {
+            get { return FileSystem.Publisher; }
+        }
 
-		protected BufferPool BufferPool
-		{
-			get { return FileSystem.BufferPool; }
-		}
+        protected BufferPool BufferPool
+        {
+            get { return FileSystem.BufferPool; }
+        }
 
-		protected SigGenerator SigGenerator
-		{
-			get { return FileSystem.SigGenerator; }
-		}
+        protected SigGenerator SigGenerator
+        {
+            get { return FileSystem.SigGenerator; }
+        }
 
-		protected Historian Historian
-		{
-			get { return FileSystem.Historian; }
-		}
+        protected Historian Historian
+        {
+            get { return FileSystem.Historian; }
+        }
 
-		protected SynchronizationTask SynchronizationTask
-		{
-			get { return FileSystem.SynchronizationTask; }
-		}
+        protected SynchronizationTask SynchronizationTask
+        {
+            get { return FileSystem.SynchronizationTask; }
+        }
 
-		protected FileLockManager FileLockManager
-		{
-			get { return FileSystem.FileLockManager; }
-		}
+        protected FileLockManager FileLockManager
+        {
+            get { return FileSystem.FileLockManager; }
+        }
 
-		protected ITransactionalStorage Storage
-		{
-			get { return FileSystem.Storage; }
-		}
+        protected ITransactionalStorage Storage
+        {
+            get { return FileSystem.Storage; }
+        }
 
-		protected IndexStorage Search
-		{
-			get { return FileSystem.Search; }
-		}
+        protected IndexStorage Search
+        {
+            get { return FileSystem.Search; }
+        }
 
-		protected ILog Log { get; private set; }
+        protected ILog Log { get; private set; }
 
-		protected ActionsBase(RavenFileSystem fileSystem, ILog log)
-		{
-			FileSystem = fileSystem;
-			Log = log;
-		}
-	}
+        protected ActionsBase(RavenFileSystem fileSystem, ILog log)
+        {
+            FileSystem = fileSystem;
+            Log = log;
+        }
+    }
 }

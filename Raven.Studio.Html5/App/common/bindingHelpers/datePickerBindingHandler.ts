@@ -1,4 +1,4 @@
-﻿/// <reference path="../../../Scripts/typings/bootstrap.v3.datetimepicker/bootstrap.v3.datetimepicker.d.ts" />
+/// <reference path="../../../Scripts/typings/bootstrap.v3.datetimepicker/bootstrap.v3.datetimepicker.d.ts" />
 
 import composition = require("durandal/composition");
 import moment = require("moment");
@@ -19,23 +19,23 @@ class datePickerBindingHandler {
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor, allBindings, viewModel, bindingContext: any) {
         var options = allBindings().datepickerOptions || {};
-		var endDateElement = options.endDateElement;
-		var startDateElement = options.startDateElement;
-		delete options.endDateElement;
-		delete options.startDateElement;
-		var dpicker = $(element).datetimepicker(options);
+        var endDateElement = options.endDateElement;
+        var startDateElement = options.startDateElement;
+        delete options.endDateElement;
+        delete options.startDateElement;
+        var dpicker = $(element).datetimepicker(options);
 
         dpicker.on('dp.change', ev => {
-	        if (endDateElement) {
-		        $("#" + endDateElement).data("DateTimePicker").minDate(ev.date);
-	        }
-	        if (startDateElement) {
-		        $("#" + startDateElement).data("DateTimePicker").maxDate(ev.date);
-	        }
+            if (endDateElement) {
+                $("#" + endDateElement).data("DateTimePicker").minDate(ev.date);
+            }
+            if (startDateElement) {
+                $("#" + startDateElement).data("DateTimePicker").maxDate(ev.date);
+            }
 
-	        var newDate = moment(ev.date);
-	        var value = valueAccessor();
-	        value(newDate);
+            var newDate = moment(ev.date);
+            var value = valueAccessor();
+            value(newDate);
         });
     }
 

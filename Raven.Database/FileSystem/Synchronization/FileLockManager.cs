@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using NLog;
 using Raven.Abstractions.Extensions;
@@ -8,52 +8,52 @@ using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
-	public class FileLockManager
-	{
-		private readonly Logger log = LogManager.GetCurrentClassLogger();
+    public class FileLockManager
+    {
+        private readonly Logger log = LogManager.GetCurrentClassLogger();
 
-		public void LockByCreatingSyncConfiguration(string fileName, FileSystemInfo sourceFileSystem, IStorageActionsAccessor accessor)
-		{
-			var syncLock = new SynchronizationLock
-			{
-				SourceFileSystem = sourceFileSystem,
-				FileLockedAt = DateTime.UtcNow
-			};
+        public void LockByCreatingSyncConfiguration(string fileName, FileSystemInfo sourceFileSystem, IStorageActionsAccessor accessor)
+        {
+            var syncLock = new SynchronizationLock
+            {
+                SourceFileSystem = sourceFileSystem,
+                FileLockedAt = DateTime.UtcNow
+            };
 
             accessor.SetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName), JsonExtensions.ToJObject(syncLock));
 
             log.Debug("File '{0}' was locked", fileName);
-		}
+        }
 
-		public void UnlockByDeletingSyncConfiguration(string fileName, IStorageActionsAccessor accessor)
-		{
-			accessor.DeleteConfig(RavenFileNameHelper.SyncLockNameForFile(fileName));
-			log.Debug("File '{0}' was unlocked", fileName);
-		}
+        public void UnlockByDeletingSyncConfiguration(string fileName, IStorageActionsAccessor accessor)
+        {
+            accessor.DeleteConfig(RavenFileNameHelper.SyncLockNameForFile(fileName));
+            log.Debug("File '{0}' was unlocked", fileName);
+        }
 
-		public bool TimeoutExceeded(string fileName, IStorageActionsAccessor accessor)
-		{
-			SynchronizationLock syncLock;
+        public bool TimeoutExceeded(string fileName, IStorageActionsAccessor accessor)
+        {
+            SynchronizationLock syncLock;
 
-			try
-			{
+            try
+            {
                 syncLock = accessor.GetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName)).JsonDeserialization<SynchronizationLock>();				
-			}
-			catch (FileNotFoundException)
-			{
-				return true;
-			}
+            }
+            catch (FileNotFoundException)
+            {
+                return true;
+            }
 
-			return (DateTime.UtcNow - syncLock.FileLockedAt).TotalMilliseconds > SynchronizationConfigAccessor.GetOrDefault(accessor).SynchronizationLockTimeoutMiliseconds;
-		}
+            return (DateTime.UtcNow - syncLock.FileLockedAt).TotalMilliseconds > SynchronizationConfigAccessor.GetOrDefault(accessor).SynchronizationLockTimeoutMiliseconds;
+        }
 
-		public bool TimeoutExceeded(string fileName, ITransactionalStorage storage)
-		{
-			var result = false;
+        public bool TimeoutExceeded(string fileName, ITransactionalStorage storage)
+        {
+            var result = false;
 
-			storage.Batch(accessor => result = TimeoutExceeded(fileName, accessor));
+            storage.Batch(accessor => result = TimeoutExceeded(fileName, accessor));
 
-			return result;
-		}
-	}
+            return result;
+        }
+    }
 }

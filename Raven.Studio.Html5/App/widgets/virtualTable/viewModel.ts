@@ -1,4 +1,4 @@
-﻿import router = require("plugins/router");
+import router = require("plugins/router");
 import app = require("durandal/app");
 
 import pagedList = require("common/pagedList");
@@ -250,7 +250,7 @@ class ctor {
         var containsId = this.columns().first(x=> x.binding === "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
-	        var containsCheckbox = this.columns().first(x => x.binding === "__IsChecked");
+            var containsCheckbox = this.columns().first(x => x.binding === "__IsChecked");
             if (!containsCheckbox && this.settings.showCheckboxes) {
                 this.columns.push(new column("__IsChecked", 38));
             }
@@ -289,7 +289,7 @@ class ctor {
     }
 
     requestAnimationFrame(action: () => void, existingHandleToCancel: number): number {
-	    var result: number;
+        var result: number;
         if (window.requestAnimationFrame) {
             if (existingHandleToCancel) {
                 window.cancelAnimationFrame(existingHandleToCancel);
@@ -307,8 +307,8 @@ class ctor {
             result = setTimeout(action, 1);
         }
 
-		this.settings.rowsAreLoading(false);
-	    return result;
+        this.settings.rowsAreLoading(false);
+        return result;
     }
 
     fillRow(rowData: documentBase, rowIndex: number) {
@@ -318,14 +318,14 @@ class ctor {
             var entityName = this.getEntityName(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromEntityNameMemoized(rowData, entityName));
             
-	        var editUrl: string;
-			if (rowData instanceof counterSummary) {
-				editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group Name"], rowData["Counter Name"]);
+            var editUrl: string;
+            if (rowData instanceof counterSummary) {
+                editUrl = appUrl.forEditCounter(appUrl.getResource(), rowData["Group Name"], rowData["Counter Name"]);
             } else if (rowData instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(rowData["Type"], rowData["Key"], appUrl.getTimeSeries());
-			} else {
-				editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName);
-			}
+            } else {
+                editUrl = appUrl.forEditItem(!!rowData.getUrl() ? rowData.getUrl() : rowData["Id"], appUrl.getResource(), rowIndex, entityName);
+            }
             rowAtIndex.editUrl(editUrl);
         }
     }
@@ -336,14 +336,14 @@ class ctor {
             var collectionName = this.items.collectionName;
             var itemIndex = this.settings.selectedIndices().first();
 
-			var editUrl: string;
-			if (selectedItem instanceof counterSummary) {
+            var editUrl: string;
+            if (selectedItem instanceof counterSummary) {
                 editUrl = appUrl.forEditCounter(appUrl.getResource(), selectedItem["Group Name"], selectedItem["Counter Name"]);
             } else if (selectedItem instanceof timeSeriesKey) {
                 editUrl = appUrl.forTimeSeriesKey(selectedItem["Type"], selectedItem["Key"], appUrl.getTimeSeries());
             } else {
-				editUrl = appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName);
-			}
+                editUrl = appUrl.forEditItem(selectedItem.getUrl(), appUrl.getResource(), itemIndex, collectionName);
+            }
             router.navigate(editUrl);
         }
     }
@@ -380,14 +380,14 @@ class ctor {
         return null;
     }
 
-	/*isCounterView(): boolean {
-		var item = this.items.getItem(0);
-		return item instanceof counterSummary;
-	}
+    /*isCounterView(): boolean {
+        var item = this.items.getItem(0);
+        return item instanceof counterSummary;
+    }
 
-	isTimeSeriesView(): boolean {
-		var item = this.items.getItem(0);
-		return item instanceof timeSeriesKey;
+    isTimeSeriesView(): boolean {
+        var item = this.items.getItem(0);
+        return item instanceof timeSeriesKey;
     }*/
 
     getColumnWidth(binding: string, defaultColumnWidth: number = 100): number {
@@ -689,14 +689,14 @@ class ctor {
         }
     }
 
-	changeCounterValue() {
-		if (this.settings.selectedIndices().length > 0) {
+    changeCounterValue() {
+        if (this.settings.selectedIndices().length > 0) {
             ko.postbox.publish("ChangeCounterValue", this.settings.selectedIndices()[0]);
         }
-	}
+    }
 
-	resetCounter() {
-		if (this.settings.selectedIndices().length > 0) {
+    resetCounter() {
+        if (this.settings.selectedIndices().length > 0) {
             ko.postbox.publish("ResetCounter", this.settings.selectedIndices()[0]);
         }
     }
@@ -768,7 +768,7 @@ class ctor {
         }
     }
 
-	getGroupHref(group: string): string {
+    getGroupHref(group: string): string {
         if (typeof group == "string") {
             return appUrl.forCounterStorageCounters(group, appUrl.getCounterStorage());
         } else {

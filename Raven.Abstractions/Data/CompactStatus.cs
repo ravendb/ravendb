@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
@@ -7,7 +7,7 @@ namespace Raven.Abstractions.Data
     {
         public CompactStatusState State;
 
-		public List<string> Messages { get; set; }
+        public List<string> Messages { get; set; }
 
         public string LastProgressMessage { get; set; }
 
@@ -23,10 +23,10 @@ namespace Raven.Abstractions.Data
             return "Raven/FileSystem/Compact/Status/" + fileSystemName;
         }
 
-		public static string RavenCounterStoageCompactStatusDocumentKey(string counterStorageName)
-		{
-			return "Raven/Counter/Compact/Status/" + counterStorageName;
-		}
+        public static string RavenCounterStoageCompactStatusDocumentKey(string counterStorageName)
+        {
+            return "Raven/Counter/Compact/Status/" + counterStorageName;
+        }
     }
 
     public enum CompactStatusState

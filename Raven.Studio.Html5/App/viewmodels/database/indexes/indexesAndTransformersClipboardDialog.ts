@@ -1,4 +1,4 @@
-﻿import transformerDefinition = require("models/database/index/transformer");
+import transformerDefinition = require("models/database/index/transformer");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
@@ -94,7 +94,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                             "Transformer": {
                                 'Name': transformer.name,
                                 'TransformResults': transformer.definition.TransformResults,
-								'LockMode':transformer.definition.LockMode
+                                'LockMode':transformer.definition.LockMode
                             }
                         }
                     }));

@@ -1,4 +1,4 @@
-﻿<style type="text/css">
+<style type="text/css">
     
 .link {
   fill: none;
@@ -82,8 +82,10 @@ text.trace {
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     </div>
 
-    
-    <div class="alert alert-danger" style="margin-top: 10px" role="alert" data-bind="text: fetchException, visible: hasFetchException">
+
+    <div class="alert alert-danger" style="margin-top: 10px" role="alert" data-bind="visible: hasFetchException">
+        <span data-bind="text: fetchException"></span> <a href="#"  data-bind="click: moreDetails, visible: showMoreDetailsButton()">More details</a>
+        <div data-bind="visible: showMoreDetails(), text: fetchExceptionDetails"></div>
     </div>
 
 

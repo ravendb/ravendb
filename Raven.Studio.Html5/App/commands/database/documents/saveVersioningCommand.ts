@@ -1,4 +1,4 @@
-﻿import database = require("models/resources/database");
+import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import commandBase = require("commands/commandBase");
 import saveBulkOfDocuments = require("commands/database/documents/saveBulkOfDocuments");

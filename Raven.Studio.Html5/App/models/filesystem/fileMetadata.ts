@@ -1,4 +1,4 @@
-﻿class fileMetadata {
+class fileMetadata {
 
     standardProps = ["ravenfs-size", "raven-last-modified", "etag", "raven-creation-date"];
 

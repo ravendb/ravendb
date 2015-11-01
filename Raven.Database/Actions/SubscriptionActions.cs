@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SubscriptionActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,286 +19,286 @@ using Sparrow.Collections;
 
 namespace Raven.Database.Actions
 {
-	public class SubscriptionActions : ActionsBase
-	{
-		private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
-			new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
+    public class SubscriptionActions : ActionsBase
+    {
+        private readonly ConcurrentDictionary<long, SubscriptionConnectionOptions> openSubscriptions = 
+            new ConcurrentDictionary<long, SubscriptionConnectionOptions>();
 
-		private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
+        private readonly ConcurrentDictionary<long, PutSerialLock> locks = new ConcurrentDictionary<long, PutSerialLock>();
 
-		private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> forciblyReleasedSubscriptions = new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
+        private readonly ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>> forciblyReleasedSubscriptions = new ConcurrentDictionary<long, SizeLimitedConcurrentSet<string>>();
 
-		public SubscriptionActions(DocumentDatabase database, ILog log)
-			: base(database, null, null, log)
-		{
-		}
+        public SubscriptionActions(DocumentDatabase database, ILog log)
+            : base(database, null, null, log)
+        {
+        }
 
-		public long CreateSubscription(SubscriptionCriteria criteria)
-		{
-			long id = -1;
+        public long CreateSubscription(SubscriptionCriteria criteria)
+        {
+            long id = -1;
 
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                id = accessor.General.GetNextIdentityValue(Constants.RavenSubscriptionsPrefix);
 
-				var config = new SubscriptionConfig
-				{
-					SubscriptionId = id,
-					Criteria = criteria,
+                var config = new SubscriptionConfig
+                {
+                    SubscriptionId = id,
+                    Criteria = criteria,
                     AckEtag = criteria.StartEtag ?? Etag.Empty,
-				};
+                };
 
-				SaveSubscriptionConfig(id, config);
-			});
+                SaveSubscriptionConfig(id, config);
+            });
 
-			return id;
-		}
+            return id;
+        }
 
-		private IDisposable LockSubscription(long  id)
-		{
-			return locks.GetOrAdd(id, new PutSerialLock()).Lock();
-		}
+        private IDisposable LockSubscription(long  id)
+        {
+            return locks.GetOrAdd(id, new PutSerialLock()).Lock();
+        }
 
-		public void DeleteSubscription(long id)
-		{
-			using (LockSubscription(id))
-			{
-				Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenSubscriptionsPrefix, id.ToString("D19")));
-			}
-		}
+        public void DeleteSubscription(long id)
+        {
+            using (LockSubscription(id))
+            {
+                Database.TransactionalStorage.Batch(accessor => accessor.Lists.Remove(Constants.RavenSubscriptionsPrefix, id.ToString("D19")));
+            }
+        }
 
-		private void SaveSubscriptionConfig(long id, SubscriptionConfig config)
-		{
-			Database.TransactionalStorage.Batch(accessor => 
-				accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(config), UuidType.Subscriptions));
-		}
+        private void SaveSubscriptionConfig(long id, SubscriptionConfig config)
+        {
+            Database.TransactionalStorage.Batch(accessor => 
+                accessor.Lists.Set(Constants.RavenSubscriptionsPrefix, id.ToString("D19"), RavenJObject.FromObject(config), UuidType.Subscriptions));
+        }
 
-		public void OpenSubscription(long id, SubscriptionConnectionOptions options)
-		{
-			SizeLimitedConcurrentSet<string> releasedConnections;
-			if (forciblyReleasedSubscriptions.TryGetValue(id, out releasedConnections) && releasedConnections.Contains(options.ConnectionId))
-				throw new SubscriptionClosedException("Subscription " + id + " was forcibly released. Cannot reopen it.");
+        public void OpenSubscription(long id, SubscriptionConnectionOptions options)
+        {
+            SizeLimitedConcurrentSet<string> releasedConnections;
+            if (forciblyReleasedSubscriptions.TryGetValue(id, out releasedConnections) && releasedConnections.Contains(options.ConnectionId))
+                throw new SubscriptionClosedException("Subscription " + id + " was forcibly released. Cannot reopen it.");
 
-			if (openSubscriptions.TryAdd(id, options))
-			{
-				UpdateClientActivityDate(id);
-				return;
-			}
+            if (openSubscriptions.TryAdd(id, options))
+            {
+                UpdateClientActivityDate(id);
+                return;
+            }
 
-			SubscriptionConnectionOptions existingOptions;
+            SubscriptionConnectionOptions existingOptions;
 
-			if(openSubscriptions.TryGetValue(id, out existingOptions) == false)
-				throw new SubscriptionDoesNotExistException("Didn't get existing open subscription while it's expected. Subscription id: " + id);
+            if(openSubscriptions.TryGetValue(id, out existingOptions) == false)
+                throw new SubscriptionDoesNotExistException("Didn't get existing open subscription while it's expected. Subscription id: " + id);
 
-			if (existingOptions.ConnectionId.Equals(options.ConnectionId, StringComparison.OrdinalIgnoreCase))
-			{
-				// reopen subscription on already existing connection - might happen after network connection problems the client tries to reopen
-				UpdateClientActivityDate(id);
-				return; 
-			}
+            if (existingOptions.ConnectionId.Equals(options.ConnectionId, StringComparison.OrdinalIgnoreCase))
+            {
+                // reopen subscription on already existing connection - might happen after network connection problems the client tries to reopen
+                UpdateClientActivityDate(id);
+                return; 
+            }
 
-			var config = GetSubscriptionConfig(id);
+            var config = GetSubscriptionConfig(id);
 
-			var now = SystemTime.UtcNow;
-			var timeSinceBatchSent = now - config.TimeOfSendingLastBatch;
+            var now = SystemTime.UtcNow;
+            var timeSinceBatchSent = now - config.TimeOfSendingLastBatch;
 
-			if (timeSinceBatchSent > existingOptions.BatchOptions.AcknowledgmentTimeout && 
-				SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
-			{
-				// last connected client exceeded ACK timeout and didn't send at least two 'client-alive' notifications - let the requesting client to open it
-				ForceReleaseAndOpenForNewClient(id, options);
-				return;
-			}
+            if (timeSinceBatchSent > existingOptions.BatchOptions.AcknowledgmentTimeout && 
+                SystemTime.UtcNow - config.TimeOfLastClientActivity > TimeSpan.FromTicks(existingOptions.ClientAliveNotificationInterval.Ticks * 3))
+            {
+                // last connected client exceeded ACK timeout and didn't send at least two 'client-alive' notifications - let the requesting client to open it
+                ForceReleaseAndOpenForNewClient(id, options);
+                return;
+            }
 
-			switch (options.Strategy)
-			{
-				case SubscriptionOpeningStrategy.TakeOver:
-					if (existingOptions.Strategy != SubscriptionOpeningStrategy.ForceAndKeep)
-					{
-						ForceReleaseAndOpenForNewClient(id, options);
-						return;
-					}
-					break;
-				case SubscriptionOpeningStrategy.ForceAndKeep:
-					ForceReleaseAndOpenForNewClient(id, options);
-					return;
-			}
+            switch (options.Strategy)
+            {
+                case SubscriptionOpeningStrategy.TakeOver:
+                    if (existingOptions.Strategy != SubscriptionOpeningStrategy.ForceAndKeep)
+                    {
+                        ForceReleaseAndOpenForNewClient(id, options);
+                        return;
+                    }
+                    break;
+                case SubscriptionOpeningStrategy.ForceAndKeep:
+                    ForceReleaseAndOpenForNewClient(id, options);
+                    return;
+            }
 
-			throw new SubscriptionInUseException("Subscription is already in use. There can be only a single open subscription connection per subscription.");
-		}
+            throw new SubscriptionInUseException("Subscription is already in use. There can be only a single open subscription connection per subscription.");
+        }
 
-		private void ForceReleaseAndOpenForNewClient(long id, SubscriptionConnectionOptions options)
-		{
-			ReleaseSubscription(id);
-			openSubscriptions.TryAdd(id, options);
-			UpdateClientActivityDate(id);
-		}
+        private void ForceReleaseAndOpenForNewClient(long id, SubscriptionConnectionOptions options)
+        {
+            ReleaseSubscription(id);
+            openSubscriptions.TryAdd(id, options);
+            UpdateClientActivityDate(id);
+        }
 
-		public void ReleaseSubscription(long id, bool forced = false)
-		{
-			SubscriptionConnectionOptions options;
-			openSubscriptions.TryRemove(id, out options);
+        public void ReleaseSubscription(long id, bool forced = false)
+        {
+            SubscriptionConnectionOptions options;
+            openSubscriptions.TryRemove(id, out options);
 
-			if (forced && options != null)
-			{
-				forciblyReleasedSubscriptions.GetOrAdd(id, new SizeLimitedConcurrentSet<string>(50, StringComparer.OrdinalIgnoreCase)).Add(options.ConnectionId);
-			}
-		}
+            if (forced && options != null)
+            {
+                forciblyReleasedSubscriptions.GetOrAdd(id, new SizeLimitedConcurrentSet<string>(50, StringComparer.OrdinalIgnoreCase)).Add(options.ConnectionId);
+            }
+        }
 
-		public void AcknowledgeBatchProcessed(long id, Etag lastEtag)
-		{
-			TransactionalStorage.Batch(accessor =>
-			{
-				var config = GetSubscriptionConfig(id);
-				var options = GetBatchOptions(id);
+        public void AcknowledgeBatchProcessed(long id, Etag lastEtag)
+        {
+            TransactionalStorage.Batch(accessor =>
+            {
+                var config = GetSubscriptionConfig(id);
+                var options = GetBatchOptions(id);
 
-				var timeSinceBatchSent = SystemTime.UtcNow - config.TimeOfSendingLastBatch;
-				if(timeSinceBatchSent > options.AcknowledgmentTimeout)
-					throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
+                var timeSinceBatchSent = SystemTime.UtcNow - config.TimeOfSendingLastBatch;
+                if(timeSinceBatchSent > options.AcknowledgmentTimeout)
+                    throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
 
-				config.AckEtag = lastEtag;
-				config.TimeOfLastClientActivity = SystemTime.UtcNow;
+                config.AckEtag = lastEtag;
+                config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-				SaveSubscriptionConfig(id, config);
-			});
-		}
+                SaveSubscriptionConfig(id, config);
+            });
+        }
 
-		public void AssertOpenSubscriptionConnection(long id, string connection)
-		{
-			SubscriptionConnectionOptions options;
-			if (openSubscriptions.TryGetValue(id, out options) == false)
-				throw new SubscriptionClosedException("There is no subscription with id: " + id + " being opened");
+        public void AssertOpenSubscriptionConnection(long id, string connection)
+        {
+            SubscriptionConnectionOptions options;
+            if (openSubscriptions.TryGetValue(id, out options) == false)
+                throw new SubscriptionClosedException("There is no subscription with id: " + id + " being opened");
 
-			if (options.ConnectionId.Equals(connection, StringComparison.OrdinalIgnoreCase) == false)
-			{
-				// prevent from concurrent work of multiple clients against the same subscription
-				throw new SubscriptionInUseException("Subscription is being opened for a different connection.");
-			}
-		}
+            if (options.ConnectionId.Equals(connection, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                // prevent from concurrent work of multiple clients against the same subscription
+                throw new SubscriptionInUseException("Subscription is being opened for a different connection.");
+            }
+        }
 
-		public SubscriptionBatchOptions GetBatchOptions(long id)
-		{
-			SubscriptionConnectionOptions options;
-			if (openSubscriptions.TryGetValue(id, out options) == false)
-				throw new SubscriptionClosedException("There is no open subscription with id: " + id);
+        public SubscriptionBatchOptions GetBatchOptions(long id)
+        {
+            SubscriptionConnectionOptions options;
+            if (openSubscriptions.TryGetValue(id, out options) == false)
+                throw new SubscriptionClosedException("There is no open subscription with id: " + id);
 
-			return options.BatchOptions;
-		}
+            return options.BatchOptions;
+        }
 
-		public SubscriptionConfig GetSubscriptionConfig(long id)
-		{
-			SubscriptionConfig config = null;
+        public SubscriptionConfig GetSubscriptionConfig(long id)
+        {
+            SubscriptionConfig config = null;
 
-			TransactionalStorage.Batch(accessor =>
-			{
-				var listItem = accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, id.ToString("D19"));
+            TransactionalStorage.Batch(accessor =>
+            {
+                var listItem = accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, id.ToString("D19"));
 
-				if(listItem == null)
-					throw new SubscriptionDoesNotExistException("There is no subscription configuration for specified identifier (id: " + id + ")");
+                if(listItem == null)
+                    throw new SubscriptionDoesNotExistException("There is no subscription configuration for specified identifier (id: " + id + ")");
 
-				config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
-			});
+                config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
+            });
 
-			return config;
-		}
+            return config;
+        }
 
-		public void UpdateBatchSentTime(long id)
-		{
-			using (LockSubscription(id))
-			{
-				TransactionalStorage.Batch(accessor =>
-				{
-					var config = GetSubscriptionConfig(id);
+        public void UpdateBatchSentTime(long id)
+        {
+            using (LockSubscription(id))
+            {
+                TransactionalStorage.Batch(accessor =>
+                {
+                    var config = GetSubscriptionConfig(id);
 
-					config.TimeOfSendingLastBatch = SystemTime.UtcNow;
-					config.TimeOfLastClientActivity = SystemTime.UtcNow;
+                    config.TimeOfSendingLastBatch = SystemTime.UtcNow;
+                    config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-					SaveSubscriptionConfig(id, config);
-				});
-			}
-		}
+                    SaveSubscriptionConfig(id, config);
+                });
+            }
+        }
 
-		public void UpdateClientActivityDate(long id)
-		{
-			using (LockSubscription(id))
-			{
-				TransactionalStorage.Batch(accessor =>
-				{
-					var config = GetSubscriptionConfig(id);
+        public void UpdateClientActivityDate(long id)
+        {
+            using (LockSubscription(id))
+            {
+                TransactionalStorage.Batch(accessor =>
+                {
+                    var config = GetSubscriptionConfig(id);
 
-					config.TimeOfLastClientActivity = SystemTime.UtcNow;
+                    config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
-					SaveSubscriptionConfig(id, config);
-				});
-			}
-		}
+                    SaveSubscriptionConfig(id, config);
+                });
+            }
+        }
 
-		public List<SubscriptionConfig> GetSubscriptions(int start, int take)
-		{
-			var subscriptions = new List<SubscriptionConfig>();
+        public List<SubscriptionConfig> GetSubscriptions(int start, int take)
+        {
+            var subscriptions = new List<SubscriptionConfig>();
 
-			TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var listItem in accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, start, take))
-				{
-					var config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
-					subscriptions.Add(config);
-				}
-			});
+            TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, start, take))
+                {
+                    var config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
+                    subscriptions.Add(config);
+                }
+            });
 
-			return subscriptions;
-		}
+            return subscriptions;
+        }
 
-		public class SubscriptionDebugInfo : SubscriptionConfig
-		{
-			public bool IsOpen { get; set; }
-			public SubscriptionConnectionOptions ConnectionOptions { get; set; }
-		}
+        public class SubscriptionDebugInfo : SubscriptionConfig
+        {
+            public bool IsOpen { get; set; }
+            public SubscriptionConnectionOptions ConnectionOptions { get; set; }
+        }
 
-		public List<object> GetDebugInfo()
-		{
-			var subscriptions = new List<object>();
+        public List<object> GetDebugInfo()
+        {
+            var subscriptions = new List<object>();
 
-			TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var listItem in accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, 0, int.MaxValue))
-				{
-					var config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
+            TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var listItem in accessor.Lists.Read(Constants.RavenSubscriptionsPrefix, 0, int.MaxValue))
+                {
+                    var config = listItem.Data.JsonDeserialization<SubscriptionConfig>();
 
-					SubscriptionConnectionOptions options = null;
-					openSubscriptions.TryGetValue(config.SubscriptionId, out options);
+                    SubscriptionConnectionOptions options = null;
+                    openSubscriptions.TryGetValue(config.SubscriptionId, out options);
 
-					var debugInfo = new
-					{
-						config.SubscriptionId,
-						config.AckEtag,
-						TimeOfLastClientActivity = config.TimeOfLastClientActivity != default(DateTime) ? config.TimeOfLastClientActivity : (DateTime?)null,
-						TimeOfSendingLastBatch = config.TimeOfSendingLastBatch != default(DateTime) ? config.TimeOfSendingLastBatch : (DateTime?)null,
-						Criteria = new
-						{
-							config.Criteria.KeyStartsWith,
-							config.Criteria.BelongsToAnyCollection,
-							PropertiesMatch = config.Criteria.PropertiesMatch == null ? null : config.Criteria.PropertiesMatch.Select(x => new
-							{
-								x.Key,x.Value
-							}).ToList(),
-							PropertiesNotMatch = config.Criteria.PropertiesNotMatch == null ? null : config.Criteria.PropertiesNotMatch.Select(x => new
-							{
-								x.Key, x.Value
-							}).ToList(),
-							config.Criteria.StartEtag
-						},
-						IsOpen = options != null,
-						ConnectionOptions = options
-					};
+                    var debugInfo = new
+                    {
+                        config.SubscriptionId,
+                        config.AckEtag,
+                        TimeOfLastClientActivity = config.TimeOfLastClientActivity != default(DateTime) ? config.TimeOfLastClientActivity : (DateTime?)null,
+                        TimeOfSendingLastBatch = config.TimeOfSendingLastBatch != default(DateTime) ? config.TimeOfSendingLastBatch : (DateTime?)null,
+                        Criteria = new
+                        {
+                            config.Criteria.KeyStartsWith,
+                            config.Criteria.BelongsToAnyCollection,
+                            PropertiesMatch = config.Criteria.PropertiesMatch == null ? null : config.Criteria.PropertiesMatch.Select(x => new
+                            {
+                                x.Key,x.Value
+                            }).ToList(),
+                            PropertiesNotMatch = config.Criteria.PropertiesNotMatch == null ? null : config.Criteria.PropertiesNotMatch.Select(x => new
+                            {
+                                x.Key, x.Value
+                            }).ToList(),
+                            config.Criteria.StartEtag
+                        },
+                        IsOpen = options != null,
+                        ConnectionOptions = options
+                    };
 
-					
-					
-					subscriptions.Add(debugInfo);
-				}
-			});
+                    
+                    
+                    subscriptions.Add(debugInfo);
+                }
+            });
 
-			return subscriptions;
-		}
-	}
+            return subscriptions;
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import changesContext = require("common/changesContext");
@@ -37,10 +37,10 @@ class counters extends viewModelBase {
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     static gridSelector = "#countersGrid";
-	static isInitialized = ko.observable<boolean>(false);
-	isInitialized = counters.isInitialized;
+    static isInitialized = ko.observable<boolean>(false);
+    isInitialized = counters.isInitialized;
 
-	constructor() {
+    constructor() {
         super();
 
         this.selectedGroup.subscribe(c => this.selectedGroupChanged(c));
@@ -79,13 +79,13 @@ class counters extends viewModelBase {
             }
             return "";
         });
-		
-		this.countersSelection = ko.computed(() => {
-		    if (this.hasAllCountersSelected())
-			    return checkbox.Checked;
-		    if (this.hasAnyCountersSelected())
-			    return checkbox.SomeChecked;
-		    return checkbox.UnChecked;
+        
+        this.countersSelection = ko.computed(() => {
+            if (this.hasAllCountersSelected())
+                return checkbox.Checked;
+            if (this.hasAnyCountersSelected())
+                return checkbox.SomeChecked;
+            return checkbox.UnChecked;
         });
     }
 
@@ -102,8 +102,8 @@ class counters extends viewModelBase {
                 
         //initial groups fetch
         this.fetchGroups(cs, 0, Number.MAX_VALUE).done(results => {
-	        this.groupsLoaded(results, cs);
-	        counters.isInitialized(true);
+            this.groupsLoaded(results, cs);
+            counters.isInitialized(true);
         });
     }
 
@@ -120,10 +120,10 @@ class counters extends viewModelBase {
         this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);*/
     }
 
-	deactivate() {
-		super.deactivate();
-		counters.isInitialized(false);
-	}
+    deactivate() {
+        super.deactivate();
+        counters.isInitialized(false);
+    }
 
     createNotifications(): Array<changeSubscription> {
         return [
@@ -187,15 +187,15 @@ class counters extends viewModelBase {
         counterChangeVm.updateTask.done((change: counterChange) => {
             var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), change.isNew());
             var execute = counterCommand.execute();
-			execute.done(() => this.refreshGridAndGroup(change.group()));
+            execute.done(() => this.refreshGridAndGroup(change.group()));
         });
         app.showDialog(counterChangeVm);
     }
 
-	refresh() {
-		var selectedGroupName = this.selectedGroup().name;
-		this.refreshGridAndGroup(selectedGroupName);
-	}
+    refresh() {
+        var selectedGroupName = this.selectedGroup().name;
+        this.refreshGridAndGroup(selectedGroupName);
+    }
 
     edit() {
         var grid = this.getCountersGrid();
@@ -218,8 +218,8 @@ class counters extends viewModelBase {
             var counterChangeVm = new editCounterDialog(change);
             counterChangeVm.updateTask.done((change: counterChange, isNew: boolean) => {
                 var counterCommand = new updateCounterCommand(this.activeCounterStorage(), change.group(), change.counterName(), change.delta(), isNew);
-	            var execute = counterCommand.execute();
-				execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
+                var execute = counterCommand.execute();
+                execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
             });
             app.showDialog(counterChangeVm);
         }
@@ -233,19 +233,19 @@ class counters extends viewModelBase {
             confirmation.done(() => {
                 var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData["Group Name"], counterData["Counter Name"]);
                 var execute = resetCommand.execute();
-				execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
+                execute.done(() => this.refreshGridAndGroup(counterData.GroupName));
             });
         }
     }
 
-	refreshGridAndGroup(changedGroupName: string) {
-		var group = this.selectedGroup();
-		if (group.name === changedGroupName || group.name === counterGroup.allGroupsGroupName) {
-			this.getCountersGrid().refreshCollectionData();
-		}
-		group.invalidateCache();
-		this.selectNone();
-	}
+    refreshGridAndGroup(changedGroupName: string) {
+        var group = this.selectedGroup();
+        if (group.name === changedGroupName || group.name === counterGroup.allGroupsGroupName) {
+            this.getCountersGrid().refreshCollectionData();
+        }
+        group.invalidateCache();
+        this.selectNone();
+    }
 
     private selectedGroupChanged(selected: counterGroup) {
         if (!!selected) {
@@ -294,9 +294,9 @@ class counters extends viewModelBase {
     }
 
     private deleteGroupInternal(group: counterGroup) {
-	    var deleteGroupVm = new deleteGroup(group, this.activeCounterStorage());
+        var deleteGroupVm = new deleteGroup(group, this.activeCounterStorage());
             deleteGroupVm.deletionTask.done(() => {
-				if (!group.isAllGroupsGroup) {
+                if (!group.isAllGroupsGroup) {
                     this.groups.remove(group);
 
                     var selectedCollection: counterGroup = this.selectedGroup();
@@ -307,7 +307,7 @@ class counters extends viewModelBase {
                     this.refreshGridAndGroup(group.name);
                 }
             });
-		app.showDialog(deleteGroupVm);
+        app.showDialog(deleteGroupVm);
     }
 
     private updateGroups(receivedGroups: Array<counterGroup>) {
@@ -359,7 +359,7 @@ class counters extends viewModelBase {
         //TODO: add proper paging support here too
         this.fetchGroups(cs, 0, Number.MAX_VALUE).done(results => {
             this.updateGroups(results);
-	        this.refreshGroupsData();
+            this.refreshGroupsData();
             //TODO: add a button to refresh the counters and than use this.refreshCollectionsData();
             deferred.resolve();
         });
@@ -394,31 +394,31 @@ class counters extends viewModelBase {
         return null;
     }
 
-	private sortGroups() {
-		this.groups.sort((c1: counterGroup, c2: counterGroup) => {
-			if (c1.isAllGroupsGroup)
-				return -1;
-			if (c2.isAllGroupsGroup)
-				return 1;
-			return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
-		});
-	}
+    private sortGroups() {
+        this.groups.sort((c1: counterGroup, c2: counterGroup) => {
+            if (c1.isAllGroupsGroup)
+                return -1;
+            if (c2.isAllGroupsGroup)
+                return 1;
+            return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+        });
+    }
 
-	// Animation callbacks for the groups list
-	showGroupElement(element) {
-		if (element.nodeType === 1 && counters.isInitialized()) {
-			$(element).hide().slideDown(500, () => {
-				ko.postbox.publish("SortGroups");
-				$(element).highlight();
-			});
-		}
-	}
+    // Animation callbacks for the groups list
+    showGroupElement(element) {
+        if (element.nodeType === 1 && counters.isInitialized()) {
+            $(element).hide().slideDown(500, () => {
+                ko.postbox.publish("SortGroups");
+                $(element).highlight();
+            });
+        }
+    }
 
-	hideGroupElement(element) {
-		if (element.nodeType === 1) {
-			$(element).slideUp(1000, () => { $(element).remove(); });
-		}
-	}
+    hideGroupElement(element) {
+        if (element.nodeType === 1) {
+            $(element).slideUp(1000, () => { $(element).remove(); });
+        }
+    }
 }
 
 export = counters;

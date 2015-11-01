@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Client;
@@ -10,19 +10,19 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1379_Client_Lazy : RavenTest
-	{
+    public class RavenDB_1379_Client_Lazy : RavenTest
+    {
         public class SomeEntity
         {
             public string Id { get; set; }
         }
 
-	    [Theory]
+        [Theory]
         [PropertyData("Storages")]
-	    public void PagingWithoutFilters(string requestedStorage)
-	    {
-	        using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
-	        {
+        public void PagingWithoutFilters(string requestedStorage)
+        {
+            using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
+            {
                 using (var session = documentStore.OpenSession())
                 {
                     session.Store(new SomeEntity { Id = "FooBar1" });
@@ -41,9 +41,9 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-	            using (var session = documentStore.OpenSession())
-	            {
-	                var fetchedDocuments = session.Advanced.Lazily
+                using (var session = documentStore.OpenSession())
+                {
+                    var fetchedDocuments = session.Advanced.Lazily
                         .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 0, 4, string.Empty)
                         .Value
                         .ToList();
@@ -55,10 +55,10 @@ namespace Raven.Tests.Issues
                     Assert.Contains("FooBar11", foundDocKeys);
                     Assert.Contains("FooBar111", foundDocKeys);
                     Assert.Contains("FooBar12", foundDocKeys);
-	            }
+                }
 
-	            using (var session = documentStore.OpenSession())
-	            {
+                using (var session = documentStore.OpenSession())
+                {
                     var fetchedDocuments = session.Advanced.Lazily
                         .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 4, 4, string.Empty)
                         .Value
@@ -66,15 +66,15 @@ namespace Raven.Tests.Issues
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
 
-	                Assert.Equal(4, foundDocKeys.Count);
-	                Assert.Contains("FooBar21", foundDocKeys);
-	                Assert.Contains("FooBar3", foundDocKeys);
-	                Assert.Contains("FooBar5", foundDocKeys);
-	                Assert.Contains("FooBar6", foundDocKeys);
-	            }
+                    Assert.Equal(4, foundDocKeys.Count);
+                    Assert.Contains("FooBar21", foundDocKeys);
+                    Assert.Contains("FooBar3", foundDocKeys);
+                    Assert.Contains("FooBar5", foundDocKeys);
+                    Assert.Contains("FooBar6", foundDocKeys);
+                }
 
-	            using (var session = documentStore.OpenSession())
-	            {
+                using (var session = documentStore.OpenSession())
+                {
                     var fetchedDocuments = session.Advanced.Lazily
                         .LoadStartingWith<SomeEntity>("FooBar", string.Empty, 8, 4, string.Empty)
                         .Value
@@ -82,11 +82,11 @@ namespace Raven.Tests.Issues
 
                     var foundDocKeys = fetchedDocuments.Select(doc => doc.Id).ToList();
 
-	                Assert.Equal(1, foundDocKeys.Count);
-	                Assert.Contains("FooBar8", foundDocKeys);
-	            }
-	        }
-	    }
+                    Assert.Equal(1, foundDocKeys.Count);
+                    Assert.Contains("FooBar8", foundDocKeys);
+                }
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
@@ -650,5 +650,5 @@ namespace Raven.Tests.Issues
                 }
             }
         }
-	}
+    }
 }

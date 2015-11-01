@@ -47,7 +47,7 @@ class topology extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         d3.select(window).on("resize", this.resize.bind(this));
        
     }

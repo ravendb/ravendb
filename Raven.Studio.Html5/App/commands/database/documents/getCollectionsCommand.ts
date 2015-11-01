@@ -8,8 +8,8 @@ import getCachedCollectionsCount = require("commands/database/studio/getCachedCo
 class getCollectionsCommand extends commandBase {
 
     /**
-	* @param ownerDb The database the collections will belong to.
-	*/
+    * @param ownerDb The database the collections will belong to.
+    */
     constructor(private ownerDb: database, private previousValues: collection[]=[], private lastQueryDate: KnockoutObservable<string> = null) {
         super();
 

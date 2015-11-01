@@ -6,14 +6,14 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Database.Indexing.IndexMerging
 {
-	internal class IndexData
+    internal class IndexData
     {
-		public override string ToString()
-		{
-			return string.Format("IndexName: {0}", IndexName);
-		}
+        public override string ToString()
+        {
+            return string.Format("IndexName: {0}", IndexName);
+        }
 
-		private readonly IndexDefinition index;
+        private readonly IndexDefinition index;
         public Dictionary<string, Expression> SelectExpressions = new Dictionary<string, Expression>();
 
         public IndexData(IndexDefinition index)
@@ -38,7 +38,7 @@ namespace Raven.Database.Indexing.IndexMerging
         public bool IsSuitedForMerge { get; set; }
         public string Comment { get; set; }
 
-		public string Collection { get; set; }
+        public string Collection { get; set; }
 
         public IDictionary<string, FieldStorage> Stores
         {
@@ -73,9 +73,9 @@ namespace Raven.Database.Indexing.IndexMerging
         {
             get { return index; }
         }
-		public bool IsMapReduceOrMultiMap { get; set; }
+        public bool IsMapReduceOrMultiMap { get; set; }
 
-		public string BuildExpression(Dictionary<string, Expression> selectExpressions)
+        public string BuildExpression(Dictionary<string, Expression> selectExpressions)
         {
             var anonymousTypeCreateExpression = new AnonymousTypeCreateExpression();
             var crrv = new ChangeRootReferenceVisitor(FromIdentifier);
@@ -109,13 +109,13 @@ namespace Raven.Database.Indexing.IndexMerging
             var printerVisitor = new CSharpOutputVisitor(printer, FormattingOptionsFactory.CreateSharpDevelop());
             queryExpr.AcceptVisitor(printerVisitor);
 
-			var format = printer.GetStringBuilder().ToString();
-			if (format.Substring(0, 3) == "\r\n\t")
-			{
-				format = format.Remove(0, 3);
-			}
-			format = format.Replace("\r\n\t", "\n");
-	        return format;
+            var format = printer.GetStringBuilder().ToString();
+            if (format.Substring(0, 3) == "\r\n\t")
+            {
+                format = format.Remove(0, 3);
+            }
+            format = format.Replace("\r\n\t", "\n");
+            return format;
         }
     }
 }

@@ -2,12 +2,12 @@ using System;
 
 namespace Raven.Abstractions.Logging
 {
-	public interface ILogManager
-	{
-		ILog GetLogger(string name);
+    public interface ILogManager
+    {
+        ILog GetLogger(string name);
 
-		IDisposable OpenNestedConext(string message);
+        IDisposable OpenNestedConext(string message);
 
-		IDisposable OpenMappedContext(string key, string value);
-	}
+        IDisposable OpenMappedContext(string key, string value);
+    }
 }

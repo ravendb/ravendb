@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
@@ -29,15 +29,15 @@ class timeSeriesTypes extends viewModelBase {
     hasAllKeysSelected: KnockoutComputed<boolean>;
     isAnyKeysAutoSelected = ko.observable<boolean>(false);
     isAllKeysAutoSelected = ko.observable<boolean>(false);
-	keysSelection: KnockoutComputed<checkbox>;
+    keysSelection: KnockoutComputed<checkbox>;
 
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     static gridSelector = "#keysGrid";
-	static isInitialized = ko.observable<boolean>(false);
+    static isInitialized = ko.observable<boolean>(false);
     isInitialized = timeSeriesTypes.isInitialized;
 
-	constructor() {
+    constructor() {
         super();
 
         this.selectedType.subscribe(t => this.selectedTypeChanged(t));
@@ -90,8 +90,8 @@ class timeSeriesTypes extends viewModelBase {
 
         var ts = this.activeTimeSeries();
         this.fetchTypes(ts).done(results => {
-	        this.typesLoaded(results, ts);
-	        timeSeriesTypes.isInitialized(true);
+            this.typesLoaded(results, ts);
+            timeSeriesTypes.isInitialized(true);
         });
     }
 
@@ -108,10 +108,10 @@ class timeSeriesTypes extends viewModelBase {
         this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);*/
     }
 
-	deactivate() {
-		super.deactivate();
-		timeSeriesTypes.isInitialized(false);
-	}
+    deactivate() {
+        super.deactivate();
+        timeSeriesTypes.isInitialized(false);
+    }
 
     createNotifications(): Array<changeSubscription> {
         return [
@@ -148,7 +148,7 @@ class timeSeriesTypes extends viewModelBase {
         }
     }
 
-	newPoint() {
+    newPoint() {
         var type = this.currentType();
         var changeVm = new editPointDialog(new pointChange(new timeSeriesPoint(type.name, type.fields, "", moment().format(), type.fields.map(x => 0)), true), true);
         changeVm.updateTask.done((change: pointChange) => {
@@ -159,19 +159,19 @@ class timeSeriesTypes extends viewModelBase {
         app.showDialog(changeVm);
     }
 
-	refresh() {
-		var selectedKeyName = this.selectedType().name;
-		this.refreshGridAndKey(selectedKeyName);
-	}
+    refresh() {
+        var selectedKeyName = this.selectedType().name;
+        this.refreshGridAndKey(selectedKeyName);
+    }
 
-	refreshGridAndKey(changedKeyName: string) {
-		var type = this.selectedType();
-		if (type.name === changedKeyName) {
-			this.getKeysGrid().refreshCollectionData();
-		}
-		type.getKeys().invalidateCache();
-		this.selectNone();
-	}
+    refreshGridAndKey(changedKeyName: string) {
+        var type = this.selectedType();
+        if (type.name === changedKeyName) {
+            this.getKeysGrid().refreshCollectionData();
+        }
+        type.getKeys().invalidateCache();
+        this.selectNone();
+    }
 
     private selectedTypeChanged(selected: timeSeriesType) {
         if (!!selected) {
@@ -261,7 +261,7 @@ class timeSeriesTypes extends viewModelBase {
 
         this.fetchTypes(ts).done(results => {
             this.updateTypes(results);
-	        this.refreshKeysData();
+            this.refreshKeysData();
             deferred.resolve();
         });
 
@@ -291,27 +291,27 @@ class timeSeriesTypes extends viewModelBase {
         return null;
     }
 
-	private sortTypes() {
-		this.types.sort((c1: timeSeriesType, c2: timeSeriesType) => {
-			return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
-		});
-	}
+    private sortTypes() {
+        this.types.sort((c1: timeSeriesType, c2: timeSeriesType) => {
+            return c1.name.toLowerCase() > c2.name.toLowerCase() ? 1 : -1;
+        });
+    }
 
-	// Animation callbacks for the types list
-	showTypeElement(element) {
-		if (element.nodeType === 1 && timeSeriesTypes.isInitialized()) {
-			$(element).hide().slideDown(500, () => {
-				ko.postbox.publish("SortTypes");
-				$(element).highlight();
-			});
-		}
-	}
+    // Animation callbacks for the types list
+    showTypeElement(element) {
+        if (element.nodeType === 1 && timeSeriesTypes.isInitialized()) {
+            $(element).hide().slideDown(500, () => {
+                ko.postbox.publish("SortTypes");
+                $(element).highlight();
+            });
+        }
+    }
 
-	hideTypeElement(element) {
-		if (element.nodeType === 1) {
-			$(element).slideUp(1000, () => { $(element).remove(); });
-		}
-	}
+    hideTypeElement(element) {
+        if (element.nodeType === 1) {
+            $(element).slideUp(1000, () => { $(element).remove(); });
+        }
+    }
 }
 
 export = timeSeriesTypes;

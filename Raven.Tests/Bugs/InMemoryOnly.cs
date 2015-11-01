@@ -12,18 +12,18 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class InMemoryOnly : RavenTest
-	{
-		[Fact]
-		public void InMemoryDoesNotCreateDataDir()
-		{
-			IOExtensions.DeleteDirectory("Data");
+    public class InMemoryOnly : RavenTest
+    {
+        [Fact]
+        public void InMemoryDoesNotCreateDataDir()
+        {
+            IOExtensions.DeleteDirectory("Data");
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-			using (NewDocumentStore(runInMemory: true, port: 8079))
-			{
-				Assert.False(Directory.Exists("Data"));
-			}
-		}
-	}
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
+            using (NewDocumentStore(runInMemory: true, port: 8079))
+            {
+                Assert.False(Directory.Exists("Data"));
+            }
+        }
+    }
 }

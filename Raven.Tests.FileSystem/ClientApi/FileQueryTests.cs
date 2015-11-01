@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ namespace Raven.Tests.FileSystem.ClientApi
     public class FileQueryTests : RavenFilesTestWithLogs
     {
         [Fact]
-		public async Task CanQueryByName()
+        public async Task CanQueryByName()
         {
             var store = this.NewStore();
 
@@ -35,7 +35,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryAll()
+        public async Task CanQueryAll()
         {
             var store = this.NewStore();
 
@@ -56,7 +56,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryAllOnDirectory()
+        public async Task CanQueryAllOnDirectory()
         {
             var store = this.NewStore();
 
@@ -78,7 +78,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryRootDirectoryWithoutRecursive()
+        public async Task CanQueryRootDirectoryWithoutRecursive()
         {
             var store = this.NewStore();
 
@@ -303,7 +303,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryInsideDirectory()
+        public async Task CanQueryInsideDirectory()
         {
             var store = this.NewStore();
 
@@ -327,7 +327,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryStoppingAtDirectory()
+        public async Task CanQueryStoppingAtDirectory()
         {
             var store = this.NewStore();
 
@@ -351,7 +351,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryByExtension()
+        public async Task CanQueryByExtension()
         {
             var store = this.NewStore();
 
@@ -375,7 +375,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryByMetadata()
+        public async Task CanQueryByMetadata()
         {
             var store = this.NewStore();
 
@@ -413,7 +413,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanQueryBySize()
+        public async Task CanQueryBySize()
         {
             var store = this.NewStore();
 
@@ -453,7 +453,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseFirst()
+        public async Task CanUseFirst()
         {
             var store = this.NewStore();
 
@@ -479,7 +479,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseFirstOrDefault()
+        public async Task CanUseFirstOrDefault()
         {
             var store = this.NewStore();
 
@@ -497,7 +497,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseSingle()
+        public async Task CanUseSingle()
         {
             var store = this.NewStore();
 
@@ -516,7 +516,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseSingleOrDefault()
+        public async Task CanUseSingleOrDefault()
         {
             var store = this.NewStore();
 
@@ -536,7 +536,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseOrderBySize()
+        public async Task CanUseOrderBySize()
         {
             var store = this.NewStore();
 
@@ -567,7 +567,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseOrderByDescendingSize()
+        public async Task CanUseOrderByDescendingSize()
         {
             var store = this.NewStore();
 
@@ -599,7 +599,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
 
         [Fact]
-		public async Task CanUseOrderByName()
+        public async Task CanUseOrderByName()
         {
             var store = this.NewStore();
 
@@ -630,7 +630,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseOrderByDescendingName()
+        public async Task CanUseOrderByDescendingName()
         {
             var store = this.NewStore();
 
@@ -661,7 +661,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseOrderByMultipleConditionsOnDescending()
+        public async Task CanUseOrderByMultipleConditionsOnDescending()
         {
             var store = this.NewStore();
 
@@ -693,7 +693,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseOrderByMultipleConditions()
+        public async Task CanUseOrderByMultipleConditions()
         {
             var store = this.NewStore();
 
@@ -725,7 +725,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseOrderByMultipleGroupConditions()
+        public async Task CanUseOrderByMultipleGroupConditions()
         {
             var store = this.NewStore();
 
@@ -755,7 +755,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseContainsAll()
+        public async Task CanUseContainsAll()
         {
             var store = this.NewStore();
 
@@ -782,7 +782,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task CanUseContainsAny()
+        public async Task CanUseContainsAny()
         {
             var store = this.NewStore();
 
@@ -812,98 +812,98 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-	    [Fact]
-	    public async Task CanUseTakeAndSkip()
-	    {
-		    var store = this.NewStore();
+        [Fact]
+        public async Task CanUseTakeAndSkip()
+        {
+            var store = this.NewStore();
 
-		    for (int i = 0; i < 20; i++)
-		    {
-			    using (var session = store.OpenAsyncSession())
-			    {
-				    session.RegisterUpload(i + ".file", CreateRandomFileStream(i));
-				    session.RegisterUpload(i + ".txt", CreateRandomFileStream(i));
-				    await session.SaveChangesAsync();
-			    }
-		    }
+            for (int i = 0; i < 20; i++)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.RegisterUpload(i + ".file", CreateRandomFileStream(i));
+                    session.RegisterUpload(i + ".txt", CreateRandomFileStream(i));
+                    await session.SaveChangesAsync();
+                }
+            }
 
-		    int pageSize = 5;
-		    var files = new List<FileHeader>();
+            int pageSize = 5;
+            var files = new List<FileHeader>();
 
-		    using (var session = store.OpenAsyncSession())
-		    {
-			    for (int i = 0; i < 4; i++)
-			    {
-				    var results = await session.Query().WhereEndsWith(x => x.Name, ".file").Skip(i*pageSize).Take(pageSize).ToListAsync();
-				    files.AddRange(results);
-			    }
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    var results = await session.Query().WhereEndsWith(x => x.Name, ".file").Skip(i*pageSize).Take(pageSize).ToListAsync();
+                    files.AddRange(results);
+                }
 
-			    Assert.Equal(20, files.Count);
-			    Assert.Equal(20, files.Select(x => x.Name).Distinct().Count());
-		    }
-	    }
+                Assert.Equal(20, files.Count);
+                Assert.Equal(20, files.Select(x => x.Name).Distinct().Count());
+            }
+        }
 
-		[Fact]
-	    public async Task CanSearchByNumericMetadataFields()
-	    {
-			using (var store = NewStore())
-			{
-				using (var session = store.OpenAsyncSession())
-				{
-					var metadata = new RavenJObject();
+        [Fact]
+        public async Task CanSearchByNumericMetadataFields()
+        {
+            using (var store = NewStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var metadata = new RavenJObject();
 
-					metadata.Add("int", 5);
-					metadata.Add("long", 5L);
-					metadata.Add("float", 5.0f);
-					metadata.Add("double", 5.0);
+                    metadata.Add("int", 5);
+                    metadata.Add("long", 5L);
+                    metadata.Add("float", 5.0f);
+                    metadata.Add("double", 5.0);
 
-					metadata.Add("uint", 5u);
-					metadata.Add("ulong", 5UL);
-					metadata.Add("short", (short) 5);
-					metadata.Add("ushort", (ushort) 5);
-					metadata.Add("decimal", 5m);
+                    metadata.Add("uint", 5u);
+                    metadata.Add("ulong", 5UL);
+                    metadata.Add("short", (short) 5);
+                    metadata.Add("ushort", (ushort) 5);
+                    metadata.Add("decimal", 5m);
 
-					session.RegisterUpload("test-1.file", CreateRandomFileStream(10), metadata);
+                    session.RegisterUpload("test-1.file", CreateRandomFileStream(10), metadata);
 
-					var metadata2 = new RavenJObject();
+                    var metadata2 = new RavenJObject();
 
-					metadata2.Add("int", 10);
-					metadata2.Add("long", 10L);
-					metadata2.Add("float", 10.0f);
-					metadata2.Add("double", 10.0);
+                    metadata2.Add("int", 10);
+                    metadata2.Add("long", 10L);
+                    metadata2.Add("float", 10.0f);
+                    metadata2.Add("double", 10.0);
 
-					metadata2.Add("uint", 10u);
-					metadata2.Add("ulong", 10UL);
-					metadata2.Add("short", (short) 10);
-					metadata2.Add("ushort", (ushort) 10);
-					metadata2.Add("decimal", 10m);
+                    metadata2.Add("uint", 10u);
+                    metadata2.Add("ulong", 10UL);
+                    metadata2.Add("short", (short) 10);
+                    metadata2.Add("ushort", (ushort) 10);
+                    metadata2.Add("decimal", 10m);
 
-					session.RegisterUpload("test-2.file", CreateRandomFileStream(10), metadata2);
+                    session.RegisterUpload("test-2.file", CreateRandomFileStream(10), metadata2);
 
-					await session.SaveChangesAsync();
-				}
+                    await session.SaveChangesAsync();
+                }
 
-				var metadataKeys = new[]
-				{
-					"int", "long", "float", "double", "uint", "ulong", "short", "ushort", "decimal"
-				};
+                var metadataKeys = new[]
+                {
+                    "int", "long", "float", "double", "uint", "ulong", "short", "ushort", "decimal"
+                };
 
-				foreach (var key in metadataKeys)
-				{
-					using (var session = store.OpenAsyncSession())
-					{
-						Assert.Equal(1, (await session.Query().WhereEquals(key, 5).ToListAsync()).Count);
-						Assert.Equal(1, (await session.Query().WhereGreaterThan(key, 5).ToListAsync()).Count);
-						Assert.Equal(2, (await session.Query().WhereGreaterThanOrEqual(key, 5).ToListAsync()).Count);
-						Assert.Equal(1, (await session.Query().WhereLessThan(key, 10).ToListAsync()).Count);
-						Assert.Equal(2, (await session.Query().WhereLessThanOrEqual(key, 10).ToListAsync()).Count);
-						Assert.Equal(0, (await session.Query().WhereBetween(key, 5, 10).ToListAsync()).Count);
-						Assert.Equal(1, (await session.Query().WhereBetween(key, 0, 10).ToListAsync()).Count);
-						Assert.Equal(1, (await session.Query().WhereBetween(key, 5, 20).ToListAsync()).Count);
-						Assert.Equal(2, (await session.Query().WhereBetweenOrEqual(key, 5, 10).ToListAsync()).Count);
-					}
-				}
-			}
-		}
-	}
+                foreach (var key in metadataKeys)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        Assert.Equal(1, (await session.Query().WhereEquals(key, 5).ToListAsync()).Count);
+                        Assert.Equal(1, (await session.Query().WhereGreaterThan(key, 5).ToListAsync()).Count);
+                        Assert.Equal(2, (await session.Query().WhereGreaterThanOrEqual(key, 5).ToListAsync()).Count);
+                        Assert.Equal(1, (await session.Query().WhereLessThan(key, 10).ToListAsync()).Count);
+                        Assert.Equal(2, (await session.Query().WhereLessThanOrEqual(key, 10).ToListAsync()).Count);
+                        Assert.Equal(0, (await session.Query().WhereBetween(key, 5, 10).ToListAsync()).Count);
+                        Assert.Equal(1, (await session.Query().WhereBetween(key, 0, 10).ToListAsync()).Count);
+                        Assert.Equal(1, (await session.Query().WhereBetween(key, 5, 20).ToListAsync()).Count);
+                        Assert.Equal(2, (await session.Query().WhereBetweenOrEqual(key, 5, 10).ToListAsync()).Count);
+                    }
+                }
+            }
+        }
+    }
 }

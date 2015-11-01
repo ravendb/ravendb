@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
@@ -16,7 +16,7 @@ namespace Raven.Tests.FileSystem.ClientApi
     public class FileSessionListenersTests : RavenFilesTestWithLogs
     {
         [Fact]
-		public async Task DoNotDeleteReadOnlyFiles()
+        public async Task DoNotDeleteReadOnlyFiles()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -49,7 +49,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task NoOpDeleteListener()
+        public async Task NoOpDeleteListener()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -78,7 +78,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task MultipleDeleteListeners()
+        public async Task MultipleDeleteListeners()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -165,9 +165,9 @@ namespace Raven.Tests.FileSystem.ClientApi
                 sessionDestination2.RegisterUpload(filename, CreateUniformFileStream(firstStreamSize));
                 await sessionDestination2.SaveChangesAsync();
 
-				await sessionDestination1.Commands.Synchronization.StartAsync();
-				
-				sessionDestination1.RegisterUpload(filename, CreateUniformFileStream(secondStreamSize));
+                await sessionDestination1.Commands.Synchronization.StartAsync();
+                
+                sessionDestination1.RegisterUpload(filename, CreateUniformFileStream(secondStreamSize));
                 await sessionDestination1.SaveChangesAsync();
 
                 var file = await sessionDestination1.LoadFileAsync(filename);
@@ -198,7 +198,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task MultipleConflictListeners_OnlyOneWithShortCircuitResolution()
+        public async Task MultipleConflictListeners_OnlyOneWithShortCircuitResolution()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -234,7 +234,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task MultipleConflictListeners_MultipleResolutionListeners()
+        public async Task MultipleConflictListeners_MultipleResolutionListeners()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -271,7 +271,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task MultipleConflictListeners_ConflictNotResolved()
+        public async Task MultipleConflictListeners_ConflictNotResolved()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -320,7 +320,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Fact]
-		public async Task MetadataUpdateListeners()
+        public async Task MetadataUpdateListeners()
         {
             var store = this.NewStore(1);
             var anotherStore = this.NewStore(2);
@@ -485,16 +485,16 @@ namespace Raven.Tests.FileSystem.ClientApi
 
         private async Task<Task<ConflictNotification>> WaitForConflictResolved(IFilesStore store, int notificationsNumber, int time)
         {
-	        var changes = store.Changes();
-	        await changes.Task;
-	        var conflicts = changes.ForConflicts();
-	        await conflicts.Task;
-	        return conflicts
-		        .OfType<ConflictNotification>()
-		        .Where(x => x.Status == ConflictStatus.Resolved)
-		        .Timeout(TimeSpan.FromSeconds(time))
-		        .Take(notificationsNumber)
-		        .ToTask();
+            var changes = store.Changes();
+            await changes.Task;
+            var conflicts = changes.ForConflicts();
+            await conflicts.Task;
+            return conflicts
+                .OfType<ConflictNotification>()
+                .Where(x => x.Status == ConflictStatus.Resolved)
+                .Timeout(TimeSpan.FromSeconds(time))
+                .Take(notificationsNumber)
+                .ToTask();
         }
 
         private Task<ConflictNotification> WaitForConflictDetected(IFilesStore store, int notificationsNumber, int time)

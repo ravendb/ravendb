@@ -1,4 +1,4 @@
-﻿/// <reference path="../../../../Scripts/typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
+/// <reference path="../../../../Scripts/typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
 
 import app = require("durandal/app");
 
@@ -114,7 +114,7 @@ class visualizer extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         var that = this;
         this.createKeyboardShortcut("esc", () => that.tooltipClose(), "body");
 

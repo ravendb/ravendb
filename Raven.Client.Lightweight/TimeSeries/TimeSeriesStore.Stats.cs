@@ -8,45 +8,45 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Client.TimeSeries
 {
-	public partial class TimeSeriesStore
-	{
-		public async Task<TimeSeriesStats> GetStatsAsync(CancellationToken token = default (CancellationToken))
-		{
-			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
-			var requestUriString = String.Format("{0}ts/{1}/stats", Url, Name);
+    public partial class TimeSeriesStore
+    {
+        public async Task<TimeSeriesStats> GetStatsAsync(CancellationToken token = default (CancellationToken))
+        {
+            AssertInitialized();
+            await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
+            var requestUriString = String.Format("{0}ts/{1}/stats", Url, Name);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<TimeSeriesStats>(JsonSerializer);
-			}
-		}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+            {
+                var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return response.ToObject<TimeSeriesStats>(JsonSerializer);
+            }
+        }
 
-		public async Task<TimeSeriesMetrics> GetTimeSeriesMetricsAsync(CancellationToken token = default (CancellationToken))
-		{
-			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
-			var requestUriString = String.Format("{0}ts/{1}/metrics", Url, Name);
+        public async Task<TimeSeriesMetrics> GetTimeSeriesMetricsAsync(CancellationToken token = default (CancellationToken))
+        {
+            AssertInitialized();
+            await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
+            var requestUriString = String.Format("{0}ts/{1}/metrics", Url, Name);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<TimeSeriesMetrics>(JsonSerializer);
-			}
-		}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+            {
+                var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return response.ToObject<TimeSeriesMetrics>(JsonSerializer);
+            }
+        }
 
-		public async Task<List<TimeSeriesReplicationStats>> GetTimeSeriesReplicationStatsAsync(CancellationToken token = default (CancellationToken))
-		{
-			AssertInitialized();
-			await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
-			var requestUriString = String.Format("{0}ts/{1}/replications/stats", Url, Name);
+        public async Task<List<TimeSeriesReplicationStats>> GetTimeSeriesReplicationStatsAsync(CancellationToken token = default (CancellationToken))
+        {
+            AssertInitialized();
+            await ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false); 
+            var requestUriString = String.Format("{0}ts/{1}/replications/stats", Url, Name);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<List<TimeSeriesReplicationStats>>(JsonSerializer);
-			}
-		}
-	}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+            {
+                var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return response.ToObject<List<TimeSeriesReplicationStats>>(JsonSerializer);
+            }
+        }
+    }
 }

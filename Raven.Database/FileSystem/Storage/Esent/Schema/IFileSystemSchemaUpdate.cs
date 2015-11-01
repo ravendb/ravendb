@@ -10,11 +10,11 @@ using Raven.Database.Config;
 
 namespace Raven.Database.FileSystem.Storage.Esent.Schema
 {
-	[InheritedExport]
-	public interface IFileSystemSchemaUpdate
-	{
-		string FromSchemaVersion { get;  }
-	    void Init(InMemoryRavenConfiguration configuration);
-		void Update(Session session, JET_DBID dbid, Action<string> output);
-	}
+    [InheritedExport]
+    public interface IFileSystemSchemaUpdate
+    {
+        string FromSchemaVersion { get;  }
+        void Init(InMemoryRavenConfiguration configuration);
+        void Update(Session session, JET_DBID dbid, Action<string> output);
+    }
 }

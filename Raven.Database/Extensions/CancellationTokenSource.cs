@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CancellationTokenSource.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,20 +9,20 @@ using System.Threading;
 
 namespace Raven.Database.Extensions
 {
-	public static class CancellationTokenSourceExtensions
-	{
-		public static CancellationTimeout TimeoutAfter(this CancellationTokenSource cts, TimeSpan dueTime)
-		{
-			return new CancellationTimeout(cts, dueTime);
-		}
-	}
+    public static class CancellationTokenSourceExtensions
+    {
+        public static CancellationTimeout TimeoutAfter(this CancellationTokenSource cts, TimeSpan dueTime)
+        {
+            return new CancellationTimeout(cts, dueTime);
+        }
+    }
 
     public class CancellationTimeout : IDisposable
     {
-		public CancellationTokenSource CancellationTokenSource { get; private set; }
+        public CancellationTokenSource CancellationTokenSource { get; private set; }
         private readonly Timer timer;
         private readonly long dueTime;
-		private readonly object locker = new object();
+        private readonly object locker = new object();
         private volatile bool isTimerDisposed;
         private Stopwatch sp  = Stopwatch.StartNew();
 
@@ -41,87 +41,87 @@ namespace Raven.Database.Extensions
             isTimerDisposed = false;
             CancellationTokenSource = cancellationTokenSource;
             this.dueTime = (long)dueTime.TotalMilliseconds;
-			timer = new Timer(self =>
-			{
-				var source = self as CancellationTokenSource;
-				if (source == null)
-					return;
+            timer = new Timer(self =>
+            {
+                var source = self as CancellationTokenSource;
+                if (source == null)
+                    return;
 
-				try
-				{
-					source.Cancel();
-				}
-				catch (ObjectDisposedException)
-				{
-				}
-			}, cancellationTokenSource, this.dueTime, -1);
+                try
+                {
+                    source.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }, cancellationTokenSource, this.dueTime, -1);
         }
 
-	    ~CancellationTimeout()
-	    {
-			DisposeInternal();
-	    }
-
-	    public void Delay()
+        ~CancellationTimeout()
         {
-			if (isTimerDisposed)
-				return;
+            DisposeInternal();
+        }
 
-	        if (sp.ElapsedMilliseconds < 500)
-	            return;
+        public void Delay()
+        {
+            if (isTimerDisposed)
+                return;
 
-	        lock (locker)
-	        {
-		        if (isTimerDisposed) 
-					return;
+            if (sp.ElapsedMilliseconds < 500)
+                return;
+
+            lock (locker)
+            {
+                if (isTimerDisposed) 
+                    return;
                 if (sp.ElapsedMilliseconds < 500)
                     return;
 
                 sp.Restart();
                 timer.Change(dueTime, -1);
-	        }
+            }
         }
 
-		public void Pause()
-		{
-			if (isTimerDisposed)
-				return;
+        public void Pause()
+        {
+            if (isTimerDisposed)
+                return;
 
-			lock (locker)
-			{
-				if (isTimerDisposed)
-					return;
+            lock (locker)
+            {
+                if (isTimerDisposed)
+                    return;
 
-				timer.Change(Timeout.Infinite, Timeout.Infinite);
-			}	
-		}
+                timer.Change(Timeout.Infinite, Timeout.Infinite);
+            }	
+        }
 
-		public void Resume()
-		{
-			Delay();
-		}
+        public void Resume()
+        {
+            Delay();
+        }
 
         public void Dispose()
         {
-			GC.SuppressFinalize(this);
-	        DisposeInternal();
+            GC.SuppressFinalize(this);
+            DisposeInternal();
         }
 
-		private void DisposeInternal()
-		{
-			if (isTimerDisposed)
-				return;
+        private void DisposeInternal()
+        {
+            if (isTimerDisposed)
+                return;
 
-			lock (locker)
-			{
-				if (isTimerDisposed)
-					return;
+            lock (locker)
+            {
+                if (isTimerDisposed)
+                    return;
 
-				isTimerDisposed = true;
-			}
+                isTimerDisposed = true;
+            }
 
-			if (timer != null)
-				timer.Dispose();
-		}
+            if (timer != null)
+                timer.Dispose();
+        }
     }
 }

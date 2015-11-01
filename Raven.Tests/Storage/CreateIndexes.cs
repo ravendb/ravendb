@@ -14,93 +14,93 @@ using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-	public class CreateIndexes : RavenTest
-	{
-		private readonly EmbeddableDocumentStore store;
-		private readonly DocumentDatabase db;
+    public class CreateIndexes : RavenTest
+    {
+        private readonly EmbeddableDocumentStore store;
+        private readonly DocumentDatabase db;
 
-		public CreateIndexes()
-		{
-			store = NewDocumentStore();
-			db = store.SystemDatabase;
-		}
+        public CreateIndexes()
+        {
+            store = NewDocumentStore();
+            db = store.SystemDatabase;
+        }
 
-		public override void Dispose()
-		{
-			store.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            store.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void Index_with_same_name_can_be_added_twice()
-		{
-			db.Indexes.PutIndex("pagesByTitle",
-						new IndexDefinition
-						{
-							Map = @"
-	from doc in docs
-	where doc.type == ""page""
-	select new { Key = doc.title, Value = doc.content, Size = doc.size };
+        [Fact]
+        public void Index_with_same_name_can_be_added_twice()
+        {
+            db.Indexes.PutIndex("pagesByTitle",
+                        new IndexDefinition
+                        {
+                            Map = @"
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
-						});
+                        });
 
-			db.Indexes.PutIndex("pagesByTitle",
-						new IndexDefinition
-						{
-							Map = @"
-	from doc in docs
-	where doc.type == ""page""
-	select new { Key = doc.title, Value = doc.content, Size = doc.size };
+            db.Indexes.PutIndex("pagesByTitle",
+                        new IndexDefinition
+                        {
+                            Map = @"
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
-						});
-		}
+                        });
+        }
 
-		[Fact]
-		public void Can_add_index()
-		{
-			db.Indexes.PutIndex("pagesByTitle",
-			            new IndexDefinition
-			            {
-							Map = @"
-	from doc in docs
-	where doc.type == ""page""
-	select new { Key = doc.title, Value = doc.content, Size = doc.size };
+        [Fact]
+        public void Can_add_index()
+        {
+            db.Indexes.PutIndex("pagesByTitle",
+                        new IndexDefinition
+                        {
+                            Map = @"
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 "
-			            });
-			var indexNames = db.IndexDefinitionStorage.IndexNames.Where(x=>x.StartsWith("Raven") == false).ToArray();
-			Assert.Equal(1, indexNames.Length);
-			Assert.Equal("pagesByTitle", indexNames[0]);
-		}
+                        });
+            var indexNames = db.IndexDefinitionStorage.IndexNames.Where(x=>x.StartsWith("Raven") == false).ToArray();
+            Assert.Equal(1, indexNames.Length);
+            Assert.Equal("pagesByTitle", indexNames[0]);
+        }
 
-		[Fact]
-		public void Index_names_should_be_sorted_alphabetically()
-		{
-			const string unimportantIndexMap = @"from doc in docs select new { doc };";
-			db.Indexes.PutIndex("zebra", new IndexDefinition { Map = unimportantIndexMap });
-			db.Indexes.PutIndex("alligator", new IndexDefinition { Map = unimportantIndexMap });
-			db.Indexes.PutIndex("monkey", new IndexDefinition { Map = unimportantIndexMap });
+        [Fact]
+        public void Index_names_should_be_sorted_alphabetically()
+        {
+            const string unimportantIndexMap = @"from doc in docs select new { doc };";
+            db.Indexes.PutIndex("zebra", new IndexDefinition { Map = unimportantIndexMap });
+            db.Indexes.PutIndex("alligator", new IndexDefinition { Map = unimportantIndexMap });
+            db.Indexes.PutIndex("monkey", new IndexDefinition { Map = unimportantIndexMap });
 
-			var indexNames = db.IndexDefinitionStorage.IndexNames
-				.Where(x => x.StartsWith("Raven") == false)
-				.ToArray();
+            var indexNames = db.IndexDefinitionStorage.IndexNames
+                .Where(x => x.StartsWith("Raven") == false)
+                .ToArray();
 
-			Assert.Equal("alligator", indexNames[0]);
-			Assert.Equal("monkey", indexNames[1]);
-			Assert.Equal("zebra", indexNames[2]);
-		}
+            Assert.Equal("alligator", indexNames[0]);
+            Assert.Equal("monkey", indexNames[1]);
+            Assert.Equal("zebra", indexNames[2]);
+        }
 
-		[Fact]
-		public void Can_list_index_definition()
-		{
-			const string definition =
-				@" 
-	from doc in docs
-	where doc.type == ""page""
-	select new { Key = doc.title, Value = doc.content, Size = doc.size };
+        [Fact]
+        public void Can_list_index_definition()
+        {
+            const string definition =
+                @" 
+    from doc in docs
+    where doc.type == ""page""
+    select new { Key = doc.title, Value = doc.content, Size = doc.size };
 ";
-			db.Indexes.PutIndex("pagesByTitle", new IndexDefinition{Map = definition});
-			var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
-			Assert.Equal(definition, actualDefinition.Map);
-		}
-	}
+            db.Indexes.PutIndex("pagesByTitle", new IndexDefinition{Map = definition});
+            var actualDefinition = db.IndexDefinitionStorage.GetIndexDefinition("pagesByTitle");
+            Assert.Equal(definition, actualDefinition.Map);
+        }
+    }
 }

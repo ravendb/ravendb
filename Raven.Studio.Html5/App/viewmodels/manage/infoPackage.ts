@@ -80,7 +80,14 @@ class infoPackage extends viewModelBase {
     infoPackage = ko.observable<any>();
     infoPackageFilename = ko.observable<string>();
     fetchException = ko.observable<string>();
+    fetchExceptionDetails = ko.observable<string>();
+    showMoreDetails = ko.observable<boolean>(false);
     showLoadingIndicator = ko.observable(false);
+    showMoreDetailsButton = ko.computed(() => {
+        var hasDetails = !!this.fetchExceptionDetails();
+        var detailsDisplayed = this.showMoreDetails();
+        return hasDetails && !detailsDisplayed;
+    })
     private stacksJson = ko.observable<stackInfo[]>(null);
 
     hasFetchException = ko.computed(() => !!this.fetchException());
@@ -108,7 +115,7 @@ class infoPackage extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.updateHelpLink('KVLC4Y');
         var self = this;
         $("#stacksContainer").resize();
@@ -368,11 +375,14 @@ class infoPackage extends viewModelBase {
     }
 
     packageCreated(stacksJson) {
+        this.showMoreDetails(false);
         if ('Error' in stacksJson) {
             this.fetchException('Unable to fetch info package: ' + stacksJson.Error);
+            this.fetchExceptionDetails(stacksJson.Details);
             return;
         } else {
             this.fetchException(null);
+            this.fetchExceptionDetails(null);
         }
         this.stacksJson(stacksJson);
         var collatedStacks = this.splitAndCollateStacks(stacksJson);
@@ -424,6 +434,11 @@ class infoPackage extends viewModelBase {
          
         app.showDialog(dialog);
     }
+
+    moreDetails() {
+        this.showMoreDetails(true);
+    }
+    
 
     static stacksCss = "* { box-sizing: border-box; }\n" +
         " svg text { font-style: normal; font-variant: normal; font-weight: normal; font-size: 12px; line-height: normal; font-family: Arial; }\n" +

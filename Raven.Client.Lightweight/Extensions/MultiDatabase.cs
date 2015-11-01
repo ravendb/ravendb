@@ -23,52 +23,52 @@ namespace Raven.Client.Extensions
             {
                 Id = "Raven/Databases/" + name,
                 Settings =
-				{
-					{"Raven/DataDir", Path.Combine("~", name)},
-				}
+                {
+                    {"Raven/DataDir", Path.Combine("~", name)},
+                }
             };
         }
         public static FileSystemDocument CreateFileSystemDocument(string name)
         {
             AssertValidName(name);
 
-			return new FileSystemDocument
+            return new FileSystemDocument
             {
-				Id = Constants.FileSystem.Prefix + name,
+                Id = Constants.FileSystem.Prefix + name,
                 Settings =
-				{
-					{Constants.FileSystem.DataDirectory, Path.Combine("~", "FileSystems", name) },
-				}
+                {
+                    {Constants.FileSystem.DataDirectory, Path.Combine("~", "FileSystems", name) },
+                }
             };
         }
 
-		public static TimeSeriesDocument CreateTimeSeriesDocument(string name)
-		{
-			AssertValidName(name);
+        public static TimeSeriesDocument CreateTimeSeriesDocument(string name)
+        {
+            AssertValidName(name);
 
-			return new TimeSeriesDocument
-			{
-				Id = Constants.TimeSeries.Prefix + name,
-				Settings =
-				{
-					{Constants.TimeSeries.DataDirectory, Path.Combine("~", "TimeSeries", name)},
-				}
-			};
-		}
+            return new TimeSeriesDocument
+            {
+                Id = Constants.TimeSeries.Prefix + name,
+                Settings =
+                {
+                    {Constants.TimeSeries.DataDirectory, Path.Combine("~", "TimeSeries", name)},
+                }
+            };
+        }
 
-		public static CounterStorageDocument CreateCounterStorageDocument(string name)
-		{
-			AssertValidName(name);
+        public static CounterStorageDocument CreateCounterStorageDocument(string name)
+        {
+            AssertValidName(name);
 
-			return new CounterStorageDocument
-			{
-				Id = Constants.Counter.Prefix + name,
-				Settings =
-				{
-					{Constants.Counter.DataDirectory, Path.Combine("~", "Counters", name)},
-				}
-			};
-		}
+            return new CounterStorageDocument
+            {
+                Id = Constants.Counter.Prefix + name,
+                Settings =
+                {
+                    {Constants.Counter.DataDirectory, Path.Combine("~", "Counters", name)},
+                }
+            };
+        }
 
         private const string ValidDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 
@@ -105,7 +105,7 @@ namespace Raven.Client.Extensions
         public static string GetRootDatabaseUrl(string url)
         {
             var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+            var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
             if (indexOfDatabases != -1)
                 databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
             if (databaseUrl.EndsWith("/"))
@@ -113,16 +113,16 @@ namespace Raven.Client.Extensions
             return databaseUrl;
         }
 
-		public static string GetRootFileSystemUrl(string url)
-		{
-			var fileSystemUrl = url;
-			var indexOfDatabases = fileSystemUrl.IndexOf("/fs/", StringComparison.OrdinalIgnoreCase);
-			if (indexOfDatabases != -1)
-				fileSystemUrl = fileSystemUrl.Substring(0, indexOfDatabases);
-			if (fileSystemUrl.EndsWith("/"))
-				return fileSystemUrl.Substring(0, fileSystemUrl.Length - 1);
-			return fileSystemUrl;
-		}
+        public static string GetRootFileSystemUrl(string url)
+        {
+            var fileSystemUrl = url;
+            var indexOfDatabases = fileSystemUrl.IndexOf("/fs/", StringComparison.OrdinalIgnoreCase);
+            if (indexOfDatabases != -1)
+                fileSystemUrl = fileSystemUrl.Substring(0, indexOfDatabases);
+            if (fileSystemUrl.EndsWith("/"))
+                return fileSystemUrl.Substring(0, fileSystemUrl.Length - 1);
+            return fileSystemUrl;
+        }
 
         public static string GetDatabaseName(string url)
         {
@@ -130,7 +130,7 @@ namespace Raven.Client.Extensions
                 return null;
 
             var databaseUrl = url;
-			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+            var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
             if (indexOfDatabases != -1)
             {
                 databaseUrl = databaseUrl.Substring(indexOfDatabases + "/databases/".Length);

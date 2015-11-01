@@ -1,4 +1,4 @@
-﻿import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
+import timeSeriesPoint = require("models/timeSeries/timeSeriesPoint");
 
 class pointChange {
     type = ko.observable<string>("");
@@ -52,8 +52,8 @@ class pointChange {
     }
 
     private isNumber(num: any): boolean {
-	    if (num < 0)
-		    return true;
+        if (num < 0)
+            return true;
 
         var n1 = Math.abs(num);
         var n2 = parseInt(num, 10);

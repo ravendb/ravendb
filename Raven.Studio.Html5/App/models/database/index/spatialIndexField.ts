@@ -114,7 +114,7 @@ class spatialIndexField {
             var earthMeanRadiusKm = 6371.0087714;
             var milesToKm = 1.60934;
 
-			var factor = (earthMeanRadiusKm * Math.PI * 2) / 360;
+            var factor = (earthMeanRadiusKm * Math.PI * 2) / 360;
             x = x * factor;
             y = y * factor;
             if (units === "Miles") {

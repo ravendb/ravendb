@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import versioningEntry = require("models/database/documents/versioningEntry");
 import appUrl = require("common/appUrl");
 import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
@@ -115,8 +115,8 @@ class globalConfigVersioning extends viewModelBase {
             Id: "DefaultConfiguration",
             MaxRevisions: 5,
             Exclude: false,
-			ExcludeUnlessExplicit: false,
-			PurgeOnDelete: false
+            ExcludeUnlessExplicit: false,
+            PurgeOnDelete: false
         });
         entry.fromDatabase(true);
 

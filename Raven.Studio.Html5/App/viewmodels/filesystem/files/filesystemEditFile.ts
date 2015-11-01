@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import filesystem = require("models/filesystem/filesystem");
@@ -13,7 +13,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 
 class filesystemEditFile extends viewModelBase {
 
-	metadataEditor: AceAjax.Editor;
+    metadataEditor: AceAjax.Editor;
     fileName = ko.observable<string>();
     file = ko.observable<file>();
     filesystemForEditedFile: filesystem;
@@ -29,7 +29,7 @@ class filesystemEditFile extends viewModelBase {
 
     constructor() {
         super();
-	    aceEditorBindingHandler.install();
+        aceEditorBindingHandler.install();
         this.fileName.subscribe(x => this.loadFile(x));
     }
 
@@ -46,11 +46,11 @@ class filesystemEditFile extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.setupKeyboardShortcuts();
     }
 
-	compositionComplete() {
+    compositionComplete() {
         super.compositionComplete();
 
         var editorElement = $("#fileMetadataEditor");
@@ -120,22 +120,22 @@ class filesystemEditFile extends viewModelBase {
     }
 
     renameFile() {
-	    var currentFileName = this.fileName();
+        var currentFileName = this.fileName();
         var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
         dialog.onExit().done((newName: string) => {
-	        this.removeFromTopRecentFiles(currentFileName);
+            this.removeFromTopRecentFiles(currentFileName);
             router.navigate(appUrl.forEditFile(newName, this.activeFilesystem()));
         });
         app.showDialog(dialog);
     }
 
-	removeFromTopRecentFiles(fileName: string) {
-		var currentFilesystemName = this.activeFilesystem().name;
+    removeFromTopRecentFiles(fileName: string) {
+        var currentFilesystemName = this.activeFilesystem().name;
         var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
-		if (recentFilesForCurFilesystem) {
-			recentFilesForCurFilesystem.recentFiles.remove(fileName);
-		}
-	}
+        if (recentFilesForCurFilesystem) {
+            recentFilesForCurFilesystem.recentFiles.remove(fileName);
+        }
+    }
 
     getTopRecentFiles() {
         var currentFilesystemName = this.activeFilesystem().name;

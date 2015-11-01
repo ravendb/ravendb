@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 
 class saveClusterConfigurationCommand extends commandBase {
@@ -15,8 +15,8 @@ class saveClusterConfigurationCommand extends commandBase {
     }
 
     private saveSetup(): JQueryPromise<any> {
-		var putArgs = JSON.stringify(this.dto);
-		return this.put("/admin/cluster/commands/configuration", putArgs, this.db, { dataType: undefined });
+        var putArgs = JSON.stringify(this.dto);
+        return this.put("/admin/cluster/commands/configuration", putArgs, this.db, { dataType: undefined });
     }
 }
 

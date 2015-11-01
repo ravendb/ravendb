@@ -1,4 +1,4 @@
-﻿
+
 #if NET20
 
 #region License, Terms and Author(s)

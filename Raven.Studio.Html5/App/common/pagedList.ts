@@ -126,11 +126,11 @@ class pagedList {
         return this.items && this.items.length > 0 && this.items[0] && this.items[0].getId && this.items[0].getId();
     }
 
-	getItem(i: number) {
-		if (i > this.items.length - 1)
-			return null;
-		return this.items[0];
-	}
+    getItem(i: number) {
+        if (i > this.items.length - 1)
+            return null;
+        return this.items[0];
+    }
 }
 
 export = pagedList;

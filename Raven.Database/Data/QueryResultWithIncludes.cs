@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="QueryResultWithIncludes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,9 +9,9 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Data
 {
-	public class QueryResultWithIncludes : QueryResult
-	{
-		[JsonIgnore]
-		public HashSet<string> IdsToInclude { get; set; }
-	}
+    public class QueryResultWithIncludes : QueryResult
+    {
+        [JsonIgnore]
+        public HashSet<string> IdsToInclude { get; set; }
+    }
 }

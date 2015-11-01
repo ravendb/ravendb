@@ -1,4 +1,4 @@
-﻿import composition = require("durandal/composition");
+import composition = require("durandal/composition");
 
 /*
  * A KnockoutJS binding handler that transforms a div into the auto-complete items container for a text box.
@@ -90,13 +90,13 @@ class autoCompleteBindingHandler {
 
     handleKeyPress(element: HTMLElement, $element: JQuery, $input: JQuery, args: JQueryEventObject) {
         var enter = 13;
-		var escape = 27;
+        var escape = 27;
         var downArrow = 40;
         var upArrow = 38;
 
-	    if (args.which === escape) {
-		    element.style.display = "none";
-	    }
+        if (args.which === escape) {
+            element.style.display = "none";
+        }
 
         var lis: JQuery, curSelected: JQuery;
         if (element.style.display == "none" && args.which === downArrow) {
@@ -118,10 +118,10 @@ class autoCompleteBindingHandler {
 
                 if (nextSelected.length) {
                     nextSelected.addClass("active");
-	                $element.scrollTop((nextSelected.index() - 1) * 30);
+                    $element.scrollTop((nextSelected.index() - 1) * 30);
                 } else {
                     lis.first().addClass("active");
-					$element.scrollTop(0);
+                    $element.scrollTop(0);
                 }
 
             } else {
@@ -134,10 +134,10 @@ class autoCompleteBindingHandler {
 
                 if (prevSelected.length) {
                     prevSelected.addClass("active");
-					$element.scrollTop((prevSelected.index() - 1) * 30);
+                    $element.scrollTop((prevSelected.index() - 1) * 30);
                 } else {
                     lis.last().addClass("active");
-					$element.scrollTop($element.children("li").length * 30);
+                    $element.scrollTop($element.children("li").length * 30);
                 }
 
             } else {

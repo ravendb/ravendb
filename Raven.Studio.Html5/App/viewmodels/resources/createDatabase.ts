@@ -32,14 +32,14 @@ class createDatabase extends createResourceBase {
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
 
-	customBundles = ko.observableArray<string>();
-	selectedCustomBundles = ko.observableArray<string>([]);
+    customBundles = ko.observableArray<string>();
+    selectedCustomBundles = ko.observableArray<string>([]);
 
-	replicationBundleChangeDisabled = ko.computed(() => {
-		var clusterMode = shell.clusterMode();
-		var clusterWide = this.isClusterWideChecked();
-		return clusterMode && clusterWide;
-	});
+    replicationBundleChangeDisabled = ko.computed(() => {
+        var clusterMode = shell.clusterMode();
+        var clusterWide = this.isClusterWideChecked();
+        return clusterMode && clusterWide;
+    });
 
     constructor(parent: dialogViewModelBase) {
         super(shell.databases, parent);
@@ -48,9 +48,9 @@ class createDatabase extends createResourceBase {
             this.isPeriodicExportBundleEnabled(false);
         }
 
-		if (shell.clusterMode()) {
-			this.isReplicationBundleEnabled(true);
-		}
+        if (shell.clusterMode()) {
+            this.isReplicationBundleEnabled(true);
+        }
 
         this.indexesCustomValidityError = ko.computed(() => {
             var newPath = this.databaseIndexesPath();
@@ -58,8 +58,8 @@ class createDatabase extends createResourceBase {
             return errorMessage;
         });
 
-		this.fetchCustomBundles();
-	    this.fetchAllowVoron();
+        this.fetchCustomBundles();
+        this.fetchAllowVoron();
 
         this.fetchClusterWideConfig();
     }
@@ -72,21 +72,21 @@ class createDatabase extends createResourceBase {
             });
     }
 
-	fetchCustomBundles() {
-		new getPluginsInfoCommand(appUrl.getSystemDatabase())
-			.execute()
-			.done((result: pluginsInfoDto) => {
-			this.customBundles(result.CustomBundles);
-		});
-	}
+    fetchCustomBundles() {
+        new getPluginsInfoCommand(appUrl.getSystemDatabase())
+            .execute()
+            .done((result: pluginsInfoDto) => {
+            this.customBundles(result.CustomBundles);
+        });
+    }
 
-	fetchAllowVoron() {
-		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
-			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
-		).done((stats: Array<databaseStatisticsDto>, config: any) => {
-			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
-		});
-	}
+    fetchAllowVoron() {
+        $.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+            new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+        ).done((stats: Array<databaseStatisticsDto>, config: any) => {
+            this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
+        });
+    }
 
     nextOrCreate() {
         this.creationTaskStarted = true;
@@ -142,17 +142,17 @@ class createDatabase extends createResourceBase {
         this.isScriptedIndexBundleEnabled.toggle();
     }
 
-	toggleCustomBundle(name: string) {
-		if (this.selectedCustomBundles.contains(name)) {
-			this.selectedCustomBundles.remove(name);
-		} else {
-			this.selectedCustomBundles.push(name);
-		}
-	}
+    toggleCustomBundle(name: string) {
+        if (this.selectedCustomBundles.contains(name)) {
+            this.selectedCustomBundles.remove(name);
+        } else {
+            this.selectedCustomBundles.push(name);
+        }
+    }
 
-	isCustomBundleEnabled(name: string) {
-		return this.selectedCustomBundles().contains(name);
-	}
+    isCustomBundleEnabled(name: string) {
+        return this.selectedCustomBundles().contains(name);
+    }
 
     private getActiveBundles(): string[] {
         var activeBundles: string[] = [];
@@ -192,7 +192,7 @@ class createDatabase extends createResourceBase {
             activeBundles.push("ScriptedIndexResults");
         }
 
-	    activeBundles.pushAll(this.selectedCustomBundles());
+        activeBundles.pushAll(this.selectedCustomBundles());
 
         return activeBundles;
     }

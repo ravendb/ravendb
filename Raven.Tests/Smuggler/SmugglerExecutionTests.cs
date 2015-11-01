@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -340,7 +340,7 @@ namespace Raven.Tests.Smuggler
                 store.DatabaseCommands.Delete(userId, null);
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -442,7 +442,7 @@ namespace Raven.Tests.Smuggler
 
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-				WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -594,7 +594,7 @@ namespace Raven.Tests.Smuggler
                 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                     servers[0].SystemDatabase.ServerUrl +
                                                                     "admin/periodicExport/purge-tombstones?docEtag=" + documentEtagAfterFirstDelete + "&attachmentEtag=" + attachmentEtagAfterFirstDelete,
-																	HttpMethods.Post,
+                                                                    HttpMethods.Post,
                                                                     new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                     store.Conventions);
 
@@ -695,10 +695,10 @@ namespace Raven.Tests.Smuggler
             using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
             {
                 new RavenJObject
-					{
-						{"LastDocEtag", Etag.Parse("00000000-0000-0000-0000-000000000001").ToString()},
+                    {
+                        {"LastDocEtag", Etag.Parse("00000000-0000-0000-0000-000000000001").ToString()},
                         {"LastAttachmentEtag", Etag.Parse("00000000-0000-0000-0000-000000000002").ToString()}
-					}.WriteTo(new JsonTextWriter(streamWriter));
+                    }.WriteTo(new JsonTextWriter(streamWriter));
                 streamWriter.Flush();
             }
 
@@ -924,7 +924,7 @@ namespace Raven.Tests.Smuggler
                 var dumper = new DatabaseDataDumper(server.SystemDatabase, options: new SmugglerDatabaseOptions { BatchSize = 4321 });
                 Assert.Equal(4321, dumper.Options.BatchSize);
 
-	            await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path });
+                await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path });
 
                 Assert.Equal(1234, dumper.Options.BatchSize);
 
@@ -938,7 +938,7 @@ namespace Raven.Tests.Smuggler
                 dumper = new DatabaseDataDumper(server.SystemDatabase, options: new SmugglerDatabaseOptions { BatchSize = 1000 });
                 Assert.Equal(1000, dumper.Options.BatchSize);
 
-	            await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path });
+                await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path });
 
                 Assert.Equal(1000, dumper.Options.BatchSize);
             }
@@ -954,21 +954,21 @@ namespace Raven.Tests.Smuggler
                 var smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 4321 });
                 Assert.Equal(4321, smuggler.Options.BatchSize);
 
-	            await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
+                await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
 
                 Assert.Equal(1234, smuggler.Options.BatchSize);
 
                 smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 4321 });
                 Assert.Equal(4321, smuggler.Options.BatchSize);
 
-	            await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
+                await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
 
                 Assert.Equal(1234, smuggler.Options.BatchSize);
 
                 smuggler = new SmugglerDatabaseApi(options: new SmugglerDatabaseOptions { BatchSize = 1000 });
                 Assert.Equal(1000, smuggler.Options.BatchSize);
 
-	            await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
+                await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = server.Configuration.ServerUrl } });
 
                 Assert.Equal(1000, smuggler.Options.BatchSize);
             }

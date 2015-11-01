@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -11,83 +11,83 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class WhereInTests : RavenTest
-	{
-		[Fact]
-		public void WhereIn_using_index_notAnalyzed()
-		{
-			using (IDocumentStore documentStore = NewDocumentStore())
-			{
-				new PersonsNotAnalyzed().Execute(documentStore);
+    public class WhereInTests : RavenTest
+    {
+        [Fact]
+        public void WhereIn_using_index_notAnalyzed()
+        {
+            using (IDocumentStore documentStore = NewDocumentStore())
+            {
+                new PersonsNotAnalyzed().Execute(documentStore);
 
-				string[] names = { "Person One", "PersonTwo" };
+                string[] names = { "Person One", "PersonTwo" };
 
-				StoreObjects(new List<Person>
-				{
-					new Person {Name = names[0]},
-					new Person {Name = names[1]}
-				}, documentStore);
+                StoreObjects(new List<Person>
+                {
+                    new Person {Name = names[0]},
+                    new Person {Name = names[1]}
+                }, documentStore);
 
-				using (var session = documentStore.OpenSession())
-				{
+                using (var session = documentStore.OpenSession())
+                {
                     var query = session.Advanced.DocumentQuery<Person, PersonsNotAnalyzed>().WhereIn(p => p.Name, names);
-					Assert.Equal(2, query.ToList().Count());
-				}
-			}
-		}
+                    Assert.Equal(2, query.ToList().Count());
+                }
+            }
+        }
 
-		[Fact]
-		public void SameHash()
-		{
-			var perFieldAnalyzerComparer = new RavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();
-			Assert.Equal(perFieldAnalyzerComparer.GetHashCode("Name"), perFieldAnalyzerComparer.GetHashCode("@in<Name>"));
-			Assert.True(perFieldAnalyzerComparer.Equals("Name","@in<Name>"));
-		}
+        [Fact]
+        public void SameHash()
+        {
+            var perFieldAnalyzerComparer = new RavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();
+            Assert.Equal(perFieldAnalyzerComparer.GetHashCode("Name"), perFieldAnalyzerComparer.GetHashCode("@in<Name>"));
+            Assert.True(perFieldAnalyzerComparer.Equals("Name","@in<Name>"));
+        }
 
-		[Fact]
-		public void WhereIn_using_index_analyzed()
-		{
-			using (IDocumentStore documentStore = NewDocumentStore())
-			{
-				new PersonsAnalyzed().Execute(documentStore);
+        [Fact]
+        public void WhereIn_using_index_analyzed()
+        {
+            using (IDocumentStore documentStore = NewDocumentStore())
+            {
+                new PersonsAnalyzed().Execute(documentStore);
 
-				string[] names = { "Person One", "PersonTwo" };
+                string[] names = { "Person One", "PersonTwo" };
 
-				StoreObjects(new List<Person>
-				{
-					new Person {Name = names[0]},
-					new Person {Name = names[1]}
-				}, documentStore);
+                StoreObjects(new List<Person>
+                {
+                    new Person {Name = names[0]},
+                    new Person {Name = names[1]}
+                }, documentStore);
 
-				using (var session = documentStore.OpenSession())
-				{
+                using (var session = documentStore.OpenSession())
+                {
                     var query = session.Advanced.DocumentQuery<Person, PersonsAnalyzed>().WhereIn(p => p.Name, names);
-					Assert.Equal(2, query.ToList().Count());
-				}
-			}
-		}
+                    Assert.Equal(2, query.ToList().Count());
+                }
+            }
+        }
 
-		[Fact]
-		public void WhereIn_not_using_index()
-		{
-			using (IDocumentStore documentStore = NewDocumentStore())
-			{
+        [Fact]
+        public void WhereIn_not_using_index()
+        {
+            using (IDocumentStore documentStore = NewDocumentStore())
+            {
 
-				string[] names = { "Person One", "PersonTwo" };
+                string[] names = { "Person One", "PersonTwo" };
 
-				StoreObjects(new List<Person>
-				{
-					new Person {Name = names[0]},
-					new Person {Name = names[1]}
-				}, documentStore);
+                StoreObjects(new List<Person>
+                {
+                    new Person {Name = names[0]},
+                    new Person {Name = names[1]}
+                }, documentStore);
 
-				using (var session = documentStore.OpenSession())
-				{
+                using (var session = documentStore.OpenSession())
+                {
                     var query = session.Advanced.DocumentQuery<Person>().WhereIn(p => p.Name, names);
-					Assert.Equal(2, query.ToList().Count());
-				}
-			}
-		}
+                    Assert.Equal(2, query.ToList().Count());
+                }
+            }
+        }
 
         [Fact]
         public void Where_In_using_query_index_notAnalyzed()
@@ -99,10 +99,10 @@ namespace Raven.Tests.MailingList
                 string[] names = { "Person One", "PersonTwo" };
 
                 StoreObjects(new List<Person>
-				{
-					new Person {Name = names[0]},
-					new Person {Name = names[1]}
-				}, documentStore);
+                {
+                    new Person {Name = names[0]},
+                    new Person {Name = names[1]}
+                }, documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -122,10 +122,10 @@ namespace Raven.Tests.MailingList
                 string[] names = { "Person One", "PersonTwo" };
 
                 StoreObjects(new List<Person>
-				{
-					new Person {Name = names[0]},
-					new Person {Name = names[1]}
-				}, documentStore);
+                {
+                    new Person {Name = names[0]},
+                    new Person {Name = names[1]}
+                }, documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -143,10 +143,10 @@ namespace Raven.Tests.MailingList
                 string[] names = { "Person One", "PersonTwo" };
 
                 StoreObjects(new List<Person>
-				{
-					new Person {Name = names[0]},
-					new Person {Name = names[1]}
-				}, documentStore);
+                {
+                    new Person {Name = names[0]},
+                    new Person {Name = names[1]}
+                }, documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -156,44 +156,44 @@ namespace Raven.Tests.MailingList
             }
         }
 
-		private void StoreObjects<T>(IEnumerable<T> objects, IDocumentStore documentStore)
-		{
-			using (var session = documentStore.OpenSession())
-			{
-				foreach (var o in objects)
-				{
-					session.Store(o);
-				}
-				session.SaveChanges();
-			}
-			WaitForIndexing(documentStore);
-		}
-	}
+        private void StoreObjects<T>(IEnumerable<T> objects, IDocumentStore documentStore)
+        {
+            using (var session = documentStore.OpenSession())
+            {
+                foreach (var o in objects)
+                {
+                    session.Store(o);
+                }
+                session.SaveChanges();
+            }
+            WaitForIndexing(documentStore);
+        }
+    }
 
-	public class Person
-	{
-		public string Name { get; set; }
-	}
+    public class Person
+    {
+        public string Name { get; set; }
+    }
 
-	public class PersonsNotAnalyzed : AbstractIndexCreationTask<Person>
-	{
-		public PersonsNotAnalyzed()
-		{
-			Map = organizations => from o in organizations
-								   select new { o.Name };
+    public class PersonsNotAnalyzed : AbstractIndexCreationTask<Person>
+    {
+        public PersonsNotAnalyzed()
+        {
+            Map = organizations => from o in organizations
+                                   select new { o.Name };
 
-			Indexes.Add(x => x.Name, FieldIndexing.NotAnalyzed);
-		}
-	}
+            Indexes.Add(x => x.Name, FieldIndexing.NotAnalyzed);
+        }
+    }
 
-	public class PersonsAnalyzed : AbstractIndexCreationTask<Person>
-	{
-		public PersonsAnalyzed()
-		{
-			Map = organizations => from o in organizations
-								   select new { o.Name };
+    public class PersonsAnalyzed : AbstractIndexCreationTask<Person>
+    {
+        public PersonsAnalyzed()
+        {
+            Map = organizations => from o in organizations
+                                   select new { o.Name };
 
-			Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
-		}
-	}
+            Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+        }
+    }
 }

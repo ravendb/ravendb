@@ -60,16 +60,16 @@ class periodicExportSetup {
     ];
     availableIntervalUnits = [this.TU_MINUTES, this.TU_HOURS, this.TU_DAYS];
 
-	mainPlaceholder = ko.computed(() => {
-		switch(this.type()) {
-			case this.GLACIER_VAULT:
-				return "vault name only e.g. myvault";
-			case this.S3_BUCKET:
-				return "bucket name only e.g. mybucket";
-			case this.AZURE_STORAGE:
-				return "container name only e.g. mycontainer";
-		}
-	}, this);
+    mainPlaceholder = ko.computed(() => {
+        switch(this.type()) {
+            case this.GLACIER_VAULT:
+                return "vault name only e.g. myvault";
+            case this.S3_BUCKET:
+                return "bucket name only e.g. mybucket";
+            case this.AZURE_STORAGE:
+                return "container name only e.g. mycontainer";
+        }
+    }, this);
 
     additionalAwsInfoRequired = ko.computed(() => {
         var type = this.type();

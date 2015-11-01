@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -327,7 +327,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         public override void WriteValue(float value)
         {
             base.WriteValue(value);
-			AddValue(value, BsonType.RavenDBCustomFloat);
+            AddValue(value, BsonType.RavenDBCustomFloat);
         }
 
         /// <summary>
@@ -415,7 +415,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
         public override void WriteValue(decimal value)
         {
             base.WriteValue(value);
-			AddValue(value, BsonType.NumberDecimal);
+            AddValue(value, BsonType.NumberDecimal);
         }
 
         /// <summary>

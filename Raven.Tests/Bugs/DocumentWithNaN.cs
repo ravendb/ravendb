@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DocumentWithNaN.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,22 +12,22 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DocumentWithNaN : RavenTest
-	{
-		[Fact]
-		public async Task CanSaveUsingLegacyMode()
-		{
-			using (var store = NewRemoteDocumentStore(fiddler:true))
-			{
-				var httpClient = new HttpClient
-				{
-					BaseAddress = new Uri(store.Url)
-				};
+    public class DocumentWithNaN : RavenTest
+    {
+        [Fact]
+        public async Task CanSaveUsingLegacyMode()
+        {
+            using (var store = NewRemoteDocumentStore(fiddler:true))
+            {
+                var httpClient = new HttpClient
+                {
+                    BaseAddress = new Uri(store.Url)
+                };
 
                 var httpResponseMessage = await httpClient.PutAsync("docs/items/1", new MultiGetSafeStringContent("{'item': NaN}"));
-				Assert.True(httpResponseMessage.IsSuccessStatusCode);
-			}
-		}
-		 
-	}
+                Assert.True(httpResponseMessage.IsSuccessStatusCode);
+            }
+        }
+         
+    }
 }

@@ -81,7 +81,7 @@ namespace Raven.Imports.Newtonsoft.Json
         /// </summary>
         public virtual event EventHandler<ErrorEventArgs> Error;
 
-		public event Action<object, JsonWriter> BeforeClosingObject;
+        public event Action<object, JsonWriter> BeforeClosingObject;
 
         /// <summary>
         /// Gets or sets the <see cref="IReferenceResolver"/> used by the serializer when resolving references.
@@ -285,9 +285,9 @@ namespace Raven.Imports.Newtonsoft.Json
         {
             get
             {
-	            if (_converters == null)
-	            {
-		             // This is a bit unorthodox but in debug mode (ours code) we don't want to use unfrozen converters
+                if (_converters == null)
+                {
+                     // This is a bit unorthodox but in debug mode (ours code) we don't want to use unfrozen converters
                     // because of the performance implications. Therefore, any mistaken attempt to use the wrong way to
                     // create the serializer will throw; but our users wont have to care about that until we hit
                     // v4.0 where the failure mode should be the default.
@@ -296,14 +296,14 @@ namespace Raven.Imports.Newtonsoft.Json
 #else
                     _converters = new JsonConverterCollection();
 #endif
-	            }
+                }
 
                 return _converters;
             }
-			set
-			{
-				_converters = value;
-			}
+            set
+            {
+                _converters = value;
+            }
         }
 
         /// <summary>
@@ -540,14 +540,14 @@ namespace Raven.Imports.Newtonsoft.Json
             {
                 // insert settings converters at the beginning so they take precedence
                 // if user wants to remove one of the default converters they will have to do it manually
-				var converters = new JsonConverterCollection(serializer.Converters); 
-				for (int i = 0; i < settings.Converters.Count; i++)
+                var converters = new JsonConverterCollection(serializer.Converters); 
+                for (int i = 0; i < settings.Converters.Count; i++)
                 {
-					converters.Insert(i, settings.Converters[i]);
+                    converters.Insert(i, settings.Converters[i]);
                 }
-				converters.Freeze();
+                converters.Freeze();
 
-				serializer.Converters = converters;
+                serializer.Converters = converters;
             }
 
             // serializer specific
@@ -943,7 +943,7 @@ namespace Raven.Imports.Newtonsoft.Json
                 ? new TraceJsonWriter(jsonWriter)
                 : null;
 
-			JsonSerializerInternalWriter serializerWriter = new JsonSerializerInternalWriter(this, BeforeClosingObject);
+            JsonSerializerInternalWriter serializerWriter = new JsonSerializerInternalWriter(this, BeforeClosingObject);
             serializerWriter.Serialize(traceJsonWriter ?? jsonWriter, value, objectType);
 
             if (traceJsonWriter != null)
@@ -974,13 +974,13 @@ namespace Raven.Imports.Newtonsoft.Json
             return _referenceResolver;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal JsonConverter GetMatchingConverter(Type type)
         {
-			return JsonConverterCache.GetMatchingConverter(_converters, type);
+            return JsonConverterCache.GetMatchingConverter(_converters, type);
         }
 
-		/*[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /*[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static JsonConverter GetMatchingConverter(IList<JsonConverter> converters, Type objectType)
         {
 #if DEBUG
@@ -989,8 +989,8 @@ namespace Raven.Imports.Newtonsoft.Json
 
             if (converters != null)
             {
-	            var count = converters.Count;
-	            for (int i = 0; i < count; i++)
+                var count = converters.Count;
+                for (int i = 0; i < count; i++)
                 {
                     JsonConverter converter = converters[i];
 
@@ -999,7 +999,7 @@ namespace Raven.Imports.Newtonsoft.Json
                 }
             }
 
-			return null;
+            return null;
         }*/
 
         internal void OnError(ErrorEventArgs e)

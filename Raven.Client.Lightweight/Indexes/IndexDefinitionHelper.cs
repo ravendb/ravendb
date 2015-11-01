@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
@@ -38,7 +38,7 @@ namespace Raven.Client.Indexes
                     switch (methodCallExpression.Method.Name)
                     {
                         case "Select":
-		                    queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments.FirstOrDefault(x => x.NodeType == ExpressionType.Call || x.NodeType == ExpressionType.Lambda) ?? methodCallExpression.Arguments[0]);
+                            queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments.FirstOrDefault(x => x.NodeType == ExpressionType.Call || x.NodeType == ExpressionType.Lambda) ?? methodCallExpression.Arguments[0]);
                             break;
                         case "SelectMany":
                             queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[1]);
@@ -78,16 +78,16 @@ namespace Raven.Client.Indexes
             return linqQuery;
         }
 
-	    private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
-	    {
-		    var firstMethodCallExpression = ((MethodCallExpression)expression);
-			if(firstMethodCallExpression.Arguments.Count > 0)
-				if (firstMethodCallExpression.Arguments[0] is MethodCallExpression)
-					return GetFirstMethodCallExpression(firstMethodCallExpression.Arguments[0]);
-		    return firstMethodCallExpression;
-	    }
+        private static MethodCallExpression GetFirstMethodCallExpression(Expression expression)
+        {
+            var firstMethodCallExpression = ((MethodCallExpression)expression);
+            if(firstMethodCallExpression.Arguments.Count > 0)
+                if (firstMethodCallExpression.Arguments[0] is MethodCallExpression)
+                    return GetFirstMethodCallExpression(firstMethodCallExpression.Arguments[0]);
+            return firstMethodCallExpression;
+        }
 
-	    private static string TryCaptureQueryRoot(Expression expression)
+        private static string TryCaptureQueryRoot(Expression expression)
         {
             if (expression.NodeType != ExpressionType.Lambda)
                 return null;

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IReplicationInformerBase.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -36,7 +36,7 @@ namespace Raven.Client.Connection
 
         int GetReadStripingBase(bool increment);
 
-		FailureCounters FailureCounters { get; }
+        FailureCounters FailureCounters { get; }
 
         Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method, string primaryUrl, OperationCredentials primaryCredentials, RequestTimeMetric primaryRequestTimeMetric, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation, CancellationToken token = default (CancellationToken));
     }
@@ -49,10 +49,10 @@ namespace Raven.Client.Connection
         /// </summary>
         void RefreshReplicationInformation(TClient client);
 
-		/// <summary>
-		/// Clears the replication information local cache.
-		/// Expert use only.
-		/// </summary>
-	    void ClearReplicationInformationLocalCache(TClient client);
+        /// <summary>
+        /// Clears the replication information local cache.
+        /// Expert use only.
+        /// </summary>
+        void ClearReplicationInformationLocalCache(TClient client);
     }
 }

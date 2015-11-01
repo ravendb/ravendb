@@ -1,4 +1,4 @@
-﻿class transformerParam implements transformerParamDto {
+class transformerParam implements transformerParamDto {
     constructor(public name: string, public value: string) {
     }
 }

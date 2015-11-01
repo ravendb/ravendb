@@ -19,13 +19,13 @@ namespace Raven.Tests.Bugs.MapRedue
         public MapReduceIndex()
         {
             m_documentIds = new String[5]
-			{
-				"One",
-				"Two",
-				"Three",
-				"Four ",
-				"Five"
-			};
+            {
+                "One",
+                "Two",
+                "Three",
+                "Four ",
+                "Five"
+            };
         }
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
@@ -117,7 +117,7 @@ namespace Raven.Tests.Bugs.MapRedue
                 IRavenQueryable<DocumentView> query =
                     session.Query<Document, VersionedDocuments>()
                         .Customize(aCustomization => aCustomization.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMinutes(10)))
-						.ProjectFromIndexFieldsInto<DocumentView>();
+                        .ProjectFromIndexFieldsInto<DocumentView>();
 
                 foreach (DocumentView document in query)
                 {

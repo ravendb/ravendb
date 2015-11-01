@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2767.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -17,144 +17,144 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2767 : RavenTest
-	{
-		private readonly EmbeddableDocumentStore store;
-		private readonly PrefetchingBehavior prefetchingBehavior;
+    public class RavenDB_2767 : RavenTest
+    {
+        private readonly EmbeddableDocumentStore store;
+        private readonly PrefetchingBehavior prefetchingBehavior;
 
-		public RavenDB_2767()
-		{
-			store = NewDocumentStore();
-			var workContext = store.SystemDatabase.WorkContext;
-			prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, new IndexBatchSizeAutoTuner(workContext),string.Empty );
-			prefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
-		}
+        public RavenDB_2767()
+        {
+            store = NewDocumentStore();
+            var workContext = store.SystemDatabase.WorkContext;
+            prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, new IndexBatchSizeAutoTuner(workContext),string.Empty );
+            prefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
+        }
 
-		[Fact]
-		public void ShouldDisableCollectingDocsAfterCommit()
-		{
-			Etag last = Etag.Empty;
+        [Fact]
+        public void ShouldDisableCollectingDocsAfterCommit()
+        {
+            Etag last = Etag.Empty;
 
-			SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(15));
+            SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(15));
 
-			prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(Enumerable.Range(0, 5).Select(x =>
-			{
-				last = EtagUtil.Increment(last, 1);
+            prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(Enumerable.Range(0, 5).Select(x =>
+            {
+                last = EtagUtil.Increment(last, 1);
 
-				return new JsonDocument
-				{
-					Etag = last,
-					Key = x.ToString(CultureInfo.InvariantCulture)
-				};
-			}).ToArray());
+                return new JsonDocument
+                {
+                    Etag = last,
+                    Key = x.ToString(CultureInfo.InvariantCulture)
+                };
+            }).ToArray());
 
-			last = EtagUtil.Increment(last, store.Configuration.MaxNumberOfItemsToProcessInSingleBatch);
+            last = EtagUtil.Increment(last, store.Configuration.MaxNumberOfItemsToProcessInSingleBatch);
 
-			prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(Enumerable.Range(0, 5).Select(x =>
-			{
-				last = EtagUtil.Increment(last, 1);
+            prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(Enumerable.Range(0, 5).Select(x =>
+            {
+                last = EtagUtil.Increment(last, 1);
 
-				return new JsonDocument
-				{
-					Etag = last,
-					Key = x.ToString(CultureInfo.InvariantCulture)
-				};
-			}).ToArray());
+                return new JsonDocument
+                {
+                    Etag = last,
+                    Key = x.ToString(CultureInfo.InvariantCulture)
+                };
+            }).ToArray());
 
-			SystemTime.UtcDateTime = null;
+            SystemTime.UtcDateTime = null;
 
-			var documentsBatchFrom = prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty);
+            var documentsBatchFrom = prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty);
 
-			prefetchingBehavior.CleanupDocuments(documentsBatchFrom.Last().Etag);
+            prefetchingBehavior.CleanupDocuments(documentsBatchFrom.Last().Etag);
 
-			Assert.True(prefetchingBehavior.DisableCollectingDocumentsAfterCommit);
+            Assert.True(prefetchingBehavior.DisableCollectingDocumentsAfterCommit);
 
-			for (int i = 0; i < 5; i++)
-			{
-				last = EtagUtil.Increment(last, 1);
-				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
-				{
-					new JsonDocument
-					{
-						Etag = last,
-						Key = i.ToString(CultureInfo.InvariantCulture)
-					},
-				});
-			}
+            for (int i = 0; i < 5; i++)
+            {
+                last = EtagUtil.Increment(last, 1);
+                prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
+                {
+                    new JsonDocument
+                    {
+                        Etag = last,
+                        Key = i.ToString(CultureInfo.InvariantCulture)
+                    },
+                });
+            }
 
-			Assert.Equal(0, prefetchingBehavior.InMemoryIndexingQueueSize);
-		}
+            Assert.Equal(0, prefetchingBehavior.InMemoryIndexingQueueSize);
+        }
 
-		[Fact]
-		public void ShouldCleanUpDocsThatResideInQueueTooLong()
-		{
-			Etag last = Etag.Empty;
+        [Fact]
+        public void ShouldCleanUpDocsThatResideInQueueTooLong()
+        {
+            Etag last = Etag.Empty;
 
-			SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(15));
+            SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(15));
 
-			for (int i = 0; i < 5; i++)
-			{
-				last = EtagUtil.Increment(last, 1);
-				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
-				{
-					new JsonDocument
-					{
-						Etag = last,
-						Key = i.ToString(CultureInfo.InvariantCulture)
-					},
-				});
-			}
+            for (int i = 0; i < 5; i++)
+            {
+                last = EtagUtil.Increment(last, 1);
+                prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
+                {
+                    new JsonDocument
+                    {
+                        Etag = last,
+                        Key = i.ToString(CultureInfo.InvariantCulture)
+                    },
+                });
+            }
 
-			SystemTime.UtcDateTime = null;
+            SystemTime.UtcDateTime = null;
 
-			prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty);
-			prefetchingBehavior.CleanupDocuments(Etag.Empty);
+            prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty);
+            prefetchingBehavior.CleanupDocuments(Etag.Empty);
 
-			Assert.Equal(0, prefetchingBehavior.InMemoryIndexingQueueSize);
-		}
+            Assert.Equal(0, prefetchingBehavior.InMemoryIndexingQueueSize);
+        }
 
-		[Fact]
-		public void ShouldEnableCollectingDocsAfterCommit()
-		{
-			Etag last = Etag.Empty;
+        [Fact]
+        public void ShouldEnableCollectingDocsAfterCommit()
+        {
+            Etag last = Etag.Empty;
 
-			SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(15));
+            SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(15));
 
-			last = EtagUtil.Increment(last, 1);
-			prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
-			{
-				new JsonDocument
-				{
-					Etag = last,
-					Key = "items/1"
-				}
-			});
+            last = EtagUtil.Increment(last, 1);
+            prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
+            {
+                new JsonDocument
+                {
+                    Etag = last,
+                    Key = "items/1"
+                }
+            });
 
-			SystemTime.UtcDateTime = null;
+            SystemTime.UtcDateTime = null;
 
-			prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty);
-			prefetchingBehavior.CleanupDocuments(Etag.Empty);
+            prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty);
+            prefetchingBehavior.CleanupDocuments(Etag.Empty);
 
-			Assert.True(prefetchingBehavior.DisableCollectingDocumentsAfterCommit);
+            Assert.True(prefetchingBehavior.DisableCollectingDocumentsAfterCommit);
 
-			prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty.IncrementBy(5)); // will trigger check for enabling collecting docs again
+            prefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty.IncrementBy(5)); // will trigger check for enabling collecting docs again
 
-			Assert.False(prefetchingBehavior.DisableCollectingDocumentsAfterCommit);
+            Assert.False(prefetchingBehavior.DisableCollectingDocumentsAfterCommit);
 
-			for (int i = 0; i < 5; i++)
-			{
-				last = EtagUtil.Increment(last, 1);
-				prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
-				{
-					new JsonDocument
-					{
-						Etag = last,
-						Key = i.ToString(CultureInfo.InvariantCulture)
-					},
-				});
-			}
+            for (int i = 0; i < 5; i++)
+            {
+                last = EtagUtil.Increment(last, 1);
+                prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(new[]
+                {
+                    new JsonDocument
+                    {
+                        Etag = last,
+                        Key = i.ToString(CultureInfo.InvariantCulture)
+                    },
+                });
+            }
 
-			Assert.Equal(5, prefetchingBehavior.InMemoryIndexingQueueSize);
-		}
-	}
+            Assert.Equal(5, prefetchingBehavior.InMemoryIndexingQueueSize);
+        }
+    }
 }

@@ -8,16 +8,16 @@ using Raven.Database.Tasks;
 
 namespace Raven.Database.Storage
 {
-	using System.Collections.Generic;
+    using System.Collections.Generic;
 
-	public interface ITasksStorageActions
-	{
-		void AddTask(DatabaseTask task, DateTime addedAt);
-		bool HasTasks { get; }
-		long ApproximateTaskCount { get; }
+    public interface ITasksStorageActions
+    {
+        void AddTask(DatabaseTask task, DateTime addedAt);
+        bool HasTasks { get; }
+        long ApproximateTaskCount { get; }
 
-		T GetMergedTask<T>() where T : DatabaseTask;
+        T GetMergedTask<T>() where T : DatabaseTask;
 
-		IEnumerable<TaskMetadata> GetPendingTasksForDebug();
-	}
+        IEnumerable<TaskMetadata> GetPendingTasksForDebug();
+    }
 }

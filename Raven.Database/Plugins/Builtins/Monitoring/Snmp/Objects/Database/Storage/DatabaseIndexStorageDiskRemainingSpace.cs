@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DatabaseTransactionalStorageDiskRemainingSpace.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,25 +11,25 @@ using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Storage
 {
-	public class DatabaseIndexStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>
-	{
-		private static readonly Gauge32 Empty = new Gauge32(-1);
+    public class DatabaseIndexStorageDiskRemainingSpace : DatabaseScalarObjectBase<Gauge32>
+    {
+        private static readonly Gauge32 Empty = new Gauge32(-1);
 
-		public DatabaseIndexStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index)
-			: base(databaseName, landlord, "5.2.{0}.2.6", index)
-		{
-		}
+        public DatabaseIndexStorageDiskRemainingSpace(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, "5.2.{0}.2.6", index)
+        {
+        }
 
-		protected override Gauge32 GetData(DocumentDatabase database)
-		{
-			if (database.Configuration.RunInMemory) 
-				return Empty;
-			
-			var result = CheckFreeDiskSpace.DiskSpaceChecker.GetFreeDiskSpace(database.Configuration.IndexStoragePath, DriveInfo.GetDrives());
-			if (result == null) 
-				return Empty;
+        protected override Gauge32 GetData(DocumentDatabase database)
+        {
+            if (database.Configuration.RunInMemory) 
+                return Empty;
+            
+            var result = CheckFreeDiskSpace.DiskSpaceChecker.GetFreeDiskSpace(database.Configuration.IndexStoragePath, DriveInfo.GetDrives());
+            if (result == null) 
+                return Empty;
 
-			return new Gauge32(result.TotalFreeSpaceInBytes / 1024L / 1024L);
-		}
-	}
+            return new Gauge32(result.TotalFreeSpaceInBytes / 1024L / 1024L);
+        }
+    }
 }

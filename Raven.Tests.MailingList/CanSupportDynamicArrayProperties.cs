@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using Raven.Imports.Newtonsoft.Json;
@@ -31,10 +31,10 @@ namespace RavenDB.DynamicArrayProperties.RavenTests
 
             using (var store = NewDocumentStore())
             {
-	            store.Conventions.CustomizeJsonSerializer += serializer =>
-	            {
-		            serializer.TypeNameHandling = TypeNameHandling.None;
-	            };
+                store.Conventions.CustomizeJsonSerializer += serializer =>
+                {
+                    serializer.TypeNameHandling = TypeNameHandling.None;
+                };
                 string id = null;
                 using (var session = store.OpenSession())
                 {

@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 
 class disableIndexingCommand extends commandBase {
     /**
@@ -13,7 +13,7 @@ class disableIndexingCommand extends commandBase {
     execute(): JQueryPromise<any> {
         var action = !this.isSettingIndexingDisabled ? "enable" : "disable"; 
         var args = {
-			id: this.dbName,
+            id: this.dbName,
             isSettingIndexingDisabled: this.isSettingIndexingDisabled
         }
         var url = "/admin/databases-toggle-indexing" + this.urlEncodeArgs(args);

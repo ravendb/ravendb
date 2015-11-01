@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;

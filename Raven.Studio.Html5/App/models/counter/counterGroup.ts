@@ -1,11 +1,11 @@
-﻿import counterStorage = require("models/counter/counterStorage");
+import counterStorage = require("models/counter/counterStorage");
 import pagedList = require("common/pagedList");
 import getCountersCommand = require("commands/counter/getCountersCommand");
 import pagedResultSet = require("common/pagedResultSet");
 import cssGenerator = require("common/cssGenerator");
 
 class counterGroup implements ICollectionBase {
-	colorClass = "";
+    colorClass = "";
     static allGroupsGroupName = "All Groups";
     private countersList: pagedList;
     private static groupColorMaps: resourceStyleMap[] = [];
@@ -20,7 +20,7 @@ class counterGroup implements ICollectionBase {
     }
 
     activate() {
-		ko.postbox.publish("ActivateGroup", this);
+        ko.postbox.publish("ActivateGroup", this);
     }
 
     getCounters() {
@@ -31,10 +31,10 @@ class counterGroup implements ICollectionBase {
         return this.countersList;
     }
 
-	invalidateCache() {
-		var countersList = this.getCounters();
-		countersList.invalidateCache();
-	}
+    invalidateCache() {
+        var countersList = this.getCounters();
+        countersList.invalidateCache();
+    }
 
     static createAllGroupsCollection(ownerCounterStorage: counterStorage): counterGroup {
         return new counterGroup(counterGroup.allGroupsGroupName, ownerCounterStorage);

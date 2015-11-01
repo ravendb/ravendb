@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 
 namespace Raven.Database.Indexing
 {
-	public class NotForQueryingAttribute : Attribute
-	{
-		 
-	}
+    public class NotForQueryingAttribute : Attribute
+    {
+         
+    }
 }

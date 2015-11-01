@@ -1,9 +1,9 @@
-﻿namespace Raven.Abstractions.Counters
+namespace Raven.Abstractions.Counters
 {
-	public class CounterNameGroupPair
-	{
-		public string Name { get; set; }
+    public class CounterNameGroupPair
+    {
+        public string Name { get; set; }
 
-		public string Group { get; set; }
-	}
+        public string Group { get; set; }
+    }
 }

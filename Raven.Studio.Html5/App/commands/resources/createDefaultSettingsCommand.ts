@@ -1,4 +1,4 @@
-﻿import database = require("models/resources/database");
+import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import versioningEntry = require("models/database/documents/versioningEntry");
 

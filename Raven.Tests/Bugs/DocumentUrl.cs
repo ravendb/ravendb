@@ -13,27 +13,27 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
-	public class DocumentUrl : RavenTest
-	{
-		[Fact]
-		public void CanGetFullUrl_WithSlashOnTheEnd()
-		{
-			using (var documentStore = NewRemoteDocumentStore(fiddler: true))
-			{
-				using (var session = documentStore.OpenSession())
-				{
+    public class DocumentUrl : RavenTest
+    {
+        [Fact]
+        public void CanGetFullUrl_WithSlashOnTheEnd()
+        {
+            using (var documentStore = NewRemoteDocumentStore(fiddler: true))
+            {
+                using (var session = documentStore.OpenSession())
+                {
 
-					var entity = new LinqIndexesFromClient.User();
-					session.Store(entity);
+                    var entity = new LinqIndexesFromClient.User();
+                    session.Store(entity);
 
-					var storedUrl = session.Advanced.GetDocumentUrl(entity);
+                    var storedUrl = session.Advanced.GetDocumentUrl(entity);
 
-					//replace machine name with localhost
-					var correctedStoredUrl = storedUrl.Replace(Environment.MachineName.ToLower(),"localhost");
+                    //replace machine name with localhost
+                    var correctedStoredUrl = storedUrl.Replace(Environment.MachineName.ToLower(),"localhost");
 
                     Assert.Equal("http://localhost:8079/databases/CanGetFullUrl_WithSlashOnTheEnd/docs/users/1", correctedStoredUrl);
-				}
-			}
-		}
-	}
+                }
+            }
+        }
+    }
 }

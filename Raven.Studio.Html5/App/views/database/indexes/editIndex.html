@@ -1,4 +1,4 @@
-﻿<ul class="breadcrumb">
+<ul class="breadcrumb">
     <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
     <li>
         <h3>
@@ -194,15 +194,15 @@
                                     </div>
                                     <label class="control-label col-md-5  fieldControl" title="The suggestion distance algorithm">Suggestion</label>
                                     <div class="col-md-7 fieldControl">
-										<button type="button" data-bind="enable: !$parent.isSideBySideIndex()" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-											<span data-bind="visible: suggestionEnabled()">Yes</span>
-											<span data-bind="visible: !suggestionEnabled()">No</span>
-											<span class="caret"></span>
-										</button>
-										<ul class="dropdown-menu" role="menu">
-											<li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, true)">Yes</a></li>
-											<li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, false)">No</a></li>
-										</ul>
+                                        <button type="button" data-bind="enable: !$parent.isSideBySideIndex()" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                            <span data-bind="visible: suggestionEnabled()">Yes</span>
+                                            <span data-bind="visible: !suggestionEnabled()">No</span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" role="menu">
+                                            <li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, true)">Yes</a></li>
+                                            <li><a href="#" data-bind="click: suggestionEnabled.bind(suggestionEnabled, false)">No</a></li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>

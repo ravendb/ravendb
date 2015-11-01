@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Connection;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
@@ -64,13 +64,14 @@ namespace Raven.Client.FileSystem
 
         Task DeleteAsync(string filename, Etag etag = null);
         Task RenameAsync(string currentName, string newName, Etag etag = null);
-	    Task CopyAsync(string sourceName, string targetNAme, Etag etag = null);
-	    
+        Task CopyAsync(string sourceName, string targetNAme, Etag etag = null);
+        
         Task<RavenJObject> GetMetadataForAsync(string filename);
 
         Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null);
 
-        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? size = null, Etag etag = null);
+        Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, Etag etag = null);
+        Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, Etag etag = null);
         Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null);
 
         Task<Stream> DownloadAsync(string filename, Reference<RavenJObject> metadata = null, long? from = null, long? to = null);
@@ -79,13 +80,13 @@ namespace Raven.Client.FileSystem
 
         Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 1024);
         Task<SearchResults> SearchAsync(string query, string[] sortFields = null, int start = 0, int pageSize = 1024);
-		Task DeleteByQueryAsync(string query);
+        Task DeleteByQueryAsync(string query);
         Task<SearchResults> SearchOnDirectoryAsync(string folder, FilesSortOptions options = FilesSortOptions.Default, string fileNameSearchPattern = "", int start = 0, int pageSize = 1024);
-	    
+        
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
         Task<FileHeader[]> GetAsync(string[] filename);
-		Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
+        Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
         IDisposable ForceReadFromMaster();
@@ -122,7 +123,7 @@ namespace Raven.Client.FileSystem
         Task<ConfigurationSearchResults> SearchAsync(string prefix, int start = 0, int pageSize = 25);
     }
 
-	public interface IAsyncFilesSynchronizationCommands : ISynchronizationServerClient, IDisposable, IHoldProfilingInformation
+    public interface IAsyncFilesSynchronizationCommands : ISynchronizationServerClient, IDisposable, IHoldProfilingInformation
     {
         IAsyncFilesCommands Commands { get; }
 
@@ -131,7 +132,7 @@ namespace Raven.Client.FileSystem
 
         Task<ItemsPage<ConflictItem>> GetConflictsAsync(int start = 0, int pageSize = 25);
 
-		Task<SynchronizationReport> GetSynchronizationStatusForAsync(string filename);
+        Task<SynchronizationReport> GetSynchronizationStatusForAsync(string filename);
         Task<ItemsPage<SynchronizationReport>> GetFinishedAsync(int start = 0, int pageSize = 25);
         Task<ItemsPage<SynchronizationDetails>> GetActiveAsync(int start = 0, int pageSize = 25);
         Task<ItemsPage<SynchronizationDetails>> GetPendingAsync(int start = 0, int pageSize = 25);
@@ -141,28 +142,28 @@ namespace Raven.Client.FileSystem
         Task<SynchronizationReport> StartAsync(string filename, SynchronizationDestination destination);
     }
 
-	public interface ISynchronizationServerClient : IHoldProfilingInformation
-	{
-		string BaseUrl { get; }
-		FilesConvention Conventions { get; }
-		OperationCredentials Credentials { get; }
-		HttpJsonRequestFactory RequestFactory { get; }
+    public interface ISynchronizationServerClient : IHoldProfilingInformation
+    {
+        string BaseUrl { get; }
+        FilesConvention Conventions { get; }
+        OperationCredentials Credentials { get; }
+        HttpJsonRequestFactory RequestFactory { get; }
 
-		Task<RavenJObject> GetMetadataForAsync(string fileName);
-		Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null);
+        Task<RavenJObject> GetMetadataForAsync(string fileName);
+        Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null);
 
-		Task<RdcStats> GetRdcStatsAsync();
-		Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
-		Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
-		Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
-		Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
-		Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
-		Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
-		Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
-		Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
-		Task<SignatureManifest> GetRdcManifestAsync(string path);
-		Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag);
-	}
+        Task<RdcStats> GetRdcStatsAsync();
+        Task<SynchronizationReport> RenameAsync(string currentName, string newName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+        Task<SynchronizationReport> DeleteAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+        Task<SynchronizationReport> UpdateMetadataAsync(string fileName, RavenJObject metadata, FileSystemInfo sourceFileSystem);
+        Task<SourceSynchronizationInformation> GetLastSynchronizationFromAsync(Guid serverId);
+        Task ResolveConflictAsync(string filename, ConflictResolutionStrategy strategy);
+        Task ApplyConflictAsync(string filename, long remoteVersion, string remoteServerId, RavenJObject remoteMetadata, string remoteServerUrl);
+        Task<ConflictResolutionStrategy> GetResolutionStrategyFromDestinationResolvers(ConflictItem conflict, RavenJObject localMetadata);
+        Task<SynchronizationConfirmation[]> GetConfirmationForFilesAsync(IEnumerable<Tuple<string, Etag>> sentFiles);
+        Task<SignatureManifest> GetRdcManifestAsync(string path);
+        Task IncrementLastETagAsync(Guid sourceServerId, string sourceFileSystemUrl, Etag sourceFileETag);
+    }
 
     public interface IAsyncFilesStorageCommands : IDisposable, IHoldProfilingInformation
     {
@@ -170,6 +171,6 @@ namespace Raven.Client.FileSystem
 
         Task CleanUpAsync();
         Task RetryRenamingAsync();
-	    Task RetryCopyingAsync();
+        Task RetryCopyingAsync();
     }
 }

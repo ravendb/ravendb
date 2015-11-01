@@ -7,35 +7,35 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class FilterOnMissingProperty : RavenTest
-	{
-		[Fact]
-		public void CanFilter()
-		{
-			using(var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.PutIndex("test",
-				                                new IndexDefinition
-				                                	{
-				                                		Map = "from doc in docs where doc.Valid select new { doc.Name }"
-				                                	});
+    public class FilterOnMissingProperty : RavenTest
+    {
+        [Fact]
+        public void CanFilter()
+        {
+            using(var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("test",
+                                                new IndexDefinition
+                                                    {
+                                                        Map = "from doc in docs where doc.Valid select new { doc.Name }"
+                                                    });
 
-				using(var session = store.OpenSession())
-				{
-					session.Store(new { Valid = true, Name = "Oren"});
+                using(var session = store.OpenSession())
+                {
+                    session.Store(new { Valid = true, Name = "Oren"});
 
-					session.Store(new { Name = "Ayende "});
+                    session.Store(new { Name = "Ayende "});
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
+                using (var session = store.OpenSession())
+                {
                     session.Advanced.DocumentQuery<dynamic>("test").WaitForNonStaleResults().ToArray();
-				}
+                }
 
-				Assert.Empty(store.SystemDatabase.Statistics.Errors);
-			}
-		}
-	}
+                Assert.Empty(store.SystemDatabase.Statistics.Errors);
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3286.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -16,171 +16,171 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3286 : ReplicationBase
-	{
-		[Fact]
-		public void RequestTimeMetricRequiresLowerThresholdToSwitchBackIfItHasSurpassed()
-		{
-			var conventions = new DocumentConvention
-							  {
-								  RequestTimeThresholdInMilliseconds = 100 // switch back threshold will be 75
-							  };
+    public class RavenDB_3286 : ReplicationBase
+    {
+        [Fact]
+        public void RequestTimeMetricRequiresLowerThresholdToSwitchBackIfItHasSurpassed()
+        {
+            var conventions = new DocumentConvention
+                              {
+                                  RequestTimeThresholdInMilliseconds = 100 // switch back threshold will be 75
+                              };
 
-			var metric = new RequestTimeMetric();
+            var metric = new RequestTimeMetric();
 
-			Assert.False(metric.RateSurpassed(conventions));
+            Assert.False(metric.RateSurpassed(conventions));
 
-			UpdateMetric(metric, 500, 60); // 500
+            UpdateMetric(metric, 500, 60); // 500
 
-			Assert.True(metric.RateSurpassed(conventions));
+            Assert.True(metric.RateSurpassed(conventions));
 
-			UpdateMetric(metric, 15, 24); // 75+
+            UpdateMetric(metric, 15, 24); // 75+
 
-			Assert.True(metric.RateSurpassed(conventions));
+            Assert.True(metric.RateSurpassed(conventions));
 
-			UpdateMetric(metric, 15, 1); // 70
+            UpdateMetric(metric, 15, 1); // 70
 
-			Assert.False(metric.RateSurpassed(conventions));
-		}
+            Assert.False(metric.RateSurpassed(conventions));
+        }
 
-		[Fact]
-		public void DecreasingTimeMetricDecreasedRequestTimeMetricAfterEachRequest()
-		{
-			var conventions = new DocumentConvention
-			{
-				RequestTimeThresholdInMilliseconds = 100 // switch back threshold will be 75
-			};
+        [Fact]
+        public void DecreasingTimeMetricDecreasedRequestTimeMetricAfterEachRequest()
+        {
+            var conventions = new DocumentConvention
+            {
+                RequestTimeThresholdInMilliseconds = 100 // switch back threshold will be 75
+            };
 
-			var metric = new RequestTimeMetric();
+            var metric = new RequestTimeMetric();
 
-			UpdateMetric(metric, 500, 60); // 500
+            UpdateMetric(metric, 500, 60); // 500
 
-			Assert.True(metric.RateSurpassed(conventions));
+            Assert.True(metric.RateSurpassed(conventions));
 
-			var decreasingMetric = new DecreasingTimeMetric(metric);
+            var decreasingMetric = new DecreasingTimeMetric(metric);
 
-			UpdateMetric(decreasingMetric, 500, 30); // 77+
+            UpdateMetric(decreasingMetric, 500, 30); // 77+
 
-			Assert.True(metric.RateSurpassed(conventions));
+            Assert.True(metric.RateSurpassed(conventions));
 
-			UpdateMetric(decreasingMetric, 500, 1); // 73
+            UpdateMetric(decreasingMetric, 500, 1); // 73
 
-			Assert.False(metric.RateSurpassed(conventions));
-		}
+            Assert.False(metric.RateSurpassed(conventions));
+        }
 
-		[Fact]
-		public async Task Basic()
-		{
-			using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
-			using (var store2 = CreateStore())
-			{
-				SetupReplication(store1.DatabaseCommands, store2);
+        [Fact]
+        public async Task Basic()
+        {
+            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
+            using (var store2 = CreateStore())
+            {
+                SetupReplication(store1.DatabaseCommands, store2);
 
-				var replicationInformer = store1.GetReplicationInformerForDatabase();
-				replicationInformer.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
-				replicationInformer.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
+                var replicationInformer = store1.GetReplicationInformerForDatabase();
+                replicationInformer.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
+                replicationInformer.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
-				await PauseReplicationAsync(0, store1.DefaultDatabase);
-				await PauseReplicationAsync(1, store2.DefaultDatabase);
+                await PauseReplicationAsync(0, store1.DefaultDatabase);
+                await PauseReplicationAsync(1, store2.DefaultDatabase);
 
-				servers.ForEach(server => server.Options.RequestManager.ResetNumberOfRequests());
+                servers.ForEach(server => server.Options.RequestManager.ResetNumberOfRequests());
 
-				var metric = store1.GetRequestTimeMetricForDatabase(store1.DefaultDatabase);
+                var metric = store1.GetRequestTimeMetricForDatabase(store1.DefaultDatabase);
 
-				UpdateMetric(metric, 150, 60);
+                UpdateMetric(metric, 150, 60);
 
-				store1.DatabaseCommands.Get("keys/1");
+                store1.DatabaseCommands.Get("keys/1");
 
-				Assert.Equal(0, servers[0].Options.RequestManager.NumberOfRequests);
-				Assert.Equal(1, servers[1].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(0, servers[0].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(1, servers[1].Options.RequestManager.NumberOfRequests);
 
-				store1.DatabaseCommands.Get("keys/1");
+                store1.DatabaseCommands.Get("keys/1");
 
-				Assert.Equal(0, servers[0].Options.RequestManager.NumberOfRequests);
-				Assert.Equal(2, servers[1].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(0, servers[0].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(2, servers[1].Options.RequestManager.NumberOfRequests);
 
-				store1.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
+                store1.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
 
-				Assert.Equal(1, servers[0].Options.RequestManager.NumberOfRequests);
-				Assert.Equal(2, servers[1].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(1, servers[0].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(2, servers[1].Options.RequestManager.NumberOfRequests);
 
-				UpdateMetric(metric, 50, 60);
+                UpdateMetric(metric, 50, 60);
 
-				store1.DatabaseCommands.Get("keys/1");
+                store1.DatabaseCommands.Get("keys/1");
 
-				Assert.Equal(2, servers[0].Options.RequestManager.NumberOfRequests);
-				Assert.Equal(2, servers[1].Options.RequestManager.NumberOfRequests);
-			}
-		}
+                Assert.Equal(2, servers[0].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(2, servers[1].Options.RequestManager.NumberOfRequests);
+            }
+        }
 
-		[Fact]
-		public void RequestsWillBumpRequestTimeMetric()
-		{
-			using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
-			{
-				var metric = store1.GetRequestTimeMetricForDatabase(store1.DefaultDatabase);
+        [Fact]
+        public void RequestsWillBumpRequestTimeMetric()
+        {
+            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
+            {
+                var metric = store1.GetRequestTimeMetricForDatabase(store1.DefaultDatabase);
 
-				UpdateMetric(metric, 0, 60);
+                UpdateMetric(metric, 0, 60);
 
-				var rate = metric.Rate();
-				Assert.True(rate <= 0.25, "The rate is " + rate);
+                var rate = metric.Rate();
+                Assert.True(rate <= 0.25, "The rate is " + rate);
 
-				for (var i = 0; i < 100; i++)
-					store1.DatabaseCommands.Get("keys/1");
+                for (var i = 0; i < 100; i++)
+                    store1.DatabaseCommands.Get("keys/1");
 
-				var newRate = metric.Rate();
-				Assert.True(newRate > rate, string.Format("{0} > {1}", newRate, rate));
-			}
-		}
+                var newRate = metric.Rate();
+                Assert.True(newRate > rate, string.Format("{0} > {1}", newRate, rate));
+            }
+        }
 
-		[Fact]
-		public async Task WillSwitchBackToPrimary()
-		{
-			using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
-			using (var store2 = CreateStore())
-			{
-				SetupReplication(store1.DatabaseCommands, store2);
+        [Fact]
+        public async Task WillSwitchBackToPrimary()
+        {
+            using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeThresholdIsSurpassed))
+            using (var store2 = CreateStore())
+            {
+                SetupReplication(store1.DatabaseCommands, store2);
 
-				var replicationInformer = store1.GetReplicationInformerForDatabase();
-				replicationInformer.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
-				replicationInformer.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
+                var replicationInformer = store1.GetReplicationInformerForDatabase();
+                replicationInformer.ClearReplicationInformationLocalCache((ServerClient)store1.DatabaseCommands);
+                replicationInformer.RefreshReplicationInformation((ServerClient)store1.DatabaseCommands);
 
-				await PauseReplicationAsync(0, store1.DefaultDatabase);
-				await PauseReplicationAsync(1, store2.DefaultDatabase);
+                await PauseReplicationAsync(0, store1.DefaultDatabase);
+                await PauseReplicationAsync(1, store2.DefaultDatabase);
 
-				servers.ForEach(server => server.Options.RequestManager.ResetNumberOfRequests());
+                servers.ForEach(server => server.Options.RequestManager.ResetNumberOfRequests());
 
-				var metric = store1.GetRequestTimeMetricForDatabase(store1.DefaultDatabase);
+                var metric = store1.GetRequestTimeMetricForDatabase(store1.DefaultDatabase);
 
-				UpdateMetric(metric, 150, 60);
+                UpdateMetric(metric, 150, 60);
 
-				store1.DatabaseCommands.Get("keys/1");
+                store1.DatabaseCommands.Get("keys/1");
 
-				Assert.Equal(0, servers[0].Options.RequestManager.NumberOfRequests);
-				Assert.Equal(1, servers[1].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(0, servers[0].Options.RequestManager.NumberOfRequests);
+                Assert.Equal(1, servers[1].Options.RequestManager.NumberOfRequests);
 
-				var switched = false;
-				for (var i = 0; i < 100; i++)
-				{
-					store1.DatabaseCommands.Get("keys/1");
+                var switched = false;
+                for (var i = 0; i < 100; i++)
+                {
+                    store1.DatabaseCommands.Get("keys/1");
 
-					if (servers[0].Options.RequestManager.NumberOfRequests <= 0)
-						continue;
+                    if (servers[0].Options.RequestManager.NumberOfRequests <= 0)
+                        continue;
 
-					switched = true;
-					break;
-				}
+                    switched = true;
+                    break;
+                }
 
-				Assert.True(switched, "We expected that client will switch primary.");
-			}
-		}
+                Assert.True(switched, "We expected that client will switch primary.");
+            }
+        }
 
-		private static void UpdateMetric(IRequestTimeMetric metric, long value, int numberOfRequests)
-		{
-			for (var i = 0; i < numberOfRequests; i++)
-			{
-				metric.Update(value);
-			}
-		}
-	}
+        private static void UpdateMetric(IRequestTimeMetric metric, long value, int numberOfRequests)
+        {
+            for (var i = 0; i < numberOfRequests; i++)
+            {
+                metric.Update(value);
+            }
+        }
+    }
 }

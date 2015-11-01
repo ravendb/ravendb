@@ -12,11 +12,11 @@ using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Server
 {
-	public static class CurrentOperationContext
-	{
-		public static readonly Raven.Abstractions.Threading.ThreadLocal<List<IDisposable>> RequestDisposables = new Raven.Abstractions.Threading.ThreadLocal<List<IDisposable>>(() => new List<IDisposable>());
-		public static readonly Raven.Abstractions.Threading.ThreadLocal<IPrincipal> User = new Raven.Abstractions.Threading.ThreadLocal<IPrincipal>(() => null);
+    public static class CurrentOperationContext
+    {
+        public static readonly Raven.Abstractions.Threading.ThreadLocal<List<IDisposable>> RequestDisposables = new Raven.Abstractions.Threading.ThreadLocal<List<IDisposable>>(() => new List<IDisposable>());
+        public static readonly Raven.Abstractions.Threading.ThreadLocal<IPrincipal> User = new Raven.Abstractions.Threading.ThreadLocal<IPrincipal>(() => null);
         public static readonly Raven.Abstractions.Threading.ThreadLocal<Lazy<NameValueCollection>> Headers = new Raven.Abstractions.Threading.ThreadLocal<Lazy<NameValueCollection>>(() => null);
 
-	}
+    }
 }

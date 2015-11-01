@@ -14,33 +14,33 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class DeleteTriggers : RavenTest
-	{
-		private readonly EmbeddableDocumentStore store;
-		private readonly DocumentDatabase db;
+    public class DeleteTriggers : RavenTest
+    {
+        private readonly EmbeddableDocumentStore store;
+        private readonly DocumentDatabase db;
 
-		public DeleteTriggers()
-		{
-			store = NewDocumentStore( catalog: (new TypeCatalog(typeof (CascadeDeleteTrigger))));
-			db = store.SystemDatabase;
-		}
+        public DeleteTriggers()
+        {
+            store = NewDocumentStore( catalog: (new TypeCatalog(typeof (CascadeDeleteTrigger))));
+            db = store.SystemDatabase;
+        }
 
-		public override void Dispose()
-		{
-			store.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            store.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void CanCascadeDeletes()
-		{
-			db.Documents.Put("abc", null, RavenJObject.Parse("{name: 'a'}"), RavenJObject.Parse("{'Cascade-Delete': 'def'}"), null);
-			db.Documents.Put("def", null, RavenJObject.Parse("{name: 'b'}"), new RavenJObject(), null);
+        [Fact]
+        public void CanCascadeDeletes()
+        {
+            db.Documents.Put("abc", null, RavenJObject.Parse("{name: 'a'}"), RavenJObject.Parse("{'Cascade-Delete': 'def'}"), null);
+            db.Documents.Put("def", null, RavenJObject.Parse("{name: 'b'}"), new RavenJObject(), null);
 
-			db.Documents.Delete("abc", null, null);
+            db.Documents.Delete("abc", null, null);
 
-			Assert.Null(db.Documents.Get("def", null));
-		}
-		
-	}
+            Assert.Null(db.Documents.Get("def", null));
+        }
+        
+    }
 }

@@ -1,4 +1,4 @@
-﻿import transformerParam = require("models/database/index/transformerParam");
+import transformerParam = require("models/database/index/transformerParam");
 
 class transformerQuery {
     transformerName: string;

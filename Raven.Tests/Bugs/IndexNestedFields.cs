@@ -15,89 +15,89 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexNestedFields : RavenTest
-	{
-		public class Outer
-		{
-			public Middle middle;
-		}
+    public class IndexNestedFields : RavenTest
+    {
+        public class Outer
+        {
+            public Middle middle;
+        }
 
-		public class Middle
-		{
-			public Inner inner;
-		}
+        public class Middle
+        {
+            public Inner inner;
+        }
 
-		public class Inner
-		{
-			public int ID;
-		}
+        public class Inner
+        {
+            public int ID;
+        }
 
-		static int ExpectedId = 1234;
+        static int ExpectedId = 1234;
 
-		[Fact]
-		public void can_query_by_ID()
-		{
-			UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
-			{
+        [Fact]
+        public void can_query_by_ID()
+        {
+            UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
+            {
                 var results1 = session3.Advanced.DocumentQuery<Outer>("matryoshka").Where("middle_inner_ID:" + ExpectedId).ToArray();
 
-				Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
-			});
-		}
+                Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
+            });
+        }
 
-		[Fact]
-		public void can_query_by_ID_with_linq()
-		{
-			UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
-				{
-					var results1 = session3.Query<Outer>("matryoshka")
-						.Where(d => d.middle.inner.ID == ExpectedId)
-						.ToArray();
+        [Fact]
+        public void can_query_by_ID_with_linq()
+        {
+            UsingPrepopulatedDatabase(delegate(IDocumentSession session3)
+                {
+                    var results1 = session3.Query<Outer>("matryoshka")
+                        .Where(d => d.middle.inner.ID == ExpectedId)
+                        .ToArray();
 
-					Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
-				});
-		}
+                    Assert.Equal(ExpectedId, results1.Single().middle.inner.ID);
+                });
+        }
 
-		void UsingPrepopulatedDatabase(Action<IDocumentSession> testOperation)
-		{
-			using (var store = NewDocumentStore())
-			{
+        void UsingPrepopulatedDatabase(Action<IDocumentSession> testOperation)
+        {
+            using (var store = NewDocumentStore())
+            {
 
-				var indexedFields = new { middle_inner_ID = FieldIndexing.NotAnalyzed };
+                var indexedFields = new { middle_inner_ID = FieldIndexing.NotAnalyzed };
 
-				store.DatabaseCommands.PutIndex("matryoshka", new IndexDefinitionBuilder<Outer, Outer>()
-				{
+                store.DatabaseCommands.PutIndex("matryoshka", new IndexDefinitionBuilder<Outer, Outer>()
+                {
 
-					Map = docs => from doc in docs select new { middle_inner_ID = doc.middle.inner.ID },
-					Indexes = { { d => indexedFields.middle_inner_ID, indexedFields.middle_inner_ID } }
+                    Map = docs => from doc in docs select new { middle_inner_ID = doc.middle.inner.ID },
+                    Indexes = { { d => indexedFields.middle_inner_ID, indexedFields.middle_inner_ID } }
 
-				});
+                });
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Outer
-						{
-							middle = new Middle()
-								{
-									inner = new Inner()
-										{
-											ID = ExpectedId
-										}
-								}
-						});
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Outer
+                        {
+                            middle = new Middle()
+                                {
+                                    inner = new Inner()
+                                        {
+                                            ID = ExpectedId
+                                        }
+                                }
+                        });
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				using (var session = store.OpenSession())
-				{
-					testOperation(session);
-				}
-			}
-		}
+                using (var session = store.OpenSession())
+                {
+                    testOperation(session);
+                }
+            }
+        }
 
-	}
+    }
 
 }

@@ -1,16 +1,16 @@
-﻿namespace Raven.Abstractions.Util.Encryptors
+namespace Raven.Abstractions.Util.Encryptors
 {
-	using System;
-	using System.Security.Cryptography;
+    using System;
+    using System.Security.Cryptography;
 
-	public abstract class HashEncryptorBase
-	{
-		protected bool AllowNonThreadSafeMethods { get; private set; }
+    public abstract class HashEncryptorBase
+    {
+        protected bool AllowNonThreadSafeMethods { get; private set; }
 
-		protected HashEncryptorBase(bool allowNonThreadSafeMethods)
-		{
-			AllowNonThreadSafeMethods = allowNonThreadSafeMethods;
-		}
+        protected HashEncryptorBase(bool allowNonThreadSafeMethods)
+        {
+            AllowNonThreadSafeMethods = allowNonThreadSafeMethods;
+        }
 
         protected byte[] ComputeHashInternal(HashAlgorithm algorithm, byte[] bytes, int? size = null)
         {
@@ -54,10 +54,10 @@
             }
         }
 
-		protected void ThrowNotSupportedExceptionForNonThreadSafeMethod()
-		{
-			if (AllowNonThreadSafeMethods == false)
-				throw new NotSupportedException("Non-thread-safe methods are not allowed.");
-		}
-	}
+        protected void ThrowNotSupportedExceptionForNonThreadSafeMethod()
+        {
+            if (AllowNonThreadSafeMethods == false)
+                throw new NotSupportedException("Non-thread-safe methods are not allowed.");
+        }
+    }
 }

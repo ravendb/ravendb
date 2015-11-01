@@ -86,7 +86,7 @@ namespace Raven.Abstractions.Smuggler
         /// </summary>
         public string IncrementalKey { get; set; }
 
-		public Action<string> ReportProgress { get; set; } 
+        public Action<string> ReportProgress { get; set; } 
     }
 
     public class SmugglerExportOptions<T> where T : ConnectionStringOptions

@@ -1,4 +1,4 @@
-﻿import appUrl = require("common/appUrl");
+import appUrl = require("common/appUrl");
 import shell = require("viewmodels/shell");
 
 import synchronizationReplicationSetup = require("models/filesystem/synchronizationReplicationSetup");

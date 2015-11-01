@@ -1,4 +1,4 @@
-﻿using Sparrow.Platform;
+using Sparrow.Platform;
 using System;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;

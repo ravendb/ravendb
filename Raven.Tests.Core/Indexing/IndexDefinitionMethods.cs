@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -69,7 +69,7 @@ namespace Raven.Tests.Core.Indexing
         }
 
         [Fact]
-		public void CanUseAsDocumentToIndexAllDocumentFields()
+        public void CanUseAsDocumentToIndexAllDocumentFields()
         {
             using (var store = GetDocumentStore())
             {
@@ -120,41 +120,41 @@ namespace Raven.Tests.Core.Indexing
             }
         }
 
-		[Fact]
-	    public void CanUseLoadAttachmentForIndexing()
-	    {
-			using (var store = GetDocumentStore())
-			{
-				var index = new Post_LoadAttachment();
-				index.Execute(store);
+        [Fact]
+        public void CanUseLoadAttachmentForIndexing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new Post_LoadAttachment();
+                index.Execute(store);
 
-				store.DatabaseCommands.PutAttachment("posts/1/attachments/1", null,
-					new MemoryStream(Encoding.UTF8.GetBytes("Lorem ipsum")), new RavenJObject());
+                store.DatabaseCommands.PutAttachment("posts/1/attachments/1", null,
+                    new MemoryStream(Encoding.UTF8.GetBytes("Lorem ipsum")), new RavenJObject());
 
-				store.DatabaseCommands.PutAttachment("posts/1/attachments/2", null,
-					new MemoryStream(Encoding.UTF8.GetBytes("dolor sit amet")), new RavenJObject());
+                store.DatabaseCommands.PutAttachment("posts/1/attachments/2", null,
+                    new MemoryStream(Encoding.UTF8.GetBytes("dolor sit amet")), new RavenJObject());
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new Post
-					{
-						Id = "posts/1",
-						AttachmentIds = new []{"posts/1/attachments/1", "posts/1/attachments/2"}
-					});
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Post
+                    {
+                        Id = "posts/1",
+                        AttachmentIds = new []{"posts/1/attachments/1", "posts/1/attachments/2"}
+                    });
 
-					session.SaveChanges();
+                    session.SaveChanges();
 
-					WaitForIndexing(store);
+                    WaitForIndexing(store);
 
-					var post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "Lorem").First();
+                    var post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "Lorem").First();
 
-					Assert.NotNull(post);
+                    Assert.NotNull(post);
 
-					post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "sit").First();
+                    post = session.Advanced.DocumentQuery<Post, Post_LoadAttachment>().WhereEquals("AttachmentContent", "sit").First();
 
-					Assert.NotNull(post);
-				}
-			}
-	    }
+                    Assert.NotNull(post);
+                }
+            }
+        }
     }
 }

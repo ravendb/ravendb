@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AttachmentActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -183,16 +183,16 @@ namespace Raven.Database.Actions
                         attachment.Data = () => new MemoryStream(new byte[0]);
                         attachment.Size = 0;
                         attachment.Metadata = new RavenJObject
-												{
-													{
-														"Raven-Read-Veto",
-														new RavenJObject
-															{
-																{"Reason", readVetoResult.Reason},
-																{"Trigger", attachmentReadTrigger.ToString()}
-															}
-														}
-												};
+                                                {
+                                                    {
+                                                        "Raven-Read-Veto",
+                                                        new RavenJObject
+                                                            {
+                                                                {"Reason", readVetoResult.Reason},
+                                                                {"Trigger", attachmentReadTrigger.ToString()}
+                                                            }
+                                                        }
+                                                };
                         foundResult = true;
                         break;
                     case ReadVetoResult.ReadAllow.Ignore:
@@ -237,16 +237,16 @@ namespace Raven.Database.Actions
                     case ReadVetoResult.ReadAllow.Deny:
                         attachment.Size = 0;
                         attachment.Metadata = new RavenJObject
-												{
-													{
-														"Raven-Read-Veto",
-														new RavenJObject
-															{
-																{"Reason", readVetoResult.Reason},
-																{"Trigger", attachmentReadTrigger.ToString()}
-															}
-														}
-												};
+                                                {
+                                                    {
+                                                        "Raven-Read-Veto",
+                                                        new RavenJObject
+                                                            {
+                                                                {"Reason", readVetoResult.Reason},
+                                                                {"Trigger", attachmentReadTrigger.ToString()}
+                                                            }
+                                                        }
+                                                };
                         foundResult = true;
                         break;
                     case ReadVetoResult.ReadAllow.Ignore:

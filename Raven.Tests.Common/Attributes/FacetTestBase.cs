@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -20,7 +20,7 @@ namespace Raven.Tests.Common.Attributes
 
         public class CameraCostIndex : Raven.Client.Indexes.AbstractIndexCreationTask
         {
-			public override IndexDefinition CreateIndexDefinition()
+            public override IndexDefinition CreateIndexDefinition()
             {
                 return new IndexDefinition
                 {
@@ -64,60 +64,60 @@ namespace Raven.Tests.Common.Attributes
         public static List<Facet> GetFacets()
         {
             return new List<Facet>
-			{
-				new Facet<Camera> {Name = x => x.Manufacturer},
-				new Facet<Camera>
-				{
-					Name = x => x.Cost,
-					Ranges =
-						{
-							x => x.Cost < 200m,
-							x => x.Cost > 200m && x.Cost < 400m,
-							x => x.Cost > 400m && x.Cost < 600m,
-							x => x.Cost > 600m && x.Cost < 800m,
-							x => x.Cost > 800m
-						}
-				},
-				new Facet<Camera>
-				{
-					Name = x => x.Megapixels,
-					Ranges =
-						{
-							x => x.Megapixels < 3.0m,
-							x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
-							x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
-							x => x.Megapixels > 10.0m
-			          					}
-			          			}
-			          	};
+            {
+                new Facet<Camera> {Name = x => x.Manufacturer},
+                new Facet<Camera>
+                {
+                    Name = x => x.Cost,
+                    Ranges =
+                        {
+                            x => x.Cost < 200m,
+                            x => x.Cost > 200m && x.Cost < 400m,
+                            x => x.Cost > 400m && x.Cost < 600m,
+                            x => x.Cost > 600m && x.Cost < 800m,
+                            x => x.Cost > 800m
+                        }
+                },
+                new Facet<Camera>
+                {
+                    Name = x => x.Megapixels,
+                    Ranges =
+                        {
+                            x => x.Megapixels < 3.0m,
+                            x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
+                            x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
+                            x => x.Megapixels > 10.0m
+                                        }
+                                }
+                        };
         }
 
         private static readonly List<string> Features = new List<string> 
-					{ 
-						"Image Stabilizer", 
-						"Tripod",
-						"Low Light Compatible",
-						"Fixed Lens",
-						"LCD"
-					};
+                    { 
+                        "Image Stabilizer", 
+                        "Tripod",
+                        "Low Light Compatible",
+                        "Fixed Lens",
+                        "LCD"
+                    };
 
         private static readonly List<string> Manufacturers = new List<string> 
-					{ 
-						"Sony", 
-						"Nikon",
-						"Phillips",
-						"Canon",
-						"Jessops"
-					};
+                    { 
+                        "Sony", 
+                        "Nikon",
+                        "Phillips",
+                        "Canon",
+                        "Jessops"
+                    };
 
         private static readonly List<string> Models = new List<string> 
-					{ 
-						"Model1", 
-						"Model2",
-						"Model3",
-						"Model4",
-						"Model5"
-					};
+                    { 
+                        "Model1", 
+                        "Model2",
+                        "Model3",
+                        "Model4",
+                        "Model5"
+                    };
 
         private static readonly Random random = new Random(1337);
 

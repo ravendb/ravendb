@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DayOfWeekTest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -63,7 +63,7 @@ namespace Raven.Tests.MailingList
 
                     var monday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Monday).ToList();
                     var tuesday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Tuesday).ToList();
-	                var wednesday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Wednesday).ToList();
+                    var wednesday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Wednesday).ToList();
                     var thursday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Thursday).ToList();
                     var friday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Friday).ToList();
                     var saturday = session.Query<SampleData>().Where(x => x.Date.DayOfWeek == DayOfWeek.Saturday).ToList();

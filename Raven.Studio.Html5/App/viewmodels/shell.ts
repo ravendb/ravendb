@@ -654,7 +654,7 @@ class shell extends viewModelBase {
 
                     this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
                     if (resourceType == TenantType.Database)
-						recentQueriesStorage.removeRecentQueries(resourceToDelete);
+                        recentQueriesStorage.removeRecentQueries(resourceToDelete);
                 }
             } else { // e.Type === "Put"
                 var getSystemDocumentTask = new getSystemDocumentCommand(e.Id).execute();
