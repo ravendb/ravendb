@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -29,12 +29,14 @@ namespace Raven.Database.Plugins.Builtins
 
         private RavenDBOptions options;
 
+        private Timer timer = null;
+
         const double FreeThreshold = 0.15;
 
         public void Execute(RavenDBOptions serverOptions)
         {
             options = serverOptions;
-            options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
+            timer = options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
         }
 
         private void ExecuteCheck(object state)
@@ -146,6 +148,12 @@ namespace Raven.Database.Plugins.Builtins
 
         public void Dispose()
         {
+            var copy = timer;
+            if (copy != null)
+            {
+                copy.Dispose();
+                timer = null;
+            }
         }
 
         private class PathToCheck
