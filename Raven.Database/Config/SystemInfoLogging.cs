@@ -9,6 +9,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 
+
 namespace Raven.Database.Config
 {
     public class SystemInfoLoggin : IServerStartupTask
@@ -28,41 +29,56 @@ namespace Raven.Database.Config
 
         private void ExecuteCheck(object state)
         {
-            if (options.Disposed)
+            try
             {
-                Dispose();
-                return;
+                if (options.Disposed)
+                {
+                    Dispose();
+                    return;
+                }
+
+                if (Log.IsDebugEnabled == false)
+                    return;
+
+                logText.Clear();
+
+                logText.AppendFormat("Version: {0} / {1}\r\n", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
+
+                logText.AppendFormat("Total Mem: {0:#,#}MB, Available: {1:#,#}MB, Mem limit: {2:#,#}MB, Low mem: {3}\r\n",
+                    MemoryStatistics.TotalPhysicalMemory,
+                    MemoryStatistics.AvailableMemoryInMb,
+                    MemoryStatistics.MemoryLimit,
+                    MemoryStatistics.IsLowMemory);
+
+                options.DatabaseLandlord.ForAllDatabases(database =>
+                {
+                    logText.AppendFormat("DebugInfo for Database '{0}' :\r\n= = = = = = = = = = = = = = = = \r\n", database.Name);
+
+                    LogMetrics(database);
+                    LogVoronStats(database);
+                    LogEtags(database);
+                    // TODO : LogIndexes (stale etc.. ?)
+                });
+
+                options.FileSystemLandlord.ForAllFileSystems(filesystem =>
+                {
+                    // TODO : Log FS as well
+                });
+
+                WriteCurrentServerStateInformationToLog();
             }
-
-            if (Log.IsDebugEnabled == false)
-                return;
-
-            logText.Clear();
-
-            logText.AppendFormat("Version: {0} / {1}\r\n", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
-
-            logText.AppendFormat("Total Mem: {0:#,#}MB, Available: {1:#,#}MB, Mem limit: {2:#,#}MB, Low mem: {3}\r\n",
-                MemoryStatistics.TotalPhysicalMemory,
-                MemoryStatistics.AvailableMemoryInMb,
-                MemoryStatistics.MemoryLimit,
-                MemoryStatistics.IsLowMemory);
-
-            options.DatabaseLandlord.ForAllDatabases(database =>
+            catch (Exception e)
             {
-                logText.AppendFormat("DebugInfo for Database '{0}' :\r\n", database.Name);
-
-                LogMetrics(database);
-                LogVoronStats(database);
-                LogEtags(database);
-                // TODO : LogIndexes (stale etc.. ?)
-            });
-
-            options.FileSystemLandlord.ForAllFileSystems(filesystem =>
-            {
-                // TODO : Log FS as well
-            });
-
-            WriteCurrentServerStateInformationToLog();
+                Log.WarnException("Error when generating log metrics, log metrics will be disabled", e);
+                try
+                {
+                    Dispose();
+                }
+                catch (Exception)
+                {
+                    
+                }
+            }
         }
 
         private void WriteCurrentServerStateInformationToLog()
@@ -77,32 +93,32 @@ namespace Raven.Database.Config
 
             var metrics = database.CreateMetrics();
 
-            logText.AppendFormat("Metrics:: DocsWritesPerSecond: {0:N3}, IndexedPerSecond: {1:N3}, ReducedPerSecond: {2:N3}, RequestsPerSecond: {3:N3}\r\n",
+            logText.AppendFormat("\tMetrics:: DocsWritesPerSecond: {0:N3}, IndexedPerSecond: {1:N3}, ReducedPerSecond: {2:N3}, RequestsPerSecond: {3:N3}\r\n",
                 metrics.DocsWritesPerSecond,
                 metrics.IndexedPerSecond,
                 metrics.ReducedPerSecond,
                 metrics.RequestsPerSecond);
 
-            logText.AppendFormat("Metrics.Request:: Count: {0:#,#}, OneMinuteRate: {1:N3}, MeanRate: {2:N3}\r\n",
+            logText.AppendFormat("\tMetrics.Requests:: Count: {0:#,#}, OneMinuteRate: {1:N3}, MeanRate: {2:N3}\r\n",
                 metrics.Requests.Count,
                 metrics.Requests.OneMinuteRate,
                 metrics.Requests.MeanRate);
 
-            logText.AppendFormat("Metrics.RequestsDuration:: Counter: {0:#,#}, Max: {1:N3}, Min: {2:N3}, Mean: {3:N3}, Stdev: {4:N3}\r\n",
+            logText.AppendFormat("\tMetrics.RequestsDuration:: Counter: {0:#,#}, Max: {1:N3}, Min: {2:N3}, Mean: {3:N3}, Stdev: {4:N3}\r\n",
                 metrics.RequestsDuration.Counter,
                 metrics.RequestsDuration.Max,
                 metrics.RequestsDuration.Min,
                 metrics.RequestsDuration.Mean,
                 metrics.RequestsDuration.Stdev);
 
-            logText.AppendFormat("Metrics.StaleIndexMaps:: Counter: {0:#,#}, Max: {1:N3}, Min: {2:N3}, Mean: {3:N3}, Stdev: {4:N3}\r\n",
+            logText.AppendFormat("\tMetrics.StaleIndexMaps:: Counter: {0:#,#}, Max: {1:N3}, Min: {2:N3}, Mean: {3:N3}, Stdev: {4:N3}\r\n",
                 metrics.StaleIndexMaps.Counter,
                 metrics.StaleIndexMaps.Max,
                 metrics.StaleIndexMaps.Min,
                 metrics.StaleIndexMaps.Mean,
                 metrics.StaleIndexMaps.Stdev);
 
-            logText.AppendFormat("Metrics.StaleIndexMaps:: Counter: {0:#,#}, Max: {1:N3}, Min: {2:N3}, Mean: {3:N3}, Stdev: {4:N3}\r\n",
+            logText.AppendFormat("\tMetrics.StaleIndexMaps:: Counter: {0:#,#}, Max: {1:N3}, Min: {2:N3}, Mean: {3:N3}, Stdev: {4:N3}\r\n",
                 metrics.StaleIndexReduces.Counter,
                 metrics.StaleIndexReduces.Max,
                 metrics.StaleIndexReduces.Min,
@@ -112,6 +128,9 @@ namespace Raven.Database.Config
 
         private void LogVoronStats(DocumentDatabase database)
         {
+            if (database.TransactionalStorage is Raven.Storage.Voron.TransactionalStorage == false)
+                return;
+
             var voronStats = database.TransactionalStorage.GetStorageStats().VoronStats;
 
             if (voronStats == null)
