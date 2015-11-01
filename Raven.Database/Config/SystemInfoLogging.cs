@@ -204,7 +204,7 @@ namespace Raven.Database.Config
                     documentsCount = accessor.Documents.GetDocumentsCount();
                 });
 
-            lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+            lastDocEtag = lastDocEtag.CombineHashWith(BitConverter.GetBytes(documentsCount));
             logText.AppendFormat("Last DB Etag={0}\r\n", lastDocEtag);
         }
 
