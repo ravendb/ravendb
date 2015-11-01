@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -149,6 +149,7 @@
     <Compile Include="Storage\SplittingVeryBig.cs" />
     <Compile Include="Storage\StorageReportGenerationTests.cs" />
     <Compile Include="Storage\VeryBig.cs" />
+    <Compile Include="Tables\BasicUsage.cs" />
     <Compile Include="Trees\Basic.cs" />
     <Compile Include="Trees\CanDefrag.cs" />
     <Compile Include="Trees\CanIterateBackward.cs" />

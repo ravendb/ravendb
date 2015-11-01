@@ -36,6 +36,7 @@ namespace Voron
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _header->OverflowSize; }
+            set { _header->OverflowSize = value; }
          
         }
 

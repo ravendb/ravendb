@@ -17,7 +17,8 @@ namespace Voron.Data.RawData
     /// Handles small values (lt 2Kb) by packing them into pages
     /// 
     /// It will allocate a 512 pages (2MB in using 4KB pages) and work with them.
-    /// It can grow up to 2,000 pages (7.8 MB in size using 4KB pages).
+    /// It can grow up to 2,000 pages (7.8 MB in size using 4KB pages), the section size
+    /// is dependent on the size of the database file.
     /// 
     /// All attempts are made to reduce the number of times that we need to move data, even
     /// at the cost of fragmentation.  
@@ -28,8 +29,8 @@ namespace Voron.Data.RawData
         private readonly LowLevelTransaction _tx;
         private RawDataSmallSectionPageHeader* _sectionHeader;
         public readonly int MaxItemSize;
-        private int _pageSize;
-        private HashSet<long> _dirtyPages = new HashSet<long>();
+        private readonly int _pageSize;
+        private readonly HashSet<long> _dirtyPages = new HashSet<long>();
 
         public event DataMovedDelegate DataMoved;
 
@@ -83,14 +84,23 @@ namespace Voron.Data.RawData
 
         public bool TryWrite(long id, byte* data, int size)
         {
-            var posInPage = (int)(id % _pageSize);
-            var pageNumberInSection = (id - posInPage) / _pageSize;
+            byte* writePos;
+            if (!TryWriteDirect(id, size, out writePos))
+                return false;
+            Memory.Copy(writePos, data, size);
+            return true;
+        }
+
+        public bool TryWriteDirect(long id, int size, out byte* writePos)
+        {
+            var posInPage = (int) (id%_pageSize);
+            var pageNumberInSection = (id - posInPage)/_pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException("Asked to load a past the allocated values: " + id + " from page " +
                                                pageHeader->PageNumber);
 
-            var sizes = (short*)((byte*)pageHeader + posInPage);
+            var sizes = (short*) ((byte*) pageHeader + posInPage);
             if (sizes[1] < 0)
                 throw new InvalidDataException("Asked to load a value that was already freed: " + id + " from page " +
                                                pageHeader->PageNumber);
@@ -102,14 +112,16 @@ namespace Voron.Data.RawData
                     pageHeader->PageNumber);
 
             if (sizes[0] < size)
+            {
+                writePos = (byte*) 0;
                 return false; // can't write here
+            }
 
 
             pageHeader = ModifyPage(pageHeader);
-            var writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
+            writePos = ((byte*) pageHeader + posInPage + sizeof (short) /*allocated*/+ sizeof (short) /*used*/);
             // note that we have to do this calc again, pageHeader might have changed
-            ((short*)((byte*)pageHeader + posInPage))[1] = (short)size;
-            Memory.Copy(writePos, data, size);
+            ((short*) ((byte*) pageHeader + posInPage))[1] = (short) size;
             return true;
         }
 

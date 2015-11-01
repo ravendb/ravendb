@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-
 using Sparrow;
-
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -132,9 +128,10 @@ namespace Voron
 
         public int ScratchBufferOverflowTimeout { get; set; }
 
+		
         public static StorageEnvironmentOptions CreateMemoryOnly(string configTempPath = null)
         {
-            if (configTempPath == null)
+		     if (configTempPath == null)
                 configTempPath = Path.GetTempPath();
 
             return new PureMemoryStorageEnvironmentOptions(configTempPath);
@@ -352,11 +349,11 @@ namespace Voron
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager";
 
                 if (RunningOnPosix)
-                {
+			    {
                     _dataPager = new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);
                 }
                 else
-                {
+				{
                     _dataPager = new Win32MemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
                 }
@@ -444,7 +441,7 @@ namespace Voron
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}";
 
                 if (RunningOnPosix)
-                     return new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);
+				    return new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);
 
 
                 return new Win32MemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize,
@@ -517,5 +514,6 @@ namespace Voron
                 }
             }
         }
+
     }
 }
