@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Raven.Client.Indexes;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -63,12 +64,63 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
-	    {
-	        base.SetResultTransformer(resultsTransformer);
-	        return this;
-	    }
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
+		{
+			base.SetResultTransformer(resultsTransformer);
+			return this;
+		}
 
+		public IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+			where TTransformer : AbstractTransformerCreationTask, new()
+		{
+			var documentQuery = new DocumentQuery<TTransformerResult>(theSession,
+																	 theDatabaseCommands,
+																	 theAsyncDatabaseCommands,
+																	 indexName,
+																	 fieldsToFetch,
+																	 projectionFields,
+																	 queryListeners,
+																	 isMapReduce)
+			{
+				pageSize = pageSize,
+				queryText = new StringBuilder(queryText.ToString()),
+				start = start,
+				timeout = timeout,
+				cutoff = cutoff,
+				cutoffEtag = cutoffEtag,
+				queryStats = queryStats,
+				theWaitForNonStaleResults = theWaitForNonStaleResults,
+				theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
+				sortByHints = sortByHints,
+				orderByFields = orderByFields,
+				isDistinct = isDistinct,
+				allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+				negate = negate,
+				transformResultsFunc = transformResultsFunc,
+				includes = new HashSet<string>(includes),
+				isSpatialQuery = isSpatialQuery,
+				spatialFieldName = spatialFieldName,
+				queryShape = queryShape,
+				spatialRelation = spatialRelation,
+				spatialUnits = spatialUnits,
+				distanceErrorPct = distanceErrorPct,
+				rootTypes = { typeof(T) },
+				defaultField = defaultField,
+				beforeQueryExecutionAction = beforeQueryExecutionAction,
+				highlightedFields = new List<HighlightedField>(highlightedFields),
+				highlighterPreTags = highlighterPreTags,
+				highlighterPostTags = highlighterPostTags,
+				resultsTransformer = new TTransformer().TransformerName,
+				transformerParameters = transformerParameters,
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching,
+				showQueryTimings = showQueryTimings,
+				lastEquality = lastEquality,
+				defaultOperator = defaultOperator,
+				shouldExplainScores = shouldExplainScores
+			};
+			return documentQuery;
+		}
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
