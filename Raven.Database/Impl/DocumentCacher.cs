@@ -34,7 +34,7 @@ namespace Raven.Database.Impl
             {
                 {"physicalMemoryLimitPercentage", configuration.Memory.MemoryCacheLimitPercentage.ToString()},
                 {"pollingInterval",  configuration.Memory.MemoryCacheLimitCheckInterval.AsTimeSpan.ToString(@"hh\:mm\:ss")},
-                {"cacheMemoryLimitMegabytes", configuration.Memory.MemoryCacheLimit.Megabytes.ToString()}
+                {"cacheMemoryLimitMegabytes", (configuration.Memory.MemoryCacheLimit.ValueInBytes / 1024 / 1024).ToString()}
             });
             log.Info(@"MemoryCache Settings:
   PhysicalMemoryLimit = {0}

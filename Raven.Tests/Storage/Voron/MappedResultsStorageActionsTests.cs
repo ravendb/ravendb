@@ -345,7 +345,7 @@ namespace Raven.Tests.Storage
                     var result = results[0];
                     Assert.NotEqual(Etag.InvalidEtag, result.Etag);
                     Assert.Equal("reduceKey1", result.ReduceKey);
-                    Assert.True(result.Size > 0);
+                    Assert.True(result.Size.ValueInBytes > 0);
                     Assert.Null(result.Source);
                     Assert.Equal(UtcNow, result.Timestamp);
                     Assert.Equal("data1", result.Data["data"]);
@@ -362,7 +362,7 @@ namespace Raven.Tests.Storage
                     var result1 = results[0];
                     Assert.NotEqual(Etag.InvalidEtag, result1.Etag);
                     Assert.Equal("reduceKey1", result1.ReduceKey);
-                    Assert.True(result1.Size > 0);
+                    Assert.True(result1.Size.ValueInBytes > 0);
                     Assert.Null(result1.Source);
                     Assert.Equal(UtcNow, result1.Timestamp);
                     Assert.Equal("data1", result1.Data["data"]);
@@ -370,7 +370,7 @@ namespace Raven.Tests.Storage
                     var result2 = results[1];
                     Assert.NotEqual(Etag.InvalidEtag, result2.Etag);
                     Assert.Equal("reduceKey1", result2.ReduceKey);
-                    Assert.True(result2.Size > 0);
+                    Assert.True(result2.Size.ValueInBytes > 0);
                     Assert.Null(result2.Source);
                     Assert.Equal(UtcNow, result2.Timestamp);
                     Assert.Equal("data2", result2.Data["data"]);
@@ -1387,7 +1387,7 @@ namespace Raven.Tests.Storage
 
                     Assert.NotEqual(Etag.InvalidEtag, r1.Etag);
                     Assert.Equal("reduceKey1", r1.ReduceKey);
-                    Assert.True(r1.Size > 0);
+                    Assert.True(r1.Size.ValueInBytes > 0);
                     Assert.Equal("2", r1.Source);
                     Assert.Equal(UtcNow, r1.Timestamp);
                     Assert.Equal("data1", r1.Data["data"]);
@@ -1677,7 +1677,7 @@ namespace Raven.Tests.Storage
                     var result = results[0];
                     Assert.NotEqual(Etag.InvalidEtag, result.Etag);
                     Assert.Equal("reduceKey1", result.ReduceKey);
-                    Assert.True(result.Size > 0);
+                    Assert.True(result.Size.ValueInBytes > 0);
                     Assert.Null(result.Source);
                     Assert.Equal(UtcNow, result.Timestamp);
                     Assert.Equal("data1", result.Data["data"]);

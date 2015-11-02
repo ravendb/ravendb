@@ -45,7 +45,7 @@ namespace Raven.Database.Config
 
                 logText.AppendFormat("Total Mem: {0:#,#}MB, Available: {1:#,#}MB, Mem limit: {2:#,#}MB, Low mem: {3}\r\n",
                     MemoryStatistics.TotalPhysicalMemory,
-                    MemoryStatistics.AvailableMemoryInMb,
+                    MemoryStatistics.AvailableMemory,
                     MemoryStatistics.MemoryLimit,
                     MemoryStatistics.IsLowMemory);
 

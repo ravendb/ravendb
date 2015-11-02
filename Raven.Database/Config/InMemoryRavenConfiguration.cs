@@ -237,7 +237,7 @@ namespace Raven.Database.Config
             Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
             
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
-            Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
+
 
             Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
             Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
@@ -910,7 +910,7 @@ namespace Raven.Database.Config
                         timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
                         Debug.Assert(timeUnit != null);
                     }
-                    else if (property.PropertyType == SizeSetting.TypeOf)
+                    else if (property.PropertyType == Size.TypeOf)
                     {
                         sizeUnit = property.GetCustomAttribute<SizeUnitAttribute>();
                         Debug.Assert(sizeUnit != null);
@@ -933,7 +933,7 @@ namespace Raven.Database.Config
                             }
                             else if (sizeUnit != null)
                             {
-                                property.SetValue(this, new SizeSetting(Convert.ToInt64(value), sizeUnit.Unit));
+                                property.SetValue(this, new Size(Convert.ToInt64(value), sizeUnit.Unit));
                             }
                             else
                             {
@@ -980,7 +980,7 @@ namespace Raven.Database.Config
                     }
                     else if (sizeUnit != null)
                     {
-                        property.SetValue(this, new SizeSetting(Convert.ToInt64(defaultValue), sizeUnit.Unit));
+                        property.SetValue(this, new Size(Convert.ToInt64(defaultValue), sizeUnit.Unit));
                     }
                     else
                     {
@@ -1455,15 +1455,15 @@ namespace Raven.Database.Config
             public MemoryConfiguration()
             {
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-                LimitForProcessing = new SizeSetting(Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)), SizeUnit.Megabytes);
+                LimitForProcessing = Size.Min(new Size(1024, SizeUnit.Megabytes), MemoryStatistics.AvailableMemory * 0.75);
 
-                LowMemoryForLinuxDetection = new SizeSetting(Math.Min(16, (int)(MemoryStatistics.AvailableMemoryInMb * 0.10)), SizeUnit.Megabytes);
+                LowMemoryForLinuxDetection = Size.Min(new Size(16, SizeUnit.Megabytes), MemoryStatistics.AvailableMemory * 0.10);
 
-                MemoryCacheLimit = new SizeSetting(GetDefaultMemoryCacheLimitMegabytes(), SizeUnit.Megabytes);
+                MemoryCacheLimit = new Size(GetDefaultMemoryCacheLimitMegabytes(), SizeUnit.Megabytes);
 
                 MemoryCacheLimitCheckInterval = new TimeSetting((long) MemoryCache.Default.PollingInterval.TotalSeconds, TimeUnit.Seconds);
 
-                AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(Math.Min(768, MemoryStatistics.TotalPhysicalMemory / 2), SizeUnit.Megabytes);
+                AvailableMemoryForRaisingBatchSizeLimit = Size.Min(new Size(768, SizeUnit.Megabytes), MemoryStatistics.TotalPhysicalMemory / 2);
             }
 
             /// <summary>
@@ -1474,17 +1474,17 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/Memory/LimitForProcessing")]
             [ConfigurationEntry("Raven/MemoryLimitForProcessing")]
             [ConfigurationEntry("Raven/MemoryLimitForIndexing")]
-            public SizeSetting LimitForProcessing { get; set; }
+            public Size LimitForProcessing { get; set; }
 
-            public SizeSetting DynamicLimitForProcessing
+            public Size DynamicLimitForProcessing
             {
                 get
                 {
-                    var availableMemory = MemoryStatistics.AvailableMemoryInMb;
-                    var minFreeMemory = (LimitForProcessing.Megabytes * 2L);
+                    var availableMemory = MemoryStatistics.AvailableMemory;
+                    var minFreeMemory = LimitForProcessing * 2L;
                     // we have more memory than the twice the limit, we can use the default limit
                     if (availableMemory > minFreeMemory)
-                        return new SizeSetting(LimitForProcessing.Megabytes * 1024L * 1024L, SizeUnit.Bytes);
+                        return LimitForProcessing;
 
                     // we don't have enough room to play with, if two databases will request the max memory limit
                     // at the same time, we'll start paging because we'll run out of free memory. 
@@ -1492,7 +1492,7 @@ namespace Raven.Database.Config
                     // of memory available for processing based on the amount of memory we actually have available,
                     // assuming that we have multiple concurrent users of memory at the same time.
                     // we limit that at 16 MB, if we have less memory than that, we can't really do much anyway
-                    return new SizeSetting(Math.Min(availableMemory * 1024L * 1024L / 4, 16 * 1024 * 1024), SizeUnit.Bytes);
+                    return Size.Min(availableMemory / 4, new Size(16, SizeUnit.Megabytes));
                 }
             }
 
@@ -1503,7 +1503,7 @@ namespace Raven.Database.Config
             [SizeUnit(SizeUnit.Megabytes)]
             [ConfigurationEntry("Raven/Memory/LowMemoryLimitForLinuxDetectionInMB")]
             [ConfigurationEntry("Raven/LowMemoryLimitForLinuxDetectionInMB")]
-            public SizeSetting LowMemoryForLinuxDetection { get; set; }
+            public Size LowMemoryForLinuxDetection { get; set; }
 
             /// <summary>
             /// An integer value that specifies the maximum allowable size, in megabytes, that caching 
@@ -1513,7 +1513,7 @@ namespace Raven.Database.Config
             [SizeUnit(SizeUnit.Megabytes)]
             [ConfigurationEntry("Raven/Memory/MemoryCacheLimitInMB")]
             [ConfigurationEntry("Raven/MemoryCacheLimitMegabytes")]
-            public SizeSetting MemoryCacheLimit { get; set; }
+            public Size MemoryCacheLimit { get; set; }
 
             /// <summary>
             /// The expiration value for documents in the internal managed cache
@@ -1549,7 +1549,7 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/Memory/AvailableMemoryForRaisingBatchSizeLimit")]
             [ConfigurationEntry("Raven/AvailableMemoryForRaisingBatchSizeLimit")]
             [ConfigurationEntry("Raven/AvailableMemoryForRaisingIndexBatchSizeLimit")]
-            public SizeSetting AvailableMemoryForRaisingBatchSizeLimit { get; set; }
+            public Size AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
             private int GetDefaultMemoryCacheLimitMegabytes()
             {
@@ -1557,9 +1557,9 @@ namespace Raven.Database.Config
                 var cacheSizeMaxSetting = 1024;
 
                 // we need to leave ( a lot ) of room for other things as well, so we min the cache size
-                var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
-                                        // reduce the unmanaged cache size from the default min
-                                        cacheSizeMaxSetting;
+                int val = (int) ((MemoryStatistics.TotalPhysicalMemory.ValueInBytes / 2) -
+                                 // reduce the unmanaged cache size from the default min
+                                 cacheSizeMaxSetting);
 
                 if (val < 0)
                     return 128; // if machine has less than 1024 MB, then only use 128 MB 
@@ -1661,7 +1661,11 @@ namespace Raven.Database.Config
             /// <summary>
             /// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
             /// </summary>
-            public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+            [DefaultValue(256)]
+            [SizeUnit(SizeUnit.Megabytes)]
+            [ConfigurationEntry("Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorageInMB")]
+            [ConfigurationEntry("Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage")]
+            public Size MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
         }
 
         public class ReplicationConfiguration : ConfigurationBase
@@ -1922,7 +1926,7 @@ namespace Raven.Database.Config
             [SizeUnit(SizeUnit.Megabytes)]
             [ConfigurationEntry("Raven/Indexing/NewIndexInMemoryMaxInMB")]
             [ConfigurationEntry("Raven/NewIndexInMemoryMaxMB")]
-            public SizeSetting NewIndexInMemoryMaxSize { get; set; }
+            public Size NewIndexInMemoryMaxSize { get; set; }
 
             /// <summary>
             /// Controls whatever RavenDB will create temporary indexes 

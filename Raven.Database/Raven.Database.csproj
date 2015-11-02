@@ -270,7 +270,7 @@
     <Compile Include="Config\Attributes\MinValueAttribute.cs" />
     <Compile Include="Config\Attributes\SizeUnitAttribute.cs" />
     <Compile Include="Config\Attributes\TimeUnitAttribute.cs" />
-    <Compile Include="Config\Settings\SizeSetting.cs" />
+    <Compile Include="Config\Settings\Size.cs" />
     <Compile Include="Config\Settings\TimeSetting.cs" />
     <Compile Include="Config\SystemInfoLogging.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />

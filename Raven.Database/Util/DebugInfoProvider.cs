@@ -25,6 +25,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Management;
+using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Util
 {
@@ -201,14 +202,14 @@ namespace Raven.Database.Util
             using (var systemUtilizationStream = systemUtilization.Open())
             using (var streamWriter = new StreamWriter(systemUtilizationStream))
             {
-                long totalPhysicalMemory = -1;
-                long availableMemory = -1;
+                Size? totalPhysicalMemory = null;
+                Size? availableMemory = null;
                 object cpuTimes;
 
                 try
                 {
                     totalPhysicalMemory = MemoryStatistics.TotalPhysicalMemory;
-                    availableMemory = MemoryStatistics.AvailableMemoryInMb;
+                    availableMemory = MemoryStatistics.AvailableMemory;
 
                     using (var searcher = new ManagementObjectSearcher("select * from Win32_PerfFormattedData_PerfOS_Processor"))
                     {
@@ -228,8 +229,8 @@ namespace Raven.Database.Util
 
                 jsonSerializer.Serialize(streamWriter, new
                 {
-                    TotalPhysicalMemory = string.Format("{0:#,#.##;;0} MB", totalPhysicalMemory),
-                    AvailableMemory = string.Format("{0:#,#.##;;0} MB", availableMemory),
+                    TotalPhysicalMemory = totalPhysicalMemory?.ToString(),
+                    AvailableMemory = availableMemory?.ToString(),
                     CurrentCpuUsage = cpuTimes
                 });
 

@@ -15,6 +15,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Raven.Database.Config.Settings;
 using Sparrow;
 using Voron.Trees;
 using VoronIndex = Raven.Database.Storage.Voron.Impl.Index;
@@ -356,7 +357,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
                         Bucket = value.ReadInt(MappedResultFields.Bucket),
                         Source = value.ReadString(MappedResultFields.DocId),
-                        Size = size,
+                        Size = new Size(size, SizeUnit.Bytes),
                         Data = LoadMappedResult(iterator.CurrentKey, value.ReadString(MappedResultFields.ReduceKey), mappedResultsData)
                     };
 
@@ -426,7 +427,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                             Timestamp = DateTime.FromBinary(value.ReadLong(ReduceResultFields.Timestamp)),
                             Bucket = value.ReadInt(ReduceResultFields.Bucket),
                             Source = value.ReadInt(ReduceResultFields.SourceBucket).ToString(),
-                            Size = size,
+                            Size = new Size(size, SizeUnit.Bytes),
                             Data = LoadMappedResult(iterator.CurrentKey, readReduceKey, reduceResultsData)
                         };
 
@@ -658,7 +659,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         Timestamp = DateTime.FromBinary(value.ReadLong(ReduceResultFields.Timestamp)),
                         Bucket = value.ReadInt(ReduceResultFields.Bucket),
                         Source = null,
-                        Size = size,
+                        Size = new Size(size, SizeUnit.Bytes),
                         Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, reduceResultsData) : null
                     };
                 }
@@ -704,7 +705,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
                         Bucket = value.ReadInt(MappedResultFields.Bucket),
                         Source = null,
-                        Size = size,
+                        Size = new Size(size, SizeUnit.Bytes),
                         Data = loadData ? LoadMappedResult(iterator.CurrentKey, readReduceKey, mappedResultsData) : null
                     };
                 }
@@ -1071,7 +1072,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                             Etag = Etag.Parse(value.ReadBytes(MappedResultFields.Etag)),
                             Timestamp = DateTime.FromBinary(value.ReadLong(MappedResultFields.Timestamp)),
                             Data = data,
-                            Size = size
+                            Size = new Size(size, SizeUnit.Bytes)
                         };
 
                         outputCollection.Add(mappedResult);

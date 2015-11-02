@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Config.Attributes

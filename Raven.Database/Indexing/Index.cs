@@ -34,6 +34,7 @@ using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing.Analyzers;
@@ -745,7 +746,7 @@ namespace Raven.Database.Indexing
                 return;
 
             var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
-            var toobig = dir.SizeInBytes() >= context.Configuration.Indexing.NewIndexInMemoryMaxSize.Bytes;
+            var toobig = new Size(dir.SizeInBytes(), SizeUnit.Bytes) >= context.Configuration.Indexing.NewIndexInMemoryMaxSize;
 
             var tooOld = (SystemTime.UtcNow - _indexCreationTime) > context.Configuration.Indexing.NewIndexInMemoryMaxTime.AsTimeSpan;
 
