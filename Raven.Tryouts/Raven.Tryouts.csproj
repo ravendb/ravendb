@@ -89,7 +89,7 @@
     <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
       <Private>True</Private>
-      </Reference>
+    </Reference>
     <Reference Include="Esent.Interop, Version=1.7.0.0, Culture=neutral, PublicKeyToken=8dd49bbdae3f61af, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
@@ -173,8 +173,8 @@
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
       <Name>Raven.Tests.Common</Name>
-        </ProjectReference>
-        <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
     </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
@@ -191,6 +191,7 @@
     <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
       <Project>{D8BDD718-6E21-41B7-9C41-D0FBE0532DF4}</Project>
       <Name>Raven.Tests.Issues</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>
