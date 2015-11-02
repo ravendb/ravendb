@@ -646,18 +646,45 @@ namespace Raven.Client.Indexes
 
             SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
             {
-                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+                var needsCasting = (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing) && TypeExistsOnServer(rightOp.Type);
+                if (needsCasting)
                 {
                     Out("((");
                     Out(ConvertTypeToCSharpKeyword(rightOp.Type));
                     Out(")(");
+                }
+                if (rightOp.NodeType == ExpressionType.Constant)
+                {
+                    // on the server side, double is treated as decimal, so we have
+                    // to force this coercion so the constants would work
+                    if (rightOp.Type == typeof(double))
+                    {
+                        Out("(double?)");
+                    }
+                    else if(rightOp.Type == typeof(float))
+                    {
+                        Out("(float?)");
+                    }
                 }
                 Visit(leftOp, innerPrecedence);
                 Out(' ');
                 Out(str);
                 Out(' ');
                 Visit(rightOp, innerPrecedence);
-                if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
+                if(rightOp.NodeType == ExpressionType.Constant)
+                {
+                    // on the server side, double is treated as decimal, so we have
+                    // to force this coercion so the constants would work
+                    if (rightOp.Type == typeof(double))
+                    {
+                        Out("D");
+                    }
+                    else if (rightOp.Type == typeof(float))
+                    {
+                        Out("F");
+                    }
+                }
+                if (needsCasting)
                 {
                     Out("))");
                 }
@@ -1028,7 +1055,7 @@ namespace Raven.Client.Indexes
             if (type.Assembly == typeof(object).Assembly) // mscorlib
                 return true;
 
-            if (type.Assembly == typeof(Uri).Assembly) // System assembly
+            if (type.Assembly == typeof(Uri).Assembly()) // System assembly
                 return true;
 
             if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core

@@ -249,16 +249,16 @@ namespace Raven.Abstractions.Json
             var documentWriter = new JsonTextWriter(documentStringWriter)
             {
                 Formatting = Formatting.Indented,
-                IndentChar = '\t',
-                Indentation = 1
+                IndentChar = ' ',
+                Indentation = 4
             };
 
             var metadataStringWriter = new StringWriter();
             var metadataWriter = new JsonTextWriter(metadataStringWriter)
             {
                 Formatting = Formatting.Indented,
-                IndentChar = '\t',
-                Indentation = 1
+                IndentChar = ' ',
+                Indentation = 4
             };
 
             documentWriter.WriteStartObject();

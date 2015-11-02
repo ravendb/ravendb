@@ -847,14 +847,14 @@ namespace Raven.Client.Connection.Async
             AddTransactionInformation(metadata);
 
             var uniqueIds = new HashSet<string>(keys);
-                // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
-                // we are fine with that, requests to load > 128 items are going to be rare
+            // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
+            // we are fine with that, requests to load > 128 items are going to be rare
             var isGet = uniqueIds.Sum(x => x.Length) < 1024;
             var method = isGet ? HttpMethod.Get : HttpMethod.Post;
             if (isGet)
-                {
-                    path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-                }
+            {
+                path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
+            }
 
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)
                 .AddOperationHeaders(OperationsHeaders))
