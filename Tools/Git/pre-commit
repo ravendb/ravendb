@@ -13,9 +13,11 @@ files=`git diff-index --name-only $against |                      # Find all cha
 
 # Find files with trailing whitespace
 for FILE in $files ; do
+if [[ -e "$FILE" ]]; then
     echo "Fixing whitespace in $FILE"
     TMP="$FILE.tmp"
     expand --tabs=4 --initial "$FILE" > TMP
     mv TMP "$FILE"
     git add "$FILE"
+fi
 done
