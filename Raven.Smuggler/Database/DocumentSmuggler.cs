@@ -47,10 +47,7 @@ namespace Raven.Smuggler.Database
                 var maxEtag = _maxEtags.LastDocsEtag;
                 var now = SystemTime.UtcNow;
                 var totalCount = 0;
-                var lastReport = SystemTime.UtcNow;
-                var reportInterval = TimeSpan.FromSeconds(2);
                 var reachedMaxEtag = false;
-                Notifications.ShowProgress("Exporting Documents");
 
                 var affectedCollections = new List<string>();
                 Options.Filters.ForEach(filter =>
@@ -70,7 +67,6 @@ namespace Raven.Smuggler.Database
                     try
                     {
                         var maxRecords = Options.Limit - totalCount;
-                        // TODO [ppekrol] Handle Limit better
                         if (maxRecords > 0 && reachedMaxEtag == false)
                         {
                             var pageSize = Source.SupportsPaging ? Math.Min(Options.BatchSize, maxRecords) : int.MaxValue;
@@ -150,26 +146,14 @@ namespace Raven.Smuggler.Database
                                         if (Options.IgnoreErrorsAndContinue == false)
                                             throw;
 
-                                        Notifications.ShowProgress("EXPORT of a document {0} failed. Message: {1}", currentDocument, e.Message);
+                                        Notifications.ShowProgress(DatabaseSmugglerMessages.Documents_Write_Failure, currentKey, e.Message);
                                     }
 
                                     totalCount++;
 
-                                    if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                                    {
-                                        Notifications.ShowProgress("Exported {0} documents", totalCount);
-                                        lastReport = SystemTime.UtcNow;
-                                    }
-
                                     if (totalCount % Options.BatchSize == 0)
                                     {
-                                        if (Destination.SupportsOperationState)
-                                        {
-                                            if (currentEtag.CompareTo(state.LastDocsEtag) > 0)
-                                                state.LastDocsEtag = currentEtag;
-
-                                            await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
-                                        }
+                                        await SaveOperationStateAsync(state, currentEtag, cancellationToken).ConfigureAwait(false);
 
                                         // Wait for the batch to be indexed before continue.
                                         if (Destination.SupportsWaitingForIndexing)
@@ -205,28 +189,30 @@ namespace Raven.Smuggler.Database
                             }
                         }
 
-                        if (Destination.SupportsOperationState)
-                        {
-                            if (afterEtag.CompareTo(state.LastDocsEtag) > 0)
-                                state.LastDocsEtag = afterEtag;
+                        await SaveOperationStateAsync(state, afterEtag, cancellationToken).ConfigureAwait(false);
 
-                            await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
-                        }
-
-                        Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, afterEtag);
                         state.LastDocsEtag = afterEtag;
                         return;
                     }
                     catch (Exception e)
                     {
-                        Notifications.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
-                        Notifications.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, afterEtag);
                         throw new SmugglerException(e.Message, e)
                         {
                             LastEtag = afterEtag
                         };
                     }
                 } while (Source.SupportsPaging);
+            }
+        }
+
+        private async Task SaveOperationStateAsync(DatabaseSmugglerOperationState state, Etag etag, CancellationToken cancellationToken)
+        {
+            if (Destination.SupportsOperationState)
+            {
+                if (etag.CompareTo(state.LastDocsEtag) > 0)
+                    state.LastDocsEtag = etag;
+
+                await Destination.SaveOperationStateAsync(Options, state, cancellationToken).ConfigureAwait(false);
             }
         }
 

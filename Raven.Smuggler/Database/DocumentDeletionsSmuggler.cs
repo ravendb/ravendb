@@ -3,9 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
 
 namespace Raven.Smuggler.Database
@@ -35,17 +38,45 @@ namespace Raven.Smuggler.Database
 
                 var maxEtag = _maxEtags.LastDocDeleteEtag?.IncrementBy(1);
 
-                var deletions = await Source
-                    .ReadDocumentDeletionsAsync(state.LastDocDeleteEtag, maxEtag, cancellationToken)
-                    .ConfigureAwait(false);
+                List<KeyValuePair<string, Etag>> deletions = null;
+                try
+                {
+                    deletions = await Source
+                        .ReadDocumentDeletionsAsync(state.LastDocDeleteEtag, maxEtag, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    if (Options.IgnoreErrorsAndContinue == false)
+                        throw;
+
+                    Notifications.ShowProgress(DatabaseSmugglerMessages.DocumentDeletions_Read_Failure, e.Message);
+                }
+
+                if (deletions == null || deletions.Count == 0)
+                    return;
 
                 var lastEtag = state.LastDocDeleteEtag;
 
                 foreach (var deletion in deletions)
                 {
-                    await actions
-                        .WriteDocumentDeletionAsync(deletion.Key, cancellationToken)
-                        .ConfigureAwait(false);
+                    Notifications.OnDocumentDeletionRead(this, deletion.Key);
+
+                    try
+                    {
+                        await actions
+                            .WriteDocumentDeletionAsync(deletion.Key, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        if (Options.IgnoreErrorsAndContinue == false)
+                            throw;
+
+                        Notifications.ShowProgress(DatabaseSmugglerMessages.DocumentDeletions_Write_Failure, deletion.Key, e.Message);
+                    }
+
+                    Notifications.OnDocumentDeletionWrite(this, deletion.Key);
 
                     lastEtag = deletion.Value;
                 }
