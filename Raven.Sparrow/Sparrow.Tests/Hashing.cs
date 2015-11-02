@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -50,12 +50,12 @@ namespace Sparrow.Tests
             expected = 0x32D153FF;
             Assert.Equal(expected, result);
 
-            value = "hei�";
+            value = "heiå";
             result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 0);
             expected = 0xDB5ABCCC;
             Assert.Equal(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 0);
             expected = 0xD855F606;
             Assert.Equal(expected, result);
@@ -72,7 +72,7 @@ namespace Sparrow.Tests
         public void Metro128()
         {
             var r1 = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes("012345678901234567890123456789012345678901234567890123456789012"), seed: 0);
-                        
+
             Assert.Equal(r1.H1, 0x9B9FEDA4BFE27CC7UL);
             Assert.Equal(r1.H2, 0x97A27450ACB24805UL);
         }
@@ -91,7 +91,7 @@ namespace Sparrow.Tests
             expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.Equal(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.Equal(expected, result);
@@ -110,7 +110,7 @@ namespace Sparrow.Tests
             expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.Equal(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.Equal(expected, result);
@@ -129,7 +129,7 @@ namespace Sparrow.Tests
             expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.Equal(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.Equal(expected, result);
@@ -149,7 +149,7 @@ namespace Sparrow.Tests
             expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.XXHash32.CalculateRaw(value, seed: 10);
             expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
@@ -169,7 +169,7 @@ namespace Sparrow.Tests
             expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.XXHash64.CalculateRaw(value, seed: 10);
             expected = Hashing.XXHash64.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
@@ -188,7 +188,7 @@ namespace Sparrow.Tests
             expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.Metro128.CalculateRaw(value, seed: 10);
             expected = Hashing.Metro128.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
@@ -203,7 +203,7 @@ namespace Sparrow.Tests
                 {
                     new object[] {1},
                     new object[] {4},
-                    new object[] {15},                  
+                    new object[] {15},
                     new object[] {65},
                     new object[] {90},
                     new object[] {128},
@@ -260,9 +260,9 @@ namespace Sparrow.Tests
         [Fact]
         public void Combine()
         {
-           int h1 = Hashing.CombineInline(1991, 13);
-           int h2 = Hashing.CombineInline(1991, 12);
-           Assert.NotEqual(h1, h2);
+            int h1 = Hashing.CombineInline(1991, 13);
+            int h2 = Hashing.CombineInline(1991, 12);
+            Assert.NotEqual(h1, h2);
         }
 
 
