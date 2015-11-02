@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyCompany("Hibernating Rhinos")]
-[assembly: AssemblyCopyright("� Hibernating Rhinos 2004 - 2.13. All rights reserved.")]
+[assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2.13. All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 [assembly: CLSCompliant(false)]

@@ -99,6 +99,29 @@ namespace Raven.Database.Storage.Esent.StorageActions
             } while (Api.TryMovePrevious(session, Lists));
         }
 
+        public void Touch(string name, string key, UuidType uuidType, out Etag preTouchEtag, out Etag afterTouchEtag)
+        {
+            Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");
+            Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, Lists, key, Encoding.Unicode, MakeKeyGrbit.None);
+
+            if (Api.TrySeek(session, Lists, SeekGrbit.SeekEQ) == false)
+            {
+                afterTouchEtag = null;
+                preTouchEtag = null;
+                return;
+            }
+
+            preTouchEtag = Etag.Parse(Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]));
+
+            using (var update = new Update(session, Lists, JET_prep.Replace))
+            {
+                afterTouchEtag = uuidGenerator.CreateSequentialUuid(uuidType);
+                Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], afterTouchEtag.TransformToValueForEsentSorting());
+                update.Save();
+            }
+        }
+
         public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
         {
             Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
