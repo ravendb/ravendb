@@ -505,7 +505,7 @@ namespace Raven.Tests.Helpers
             };
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-            ravenConfiguration.Storage.Voron.TempPath = tempDir;
+            ravenConfiguration.Storage.TempPath = tempDir;
 
             Action onCommitNotification = () =>
             {

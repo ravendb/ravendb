@@ -298,7 +298,7 @@ namespace Raven.Database.Common
                 switch (ResourceType)
                 {
                     case ResourceType.Database:
-                        return Resource.Configuration.RejectClientsMode;
+                        return Resource.Configuration.Core.RejectClientsMode;
                     case ResourceType.FileSystem:
                     case ResourceType.Counter:
                     case ResourceType.TimeSeries:

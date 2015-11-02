@@ -51,7 +51,7 @@ namespace Raven.Database.Config
 
         public PrefetcherConfiguration Prefetcher { get; }
 
-        public StorageConfiguration Storage { get; }
+        public VoronConfiguration Storage { get; }
 
         public FileSystemConfiguration FileSystem { get; }
 
@@ -86,7 +86,7 @@ namespace Raven.Database.Config
             
             Replication = new ReplicationConfiguration();
             Prefetcher = new PrefetcherConfiguration();
-            Storage = new StorageConfiguration();
+            Storage = new VoronConfiguration();
             FileSystem = new FileSystemConfiguration();
             Counter = new CounterConfiguration();
             TimeSeries = new TimeSeriesConfiguration();
@@ -167,26 +167,10 @@ namespace Raven.Database.Config
             if (ConcurrentMultiGetRequests == null)
                 ConcurrentMultiGetRequests = new SemaphoreSlim(Server.MaxConcurrentMultiGetRequests);
 
-            // Discovery
-            DisableClusterDiscovery = ravenSettings.DisableClusterDiscovery.Value;
-
-            ServerName = ravenSettings.ServerName.Value;
-
-            MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
-            AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
-            TurnOffDiscoveryClient = ravenSettings.TurnOffDiscoveryClient.Value;
-
             // Index settings
             
             FlushIndexToDiskSizeInMb = ravenSettings.FlushIndexToDiskSizeInMb.Value;
 
-            
-
-            MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
-
-            MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
-
-            MaxNumberOfStoredCommitPoints = ravenSettings.MaxNumberOfStoredCommitPoints.Value;
 
             // Data settings
 
@@ -194,18 +178,8 @@ namespace Raven.Database.Config
             {
                 DefaultStorageTypeName = ravenSettings.DefaultStorageTypeName.Value;
             }
-
-            DatabaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
-
-            TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
-            TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
-
-            TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
-            TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
-
+            
             SetupTransactionMode();
-
-            MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
 
             // HTTP settings
             
@@ -222,22 +196,18 @@ namespace Raven.Database.Config
             
             // Misc settings
 
-            AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
-            RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
-            Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
-            Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
-            Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
-            Storage.Voron.ScratchBufferSizeNotificationThreshold = ravenSettings.Voron.ScratchBufferSizeNotificationThreshold.Value;
-            Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
-            Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
-            Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
-            Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
+            Storage.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
+            Storage.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
+            Storage.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
+            Storage.ScratchBufferSizeNotificationThreshold = ravenSettings.Voron.ScratchBufferSizeNotificationThreshold.Value;
+            Storage.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
+            Storage.TempPath = ravenSettings.Voron.TempPath.Value;
+            Storage.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
+            Storage.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
             Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
             
-            Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
-
 
             Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
             Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
@@ -313,19 +283,6 @@ namespace Raven.Database.Config
         /// </summary>
         [JsonIgnore]
         public SemaphoreSlim ConcurrentMultiGetRequests;
-
-        /// <summary>
-        /// The time to wait before canceling a database operation such as load (many) or query
-        /// </summary>
-        public TimeSpan DatabaseOperationTimeout { get; private set; }
-
-        public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
-
-        public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
-
-        public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
-
-        public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
 
         private void CheckDirectoryPermissions()
         {
@@ -530,20 +487,6 @@ namespace Raven.Database.Config
         public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
         /// <summary>
-        /// If set local request don't require authentication
-        /// Allowed values: true/false
-        /// Default: false
-        /// </summary>
-        public bool AllowLocalAccessWithoutAuthorization { get; set; }
-
-        /// <summary>
-        /// If set all client request to the server will be rejected with 
-        /// the http 503 response.
-        /// Other servers or the studio could still access the server.
-        /// </summary>
-        public bool RejectClientsMode { get; set; }
-
-        /// <summary>
         /// The certificate to use when verifying access token signatures for OAuth
         /// </summary>
         public byte[] OAuthTokenKey { get; set; }
@@ -607,60 +550,7 @@ namespace Raven.Database.Config
         //this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
         private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof (DocumentDatabase).Assembly);
 
-        /// <summary>
-        /// Maximum time interval for storing commit points for map indexes when new items were added.
-        /// The commit points are used to restore index if unclean shutdown was detected.
-        /// Default: 00:05:00 
-        /// </summary>
-        public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
-
-        /// <summary>
-        /// Minumum interval between between successive indexing that will allow to store a  commit point
-        /// Default: 00:01:00
-        /// </summary>
-        public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
-
-        /// <summary>
-        /// Maximum number of kept commit points to restore map index after unclean shutdown
-        /// Default: 5
-        /// </summary>
-        public int MaxNumberOfStoredCommitPoints { get; set; }
-
         internal bool IsTenantDatabase { get; set; }
-        
-        /// <summary>
-        /// If True, cluster discovery will be disabled. Default is False
-        /// </summary>
-        public bool DisableClusterDiscovery { get; set; }
-
-        /// <summary>
-        /// If True, turns off the discovery client.
-        /// </summary>
-        public bool TurnOffDiscoveryClient { get; set; }
-
-        /// <summary>
-        /// The server name
-        /// </summary>
-        public string ServerName { get; set; }
-        
-        /// <summary>
-        /// The maximum number of steps (instructions) to give a script before timing out.
-        /// Default: 10,000
-        /// </summary>
-        public int MaxStepsForScript { get; set; }
-
-        /// <summary>
-        /// The maximum number of recent document touches to store (i.e. updates done in
-        /// order to initiate indexing rather than because something has actually changed).
-        /// </summary>
-        public int MaxRecentTouchesToRemember { get; set; }
-
-        /// <summary>
-        /// The number of additional steps to add to a given script based on the processed document's quota.
-        /// Set to 0 to give use a fixed size quota. This value is multiplied with the doucment size.
-        /// Default: 5
-        /// </summary>
-        public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
 
         /// <summary>
         /// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
@@ -873,7 +763,7 @@ namespace Raven.Database.Config
             Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
 
             Core.AssembliesDirectory = defaultConfiguration.Core.AssembliesDirectory;
-            Storage.Voron.AllowOn32Bits = defaultConfiguration.Storage.Voron.AllowOn32Bits;
+            Storage.AllowOn32Bits = defaultConfiguration.Storage.AllowOn32Bits;
         }
 
         public IEnumerable<string> GetConfigOptionsDocs()
@@ -1296,6 +1186,55 @@ namespace Raven.Database.Config
             //TODO arek
             public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
+            /// <summary>
+            /// If set local request don't require authentication
+            /// Allowed values: true/false
+            /// Default: false
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/AllowLocalAccessWithoutAuthorization")]
+            public bool AllowLocalAccessWithoutAuthorization { get; set; } // TODO arek - 0 references
+
+            /// <summary>
+            /// If set all client request to the server will be rejected with 
+            /// the http 503 response.
+            /// Other servers or the studio could still access the server.
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/RejectClientsModeEnabled")]
+            public bool RejectClientsMode { get; set; }
+
+            /// <summary>
+            /// The time to wait before canceling a database operation such as load (many) or query
+            /// </summary>
+            [DefaultValue(5)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/DatabaseOperationTimeoutInMin")]
+            [ConfigurationEntry("Raven/DatabaseOperationTimeout")]
+            public TimeSetting DatabaseOperationTimeout { get; set; }
+
+            /// <summary>
+            /// If True, cluster discovery will be disabled. Default is False
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/DisableClusterDiscovery")]
+            public bool DisableClusterDiscovery { get; set; } // TODO arek - 0 references
+
+            /// <summary>
+            /// If True, turns off the discovery client.
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/TurnOffDiscoveryClient")]
+            public bool TurnOffDiscoveryClient { get; set; }
+
+            /// <summary>
+            /// The maximum number of recent document touches to store (i.e. updates done in
+            /// order to initiate indexing rather than because something has actually changed).
+            /// </summary>
+            [DefaultValue(1024)]
+            [ConfigurationEntry("Raven/MaxRecentTouchesToRemember")]
+            public int MaxRecentTouchesToRemember { get; set; }
+
             public override void Initialize(NameValueCollection settings)
             {
                 base.Initialize(settings);
@@ -1442,6 +1381,14 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/RedirectStudioUrl")]
             public string RedirectStudioUrl { get; set; }
 
+            /// <summary>
+            /// The server name
+            /// </summary>
+            [DefaultValue((string)null)]
+            [ConfigurationEntry("Raven/Server/Name")]
+            [ConfigurationEntry("Raven/ServerName")]
+            public string Name { get; set; }
+
             public override void Initialize(NameValueCollection settings)
             {
                 base.Initialize(settings);
@@ -1568,63 +1515,54 @@ namespace Raven.Database.Config
             }
         }
 
-        public class StorageConfiguration
+        public class VoronConfiguration : ConfigurationBase
         {
-            public StorageConfiguration()
-            {
-                Voron = new VoronConfiguration();
-            }
             public bool PreventSchemaUpdate { get; set; }
 
-            public VoronConfiguration Voron { get; private set; }
+            /// <summary>
+            /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
+            /// By default it is 4.
+            /// Minimum value is 2.
+            /// </summary>
+            public int MaxBufferPoolSize { get; set; }
 
-            public class VoronConfiguration
-            {
-                /// <summary>
-                /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
-                /// By default it is 4.
-                /// Minimum value is 2.
-                /// </summary>
-                public int MaxBufferPoolSize { get; set; }
+            /// <summary>
+            /// You can use this setting to specify an initial file size for data file (in bytes).
+            /// </summary>
+            public int? InitialFileSize { get; set; }
 
-                /// <summary>
-                /// You can use this setting to specify an initial file size for data file (in bytes).
-                /// </summary>
-                public int? InitialFileSize { get; set; }
+            /// <summary>
+            /// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
+            /// Default: 6144.
+            /// </summary>
+            public int MaxScratchBufferSize { get; set; }
 
-                /// <summary>
-                /// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
-                /// Default: 6144.
-                /// </summary>
-                public int MaxScratchBufferSize { get; set; }
+            /// <summary>
+            /// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.
+            /// Default: 
+            /// 1024 when MaxScratchBufferSize > 1024, 
+            /// 512 when MaxScratchBufferSize > 512
+            /// -1 otherwise (disabled) 
+            /// </summary>
+            public int ScratchBufferSizeNotificationThreshold { get; set; }
 
-                /// <summary>
-                /// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.
-                /// Default: 
-                /// 1024 when MaxScratchBufferSize > 1024, 
-                /// 512 when MaxScratchBufferSize > 512
-                /// -1 otherwise (disabled) 
-                /// </summary>
-                public int ScratchBufferSizeNotificationThreshold { get; set; }
+            /// <summary>
+            /// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
+            /// Default: false.
+            /// </summary>
+            public bool AllowIncrementalBackups { get; set; }
 
-                /// <summary>
-                /// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
-                /// Default: false.
-                /// </summary>
-                public bool AllowIncrementalBackups { get; set; }
+            /// <summary>
+            /// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
+            /// </summary>
+            public string TempPath { get; set; }
 
-                /// <summary>
-                /// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
-                /// </summary>
-                public string TempPath { get; set; }
+            public string JournalsStoragePath { get; set; }
 
-                public string JournalsStoragePath { get; set; }
-
-                /// <summary>
-                /// Whether to allow Voron to run in 32 bits process.
-                /// </summary>
-                public bool AllowOn32Bits { get; set; }
-            }
+            /// <summary>
+            /// Whether to allow Voron to run in 32 bits process.
+            /// </summary>
+            public bool AllowOn32Bits { get; set; }
         }
 
         public class PrefetcherConfiguration : ConfigurationBase
@@ -1656,14 +1594,18 @@ namespace Raven.Database.Config
             /// <summary>
             /// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
             /// </summary>
-            public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+            [DefaultValue(5)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Prefetching/FetchingDocumentsFromDiskTimeoutInSec")]
+            [ConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
+            public TimeSetting FetchingDocumentsFromDiskTimeout { get; set; }
 
             /// <summary>
             /// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
             /// </summary>
             [DefaultValue(256)]
             [SizeUnit(SizeUnit.Megabytes)]
-            [ConfigurationEntry("Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorageInMB")]
+            [ConfigurationEntry("Raven/Prefetching/MaximumSizeAllowedToFetchFromStorageInMB")]
             [ConfigurationEntry("Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage")]
             public Size MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
         }
@@ -1788,6 +1730,24 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/Patching/AllowScriptsToAdjustNumberOfSteps")]
             [ConfigurationEntry("Raven/AllowScriptsToAdjustNumberOfSteps")]
             public bool AllowScriptsToAdjustNumberOfSteps { get; set; }
+
+            /// <summary>
+            /// The maximum number of steps (instructions) to give a script before timing out.
+            /// Default: 10,000
+            /// </summary>
+            [DefaultValue(10 * 1000)]
+            [ConfigurationEntry("Raven/Patching/MaxStepsForScript")]
+            [ConfigurationEntry("Raven/MaxStepsForScript")]
+            public int MaxStepsForScript { get; set; }
+
+            /// <summary>
+            /// The number of additional steps to add to a given script based on the processed document's quota.
+            /// Set to 0 to give use a fixed size quota. This value is multiplied with the doucment size.
+            /// Default: 5
+            /// </summary>
+            [DefaultValue(5)]
+            [ConfigurationEntry("Raven/AdditionalStepsForScriptBasedOnDocumentSize")]
+            public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
         }
 
         public class BulkInsertConfiguration : ConfigurationBase
@@ -1953,6 +1913,60 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/Indexing/DisableInMemory")]
             [ConfigurationEntry("Raven/DisableInMemoryIndexing")]
             public bool DisableInMemoryIndexing { get; set; }
+
+            /// <summary>
+            /// Maximum time interval for storing commit points for map indexes when new items were added.
+            /// The commit points are used to restore index if unclean shutdown was detected.
+            /// Default: 00:05:00 
+            /// </summary>
+            [DefaultValue(5)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/MaxIndexCommitPointStoreIntervalInMin")]
+            [ConfigurationEntry("Raven/MaxIndexCommitPointStoreTimeInterval")]
+            public TimeSetting MaxIndexCommitPointStoreInterval { get; set; }
+
+            /// <summary>
+            /// Maximum number of kept commit points to restore map index after unclean shutdown
+            /// Default: 5
+            /// </summary>
+            [DefaultValue(5)]
+            [ConfigurationEntry("Raven/Indexing/MaxNumberOfStoredCommitPoints")]
+            [ConfigurationEntry("Raven/MaxNumberOfStoredCommitPoints")]
+            public int MaxNumberOfStoredCommitPoints { get; set; }
+
+            /// <summary>
+            /// Minimum interval between between successive indexing that will allow to store a  commit point
+            /// Default: 00:01:00
+            /// </summary>
+            [DefaultValue(1)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/MinIndexingIntervalToStoreCommitPointInMin")]
+            [ConfigurationEntry("Raven/MinIndexingTimeIntervalToStoreCommitPoint")]
+            public TimeSetting MinIndexingIntervalToStoreCommitPoint { get; set; }
+
+            [DefaultValue(10)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningIdleIndexesInMin")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeRunningIdleIndexes")]
+            public TimeSetting TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
+
+            [DefaultValue(60)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle")]
+            public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; set; }
+
+            [DefaultValue(72)]
+            [TimeUnit(TimeUnit.Hours)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingIdleIndexAsAbandonedInHrs")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned")]
+            public TimeSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; set; }
+
+            [DefaultValue(3)]
+            [TimeUnit(TimeUnit.Hours)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningAbandonedIndexesInHrs")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeRunningAbandonedIndexes")]
+            public TimeSetting TimeToWaitBeforeRunningAbandonedIndexes { get; set; }
 
             public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 

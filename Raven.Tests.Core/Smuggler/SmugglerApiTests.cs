@@ -57,7 +57,7 @@ namespace Raven.Tests.Core.Smuggler
                 {
                     Port = Port1
                 },
-                ServerName = ServerName1
+                Server = { Name = ServerName1 }
             })
             {
                 RunInMemory = true,
@@ -89,7 +89,7 @@ namespace Raven.Tests.Core.Smuggler
                         {
                             Port = Port2
                         },
-                        ServerName = ServerName2
+                        Server = { Name = ServerName2 }
                     })
                     {
                         RunInMemory = true,
@@ -143,7 +143,7 @@ namespace Raven.Tests.Core.Smuggler
                 {
                     Port = Port1
                 },
-                ServerName = ServerName1
+                Server = { Name = ServerName1 }
             })
             {
                 RunInMemory = true,
@@ -188,7 +188,10 @@ namespace Raven.Tests.Core.Smuggler
                         {
                         Port = Port2,
                         },
-                        ServerName = ServerName2
+                        Server =
+                        {
+                            Name = ServerName2
+                        }
                     })
                     {
                         RunInMemory = true,

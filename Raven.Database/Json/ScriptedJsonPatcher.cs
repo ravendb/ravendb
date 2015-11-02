@@ -58,8 +58,8 @@ namespace Raven.Database.Json
             }
             else
             {
-                maxSteps = database.Configuration.MaxStepsForScript;
-                additionalStepsPerSize = database.Configuration.AdditionalStepsForScriptBasedOnDocumentSize;
+                maxSteps = database.Configuration.Patching.MaxStepsForScript;
+                additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             }
 
             totalScriptSteps = maxSteps;

@@ -325,9 +325,9 @@ namespace Raven.Database.Indexing
             if (directory is RAMDirectory) // no point in trying to store commits for ram index
                 return false;
             // no often than specified indexing interval
-            return (LastIndexTime - PreviousIndexTime > context.Configuration.MinIndexingTimeIntervalToStoreCommitPoint ||
+            return (LastIndexTime - PreviousIndexTime > context.Configuration.Indexing.MinIndexingIntervalToStoreCommitPoint.AsTimeSpan ||
                 // at least once for specified time interval
-                    LastIndexTime - LastCommitPointStoreTime > context.Configuration.MaxIndexCommitPointStoreTimeInterval);
+                    LastIndexTime - LastCommitPointStoreTime > context.Configuration.Indexing.MaxIndexCommitPointStoreInterval.AsTimeSpan);
         }
 
         private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)

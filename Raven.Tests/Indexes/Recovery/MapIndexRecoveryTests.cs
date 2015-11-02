@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Common;
@@ -17,26 +18,22 @@ using Xunit;
 
 namespace Raven.Tests.Indexes.Recovery
 {
-    using Client.Connection;
-    using Imports.Newtonsoft.Json.Linq;
-    using Raven.Abstractions.Data;
     using Raven.Abstractions.Extensions;
-    using Raven.Json.Linq;
 
     public class MapIndexRecoveryTests : RavenTest
     {
         private void CommitPointAfterEachCommit(InMemoryRavenConfiguration configuration)
         {
             // force commit point creation after each commit
-            configuration.MinIndexingTimeIntervalToStoreCommitPoint = TimeSpan.FromSeconds(0);
-            configuration.MaxIndexCommitPointStoreTimeInterval = TimeSpan.FromSeconds(0);
+            configuration.Indexing.MinIndexingIntervalToStoreCommitPoint = new TimeSetting(0, TimeUnit.Seconds);
+            configuration.Indexing.MaxIndexCommitPointStoreInterval = new TimeSetting(0, TimeUnit.Seconds);
         }
 
         private void CommitPointAfterFirstCommitOnly(InMemoryRavenConfiguration configuration)
         {
             // by default first commit will force creating commit point, here we don't need more
-            configuration.MinIndexingTimeIntervalToStoreCommitPoint = TimeSpan.FromMinutes(30);
-            configuration.MaxIndexCommitPointStoreTimeInterval = TimeSpan.MaxValue;
+            configuration.Indexing.MinIndexingIntervalToStoreCommitPoint = new TimeSetting(30, TimeUnit.Minutes);
+            configuration.Indexing.MaxIndexCommitPointStoreInterval = new TimeSetting((long) TimeSpan.MaxValue.TotalSeconds, TimeUnit.Seconds);
         }
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
@@ -112,7 +109,7 @@ namespace Raven.Tests.Indexes.Recovery
             {
                 CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 
-                var maxNumberOfStoredCommitPoints = server.SystemDatabase.Configuration.MaxNumberOfStoredCommitPoints;
+                var maxNumberOfStoredCommitPoints = server.SystemDatabase.Configuration.Indexing.MaxNumberOfStoredCommitPoints;
 
                 using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
                 {

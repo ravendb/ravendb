@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
             {
                 var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
 
-                return (timeSinceLastIndexing > context.Configuration.TimeToWaitBeforeRunningAbandonedIndexes);
+                return (timeSinceLastIndexing > context.Configuration.Indexing.TimeToWaitBeforeRunningAbandonedIndexes.AsTimeSpan);
             }
 
             throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Id + ": " + indexesStat.Priority);

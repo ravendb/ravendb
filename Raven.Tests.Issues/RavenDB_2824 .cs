@@ -26,7 +26,7 @@ namespace Raven.Tests.Issues
         protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
         {
             config.Settings[Constants.Voron.AllowIncrementalBackups] = "true";
-            config.Storage.Voron.AllowIncrementalBackups = true;
+            config.Storage.AllowIncrementalBackups = true;
         }
 
         [Theory]

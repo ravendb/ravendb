@@ -89,7 +89,7 @@ namespace Raven.Database.Server.Controllers
 
             var bufferStream = new BufferedStream(stream, 1024 * 64);
             using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan))
             using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
             {
                 writer.WriteStartObject();
@@ -162,7 +162,7 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage SteamQueryGet(string id)
         {
             var cts = new CancellationTokenSource();
-            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan);
             var msg = GetEmptyMessage();
 
             var index = id;
@@ -194,7 +194,7 @@ namespace Raven.Database.Server.Controllers
             catch (OperationCanceledException e)
             {
                 accessor.Dispose();
-                throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
+                throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan), e);
             }
             catch (Exception)
             {

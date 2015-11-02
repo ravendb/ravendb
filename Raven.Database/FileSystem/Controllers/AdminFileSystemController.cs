@@ -267,7 +267,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             if (incrementalBackup &&
                 transactionalStorage is Storage.Voron.TransactionalStorage &&
-                FileSystem.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+                FileSystem.Configuration.Storage.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }

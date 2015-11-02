@@ -109,7 +109,7 @@ namespace Raven.Database.Indexing
                     }
                     if (foundWork == false && context.RunIndexing)
                     {
-                        isIdle = context.WaitForWork(context.Configuration.TimeToWaitBeforeRunningIdleIndexes, ref workCounter, () =>
+                        isIdle = context.WaitForWork(context.Configuration.Indexing.TimeToWaitBeforeRunningIdleIndexes.AsTimeSpan, ref workCounter, () =>
                         {
                             try
                             {

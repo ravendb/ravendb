@@ -186,42 +186,42 @@ namespace Raven.Database.Config
             //	new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\CompiledIndexCache");
             //TaskScheduler =
             //	new StringSetting(settings["Raven/TaskScheduler"], (string)null);
-            AllowLocalAccessWithoutAuthorization =
-                new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
-            RejectClientsModeEnabled =
-                new BooleanSetting(settings[Constants.RejectClientsModeEnabled], false);
+            //AllowLocalAccessWithoutAuthorization =
+            //    new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
+            //RejectClientsModeEnabled =
+            //    new BooleanSetting(settings[Constants.RejectClientsModeEnabled], false);
 
-            MaxIndexCommitPointStoreTimeInterval =
-                new TimeSpanSetting(settings["Raven/MaxIndexCommitPointStoreTimeInterval"], TimeSpan.FromMinutes(5),
-                                    TimeSpanArgumentType.FromParse);
-            MaxNumberOfStoredCommitPoints =
-                new IntegerSetting(settings["Raven/MaxNumberOfStoredCommitPoints"], 5);
-            MinIndexingTimeIntervalToStoreCommitPoint =
-                new TimeSpanSetting(settings["Raven/MinIndexingTimeIntervalToStoreCommitPoint"], TimeSpan.FromMinutes(1),
-                                    TimeSpanArgumentType.FromParse);
+            //MaxIndexCommitPointStoreTimeInterval =
+            //    new TimeSpanSetting(settings["Raven/MaxIndexCommitPointStoreTimeInterval"], TimeSpan.FromMinutes(5),
+            //                        TimeSpanArgumentType.FromParse);
+            //MaxNumberOfStoredCommitPoints =
+            //    new IntegerSetting(settings["Raven/MaxNumberOfStoredCommitPoints"], 5);
+            //MinIndexingTimeIntervalToStoreCommitPoint =
+            //    new TimeSpanSetting(settings["Raven/MinIndexingTimeIntervalToStoreCommitPoint"], TimeSpan.FromMinutes(1),
+            //                        TimeSpanArgumentType.FromParse);
 
-            TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
+            //TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
 
-            DatbaseOperationTimeout = new TimeSpanSetting(settings["Raven/DatabaseOperationTimeout"], TimeSpan.FromMinutes(5), TimeSpanArgumentType.FromParse);
+            //DatbaseOperationTimeout = new TimeSpanSetting(settings["Raven/DatabaseOperationTimeout"], TimeSpan.FromMinutes(5), TimeSpanArgumentType.FromParse);
 
-            TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
+            //TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
 
-            TimeToWaitBeforeMarkingIdleIndexAsAbandoned = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned"], TimeSpan.FromHours(72), TimeSpanArgumentType.FromParse);
+            //TimeToWaitBeforeMarkingIdleIndexAsAbandoned = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned"], TimeSpan.FromHours(72), TimeSpanArgumentType.FromParse);
 
-            TimeToWaitBeforeRunningAbandonedIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningAbandonedIndexes"], TimeSpan.FromHours(3), TimeSpanArgumentType.FromParse);
+            //TimeToWaitBeforeRunningAbandonedIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningAbandonedIndexes"], TimeSpan.FromHours(3), TimeSpanArgumentType.FromParse);
 
-            DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
+            //DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
 
-            TurnOffDiscoveryClient = new BooleanSetting(settings["Raven/TurnOffDiscoveryClient"], false);
+            //TurnOffDiscoveryClient = new BooleanSetting(settings["Raven/TurnOffDiscoveryClient"], false);
 
-            ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);
+            //ServerName = new StringSetting(settings["Raven/ServerName"], (string)null);
 
-            MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10 * 1000);
-            AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
+            //MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10 * 1000);
+            //AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
-            MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
+            //MaxRecentTouchesToRemember = new IntegerSetting(settings["Raven/MaxRecentTouchesToRemember"], 1024);
 
-            Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
+            //Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
             //Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 
             Voron.MaxBufferPoolSize = new IntegerSetting(settings[Constants.Voron.MaxBufferPoolSize], 4);

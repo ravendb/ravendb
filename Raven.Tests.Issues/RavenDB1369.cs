@@ -88,7 +88,7 @@ namespace Raven.Tests.Issues
             {
                 documentStore.Configuration.Core.DataDirectory = dataDir;
                 documentStore.Configuration.Core.IndexStoragePath = indexesDir;
-                documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
+                documentStore.Configuration.Storage.JournalsStoragePath = jouranlDir;
             }))
             {
                 using (var sesion = store.OpenSession())
@@ -139,7 +139,7 @@ namespace Raven.Tests.Issues
                 }
             };
 
-            ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
+            ravenConfiguration.Storage.JournalsStoragePath = jouranlDir;
 
             using (var db = new DocumentDatabase(ravenConfiguration, null))
             {

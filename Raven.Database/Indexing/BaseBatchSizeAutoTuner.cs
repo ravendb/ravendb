@@ -27,7 +27,7 @@ namespace Raven.Database.Indexing
         protected BaseBatchSizeAutoTuner(WorkContext context)
         {
             this.context = context;
-            FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
+            FetchingDocumentsFromDiskTimeout = context.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeout.AsTimeSpan;
             maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb;
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
             NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;

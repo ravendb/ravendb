@@ -83,7 +83,7 @@ namespace Raven.Storage.Voron
             documentCacher = new DocumentCacher(configuration);
             exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(
-                configuration.Storage.Voron.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
+                configuration.Storage.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
                 int.MaxValue); // 2GB max buffer size (voron limit)
             this.onNestedTransactionEnter = onNestedTransactionEnter;
             this.onNestedTransactionExit = onNestedTransactionExit;
@@ -334,10 +334,10 @@ namespace Raven.Storage.Voron
 
             options.OnScratchBufferSizeChanged += size =>
             {
-                if (configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold < 0)
+                if (configuration.Storage.ScratchBufferSizeNotificationThreshold < 0)
                     return;
 
-                if (size < configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold * 1024L * 1024L)
+                if (size < configuration.Storage.ScratchBufferSizeNotificationThreshold * 1024L * 1024L)
                     return;
 
                 RunTransactionalStorageNotificationHandlers();
@@ -363,8 +363,8 @@ namespace Raven.Storage.Voron
         private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnly();
-            options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
-            options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
+            options.InitialFileSize = configuration.Storage.InitialFileSize;
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize * 1024L * 1024L;
 
             return options;
         }
@@ -383,12 +383,12 @@ namespace Raven.Storage.Voron
                     filePathFolder.Create ();
             }
 
-            var tempPath = configuration.Storage.Voron.TempPath;
-            var journalPath = configuration.Storage.Voron.JournalsStoragePath;
+            var tempPath = configuration.Storage.TempPath;
+            var journalPath = configuration.Storage.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
-            options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
-            options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
+            options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
+            options.InitialFileSize = configuration.Storage.InitialFileSize;
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize * 1024L * 1024L;
 
             return options;
         }

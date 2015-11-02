@@ -30,7 +30,7 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> BulkPost()
         {
             using (var cts = new CancellationTokenSource())
-            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan))
             {
                 RavenJArray jsonCommandArray;
 
@@ -103,7 +103,7 @@ namespace Raven.Database.Server.Controllers
 
             // we don't use using because execution is async
             var cts = new CancellationTokenSource();
-            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, cts, timeout);
             return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, timeout);
@@ -141,7 +141,7 @@ namespace Raven.Database.Server.Controllers
 
             // we don't use using because execution is async
             var cts = new CancellationTokenSource();
-            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, cts, timeout);
 
@@ -182,7 +182,7 @@ namespace Raven.Database.Server.Controllers
 
             // we don't use using because execution is async
             var cts = new CancellationTokenSource();
-            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, cts, timeout);
 

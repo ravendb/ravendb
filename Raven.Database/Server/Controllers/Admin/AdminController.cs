@@ -725,7 +725,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var stats = new AdminStatistics
             {
-                ServerName = currentConfiguration.ServerName,
+                ServerName = currentConfiguration.Server.Name,
                 TotalNumberOfRequests = RequestManager.NumberOfRequests,
                 Uptime = SystemTime.UtcNow - RequestManager.StartUpTime,
                 Memory = new AdminMemoryStatistics

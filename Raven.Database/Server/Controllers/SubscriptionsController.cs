@@ -190,7 +190,7 @@ namespace Raven.Database.Server.Controllers
                 writer.WriteStartArray();
 
                 using (var cts = new CancellationTokenSource())
-                using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+                using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan))
                 {
                     Etag lastProcessedDocEtag = null;
 

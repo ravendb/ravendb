@@ -33,7 +33,7 @@ namespace Raven.Tests.MailingList
                 UseEmbeddedHttpServer = true,
 
             };
-            str.Configuration.Storage.Voron.AllowOn32Bits = true;
+            str.Configuration.Storage.AllowOn32Bits = true;
             using (var store = str
                  .Initialize())
             {

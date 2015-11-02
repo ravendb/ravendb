@@ -7,6 +7,7 @@ using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Commercial;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi;
@@ -417,17 +418,17 @@ namespace Raven.Database.Server.Controllers.Admin
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
             var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (dbDoc.Settings.ContainsKey(Constants.RejectClientsModeEnabled))
+            if (dbDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)))
             {
                 bool rejectClientsEnabled;
-                var success = bool.TryParse(dbDoc.Settings[Constants.RejectClientsModeEnabled], out rejectClientsEnabled);
+                var success = bool.TryParse(dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)], out rejectClientsEnabled);
                 if (success && rejectClientsEnabled == isRejectClientsEnabled)
                 {
                     var state = rejectClientsEnabled ? "reject clients mode" : "accept clients mode";
                     return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "is already in " + state};
                 }
             }
-            dbDoc.Settings[Constants.RejectClientsModeEnabled] = isRejectClientsEnabled.ToString();
+            dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)] = isRejectClientsEnabled.ToString();
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
             Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
