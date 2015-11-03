@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,6 +64,8 @@ namespace Raven.Client.TimeSeries
         Task<TimeSeriesReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken));
 
         Task SaveReplicationsAsync(TimeSeriesReplicationDocument newReplicationDocument, CancellationToken token = default(CancellationToken));
+
+        Task<int> WaitForReplicationAsync(CancellationToken token = default(CancellationToken));
 
         Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken));
 

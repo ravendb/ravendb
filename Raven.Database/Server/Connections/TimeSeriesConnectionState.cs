@@ -13,7 +13,7 @@ namespace Raven.Database.Server.Connections
         private readonly ConcurrentSet<string> matchingKeyChanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
         // private readonly ConcurrentSet<string> matchingRanges = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
         private readonly ConcurrentSet<string> matchingBulkOperations = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-        private readonly string keyChangeNotificationType = typeof(KeyChangeNotification).Name;
+        private readonly string keyChangeNotificationType = typeof(TimeSeriesChangeNotification).Name;
         // private readonly string rangesNotificationType = typeof(TimeSeriesRangeChangeNotification).Name;
         private readonly string bulkOperationNotificationType = typeof(BulkOperationNotification).Name;
         private int watchAllTimeSeries;
@@ -66,7 +66,7 @@ namespace Raven.Database.Server.Connections
             matchingBulkOperations.TryRemove(operationId);
         }
 
-        public void Send(KeyChangeNotification notification)
+        public void Send(TimeSeriesChangeNotification notification)
         {
             var timeSeriesPrefix = string.Concat(notification.Type, "/", notification.Key);
             if (watchAllTimeSeries > 0 || matchingKeyChanges.Contains(timeSeriesPrefix))

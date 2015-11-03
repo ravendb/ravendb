@@ -564,6 +564,7 @@
     <Compile Include="TimeSeries\Backup\RestoreOperation.cs" />
     <Compile Include="TimeSeries\Controllers\BaseAdminTimeSeriesApiController.cs" />
     <Compile Include="TimeSeries\Controllers\AdminTimeSeriesController.cs" />
+    <Compile Include="TimeSeries\Controllers\TimeSeriesDebugController.cs" />
     <Compile Include="TimeSeries\Controllers\TimeSeriesReplicationController.cs" />
     <Compile Include="TimeSeries\ReplicationLogItem.cs" />
     <Compile Include="TimeSeries\ReplicationMessage.cs" />

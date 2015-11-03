@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -38,53 +38,28 @@ namespace Raven.Database.TimeSeries.Controllers
             }
 
             long lastEtag = 0;
-            var wroteCounter = false;
-            /*using (var writer = TimeSeries.CreateWriter())
+            using (var writer = TimeSeries.CreateWriter())
             {
-                var counterChangeNotifications = new List<ChangeNotification>();
-                foreach (var counter in replicationMessage.TimeSeries)
+                // var changeNotifications = new List<ChangeNotification>();
+                foreach (var logItem in replicationMessage.Logs)
                 {
-                    lastEtag = Math.Max(counter.Etag, lastEtag);
-                    var singleCounterValue = writer.GetSingleCounterValue(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign);
-                    var currentCounterValue = singleCounterValue.Value;
+                    lastEtag = Math.Max(logItem.Etag, lastEtag);
+                    writer.PostReplicationLogItem(logItem);
+                }
 
-                    //if current counter exists and current value is less than received value
-                    if ((currentCounterValue != -1 && counter.Value < currentCounterValue) ||
-                        (counter.Value == currentCounterValue && (singleCounterValue.DoesCounterExist || writer.IsTombstone(counter.ServerId))))
-                        continue;
+                writer.Commit();
 
-                    wroteCounter = true;
-                    var counterChangeAction = writer.Store(counter.GroupName, counter.CounterName, counter.ServerId, counter.Sign, counter.Value);
-
-                    counterChangeNotifications.Add(new ChangeNotification
+                /*using (var reader = TimeSeriestorage.CreateReader())
+                {
+                    changeNotifications.ForEach(change =>
                     {
-                        GroupName = counter.GroupName,
-                        CounterName = counter.CounterName,
-                        Delta = counter.Value - currentCounterValue,
-                        Action = counterChangeAction
+                        change.Total = reader.GetCounterTotal(change.GroupName, change.CounterName);
+                        TimeSeriestorage.Publisher.RaiseNotification(change);
                     });
-                }
-
-                var serverId = replicationMessage.ServerId;
-                if (wroteCounter || writer.GetLastEtagFor(serverId) < lastEtag)
-                {
-                    writer.RecordSourceNameFor(serverId, replicationMessage.SendingServerName);
-                    writer.RecordLastEtagFor(serverId, lastEtag);
-                    writer.Commit();
-
-                    using (var reader = TimeSeriestorage.CreateReader())
-                    {
-                        counterChangeNotifications.ForEach(change =>
-                        {
-                            change.Total = reader.GetCounterTotal(change.GroupName, change.CounterName);
-                            TimeSeriestorage.Publisher.RaiseNotification(change);
-                        });
-                    }
-                }
+                }*/
 
                 return GetEmptyMessage();
-            }*/
-            throw new NotImplementedException();
+            }
         }
 
         [RavenRoute("ts/{timeSeriesName}/replication/heartbeat")]
