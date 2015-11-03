@@ -247,7 +247,6 @@ namespace Raven.Database.Prefetching
                 prefetchingDurationTimer.ElapsedMilliseconds <= context.Configuration.PrefetchingDurationLimit &&
                 ((prefetchingQueueSizeInBytes + currentlyUsedBatchSizesInBytes) < (context.Configuration.DynamicMemoryLimitForProcessing)));
 
-            MaybeAddFutureBatch(result);
             return result;
         }
 
