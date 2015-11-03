@@ -1,4 +1,4 @@
-﻿import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
+import executeBulkDocsCommand = require("commands/database/documents/executeBulkDocsCommand");
 import scriptedIndex = require("models/database/index/scriptedIndex");
 import database = require("models/resources/database");
 

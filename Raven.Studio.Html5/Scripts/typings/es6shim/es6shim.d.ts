@@ -1,4 +1,4 @@
-﻿interface String {
+interface String {
   codePointAt();
   repeat();
   startsWith(str: string): boolean;

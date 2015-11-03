@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Files.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -59,8 +59,8 @@ namespace Voron.Tests.Storage
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path, temp);
             using (var env = new StorageEnvironment(options))
             {
-				var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
-				var scratchFileTemp = Path.Combine(temp, StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFileTemp = Path.Combine(temp, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.False(File.Exists(scratchFile));
                 Assert.True(File.Exists(scratchFileTemp));

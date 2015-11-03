@@ -5,8 +5,8 @@ import database = require("models/resources/database");
 class getDocRefsCommand extends commandBase {
 
     /**
-	* @param ownerDb The database the collections will belong to.
-	*/
+    * @param ownerDb The database the collections will belong to.
+    */
     constructor(private ownerDb: database, private docId:string, private skip: number, private take: number) {
         super();
 

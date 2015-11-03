@@ -1,4 +1,4 @@
-﻿class searchResults {
+class searchResults {
 
     Files: filesystemFileHeaderDto[];
     FileCount: number;

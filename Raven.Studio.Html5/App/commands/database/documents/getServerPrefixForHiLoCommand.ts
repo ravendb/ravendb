@@ -1,4 +1,4 @@
-﻿import database = require("models/resources/database");
+import database = require("models/resources/database");
 import commandBase = require("commands/commandBase");
 
 class getServerPrefixForHiLoCommand extends commandBase {

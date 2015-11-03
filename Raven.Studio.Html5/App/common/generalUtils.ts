@@ -1,4 +1,4 @@
-﻿class genUtils {
+class genUtils {
     
     static formatAsCommaSeperatedString(input, digitsAfterDecimalPoint) {
         var parts = input.toString().split(".");

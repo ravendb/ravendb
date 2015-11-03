@@ -1,8 +1,8 @@
-﻿namespace Raven.Abstractions.Indexing
+namespace Raven.Abstractions.Indexing
 {
-	public enum TransformerLockMode
-	{
-		Unlock,
-		LockedIgnore
-	}
+    public enum TransformerLockMode
+    {
+        Unlock,
+        LockedIgnore
+    }
 }

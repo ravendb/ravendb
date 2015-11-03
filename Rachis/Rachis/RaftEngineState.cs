@@ -1,15 +1,15 @@
 namespace Rachis
 {
-	public enum RaftEngineState
-	{
-		None,
-		Follower,
-		Leader,
-		Candidate,
-		SteppingDown,
-		SnapshotInstallation,
+    public enum RaftEngineState
+    {
+        None,
+        Follower,
+        Leader,
+        Candidate,
+        SteppingDown,
+        SnapshotInstallation,
 
-		FollowerAfterStepDown,
-		CandidateByRequest,
-	}
+        FollowerAfterStepDown,
+        CandidateByRequest,
+    }
 }

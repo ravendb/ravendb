@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DynamicLuceneOrDocumntObject.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,8 +13,8 @@ using System.Linq;
 
 namespace Raven.Database.Indexing
 {
-	[JsonObject]
-	internal class DynamicLuceneOrParentDocumntObject : DynamicJsonObject
+    [JsonObject]
+    internal class DynamicLuceneOrParentDocumntObject : DynamicJsonObject
     {
         private readonly DocumentRetriever retriever;
         private dynamic parentDoc;
@@ -72,18 +72,18 @@ namespace Raven.Database.Indexing
             return parentDoc[name];
         }
 
-	    private bool TryLoadParentDoc()
-	    {
-	        object documentId = GetDocumentId() as string;
-	        if (documentId == null)
-	        {
-	            return false;
-	        }
+        private bool TryLoadParentDoc()
+        {
+            object documentId = GetDocumentId() as string;
+            if (documentId == null)
+            {
+                return false;
+            }
 
-	        parentDoc = retriever.Load(documentId);
+            parentDoc = retriever.Load(documentId);
 
 
-	        return true;
-	    }
+            return true;
+        }
     }
 }

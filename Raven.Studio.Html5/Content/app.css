@@ -1,4 +1,4 @@
-﻿@font-face {
+@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -6859,12 +6859,12 @@ body {
 }
 /*
 .ace_editor {
-		border: 1px solid lightgray;
-		margin: auto;
-		height: 200px;
-		width: 80%;
-		position: relative !important
-	}*/
+        border: 1px solid lightgray;
+        margin: auto;
+        height: 200px;
+        width: 80%;
+        position: relative !important
+    }*/
 .fullScreen .fullScreen-editor {
   height: auto !important;
   width: auto !important;
@@ -8260,6 +8260,45 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
   -o-text-overflow: ellipsis;
   text-overflow: ellipsis;
 }
+#editCounterContainer:focus {
+  outline: 0;
+}
+#editCounterContainer .counter-recent {
+  margin-top: 95px;
+  padding-top: 10px;
+  padding-bottom: 40px;
+  max-width: 41%;
+}
+#editCounterContainer hr {
+  margin-top: 5px;
+}
+#editCounterContainer .counter-recent-internal {
+  padding-top: 20px;
+}
+#editCounterContainer .counters-links-container {
+  -webkit-column-count: 2;
+  /* Chrome, Safari, Opera */
+  -moz-column-count: 2;
+  /* Firefox */
+  column-count: 2;
+  -webkit-column-gap: 30px;
+  /* Chrome, Safari, Opera */
+  -moz-column-gap: 30px;
+  /* Firefox */
+  column-gap: 30px;
+  -moz-column-width: 10px;
+  -webkit-column-width: 10px;
+  column-width: 10px;
+}
+#editCounterContainer .counters-links-container .counter-link {
+  margin-left: 10px;
+  width: 80%;
+  overflow: hidden;
+  white-space: nowrap;
+  -ms-text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+}
 .upload-queue {
   position: fixed;
   width: 100%;
@@ -8523,6 +8562,10 @@ a.global_help_link:focus {
 }
 #matchingDocumentsGrid {
   margin-bottom: -30px;
+}
+.alert-danger a {
+  color: white;
+  text-decoration: underline;
 }
 .experimental {
   font-size: 9px;

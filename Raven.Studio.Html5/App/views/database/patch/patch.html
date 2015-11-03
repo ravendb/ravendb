@@ -1,4 +1,4 @@
-﻿<div id="patchContainer" class="no-outline" tabindex="0"> <!-- tabindex = 0 to that it can receive focus and catch keyboard shortcuts -->
+<div id="patchContainer" class="no-outline" tabindex="0"> <!-- tabindex = 0 to that it can receive focus and catch keyboard shortcuts -->
     <div class="btn-toolbar" role="toolbar">
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <div class="btn-group">
@@ -185,13 +185,13 @@
                 </div>
                 <div>
                     <div class="row">
-	                    <div class="col-md-12">
-							<ul class="nav nav-tabs">
-								<li data-bind="click: activateBeforeDoc, css: { active: beforePatchDocMode()}" title="View document data"><a style="cursor: pointer;">Data</a></li>
-								<li data-bind="click: activateBeforeMeta, css: { active: !beforePatchDocMode() }" title="View document metadata"><a style="cursor: pointer;">Metadata</a></li>
-							</ul>
-		                    <pre id="beforePatchEditor" class="form-control" data-bind="aceEditor: { code: beforePatch, readOnly: true }" style="height: 260px;"></pre>
-	                    </div>
+                        <div class="col-md-12">
+                            <ul class="nav nav-tabs">
+                                <li data-bind="click: activateBeforeDoc, css: { active: beforePatchDocMode()}" title="View document data"><a style="cursor: pointer;">Data</a></li>
+                                <li data-bind="click: activateBeforeMeta, css: { active: !beforePatchDocMode() }" title="View document metadata"><a style="cursor: pointer;">Metadata</a></li>
+                            </ul>
+                            <pre id="beforePatchEditor" class="form-control" data-bind="aceEditor: { code: beforePatch, readOnly: true }" style="height: 260px;"></pre>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -201,13 +201,13 @@
                 </div>
                 <div>
                     <div class="row">
-	                    <div class="col-md-12">
-							<ul class="nav nav-tabs">
-								<li data-bind="click: activateAfterDoc, css: { active: afterPatchDocMode()}" title="View document data"><a style="cursor: pointer;">Data</a></li>
-								<li data-bind="click: activateAfterMeta, css: { active: !afterPatchDocMode() }" title="View document metadata"><a style="cursor: pointer;">Metadata</a></li>
-							</ul>
-							<pre id="afterPatchEditor" class="form-control" data-bind="aceEditor: { code: afterPatch, readOnly: true }" style="height: 260px;"></pre>
-	                    </div>
+                        <div class="col-md-12">
+                            <ul class="nav nav-tabs">
+                                <li data-bind="click: activateAfterDoc, css: { active: afterPatchDocMode()}" title="View document data"><a style="cursor: pointer;">Data</a></li>
+                                <li data-bind="click: activateAfterMeta, css: { active: !afterPatchDocMode() }" title="View document metadata"><a style="cursor: pointer;">Metadata</a></li>
+                            </ul>
+                            <pre id="afterPatchEditor" class="form-control" data-bind="aceEditor: { code: afterPatch, readOnly: true }" style="height: 260px;"></pre>
+                        </div>
                     </div>
                 </div>
                 <div class="tabs-container">

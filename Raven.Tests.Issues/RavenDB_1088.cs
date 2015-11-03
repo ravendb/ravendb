@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1088.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,129 +13,129 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1088 : RavenTest
-	{
-		internal class Person
-		{
-			public int Id { get; set; }
+    public class RavenDB_1088 : RavenTest
+    {
+        internal class Person
+        {
+            public int Id { get; set; }
 
-			public string FirstName { get; set; }
-		}
+            public string FirstName { get; set; }
+        }
 
-		[Fact]
-		public void BulkInsertErrorNotificationTest()
-		{
-			var errored = false;
+        [Fact]
+        public void BulkInsertErrorNotificationTest()
+        {
+            var errored = false;
 
-			using (var store = NewDocumentStore())
-			{
-				using (var bulk = store.BulkInsert())
-				{
-					for (int i = 0; i < 1000; i++)
-					{
-						bulk.Store(new Person
-						{
-							Id = i,
-							FirstName = "FName" + i
-						}, i.ToString());
-					}
-				}
+            using (var store = NewDocumentStore())
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < 1000; i++)
+                    {
+                        bulk.Store(new Person
+                        {
+                            Id = i,
+                            FirstName = "FName" + i
+                        }, i.ToString());
+                    }
+                }
 
-				try
-				{
-					using (var bulk = store.BulkInsert())
-					{
-						store.Changes()
-							 .ForBulkInsert(bulk.OperationId)
-							 .Subscribe(change =>
-							 {
-								 if (change.Type == DocumentChangeTypes.BulkInsertError)
-								 {
-									 errored = true;
-								 }
-							 });
+                try
+                {
+                    using (var bulk = store.BulkInsert())
+                    {
+                        store.Changes()
+                             .ForBulkInsert(bulk.OperationId)
+                             .Subscribe(change =>
+                             {
+                                 if (change.Type == DocumentChangeTypes.BulkInsertError)
+                                 {
+                                     errored = true;
+                                 }
+                             });
 
-						for (int i = 0; i < 1000; i++)
-						{
-							bulk.Store(new Person
-							{
-								Id = i,
-								FirstName = "FName" + i
-							}, i.ToString());
-						}
-					}
+                        for (int i = 0; i < 1000; i++)
+                        {
+                            bulk.Store(new Person
+                            {
+                                Id = i,
+                                FirstName = "FName" + i
+                            }, i.ToString());
+                        }
+                    }
 
-					Assert.True(false);
-				}
-				catch (Exception e)
-				{
-					Assert.IsType<ConcurrencyException>(e); 
-				}
-			}
+                    Assert.True(false);
+                }
+                catch (Exception e)
+                {
+                    Assert.IsType<ConcurrencyException>(e); 
+                }
+            }
 
-			Assert.True(errored);
-		}
+            Assert.True(errored);
+        }
 
-		[Fact]
-		public void BulkInsertErrorNotificationRemoteTest()
-		{
-			var errored = false;
+        [Fact]
+        public void BulkInsertErrorNotificationRemoteTest()
+        {
+            var errored = false;
 
-			using (var store = NewRemoteDocumentStore())
-			{
-				using (var bulk = store.BulkInsert())
-				{
-					for (int i = 0; i < 1000; i++)
-					{
-						bulk.Store(new Person
-						{
-							Id = i,
-							FirstName = "FName" + i
-						}, i.ToString());
-					}
-				}
+            using (var store = NewRemoteDocumentStore())
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < 1000; i++)
+                    {
+                        bulk.Store(new Person
+                        {
+                            Id = i,
+                            FirstName = "FName" + i
+                        }, i.ToString());
+                    }
+                }
 
-				using (var bulk = store.BulkInsert())
-				{
-					store.Changes()
-						 .ForBulkInsert(bulk.OperationId)
-						 .Subscribe(change =>
-						 {
-							 if (change.Type == DocumentChangeTypes.BulkInsertError)
-							 {
-								 errored = true;
-							 }
-						 });
+                using (var bulk = store.BulkInsert())
+                {
+                    store.Changes()
+                         .ForBulkInsert(bulk.OperationId)
+                         .Subscribe(change =>
+                         {
+                             if (change.Type == DocumentChangeTypes.BulkInsertError)
+                             {
+                                 errored = true;
+                             }
+                         });
 
-					for (int i = 0; i < 1000; i++)
-					{
-						try
-						{
-							bulk.Store(new Person
-							{
-								Id = i,
-								FirstName = "FName" + i
-							}, i.ToString(CultureInfo.InvariantCulture));
-						}
-						catch (Exception)
-						{
-							errored = true;
-							break;
-						}
-					}
+                    for (int i = 0; i < 1000; i++)
+                    {
+                        try
+                        {
+                            bulk.Store(new Person
+                            {
+                                Id = i,
+                                FirstName = "FName" + i
+                            }, i.ToString(CultureInfo.InvariantCulture));
+                        }
+                        catch (Exception)
+                        {
+                            errored = true;
+                            break;
+                        }
+                    }
 
-					try
-					{
-						bulk.DisposeAsync().Wait();
-					}
-					catch (Exception)
-					{
-						errored = true;
-					}
-				}
-			}
+                    try
+                    {
+                        bulk.DisposeAsync().Wait();
+                    }
+                    catch (Exception)
+                    {
+                        errored = true;
+                    }
+                }
+            }
 
-			Assert.True(errored);
-		}
-	}
+            Assert.True(errored);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
@@ -294,18 +294,18 @@ This is likely a bug, because this will execute the filter in memory, rather tha
         /// <returns></returns>
         Task<T> SingleAsync();
 
-		/// <summary>
-		///   Takes the specified count.
-		/// </summary>
-		/// <param name = "count">The count.</param>
-		/// <returns></returns>
-		TSelf Take(int count);
+        /// <summary>
+        ///   Takes the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        /// <returns></returns>
+        TSelf Take(int count);
 
-		/// <summary>
-		///   Skips the specified count.
-		/// </summary>
-		/// <param name = "count">The count.</param>
-		/// <returns></returns>
-		TSelf Skip(int count);
+        /// <summary>
+        ///   Skips the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        /// <returns></returns>
+        TSelf Skip(int count);
     }
 }

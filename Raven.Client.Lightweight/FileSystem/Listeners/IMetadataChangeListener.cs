@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 
 namespace Raven.Client.FileSystem.Listeners

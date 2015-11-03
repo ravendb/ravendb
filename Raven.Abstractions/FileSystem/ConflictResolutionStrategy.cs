@@ -1,9 +1,9 @@
-﻿namespace Raven.Abstractions.FileSystem
+namespace Raven.Abstractions.FileSystem
 {
-	public enum ConflictResolutionStrategy
-	{
-		NoResolution,
-		RemoteVersion,
-		CurrentVersion,
-	}
+    public enum ConflictResolutionStrategy
+    {
+        NoResolution,
+        RemoteVersion,
+        CurrentVersion,
+    }
 }

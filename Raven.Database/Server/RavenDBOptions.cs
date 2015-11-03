@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 using Raven.Abstractions.Extensions;
@@ -14,131 +14,131 @@ using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Server
 {
-	public sealed class RavenDBOptions : IDisposable
-	{
-		private readonly DatabasesLandlord databasesLandlord;
-		private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
-		private readonly DocumentDatabase systemDatabase;
-		private readonly RequestManager requestManager;
-	    private readonly FileSystemsLandlord fileSystemLandlord;
-		private readonly CountersLandlord countersLandlord;
-		private readonly TimeSeriesLandlord timeSeriesLandlord;
+    public sealed class RavenDBOptions : IDisposable
+    {
+        private readonly DatabasesLandlord databasesLandlord;
+        private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
+        private readonly DocumentDatabase systemDatabase;
+        private readonly RequestManager requestManager;
+        private readonly FileSystemsLandlord fileSystemLandlord;
+        private readonly CountersLandlord countersLandlord;
+        private readonly TimeSeriesLandlord timeSeriesLandlord;
 
-		private readonly IList<IDisposable> toDispose = new List<IDisposable>();
-		private readonly IEnumerable<IServerStartupTask> serverStartupTasks;
+        private readonly IList<IDisposable> toDispose = new List<IDisposable>();
+        private readonly IEnumerable<IServerStartupTask> serverStartupTasks;
 
-		private bool preventDisposing;
+        private bool preventDisposing;
 
-		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
-		{
-			if (configuration == null)
-				throw new ArgumentNullException("configuration");
-			
-			try
-			{
-				HttpEndpointRegistration.RegisterHttpEndpointTarget();
-			    HttpEndpointRegistration.RegisterAdminLogsTarget();
-				if (db == null)
-				{
-					configuration.UpdateDataDirForLegacySystemDb();
-					systemDatabase = new DocumentDatabase(configuration, null);
-					systemDatabase.SpinBackgroundWorkers(false);
-				}
-				else
-				{
-					systemDatabase = db;
-				}
+        public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
+        {
+            if (configuration == null)
+                throw new ArgumentNullException("configuration");
+            
+            try
+            {
+                HttpEndpointRegistration.RegisterHttpEndpointTarget();
+                HttpEndpointRegistration.RegisterAdminLogsTarget();
+                if (db == null)
+                {
+                    configuration.UpdateDataDirForLegacySystemDb();
+                    systemDatabase = new DocumentDatabase(configuration, null);
+                    systemDatabase.SpinBackgroundWorkers(false);
+                }
+                else
+                {
+                    systemDatabase = db;
+                }
 
-				WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
-			    fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
-				databasesLandlord = new DatabasesLandlord(systemDatabase);
-				countersLandlord = new CountersLandlord(systemDatabase);
-				timeSeriesLandlord = new TimeSeriesLandlord(systemDatabase);
-				requestManager = new RequestManager(databasesLandlord);
-				systemDatabase.RequestManager = requestManager;
-				ClusterManager = new Reference<ClusterManager>();
-				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
+                WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
+                fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
+                databasesLandlord = new DatabasesLandlord(systemDatabase);
+                countersLandlord = new CountersLandlord(systemDatabase);
+                timeSeriesLandlord = new TimeSeriesLandlord(systemDatabase);
+                requestManager = new RequestManager(databasesLandlord);
+                systemDatabase.RequestManager = requestManager;
+                ClusterManager = new Reference<ClusterManager>();
+                mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
+                mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 
-				serverStartupTasks = configuration.Container.GetExportedValues<IServerStartupTask>();
+                serverStartupTasks = configuration.Container.GetExportedValues<IServerStartupTask>();
 
-				foreach (var task in serverStartupTasks)
-				{
-					toDispose.Add(task);
-					task.Execute(this);
-				}
-			}
-			catch (Exception)
-			{
-				if (systemDatabase != null)
-					systemDatabase.Dispose();
-				throw;
-			}
-		}
+                foreach (var task in serverStartupTasks)
+                {
+                    toDispose.Add(task);
+                    task.Execute(this);
+                }
+            }
+            catch (Exception)
+            {
+                if (systemDatabase != null)
+                    systemDatabase.Dispose();
+                throw;
+            }
+        }
 
-		public IEnumerable<IServerStartupTask> ServerStartupTasks
-		{
-			get { return serverStartupTasks; }
-		}
+        public IEnumerable<IServerStartupTask> ServerStartupTasks
+        {
+            get { return serverStartupTasks; }
+        }
 
-		public DocumentDatabase SystemDatabase
-		{
-			get { return systemDatabase; }
-		}
+        public DocumentDatabase SystemDatabase
+        {
+            get { return systemDatabase; }
+        }
 
-		public MixedModeRequestAuthorizer MixedModeRequestAuthorizer
-		{
-			get { return mixedModeRequestAuthorizer; }
-		}
+        public MixedModeRequestAuthorizer MixedModeRequestAuthorizer
+        {
+            get { return mixedModeRequestAuthorizer; }
+        }
 
-		public DatabasesLandlord DatabaseLandlord
-		{
-			get { return databasesLandlord; }
-		}
-	    public FileSystemsLandlord FileSystemLandlord
-	    {
-	        get { return fileSystemLandlord; }
-	    }
+        public DatabasesLandlord DatabaseLandlord
+        {
+            get { return databasesLandlord; }
+        }
+        public FileSystemsLandlord FileSystemLandlord
+        {
+            get { return fileSystemLandlord; }
+        }
 
-		public CountersLandlord CountersLandlord
-		{
-			get { return countersLandlord; }
-		}
+        public CountersLandlord CountersLandlord
+        {
+            get { return countersLandlord; }
+        }
 
-		public TimeSeriesLandlord TimeSeriesLandlord
-		{
-			get { return timeSeriesLandlord; }
-		}
+        public TimeSeriesLandlord TimeSeriesLandlord
+        {
+            get { return timeSeriesLandlord; }
+        }
 
-	    public RequestManager RequestManager
-		{
-			get { return requestManager; }
-		}
+        public RequestManager RequestManager
+        {
+            get { return requestManager; }
+        }
 
-		public Reference<ClusterManager> ClusterManager { get; private set; }
+        public Reference<ClusterManager> ClusterManager { get; private set; }
 
-		public bool Disposed { get; private set; }
+        public bool Disposed { get; private set; }
 
-		public void Dispose()
-		{
-			if (preventDisposing || Disposed)
-				return;
+        public void Dispose()
+        {
+            if (preventDisposing || Disposed)
+                return;
 
-			Disposed = true;
+            Disposed = true;
 
-			toDispose.Add(mixedModeRequestAuthorizer);
-			toDispose.Add(databasesLandlord);
-			toDispose.Add(fileSystemLandlord);
-			toDispose.Add(systemDatabase);
-			toDispose.Add(LogManager.GetTarget<AdminLogsTarget>());
-			toDispose.Add(requestManager);
-			toDispose.Add(countersLandlord);
-			toDispose.Add(ClusterManager.Value);
+            toDispose.Add(mixedModeRequestAuthorizer);
+            toDispose.Add(databasesLandlord);
+            toDispose.Add(fileSystemLandlord);
+            toDispose.Add(systemDatabase);
+            toDispose.Add(LogManager.GetTarget<AdminLogsTarget>());
+            toDispose.Add(requestManager);
+            toDispose.Add(countersLandlord);
+            toDispose.Add(ClusterManager.Value);
 
             var errors = new List<Exception>();
 
-		    foreach (var disposable in toDispose)
-		    {
+            foreach (var disposable in toDispose)
+            {
                 try
                 {
                     if (disposable != null)
@@ -148,39 +148,39 @@ namespace Raven.Database.Server
                 {
                     errors.Add(e);
                 }
-		    }
+            }
 
-			if (errors.Count != 0)
+            if (errors.Count != 0)
                 throw new AggregateException(errors);
-		}
+        }
 
-		public IDisposable PreventDispose()
-		{
-			preventDisposing = true;
+        public IDisposable PreventDispose()
+        {
+            preventDisposing = true;
 
-			return new DisposableAction(() => preventDisposing = false);
-		}
+            return new DisposableAction(() => preventDisposing = false);
+        }
 
-		private class RavenServer : IRavenServer
-		{
-			private readonly InMemoryRavenConfiguration systemConfiguration;
-			private readonly DocumentDatabase systemDatabase;
+        private class RavenServer : IRavenServer
+        {
+            private readonly InMemoryRavenConfiguration systemConfiguration;
+            private readonly DocumentDatabase systemDatabase;
 
-			public RavenServer(DocumentDatabase systemDatabase, InMemoryRavenConfiguration systemConfiguration)
-			{
-				this.systemDatabase = systemDatabase;
-				this.systemConfiguration = systemConfiguration;
-			}
+            public RavenServer(DocumentDatabase systemDatabase, InMemoryRavenConfiguration systemConfiguration)
+            {
+                this.systemDatabase = systemDatabase;
+                this.systemConfiguration = systemConfiguration;
+            }
 
-			public DocumentDatabase SystemDatabase
-			{
-				get { return systemDatabase; }
-			}
+            public DocumentDatabase SystemDatabase
+            {
+                get { return systemDatabase; }
+            }
 
-			public InMemoryRavenConfiguration SystemConfiguration
-			{
-				get { return systemConfiguration; }
-			}
-		}
-	}
+            public InMemoryRavenConfiguration SystemConfiguration
+            {
+                get { return systemConfiguration; }
+            }
+        }
+    }
 }

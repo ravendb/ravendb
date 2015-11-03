@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using Voron.Impl.Backup;
 using Voron.Impl.Journal;
 
@@ -19,11 +19,11 @@ namespace Voron.Impl.FileHeaders
         [FieldOffset(8)]
         public int Version;
 
-		/// <summary>
-		/// Incremented on every header modification
-		/// </summary>
-		[FieldOffset(12)]
-		public long HeaderRevision;
+        /// <summary>
+        /// Incremented on every header modification
+        /// </summary>
+        [FieldOffset(12)]
+        public long HeaderRevision;
 
         /// <summary>
         /// The transaction id that committed this page
@@ -55,16 +55,16 @@ namespace Voron.Impl.FileHeaders
         [FieldOffset(160)] 
         public JournalInfo Journal;
 
-		/// <summary>
-		/// Information about an incremental backup
-		/// </summary>
-	    [FieldOffset(188)] 
-		public IncrementalBackupInfo IncrementalBackup;
+        /// <summary>
+        /// Information about an incremental backup
+        /// </summary>
+        [FieldOffset(188)] 
+        public IncrementalBackupInfo IncrementalBackup;
 
-		/// <summary>
-		/// Crc of last shipped transaction
-		/// </summary>
-		[FieldOffset(212)]
-		public uint PreviousTransactionCrc;
-	}
+        /// <summary>
+        /// Crc of last shipped transaction
+        /// </summary>
+        [FieldOffset(212)]
+        public uint PreviousTransactionCrc;
+    }
 }

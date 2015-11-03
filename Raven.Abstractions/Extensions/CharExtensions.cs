@@ -2,12 +2,12 @@ using System;
 using System.Globalization;
 namespace Raven.Abstractions.Extensions
 {
-	public static class CharExtensions
-	{
-		public static string CharToString(this char c)
-		{
-			return c.ToString(CultureInfo.InvariantCulture);
-		}
+    public static class CharExtensions
+    {
+        public static string CharToString(this char c)
+        {
+            return c.ToString(CultureInfo.InvariantCulture);
+        }
 
         public static string ToInvariantString(this object obj)
         {
@@ -15,5 +15,5 @@ namespace Raven.Abstractions.Extensions
                 : obj is IFormattable ? ((IFormattable)obj).ToString(null, CultureInfo.InvariantCulture)
                 : obj.ToString();
         }
-	}
+    }
 }

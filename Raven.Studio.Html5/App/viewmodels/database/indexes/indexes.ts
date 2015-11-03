@@ -1,4 +1,4 @@
-﻿import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
@@ -21,6 +21,7 @@ import forceIndexReplace = require("commands/database/index/forceIndexReplace");
 import saveIndexPriorityCommand = require("commands/database/index/saveIndexPriorityCommand");
 import indexPriority = require("models/database/index/indexPriority");
 import tryRecoverCorruptedIndexes = require("commands/database/index/tryRecoverCorruptedIndexes");
+import indexLockAllConfirm = require("viewmodels/database/indexes/indexLockAllConfirm");
 
 class indexes extends viewModelBase {
 
@@ -34,12 +35,13 @@ class indexes extends viewModelBase {
     btnStateTooltip = ko.observable<string>("ExpandAll");
     btnTitle = ko.computed(() => this.btnState() === true ? "Expand all" : "Collapse all");
     sortedGroups: KnockoutComputed<{ entityName: string; indexes: KnockoutObservableArray<index>; }[]>;
-	corruptedIndexes: KnockoutComputed<index[]>;
-	searchText = ko.observable<string>();
+    corruptedIndexes: KnockoutComputed<index[]>;
+    lockModeCommon: KnockoutComputed<string>;
+    searchText = ko.observable<string>();
 
     constructor() {
         super();
-		this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
+        this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterIndexes());
 
         this.sortedGroups = ko.computed(() => {
             var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
@@ -51,12 +53,26 @@ class indexes extends viewModelBase {
             return groups;
         });
 
-		this.corruptedIndexes = ko.computed(() => {
-			var corrupted: index[] = [];
-			this.indexGroups().forEach(g => corrupted.pushAll(g.indexes().filter(i => i.priority && i.priority.indexOf(index.priorityErrored) !== -1)));
+        this.corruptedIndexes = ko.computed(() => {
+            var corrupted: index[] = [];
+            this.indexGroups().forEach(g => corrupted.pushAll(g.indexes().filter(i => i.priority && i.priority.indexOf(index.priorityErrored) !== -1)));
 
-			return corrupted.distinct();
-	    });
+            return corrupted.distinct();
+        });
+
+        this.lockModeCommon = ko.computed(() => {
+            var allIndexes = this.getAllIndexes();
+            if (allIndexes.length === 0)
+                return "None";
+
+            var firstLockMode = allIndexes[0].lockMode();
+            for (var i = 1; i < allIndexes.length; i++) {
+                if (allIndexes[i].lockMode() != firstLockMode) {
+                    return "Mixed";
+                }
+            }
+            return firstLockMode;
+        });
     }
 
     canActivate(args) {
@@ -81,7 +97,7 @@ class indexes extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         // Alt+Minus and Alt+Plus are already setup. Since laptops don't have a dedicated key for plus, we'll also use the equal sign key (co-opted for plus).
         //this.createKeyboardShortcut("Alt+=", () => this.toggleExpandAll(), this.containerSelector);
         ko.postbox.publish("SetRawJSONUrl", appUrl.forIndexesRawData(this.activeDatabase()));
@@ -92,29 +108,29 @@ class indexes extends viewModelBase {
         });
     }
 
-	idlePriority(idx: index) {
-		this.setIndexPriority(idx, indexPriority.idleForced);
-	}
+    idlePriority(idx: index) {
+        this.setIndexPriority(idx, indexPriority.idleForced);
+    }
 
     disabledPriority(idx: index) {
-	    this.setIndexPriority(idx, indexPriority.disabledForced);
+        this.setIndexPriority(idx, indexPriority.disabledForced);
     }
 
     abandonedPriority(idx: index) {
-	    this.setIndexPriority(idx, indexPriority.abandonedForced);
+        this.setIndexPriority(idx, indexPriority.abandonedForced);
     }
 
     normalPriority(idx: index) {
-	    this.setIndexPriority(idx, indexPriority.normal);
+        this.setIndexPriority(idx, indexPriority.normal);
     }
 
-	private setIndexPriority(idx: index, newPriority: indexPriority) {
-		new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
-			.execute()
-			.done(() => {
-				this.fetchIndexes();
-			});
-	}
+    private setIndexPriority(idx: index, newPriority: indexPriority) {
+        new saveIndexPriorityCommand(idx.name, newPriority, this.activeDatabase())
+            .execute()
+            .done(() => {
+                this.fetchIndexes();
+            });
+    }
 
     private fetchIndexes() {
         var deferred = $.Deferred();
@@ -141,21 +157,21 @@ class indexes extends viewModelBase {
         this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
     }
 
-	private filterIndexes() {
-		var filterLower = this.searchText().toLowerCase();
-		this.indexGroups().forEach(indexGroup => {
-			var hasAnyInGroup = false;
-			indexGroup.indexes().forEach(index => {
-				var match = index.name.toLowerCase().indexOf(filterLower) >= 0;
-				index.filteredOut(!match);
-				if (match) {
-					hasAnyInGroup = true;
-				}
-			});
+    private filterIndexes() {
+        var filterLower = this.searchText().toLowerCase();
+        this.indexGroups().forEach(indexGroup => {
+            var hasAnyInGroup = false;
+            indexGroup.indexes().forEach(index => {
+                var match = index.name.toLowerCase().indexOf(filterLower) >= 0;
+                index.filteredOut(!match);
+                if (match) {
+                    hasAnyInGroup = true;
+                }
+            });
 
-			indexGroup.groupHidden(!hasAnyInGroup);
-		});
-	}
+            indexGroup.groupHidden(!hasAnyInGroup);
+        });
+    }
 
     getRecentQueryUrl(query: storedQueryDto) {
         return appUrl.forQuery(this.activeDatabase(), query.Hash);
@@ -321,7 +337,7 @@ class indexes extends viewModelBase {
     }
 
     deleteAllIndexes() {
-		this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
+        this.promptDeleteIndexes(this.getAllIndexes().filter(i => i.name !== "Raven/DocumentsByEntityName"));
     }
 
     deleteIndex(i: index) {
@@ -418,13 +434,23 @@ class indexes extends viewModelBase {
         new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
 
-	forceSideBySide(idx: index) {
-		new forceIndexReplace(idx.name, this.activeDatabase()).execute();
-	}
+    forceSideBySide(idx: index) {
+        new forceIndexReplace(idx.name, this.activeDatabase()).execute();
+    }
 
-	tryRecoverCorruptedIndexes() {
-		new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
-	}
+    tryRecoverCorruptedIndexes() {
+        new tryRecoverCorruptedIndexes(this.activeDatabase()).execute();
+    }
+
+    setLockModeAllIndexes(lockModeString: string, lockModeStrForTitle: string) {
+        if (this.lockModeCommon() === lockModeString)
+            return false;
+
+        var lockModeTitle = "Do you want to " + lockModeStrForTitle + " ALL Indexes?";
+
+        var indexLockAllVm = new indexLockAllConfirm(lockModeString, this.activeDatabase(), this.getAllIndexes(), lockModeTitle);
+        app.showDialog(indexLockAllVm);
+    }
 }
 
 export = indexes;

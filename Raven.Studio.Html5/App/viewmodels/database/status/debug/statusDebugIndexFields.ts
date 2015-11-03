@@ -20,7 +20,7 @@ class statusDebugIndexFields extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         $("#indexDefLabel").popover({
             html: true,
             trigger: 'hover',

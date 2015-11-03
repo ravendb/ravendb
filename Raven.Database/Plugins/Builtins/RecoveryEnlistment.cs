@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Transactions;
 
 namespace Raven.Database.Plugins.Builtins

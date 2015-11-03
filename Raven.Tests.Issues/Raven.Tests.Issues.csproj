@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -134,12 +134,16 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-3931.cs" />
+    <Compile Include="RavenDB-3974.cs" />
     <Compile Include="BackupRestore.cs" />
     <Compile Include="RavenDB-3559.cs" />
     <Compile Include="RavenDB-3609.cs" />
     <Compile Include="RavenDB-3726.cs" />
     <Compile Include="RavenDB-3763.cs" />
+    <Compile Include="RavenDB-3818.cs" />
     <Compile Include="RavenDB_3488.cs" />
+    <Compile Include="RavenDB-3472-async.cs" />
     <Compile Include="RavenDB_3646.cs" />
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />
@@ -467,6 +471,8 @@
     <Compile Include="RavenDB_3864.cs" />
     <Compile Include="RavenDB_3917.cs" />
     <Compile Include="RavenDB_3929.cs" />
+    <Compile Include="RavenDB_3938.cs" />
+    <Compile Include="RavenDB_3970.cs" />
     <Compile Include="RavenDB_406.cs" />
     <Compile Include="RavenDB_410.cs" />
     <Compile Include="RavenDB_421.cs" />

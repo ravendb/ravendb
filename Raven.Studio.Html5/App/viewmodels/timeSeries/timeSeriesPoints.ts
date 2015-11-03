@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import changeSubscription = require("common/changeSubscription");
@@ -41,15 +41,15 @@ class timeSeriesPoints extends viewModelBase {
     hasAllPointsSelected: KnockoutComputed<boolean>;
     isAnyPointsAutoSelected = ko.observable<boolean>(false);
     isAllPointsAutoSelected = ko.observable<boolean>(false);
-	pointsSelection: KnockoutComputed<checkbox>;
+    pointsSelection: KnockoutComputed<checkbox>;
 
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
     static gridSelector = "#pointsGrid";
-	static isInitialized = ko.observable<boolean>(false);
+    static isInitialized = ko.observable<boolean>(false);
     isInitialized = timeSeriesPoints.isInitialized;
 
-	constructor() {
+    constructor() {
         super();
 
         this.hasPoints = ko.computed(() => {
@@ -82,7 +82,7 @@ class timeSeriesPoints extends viewModelBase {
             return checkbox.UnChecked;
         });
 
-	    this.isFiltered.subscribe(() => {
+        this.isFiltered.subscribe(() => {
             this.refresh();
         });
         this.startPointFilter.subscribe(() => {
@@ -101,7 +101,7 @@ class timeSeriesPoints extends viewModelBase {
         this.durationType.subscribe(() => {
             this.refresh();
         });
-	}
+    }
 
     activate(args) {
         super.activate(args);
@@ -158,10 +158,10 @@ class timeSeriesPoints extends viewModelBase {
         this.createKeyboardShortcut("Ctrl+C, I", () => this.copySelectedDocIds(), docsPageSelector);*/
     }
 
-	deactivate() {
-		super.deactivate();
-		timeSeriesPoints.isInitialized(false);
-	}
+    deactivate() {
+        super.deactivate();
+        timeSeriesPoints.isInitialized(false);
+    }
 
     createNotifications(): Array<changeSubscription> {
         return [
@@ -204,7 +204,7 @@ class timeSeriesPoints extends viewModelBase {
             pointsList.invalidateCache();
         }
         this.selectNone();
-	}
+    }
 
     changePoint() {
         var grid = this.getPointsGrid();

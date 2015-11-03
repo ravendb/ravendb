@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ProxyServer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,24 +26,24 @@ namespace Raven.Tests.Common.Util
         public ProxyServer(ref int port, int to)
         {
             this.to = to;
-	        var originPort = port;
-	        while (port > 0)
-	        {
-		        try
-		        {
-					listener = new TcpListener(IPAddress.Loopback, port);
-					listener.Start();
-			        break;
-		        }
-		        catch (SocketException)
-		        {
-			        port--;
-			        listener = null;
-		        }
-	        }
+            var originPort = port;
+            while (port > 0)
+            {
+                try
+                {
+                    listener = new TcpListener(IPAddress.Loopback, port);
+                    listener.Start();
+                    break;
+                }
+                catch (SocketException)
+                {
+                    port--;
+                    listener = null;
+                }
+            }
 
-	        if (listener == null)
-		        throw new InvalidOperationException("Couldn't find an open port in the range " + port + " - " + originPort);
+            if (listener == null)
+                throw new InvalidOperationException("Couldn't find an open port in the range " + port + " - " + originPort);
 
             totalRead = 0;
             totalWrite = 0;
@@ -90,7 +91,7 @@ namespace Raven.Tests.Common.Util
                     if (read == 0)
                         break;
                     var tmpTotal = Interlocked.Add(ref total, read);
-					if (VetoTransfer(tmpTotal, new ArraySegment<byte>(buffer, 0, read)))
+                    if (VetoTransfer(tmpTotal, new ArraySegment<byte>(buffer, 0, read)))
                     {
                         //force close of both streams
                         s.Close();
@@ -99,7 +100,7 @@ namespace Raven.Tests.Common.Util
                     }
 
                     d.Write(buffer, 0, read);
-                    if (IsEndOfChunkEncoding(buffer, 0, read))
+                    if (IsEndOfChunkEncoding(buffer, 0, read) || IsEmptyResponse(buffer, 0, read))
                     {
                         break;
                     }
@@ -110,8 +111,13 @@ namespace Raven.Tests.Common.Util
             }
 
         }
+        private bool IsEmptyResponse(byte[] buffer, int i, int read)
+        {
+            var payload = Encoding.UTF8.GetString(buffer, 0, read);
+            return payload.Contains("HTTP/1.1") && payload.Contains("Content-Length: 0");
+        }
 
-        private static bool IsEndOfChunkEncoding(byte[] buffer, int offset, int count)
+    private static bool IsEndOfChunkEncoding(byte[] buffer, int offset, int count)
         {
             // end of chunk encoding:
             // 0x30, 0x0d, 0x0a, 0x0d, 0x0a

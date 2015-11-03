@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.FileSystem
@@ -42,22 +42,22 @@ namespace Raven.Abstractions.FileSystem
             this.Enabled = true;
         }
 
-		[JsonIgnore]
-		public ICredentials Credentials
-	    {
-		    get
-		    {
-				if (string.IsNullOrEmpty(Username) == false)
-				{
-					return string.IsNullOrEmpty(Domain)
-									  ? new NetworkCredential(Username, Password)
-									  : new NetworkCredential(Username, Password, Domain);
-				}
-			    return null;
-		    }
-	    }
+        [JsonIgnore]
+        public ICredentials Credentials
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Username) == false)
+                {
+                    return string.IsNullOrEmpty(Domain)
+                                      ? new NetworkCredential(Username, Password)
+                                      : new NetworkCredential(Username, Password, Domain);
+                }
+                return null;
+            }
+        }
 
-	    protected bool Equals(SynchronizationDestination other)
+        protected bool Equals(SynchronizationDestination other)
         {
             return string.Equals(serverUrl, other.serverUrl) && string.Equals(ApiKey, other.ApiKey) && string.Equals(Domain, other.Domain) &&
                 string.Equals(Password, other.Password) && string.Equals(Username, other.Username) && string.Equals(FileSystem, other.FileSystem);

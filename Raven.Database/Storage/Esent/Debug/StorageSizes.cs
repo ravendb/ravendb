@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="StorageSizes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -18,84 +18,84 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage.Esent.Debug
 {
-	public static class StorageSizes
-	{
-		public static List<string> ReportOn(string path)
-		{
-			using (var transactionalStorage = new TransactionalStorage(new RavenConfiguration
-			{
-				DataDirectory = path,
-				Settings =
-				{
-					{Constants.Esent.LogFileSize, "1"}
-				}
-			}, () => { }, () => { }, () => { }, () => { }))
-			{
-				transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
+    public static class StorageSizes
+    {
+        public static List<string> ReportOn(string path)
+        {
+            using (var transactionalStorage = new TransactionalStorage(new RavenConfiguration
+            {
+                DataDirectory = path,
+                Settings =
+                {
+                    {Constants.Esent.LogFileSize, "1"}
+                }
+            }, () => { }, () => { }, () => { }, () => { }))
+            {
+                transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 
-				return ReportOn(transactionalStorage);
-			}
-		}
+                return ReportOn(transactionalStorage);
+            }
+        }
 
-		public static List<string> ReportOn(TransactionalStorage transactionalStorage)
-		{
-			var list = new List<string>();
-			transactionalStorage.Batch(accessor =>
-			{
-				var session = ((StorageActionsAccessor)accessor).Inner.Session;
-				var jetDbid = ((StorageActionsAccessor)accessor).Inner.Dbid;
+        public static List<string> ReportOn(TransactionalStorage transactionalStorage)
+        {
+            var list = new List<string>();
+            transactionalStorage.Batch(accessor =>
+            {
+                var session = ((StorageActionsAccessor)accessor).Inner.Session;
+                var jetDbid = ((StorageActionsAccessor)accessor).Inner.Dbid;
 
-				var dictionary = GetSizes(session, jetDbid);
-				list.AddRange(dictionary.OrderByDescending(x => x.Item2).Select(l => l.Item1));
-			});
-			return list;
-		}
+                var dictionary = GetSizes(session, jetDbid);
+                list.AddRange(dictionary.OrderByDescending(x => x.Item2).Select(l => l.Item1));
+            });
+            return list;
+        }
 
-		private static IEnumerable<Tuple<string, long>> GetSizes(Session session, JET_DBID db)
-		{
-			int dbPages;
-			Api.JetGetDatabaseInfo(session, db, out dbPages, JET_DbInfo.Filesize);
+        private static IEnumerable<Tuple<string, long>> GetSizes(Session session, JET_DBID db)
+        {
+            int dbPages;
+            Api.JetGetDatabaseInfo(session, db, out dbPages, JET_DbInfo.Filesize);
 
-			var dbTotalSize = (long)dbPages * SystemParameters.DatabasePageSize;
-			yield return Tuple.Create("Total db size: " + SizeHelper.Humane(dbTotalSize), dbTotalSize);
+            var dbTotalSize = (long)dbPages * SystemParameters.DatabasePageSize;
+            yield return Tuple.Create("Total db size: " + SizeHelper.Humane(dbTotalSize), dbTotalSize);
 
-			foreach (var tableName in Api.GetTableNames(session, db))
-			{
-				using (var tbl = new Table(session, db, tableName, OpenTableGrbit.None))
-				{
-					Api.JetComputeStats(session, tbl);
+            foreach (var tableName in Api.GetTableNames(session, db))
+            {
+                using (var tbl = new Table(session, db, tableName, OpenTableGrbit.None))
+                {
+                    Api.JetComputeStats(session, tbl);
 
-					JET_OBJECTINFO result;
-					Api.JetGetTableInfo(session, tbl, out result, JET_TblInfo.Default);
-					var sb = new StringBuilder(tableName).AppendLine();
-					var usedSize = (long)result.cPage * SystemParameters.DatabasePageSize;
-					int ownedPages;
-					Api.JetGetTableInfo(session, tbl, out ownedPages, JET_TblInfo.SpaceOwned);
+                    JET_OBJECTINFO result;
+                    Api.JetGetTableInfo(session, tbl, out result, JET_TblInfo.Default);
+                    var sb = new StringBuilder(tableName).AppendLine();
+                    var usedSize = (long)result.cPage * SystemParameters.DatabasePageSize;
+                    int ownedPages;
+                    Api.JetGetTableInfo(session, tbl, out ownedPages, JET_TblInfo.SpaceOwned);
 
-					sb.Append("\tOwned Size: ")
-					  .Append(SizeHelper.Humane((long)ownedPages * SystemParameters.DatabasePageSize))
-					  .AppendLine();
-
-
-					sb.Append("\tUsed Size: ")
-					  .Append(SizeHelper.Humane(usedSize))
-					  .AppendLine();
+                    sb.Append("\tOwned Size: ")
+                      .Append(SizeHelper.Humane((long)ownedPages * SystemParameters.DatabasePageSize))
+                      .AppendLine();
 
 
-					sb.Append("\tRecords: ").AppendFormat("{0:#,#;;0}", result.cRecord).AppendLine();
-					sb.Append("\tIndexes:").AppendLine();
+                    sb.Append("\tUsed Size: ")
+                      .Append(SizeHelper.Humane(usedSize))
+                      .AppendLine();
 
-					foreach (var index in Api.GetTableIndexes(session, tbl))
-					{
-						sb.Append("\t\t")
-						  .Append(index.Name)
-						  .Append(": ")
-						  .Append(SizeHelper.Humane((long)index.Pages * (SystemParameters.DatabasePageSize)))
-						  .AppendLine();
-					}
-					yield return Tuple.Create(sb.ToString(), (long)ownedPages * SystemParameters.DatabasePageSize);
-				}
-			}
-		}
-	}
+
+                    sb.Append("\tRecords: ").AppendFormat("{0:#,#;;0}", result.cRecord).AppendLine();
+                    sb.Append("\tIndexes:").AppendLine();
+
+                    foreach (var index in Api.GetTableIndexes(session, tbl))
+                    {
+                        sb.Append("\t\t")
+                          .Append(index.Name)
+                          .Append(": ")
+                          .Append(SizeHelper.Humane((long)index.Pages * (SystemParameters.DatabasePageSize)))
+                          .AppendLine();
+                    }
+                    yield return Tuple.Create(sb.ToString(), (long)ownedPages * SystemParameters.DatabasePageSize);
+                }
+            }
+        }
+    }
 }

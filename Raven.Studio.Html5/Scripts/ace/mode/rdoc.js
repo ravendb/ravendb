@@ -45,7 +45,7 @@ var RDocHighlightRules = require("./rdoc_highlight_rules").RDocHighlightRules;
 var MatchingBraceOutdent = require("./matching_brace_outdent").MatchingBraceOutdent;
 
 var Mode = function(suppressHighlighting) {
-	this.HighlightRules = RDocHighlightRules;
+    this.HighlightRules = RDocHighlightRules;
     this.$outdent = new MatchingBraceOutdent();
 };
 oop.inherits(Mode, TextMode);

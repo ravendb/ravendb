@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MoreDtcIssues : RavenTest
+    public class MoreDtcIssues : RavenTest
     {
         public class MyTestClass
         {

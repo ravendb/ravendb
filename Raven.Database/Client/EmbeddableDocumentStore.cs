@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="EmbeddableDocumentStore.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -85,24 +85,24 @@ namespace Raven.Client.Embedded
             Conventions = new DocumentConvention();
             Listeners = new DocumentSessionListeners();
             Configuration = new RavenConfiguration();
-	        LegacyDataDirSupport(Configuration);
+            LegacyDataDirSupport(Configuration);
 
             EnlistInDistributedTransactions = true;
         }
 
-	    private static void LegacyDataDirSupport(InMemoryRavenConfiguration configuration)
-	    {
-		    if (System.IO.Directory.Exists(configuration.DataDirectory))
-				return;
+        private static void LegacyDataDirSupport(InMemoryRavenConfiguration configuration)
+        {
+            if (System.IO.Directory.Exists(configuration.DataDirectory))
+                return;
 
-			var directory = FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(configuration.WorkingDirectory, "~\\Data");
-			if (System.IO.Directory.Exists(directory) == false)
-				return;
-			
-		    configuration.DataDirectory = "~\\Data";
-	    }
+            var directory = FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(configuration.WorkingDirectory, "~\\Data");
+            if (System.IO.Directory.Exists(directory) == false)
+                return;
+            
+            configuration.DataDirectory = "~\\Data";
+        }
 
-	    private IDocumentStore Inner
+        private IDocumentStore Inner
         {
             get
             {
@@ -117,7 +117,7 @@ namespace Raven.Client.Embedded
             if (_inner != null)
                 return this;
 
-			AssertValidConfiguration();
+            AssertValidConfiguration();
 
             if (string.IsNullOrEmpty(Url) == false)
             {
@@ -149,34 +149,34 @@ namespace Raven.Client.Embedded
 
             _inner.SetListeners(Listeners);
 
-			Configuration.PostInit();
+            Configuration.PostInit();
             _inner.Initialize();	        
 
             return this;
         }
 
-	    private void AssertValidConfiguration()
-	    {
-		    if(string.IsNullOrEmpty(Url) == false && UseEmbeddedHttpServer)
-				throw new InvalidOperationException("You cannot set non empty Url and UseEmbeddedHttpServer = true at the same time. If you want to have HTTP access then you should use only UseEmbeddedHttpServer property, the listening port will be set according to configuration.");
-	    }
+        private void AssertValidConfiguration()
+        {
+            if(string.IsNullOrEmpty(Url) == false && UseEmbeddedHttpServer)
+                throw new InvalidOperationException("You cannot set non empty Url and UseEmbeddedHttpServer = true at the same time. If you want to have HTTP access then you should use only UseEmbeddedHttpServer property, the listening port will be set according to configuration.");
+        }
 
         public Guid ResourceManagerId { get; set; }
 
-	    public RavenDbServer ServerIfEmbedded
-	    {
-		    get
-		    {
-				var eds = Inner as EmbeddedDocumentStore;
-				if (eds != null)
-					return eds.Server;
-				return null;
-		    }
-	    }
+        public RavenDbServer ServerIfEmbedded
+        {
+            get
+            {
+                var eds = Inner as EmbeddedDocumentStore;
+                if (eds != null)
+                    return eds.Server;
+                return null;
+            }
+        }
 
-		/// <summary>
-		/// Direct access to system database.
-		/// </summary>
+        /// <summary>
+        /// Direct access to system database.
+        /// </summary>
         public DocumentDatabase SystemDatabase
         {
             get
@@ -188,31 +188,31 @@ namespace Raven.Client.Embedded
             }
         }
 
-		/// <summary>
-		/// Direct access to database configured in 'DefaultDatabase' property. If property value is 'null' then 'SystemDatabase' is returned. 
-		/// </summary>
-		public DocumentDatabase DocumentDatabase
-		{
-			get
-			{
-				var eds = Inner as EmbeddedDocumentStore;
-				if (eds != null)
-					return eds.DocumentDatabase;
-				return null;
-			}
-		}
+        /// <summary>
+        /// Direct access to database configured in 'DefaultDatabase' property. If property value is 'null' then 'SystemDatabase' is returned. 
+        /// </summary>
+        public DocumentDatabase DocumentDatabase
+        {
+            get
+            {
+                var eds = Inner as EmbeddedDocumentStore;
+                if (eds != null)
+                    return eds.DocumentDatabase;
+                return null;
+            }
+        }
 
         public DocumentConvention Conventions
         {
             get; set;
         }
 
-	    public string DataDirectory
-	    {
-		    get { return Configuration.DataDirectory; }
-			set { Configuration.DataDirectory = value; }
-	    }
-	    public string Url
+        public string DataDirectory
+        {
+            get { return Configuration.DataDirectory; }
+            set { Configuration.DataDirectory = value; }
+        }
+        public string Url
         {
             get; set;
         }
@@ -264,15 +264,15 @@ namespace Raven.Client.Embedded
             get { return Inner.JsonRequestFactory; }
         }
 
-	    public bool HasJsonRequestFactory
-	    {
-		    get
-		    {
-			    return Inner.HasJsonRequestFactory;
-		    }
-	    }
+        public bool HasJsonRequestFactory
+        {
+            get
+            {
+                return Inner.HasJsonRequestFactory;
+            }
+        }
 
-	    public string Identifier
+        public string Identifier
         {
             get { return Inner.Identifier; }
             set { Inner.Identifier = value; }
@@ -304,12 +304,12 @@ namespace Raven.Client.Embedded
             return Inner.OpenAsyncSession(database);
         }
 
-	    public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
-	    {
-		    return Inner.OpenAsyncSession(sessionOptions);
-	    }
+        public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+        {
+            return Inner.OpenAsyncSession(sessionOptions);
+        }
 
-	    public IDocumentSession OpenSession()
+        public IDocumentSession OpenSession()
         {
             return Inner.OpenSession();
         }
@@ -328,48 +328,48 @@ namespace Raven.Client.Embedded
         {
             get { return Inner.DatabaseCommands; }
         }
-	    
-	    public void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
+        
+        public void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
         {
             Inner.ExecuteIndex(indexCreationTask);
         }
 
-	    public void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
-	    {
-		    Inner.ExecuteIndexes(indexCreationTasks);
-	    }
+        public void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+        {
+            Inner.ExecuteIndexes(indexCreationTasks);
+        }
 
-	    public void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-	    {
-			Inner.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
-	    }
+        public void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            Inner.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-		public Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-		{
-			return Inner.SideBySideExecuteIndexesAsync(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
-		}
+        public Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            return Inner.SideBySideExecuteIndexesAsync(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+        public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
         {
             return Inner.ExecuteIndexAsync(indexCreationTask);
         }
 
-	    public Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
-	    {
-		    return Inner.ExecuteIndexesAsync(indexCreationTasks);
-	    }
+        public Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+        {
+            return Inner.ExecuteIndexesAsync(indexCreationTasks);
+        }
 
-	    public void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-	    {
-			Inner.SideBySideExecuteIndex(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
-	    }
+        public void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            Inner.SideBySideExecuteIndex(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-	    public Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-	    {
-		    return Inner.SideBySideExecuteIndexAsync(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
-	    }
+        public Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            return Inner.SideBySideExecuteIndexAsync(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-	    public void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
+        public void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
         {
             Inner.ExecuteTransformer(transformerCreationTask);
         }
@@ -391,15 +391,15 @@ namespace Raven.Client.Embedded
 
         public DocumentSessionListeners Listeners { get; private set; }
 
-		public IAsyncReliableSubscriptions AsyncSubscriptions
-		{
-			get { return Inner.AsyncSubscriptions; }
-		}
+        public IAsyncReliableSubscriptions AsyncSubscriptions
+        {
+            get { return Inner.AsyncSubscriptions; }
+        }
 
-	    public IReliableSubscriptions Subscriptions
-	    {
-			get { return Inner.Subscriptions; }
-	    }
+        public IReliableSubscriptions Subscriptions
+        {
+            get { return Inner.Subscriptions; }
+        }
 
         public void SetListeners(DocumentSessionListeners listeners)
         {
@@ -411,11 +411,11 @@ namespace Raven.Client.Embedded
         ///</summary>
         public bool UseEmbeddedHttpServer { get; set; }
 
-		public bool RunInMemory
-		{
-			get { return Configuration.RunInMemory; }
-			set { Configuration.RunInMemory = value; }
-		}
+        public bool RunInMemory
+        {
+            get { return Configuration.RunInMemory; }
+            set { Configuration.RunInMemory = value; }
+        }
 
         public IDocumentStore RegisterListener(IDocumentStoreListener listener)
         {
@@ -449,14 +449,14 @@ namespace Raven.Client.Embedded
             return this;
         }
 
-	    public void InitializeProfiling()
-	    {
-			_inner.InitializeProfiling();
-	    }
+        public void InitializeProfiling()
+        {
+            _inner.InitializeProfiling();
+        }
 
-	    public ProfilingInformation GetProfilingInformationFor(Guid id)
-	    {
-		    return _inner.GetProfilingInformationFor(id);
-	    }
+        public ProfilingInformation GetProfilingInformationFor(Guid id)
+        {
+            return _inner.GetProfilingInformationFor(id);
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Performance.Comparison.Esent
+namespace Performance.Comparison.Esent
 {
     using System;
     using System.Collections.Generic;
@@ -144,14 +144,14 @@
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[Esent] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(string.Format("[Esent] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }

@@ -2,7 +2,7 @@ using ICSharpCode.NRefactory.CSharp;
 
 namespace Raven.Database.Indexing.IndexMerging
 {
-	internal class ChangeRootReferenceVisitor : DepthFirstAstVisitor
+    internal class ChangeRootReferenceVisitor : DepthFirstAstVisitor
     {
         private readonly string _fromIdentifier;
 

@@ -1,12 +1,12 @@
-﻿namespace Raven.Abstractions.TimeSeries
+namespace Raven.Abstractions.TimeSeries
 {
-	public enum AggregationDurationType
-	{
-		Seconds,
-		Minutes,
-		Hours,
-		Days,
-		Months,
-		Years,
-	}
+    public enum AggregationDurationType
+    {
+        Seconds,
+        Minutes,
+        Hours,
+        Days,
+        Months,
+        Years,
+    }
 }

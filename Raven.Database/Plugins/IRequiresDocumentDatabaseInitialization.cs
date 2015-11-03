@@ -7,10 +7,10 @@ using System.ComponentModel.Composition;
 
 namespace Raven.Database.Plugins
 {
-	internal interface IRequiresDocumentDatabaseInitialization
-	{
-		void Initialize(DocumentDatabase database);
+    internal interface IRequiresDocumentDatabaseInitialization
+    {
+        void Initialize(DocumentDatabase database);
 
-		void SecondStageInit();
-	}
+        void SecondStageInit();
+    }
 }

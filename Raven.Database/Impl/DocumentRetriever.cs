@@ -176,7 +176,8 @@ namespace Raven.Database.Impl
                                 var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
                                 foreach (var property in result)
                                 {
-                                    if (property.Value == null || property.Value.Type == JTokenType.Null) continue;
+                                    if (property.Value == null ) continue;
+
                                     queryResult.Projection[property.Key] = property.Value;
                                 }
                             }
@@ -320,8 +321,8 @@ namespace Raven.Database.Impl
                                                       }
                         };
                     case ReadVetoResult.ReadAllow.Ignore:
-						if (log.IsDebugEnabled)
-							log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
+                        if (log.IsDebugEnabled)
+                            log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
                         return null;
                     default:
                         throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());

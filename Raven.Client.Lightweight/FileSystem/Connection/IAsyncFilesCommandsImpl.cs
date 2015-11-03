@@ -1,4 +1,5 @@
-﻿using Raven.Client.Connection;
+using System;
+using Raven.Client.Connection;
 
 namespace Raven.Client.FileSystem.Connection
 {

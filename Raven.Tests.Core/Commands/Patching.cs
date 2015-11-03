@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -17,7 +17,7 @@ namespace Raven.Tests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-				await store.AsyncDatabaseCommands.PutAsync(
+                await store.AsyncDatabaseCommands.PutAsync(
                     "companies/1",
                     null,
                     RavenJObject.FromObject(new Company
@@ -31,50 +31,50 @@ namespace Raven.Tests.Core.Commands
                     new RavenJObject());
                 Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
 
-	            var result=await store.AsyncDatabaseCommands.BatchAsync(
-		            new ICommandData[]
-		            {
-			            new PatchCommandData
-			            {
-				            Key = "companies/1",
-				            Patches = new PatchRequest[]{ new PatchRequest 
+                var result=await store.AsyncDatabaseCommands.BatchAsync(
+                    new ICommandData[]
+                    {
+                        new PatchCommandData
+                        {
+                            Key = "companies/1",
+                            Patches = new PatchRequest[]{ new PatchRequest 
                                 {
                                     Type = PatchCommandType.Add,
                                     Name = "NewArray",
                                     Value = "NewValue"
                                 }, },
-				            Etag = Etag.InvalidEtag,
-							SkipPatchIfEtagMismatch = true
-			            }
-		            });
+                            Etag = Etag.InvalidEtag,
+                            SkipPatchIfEtagMismatch = true
+                        }
+                    });
 
 
-				Assert.Equal(PatchResult.Skipped,result[0].PatchResult);
+                Assert.Equal(PatchResult.Skipped,result[0].PatchResult);
             }
         }
 
-		[Fact]
-		public async Task CanDoSimplePatching()
-		{
-			using (var store = GetDocumentStore())
-			{
-				var putResult = await store.AsyncDatabaseCommands.PutAsync(
-					"companies/1",
-					null,
-					RavenJObject.FromObject(new Company
-					{
-						Name = "testname",
-						Phone = 1,
-						Contacts = new List<Contact> { new Contact { }, new Contact { } },
-						Address1 = "To be removed.",
-						Address2 = "Address2"
-					}),
-					new RavenJObject());
-				Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
+        [Fact]
+        public async Task CanDoSimplePatching()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var putResult = await store.AsyncDatabaseCommands.PutAsync(
+                    "companies/1",
+                    null,
+                    RavenJObject.FromObject(new Company
+                    {
+                        Name = "testname",
+                        Phone = 1,
+                        Contacts = new List<Contact> { new Contact { }, new Contact { } },
+                        Address1 = "To be removed.",
+                        Address2 = "Address2"
+                    }),
+                    new RavenJObject());
+                Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
 
-				await store.AsyncDatabaseCommands.PatchAsync(
-					"companies/1",
-					new[]
+                await store.AsyncDatabaseCommands.PatchAsync(
+                    "companies/1",
+                    new[]
                         {
                             new PatchRequest 
                                 {
@@ -128,20 +128,20 @@ namespace Raven.Tests.Core.Commands
                                     Name = "Address1"
                                 }
                         },
-					null);
+                    null);
 
-				var item1 = await store.AsyncDatabaseCommands.GetAsync("companies/1");
-				Assert.NotNull(item1);
-				Assert.Equal("NewValue", item1.DataAsJson.Value<RavenJArray>("NewArray")[0]);
-				Assert.Equal("testname", item1.DataAsJson.Value<string>("CopiedName"));
-				Assert.Equal(0, item1.DataAsJson.Value<int>("Phone"));
-				Assert.Equal("TestFirstName", item1.DataAsJson.Value<RavenJArray>("Contacts")[1].Value<string>("FirstName"));
-				Assert.Equal("SomeFirstName", item1.DataAsJson.Value<RavenJArray>("Contacts")[0].Value<string>("FirstName"));
-				Assert.Null(item1.DataAsJson.Value<string>("Address1"));
-				Assert.Null(item1.DataAsJson.Value<string>("Address2"));
-				Assert.Equal("Address2", item1.DataAsJson.Value<string>("Renamed"));
-			}
-		}
+                var item1 = await store.AsyncDatabaseCommands.GetAsync("companies/1");
+                Assert.NotNull(item1);
+                Assert.Equal("NewValue", item1.DataAsJson.Value<RavenJArray>("NewArray")[0]);
+                Assert.Equal("testname", item1.DataAsJson.Value<string>("CopiedName"));
+                Assert.Equal(0, item1.DataAsJson.Value<int>("Phone"));
+                Assert.Equal("TestFirstName", item1.DataAsJson.Value<RavenJArray>("Contacts")[1].Value<string>("FirstName"));
+                Assert.Equal("SomeFirstName", item1.DataAsJson.Value<RavenJArray>("Contacts")[0].Value<string>("FirstName"));
+                Assert.Null(item1.DataAsJson.Value<string>("Address1"));
+                Assert.Null(item1.DataAsJson.Value<string>("Address2"));
+                Assert.Equal("Address2", item1.DataAsJson.Value<string>("Renamed"));
+            }
+        }
 
         [Fact]
         public void CanDoScriptedPatching()

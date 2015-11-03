@@ -1,4 +1,4 @@
-﻿using Raven.Json.Linq;
+using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -53,8 +53,8 @@ namespace Raven.Client.FileSystem.Shard
 
         public virtual string GetShardIdFromFileName(string filename)
         {
-	        if (filename.StartsWith("/"))
-		        filename = filename.TrimStart(new[] {'/'});
+            if (filename.StartsWith("/"))
+                filename = filename.TrimStart(new[] {'/'});
             var start = filename.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.OrdinalIgnoreCase);
             if (start == -1)
                 throw new InvalidDataException("file name does not have the required file name");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,14 +10,14 @@ using Raven.Bundles.Replication.Tasks;
 
 namespace Raven.Database.TimeSeries
 {
-	[CLSCompliant(false)]
+    [CLSCompliant(false)]
     public class TimeSeriesMetricsManager
     {
         readonly Metrics timeSeriesMetrics = new Metrics();
         public PerSecondCounterMetric RequestsPerSecondCounter { get; private set; }
 
         public MeterMetric Appends { get; private set; }
-		public MeterMetric Deletes { get; private set; }
+        public MeterMetric Deletes { get; private set; }
         public MeterMetric ClientRequests { get; private set; }
         public MeterMetric IncomingReplications { get; private set; }
         public MeterMetric OutgoingReplications { get; private set; }
@@ -28,16 +28,16 @@ namespace Raven.Database.TimeSeries
         public ConcurrentDictionary<string, HistogramMetric> ReplicationBatchSizeHistogram { get; private set; }
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
 
-		public long ConcurrentRequestsCount;
+        public long ConcurrentRequestsCount;
 
         public TimeSeriesMetricsManager()
         {
             Appends = timeSeriesMetrics.Meter("timeSeriesMetrics", "append/min", "appends", TimeUnit.Minutes);
-			Deletes = timeSeriesMetrics.Meter("timeSeriesMetrics", "delete/min", "deletes", TimeUnit.Minutes);
+            Deletes = timeSeriesMetrics.Meter("timeSeriesMetrics", "delete/min", "deletes", TimeUnit.Minutes);
             ClientRequests = timeSeriesMetrics.Meter("timeSeriesMetrics", "client/min", "client requests", TimeUnit.Minutes);
 
-			IncomingReplications = timeSeriesMetrics.Meter("timeSeriesMetrics", "RepIn/min", "replications", TimeUnit.Minutes);
-			OutgoingReplications = timeSeriesMetrics.Meter("timeSeriesMetrics", "RepOut/min", "replications", TimeUnit.Minutes);
+            IncomingReplications = timeSeriesMetrics.Meter("timeSeriesMetrics", "RepIn/min", "replications", TimeUnit.Minutes);
+            OutgoingReplications = timeSeriesMetrics.Meter("timeSeriesMetrics", "RepOut/min", "replications", TimeUnit.Minutes);
 
             RequestsPerSecondCounter = timeSeriesMetrics.TimedCounter("timeSeriesMetrics", "req/sec time series", "Requests Per Second");
 

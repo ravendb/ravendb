@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 
@@ -9,10 +9,10 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.FileSystem.Storage
 {
-	internal abstract class BaseRestoreOperation
+    internal abstract class BaseRestoreOperation
     {
-	    private const string IndexesSubfolder = "Indexes";
-	    protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+        private const string IndexesSubfolder = "Indexes";
+        protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         protected readonly Action<string> output;
 
@@ -61,9 +61,9 @@ namespace Raven.Database.FileSystem.Storage
                 Directory.CreateDirectory(journalLocation);
         }
 
-	    protected abstract bool IsValidBackup(string backupFilename);
+        protected abstract bool IsValidBackup(string backupFilename);
 
-	    protected string BackupIndexesPath()
+        protected string BackupIndexesPath()
         {
             return Path.Combine(backupLocation, "Indexes");
         }
@@ -110,7 +110,7 @@ namespace Raven.Database.FileSystem.Storage
             var directories = Directory.GetDirectories(backupLocation, "Inc*")
                                        .OrderByDescending(dir => dir)
                                        .ToList();
-	        if (directories.Count == 0)
+            if (directories.Count == 0)
             {
                 // if not incremental backup
                 try

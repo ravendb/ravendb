@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ClusterBasic.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -21,32 +21,32 @@ using Xunit;
 
 namespace Raven.Tests.Raft
 {
-	public class SnaphshottingTest : RaftTestBase
-	{
-		[Fact]
-		public void CanInstallSnapshot()
-		{
-			CreateRaftCluster(3, inMemory:false); // 3 nodes
+    public class SnaphshottingTest : RaftTestBase
+    {
+        [Fact]
+        public void CanInstallSnapshot()
+        {
+            CreateRaftCluster(3, inMemory:false); // 3 nodes
 
-			for (var i = 0; i < 5; i++)
-			{
-				var client = servers[0].Options.ClusterManager.Value.Client;
-				client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false}).Wait(3000);
-			}
+            for (var i = 0; i < 5; i++)
+            {
+                var client = servers[0].Options.ClusterManager.Value.Client;
+                client.SendClusterConfigurationAsync(new ClusterConfiguration {EnableReplication = false}).Wait(3000);
+            }
 
-			WaitForClusterToBecomeNonStale(3);
+            WaitForClusterToBecomeNonStale(3);
 
-			var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
+            var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
             Assert.NotNull(leader);
 
-		    var newServer = GetNewServer(GetPort(), runInMemory: false);
+            var newServer = GetNewServer(GetPort(), runInMemory: false);
 
             var snapshotInstalledMre = new ManualResetEventSlim();
 
-			newServer.Options.ClusterManager.Value.Engine.SnapshotInstalled += () => snapshotInstalledMre.Set();
+            newServer.Options.ClusterManager.Value.Engine.SnapshotInstalled += () => snapshotInstalledMre.Set();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
-			leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
+            leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
             {
                 if (command.Requested.AllNodeNames.All(command.Requested.IsVoter))
                 {
@@ -54,19 +54,19 @@ namespace Raven.Tests.Raft
                 }
             };
 
-			Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(new NodeConnectionInfo
+            Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(new NodeConnectionInfo
             {
                 Name = RaftHelper.GetNodeName(newServer.SystemDatabase.TransactionalStorage.Id),
                 Uri = RaftHelper.GetNodeUrl(newServer.SystemDatabase.Configuration.ServerUrl)
             }).Wait(10000));
             Assert.True(allNodesFinishedJoining.Wait(10000));
 
-		    Assert.True(snapshotInstalledMre.Wait(TimeSpan.FromSeconds(5)));
-		}
+            Assert.True(snapshotInstalledMre.Wait(TimeSpan.FromSeconds(5)));
+        }
 
-		protected override void ModifyServer(RavenDbServer ravenDbServer)
-		{
-			ravenDbServer.Options.ClusterManager.Value.Engine.Options.MaxLogLengthBeforeCompaction = 4;
-		}
-	}
+        protected override void ModifyServer(RavenDbServer ravenDbServer)
+        {
+            ravenDbServer.Options.ClusterManager.Value.Engine.Options.MaxLogLengthBeforeCompaction = 4;
+        }
+    }
 }

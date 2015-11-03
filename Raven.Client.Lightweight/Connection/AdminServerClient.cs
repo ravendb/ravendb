@@ -1,4 +1,4 @@
-﻿
+
 // -----------------------------------------------------------------------
 //  <copyright file="AdminDatabaseCommands.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -12,82 +12,82 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-	public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
-	{
-		private readonly AsyncServerClient asyncServerClient;
-		private readonly AsyncAdminServerClient asyncAdminServerClient;
+    public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
+    {
+        private readonly AsyncServerClient asyncServerClient;
+        private readonly AsyncAdminServerClient asyncAdminServerClient;
 
-		public AdminServerClient(AsyncServerClient asyncServerClient, AsyncAdminServerClient asyncAdminServerClient)
-		{
-			this.asyncServerClient = asyncServerClient;
-			this.asyncAdminServerClient = asyncAdminServerClient;
-		}
+        public AdminServerClient(AsyncServerClient asyncServerClient, AsyncAdminServerClient asyncAdminServerClient)
+        {
+            this.asyncServerClient = asyncServerClient;
+            this.asyncAdminServerClient = asyncAdminServerClient;
+        }
 
-		public void CreateDatabase(DatabaseDocument databaseDocument)
-		{
-			AsyncHelpers.RunSync(() => asyncAdminServerClient.CreateDatabaseAsync(databaseDocument));
-		}
+        public void CreateDatabase(DatabaseDocument databaseDocument)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.CreateDatabaseAsync(databaseDocument));
+        }
 
-		public void DeleteDatabase(string databaseName, bool hardDelete = false)
-		{
-			AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete));
-		}
+        public void DeleteDatabase(string databaseName, bool hardDelete = false)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete));
+        }
 
-		public void EnsureDatabaseExists(string name, bool ignoreFailures = false)
-		{
-			AsyncHelpers.RunSync(() => asyncAdminServerClient.EnsureDatabaseExistsAsync(name, ignoreFailures));
-		}
+        public void EnsureDatabaseExists(string name, bool ignoreFailures = false)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.EnsureDatabaseExistsAsync(name, ignoreFailures));
+        }
 
-		public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
+        public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
 
-		public Operation CompactDatabase(string databaseName)
-		{
-			return AsyncHelpers.RunSync(() => asyncAdminServerClient.CompactDatabaseAsync(databaseName));
-		}
+        public Operation CompactDatabase(string databaseName)
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.CompactDatabaseAsync(databaseName));
+        }
 
-		public void StopIndexing()
-		{
-			AsyncHelpers.RunSync(() => asyncAdminServerClient.StopIndexingAsync());
-		}
+        public void StopIndexing()
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.StopIndexingAsync());
+        }
 
-		public void StartIndexing(int? maxNumberOfParallelIndexTasks)
-		{
-			AsyncHelpers.RunSync(() => asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks));
-		}
+        public void StartIndexing(int? maxNumberOfParallelIndexTasks)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.StartIndexingAsync(maxNumberOfParallelIndexTasks));
+        }
 
-		public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
-		{
-			AsyncHelpers.RunSync(() => asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName));
-		}
+        public void StartBackup(string backupLocation, DatabaseDocument databaseDocument, bool incremental, string databaseName)
+        {
+            AsyncHelpers.RunSync(() => asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument, incremental, databaseName));
+        }
 
-		public Operation StartRestore(DatabaseRestoreRequest restoreRequest)
-		{
-			return AsyncHelpers.RunSync(() => asyncAdminServerClient.StartRestoreAsync(restoreRequest));
-		}
+        public Operation StartRestore(DatabaseRestoreRequest restoreRequest)
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.StartRestoreAsync(restoreRequest));
+        }
 
-		public string GetIndexingStatus()
-		{
-			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetIndexingStatusAsync());
-		}
+        public string GetIndexingStatus()
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetIndexingStatusAsync());
+        }
 
-		public RavenJObject GetDatabaseConfiguration()
-		{
-			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetDatabaseConfigurationAsync());
-		}
+        public RavenJObject GetDatabaseConfiguration()
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetDatabaseConfigurationAsync());
+        }
 
-		public BuildNumber GetBuildNumber()
-		{
-			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetBuildNumberAsync());
-		}
+        public BuildNumber GetBuildNumber()
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetBuildNumberAsync());
+        }
 
-		public string[] GetDatabaseNames(int pageSize, int start = 0)
-		{
-			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetDatabaseNamesAsync(pageSize, start));
-		}
+        public string[] GetDatabaseNames(int pageSize, int start = 0)
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetDatabaseNamesAsync(pageSize, start));
+        }
 
-		public AdminStatistics GetStatistics()
-		{
-			return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetStatisticsAsync());
-		}
-	}
+        public AdminStatistics GetStatistics()
+        {
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetStatisticsAsync());
+        }
+    }
 }

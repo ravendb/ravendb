@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1562.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -23,7 +23,7 @@ using Xunit;
 
 namespace Raven.DtcTests
 {
-	public class RavenDB_1562 : ReplicationBase
+    public class RavenDB_1562 : ReplicationBase
     {
         public IDocumentStore PrimaryDocumentStore;
         public IDocumentStore SecondaryDocumentStore;
@@ -38,7 +38,7 @@ namespace Raven.DtcTests
             IOExtensions.DeleteDirectory("Databases/" + secondaryDbName);
 
             PrimaryDocumentStore = CreateStore(requestedStorageType: "esent");
-			SecondaryDocumentStore = CreateStore(requestedStorageType: "esent");
+            SecondaryDocumentStore = CreateStore(requestedStorageType: "esent");
         }
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
@@ -105,7 +105,7 @@ namespace Raven.DtcTests
 
                 var deleteByIndex = databaseCommands.DeleteByIndex(new DocsIndex().IndexName, deleteExistingDocsIndexQuery, new BulkOperationOptions()
                 {
-	                RetrieveDetails = true
+                    RetrieveDetails = true
                 });
                 var array = deleteByIndex.WaitForCompletion() as RavenJArray;
 
@@ -143,24 +143,24 @@ namespace Raven.DtcTests
 
         private void SetupDB(IDocumentStore store, string dbName, bool addReplicationTarget, string targetDbName)
         {
-	        try
-	        {
-		        store.DatabaseCommands.GlobalAdmin.DeleteDatabase(dbName, true);
-	        }
-			catch (ErrorResponseException e)
-			{
-				if (e.StatusCode != HttpStatusCode.NotFound)
-					throw;
-			}
+            try
+            {
+                store.DatabaseCommands.GlobalAdmin.DeleteDatabase(dbName, true);
+            }
+            catch (ErrorResponseException e)
+            {
+                if (e.StatusCode != HttpStatusCode.NotFound)
+                    throw;
+            }
 
-	        var databaseDocument = new DatabaseDocument
+            var databaseDocument = new DatabaseDocument
             {
                 Id = dbName,
                 Settings =
-				{
-					{"Raven/ActiveBundles", "Replication"},
-					{"Raven/DataDir", "~\\Databases\\" + dbName}
-				}
+                {
+                    {"Raven/ActiveBundles", "Replication"},
+                    {"Raven/DataDir", "~\\Databases\\" + dbName}
+                }
             };
 
             store.DatabaseCommands.EnsureDatabaseDocumentExists(databaseDocument);
@@ -177,9 +177,9 @@ namespace Raven.DtcTests
                 var newReplicationDocument = new Raven.Abstractions.Replication.ReplicationDocument()
                 {
                     Destinations = new List<ReplicationDestination>()
-					{
-						replicationDestination
-					}
+                    {
+                        replicationDestination
+                    }
                 };
 
                 using (var session = store.OpenSession(dbName))
@@ -263,7 +263,7 @@ namespace Raven.DtcTests
             var doc = RavenJObject.FromObject(databaseDocument);
             doc.Remove("Id");
 
-			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
+            var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
             req.WriteAsync(doc.ToString(Formatting.Indented)).Wait();
             req.ExecuteRequest();
 

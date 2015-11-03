@@ -22,9 +22,9 @@ namespace Raven.Database.Indexing
         }
         public void Parse(string s)
         {
-	        var luceneQueryScanner = new LuceneQueryScanner();
-	        luceneQueryScanner.SetSource(s, 0);
-	        Scanner = luceneQueryScanner;
+            var luceneQueryScanner = new LuceneQueryScanner();
+            luceneQueryScanner.SetSource(s, 0);
+            Scanner = luceneQueryScanner;
             Parse();
         }
     }

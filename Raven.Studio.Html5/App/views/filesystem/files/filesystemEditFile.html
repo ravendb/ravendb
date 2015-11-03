@@ -1,4 +1,4 @@
-﻿<div id="editFileContainer" tabindex="-1">
+<div id="editFileContainer" tabindex="-1">
     <!-- We use a container with a tab index so that we can capture keyboard events, such as CTRL+S. -->
     <ul class="breadcrumb">
         <li>
@@ -36,7 +36,7 @@
                     <ul class="nav nav-tabs">
                         <li accesskey="m" title="Edit file metadata (Alt+M)">File Metadata</li>
                     </ul>
-					<pre id="fileMetadataEditor" class="form-control" data-bind="aceEditor: { code: fileMetadataText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
+                    <pre id="fileMetadataEditor" class="form-control" data-bind="aceEditor: { code: fileMetadataText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
                 </div>
             </div>
         </div>

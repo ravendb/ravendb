@@ -172,7 +172,7 @@ namespace RavenDB_FailingTests.RavenTests
             new GlobalizationTransformer().Execute(_store);
 
             WaitForIndexing(_store);
-			WaitForUserToContinueTheTest(_store);
+            WaitForUserToContinueTheTest(_store);
             using (var session = _store.OpenSession())
             {
                 var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_Map>()

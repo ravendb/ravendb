@@ -1,4 +1,4 @@
-﻿class synchronizationDestination {
+class synchronizationDestination {
 
     url = ko.observable<string>().extend({ required: true });
     username = ko.observable<string>().extend({ required: true });

@@ -1,4 +1,4 @@
-﻿class counterSummary implements documentBase {
+class counterSummary implements documentBase {
     Total: number; 
 
     constructor(dto: counterSummaryDto, private isAllGroupsGroup: boolean = false) {

@@ -1,4 +1,4 @@
-﻿using Raven.Json.Linq;
+using Raven.Json.Linq;
 using System.Linq;
 using Xunit;
 
@@ -12,7 +12,7 @@ namespace Raven.Tests.FileSystem.Bugs
             transactionalStorage.Batch(
                 accessor =>
                 {
-					accessor.PutFile("test.bin", 3, new RavenJObject());
+                    accessor.PutFile("test.bin", 3, new RavenJObject());
                     var pageId = accessor.InsertPage(new byte[] { 1, 2, 3 }, 3);
                     accessor.AssociatePage("test.bin", pageId, 0, 3);
                     accessor.CompleteFileUpload("test.bin");
@@ -39,7 +39,7 @@ namespace Raven.Tests.FileSystem.Bugs
             transactionalStorage.Batch(
                 accessor =>
                     {
-						accessor.PutFile("test0.bin", 3, new RavenJObject());
+                        accessor.PutFile("test0.bin", 3, new RavenJObject());
                         var pageId = accessor.InsertPage(new byte[] { 1, 2, 3 }, 3);
                         accessor.AssociatePage("test0.bin", pageId, 0, 3);
                         accessor.CompleteFileUpload("test0.bin");
@@ -48,7 +48,7 @@ namespace Raven.Tests.FileSystem.Bugs
             transactionalStorage.Batch(
                 accessor =>
                     {
-						accessor.PutFile("test1.bin", 3, new RavenJObject());
+                        accessor.PutFile("test1.bin", 3, new RavenJObject());
                         var pageId = accessor.InsertPage(new byte[] { 4, 5, 6 }, 3);
                         accessor.AssociatePage("test1.bin", pageId, 0, 3);
                         accessor.CompleteFileUpload("test1.bin");

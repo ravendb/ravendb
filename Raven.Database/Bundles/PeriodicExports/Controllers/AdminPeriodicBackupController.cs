@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AdminPeriodicExportController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -21,8 +21,8 @@ namespace Raven.Database.Bundles.PeriodicExports.Controllers
         }
 
         [HttpPost]
-		[RavenRoute("admin/periodicExport/purge-tombstones")]
-		[RavenRoute("databases/{databaseName}/admin/periodicExport/purge-tombstones")]
+        [RavenRoute("admin/periodicExport/purge-tombstones")]
+        [RavenRoute("databases/{databaseName}/admin/periodicExport/purge-tombstones")]
         public HttpResponseMessage PurgeTombstones()
         {
             var docEtagStr = GetQueryStringValue("docEtag");

@@ -1,4 +1,4 @@
-﻿import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
+import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
 
 class searchLastModifiedBetweenClause extends searchDialogViewModel {

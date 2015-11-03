@@ -4,8 +4,8 @@ import database = require("models/resources/database");
 class adminLogsConfigureCommand extends commandBase {
 
     /**
-	* @param ownerDb The database the collections will belong to.
-	*/
+    * @param ownerDb The database the collections will belong to.
+    */
     constructor(private ownerDb: database, private logConfig: adminLogsConfigEntryDto[], private eventsId: string) {
         super();
 

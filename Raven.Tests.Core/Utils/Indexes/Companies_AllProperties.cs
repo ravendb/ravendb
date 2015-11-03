@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using System.Linq;

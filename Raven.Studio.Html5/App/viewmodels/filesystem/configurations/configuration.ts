@@ -1,4 +1,4 @@
-﻿/// <reference path="../../../../Scripts/typings/ace/ace.amd.d.ts" />
+/// <reference path="../../../../Scripts/typings/ace/ace.amd.d.ts" />
 
 import app = require("durandal/app");
 import router = require("plugins/router");
@@ -34,7 +34,7 @@ class configuration extends viewModelBase {
     configurationKeyText = ko.observable<string>('').extend({ required: true });
     isBusy = ko.observable(false);
     isSaveEnabled: KnockoutComputed<boolean>;
-	editor: AceAjax.Editor;
+    editor: AceAjax.Editor;
     enabled: boolean = true;
 
     constructor() {
@@ -67,7 +67,7 @@ class configuration extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.activeFilesystem.subscribe(x => {
             this.loadKeys(x);
         });

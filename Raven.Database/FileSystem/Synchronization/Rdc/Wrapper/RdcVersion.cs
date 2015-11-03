@@ -1,8 +1,8 @@
-﻿namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
+namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 {
-	public class RdcVersion
-	{
-		public int CurrentVersion { get; set; }
-		public int MinimumCompatibleAppVersion { get; set; }
-	}
+    public class RdcVersion
+    {
+        public int CurrentVersion { get; set; }
+        public int MinimumCompatibleAppVersion { get; set; }
+    }
 }

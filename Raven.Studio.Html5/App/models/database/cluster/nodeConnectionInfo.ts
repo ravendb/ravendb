@@ -6,8 +6,8 @@ class nodeConnectionInfo {
     password = ko.observable<string>();
     domain = ko.observable<string>();
     apiKey = ko.observable<string>();
-	state = ko.observable<string>(); // used to store owning collection name (voting, non-voting, promotable)
-	status = ko.observable<string>("Loading");
+    state = ko.observable<string>(); // used to store owning collection name (voting, non-voting, promotable)
+    status = ko.observable<string>("Loading");
 
     constructor(dto: nodeConnectionInfoDto) {
         this.uri(dto.Uri);
@@ -57,32 +57,32 @@ class nodeConnectionInfo {
 
     useUserCredentials() {
         this.isUserCredentials(true);
-		this.isApiKeyCredentials(false);
-	    this.clearApiKeyCredentials();
+        this.isApiKeyCredentials(false);
+        this.clearApiKeyCredentials();
     }
 
     useApiKeyCredentials() {
         this.isApiKeyCredentials(true);
-		this.isUserCredentials(false);
-	    this.clearUserCredentials();
+        this.isUserCredentials(false);
+        this.clearUserCredentials();
     }
 
     useNoCredentials() {
         this.isUserCredentials(false);
-		this.isApiKeyCredentials(false);
-		this.clearApiKeyCredentials()
-	    this.clearUserCredentials();
+        this.isApiKeyCredentials(false);
+        this.clearApiKeyCredentials()
+        this.clearUserCredentials();
     }
 
-	private clearApiKeyCredentials() {
-		this.apiKey(null);
-	}
+    private clearApiKeyCredentials() {
+        this.apiKey(null);
+    }
 
-	private clearUserCredentials() {
-		this.username(null);
-		this.password(null);
-		this.domain(null);
-	}
+    private clearUserCredentials() {
+        this.username(null);
+        this.password(null);
+        this.domain(null);
+    }
 }
 
 export = nodeConnectionInfo;

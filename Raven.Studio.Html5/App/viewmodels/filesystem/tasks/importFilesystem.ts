@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import filesystem = require("models/filesystem/filesystem");
 import messagePublisher = require("common/messagePublisher");
 import importFilesystemCommand = require("commands/filesystem/importFilesystemCommand");
@@ -12,7 +12,7 @@ class importDatabase extends viewModelBase {
     private filePickerTag = "#importFilesystemFilePicker";
 
     attached() {
-		super.attached();
+        super.attached();
         this.updateHelpLink("YD9M1R");
 
         var fs: filesystem = this.activeFilesystem();

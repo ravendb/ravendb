@@ -12,29 +12,29 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Queries
 {
-	public static class DynamicQueryExtensions
-	{
-		public static QueryResultWithIncludes ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery, CancellationToken token)
-		{
-			var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAdd(typeof(DynamicQueryExtensions).AssemblyQualifiedName, o => new DynamicQueryRunner(self));
-			return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery, token);
-		}
+    public static class DynamicQueryExtensions
+    {
+        public static QueryResultWithIncludes ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery, CancellationToken token)
+        {
+            var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAdd(typeof(DynamicQueryExtensions).AssemblyQualifiedName, o => new DynamicQueryRunner(self));
+            return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery, token);
+        }
 
-		public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, IndexQuery query)
-		{
+        public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, IndexQuery query)
+        {
             var result = new DynamicQueryOptimizer(self).SelectAppropriateIndex(entityName, query.Clone());
-		    if (result.MatchType == DynamicQueryMatchType.Complete)
-		        return result.IndexName;
-		    return null;
-		}
+            if (result.MatchType == DynamicQueryMatchType.Complete)
+                return result.IndexName;
+            return null;
+        }
 
 
-		public static List<DynamicQueryOptimizer.Explanation> ExplainDynamicIndexSelection(this DocumentDatabase self, string entityName, IndexQuery query)
-		{
-			var explanations = new List<DynamicQueryOptimizer.Explanation>();
-			new DynamicQueryOptimizer(self)
-				.SelectAppropriateIndex(entityName, query.Clone(), explanations);
-			return explanations;
-		}
-	}
+        public static List<DynamicQueryOptimizer.Explanation> ExplainDynamicIndexSelection(this DocumentDatabase self, string entityName, IndexQuery query)
+        {
+            var explanations = new List<DynamicQueryOptimizer.Explanation>();
+            new DynamicQueryOptimizer(self)
+                .SelectAppropriateIndex(entityName, query.Clone(), explanations);
+            return explanations;
+        }
+    }
 }

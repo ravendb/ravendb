@@ -8,23 +8,23 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Database.Storage
 {
-	public interface IStalenessStorageActions
-	{
-	    bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag);
+    public interface IStalenessStorageActions
+    {
+        bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag);
 
-		bool IsIndexStaleByTask(int view, DateTime? cutOff);
+        bool IsIndexStaleByTask(int view, DateTime? cutOff);
 
-		bool IsReduceStale(int view);
+        bool IsReduceStale(int view);
 
-		bool IsMapStale(int view);
+        bool IsMapStale(int view);
 
-		Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
+        Tuple<DateTime, Etag> IndexLastUpdatedAt(int view);
 
-		Etag GetMostRecentDocumentEtag();
+        Etag GetMostRecentDocumentEtag();
 
         [Obsolete("Use RavenFS instead.")]
-		Etag GetMostRecentAttachmentEtag();
-		
+        Etag GetMostRecentAttachmentEtag();
+        
         int GetIndexTouchCount(int view);
-	}
+    }
 }

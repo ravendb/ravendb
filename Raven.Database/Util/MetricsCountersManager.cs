@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="MetricsCountersManager.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,7 +19,7 @@ using metrics.Core;
 
 namespace Raven.Database.Util
 {
-	[CLSCompliant(false)]
+    [CLSCompliant(false)]
     public class MetricsCountersManager : IDisposable
     {
         readonly Metrics dbMetrics = new Metrics();
@@ -29,7 +29,7 @@ namespace Raven.Database.Util
         public HistogramMetric StaleIndexReduces { get; private set; }
 
         public HistogramMetric RequestDurationMetric { get; private set; }
-		public OneMinuteMetric RequestDurationLastMinute { get; set; }
+        public OneMinuteMetric RequestDurationLastMinute { get; set; }
 
         public PerSecondCounterMetric DocsPerSecond { get; private set; }
         public PerSecondCounterMetric FilesPerSecond { get; private set; }
@@ -51,7 +51,7 @@ namespace Raven.Database.Util
 
         public ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>> ReplicationPerformanceStats { get; private set; }
 
-		public long ConcurrentRequestsCount;
+        public long ConcurrentRequestsCount;
         
         public MetricsCountersManager()
         {
@@ -61,7 +61,7 @@ namespace Raven.Database.Util
 
             ConcurrentRequests = dbMetrics.Meter("metrics", "req/sec", "Concurrent Requests Meter", TimeUnit.Seconds);
 
-	        RequestDurationLastMinute = new OneMinuteMetric();
+            RequestDurationLastMinute = new OneMinuteMetric();
 
             RequestDurationMetric = dbMetrics.Histogram("metrics", "req duration");
 
@@ -77,7 +77,7 @@ namespace Raven.Database.Util
             ReplicationPerformanceStats = new ConcurrentDictionary<string, ConcurrentQueue<ReplicationPerformanceStats>>();
         }
 
-		public void AddGauge<T>(Type type, string name, Func<T> function)
+        public void AddGauge<T>(Type type, string name, Func<T> function)
         {
             dbMetrics.Gauge(type, name, function);
         }
@@ -124,74 +124,74 @@ namespace Raven.Database.Util
         }
     }
 
-	public class OneMinuteMetric
-	{
-		private readonly ConcurrentQueue<OneMinuteMetricRecord> records;
+    public class OneMinuteMetric
+    {
+        private readonly ConcurrentQueue<OneMinuteMetricRecord> records;
 
-		private class OneMinuteMetricRecord
-		{
-			public long Value { get; set; }
+        private class OneMinuteMetricRecord
+        {
+            public long Value { get; set; }
 
-			public DateTime TimeAdded { get; set; }
-		}
+            public DateTime TimeAdded { get; set; }
+        }
 
-		public OneMinuteMetric()
-		{
-			records = new ConcurrentQueue<OneMinuteMetricRecord>();
-			Task.Factory.StartNew(async () =>
-			{
-				while (true)
-				{
-					await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
-					CleanupQueue();
-				}
-			});
-		}
+        public OneMinuteMetric()
+        {
+            records = new ConcurrentQueue<OneMinuteMetricRecord>();
+            Task.Factory.StartNew(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+                    CleanupQueue();
+                }
+            });
+        }
 
-		private void CleanupQueue()
-		{
-			var now = SystemTime.UtcNow;
-			OneMinuteMetricRecord record;
-			while (records.TryPeek(out record))
-			{
-				if ((now - record.TimeAdded).TotalSeconds < 60)
-					return;
+        private void CleanupQueue()
+        {
+            var now = SystemTime.UtcNow;
+            OneMinuteMetricRecord record;
+            while (records.TryPeek(out record))
+            {
+                if ((now - record.TimeAdded).TotalSeconds < 60)
+                    return;
 
-				records.TryDequeue(out record);
-			}
-		}
+                records.TryDequeue(out record);
+            }
+        }
 
-		public void AddRecord(long value)
-		{
-			records.Enqueue(new OneMinuteMetricRecord
-			{
-				Value = value, 
-				TimeAdded = SystemTime.UtcNow
-			});
-		}
+        public void AddRecord(long value)
+        {
+            records.Enqueue(new OneMinuteMetricRecord
+            {
+                Value = value, 
+                TimeAdded = SystemTime.UtcNow
+            });
+        }
 
-		public OneMinuteMetricData GetData()
-		{
-			var now = SystemTime.UtcNow;
-			var values = records
-				.Where(x => (now - x.TimeAdded).TotalSeconds <= 60)
-				.ToList();
+        public OneMinuteMetricData GetData()
+        {
+            var now = SystemTime.UtcNow;
+            var values = records
+                .Where(x => (now - x.TimeAdded).TotalSeconds <= 60)
+                .ToList();
 
-			var min = 0L;
-			var max = 0L;
-			var sum = 0L;
-			double avg = 0;
-			foreach (var value in values.Select(v => v.Value))
-			{
-				min = Math.Min(min, value);
-				max = Math.Max(max, value);
-				sum += value;
-			}
+            var min = 0L;
+            var max = 0L;
+            var sum = 0L;
+            double avg = 0;
+            foreach (var value in values.Select(v => v.Value))
+            {
+                min = Math.Min(min, value);
+                max = Math.Max(max, value);
+                sum += value;
+            }
 
-			if (values.Count > 0)
-				avg = sum / (double)values.Count;
+            if (values.Count > 0)
+                avg = sum / (double)values.Count;
 
-			return new OneMinuteMetricData { Count = values.Count, Min = min, Max = max, Avg = avg };
-		}
-	}
+            return new OneMinuteMetricData { Count = values.Count, Min = min, Max = max, Avg = avg };
+        }
+    }
 }

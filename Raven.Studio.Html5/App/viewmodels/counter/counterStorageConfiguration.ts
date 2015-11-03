@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 
 class counterStorageConfiguration extends viewModelBase {
     canActivate(args: any): any {

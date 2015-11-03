@@ -81,8 +81,8 @@ interface databaseStatisticsDto {
     CountOfDocuments: number;
     CountOfIndexes: number;
     CurrentNumberOfItemsToIndexInSingleBatch: number;
-	CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
-	CountOfIndexesExcludingDisabledAndAbandoned: number;
+    CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
+    CountOfIndexesExcludingDisabledAndAbandoned: number;
     CurrentNumberOfItemsToReduceInSingleBatch: number;
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
@@ -95,7 +95,7 @@ interface databaseStatisticsDto {
     Prefetches: futureBatchStatsDto[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
-	Is64Bit: boolean;
+    Is64Bit: boolean;
 }
 
 interface futureBatchStatsDto {
@@ -280,14 +280,14 @@ interface licenseStatusDto {
         ravenfs: string;
         counterStorage: string;
         timeSeries: string;
-		hotSpare: string;
+        hotSpare: string;
     }
 }
 
 interface HotSpareDto {
-	ActivationMode: string;
-	ActivationTime: string;
-	RemainingTestActivations: number;
+    ActivationMode: string;
+    ActivationTime: string;
+    RemainingTestActivations: number;
 }
 
 interface userInfoDto {
@@ -399,7 +399,7 @@ interface indexDefinitionDto {
     SortOptions: any;
     Analyzers: any;
     Fields: string[];
-	SuggestionsOptions: any;
+    SuggestionsOptions: any;
     TermVectors: any;
     SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;
@@ -456,7 +456,7 @@ interface indexResultsDto<T extends metadataAwareDto> {
 }
 
 interface indexQueryResultsDto extends indexResultsDto<documentDto> {
-	Error?: string;
+    Error?: string;
 }
 
 interface versioningEntryDto extends documentDto {
@@ -551,7 +551,7 @@ interface transformerDto {
     definition: {
         TransformResults: string;
         Name: string;
-		LockMode: string;
+        LockMode: string;
     }
 }
 
@@ -576,7 +576,7 @@ interface savedTransformerDto {
     {
         "TransformResults": string;
         "Name": string;
-		"LockMode": string;
+        "LockMode": string;
     }
 }
 
@@ -655,8 +655,8 @@ interface databaseDocumentDto {
 
 interface restoreRequestDto {
     BackupLocation: string;
-	IndexesLocation: string;
-	JournalsLocation: string;
+    IndexesLocation: string;
+    JournalsLocation: string;
 }
 
 interface databaseRestoreRequestDto extends restoreRequestDto {
@@ -701,7 +701,7 @@ interface sqlReplicationDto extends documentDto {
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     QuoteTables?: boolean;
-	PerformTableQuatation?: boolean; //obsolate
+    PerformTableQuatation?: boolean; //obsolate
 }
 
 interface commandData {
@@ -796,7 +796,7 @@ interface documentBase {
 }
 
 interface ICollectionBase {
-	colorClass: string;
+    colorClass: string;
 }
 
 interface smugglerOptionsDto {
@@ -965,7 +965,7 @@ interface statusDebugCurrentlyIndexingDto {
 interface statusDebugIndexDto {
     IndexName: string;
     IsMapReduce: boolean;
-	RemainingReductions: number;
+    RemainingReductions: number;
     CurrentOperations: Array<statusDebugIndexOperationDto>;
     Priority: string;
     OverallIndexingRate: Array<statusDebugIndexRateDto>;
@@ -1098,7 +1098,7 @@ interface changesApiEventDto {
 interface databaseDto extends tenantDto {
     IndexingDisabled: boolean;
     RejectClientsEnabled: boolean;
-	ClusterWide: boolean;
+    ClusterWide: boolean;
 }
 
 interface tenantDto {
@@ -1379,24 +1379,24 @@ interface synchronizationConfigDto {
 }
 
 interface pluginsInfoDto {
-	Extensions: Array<extensionsLogDto>;
-	Triggers: Array<triggerInfoDto>;
-	CustomBundles: Array<string>;
+    Extensions: Array<extensionsLogDto>;
+    Triggers: Array<triggerInfoDto>;
+    CustomBundles: Array<string>;
 }
 
 interface extensionsLogDto {
-	Name: string;
-	Installed: Array<extensionsLogDetailDto>;
+    Name: string;
+    Installed: Array<extensionsLogDetailDto>;
 }
 
 interface extensionsLogDetailDto {
-	Name: string;
-	Assembly: string;
+    Name: string;
+    Assembly: string;
 }
 
 interface triggerInfoDto {
-	Type: string;
-	Name: string;
+    Type: string;
+    Name: string;
 }
 
 interface copyFromParentDto<T> {
@@ -1423,59 +1423,59 @@ interface nodeConnectionInfoDto {
 }
 
 interface clusterConfigurationDto {
-	EnableReplication: boolean;
+    EnableReplication: boolean;
 }
 
 interface clusterNodeStatusDto {
-	Uri: string;
-	Status: string;
+    Uri: string;
+    Status: string;
 }
 
 interface serverSmugglingItemDto {
-	Name: string;
-	Incremental: boolean;
-	StripReplicationInformation: boolean;
-	ShouldDisableVersioningBundle: boolean;
+    Name: string;
+    Incremental: boolean;
+    StripReplicationInformation: boolean;
+    ShouldDisableVersioningBundle: boolean;
 }
 
 interface serverConnectionInfoDto {
-	Url: string;
-	Username: string;
-	Password: string;
-	Domain: string;
-	ApiKey: string;
+    Url: string;
+    Username: string;
+    Password: string;
+    Domain: string;
+    ApiKey: string;
 }
 
 interface serverSmugglingDto {
-	TargetServer: serverConnectionInfoDto;
-	Config: Array<serverSmugglingItemDto>;
+    TargetServer: serverConnectionInfoDto;
+    Config: Array<serverSmugglingItemDto>;
 }
 
 interface serverSmugglingOperationStateDto extends operationStatusDto {
-	Messages: Array<string>;
+    Messages: Array<string>;
 }
 
 interface dataExplorationRequestDto {
-	Linq: string;
-	Collection: string;
-	TimeoutSeconds: number;
-	PageSize: number;
+    Linq: string;
+    Collection: string;
+    TimeoutSeconds: number;
+    PageSize: number;
 }
 
 interface adminJsScriptDto {
-	Script: string;
+    Script: string;
 }
 
 
 interface consoleJsSampleDto {
-	Name: string;
-	Code: string;
+    Name: string;
+    Code: string;
 }
 
 enum checkbox {
     UnChecked = 0,
     SomeChecked = 1,
-	Checked = 2
+    Checked = 2
 }
 
 
@@ -1495,12 +1495,12 @@ interface diskIoPerformanceRunResultDto
 
 interface diskIoPerformanceRunIoResultDto extends documentDto {
     PathType: string;
-	WriteDurationInMilliseconds: number;
-	WriteIoSizeInBytes: number;
-	ReadDurationInMilliseconds: number;
-	ReadIoSizeInBytes: number;
-	NumberOfReadOperations: number;
-	NumberOfWriteOperations: number;
+    WriteDurationInMilliseconds: number;
+    WriteIoSizeInBytes: number;
+    ReadDurationInMilliseconds: number;
+    ReadIoSizeInBytes: number;
+    NumberOfReadOperations: number;
+    NumberOfWriteOperations: number;
 }
 
 interface performanceRunItemDto {

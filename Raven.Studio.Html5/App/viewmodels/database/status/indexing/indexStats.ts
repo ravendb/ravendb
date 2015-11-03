@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
 import getIndexingPerfStatsCommand = require("commands/database/debug/getIndexingPerfStatsCommand");
 import d3 = require("d3/d3");
@@ -37,7 +37,7 @@ class indexStats extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         $("#indexStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#indexStatsContainer").scroll(() => this.graphScrolled());
         this.refreshSubscription = this.refreshGraphObservable.throttle(5000).subscribe((e) => this.refresh());

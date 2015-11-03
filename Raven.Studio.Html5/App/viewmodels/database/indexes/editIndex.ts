@@ -130,7 +130,7 @@ class editIndex extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
         this.addScriptsLabelPopover();
@@ -333,7 +333,7 @@ class editIndex extends viewModelBase {
     }
 
     copyIndex() {
-		app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
+        app.showDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
     }
 
     createCSharpCode() {

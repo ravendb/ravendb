@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
@@ -79,7 +79,7 @@ class studioConfig extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         var self = this;
         $(window).bind('storage', (e: any) => {
             if (e.originalEvent.key === serverBuildReminder.localStorageName) {
@@ -133,14 +133,16 @@ class studioConfig extends viewModelBase {
     saveStudioConfig(newDocument: documentClass) {
         var deferred = $.Deferred();
 
-        var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
-        saveTask
-            .done((saveResult: bulkDocumentDto[]) => {
-                this.configDocument(newDocument);
-                this.configDocument().__metadata['@etag'] = saveResult[0].Etag;
-                deferred.resolve();
-            })
-            .fail(() => deferred.reject());
+        require(["commands/saveDocumentCommand"], saveDocumentCommand => {
+            var saveTask = new saveDocumentCommand(this.documentId, newDocument, this.systemDatabase).execute();
+            saveTask
+                .done((saveResult: bulkDocumentDto[]) => {
+                    this.configDocument(newDocument);
+                    this.configDocument().__metadata['etag'] = saveResult[0].Etag;
+                    deferred.resolve();
+                })
+                .fail(() => deferred.reject());
+        });
 
         return deferred;
     }

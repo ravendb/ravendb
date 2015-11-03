@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Client.Changes;
 using System;
 using System.Threading.Tasks;
@@ -9,16 +9,16 @@ namespace Raven.Client.FileSystem.Changes
     {
         private readonly Func<FilesConnectionState, Task> ensureConnection;
 
-		public FilesConnectionState(Action onZero, Func<FilesConnectionState, Task> ensureConnection, Task task)
-			: base(onZero, task)
-		{
-			this.ensureConnection = ensureConnection;
-		}
+        public FilesConnectionState(Action onZero, Func<FilesConnectionState, Task> ensureConnection, Task task)
+            : base(onZero, task)
+        {
+            this.ensureConnection = ensureConnection;
+        }
 
-		protected override Task EnsureConnection()
-		{
-			return ensureConnection(this);
-		}
+        protected override Task EnsureConnection()
+        {
+            return ensureConnection(this);
+        }
 
         public event Action<ConfigurationChangeNotification> OnConfigurationChangeNotification = (x) => { };
         public void Send(ConfigurationChangeNotification configurationChangeNotification)

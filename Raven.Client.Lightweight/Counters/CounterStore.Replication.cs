@@ -8,43 +8,43 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Counters
 {
-	public partial class CounterStore
-	{
-		public async Task<CountersReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken))
-		{
-			AssertInitialized();
+    public partial class CounterStore
+    {
+        public async Task<CountersReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken))
+        {
+            AssertInitialized();
 
-			var requestUriString = String.Format("{0}/cs/{1}/replications/get", Url, Name);
+            var requestUriString = $"{Url}/cs/{Name}/replications/get";
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<CountersReplicationDocument>(JsonSerializer);
-			}
-		}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+            {
+                var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return response.ToObject<CountersReplicationDocument>(JsonSerializer);
+            }
+        }
 
-		public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument,CancellationToken token = default(CancellationToken))
-		{
-			AssertInitialized();
-			var requestUriString = String.Format("{0}/cs/{1}/replications/save", Url, Name);
+        public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument, CancellationToken token = default(CancellationToken))
+        {
+            AssertInitialized();
+            var requestUriString = $"{Url}/cs/{Name}/replications/save";
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
-			{
-				await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument)).WithCancellation(token).ConfigureAwait(false);
-				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-			}
-		}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
+            {
+                await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument)).WithCancellation(token).ConfigureAwait(false);
+                await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+            }
+        }
 
-		public async Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken))
-		{
-			AssertInitialized();
-			var requestUriString = String.Format("{0}/cs/{1}/lastEtag?serverId={2}", Url, Name, serverId);
+        public async Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken))
+        {
+            AssertInitialized();
+            var requestUriString = $"{Url}/cs/{Name}/lastEtag?serverId={serverId}";
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.Value<long>();
-			}
-		}
-	}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+            {
+                var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return response.Value<long>();
+            }
+        }
+    }
 }

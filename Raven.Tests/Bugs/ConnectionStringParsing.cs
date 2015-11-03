@@ -5,8 +5,8 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ConnectionStringParsing : NoDisposalNeeded
-	{
+    public class ConnectionStringParsing : NoDisposalNeeded
+    {
         [Fact]
         public void EnsureWellFormedConnectionStrings_ParsingWithEndingSemicolons_Successful()
         {
@@ -66,5 +66,5 @@ namespace Raven.Tests.Bugs
             var embeddedParser = ConnectionStringParser<EmbeddedRavenConnectionStringOptions>.FromConnectionString("filesystem=test;");
             Assert.Throws<ArgumentException>(() => embeddedParser.Parse());
         }
-	}
+    }
 }

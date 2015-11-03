@@ -1,4 +1,4 @@
-﻿import dialog = require("plugins/dialog");
+import dialog = require("plugins/dialog");
 import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import shell = require("viewmodels/shell");

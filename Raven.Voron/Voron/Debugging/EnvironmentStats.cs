@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Voron.Debugging
 {
@@ -9,13 +9,13 @@ namespace Voron.Debugging
         public long UnallocatedPagesAtEndOfFile;
         public long UsedDataFileSizeInBytes;
         public long AllocatedDataFileSizeInBytes;
-	    public long NextWriteTransactionId;
-	    public List<ActiveTransaction> ActiveTransactions;
+        public long NextWriteTransactionId;
+        public List<ActiveTransaction> ActiveTransactions;
     }
 
-	public class ActiveTransaction
-	{
-		public long Id;
-		public TransactionFlags Flags;
-	}
+    public class ActiveTransaction
+    {
+        public long Id;
+        public TransactionFlags Flags;
+    }
 }

@@ -1,6 +1,6 @@
-﻿namespace Raven.Database.Server.Connections
+namespace Raven.Database.Server.Connections
 {
     public class HttpTracePushContent : PushContentBase
-	{
+    {
     }
 }

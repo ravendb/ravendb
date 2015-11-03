@@ -223,8 +223,8 @@
             <example>
             using(var tr = db.BeginReadOnlyTransaction(CancellationToken.None))
             {
-            	var result = await tr.Get(Slice.FromString("Hello"));
-            	var items = await tr.GetRange(FdbKeyRange.StartsWith(Slice.FromString("ABC"))).ToListAsync();
+                var result = await tr.Get(Slice.FromString("Hello"));
+                var items = await tr.GetRange(FdbKeyRange.StartsWith(Slice.FromString("ABC"))).ToListAsync();
             }</example>
         </member>
         <member name="M:FoundationDB.Client.FdbDatabaseExtensions.BeginTransaction(FoundationDB.Client.IFdbDatabase,System.Threading.CancellationToken)">
@@ -235,9 +235,9 @@
             <example>
             using(var tr = db.BeginTransaction(CancellationToken.None))
             {
-            	tr.Set(Slice.FromString("Hello"), Slice.FromString("World"));
-            	tr.Clear(Slice.FromString("OldValue"));
-            	await tr.CommitAsync();
+                tr.Set(Slice.FromString("Hello"), Slice.FromString("World"));
+                tr.Clear(Slice.FromString("OldValue"));
+                await tr.CommitAsync();
             }</example>
         </member>
         <member name="M:FoundationDB.Client.FdbDatabaseExtensions.SetLocationCacheSize(FoundationDB.Client.IFdbDatabase,System.Int32)">
@@ -757,9 +757,9 @@
             <example>
             using(var tr = db.BeginTransaction(CancellationToken.None))
             {
-            	tr.Set(Slice.FromString("Hello"), Slice.FromString("World"));
-            	tr.Clear(Slice.FromString("OldValue"));
-            	await tr.CommitAsync();
+                tr.Set(Slice.FromString("Hello"), Slice.FromString("World"));
+                tr.Clear(Slice.FromString("OldValue"));
+                await tr.CommitAsync();
             }</example>
         </member>
         <member name="P:FoundationDB.Client.IFdbDatabase.Name">
@@ -4144,9 +4144,9 @@
             <example>
             using(var tr = db.BeginTransaction(CancellationToken.None))
             {
-            	tr.Set(Slice.FromString("Hello"), Slice.FromString("World"));
-            	tr.Clear(Slice.FromString("OldValue"));
-            	await tr.CommitAsync();
+                tr.Set(Slice.FromString("Hello"), Slice.FromString("World"));
+                tr.Clear(Slice.FromString("OldValue"));
+                await tr.CommitAsync();
             }</example>
         </member>
         <member name="M:FoundationDB.Client.FdbDatabase.CreateNewTransaction(FoundationDB.Client.FdbOperationContext)">

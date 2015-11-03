@@ -8,22 +8,22 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Config
 {
-	public class GlobalSettingsDocument
-	{
-		/// <summary>
-		/// Global settings (unsecured).
-		/// </summary>
-		public Dictionary<string, string> Settings { get; set; }
+    public class GlobalSettingsDocument
+    {
+        /// <summary>
+        /// Global settings (unsecured).
+        /// </summary>
+        public Dictionary<string, string> Settings { get; set; }
 
-		/// <summary>
-		/// Global settings (secured).
-		/// </summary>
-		public Dictionary<string, string> SecuredSettings { get; set; }
+        /// <summary>
+        /// Global settings (secured).
+        /// </summary>
+        public Dictionary<string, string> SecuredSettings { get; set; }
 
         public GlobalSettingsDocument()
-		{
-			Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-			SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		}
-	}
+        {
+            Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
 }

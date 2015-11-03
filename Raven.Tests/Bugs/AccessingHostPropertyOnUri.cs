@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using System;
 using System.Collections.Generic;
@@ -33,7 +33,7 @@ namespace Raven.Tests.Issues
                                                   select new 
                                                   {
                                                       Owner = activity.Owner,
-													  Host = new Uri(state.Url.ToString()).Host,
+                                                      Host = new Uri(state.Url.ToString()).Host,
                                                       Url = state.Url,
                                                   }
                                     from state in mapping
@@ -89,7 +89,7 @@ namespace Raven.Tests.Issues
                     session.Store(activities2, "test2");
                     session.SaveChanges();
                 }
-				
+                
                 WaitForIndexing(store);
 
                 var errors = store.DatabaseCommands.GetStatistics().Errors;

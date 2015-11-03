@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
             this.log = log;
         }
 
-		public IEnumerable<AbstractField> Index(object val, PropertyAccessor accessor, Field.Store defaultStorage)
+        public IEnumerable<AbstractField> Index(object val, PropertyAccessor accessor, Field.Store defaultStorage)
         {
             return from property in accessor.Properies
                    where property.Key != Constants.DocumentIdFieldName
@@ -175,7 +175,7 @@ namespace Raven.Database.Indexing
                 {
                     var sortOptions = indexDefinition.GetSortOption(name, query: null);
                     if (sortOptions == null ||
-						sortOptions.Value == SortOptions.None ||
+                        sortOptions.Value == SortOptions.None ||
                         sortOptions.Value == SortOptions.String ||
                         sortOptions.Value == SortOptions.StringVal ||
                         sortOptions.Value == SortOptions.Custom)

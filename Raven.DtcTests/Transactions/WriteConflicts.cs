@@ -15,72 +15,72 @@ using Xunit;
 
 namespace Raven.Tests.Transactions
 {
-	public class WriteConflicts : RavenTest
-	{
-		private readonly EmbeddableDocumentStore store;
-		private readonly DocumentDatabase db;
+    public class WriteConflicts : RavenTest
+    {
+        private readonly EmbeddableDocumentStore store;
+        private readonly DocumentDatabase db;
 
-		public WriteConflicts()
-		{
-			store = NewDocumentStore(requestedStorage: "esent");
-			db = store.SystemDatabase;
-		}
+        public WriteConflicts()
+        {
+            store = NewDocumentStore(requestedStorage: "esent");
+            db = store.SystemDatabase;
+        }
 
-		public override void Dispose()
-		{
-			store.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            store.Dispose();
+            base.Dispose();
+        }
 
-		[Fact]
-		public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateOutsideTransaction()
-		{
+        [Fact]
+        public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateOutsideTransaction()
+        {
             EnsureDtcIsSupported(db);
-			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			Assert.Throws<ConcurrencyException>(
-				() => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));
-		}
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+            Assert.Throws<ConcurrencyException>(
+                () => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));
+        }
 
-		[Fact]
-		public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateInsideAnotherTransaction()
-		{
+        [Fact]
+        public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateInsideAnotherTransaction()
+        {
             EnsureDtcIsSupported(db);
-			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			Assert.Throws<ConcurrencyException>(
-				() => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
-				{
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+            Assert.Throws<ConcurrencyException>(
+                () => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
+                {
                     Id = Guid.NewGuid().ToString(),
-					Timeout = TimeSpan.FromMinutes(1)
-				}));
-		}
+                    Timeout = TimeSpan.FromMinutes(1)
+                }));
+        }
 
 
-		[Fact]
-		public void WhileCreatingDocumentInTransactionTryingToWriteInAnotherTransactionFail()
-		{
+        [Fact]
+        public void WhileCreatingDocumentInTransactionTryingToWriteInAnotherTransactionFail()
+        {
             EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			Assert.Throws<ConcurrencyException>(
-				() => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
-				{
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+            Assert.Throws<ConcurrencyException>(
+                () => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
+                {
                     Id = Guid.NewGuid().ToString(),
-					Timeout = TimeSpan.FromMinutes(1)
-				}));
-		}
+                    Timeout = TimeSpan.FromMinutes(1)
+                }));
+        }
 
-		[Fact]
-		public void WhileCreatingDocumentInTransactionTryingToWriteOutsideTransactionFail()
-		{
+        [Fact]
+        public void WhileCreatingDocumentInTransactionTryingToWriteOutsideTransactionFail()
+        {
             EnsureDtcIsSupported(db);
             var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
-			db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
-			Assert.Throws<ConcurrencyException>(
-				() => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));
-		}
-	}
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
+            Assert.Throws<ConcurrencyException>(
+                () => db.Documents.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Context.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,53 +14,53 @@ using Raven.Server;
 
 namespace Raven.Tests.Server.Runner.Data
 {
-	public static class Context
-	{
-		public static readonly string DataDir = string.Format(@"Servers");
+    public static class Context
+    {
+        public static readonly string DataDir = string.Format(@"Servers");
 
-		public static readonly IDictionary<int, RavenDbServer> Servers = new Dictionary<int, RavenDbServer>();
+        public static readonly IDictionary<int, RavenDbServer> Servers = new Dictionary<int, RavenDbServer>();
 
-		public static void Clear()
-		{
-			foreach (var serverPort in Servers.Keys)
-				Servers[serverPort].Dispose();
+        public static void Clear()
+        {
+            foreach (var serverPort in Servers.Keys)
+                Servers[serverPort].Dispose();
 
-			GC.Collect(2);
-			GC.WaitForPendingFinalizers();
+            GC.Collect(2);
+            GC.WaitForPendingFinalizers();
 
-			DeleteDataDirectoryWithRetry();
-		}
+            DeleteDataDirectoryWithRetry();
+        }
 
-		private static void DeleteDataDirectoryWithRetry()
-		{
-			var isRetry = false;
+        private static void DeleteDataDirectoryWithRetry()
+        {
+            var isRetry = false;
 
-			while (true)
-			{
-				try
-				{
+            while (true)
+            {
+                try
+                {
                     DeleteDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataDir).ToFullPath());
-					break;
-				}
-				catch (Exception)
-				{
-					if (isRetry)
-						throw;
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (isRetry)
+                        throw;
 
-					GC.Collect();
-					GC.WaitForPendingFinalizers();
-					isRetry = true;
-				}
-			}
-		}
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    isRetry = true;
+                }
+            }
+        }
 
-		public static void DeleteDirectory(string directory)
-		{
-			IOExtensions.DeleteDirectory(directory);
-			if (SpinWait.SpinUntil(() => Directory.Exists(directory) == false, TimeSpan.FromSeconds(5)) == false)
-			{
-			    throw new Exception("Unable to delete directory:" + directory);
-			}
-		}
-	}
+        public static void DeleteDirectory(string directory)
+        {
+            IOExtensions.DeleteDirectory(directory);
+            if (SpinWait.SpinUntil(() => Directory.Exists(directory) == false, TimeSpan.FromSeconds(5)) == false)
+            {
+                throw new Exception("Unable to delete directory:" + directory);
+            }
+        }
+    }
 }

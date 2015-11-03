@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
 import pagedResultSet = require("common/pagedResultSet");
 import file = require("models/filesystem/file");
@@ -11,7 +11,7 @@ class searchByQueryCommand  extends commandBase {
 
     execute(): JQueryPromise<pagedResultSet> {
 
-	    var filesTask = this.fetchFiles();
+        var filesTask = this.fetchFiles();
 
         var doneTask = $.Deferred();
 

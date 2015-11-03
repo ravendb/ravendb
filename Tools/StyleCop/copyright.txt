@@ -1,4 +1,4 @@
-﻿Name:
+Name:
   StyleCop
 
 Homepage:

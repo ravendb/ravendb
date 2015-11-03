@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDynamicTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -18,15 +18,15 @@ namespace Raven.Tests.MailingList
     {
         private static readonly Person Dad = new Person { Name = "Dad" };
 
-	    private static readonly Person Sally = new Person
-	    {
-		    Name = "sally",
-		    UserId = Guid.NewGuid(),
-		    Family = new Dictionary<string, Person>
-		    {
-			    {"Dad", Dad},
-		    }
-	    };
+        private static readonly Person Sally = new Person
+        {
+            Name = "sally",
+            UserId = Guid.NewGuid(),
+            Family = new Dictionary<string, Person>
+            {
+                {"Dad", Dad},
+            }
+        };
 
         public class WhenUsingIdCopy : RavenTest
         {

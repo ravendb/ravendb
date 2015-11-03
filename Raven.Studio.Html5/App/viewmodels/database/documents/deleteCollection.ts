@@ -8,11 +8,11 @@ class deleteCollection extends dialogViewModelBase {
 
     public deletionTask = $.Deferred();
     private deletionStarted = false;
-	isAllDocuments: boolean;
+    isAllDocuments: boolean;
 
     constructor(private collection: collection) {
         super();
-	    this.isAllDocuments = collection.isAllDocuments;
+        this.isAllDocuments = collection.isAllDocuments;
     }
 
     deleteCollection() {

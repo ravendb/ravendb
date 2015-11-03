@@ -69,14 +69,14 @@ namespace QUT.GplexBuffers
         }
 #endif // !BYTEMODE
 #endif // !NOFILES
-		public bool SetPaddingOn { get; set; }
-		protected CommaState state { get; set; }
-		protected enum CommaState
-		{
-			None,
-			Comma,
-			AfterComma
-		}
+        public bool SetPaddingOn { get; set; }
+        protected CommaState state { get; set; }
+        protected enum CommaState
+        {
+            None,
+            Comma,
+            AfterComma
+        }
     }
 
     #region Buffer classes
@@ -105,41 +105,41 @@ namespace QUT.GplexBuffers
         }
         public override int Read()
         {
-	        if (SetPaddingOn)
-	        {
-				// escaping ',' into ,
-		        if (bPos + 2 < sLen && str[bPos] == 96 && str[bPos] == 44 && str[bPos + 2] == 96)
-		        {
-			        bPos += 3;
-			        return 44;
-		        }
-				// padding comma state
-				if (bPos < sLen)
-				{
-					var res = str[bPos];
-       				switch (state)
-					{
-						case CommaState.None:						
-							if (res == 44)
-							{
-								state = CommaState.Comma;
-								return 32;
-							}
-							bPos++;
-							return res;
-						case CommaState.Comma:
-							state = CommaState.AfterComma;
-							return 44;
-						case CommaState.AfterComma:						
-							state = CommaState.None;
-							bPos++;
-						return 32;						
-					}
-				}					
-				else if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
-				else { bPos++; return EndOfFile; }                // two strikes and you're out!
-	        }
-	        if (bPos < sLen) return str[bPos++];
+            if (SetPaddingOn)
+            {
+                // escaping ',' into ,
+                if (bPos + 2 < sLen && str[bPos] == 96 && str[bPos] == 44 && str[bPos + 2] == 96)
+                {
+                    bPos += 3;
+                    return 44;
+                }
+                // padding comma state
+                if (bPos < sLen)
+                {
+                    var res = str[bPos];
+                    switch (state)
+                    {
+                        case CommaState.None:						
+                            if (res == 44)
+                            {
+                                state = CommaState.Comma;
+                                return 32;
+                            }
+                            bPos++;
+                            return res;
+                        case CommaState.Comma:
+                            state = CommaState.AfterComma;
+                            return 44;
+                        case CommaState.AfterComma:						
+                            state = CommaState.None;
+                            bPos++;
+                        return 32;						
+                    }
+                }					
+                else if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
+                else { bPos++; return EndOfFile; }                // two strikes and you're out!
+            }
+            if (bPos < sLen) return str[bPos++];
             else if (bPos == sLen) { bPos++; return '\n'; }   // one strike, see new line
             else { bPos++; return EndOfFile; }                // two strikes and you're out!
         }
@@ -323,7 +323,7 @@ namespace QUT.GplexBuffers
 
             internal char this[int index]
             {
-				[MethodImpl(MethodImplOptions.AggressiveInlining)]
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get
                 {
                     if (index < minIx || index >= maxIx)
@@ -521,7 +521,7 @@ namespace QUT.GplexBuffers
     public static class BlockReaderFactory
     {
 
-		private static readonly ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>(() => new byte[4096]);
+        private static readonly ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>(() => new byte[4096]);
         public static BlockReader Raw(Stream stream)
         {
             return delegate(char[] block, int index, int number)
@@ -530,7 +530,7 @@ namespace QUT.GplexBuffers
                 int i = 0;
                 int j = index;
                 for (; i < count; i++, j++)
-					block[j] = (char)buffer.Value[i];
+                    block[j] = (char)buffer.Value[i];
                 return count;
             };
         }

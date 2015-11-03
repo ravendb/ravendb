@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DatabaseReloadingTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Should_save_put_to_tenant_database_if_tenant_database_is_reloaded_before_the_put_transaction()
         {
-			using (var server = GetNewServer(runInMemory: false, requestedStorage: "esent"))
+            using (var server = GetNewServer(runInMemory: false, requestedStorage: "esent"))
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8079"
@@ -41,12 +41,12 @@ namespace Raven.Tests.Issues
                 var tenantDatabaseDocument = store.DatabaseCommands.Get("Raven/Databases/" + TenantName);
                 server.SystemDatabase.Documents.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
                 server.SystemDatabase.PrepareTransaction(tx1.Id);
-				server.SystemDatabase.Commit(tx1.Id);
+                server.SystemDatabase.Commit(tx1.Id);
 
                 var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
                 tenantDb.Documents.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
                 tenantDb.PrepareTransaction(tx2.Id);
-				tenantDb.Commit(tx2.Id);
+                tenantDb.Commit(tx2.Id);
 
                 var fooDoc = tenantDb.Documents.Get("Foo/1", new TransactionInformation {Id = Guid.NewGuid().ToString()});
                 Assert.NotNull(fooDoc);
@@ -56,7 +56,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Should_save_put_to_tenant_database_if_tenant_database_is_reloaded_in_the_middle_of_the_put_transaction()
         {
-			using (var server = GetNewServer(runInMemory: false, requestedStorage:"esent"))
+            using (var server = GetNewServer(runInMemory: false, requestedStorage:"esent"))
             using (var store = new DocumentStore
             {
                 Url = "http://localhost:8079"
@@ -74,11 +74,11 @@ namespace Raven.Tests.Issues
                 var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
                 tenantDb.Documents.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
 
-				server.SystemDatabase.PrepareTransaction(tx1.Id);
+                server.SystemDatabase.PrepareTransaction(tx1.Id);
                 server.SystemDatabase.Commit(tx1.Id);
 
                 tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
-				tenantDb.PrepareTransaction(tx2.Id);
+                tenantDb.PrepareTransaction(tx2.Id);
                 tenantDb.Commit(tx2.Id);
 
                 var fooDoc = tenantDb.Documents.Get("Foo/1", new TransactionInformation { Id = Guid.NewGuid().ToString() });
@@ -86,11 +86,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-		//basically if you do not call prepare before commit, exception will be thrown
-		[Fact]
-		public void Should_fail_put_to_tenant_database_if_tenant_database_is_reloaded_after_the_put_transaction_because_tx_was_reset()
+        //basically if you do not call prepare before commit, exception will be thrown
+        [Fact]
+        public void Should_fail_put_to_tenant_database_if_tenant_database_is_reloaded_after_the_put_transaction_because_tx_was_reset()
         {
-			using (var server = GetNewServer(runInMemory: false, requestedStorage: "esent"))
+            using (var server = GetNewServer(runInMemory: false, requestedStorage: "esent"))
             using (var store = NewRemoteDocumentStore(ravenDbServer:server))
             {
                 EnsureDtcIsSupported(server);
@@ -100,18 +100,18 @@ namespace Raven.Tests.Issues
                 var tx1 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
                 var tx2 = new TransactionInformation { Id = Guid.NewGuid().ToString() };
 
-				var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
-				tenantDb.Documents.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
-				
-				var tenantDatabaseDocument = store.DatabaseCommands.ForSystemDatabase().Get("Raven/Databases/" + TenantName);
+                var tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
+                tenantDb.Documents.Put("Foo/1", null, new RavenJObject { { "Test", "123" } }, new RavenJObject(), tx2);
+                
+                var tenantDatabaseDocument = store.DatabaseCommands.ForSystemDatabase().Get("Raven/Databases/" + TenantName);
                 server.SystemDatabase.Documents.Put("Raven/Databases/" + TenantName, null, tenantDatabaseDocument.DataAsJson, tenantDatabaseDocument.Metadata, tx1);
-				server.SystemDatabase.PrepareTransaction(tx1.Id);
-				server.SystemDatabase.Commit(tx1.Id);
+                server.SystemDatabase.PrepareTransaction(tx1.Id);
+                server.SystemDatabase.Commit(tx1.Id);
 
-				tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
+                tenantDb = GetDocumentDatabaseForTenant(server, TenantName);
 
-				var exception = Assert.Throws<InvalidOperationException>(() => tenantDb.Commit(tx2.Id));
-				Assert.Contains("There is no transaction with id:", exception.Message);
+                var exception = Assert.Throws<InvalidOperationException>(() => tenantDb.Commit(tx2.Id));
+                Assert.Contains("There is no transaction with id:", exception.Message);
             }
         }
 

@@ -1,4 +1,4 @@
-﻿import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
+import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialogViewModel");
 import searchByTermCommand = require("commands/filesystem/searchByTermCommand");
 import filesystem = require("models/filesystem/filesystem");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");

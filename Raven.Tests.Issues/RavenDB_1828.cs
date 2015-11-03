@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1828.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,59 +15,59 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_1828 : RavenTest
     {
-		public class Product
-		{
-			public string Id { get; set; }
-			public string Name { get; set; }
-			public string CategoryId { get; set; }
-		}
+        public class Product
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string CategoryId { get; set; }
+        }
 
-		public class Category
-		{
-			public string Id { get; set; }
-			public string Name { get; set; }
-		}
+        public class Category
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
 
-		public class ProductWithTransformerParameter : AbstractTransformerCreationTask<Product>
-		{
-			public class Result
-			{
-				public string ProductId { get; set; }
-				public string ProductName { get; set; }
-				public string Input { get; set; }
-			}
-			public ProductWithTransformerParameter()
-			{
-				TransformResults = docs => from product in docs
-										   select new
-										   {
-											   ProductId = product.Id,
-											   ProductName = product.Name,
-											   Input = Parameter("input")
-										   };
-			}
-		}
+        public class ProductWithTransformerParameter : AbstractTransformerCreationTask<Product>
+        {
+            public class Result
+            {
+                public string ProductId { get; set; }
+                public string ProductName { get; set; }
+                public string Input { get; set; }
+            }
+            public ProductWithTransformerParameter()
+            {
+                TransformResults = docs => from product in docs
+                                           select new
+                                           {
+                                               ProductId = product.Id,
+                                               ProductName = product.Name,
+                                               Input = Parameter("input")
+                                           };
+            }
+        }
 
-		public class ProductWithTransformerParameterAndInclude : AbstractTransformerCreationTask<Product>
-		{
-			public class Result
-			{
-				public string ProductId { get; set; }
-				public string ProductName { get; set; }
-				public string CategoryId { get; set; }
-			}
-			public ProductWithTransformerParameterAndInclude()
-			{
-				TransformResults = docs => from product in docs
-										   let _ = Include(product.CategoryId)
-										   select new
-										   {
-											   ProductId = product.Id,
-											   ProductName = product.Name,
-											   product.CategoryId,
-										   };
-			}
-		}
+        public class ProductWithTransformerParameterAndInclude : AbstractTransformerCreationTask<Product>
+        {
+            public class Result
+            {
+                public string ProductId { get; set; }
+                public string ProductName { get; set; }
+                public string CategoryId { get; set; }
+            }
+            public ProductWithTransformerParameterAndInclude()
+            {
+                TransformResults = docs => from product in docs
+                                           let _ = Include(product.CategoryId)
+                                           select new
+                                           {
+                                               ProductId = product.Id,
+                                               ProductName = product.Name,
+                                               product.CategoryId,
+                                           };
+            }
+        }
 
         [Fact]
         public void CanUseResultsTransformerByName()

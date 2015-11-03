@@ -1,4 +1,4 @@
-﻿import timeSeriesType = require("models/timeSeries/timeSeriesType");
+import timeSeriesType = require("models/timeSeries/timeSeriesType");
 
 class typeChange {
     type = ko.observable<string>("");

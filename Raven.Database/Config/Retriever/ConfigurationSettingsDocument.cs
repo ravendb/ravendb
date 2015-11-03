@@ -4,10 +4,10 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Config.Retriever
 {
-	public class ConfigurationSettings
-	{
+    public class ConfigurationSettings
+    {
         public Dictionary<string, ConfigurationSetting> Results { get; set; }
-	}
+    }
 
     public class ConfigurationSetting
     {

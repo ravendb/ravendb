@@ -1196,12 +1196,12 @@ int NextState() {
         // ==== Nested struct to support input switching in scanners ====
         // ==============================================================
 
-		struct BufferContext {
+        struct BufferContext {
             internal ScanBuff buffSv;
-			internal int chrSv;
-			internal int cColSv;
-			internal int lNumSv;
-		}
+            internal int chrSv;
+            internal int cColSv;
+            internal int lNumSv;
+        }
 
         // ==============================================================
         // ===== Private methods to save and restore buffer contexts ====
@@ -1214,14 +1214,14 @@ int NextState() {
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         BufferContext MkBuffCtx()
-		{
-			BufferContext rslt;
-			rslt.buffSv = this.buffer;
-			rslt.chrSv = this.code;
-			rslt.cColSv = this.cCol;
-			rslt.lNumSv = this.lNum;
-			return rslt;
-		}
+        {
+            BufferContext rslt;
+            rslt.buffSv = this.buffer;
+            rslt.chrSv = this.code;
+            rslt.cColSv = this.cCol;
+            rslt.lNumSv = this.lNum;
+            return rslt;
+        }
 
         /// <summary>
         /// This method restores the buffer value and allied
@@ -1229,11 +1229,11 @@ int NextState() {
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         void RestoreBuffCtx(BufferContext value)
-		{
-			this.buffer = value.buffSv;
-			this.code = value.chrSv;
-			this.cCol = value.cColSv;
-			this.lNum = value.lNumSv;
+        {
+            this.buffer = value.buffSv;
+            this.code = value.chrSv;
+            this.cCol = value.cColSv;
+            this.lNum = value.lNumSv;
         } 
         // =================== End Nested classes =======================
 
@@ -1644,14 +1644,14 @@ int NextState() {
         case 102: // Recognized '{UnquotedTerm}',	Shortest string "0x"
         case 103: // Recognized '{UnquotedTerm}',	Shortest string "0x+"
 if(InMethod && bStack.Count == 0) 
-								{
-									yylval.s = HandleTermInMethod();
-								}
-								else 
-								{
-									yylval.s = DiscardEscapeChar(yytext, true);
-								}
-								return (int)Token.UNQUOTED_TERM;
+                                {
+                                    yylval.s = HandleTermInMethod();
+                                }
+                                else 
+                                {
+                                    yylval.s = DiscardEscapeChar(yytext, true);
+                                }
+                                return (int)Token.UNQUOTED_TERM;
             break;
         case 2: // Recognized '{Whitespace}',	Shortest string "\t"
 /* skip */
@@ -1833,8 +1833,8 @@ yylval.s = yytext; return (int)Token.QUOTED_WILDCARD_TERM;
         {
             // Protect against input errors that pop too far ...
             if (scStack.Count > 0) {
-				int newSc = scStack.Pop();
-				BEGIN(newSc);
+                int newSc = scStack.Pop();
+                BEGIN(newSc);
             } // Otherwise leave stack unchanged.
         }
  #endif // STACK

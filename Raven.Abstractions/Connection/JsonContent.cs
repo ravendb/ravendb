@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="JsonContent.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,82 +14,88 @@ using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using Raven.Abstractions.Util.Streams;
 
 namespace Raven.Abstractions.Connection
 {
-	public class JsonContent : HttpContent
-	{
-		private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
+    public class JsonContent : HttpContent
+    {
+        private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
 
-	    public JsonContent(RavenJToken data = null)
-	    {
-	        Data = data;
-	        if (data != null)
-	        {
-	            Headers.ContentType = string.IsNullOrEmpty(Jsonp) ?
-	                new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"} :
-	                new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
-	        }
-	    }
+        public JsonContent(RavenJToken data = null)
+        {
+            Data = data;
+            if (data != null)
+            {
+                Headers.ContentType = string.IsNullOrEmpty(Jsonp) ?
+                    new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"} :
+                    new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
+            }
+        }
 
-	    public RavenJToken Data { get; set; }
+        public RavenJToken Data { get; set; }
 
-		public string Jsonp { get; set; }
+        public string Jsonp { get; set; }
 
-		public bool IsOutputHumanReadable { get; set; }
+        public bool IsOutputHumanReadable { get; set; }
 
-		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-		{
-		    if (HasNoData())
-		        return new CompletedTask<bool>(true);
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        {
+            if (HasNoData())
+                return new CompletedTask<bool>(true);
 
-			var writer = new StreamWriter(stream, DefaultEncoding);
-			if (string.IsNullOrEmpty(Jsonp) == false)
-			{
-				writer.Write(Jsonp);
-				writer.Write("(");
-			}
+            using ( var undisposableStream = new UndisposableStream(stream) )
+            using ( var bufferedStream = new BufferedStream(undisposableStream))
+            {
+                var writer = new StreamWriter(stream, DefaultEncoding);
+                if (string.IsNullOrEmpty(Jsonp) == false)
+                {
+                    writer.Write(Jsonp);
+                    writer.Write("(");
+                }
 
-			Data.WriteTo(new JsonTextWriter(writer)
-			{
-				Formatting = IsOutputHumanReadable ? Formatting.Indented : Formatting.None,
-			}, Default.Converters);
+                Data.WriteTo(new JsonTextWriter(writer)
+                {
+                    Formatting = IsOutputHumanReadable ? Formatting.Indented : Formatting.None,
+                }, Default.Converters);
 
-			if (string.IsNullOrEmpty(Jsonp) == false)
-				writer.Write(")");
+                if (string.IsNullOrEmpty(Jsonp) == false)
+                    writer.Write(")");
 
-			writer.Flush();
+                writer.Flush();
+            }
+
             return new CompletedTask<bool>(true);
-		}
+        }
 
-		private bool HasNoData()
-		{
-			return Data == null || Data.Type == JTokenType.Null;
-		}
+        private bool HasNoData()
+        {
+            return Data == null || Data.Type == JTokenType.Null;
+        }
 
-		protected override bool TryComputeLength(out long length)
-		{
-			var hasNoData = HasNoData();
-			length = hasNoData ? 0 : -1;
-			return hasNoData;
-		}
+        protected override bool TryComputeLength(out long length)
+        {
+            var hasNoData = HasNoData();
+            length = hasNoData ? 0 : -1;
+            return hasNoData;
+        }
 
-		public JsonContent WithRequest(HttpRequestMessage request)
-		{
-			if (request != null)
-			{
-				// Just a directly request from a browser should return human readable JSON, but not a request from a JavaScript application.
-				foreach (var agent in request.Headers.UserAgent)
-				{
-					if (agent == null || agent.Product == null)
-						continue;
-					if (agent.Product.Name == "Mozilla" || agent.Product.Name == "Fiddler")
-					{
-						IsOutputHumanReadable = true;
-					}
-				}
-			}
-			return this;
-		}
-	}
+        public JsonContent WithRequest(HttpRequestMessage request)
+        {
+            if (request != null)
+            {
+                // Just a directly request from a browser should return human readable JSON, but not a request from a JavaScript application.
+                foreach (var agent in request.Headers.UserAgent)
+                {
+                    if (agent == null || agent.Product == null)
+                        continue;
+                    if (agent.Product.Name == "Mozilla" || agent.Product.Name == "Fiddler")
+                    {
+                        IsOutputHumanReadable = true;
+                    }
+                }
+            }
+            return this;
+        }
+    }
 }

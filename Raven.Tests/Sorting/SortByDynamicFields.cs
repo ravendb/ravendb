@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Lucene.Net.Index;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing.Sorting.Custom;

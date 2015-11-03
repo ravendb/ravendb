@@ -8,7 +8,7 @@ class cell {
     static externalIdTemplate = "externalIdTemplate";
     static customTemplate = "customTemplate";
     static counterNameTemplate = "counterNameTemplate";
-	static counterGroupTemplate = "counterGroupTemplate";
+    static counterGroupTemplate = "counterGroupTemplate";
     static timeSeriesKeyTemplate = "timeSeriesKeyTemplate";
 
     constructor(data: any, public templateName: string) {
@@ -17,7 +17,7 @@ class cell {
 
     update(data: any) {
         if (this.isNumber(data)) {
-            data = data.toLocaleString();
+            data = data.toLocaleString('en-US');
         }
         this.data(data);
     }

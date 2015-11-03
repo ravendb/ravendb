@@ -29,7 +29,7 @@ class facet {
         return {
             Aggregation: this.aggregation(),
             AggregationField: this.aggregationField,
-			AggregationType: this.aggregationType,
+            AggregationType: this.aggregationType,
             DisplayName: this.displayName,
             IncludeRemainingTerms: this.includeRemainingTerms,
             MaxResults: this.maxResults,
@@ -44,7 +44,7 @@ class facet {
         var dto: facetDto = {
             Aggregation: 0,
             AggregationField: aggregationField,
-			AggregationType: aggregationType,
+            AggregationType: aggregationType,
             DisplayName: name + "-" + aggregationField,
             IncludeRemainingTerms: false,
             MaxResults: null,
