@@ -36,6 +36,7 @@ namespace Raven.Database.Indexing
         private readonly SizeLimitedConcurrentSet<IndexingBatchInfo> lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(25);
         private readonly SizeLimitedConcurrentSet<ReducingBatchInfo> lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(25);
         private readonly ConcurrentQueue<IndexingError> indexingErrors = new ConcurrentQueue<IndexingError>();
+        private readonly ConcurrentDictionary<int, object> indexingErrorLocks = new ConcurrentDictionary<int, object>();
         private readonly object waitForWork = new object();
         private volatile bool doWork = true;
         private volatile bool doIndexing = true;
@@ -303,7 +304,7 @@ namespace Raven.Database.Indexing
             AddError(index, indexName, key, error, "Unknown");
         }
 
-        public void AddError(int index, string indexName, string key, string error, string component)
+        private void AddError(int index, string indexName, string key, string error, string component)
         {
             errorsCounter = Interlocked.Increment(ref errorsCounter);
 
@@ -319,24 +320,41 @@ namespace Raven.Database.Indexing
             };
 
             indexingErrors.Enqueue(indexingError);
+            IndexingError ignored = null;
 
-            if (indexingErrors.Count <= 50)
+            lock (indexingErrorLocks.GetOrAdd(index, new object()))
             {
-                TransactionalStorage.Batch(accessor => accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing));
-                return;
+                using (TransactionalStorage.DisableBatchNesting())
+                    TransactionalStorage.Batch(accessor =>
+                    {
+                        accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing);
+
+                        if (indexingErrors.Count <= 50)
+                            return;
+
+                        if (indexingErrors.TryDequeue(out ignored) == false)
+                            return;
+
+                        if (index != ignored.Index || (SystemTime.UtcNow - ignored.Timestamp).TotalSeconds <= 10)
+                            return;
+
+                        accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Timestamp);
+                    });
             }
 
-            IndexingError ignored;
-            indexingErrors.TryDequeue(out ignored);
+            if (ignored == null || index == ignored.Index)
+                return;
 
-            if ((SystemTime.UtcNow - ignored.Timestamp).TotalSeconds > 10)
+            if ((SystemTime.UtcNow - ignored.Timestamp).TotalSeconds <= 10)
+                return;
+
+            lock (indexingErrorLocks.GetOrAdd(ignored.Index, new object()))
             {
-                TransactionalStorage.Batch(accessor =>
-                {
-                    accessor.Lists.Set("Raven/Indexing/Errors/" + indexName, indexingError.Id.ToString(CultureInfo.InvariantCulture), RavenJObject.FromObject(indexingError), UuidType.Indexing);
-                    accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Timestamp);
-                });
-                
+                using (TransactionalStorage.DisableBatchNesting())
+                    TransactionalStorage.Batch(accessor =>
+                    {
+                        accessor.Lists.RemoveAllOlderThan("Raven/Indexing/Errors/" + ignored.IndexName, ignored.Timestamp);
+                    });
             }
         }
 
@@ -378,6 +396,16 @@ namespace Raven.Database.Indexing
             foreach (var indexingError in list)
             {
                 indexingErrors.Enqueue(indexingError);
+            }
+
+            var removedIndexIds = removed
+                .Select(x => x.Index)
+                .Distinct();
+
+            foreach (var removedIndexId in removedIndexIds)
+            {
+                object _;
+                indexingErrorLocks.TryRemove(removedIndexId, out _);
             }
 
             TransactionalStorage.Batch(accessor =>
