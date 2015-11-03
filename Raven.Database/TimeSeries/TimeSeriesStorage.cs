@@ -930,7 +930,7 @@ namespace Raven.Database.TimeSeries
 				var existingType = GetTimeSeriesType(type);
 				if (existingType != null && existingType.KeysCount > 0)
 				{
-					var message = string.Format("There an existing type on the replicated server with the same name but with different fields. " +
+					var message = string.Format("There an existing type with the same name but with different fields. " +
 												"Since the type has already {2} keys, the replication failed to overwrite this type. " +
 												"{0} <=> {1}", string.Join(",", existingType.Fields), string.Join(",", fields), existingType.KeysCount);
 					throw new InvalidOperationException(message);

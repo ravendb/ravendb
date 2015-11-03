@@ -12,7 +12,8 @@ namespace Raven.Tests.TimeSeries
 			using (var writer = storage.CreateWriter())
 			{
 				writer.CreateType("Simple", new[] {"Value"});
-			}
+                writer.Commit();
+            }
 			return storage;
 		}
 	}

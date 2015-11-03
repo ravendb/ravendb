@@ -49,7 +49,7 @@ namespace Raven.Tests.TimeSeries
                 await store.CreateTypeAsync("Simple", new[] {"Value", "Another value"}); // Can overwrite, because we don't have keys yet
                 await store.AppendAsync("Simple", "Is", DateTimeOffset.Now, CancellationToken.None, 3456D, 8888D);
                 var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.CreateTypeAsync("Simple", new[] { "Value", "Another value", "Different Value" }));
-                Assert.Contains("System.InvalidOperationException: Type 'Simple' is already created, and cannot be overwritten", exception.Message);
+                Assert.Contains("System.InvalidOperationException: There an existing type with the same name but with different fields. Since the type has already 1 keys, the replication failed to overwrite this type.", exception.Message);
 
                 var stats = await store.GetStatsAsync();
                 Assert.Equal(1, stats.TypesCount);
@@ -85,7 +85,7 @@ namespace Raven.Tests.TimeSeries
                 await store.AppendAsync("Simple", "Is", DateTimeOffset.Now, 3D);
 
                 var exception = await AssertAsync.Throws<ErrorResponseException>(async () => await store.DeleteTypeAsync("Simple"));
-                Assert.Contains("System.InvalidOperationException: Cannot delete type 'Simple' (1 key) because it has associated keys.", exception.Message);
+                Assert.Contains("System.InvalidOperationException: Cannot delete type 'Simple' because it has 1 associated key.", exception.Message);
 
                 var stats = await store.GetStatsAsync();
                 Assert.Equal(1, stats.TypesCount);
