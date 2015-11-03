@@ -105,46 +105,11 @@ class conflicts extends viewModelBase {
             })
             .fail( 
             function () {
-                //TODO: we should check exact result of getIndex/Transfomer commands (if it contains 404)
-                var indexTask = new saveIndexDefinitionCommand(conflicts.getConflictsIndexDefinition(), db).execute();
-                var transformerTask = new saveTransformerCommand(conflicts.getConflictsTransformerDefinition(), db).execute();
-
-                $.when(indexTask, transformerTask).done(function () {
-                    conflicts.performedIndexChecks.push(db.name);
-                    performCheckTask.resolve();
-                }).fail(() => performCheckTask.reject() );
+                conflicts.performedIndexChecks.push(db.name);
             });
 
         return performCheckTask;
     }
-
-    static getConflictsIndexDefinition(): indexDefinitionDto {
-        var indexDef = indexDefinition.empty();
-        indexDef.name(conflicts.conflictsIndexName);
-        indexDef.maps()[0](
-        "from doc in docs \r\n" +
-            " let id = doc[\"@metadata\"][\"@id\"] \r\n" + 
-            " where doc[\"@metadata\"][\"Raven-Replication-Conflict\"] == true && (id.Length < 47 || !id.Substring(id.Length - 47).StartsWith(\"/conflicts/\", StringComparison.OrdinalIgnoreCase)) \r\n" + 
-            " select new { ConflictDetectedAt = (DateTime)doc[\"@metadata\"][\"Last-Modified\"] }");
-
-        return indexDef.toDto();
-    }
-    static getConflictsTransformerDefinition(): transformer {
-        var transDef = transformer.empty();
-        transDef.name(conflicts.conflictsTransformerName);
-        transDef.transformResults("from result in results \r\n" +
-            "                select new {  \r\n" +
-            "                    Id = result[\"__document_id\"], \r\n" +
-            "                    ConflictDetectedAt = result[\"@metadata\"].Value<DateTime>(\"Last-Modified\"),  \r\n" +
-            "                    EntityName = result[\"@metadata\"][\"Raven-Entity-Name\"], \r\n" +
-            "                    Versions = result.Conflicts.Select(versionId => { \r\n" +
-            "                        var version = LoadDocument(versionId); \r\n" +
-            "                 return new { Id = versionId, SourceId = version[\"@metadata\"][\"Raven-Replication-Source\"] }; \r\n" +
-            "             }) \r\n" +
-            "         }\r\n");
-        return transDef;
-    }
-    
 
     replicationSourcesLoaded(sources: dictionary<string> , db: database) {
         this.sourcesLookup = sources;
