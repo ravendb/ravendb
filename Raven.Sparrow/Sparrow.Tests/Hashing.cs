@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Xunit;
 
 namespace Sparrow.Tests
@@ -38,12 +38,12 @@ namespace Sparrow.Tests
             expected = 0x32D153FF;
             Assert.Equal(expected, result);
 
-            value = "hei�";
+            value = "heiå";
             result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 0);
             expected = 0xDB5ABCCC;
             Assert.Equal(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 0);
             expected = 0xD855F606;
             Assert.Equal(expected, result);
@@ -68,7 +68,7 @@ namespace Sparrow.Tests
             expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
 
-            value = "??s�e";
+            value = "κόσμε";
             result = Hashing.XXHash32.CalculateRaw(value, seed: 10);
             expected = Hashing.XXHash32.Calculate(Encoding.UTF8.GetBytes(value), seed: 10);
             Assert.NotEqual(expected, result);
