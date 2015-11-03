@@ -1,6 +1,8 @@
 using System;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -376,6 +378,52 @@ namespace Raven.Tests.Core.ChangesApi
                 subscription2.Dispose();
 
                 WaitUntilOutput("passed_CanSubscribeToAllDataSubscriptions_SubscriptionReleased_" + id);
+            }
+        }
+
+        [Fact]
+        public async Task CanSubscribeToStartingWithDocumentChanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var changes = store.Changes();
+                var notificationTask = changes.Task.Result
+                    .ForDocumentsStartingWith("compani")
+                    .Timeout(TimeSpan.FromSeconds(3))
+                    .Take(1).ToTask();
+
+                changes.WaitForAllPendingSubscriptions();
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Id = "companies/1"
+                    });
+                    session.SaveChanges();
+                }
+
+                var change = await notificationTask;
+                Assert.Equal("Companies", change.CollectionName);
+                Assert.Equal("companies/1", change.Id);
+
+                notificationTask = changes.Task.Result
+                    .ForDocumentsStartingWith("companies")
+                    .Timeout(TimeSpan.FromSeconds(5))
+                    .Take(1).ToTask();
+
+                changes.WaitForAllPendingSubscriptions();
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Id = "companies/2"
+                    });
+                    session.SaveChanges();
+                }
+
+                change = await notificationTask;
+                Assert.Equal("Companies", change.CollectionName);
+                Assert.Equal("companies/2", change.Id);
             }
         }
     }

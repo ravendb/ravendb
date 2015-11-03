@@ -295,7 +295,7 @@ namespace Raven.Client.Changes
                 case "Heartbeat":
                     break;
                 default:
-                    NotifySubscribers(type, value, Counters);
+                    NotifySubscribers(type, value, Counters.Snapshot);
                     break;
             }
         }
@@ -312,7 +312,6 @@ namespace Raven.Client.Changes
 
         protected abstract Task SubscribeOnServer();
         protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);
-
 
         public virtual void OnCompleted()
         { }
