@@ -99,5 +99,8 @@ namespace Voron.Data.BTrees
 
         [FieldOffset(13)]
         public RawDataPageFlags RawDataFlags;
+
+        [FieldOffset(14)]
+        public ushort PageNumberInSection;
     }
 }

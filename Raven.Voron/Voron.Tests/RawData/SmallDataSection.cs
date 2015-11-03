@@ -16,7 +16,7 @@ namespace Voron.Tests.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = RawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -24,7 +24,7 @@ namespace Voron.Tests.RawData
             long id;
             using (var tx = Env.WriteTransaction())
             {
-                var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
                 Assert.True(section.TryAllocate(15, out id));
                 WriteValue(section, id, "Hello There");
                 tx.Commit();
@@ -32,7 +32,7 @@ namespace Voron.Tests.RawData
 
             using (var tx = Env.ReadTransaction())
             {
-                var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
                 
                 AssertValueMatches(section,id, "Hello There");
             }
@@ -47,7 +47,7 @@ namespace Voron.Tests.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = RawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -57,7 +57,7 @@ namespace Voron.Tests.RawData
                 long id;
                 using (var tx = Env.WriteTransaction())
                 {
-                    var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
                     Assert.True(section.TryAllocate(random.Next(16,256), out id));
                     WriteValue(section, id, i.ToString("0000000000000"));
                     dic[id] = i;
@@ -66,7 +66,7 @@ namespace Voron.Tests.RawData
 
                 using (var tx = Env.WriteTransaction())
                 {
-                    var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
                     AssertValueMatches(section, id, i.ToString("0000000000000"));
                 }
             }
@@ -75,7 +75,7 @@ namespace Voron.Tests.RawData
             {
                 using (var tx = Env.WriteTransaction())
                 {
-                    var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                    var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
                     AssertValueMatches(section, kvp.Key, kvp.Value.ToString("0000000000000"));
                 }
             }
@@ -87,7 +87,7 @@ namespace Voron.Tests.RawData
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var section = RawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
                 pageNumber = section.PageNumber;
                 tx.Commit();
             }
@@ -95,7 +95,7 @@ namespace Voron.Tests.RawData
             long id, idToFree = -1;
             using (var tx = Env.WriteTransaction())
             {
-                var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
                 for (int i = 0; i < 1536; i++)
                 {
                     Assert.True(section.TryAllocate(1020, out id));
@@ -120,7 +120,7 @@ namespace Voron.Tests.RawData
             Env.Options.ManualFlushing = true;
             using (var tx = Env.WriteTransaction())
             {
-                var section = RawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
 
                 long id;
             
@@ -144,7 +144,7 @@ namespace Voron.Tests.RawData
             long id;
             using (var tx = Env.WriteTransaction())
             {
-                var section = RawDataSmallSection.Create(tx.LowLevelTransaction);
+                var section = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
                 pageNumber = section.PageNumber;
           
                 //var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
@@ -156,13 +156,13 @@ namespace Voron.Tests.RawData
 
             using (var tx = Env.ReadTransaction())
             {
-                var section = new RawDataSmallSection(tx.LowLevelTransaction, pageNumber);
+                var section = new ActiveRawDataSmallSection(tx.LowLevelTransaction, pageNumber);
 
                 AssertValueMatches(section, id, "Hello There");
             }
         }
 
-        private static void WriteValue(RawDataSmallSection section, long id, string value)
+        private static void WriteValue(ActiveRawDataSmallSection section, long id, string value)
         {
             var bytes = Encoding.UTF8.GetBytes(value);
             fixed (byte* p = bytes)
@@ -171,7 +171,7 @@ namespace Voron.Tests.RawData
             }
         }
 
-        private static void AssertValueMatches(RawDataSmallSection section, long id, string expected)
+        private static void AssertValueMatches(ActiveRawDataSmallSection section, long id, string expected)
         {
             int size;
             var p = section.DirectRead(id, out size);

@@ -1,58 +1,63 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
-using Voron.Impl.Paging;
 
 namespace Voron.Data.RawData
 {
-    public unsafe delegate void DataMovedDelegate(long previousId, long newId, byte* data, int size);
-
-    /// <summary>
-    /// Handles small values (lt 2Kb) by packing them into pages
-    /// 
-    /// It will allocate a 512 pages (2MB in using 4KB pages) and work with them.
-    /// It can grow up to 2,000 pages (7.8 MB in size using 4KB pages), the section size
-    /// is dependent on the size of the database file.
-    /// 
-    /// All attempts are made to reduce the number of times that we need to move data, even
-    /// at the cost of fragmentation.  
-    /// </summary>
-    public unsafe class RawDataSmallSection
+    public unsafe class RawDataSection
     {
-        public long PageNumber { get; }
-        private readonly LowLevelTransaction _tx;
-        private RawDataSmallSectionPageHeader* _sectionHeader;
-        public readonly int MaxItemSize;
-        private readonly int _pageSize;
+        protected const ushort ReservedHeaderSpace = 96;
         private readonly HashSet<long> _dirtyPages = new HashSet<long>();
+        protected readonly int _pageSize;
+        protected readonly LowLevelTransaction _tx;
+        public readonly int MaxItemSize;
+        protected RawDataSmallSectionPageHeader* _sectionHeader;
 
-        public event DataMovedDelegate DataMoved;
+        public RawDataSection(LowLevelTransaction tx, long pageNumber)
+        {
+            PageNumber = pageNumber;
+            _tx = tx;
+            _pageSize = _tx.DataPager.PageSize;
 
-        const ushort ReservedHeaderSpace = 96;
+            MaxItemSize = (_pageSize - sizeof (RawDataSmallPageHeader))/2;
+
+            _sectionHeader = (RawDataSmallSectionPageHeader*) _tx.GetPage(pageNumber).Pointer;
+        }
+
+        public long PageNumber { get; }
+
 
         public int AllocatedSize => _sectionHeader->AllocatedSize;
 
-        public int Size => _sectionHeader->NumberOfPages * _pageSize;
+        public int Size => _sectionHeader->NumberOfPages*_pageSize;
+
+
+        public ushort* AvailableSpace
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                return (ushort*) ((byte*) _sectionHeader + ReservedHeaderSpace);
+            }
+        }
+
 
         public int NumberOfEntries => _sectionHeader->NumberOfEntries;
 
         public int OverheadSize
             => _pageSize /* header page*/+
-            _sectionHeader->NumberOfEntries * (sizeof(ushort) * 2) /*per entry*/+
-            _sectionHeader->NumberOfPages * sizeof(RawDataSmallPageHeader);
+               _sectionHeader->NumberOfEntries*(sizeof (ushort)*2) /*per entry*/+
+               _sectionHeader->NumberOfPages*sizeof (RawDataSmallPageHeader);
 
         public double Density
         {
             get
             {
                 var total = 0;
-                for (int i = 0; i < _sectionHeader->NumberOfPages; i++)
+                for (var i = 0; i < _sectionHeader->NumberOfPages; i++)
                 {
                     total += AvailableSpace[i];
                 }
@@ -60,27 +65,14 @@ namespace Voron.Data.RawData
             }
         }
 
-        public override string ToString()
+        public bool Contains(long id)
         {
-            return $"PageNumber: {PageNumber}; " +
-                   $"AllocatedSize: {AllocatedSize:#,#;;0}; " +
-                   $"Size: {Size:#,#;;0}; " +
-                   $"Entries: {NumberOfEntries:#,#;;0}; " +
-                   $"Overhead: {OverheadSize:#,#;;0}; " +
-                   $"Density: {Density:P}";
+            var posInPage = (int) (id%_pageSize);
+            var pageNumberInSection = (id - posInPage)/_pageSize;
+
+            return (pageNumberInSection > _sectionHeader->PageNumber &&
+                    pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages);
         }
-
-        public RawDataSmallSection(LowLevelTransaction tx, long pageNumber)
-        {
-            PageNumber = pageNumber;
-            _tx = tx;
-            _pageSize = _tx.DataPager.PageSize;
-
-            MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
-
-            _sectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(pageNumber).Pointer;
-        }
-
 
         public bool TryWrite(long id, byte* data, int size)
         {
@@ -127,14 +119,14 @@ namespace Voron.Data.RawData
 
         public byte* DirectRead(long id, out int size)
         {
-            var posInPage = (int)(id % _pageSize);
-            var pageNumberInSection = (id - posInPage) / _pageSize;
+            var posInPage = (int) (id%_pageSize);
+            var pageNumberInSection = (id - posInPage)/_pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException("Asked to load a past the allocated values: " + id + " from page " +
                                                pageHeader->PageNumber);
 
-            var sizes = (short*)((byte*)pageHeader + posInPage);
+            var sizes = (short*) ((byte*) pageHeader + posInPage);
             if (sizes[1] < 0)
                 throw new InvalidDataException("Asked to load a value that was already freed: " + id + " from page " +
                                                pageHeader->PageNumber);
@@ -146,230 +138,87 @@ namespace Voron.Data.RawData
                     pageHeader->PageNumber);
 
             size = sizes[1];
-            return ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
+            return ((byte*) pageHeader + posInPage + sizeof (short) /*allocated*/+ sizeof (short) /*used*/);
         }
 
-        public void Free(long id)
+        public long GetSectionPageNumber(long id)
         {
             var posInPage = (int)(id % _pageSize);
             var pageNumberInSection = (id - posInPage) / _pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
+            var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection;
+            return sectionPageNumber;
+        }
+
+        public double Free(long id)
+        {
+            var posInPage = (int) (id%_pageSize);
+            var pageNumberInSection = (id - posInPage)/_pageSize;
+            var pageHeader = PageHeaderFor(pageNumberInSection);
+
+            if (Contains(id) == false)
+            {
+                // this is in another section, cannot free it directly, so we'll forward to the right section
+                var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection;
+                return new RawDataSection(_tx, sectionPageNumber).Free(id);
+            }
+
             pageHeader = ModifyPage(pageHeader);
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException("Asked to load a past the allocated values: " + id + " from page " +
                                                pageHeader->PageNumber);
 
-            var sizes = (short*)((byte*)pageHeader + posInPage);
+            var sizes = (short*) ((byte*) pageHeader + posInPage);
             if (sizes[1] < 0)
                 throw new InvalidDataException("Asked to free a value that was already freed: " + id + " from page " +
                                                pageHeader->PageNumber);
 
             sizes[1] = -1;
             pageHeader->NumberOfEntries--;
-            
+
             EnsureHeaderModified();
             _sectionHeader->NumberOfEntries--;
-            var sizeFreed = sizes[0] + (sizeof(short)*2);
+            var sizeFreed = sizes[0] + (sizeof (short)*2);
             _sectionHeader->AllocatedSize -= sizeFreed;
-            AvailableSpace[pageHeader->PageNumber - _sectionHeader->PageNumber] += (ushort)sizeFreed;
+            AvailableSpace[pageHeader->PageNumber - _sectionHeader->PageNumber] += (ushort) sizeFreed;
+
+            return Density;
         }
 
-        /// <summary>
-        /// Try allocating some space in the section, defrag if needed (including moving other valid entries)
-        /// Once a section returned false for try allocation, it should be retired as an actively allocating
-        /// section, and a new one will be generated for new values.
-        /// </summary>
-        public bool TryAllocate(int size, out long id)
+        public event DataMovedDelegate DataMoved;
+
+        public override string ToString()
         {
-            var allocatedSize = (short)size;
-            size += sizeof(short) /*allocated size */+ sizeof(short) /*actual size*/;
-            // we need to have the size value here, so we add that
-
-            if(allocatedSize<=0)
-                throw new ArgumentException("size must be greater than zero, but was " + allocatedSize);
-
-            if (size > MaxItemSize || size > short.MaxValue)
-                throw new ArgumentException("Cannot allocate an item of " + size +
-                                            " bytes in a small data section. Maximum is: " + MaxItemSize);
-
-            //  start reading from the last used page, to skip full pages
-            for (var i = _sectionHeader->LastUsedPage; i < _sectionHeader->NumberOfPages; i++)
-            {
-                if (AvailableSpace[i] < size)
-                    continue;
-
-                var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
-                if (pageHeader->NextAllocation + size > _pageSize)
-                    continue;
-
-                // best case, we have enough space, and we don't need to defrag
-                pageHeader = ModifyPage(pageHeader);
-                id = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
-                ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
-                pageHeader->NextAllocation += (ushort)size;
-                pageHeader->NumberOfEntries++;
-                EnsureHeaderModified();
-                AvailableSpace[i] -= (ushort)size;
-                _sectionHeader->NumberOfEntries++;
-                _sectionHeader->LastUsedPage = i;
-                _sectionHeader->AllocatedSize += size;
-                return true;
-            }
-
-            // we don't have any pages that are free enough, we need to check if we 
-            // need to fragment, so we will scan from the start, see if we have anything
-            // worth doing, and defrag if needed
-            for (ushort i = 0; i < _sectionHeader->NumberOfPages; i++)
-            {
-                if (AvailableSpace[i] < size)
-                    continue;
-                // we have space, but we need to defrag
-                var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
-                pageHeader = DefragPage(pageHeader);
-
-                id = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
-                ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
-                pageHeader->NextAllocation += (ushort)size;
-                pageHeader->NumberOfEntries++;
-                EnsureHeaderModified();
-                _sectionHeader->NumberOfEntries++;
-                _sectionHeader->LastUsedPage = i;
-                _sectionHeader->AllocatedSize += size;
-                AvailableSpace[i] = (ushort)(_pageSize - pageHeader->NextAllocation);
-
-                return true;
-            }
-
-            // we don't have space, caller need to allocate new small section?
-            id = -1;
-            return false;
-        }
-
-        public ushort* AvailableSpace
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return (ushort*)((byte*)_sectionHeader + ReservedHeaderSpace);
-            }
-        }
-
-
-        private unsafe RawDataSmallPageHeader* DefragPage(RawDataSmallPageHeader* pageHeader)
-        {
-            pageHeader = ModifyPage(pageHeader);
-
-            TemporaryPage tmp;
-            using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
-            {
-                var maxUsedPos = pageHeader->NextAllocation;
-                Memory.Copy(tmp.TempPagePointer, (byte*)pageHeader, _pageSize);
-                pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
-                Memory.Set((byte*)pageHeader + pageHeader->NextAllocation, 0,
-                    _pageSize - pageHeader->NextAllocation);
-
-                pageHeader->NumberOfEntries = 0;
-                var pos = pageHeader->NextAllocation;
-                while (pos < maxUsedPos)
-                {
-                    var sizes = ((short*)(tmp.TempPagePointer + pos));
-                    var allocatedSize = sizes[0];
-                    if (allocatedSize <= 0)
-                        throw new InvalidDataException("Allocated size cannot be zero or negative, but was " + allocatedSize +
-                                                       " in page " + pageHeader->PageNumber);
-                    var usedSize = sizes[1]; // used size
-                    if (usedSize < 0)
-                    {
-                        pos += (ushort)(allocatedSize + sizeof(short) + sizeof(short));
-                        continue; // this was freed
-                    }
-
-                    if (DataMoved != null)
-                    {
-                        var prevId = (pageHeader->PageNumber) * _pageSize + pos;
-                        var newId = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
-                        if (prevId != newId)
-                        {
-                            DataMoved(prevId, newId, tmp.TempPagePointer + pos, usedSize);
-                        }
-                    }
-
-                    sizes = (short*)(((byte*)pageHeader) + pageHeader->NextAllocation);
-                    sizes[0] = allocatedSize; // allocated
-                    sizes[1] = usedSize; // used
-                    pageHeader->NextAllocation += sizeof(short) + sizeof(short);
-                    pageHeader->NumberOfEntries++;
-                    Memory.Copy(((byte*)pageHeader) + pageHeader->NextAllocation, tmp.TempPagePointer + pos,
-                        usedSize);
-
-                    pageHeader->NextAllocation += (ushort)allocatedSize;
-                    pos += (ushort) (allocatedSize + sizeof (short) + sizeof (short));
-                }
-            }
-            return pageHeader;
+            return $"PageNumber: {PageNumber}; " +
+                   $"AllocatedSize: {AllocatedSize:#,#;;0}; " +
+                   $"Size: {Size:#,#;;0}; " +
+                   $"Entries: {NumberOfEntries:#,#;;0}; " +
+                   $"Overhead: {OverheadSize:#,#;;0}; " +
+                   $"Density: {Density:P}";
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureHeaderModified()
+        protected void EnsureHeaderModified()
         {
             if (_dirtyPages.Add(_sectionHeader->PageNumber) == false)
                 return;
             var page = _tx.ModifyPage(_sectionHeader->PageNumber);
-            _sectionHeader = (RawDataSmallSectionPageHeader*)page.Pointer;
+            _sectionHeader = (RawDataSmallSectionPageHeader*) page.Pointer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private RawDataSmallPageHeader* ModifyPage(RawDataSmallPageHeader* pageHeader)
+        protected RawDataSmallPageHeader* ModifyPage(RawDataSmallPageHeader* pageHeader)
         {
             if (_dirtyPages.Add(pageHeader->PageNumber) == false)
                 return pageHeader;
             var page = _tx.ModifyPage(pageHeader->PageNumber);
-            return (RawDataSmallPageHeader*)page.Pointer;
+            return (RawDataSmallPageHeader*) page.Pointer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe RawDataSmallPageHeader* PageHeaderFor(long pageNumber)
+        protected RawDataSmallPageHeader* PageHeaderFor(long pageNumber)
         {
-            return (RawDataSmallPageHeader*)(_tx.GetPage(pageNumber).Pointer);
-        }
-
-        public static RawDataSmallSection Create(LowLevelTransaction tx)
-        {
-            ushort numberOfPagesInSmallSection = 512;
-            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 32)
-            {
-                numberOfPagesInSmallSection = (ushort)(tx.DataPager.PageSize - ReservedHeaderSpace);
-            }
-            else if (tx.DataPager.NumberOfAllocatedPages > 1024 * 16)
-            {
-                numberOfPagesInSmallSection = 1024;
-            }
-            Debug.Assert(numberOfPagesInSmallSection <= tx.DataPager.PageSize - ReservedHeaderSpace);
-
-            var sectionStart = tx.AllocatePage(numberOfPagesInSmallSection + 1);
-            tx.BreakLargeAllocationToSeparatePages(sectionStart.PageNumber);
-
-            var sectionHeader = (RawDataSmallSectionPageHeader*)sectionStart.Pointer;
-            sectionHeader->RawDataFlags = RawDataPageFlags.Header;
-            sectionHeader->Flags = PageFlags.RawData | PageFlags.Single;
-            sectionHeader->NumberOfEntries = 0;
-            sectionHeader->NumberOfPages = numberOfPagesInSmallSection;
-            sectionHeader->LastUsedPage = 0;
-
-            var availablespace = (ushort*)((byte*)sectionHeader + ReservedHeaderSpace);
-
-            for (int i = 0; i < numberOfPagesInSmallSection; i++)
-            {
-                var pageHeader = (RawDataSmallPageHeader*)(sectionStart.Pointer + (i + 1) * tx.DataPager.PageSize);
-                Debug.Assert(pageHeader->PageNumber == sectionStart.PageNumber + i + 1);
-                pageHeader->NumberOfEntries = 0;
-                pageHeader->RawDataFlags = RawDataPageFlags.Small;
-                pageHeader->Flags = PageFlags.RawData | PageFlags.Single;
-                pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
-                availablespace[i] = (ushort)(tx.DataPager.PageSize - sizeof(RawDataSmallPageHeader));
-            }
-
-            return new RawDataSmallSection(tx, sectionStart.PageNumber);
+            return (RawDataSmallPageHeader*) (_tx.GetPage(pageNumber).Pointer);
         }
     }
 }

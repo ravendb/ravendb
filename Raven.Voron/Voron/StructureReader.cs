@@ -1,5 +1,7 @@
+using System;
 using Sparrow;
 using System.IO;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Voron.Util;
@@ -11,6 +13,7 @@ namespace Voron
         private readonly Structure<T> _value;
         private readonly byte* _ptr;
         private readonly StructureSchema<T> _schema;
+
         public StructureReader(byte* ptr, StructureSchema<T> schema)
         {
             _ptr = ptr;
@@ -31,8 +34,7 @@ namespace Voron
 
         public uint* VariableOffsets
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (uint*) (_ptr + _schema.FixedSize); }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] get { return (uint*) (_ptr + _schema.FixedSize); }
         }
 
         private int Read7BitEncodedInt(byte* ptr, out int size)
@@ -46,7 +48,7 @@ namespace Voron
             do
             {
                 // Check for a corrupted stream.  Read a max of 5 bytes. 
-                if (shift == 5 * 7)  // 5 bytes max per Int32, shift += 7
+                if (shift == 5*7) // 5 bytes max per Int32, shift += 7
                     throw new InvalidDataException("Invalid 7bit shifted value, used more than 5 bytes");
 
                 // ReadByte handles end of stream cases for us.
@@ -62,8 +64,8 @@ namespace Voron
 
         public int ReadInt(T field)
         {
-            if(_ptr != null)
-                return *((int*)(_ptr + FixedOffset(field)));
+            if (_ptr != null)
+                return *((int*) (_ptr + FixedOffset(field)));
 
             return (int) _value.FixedSizeWrites[field].Value;
         }
@@ -79,7 +81,7 @@ namespace Voron
         public long ReadLong(T field)
         {
             if (_ptr != null)
-                return *((long*)(_ptr + FixedOffset(field)));
+                return *((long*) (_ptr + FixedOffset(field)));
 
             return (long) _value.FixedSizeWrites[field].Value;
         }
@@ -181,7 +183,7 @@ namespace Voron
 
         public string ReadString(T field)
         {
-            var fieldIndex = ((VariableSizeField)_schema.Fields[field.GetHashCode()]).Index;
+            var fieldIndex = ((VariableSizeField) _schema.Fields[field.GetHashCode()]).Index;
 
             if (_ptr != null)
             {
@@ -189,7 +191,7 @@ namespace Voron
                 int valueLengthSize;
                 var length = Read7BitEncodedInt(_ptr + offset, out valueLengthSize);
 
-                return new string((sbyte*)(_ptr + offset + valueLengthSize), 0, length, Encoding.UTF8);
+                return new string((sbyte*) (_ptr + offset + valueLengthSize), 0, length, Encoding.UTF8);
             }
 
             return _value.VariableSizeWrites[fieldIndex].ValueString;
@@ -197,7 +199,7 @@ namespace Voron
 
         public byte[] ReadBytes(T field)
         {
-            var fieldIndex = ((VariableSizeField)_schema.Fields[field.GetHashCode()]).Index;
+            var fieldIndex = ((VariableSizeField) _schema.Fields[field.GetHashCode()]).Index;
 
             if (_ptr != null)
             {
@@ -216,6 +218,82 @@ namespace Voron
             }
 
             return _value.VariableSizeWrites[fieldIndex].Value;
+        }
+
+        public int GetSize(T field)
+        {
+            var structureField = _schema.Fields[field.GetHashCode()];
+            var fixedSizeField = structureField as FixedSizeField;
+            if (fixedSizeField != null)
+                return fixedSizeField.Size;
+
+
+            var variableSizeField = ((VariableSizeField) structureField);
+            var fieldIndex = variableSizeField.Index;
+            if (_ptr != null)
+            {
+                var offset = VariableOffsets[fieldIndex];
+                int valueLengthSize;
+                var length = Read7BitEncodedInt(_ptr + offset, out valueLengthSize);
+                return length;
+            }
+
+            return _value.VariableSizeWrites[fieldIndex].ValueSize;
+        }
+
+        public int CopyToIndex(T field, byte* buffer)
+        {
+            var structureField = _schema.Fields[field.GetHashCode()];
+            var fixedSizeField = structureField as FixedSizeField;
+            if (fixedSizeField != null)
+            {
+                if (fixedSizeField.Type == typeof(int))
+                {
+                    *((int*)(buffer)) = IPAddress.HostToNetworkOrder(ReadInt(field));
+                    return sizeof (int);
+                }
+                if (fixedSizeField.Type == typeof(long))
+                {
+                    *((long*)(buffer)) = IPAddress.HostToNetworkOrder(ReadLong(field));
+                    return sizeof(long);
+                }
+                throw new NotSupportedException("No way to handle type of " + fixedSizeField.Type);
+            }
+            var fieldIndex = ((VariableSizeField)_schema.Fields[field.GetHashCode()]).Index;
+
+            if (_ptr != null)
+            {
+                var offset = VariableOffsets[fieldIndex];
+                int valueLengthSize;
+                var length = Read7BitEncodedInt(_ptr + offset, out valueLengthSize);
+                Memory.Copy(buffer, _ptr + offset + valueLengthSize, length);
+
+                return length;
+            }
+
+            var variableSizeWrite = _value.VariableSizeWrites[fieldIndex];
+            if (variableSizeWrite.Value != null)
+            {
+                fixed (byte* pSrc = variableSizeWrite.Value)
+                {
+                    Memory.Copy(buffer, pSrc, variableSizeWrite.Value.Length);
+                }
+            }
+            else
+            {
+                fixed (char* chars = variableSizeWrite.ValueString)
+                {
+                    int charsUsed;
+                    int bytesUsed;
+                    bool completed;
+                    var encoder = Encoding.UTF8.GetEncoder();
+                    encoder.Convert(chars, variableSizeWrite.ValueString.Length,
+                        buffer, variableSizeWrite.ValueSize, true, 
+                        out charsUsed, out bytesUsed, out completed);
+                }
+            }
+            return variableSizeWrite.ValueSize;
+
         }
     }
 }
