@@ -69,7 +69,7 @@ namespace Raven.Database.Counters.Controllers
         private void ReplicationAction()
         {
             var runningBecauseOfDataModification = false;
-            var timeToWait = TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs * 10);
+            var timeToWait = TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatency.AsTimeSpan.TotalMilliseconds * 10);
 
             //NotifySiblings(); //TODO: implement
 
@@ -78,8 +78,8 @@ namespace Raven.Database.Counters.Controllers
                 SendReplicationToAllServers(runningBecauseOfDataModification);
                 runningBecauseOfDataModification = WaitForCountersUpdate(timeToWait);
                 timeToWait = runningBecauseOfDataModification ? 
-                    TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs) : //by default this is 30 sec
-                    TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs * 10); //by default this is 5 min
+                    storage.Configuration.Counter.ReplicationLatency.AsTimeSpan : //by default this is 30 sec
+                    TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatency.AsTimeSpan.TotalMilliseconds * 10); //by default this is 5 min
             }
         }
 

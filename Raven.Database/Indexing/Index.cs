@@ -66,7 +66,7 @@ namespace Raven.Database.Indexing
         protected Directory directory;
         protected readonly IndexDefinition indexDefinition;
         private volatile string waitReason;
-        private readonly long flushSize;
+        private readonly Size flushSize;
         private long writeErrors;
         // Users sometimes configure index outputs without realizing that we need to count on that for memory 
         // management. That can result in very small batch sizes, so we want to make sure that we don't trust
@@ -119,7 +119,7 @@ namespace Raven.Database.Indexing
             if (logIndexing.IsDebugEnabled)
                 logIndexing.Debug("Creating index for {0}", PublicName);
             this.directory = directory;
-            flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
+            flushSize = context.Configuration.Indexing.FlushIndexToDiskSize;
             _indexCreationTime = SystemTime.UtcNow;
             RecreateSearcher();
 
@@ -592,7 +592,7 @@ namespace Raven.Database.Indexing
                             {
                                 WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 
-                                if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
+                                if (indexWriter != null && indexWriter.RamSize() >= flushSize)
                                 {
                                     Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
                                     flushed = true;

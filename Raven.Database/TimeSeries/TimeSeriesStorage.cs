@@ -82,7 +82,7 @@ namespace Raven.Database.TimeSeries
             notificationPublisher = new NotificationPublisher(TransportState);
             ExtensionsState = new AtomicDictionary<object>();
             ReplicationTask = new ReplicationTask(this);
-            ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
+            ReplicationTimeoutInMs = (int) configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
 
             Configuration = configuration;
             Initialize();
@@ -122,16 +122,16 @@ namespace Raven.Database.TimeSeries
                 return StorageEnvironmentOptions.CreateMemoryOnly();
 
             bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
+            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)] ?? "false", out allowIncrementalBackupsSetting) == false)
+                throw new ArgumentException(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups) + " settings key contains invalid value");
 
             var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
 
-            var tempPath = settings[Constants.Voron.TempPath];
-            var journalPath = settings[Constants.RavenTxJournalPath];
+            var tempPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.TempPath)];
+            var journalPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)];
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
             return options;

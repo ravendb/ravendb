@@ -224,83 +224,83 @@ namespace Raven.Database.Config
             //Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
             //Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 
-            Voron.MaxBufferPoolSize = new IntegerSetting(settings[Constants.Voron.MaxBufferPoolSize], 4);
-            Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
-            Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 6144);
+            //Voron.MaxBufferPoolSize = new IntegerSetting(settings[Constants.Voron.MaxBufferPoolSize], 4);
+            //Voron.InitialFileSize = new NullableIntegerSetting(settings[Constants.Voron.InitialFileSize], (int?)null);
+            //Voron.MaxScratchBufferSize = new IntegerSetting(settings[Constants.Voron.MaxScratchBufferSize], 6144);
 
-            var maxScratchBufferSize = Voron.MaxScratchBufferSize.Value;
-            var scratchBufferSizeNotificationThreshold = -1;
-            if (maxScratchBufferSize > 1024)
-                scratchBufferSizeNotificationThreshold = 1024;
-            else if (maxScratchBufferSize > 512)
-                scratchBufferSizeNotificationThreshold = 512;
-            Voron.ScratchBufferSizeNotificationThreshold = new IntegerSetting(settings[Constants.Voron.ScratchBufferSizeNotificationThreshold], scratchBufferSizeNotificationThreshold);
+            //var maxScratchBufferSize = Voron.MaxScratchBufferSize.Value;
+            //var scratchBufferSizeNotificationThreshold = -1;
+            //if (maxScratchBufferSize > 1024)
+            //    scratchBufferSizeNotificationThreshold = 1024;
+            //else if (maxScratchBufferSize > 512)
+            //    scratchBufferSizeNotificationThreshold = 512;
+            //Voron.ScratchBufferSizeNotificationThreshold = new IntegerSetting(settings[Constants.Voron.ScratchBufferSizeNotificationThreshold], scratchBufferSizeNotificationThreshold);
 
-            Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
-            Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
-            Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
-            Voron.JournalsStoragePath = new StringSetting(settings[Constants.RavenTxJournalPath], (string)null);
+            //Voron.AllowIncrementalBackups = new BooleanSetting(settings[Constants.Voron.AllowIncrementalBackups], false);
+            //Voron.AllowOn32Bits = new BooleanSetting(settings[Constants.Voron.AllowOn32Bits], false);
+            //Voron.TempPath = new StringSetting(settings[Constants.Voron.TempPath], (string)null);
+            //Voron.JournalsStoragePath = new StringSetting(settings[Constants.RavenTxJournalPath], (string)null);
 
-            Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
-            Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
-            Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"],false);
-            Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
+            //Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
+            //Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
+            //Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"],false);
+            //Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
 
-            FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
-            FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
-            FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
-            FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
-            FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
+            //FileSystem.MaximumSynchronizationInterval = new TimeSpanSetting(settings[Constants.FileSystem.MaximumSynchronizationInterval], TimeSpan.FromSeconds(60), TimeSpanArgumentType.FromParse);
+            //FileSystem.IndexStoragePath = new StringSetting(settings[Constants.FileSystem.IndexStorageDirectory], string.Empty);
+            //FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
+            //FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
+            //FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
 
-            Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
-            Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
-            Counter.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.Counter.DeletedTombstonesInBatch], 1000);
-            Counter.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.Counter.ReplicationLatencyMs], 30 * 1000);
+            //Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
+            //Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+            //Counter.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.Counter.DeletedTombstonesInBatch], 1000);
+            //Counter.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.Counter.ReplicationLatencyMs], 30 * 1000);
 
-            TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
-            TimeSeries.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.TimeSeries.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
-            TimeSeries.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.TimeSeries.DeletedTombstonesInBatch], 1000);
-            TimeSeries.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.TimeSeries.ReplicationLatencyMs], 30 * 1000);
+            //TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
+            //TimeSeries.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.TimeSeries.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+            //TimeSeries.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.TimeSeries.DeletedTombstonesInBatch], 1000);
+            //TimeSeries.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.TimeSeries.ReplicationLatencyMs], 30 * 1000);
 
-            Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
-            Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
-            Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
+            //Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
+            //Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
+            //Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
 
-            Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
-            Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
-            Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking],false);
-            Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 512);
-            Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
+            //Indexing.MaxNumberOfItemsToProcessInTestIndexes = new IntegerSetting(settings[Constants.MaxNumberOfItemsToProcessInTestIndexes], 512);
+            //Indexing.DisableIndexingFreeSpaceThreshold = new IntegerSetting(settings[Constants.Indexing.DisableIndexingFreeSpaceThreshold], 2048);
+            //Indexing.DisableMapReduceInMemoryTracking = new BooleanSetting(settings[Constants.Indexing.DisableMapReduceInMemoryTracking],false);
+            //Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 512);
+            //Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
 
-            Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
-            Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
-            Cluster.MaxLogLengthBeforeCompaction = new IntegerSetting(settings["Raven/Cluster/MaxLogLengthBeforeCompaction"], RaftEngineOptions.DefaultMaxLogLengthBeforeCompaction);
-            Cluster.MaxEntriesPerRequest = new IntegerSetting(settings["Raven/Cluster/MaxEntriesPerRequest"], RaftEngineOptions.DefaultMaxEntiresPerRequest);
-            Cluster.MaxStepDownDrainTime = new TimeSpanSetting(settings["Raven/Cluster/MaxStepDownDrainTime"], RaftEngineOptions.DefaultMaxStepDownDrainTime, TimeSpanArgumentType.FromParse);
+            //Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
+            //Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
+            //Cluster.MaxLogLengthBeforeCompaction = new IntegerSetting(settings["Raven/Cluster/MaxLogLengthBeforeCompaction"], RaftEngineOptions.DefaultMaxLogLengthBeforeCompaction);
+            //Cluster.MaxEntriesPerRequest = new IntegerSetting(settings["Raven/Cluster/MaxEntriesPerRequest"], RaftEngineOptions.DefaultMaxEntiresPerRequest);
+            //Cluster.MaxStepDownDrainTime = new TimeSpanSetting(settings["Raven/Cluster/MaxStepDownDrainTime"], RaftEngineOptions.DefaultMaxStepDownDrainTime, TimeSpanArgumentType.FromParse);
 
-            DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], "voron");
+            //DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], "voron");
 
-            FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
+            //FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 
-            TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
+            //TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 
-            ImplicitFetchFieldsFromDocumentMode = new EnumSetting<ImplicitFetchFieldsMode>(settings["Raven/ImplicitFetchFieldsFromDocumentMode"], ImplicitFetchFieldsMode.Enabled);
+            //ImplicitFetchFieldsFromDocumentMode = new EnumSetting<ImplicitFetchFieldsMode>(settings["Raven/ImplicitFetchFieldsFromDocumentMode"], ImplicitFetchFieldsMode.Enabled);
             
             if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 
-            WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
+            //WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
 
-            TempPath = new StringSetting(settings[Constants.TempPath], Path.GetTempPath());
+            //TempPath = new StringSetting(settings[Constants.TempPath], Path.GetTempPath());
 
-            FillMonitoringSettings();
+            //FillMonitoringSettings();
         }
 
         private void FillMonitoringSettings()
         {
-            Monitoring.Snmp.Enabled = new BooleanSetting(settings[Constants.Monitoring.Snmp.Enabled], false);
-            Monitoring.Snmp.Community = new StringSetting(settings[Constants.Monitoring.Snmp.Community], "ravendb");
-            Monitoring.Snmp.Port = new IntegerSetting(settings[Constants.Monitoring.Snmp.Port], 161);
+            //Monitoring.Snmp.Enabled = new BooleanSetting(settings[Constants.Monitoring.Snmp.Enabled], false);
+            //Monitoring.Snmp.Community = new StringSetting(settings[Constants.Monitoring.Snmp.Community], "ravendb");
+            //Monitoring.Snmp.Port = new IntegerSetting(settings[Constants.Monitoring.Snmp.Port], 161);
         }
 
         public IntegerSetting MaxClauseCount { get; private set; }

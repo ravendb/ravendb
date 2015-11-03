@@ -120,7 +120,7 @@ namespace Raven.Database.Actions
                 Constants.RavenReplicationDocsTombstones
             };
 
-            var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.TombstoneRetentionTime);
+            var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.Core.TombstoneRetentionTime.AsTimeSpan);
 
             foreach (var listName in tomstoneLists)
             {

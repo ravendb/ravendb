@@ -37,7 +37,7 @@ namespace Raven.Client.Extensions
                 Id = Constants.FileSystem.Prefix + name,
                 Settings =
                 {
-                    {Constants.FileSystem.DataDirectory, Path.Combine("~", "FileSystems", name) },
+                    {"Raven/FileSystem/DataDir", Path.Combine("~", "FileSystems", name) },
                 }
             };
         }
@@ -51,7 +51,7 @@ namespace Raven.Client.Extensions
                 Id = Constants.TimeSeries.Prefix + name,
                 Settings =
                 {
-                    {Constants.TimeSeries.DataDirectory, Path.Combine("~", "TimeSeries", name)},
+                    {"Raven/TimeSeries/DataDir", Path.Combine("~", "TimeSeries", name)},
                 }
             };
         }
@@ -65,7 +65,7 @@ namespace Raven.Client.Extensions
                 Id = Constants.Counter.Prefix + name,
                 Settings =
                 {
-                    {Constants.Counter.DataDirectory, Path.Combine("~", "Counters", name)},
+                    {"Raven/Counters/DataDir", Path.Combine("~", "Counters", name)},
                 }
             };
         }

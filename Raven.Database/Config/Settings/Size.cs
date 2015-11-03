@@ -12,7 +12,8 @@ namespace Raven.Database.Config.Settings
 {
     public struct Size
     {
-        public static readonly Type TypeOf = typeof(Size);
+        public static readonly Type TypeOf = typeof (Size);
+        public static readonly Type NullableTypeOf = typeof (Size?);
 
         private const long OneKb = 1024;
         private const long OneMb = OneKb * 1024;

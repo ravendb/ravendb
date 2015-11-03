@@ -38,7 +38,6 @@ namespace Raven.Tests.Server.Runner.Data
                                         RunInMemory = RunInMemory,
                                          Port = Port,
                                     },
-                                    DefaultStorageTypeName = DefaultStorageTypeName
                                 };
 
             foreach (var key in Settings.Keys)

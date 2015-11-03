@@ -664,7 +664,7 @@ namespace Raven.Database.Indexing
                 string configurationKey = null;
                 if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.VoronTypeName, StringComparison.OrdinalIgnoreCase))
                 {
-                    configurationKey = Constants.Voron.MaxScratchBufferSize;
+                    configurationKey = InMemoryRavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize);
                 }
 
                 Debug.Assert(configurationKey != null);

@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
                 },
                 AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
             };
-            configuration.Core.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            configuration.Core.RunInMemory = true;
 
             var ravenDbServer = new RavenDbServer(configuration)
             {

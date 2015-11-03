@@ -87,8 +87,8 @@ namespace Raven.Database.FileSystem.Controllers
 
         private static void EnsureFileSystemHasRequiredSettings(string id, FileSystemDocument fsDoc)
         {
-            if (!fsDoc.Settings.ContainsKey(Constants.FileSystem.DataDirectory))
-                fsDoc.Settings[Constants.FileSystem.DataDirectory] = "~/FileSystems/" + id;
+            if (!fsDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)))
+                fsDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = "~/FileSystems/" + id;
         }
 
         [HttpDelete]
@@ -278,9 +278,6 @@ namespace Raven.Database.FileSystem.Controllers
                 IsRunning = true,
             })));
 
-            if (filesystemDocument.Settings.ContainsKey(Constants.FileSystem.Storage) == false)
-                filesystemDocument.Settings[Constants.FileSystem.Storage] = transactionalStorage.FriendlyName.ToLower() ?? transactionalStorage.GetType().AssemblyQualifiedName;
-
             transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, filesystemDocument);
 
             return GetEmptyMessage(HttpStatusCode.Created);
@@ -425,8 +422,6 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             }
 
-
-            ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
             ravenConfiguration.CustomizeValuesForFileSystemTenant(filesystemName);
             ravenConfiguration.Initialize();
 
@@ -494,12 +489,12 @@ namespace Raven.Database.FileSystem.Controllers
                     if (filesystemDocument == null)
                         return;
 
-                    filesystemDocument.Settings[Constants.FileSystem.DataDirectory] = documentDataDir;
+                    filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = documentDataDir;
 
                     if (restoreRequest.IndexesLocation != null)
                         filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
                     if (restoreRequest.JournalsLocation != null)
-                        filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                        filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
                     filesystemDocument.Id = filesystemName;
 
                     FileSystemsLandlord.Protect(filesystemDocument);

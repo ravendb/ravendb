@@ -61,8 +61,7 @@ namespace Raven.Tests.Issues
                     RunInMemory = false,
                     DataDirectory = dataDirectory,
                     Port = port,
-                },
-                DefaultStorageTypeName = "voron"
+                }
             };
 
             if (removeDataDirectory)

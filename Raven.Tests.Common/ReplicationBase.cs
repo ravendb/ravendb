@@ -180,8 +180,7 @@ namespace Raven.Tests.Common
                     RunInMemory = previousServer.SystemDatabase.Configuration.Core.RunInMemory,
                     DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
                     Port = previousServer.SystemDatabase.Configuration.Core.Port,
-                },
-                DefaultStorageTypeName = GetDefaultStorageType()
+                }
             };
 
             serverConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;

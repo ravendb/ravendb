@@ -36,6 +36,7 @@ using Task = System.Threading.Tasks.Task;
 using Raven.Unix.Native;
 using Raven.Abstractions;
 using Raven.Abstractions.Threading;
+using Raven.Database.Config.Settings;
 using Raven.Database.Util;
 using Voron.Impl.Paging;
 
@@ -83,7 +84,7 @@ namespace Raven.Storage.Voron
             documentCacher = new DocumentCacher(configuration);
             exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(
-                configuration.Storage.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
+                configuration.Storage.MaxBufferPoolSize.ValueInBytes, 
                 int.MaxValue); // 2GB max buffer size (voron limit)
             this.onNestedTransactionEnter = onNestedTransactionEnter;
             this.onNestedTransactionExit = onNestedTransactionExit;
@@ -334,10 +335,10 @@ namespace Raven.Storage.Voron
 
             options.OnScratchBufferSizeChanged += size =>
             {
-                if (configuration.Storage.ScratchBufferSizeNotificationThreshold < 0)
+                if (configuration.Storage.ScratchBufferSizeNotificationThreshold == null)
                     return;
 
-                if (size < configuration.Storage.ScratchBufferSizeNotificationThreshold * 1024L * 1024L)
+                if (new Size(size, SizeUnit.Bytes) < configuration.Storage.ScratchBufferSizeNotificationThreshold)
                     return;
 
                 RunTransactionalStorageNotificationHandlers();
@@ -363,8 +364,8 @@ namespace Raven.Storage.Voron
         private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnly();
-            options.InitialFileSize = configuration.Storage.InitialFileSize;
-            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize * 1024L * 1024L;
+            options.InitialFileSize = configuration.Storage.InitialFileSize?.ValueInBytes;
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.ValueInBytes;
 
             return options;
         }
@@ -387,8 +388,8 @@ namespace Raven.Storage.Voron
             var journalPath = configuration.Storage.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
-            options.InitialFileSize = configuration.Storage.InitialFileSize;
-            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize * 1024L * 1024L;
+            options.InitialFileSize = configuration.Storage.InitialFileSize?.ValueInBytes;
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.ValueInBytes;
 
             return options;
         }

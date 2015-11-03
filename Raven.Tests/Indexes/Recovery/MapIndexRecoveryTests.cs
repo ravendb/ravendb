@@ -38,7 +38,7 @@ namespace Raven.Tests.Indexes.Recovery
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.FlushIndexToDiskSizeInMb = 0;
+            configuration.Indexing.FlushIndexToDiskSize = new Size(0, SizeUnit.Bytes);
         }
 
         [Fact]

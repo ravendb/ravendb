@@ -24,7 +24,7 @@ namespace Raven.Tests.Core
             var configuration = new RavenConfiguration();
             configuration.Core.Port = Port;
             configuration.Server.Name = ServerName;
-            configuration.Core.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
             configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
             configuration.Storage.AllowOn32Bits = true;

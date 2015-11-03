@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Controllers
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
-            string tempPath = FileSystem.Configuration.TempPath;
+            string tempPath = FileSystem.Configuration.Core.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
                 File.Delete(fullTempPath);

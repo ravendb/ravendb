@@ -19,7 +19,7 @@ namespace Raven.Tests
             var configuration = new InMemoryRavenConfiguration { Settings =
             {
                 { "Raven/DataDir", path },
-                { Constants.FileSystem.DataDirectory, Path.Combine(path, "FileSystem")}
+                { InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine(path, "FileSystem")}
             } };
 
             configuration.Initialize();

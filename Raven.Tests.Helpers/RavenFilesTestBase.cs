@@ -23,6 +23,7 @@ using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem;
 using Raven.Database.Server;
@@ -77,7 +78,6 @@ namespace Raven.Tests.Helpers
                                                     Action<RavenConfiguration> customConfig = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-            var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
             var ravenConfiguration = new RavenConfiguration
@@ -91,7 +91,6 @@ namespace Raven.Tests.Helpers
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif                
-                DefaultStorageTypeName = storageType,
                 AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
                 Encryption = 
                 { 
@@ -99,9 +98,8 @@ namespace Raven.Tests.Helpers
                 },
                 FileSystem = 
                 {
-                    MaximumSynchronizationInterval = this.SynchronizationInterval, 
+                    MaximumSynchronizationInterval = new TimeSetting((long) this.SynchronizationInterval.TotalSeconds, TimeUnit.Seconds), 
                     DataDirectory = Path.Combine(directory, "FileSystems"),
-                    DefaultStorageTypeName = storageType
                 },
             };
 
@@ -265,19 +263,6 @@ namespace Raven.Tests.Helpers
             var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(fileSystemName))).ToString("N").Substring(0, 8);
 
             return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
-        }
-
-        public static string GetDefaultStorageType(string requestedStorage = null)
-        {
-            string defaultStorageType;
-            var envVar = Environment.GetEnvironmentVariable("raventest_storage_engine");
-            if (string.IsNullOrEmpty(envVar) == false)
-                defaultStorageType = envVar;
-            else if (requestedStorage != null)
-                defaultStorageType = requestedStorage;
-            else
-                defaultStorageType = "voron";
-            return defaultStorageType;
         }
 
         protected static string StreamToString(Stream stream)

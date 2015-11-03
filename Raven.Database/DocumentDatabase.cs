@@ -1189,7 +1189,7 @@ namespace Raven.Database
                     && configuration.Storage.AllowOn32Bits == false && 
                     Environment.Is64BitProcess == false)
                 {
-                    throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+                    throw new Exception("Voron is prone to failure in 32-bits mode. Use " + InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
                 }
             }
 

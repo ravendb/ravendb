@@ -96,7 +96,7 @@ namespace Raven.Bundles.Replication.Tasks
         {
             docDb = database;
 
-            var replicationRequestTimeoutInMs = docDb.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
+            var replicationRequestTimeoutInMs = (int) docDb.Configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
 
             autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext, PrefetchingUser.Replicator);
             httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
@@ -851,7 +851,7 @@ namespace Raven.Bundles.Replication.Tasks
 
         private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStrategy destination, PrefetchingBehavior prefetchingBehavior, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope scope)
         {
-            var timeout = TimeSpan.FromSeconds(docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds);
+            var timeout = docDb.Configuration.Replication.FetchingFromDiskTimeoutInSeconds.AsTimeSpan;
             var duration = Stopwatch.StartNew();
             var result = new JsonDocumentsToReplicate
             {

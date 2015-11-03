@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(store.Configuration.TombstoneRetentionTime);
+                SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(store.Configuration.Core.TombstoneRetentionTime.AsTimeSpan);
 
                 // create document
                 string user1;

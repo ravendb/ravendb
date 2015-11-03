@@ -77,8 +77,8 @@ namespace Raven.Database.Counters
             transportState = receivedTransportState ?? new TransportState();
             notificationPublisher = new NotificationPublisher(transportState);
             replicationTask = new ReplicationTask(this);
-            ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
-            tombstoneRetentionTime = configuration.Counter.TombstoneRetentionTime;
+            ReplicationTimeoutInMs = (int) configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
+            tombstoneRetentionTime = configuration.Counter.TombstoneRetentionTime.AsTimeSpan;
             deletedTombstonesInBatch = configuration.Counter.DeletedTombstonesInBatch;
             metricsCounters = new CountersMetricsManager();
             Configuration = configuration;
@@ -260,16 +260,16 @@ namespace Raven.Database.Counters
                 return StorageEnvironmentOptions.CreateMemoryOnly();
 
             bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
+            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)] ?? "false", out allowIncrementalBackupsSetting) == false)
+                throw new ArgumentException(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups) + " settings key contains invalid value");
 
             var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
 
-            var tempPath = settings[Constants.Voron.TempPath];
-            var journalPath = settings[Constants.RavenTxJournalPath];
+            var tempPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.TempPath)];
+            var journalPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)];
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
             return options;

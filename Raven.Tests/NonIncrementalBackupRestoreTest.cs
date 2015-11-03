@@ -42,7 +42,6 @@ namespace Raven.Tests
         {
             db = new DocumentDatabase(new RavenConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     RunInMemory = false,
@@ -74,7 +73,6 @@ namespace Raven.Tests
 
             MaintenanceActions.Restore(new RavenConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     RunInMemory = false,
@@ -129,7 +127,6 @@ namespace Raven.Tests
             Assert.Throws<IOException>(() => 
                 MaintenanceActions.Restore(new RavenConfiguration
                 {
-                    DefaultStorageTypeName = storageName, 
                     Core =
                     {
                         RunInMemory = false,
@@ -171,7 +168,6 @@ namespace Raven.Tests
             Assert.DoesNotThrow(() =>
                 MaintenanceActions.Restore(new RavenConfiguration
                 {
-                    DefaultStorageTypeName = storageName,
                     Core =
                     {
                         RunInMemory = false,
@@ -231,7 +227,6 @@ namespace Raven.Tests
             Assert.DoesNotThrow(() =>
                 MaintenanceActions.Restore(new RavenConfiguration
                 {
-                    DefaultStorageTypeName = storageName,
                     Core =
                     {
                         RunInMemory = false,

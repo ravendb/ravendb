@@ -153,7 +153,7 @@ namespace Raven.Database.Impl
                 var fieldsToFetchFromDocument = fieldsToFetch.Fields.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
                 if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
                 {
-                    switch (configuration.ImplicitFetchFieldsFromDocumentMode)
+                    switch (configuration.Core.ImplicitFetchFieldsFromDocumentMode)
                     {
                         case ImplicitFetchFieldsMode.Enabled:
                             doc = GetDocumentWithCaching(queryResult);
@@ -183,7 +183,7 @@ namespace Raven.Database.Impl
                                                   "Fetching id: {2}", indexDefinition.Name, string.Join(", ", fieldsToFetchFromDocument), fetchingId);
                             throw new ImplicitFetchFieldsFromDocumentNotAllowedException(message);
                         default:
-                            throw new ArgumentOutOfRangeException(configuration.ImplicitFetchFieldsFromDocumentMode.ToString());
+                            throw new ArgumentOutOfRangeException(configuration.Core.ImplicitFetchFieldsFromDocumentMode.ToString());
                     }
                 }
             }

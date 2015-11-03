@@ -111,7 +111,7 @@ namespace Raven.Tests.Issues
                     {
                         Settings =
                         {
-                            {Constants.Voron.AllowIncrementalBackups, "true"}
+                            {InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
                         }
                     }, new DatabaseRestoreRequest
                     {

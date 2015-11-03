@@ -144,27 +144,11 @@ namespace Raven.Database.FileSystem
 
         internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
         {
-            //TODO: Check if we need all this complexity at all. 
-
-            // We select the most specific.
-            var storageType = configuration.FileSystem.DefaultStorageTypeName;
-            if (storageType == null) // We choose the system wide if not defined.
-                storageType = configuration.DefaultStorageTypeName;
-
-            if (storageType != null)
-                storageType = storageType.ToLowerInvariant();
-
-            switch (storageType)
+            if (Environment.Is64BitProcess == false && configuration.Storage.AllowOn32Bits == false)
             {
-                case InMemoryRavenConfiguration.VoronTypeName:
-                    if (Environment.Is64BitProcess == false && configuration.Storage.AllowOn32Bits == false)
-                    {
-                        throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
-                    }
-                    return new TransactionalStorage(configuration);
-                default: // We choose voron by default.
-                    return new TransactionalStorage(configuration);
+                throw new Exception("Voron is prone to failure in 32-bits mode. Use " + InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
             }
+            return new TransactionalStorage(configuration);
         }
 
         public IDisposable DisableAllTriggersForCurrentThread()

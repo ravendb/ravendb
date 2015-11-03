@@ -69,7 +69,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.Counter.DataDirectory, systemDatabase.Configuration);		
+            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory), systemDatabase.Configuration);		
         }
 
         protected InMemoryRavenConfiguration CreateConfiguration(
@@ -104,8 +104,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Counter.DataDirectory);
-            //config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.Core.DataDirectory);
+            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
 
             config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
@@ -127,8 +126,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
-            if (document.Settings.Keys.Contains(Constants.Counter.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find " + Constants.Counter.DataDirectory);
+            if (document.Settings.Keys.Contains(InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledCounterStorage)
                 throw new InvalidOperationException("The counter storage has been disabled.");

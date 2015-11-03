@@ -2,6 +2,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Database.Config;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -17,7 +18,6 @@ namespace Raven.Tests.Issues
             {				
                 store.Configuration.Core.RunInMemory = true;
                 store.Configuration.Settings[Constants.ActiveBundles] = "Versioning";
-                store.Configuration.DefaultStorageTypeName = "voron";
                 store.Initialize();
 
                 DoTest(store);
@@ -38,7 +38,7 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         { Constants.ActiveBundles, "Versioning"},
-                        { Constants.RavenDataDir, "~/Data"}
+                        { InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory), "~/Data"}
                     }
                 });
 

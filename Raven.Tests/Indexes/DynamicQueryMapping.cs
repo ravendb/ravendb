@@ -22,7 +22,7 @@ namespace Raven.Tests.Indexes
         {
             var configuration = new RavenConfiguration();
             configuration.Core.DataDirectory = Path.Combine(NewDataPath(), "System");
-            configuration.Core.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            configuration.Core.RunInMemory = true;
             return new DocumentDatabase(configuration, null);
         }
 
