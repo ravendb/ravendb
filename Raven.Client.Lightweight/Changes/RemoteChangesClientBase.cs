@@ -295,7 +295,7 @@ namespace Raven.Client.Changes
                 case "Heartbeat":
                     break;
                 default:
-                    NotifySubscribers(type, value, Counters);
+                    NotifySubscribers(type, value, Counters.Snapshot);
                     break;
             }
         }
