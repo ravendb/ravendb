@@ -187,8 +187,20 @@ namespace Voron.Data.Tables
             var keySlice = GetPrimaryKeySlice(new StructureReader<T>(ptr,_schema.StructureSchema));
             var tree = GetTree(_schema.Key.Name);
             tree.Delete(keySlice);
-            
+
             //TODO: Delete value from indexes
+
+            var largeValue = (id%_pageSize) == 0;
+            if (largeValue)
+            {
+                var page = _tx.LowLevelTransaction.GetPage(id/_pageSize);
+                var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+                for (int i = 0; i < numberOfPages; i++)
+                {
+                    _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
+                }
+                return;
+            }
 
             var density = ActiveDataSmallSection.Free(id);
             if (density <= 0.15 && ActiveDataSmallSection.Contains(id) == false )
