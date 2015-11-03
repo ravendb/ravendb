@@ -12,6 +12,9 @@ namespace Raven.Abstractions.Util
         private readonly ConcurrentDictionary<string, object> locks;
         private readonly ConcurrentDictionary<string, TVal> items;
         private readonly EasyReaderWriterLock globalLocker = new EasyReaderWriterLock();
+        private List<KeyValuePair<string, TVal>> snapshot;
+        private long snapshotVersion;
+        private long version;
         private static readonly string NullValue = "Null Replacement: " + Guid.NewGuid();
 
         public AtomicDictionary()
@@ -24,7 +27,6 @@ namespace Raven.Abstractions.Util
         {
             items = new ConcurrentDictionary<string, TVal>(comparer);
             locks = new ConcurrentDictionary<string, object>(comparer);
-
         }
 
         public IEnumerable<TVal> Values
@@ -34,7 +36,7 @@ namespace Raven.Abstractions.Util
 
         public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
         {
-            using(globalLocker.EnterReadLock())
+            using (globalLocker.EnterReadLock())
             {
                 var actualGenerator = valueGenerator;
                 if (key == null)
@@ -45,14 +47,30 @@ namespace Raven.Abstractions.Util
                     return val;
                 lock (locks.GetOrAdd(key, new object()))
                 {
-                    return items.GetOrAdd(key, actualGenerator);
+                    var result = items.GetOrAdd(key, actualGenerator);
+                    Interlocked.Increment(ref version);
+                    return result;
                 }
+            }
+        }
+
+        public List<KeyValuePair<string, TVal>> Snapshot
+        {
+            get
+            {
+                var currentVersion = Interlocked.Read(ref version);
+                if (currentVersion != snapshotVersion || snapshot == null)
+                {
+                    snapshot = new List<KeyValuePair<string, TVal>>(items);
+                    snapshotVersion = currentVersion;
+                }
+                return snapshot;
             }
         }
 
         public IDisposable WithLockFor(string key)
         {
-            using(globalLocker.EnterReadLock())
+            using (globalLocker.EnterReadLock())
             {
                 var locker = locks.GetOrAdd(key, new object());
                 var release = new DisposableAction(() => Monitor.Exit(locker));
@@ -70,13 +88,14 @@ namespace Raven.Abstractions.Util
                 {
                     var addValue = valueGenerator(key);
                     items.AddOrUpdate(key, addValue, (s, val) => addValue);
+                    Interlocked.Increment(ref version);
                 }
             }
         }
 
         public void Remove(string key)
         {
-            using(globalLocker.EnterReadLock())
+            using (globalLocker.EnterReadLock())
             {
                 key = key ?? NullValue;
                 object value;
@@ -84,6 +103,7 @@ namespace Raven.Abstractions.Util
                 {
                     TVal val;
                     items.TryRemove(key, out val); // just to be on the safe side
+                    Interlocked.Increment(ref version);
                     return;
                 }
                 lock (value)
@@ -92,6 +112,7 @@ namespace Raven.Abstractions.Util
                     locks.TryRemove(key, out o);
                     TVal val;
                     items.TryRemove(key, out val);
+                    Interlocked.Increment(ref version);
                 }
             }
         }
@@ -110,6 +131,8 @@ namespace Raven.Abstractions.Util
         {
             items.Clear();
             locks.Clear();
+
+            Interlocked.Increment(ref version);
         }
 
         public bool TryGetValue(string key, out TVal val)
@@ -119,11 +142,13 @@ namespace Raven.Abstractions.Util
 
         public bool TryRemove(string key, out TVal val)
         {
-            using(globalLocker.EnterReadLock())
+            using (globalLocker.EnterReadLock())
             {
                 var result = items.TryRemove(key, out val);
                 object value;
                 locks.TryRemove(key, out value);
+
+                Interlocked.Increment(ref version);
                 return result;
             }
         }
