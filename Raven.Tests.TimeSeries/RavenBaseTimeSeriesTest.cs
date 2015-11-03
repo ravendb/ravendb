@@ -17,72 +17,72 @@ using Raven.Tests.Helpers;
 
 namespace Raven.Tests.TimeSeries
 {
-	public class RavenBaseTimeSeriesTest : RavenTestBase
-	{
-		protected readonly List<TimeSeriesStore> timeSeriesStores = new List<TimeSeriesStore>();
+    public class RavenBaseTimeSeriesTest : RavenTestBase
+    {
+        protected readonly List<TimeSeriesStore> timeSeriesStores = new List<TimeSeriesStore>();
 
-		protected readonly string DefaultTimeSeriesName = "SeriesName-";
+        protected readonly string DefaultTimeSeriesName = "SeriesName-";
 
-		protected RavenBaseTimeSeriesTest()
-		{
-			foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueTimeSeriesName*"))
-				IOExtensions.DeleteDirectory(folder);
+        protected RavenBaseTimeSeriesTest()
+        {
+            foreach (var folder in Directory.EnumerateDirectories(Directory.GetCurrentDirectory(), "ThisIsRelativelyUniqueTimeSeriesName*"))
+                IOExtensions.DeleteDirectory(folder);
 
-			// DefaultTimeSeriesName += Guid.NewGuid();
-		}
+            // DefaultTimeSeriesName += Guid.NewGuid();
+        }
 
-		protected ITimeSeriesStore NewRemoteTimeSeriesStore(int port = 8079, RavenDbServer ravenDbServer = null, bool createDefaultTimeSeries = true, OperationCredentials credentials = null)
-		{
-			ravenDbServer = GetNewServer(requestedStorage: "voron", databaseName: DefaultTimeSeriesName + "Database", port: port);
+        protected ITimeSeriesStore NewRemoteTimeSeriesStore(int port = 8079, RavenDbServer ravenDbServer = null, bool createDefaultTimeSeries = true, OperationCredentials credentials = null)
+        {
+            ravenDbServer = GetNewServer(requestedStorage: "voron", databaseName: DefaultTimeSeriesName + "Database", port: port);
 
-			var timeSeriesStore = new TimeSeriesStore
-			{
-				Url = GetServerUrl(true, ravenDbServer.SystemDatabase.ServerUrl),
-				Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
-				Name = DefaultTimeSeriesName + (timeSeriesStores.Count + 1)
-			};
+            var timeSeriesStore = new TimeSeriesStore
+            {
+                Url = GetServerUrl(true, ravenDbServer.SystemDatabase.ServerUrl),
+                Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
+                Name = DefaultTimeSeriesName + (timeSeriesStores.Count + 1)
+            };
 
-			timeSeriesStore.Initialize(createDefaultTimeSeries);
-			timeSeriesStores.Add(timeSeriesStore);
-			return timeSeriesStore;
-		}
+            timeSeriesStore.Initialize(createDefaultTimeSeries);
+            timeSeriesStores.Add(timeSeriesStore);
+            return timeSeriesStore;
+        }
 
-		public override void Dispose()
-		{
-			var errors = new List<Exception>();
+        public override void Dispose()
+        {
+            var errors = new List<Exception>();
 
-			foreach (var store in timeSeriesStores)
-			{
-				try
-				{
-					store.Dispose();
-				}
-				catch (Exception e)
-				{
-					errors.Add(e);
-				}
-			}
-			stores.Clear();
+            foreach (var store in timeSeriesStores)
+            {
+                try
+                {
+                    store.Dispose();
+                }
+                catch (Exception e)
+                {
+                    errors.Add(e);
+                }
+            }
+            stores.Clear();
 
-			if (errors.Count > 0)
-				throw new AggregateException(errors);
+            if (errors.Count > 0)
+                throw new AggregateException(errors);
 
-			base.Dispose();
-		}
+            base.Dispose();
+        }
 
-		protected static async Task SetupReplicationAsync(ITimeSeriesStore source, params ITimeSeriesStore[] destinations)
-		{
-			var replicationDocument = new TimeSeriesReplicationDocument();
-			foreach (var destStore in destinations)
-			{
-				replicationDocument.Destinations.Add(new TimeSeriesReplicationDestination
-				{
-					TimeSeriesName = destStore.Name,
-					ServerUrl = GetServerUrl(true, destStore.Url),
-				});
-			}
+        protected static async Task SetupReplicationAsync(ITimeSeriesStore source, params ITimeSeriesStore[] destinations)
+        {
+            var replicationDocument = new TimeSeriesReplicationDocument();
+            foreach (var destStore in destinations)
+            {
+                replicationDocument.Destinations.Add(new TimeSeriesReplicationDestination
+                {
+                    TimeSeriesName = destStore.Name,
+                    ServerUrl = GetServerUrl(true, destStore.Url),
+                });
+            }
 
-			await source.SaveReplicationsAsync(replicationDocument);
-		}
-	}
+            await source.SaveReplicationsAsync(replicationDocument);
+        }
+    }
 }

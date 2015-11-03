@@ -8,51 +8,51 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.TimeSeries
 {
-	public partial class TimeSeriesStore
-	{
-		public async Task<TimeSeriesReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken))
-		{
-			AssertInitialized();
+    public partial class TimeSeriesStore
+    {
+        public async Task<TimeSeriesReplicationDocument> GetReplicationsAsync(CancellationToken token = default (CancellationToken))
+        {
+            AssertInitialized();
 
-			var requestUriString = String.Format("{0}ts/{1}/replications/get", Url, Name);
+            var requestUriString = String.Format("{0}ts/{1}/replications/get", Url, Name);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.ToObject<TimeSeriesReplicationDocument>(JsonSerializer);
-			}
-		}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+            {
+                var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return response.ToObject<TimeSeriesReplicationDocument>(JsonSerializer);
+            }
+        }
 
-		public async Task SaveReplicationsAsync(TimeSeriesReplicationDocument newReplicationDocument,CancellationToken token = default(CancellationToken))
-		{
-			AssertInitialized();
-			var requestUriString = String.Format("{0}ts/{1}/replications/save", Url, Name);
+        public async Task SaveReplicationsAsync(TimeSeriesReplicationDocument newReplicationDocument,CancellationToken token = default(CancellationToken))
+        {
+            AssertInitialized();
+            var requestUriString = String.Format("{0}ts/{1}/replications/save", Url, Name);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
-			{
-				await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument)).WithCancellation(token).ConfigureAwait(false);
-				await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-			}
-		}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
+            {
+                await request.WriteAsync(RavenJObject.FromObject(newReplicationDocument)).WithCancellation(token).ConfigureAwait(false);
+                await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+            }
+        }
 
-		public async Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken))
-		{
-			AssertInitialized();
-			var requestUriString = String.Format("{0}ts/{1}/lastEtag?serverId={2}", Url, Name, serverId);
+        public async Task<long> GetLastEtag(string serverId, CancellationToken token = default(CancellationToken))
+        {
+            AssertInitialized();
+            var requestUriString = String.Format("{0}ts/{1}/lastEtag?serverId={2}", Url, Name, serverId);
 
-			using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-			{
-				var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-				return response.Value<long>();
-			}
-		}
+            using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+            {
+                var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return response.Value<long>();
+            }
+        }
 
-		public async Task<int> WaitForReplicationAsync(CancellationToken token = new CancellationToken())
-		{
-			AssertInitialized();
-			throw new NotImplementedException();
-			await Task.Delay(50000, token).ConfigureAwait(false);
-			return 0;
-		}
-	}
+        public async Task<int> WaitForReplicationAsync(CancellationToken token = new CancellationToken())
+        {
+            AssertInitialized();
+            throw new NotImplementedException();
+            await Task.Delay(50000, token).ConfigureAwait(false);
+            return 0;
+        }
+    }
 }

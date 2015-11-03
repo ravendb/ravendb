@@ -9,31 +9,31 @@ namespace Raven.Client.TimeSeries.Changes
     {
         private readonly Func<TimeSeriesConnectionState, Task> ensureConnection;
 
-		public TimeSeriesConnectionState(Action onZero, Func<TimeSeriesConnectionState, Task> ensureConnection, Task task)
-			: base(onZero, task)
-		{
-			this.ensureConnection = ensureConnection;
-		}
-
-	    protected override Task EnsureConnection()
-		{
-			return ensureConnection(this);
-		}
-
-		public event Action<TimeSeriesChangeNotification> OnChangeNotification = (x) => { };
-		public void Send(TimeSeriesChangeNotification changeNotification)
+        public TimeSeriesConnectionState(Action onZero, Func<TimeSeriesConnectionState, Task> ensureConnection, Task task)
+            : base(onZero, task)
         {
-			var onTimeSeriesChangeNotification = OnChangeNotification;
-			if (onTimeSeriesChangeNotification != null)
-				onTimeSeriesChangeNotification(changeNotification);
+            this.ensureConnection = ensureConnection;
         }
 
-		public event Action<BulkOperationNotification> OnBulkOperationNotification = (x) => { };
-		public void Send(BulkOperationNotification bulkOperationNotification)
+        protected override Task EnsureConnection()
         {
-			var onBulkOperationNotification = OnBulkOperationNotification;
-			if (onBulkOperationNotification != null)
-				onBulkOperationNotification(bulkOperationNotification);
+            return ensureConnection(this);
+        }
+
+        public event Action<TimeSeriesChangeNotification> OnChangeNotification = (x) => { };
+        public void Send(TimeSeriesChangeNotification changeNotification)
+        {
+            var onTimeSeriesChangeNotification = OnChangeNotification;
+            if (onTimeSeriesChangeNotification != null)
+                onTimeSeriesChangeNotification(changeNotification);
+        }
+
+        public event Action<BulkOperationNotification> OnBulkOperationNotification = (x) => { };
+        public void Send(BulkOperationNotification bulkOperationNotification)
+        {
+            var onBulkOperationNotification = OnBulkOperationNotification;
+            if (onBulkOperationNotification != null)
+                onBulkOperationNotification(bulkOperationNotification);
         }
     }
 }
