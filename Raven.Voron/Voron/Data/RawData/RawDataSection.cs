@@ -195,9 +195,11 @@ namespace Voron.Data.RawData
             //  start reading from the last used page, to skip full pages
             for (var i = _sectionHeader->LastUsedPage; i < _sectionHeader->NumberOfPages; i++)
             {
+                if (AvailableSpace[i] < size)
+                    continue;
+
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
-                if (AvailableSpace[i] < size ||
-                    pageHeader->NextAllocation + size > _pageSize)
+                if (pageHeader->NextAllocation + size > _pageSize)
                     continue;
 
                 // best case, we have enough space, and we don't need to defrag
