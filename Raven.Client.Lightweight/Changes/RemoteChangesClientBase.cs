@@ -313,7 +313,6 @@ namespace Raven.Client.Changes
         protected abstract Task SubscribeOnServer();
         protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);
 
-
         public virtual void OnCompleted()
         { }
 
