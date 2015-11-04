@@ -7,6 +7,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Tests.Helpers;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -16,7 +17,7 @@ namespace Raven.Tests.Issues
         public class Profile
         {
             public string Id { get; set; }
-            
+
             public string Name { get; set; }
 
             public string Location { get; set; }
@@ -28,7 +29,7 @@ namespace Raven.Tests.Issues
             {
                 TransformResults = profiles =>
                     from profile in profiles
-                    select new {profile.Name};
+                    select new { profile.Name };
             }
         }
 
@@ -53,13 +54,12 @@ namespace Raven.Tests.Issues
                 shardedDocumentStore.Initialize();
                 new Transformer().Execute(shardedDocumentStore);
 
-                var profile = new Profile {Name = "Test", Location = "Shard1"};
-
                 using (var session = shardedDocumentStore.OpenAsyncSession())
                 {
                     var results = await session.Query<Profile>()
-                     .TransformWith<Transformer, Profile>()
-                     .ToListAsync();
+                        .Where(x => x.Name == null)
+                        .TransformWith<Transformer, Profile>()
+                        .ToListAsync();
                 }
 
             }
