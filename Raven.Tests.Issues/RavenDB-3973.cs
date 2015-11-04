@@ -110,7 +110,7 @@ namespace Raven.Tests.Issues
                 "((((-CaseId:3 AND CaseId:*) AND -CaseId:5)) AND -CaseId:6)"));
 
             expressions.ForEach(x =>
-            {
+            { 
                 var queryExpOptimized = session.Query<Entity3973, EntityIndex>()
                     .Where(x.Item1);
 
