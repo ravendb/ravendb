@@ -676,7 +676,7 @@ namespace Raven.Database.Prefetching
             };
             Stopwatch sp = Stopwatch.StartNew();
             context.AddFutureBatch(futureBatchStat);
-            futureIndexBatches.TryAdd(nextEtag, new FutureIndexBatch
+            var futureIndexBatch = new FutureIndexBatch
             {
                 StartingEtag = nextEtag,
                 Age = Interlocked.Increment(ref currentIndexingAge),
@@ -745,11 +745,16 @@ namespace Raven.Database.Prefetching
                 }).ContinueWith(t =>
                 {
                     t.AssertNotFailed();
-
-                    FutureBatchCompleted(t.Result.Count);
                     return t.Result;
                 })
+            };
+
+            futureIndexBatch.Task.ContinueWith(t =>
+            {
+                FutureBatchCompleted(t.Result.Count);
             });
+
+            futureIndexBatches.TryAdd(nextEtag, futureIndexBatch);
         }
 
         private Etag GetNextDocEtag(Etag etag)
