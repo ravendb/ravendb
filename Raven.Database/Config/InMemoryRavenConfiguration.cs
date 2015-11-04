@@ -208,19 +208,6 @@ namespace Raven.Database.Config
             }
         }
 
-        private HashSet<string> headersToIgnore;
-        public HashSet<string> HeadersToIgnore
-        {
-            get
-            {
-                if (headersToIgnore != null)
-                    return headersToIgnore;
-
-                var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
-                return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
-            }
-        } 
-
         internal static ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
         {
             if (catalogs.Count != 1)
@@ -237,52 +224,6 @@ namespace Raven.Database.Config
         }
 
         public TaskScheduler CustomTaskScheduler { get; set; }
-
-        public class OAuthConfiguration : ConfigurationBase
-        {
-            public OAuthConfiguration(string serverUrl)
-            {
-                TokenServer = serverUrl.EndsWith("/") ? serverUrl + "OAuth/API-Key" : serverUrl + "/OAuth/API-Key";
-            }
-
-            [DefaultValue(DefaultValueSetInConstructor)]
-            [ConfigurationEntry("Raven/OAuthTokenServer")]
-            public string TokenServer { get; set; }
-
-            public bool UseDefaultTokenServer { get; private set; }
-
-            /// <summary>
-            /// The certificate to use when verifying access token signatures for OAuth
-            /// </summary>
-            public byte[] TokenKey { get; set; }
-
-            public override void Initialize(NameValueCollection settings)
-            {
-                base.Initialize(settings);
-
-                TokenKey = GetOAuthKey(settings);
-                UseDefaultTokenServer =  settings[GetKey(x => x.OAuth.TokenServer)] == null;
-            }
-
-            private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
-            {
-                using (var rsa = Encryptor.Current.CreateAsymmetrical())
-                {
-                    return rsa.ExportCspBlob(true);
-                }
-            });
-
-            private byte[] GetOAuthKey(NameValueCollection settings)
-            {
-                var key = settings["Raven/OAuthTokenCertificate"];
-                if (string.IsNullOrEmpty(key) == false)
-                {
-                    return Convert.FromBase64String(key);
-                }
-                return DefaultOauthKey.Value; // ensure we only create this once per process
-            }
-        }
-
 
         public NameValueCollection Settings { get; set; }
 
@@ -1040,6 +981,12 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/IgnoreSslCertificateErrors")]
             public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
 
+            [DefaultValue("")]
+            [ConfigurationEntry("Raven/Headers/Ignore")]
+            public string HeadersToIgnoreStringValue { get; set; }
+            
+            public HashSet<string> HeadersToIgnore { get; private set; }
+
             public override void Initialize(NameValueCollection settings)
             {
                 base.Initialize(settings);
@@ -1079,6 +1026,8 @@ namespace Raven.Database.Config
                     var type = Type.GetType(TaskScheduler);
                     parent.CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
                 }
+
+                HeadersToIgnore = new HashSet<string>(HeadersToIgnoreStringValue.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
             }
 
             private string GetDefaultVirtualDirectory()
@@ -1966,6 +1915,51 @@ namespace Raven.Database.Config
             [SizeUnit(SizeUnit.Bytes)]
             [ConfigurationEntry("Raven/WebSockets/InitialBufferPoolSize")]
             public Size InitialBufferPoolSize { get; set; }
+        }
+
+        public class OAuthConfiguration : ConfigurationBase
+        {
+            public OAuthConfiguration(string serverUrl)
+            {
+                TokenServer = serverUrl.EndsWith("/") ? serverUrl + "OAuth/API-Key" : serverUrl + "/OAuth/API-Key";
+            }
+
+            [DefaultValue(DefaultValueSetInConstructor)]
+            [ConfigurationEntry("Raven/OAuthTokenServer")]
+            public string TokenServer { get; set; }
+
+            public bool UseDefaultTokenServer { get; private set; }
+
+            /// <summary>
+            /// The certificate to use when verifying access token signatures for OAuth
+            /// </summary>
+            public byte[] TokenKey { get; set; }
+
+            public override void Initialize(NameValueCollection settings)
+            {
+                base.Initialize(settings);
+
+                TokenKey = GetOAuthKey(settings);
+                UseDefaultTokenServer = settings[GetKey(x => x.OAuth.TokenServer)] == null;
+            }
+
+            private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
+            {
+                using (var rsa = Encryptor.Current.CreateAsymmetrical())
+                {
+                    return rsa.ExportCspBlob(true);
+                }
+            });
+
+            private byte[] GetOAuthKey(NameValueCollection settings)
+            {
+                var key = settings["Raven/OAuthTokenCertificate"];
+                if (string.IsNullOrEmpty(key) == false)
+                {
+                    return Convert.FromBase64String(key);
+                }
+                return DefaultOauthKey.Value; // ensure we only create this once per process
+            }
         }
 
         public void UpdateDataDirForLegacySystemDb()
