@@ -23,7 +23,7 @@ namespace Raven.Tests.Triggers.Bugs
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
             configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (AuditTrigger)));
         }
 

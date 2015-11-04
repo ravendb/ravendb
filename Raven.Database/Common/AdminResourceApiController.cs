@@ -49,7 +49,7 @@ namespace Raven.Database.Common
             if (authorizer.TryAuthorize(this, out authMsg) == false)
                 return authMsg;
 
-            var accessMode = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode;
+            var accessMode = DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode;
             if (accessMode == AnonymousUserAccessMode.Admin || accessMode == AnonymousUserAccessMode.All ||
             (accessMode == AnonymousUserAccessMode.Get && InnerRequest.Method.Method == "GET"))
                 return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
@@ -61,7 +61,7 @@ namespace Raven.Database.Common
                     Error = "The operation '" + GetRequestUrl() + "' is only available to administrators, and could not find the user to authorize with"
                 }, HttpStatusCode.Unauthorized);
 
-            if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false &&
+            if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode) == false &&
             user.IsAdministrator(ResourceName) == false && SupportedByAnyAdditionalRoles(user) == false)
             {
                 return GetMessageWithObject(new
@@ -75,7 +75,7 @@ namespace Raven.Database.Common
 
         private bool SupportedByAnyAdditionalRoles(IPrincipal user)
         {
-            return AdditionalSupportedRoles.Any(role => user.IsInRole(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode, role));
+            return AdditionalSupportedRoles.Any(role => user.IsInRole(DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode, role));
         }
 
         protected static bool IsValidName(string name, string dataDirectory, out MessageWithStatusCode errorMessageWithStatusCode)

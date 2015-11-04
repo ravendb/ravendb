@@ -190,8 +190,8 @@ namespace Raven.Tests.Helpers
                         RunInMemory = runInMemory,
                         DataDirectory = Path.Combine(dataDirectory, "System"),
                         Port = port ?? 8079,
-                    },
-                    AnonymousUserAccessMode = anonymousUserAccessMode
+                        AnonymousUserAccessMode = anonymousUserAccessMode
+                    }
                 },
                 Conventions = conventions ?? new DocumentConvention()
             };
@@ -410,11 +410,11 @@ namespace Raven.Tests.Helpers
                     RunInMemory = runInMemory,
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
+                    AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
             };
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
@@ -741,7 +741,7 @@ namespace Raven.Tests.Helpers
                 databaseName = embeddableDocumentStore.DefaultDatabase;
                 embeddableDocumentStore.Configuration.Core.Port = port;
                 SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
-                embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+                embeddableDocumentStore.Configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
                 NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
                 server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
                 url = embeddableDocumentStore.Configuration.ServerUrl;

@@ -47,7 +47,7 @@ namespace Raven.Database.Server.Controllers
                         RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)),
                         ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.Cluster.NonClusterDatabaseMarker),
                         Bundles = bundles,
-                        IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
+                        IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
                         IsLoaded = DatabasesLandlord.IsDatabaseLoaded(dbName)
                     };
                 }).ToList();

@@ -32,8 +32,8 @@ namespace Raven.Tests.Bugs.MultiTenancy
                 {
                     DataDirectory = dataDirectory,
                     Port = port,
-                },
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                }
             };
             configuration.Core.RunInMemory = true;
 

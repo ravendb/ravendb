@@ -26,7 +26,7 @@ namespace Raven.Tests.Core.Auth
         public void	GetUserInfoAndPermissionsWindowsAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
-            this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            this.Server.Configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
                 "Raven/Authorization/WindowsSettings",
                 null,

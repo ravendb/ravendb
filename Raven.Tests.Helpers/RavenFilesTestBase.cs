@@ -87,11 +87,11 @@ namespace Raven.Tests.Helpers
                     RunInMemory = runInMemory,
                     DataDirectory = directory,
                     Port = port,
+                    AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
-#endif                
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+#endif          
                 Encryption = 
                 { 
                     UseFips = SettingsHelper.UseFipsEncryptionAlgorithms 

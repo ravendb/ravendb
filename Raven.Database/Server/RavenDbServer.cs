@@ -95,7 +95,7 @@ namespace Raven.Server
 
         public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
         {
-            if (configuration.IgnoreSslCertificateErrors == IgnoreSslCertificateErrorsMode.All)
+            if (configuration.Core.IgnoreSslCertificateErrors == IgnoreSslCertificateErrorsMode.All)
             {
                 // we ignore either all or none at the moment
                 ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;

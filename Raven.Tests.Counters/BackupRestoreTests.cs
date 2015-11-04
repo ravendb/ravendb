@@ -42,8 +42,8 @@ namespace Raven.Tests.Counters
                     RunInMemory = false,
                     DataDirectory = DocumentDatabaseDirectory,
                     Port = 8090,
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 },
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 Encryption = { UseFips = SettingsHelper.UseFipsEncryptionAlgorithms },
             };
 

@@ -53,9 +53,9 @@ namespace Raven.Tests.Bugs
                                             {
                                                 DataDirectory = "HiLoData",
                                                 Port = 8079,
+                                                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
                                             },
                                             RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                                            AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
                                         })
             {
                 UseEmbeddedHttpServer = true

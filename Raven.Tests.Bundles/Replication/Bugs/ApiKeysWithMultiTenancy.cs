@@ -25,7 +25,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
         {
-            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 

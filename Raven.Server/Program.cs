@@ -808,7 +808,7 @@ Configuration databaseOptions:
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Core.Port, ravenConfiguration.Encryption.UseSsl);
             if (anonymousUserAccessMode.HasValue)
-                ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
+                ravenConfiguration.Core.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
             while (RunServerInDebugMode(ravenConfiguration, launchBrowser, server => InteractiveRun(server)))
             {
                 launchBrowser = false;

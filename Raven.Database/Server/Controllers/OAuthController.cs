@@ -135,7 +135,7 @@ namespace Raven.Database.Server.Controllers
             if (apiKeyDefinition.Enabled == false)
                 return null;
 
-            return Tuple.Create(apiKeyDefinition.Secret, AccessToken.Create(DatabasesLandlord.SystemConfiguration.OAuthTokenKey, new AccessTokenBody
+            return Tuple.Create(apiKeyDefinition.Secret, AccessToken.Create(DatabasesLandlord.SystemConfiguration.OAuth.TokenKey, new AccessTokenBody
             {
                 UserId = apiKeyName,
                 AuthorizedDatabases = apiKeyDefinition.Databases

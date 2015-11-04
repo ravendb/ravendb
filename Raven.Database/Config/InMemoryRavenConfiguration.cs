@@ -9,11 +9,11 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
@@ -31,10 +31,8 @@ using Raven.Database.FileSystem.Util;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
-using Enum = System.Enum;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Util;
 using Raven.Database.Config.Attributes;
 using Raven.Database.Config.Settings;
 
@@ -82,6 +80,8 @@ namespace Raven.Database.Config
         public MemoryConfiguration Memory { get; }
 
         public FacetsConfiguration Facets { get; }
+
+        public OAuthConfiguration OAuth { get; private set; }
 
         public InMemoryRavenConfiguration()
         {
@@ -131,30 +131,12 @@ namespace Raven.Database.Config
 
             FilterActiveBundles();
 
-            SetupOAuth();
-
-            SetupGC();
+            OAuth = new OAuthConfiguration(ServerUrl);
+            OAuth.Initialize(Settings);
         }
 
         public InMemoryRavenConfiguration Initialize()
         {
-            int defaultMaxNumberOfItemsToIndexInSingleBatch = -1;
-            int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
-
-            var ravenSettings = new StronglyTypedRavenSettings(Settings);
-            ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-            
-            
-
-            var configurations = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(ConfigurationBase));
-
-            //foreach (var configuration in configurations)
-            //{
-            //	configuration.
-            //}
-
-            Settings.Add("Raven/ImplicitFetchFieldsFromDocumentMode", ImplicitFetchFieldsMode.Exception.ToString());
-
             Core.Initialize(Settings);
             Replication.Initialize(Settings);
             Queries.Initialize(Settings);
@@ -168,33 +150,17 @@ namespace Raven.Database.Config
             Encryption.Initialize(Settings);
             Cluster.Initialize(Settings);
             Monitoring.Initialize(Settings);
-
             FileSystem.Initialize(Settings);
             Counter.Initialize(Settings);
             TimeSeries.Initialize(Settings);
 
-
+            if (Settings["Raven/MaxServicePointIdleTime"] != null)
+                ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(Settings["Raven/MaxServicePointIdleTime"]);
 
             if (ConcurrentMultiGetRequests == null)
                 ConcurrentMultiGetRequests = new SemaphoreSlim(Server.MaxConcurrentMultiGetRequests);
-            
-            SetupTransactionMode();
 
-            // HTTP settings
-
-
-            SetVirtualDirectory();
-            
-
-            AnonymousUserAccessMode = GetAnonymousUserAccessMode();
-            
-            // Misc settings
-
-            IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
-            
             PostInit();
-
-            // TODO arek
 
             return this;
         }
@@ -277,68 +243,51 @@ namespace Raven.Database.Config
 
         public TaskScheduler CustomTaskScheduler { get; set; }
 
-        private void SetupTransactionMode()
+        public class OAuthConfiguration : ConfigurationBase
         {
-            var transactionMode = Settings["Raven/TransactionMode"];
-            TransactionMode result;
-            if (Enum.TryParse(transactionMode, true, out result) == false)
-                result = TransactionMode.Safe;
-            TransactionMode = result;
-        }
-
-        private void SetVirtualDirectory()
-        {
-            var defaultVirtualDirectory = "/";
-            try
+            public OAuthConfiguration(string serverUrl)
             {
-                if (HttpContext.Current != null)
-                    defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
-            }
-            catch (HttpException)
-            {
-                // explicitly ignoring this because we might be running in embedded mode
-                // inside IIS during init stages, in which case we can't access the HttpContext
-                // nor do we actually care
+                TokenServer = serverUrl.EndsWith("/") ? serverUrl + "OAuth/API-Key" : serverUrl + "/OAuth/API-Key";
             }
 
-            VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
+            [DefaultValue(DefaultValueSetInConstructor)]
+            [ConfigurationEntry("Raven/OAuthTokenServer")]
+            public string TokenServer { get; set; }
 
-        }
+            public bool UseDefaultTokenServer { get; private set; }
 
-        public bool UseDefaultOAuthTokenServer
-        {
-            get { return Settings["Raven/OAuthTokenServer"] == null;  }
-        }
+            /// <summary>
+            /// The certificate to use when verifying access token signatures for OAuth
+            /// </summary>
+            public byte[] TokenKey { get; set; }
 
-        private void SetupOAuth()
-        {
-            OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
-                               (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
-            OAuthTokenKey = GetOAuthKey();
-        }
-
-        private void SetupGC()
-        {
-            //GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
-        }
-
-        private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
+            public override void Initialize(NameValueCollection settings)
             {
-            using (var rsa = Encryptor.Current.CreateAsymmetrical())
-            {
-                return rsa.ExportCspBlob(true);
+                base.Initialize(settings);
+
+                TokenKey = GetOAuthKey(settings);
+                UseDefaultTokenServer =  settings[GetKey(x => x.OAuth.TokenServer)] == null;
             }
-        });
 
-        private byte[] GetOAuthKey()
-        {
-            var key = Settings["Raven/OAuthTokenCertificate"];
-            if (string.IsNullOrEmpty(key) == false)
+            private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
             {
-                return Convert.FromBase64String(key);
+                using (var rsa = Encryptor.Current.CreateAsymmetrical())
+                {
+                    return rsa.ExportCspBlob(true);
+                }
+            });
+
+            private byte[] GetOAuthKey(NameValueCollection settings)
+            {
+                var key = settings["Raven/OAuthTokenCertificate"];
+                if (string.IsNullOrEmpty(key) == false)
+                {
+                    return Convert.FromBase64String(key);
+                }
+                return DefaultOauthKey.Value; // ensure we only create this once per process
             }
-            return DefaultOauthKey.Value; // ensure we only create this once per process
         }
+
 
         public NameValueCollection Settings { get; set; }
 
@@ -366,7 +315,7 @@ namespace Raven.Database.Config
                         Query = ""
                     }.Uri.ToString();
                 }
-                return new UriBuilder(Encryption.UseSsl ? "https" : "http", (Core.HostName ?? Environment.MachineName), Core.Port, VirtualDirectory).Uri.ToString();
+                return new UriBuilder(Encryption.UseSsl ? "https" : "http", (Core.HostName ?? Environment.MachineName), Core.Port, Core.VirtualDirectory).Uri.ToString();
             }
         }
 
@@ -379,63 +328,12 @@ namespace Raven.Database.Config
 
         #endregion
 
-        #region HTTP settings
-
-
-        private string virtualDirectory;
-
-        /// <summary>
-        /// The virtual directory to use when creating the http listener. 
-        /// Default: / 
-        /// </summary>
-        public string VirtualDirectory
-        {
-            get { return virtualDirectory; }
-            set
-            {
-                virtualDirectory = value;
-
-                if (virtualDirectory.EndsWith("/"))
-                    virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
-                if (virtualDirectory.StartsWith("/") == false)
-                    virtualDirectory = "/" + virtualDirectory;
-            }
-        }
-
-        /// <summary>
-        /// Defines which operations are allowed for anonymous users.
-        /// Allowed values: All, Get, None
-        /// Default: Get
-        /// </summary>
-        public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
-
-        /// <summary>
-        /// The certificate to use when verifying access token signatures for OAuth
-        /// </summary>
-        public byte[] OAuthTokenKey { get; set; }
-
-        public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
-
-        #endregion
-
-        #region Data settings
-        /// <summary>
-        /// What sort of transaction mode to use. 
-        /// Allowed values: 
-        /// Lazy - faster, but can result in data loss in the case of server crash. 
-        /// Safe - slower, but will never lose data 
-        /// Default: Safe 
-        /// </summary>
-        public TransactionMode TransactionMode { get; set; }
-
-        #endregion
-
         #region Misc settings
 
         public bool CreatePluginsDirectoryIfNotExisting { get; set; }
         public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
-        public string OAuthTokenServer { get; set; }
+        
 
         #endregion
 
@@ -488,26 +386,6 @@ namespace Raven.Database.Config
             }
         }
 
-        protected AnonymousUserAccessMode GetAnonymousUserAccessMode()
-        {
-            if (string.IsNullOrEmpty(Settings["Raven/AnonymousAccess"]) == false)
-            {
-                var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
-                return (AnonymousUserAccessMode)val;
-            }
-            return AnonymousUserAccessMode.Admin;
-        }
-
-        protected IgnoreSslCertificateErrorsMode GetIgnoreSslCertificateErrorModeMode()
-        {
-            if (string.IsNullOrEmpty(Settings["Raven/IgnoreSslCertificateErrors"]) == false)
-            {
-                var val = Enum.Parse(typeof(IgnoreSslCertificateErrorsMode), Settings["Raven/IgnoreSslCertificateErrors"]);
-                return (IgnoreSslCertificateErrorsMode)val;
-            }
-            return IgnoreSslCertificateErrorsMode.None;
-        }
-
         public Uri GetFullUrl(string baseUrl)
         {
             baseUrl = Uri.EscapeUriString(baseUrl);
@@ -515,7 +393,7 @@ namespace Raven.Database.Config
             if (baseUrl.StartsWith("/"))
                 baseUrl = baseUrl.Substring(1);
 
-            var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
+            var url = Core.VirtualDirectory.EndsWith("/") ? Core.VirtualDirectory + baseUrl : Core.VirtualDirectory + "/" + baseUrl;
             return new Uri(url, UriKind.RelativeOrAbsolute);
         }
 
@@ -628,8 +506,8 @@ namespace Raven.Database.Config
         public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
         {
             Core.Port = defaultConfiguration.Core.Port;
-            OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
-            OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
+            OAuth.TokenKey = defaultConfiguration.OAuth.TokenKey;
+            OAuth.TokenServer = defaultConfiguration.OAuth.TokenServer;
 
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 
@@ -707,7 +585,7 @@ namespace Raven.Database.Config
                                 {
                                     if (property.PropertyType.IsEnum)
                                     {
-                                        property.SetValue(this, Enum.Parse(property.PropertyType, value));
+                                        property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
                                     }
                                     else
                                     {
@@ -788,6 +666,7 @@ namespace Raven.Database.Config
             private string assembliesDirectory;
             private string embeddedFilesDirectory;
             private string compiledIndexCacheDirectory;
+            private string virtualDirectory;
 
             public CoreConfiguration(InMemoryRavenConfiguration parent)
             {
@@ -797,6 +676,7 @@ namespace Raven.Database.Config
                 MaxNumberOfParallelProcessingTasks = Environment.ProcessorCount;
                 WebDir = GetDefaultWebDir();
                 TempPath = Path.GetTempPath();
+                VirtualDirectory = GetDefaultVirtualDirectory();
             }
 
             /// <summary>
@@ -1146,6 +1026,50 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/TempPath")]
             public string TempPath { get; set; }
 
+            /// <summary>
+            /// What sort of transaction mode to use. 
+            /// Allowed values: 
+            /// Lazy - faster, but can result in data loss in the case of server crash. 
+            /// Safe - slower, but will never lose data 
+            /// Default: Safe 
+            /// </summary>
+            [DefaultValue(TransactionMode.Safe)]
+            [ConfigurationEntry("Raven/TransactionMode")]
+            public TransactionMode TransactionMode { get; set; }
+
+            /// <summary>
+            /// Defines which operations are allowed for anonymous users.
+            /// Allowed values: All, Get, None
+            /// Default: Get
+            /// </summary>
+            [DefaultValue(AnonymousUserAccessMode.Admin)]
+            [ConfigurationEntry("Raven/AnonymousAccess")]
+            public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
+
+            /// <summary>
+            /// The virtual directory to use when creating the http listener. 
+            /// Default: / 
+            /// </summary>
+            [DefaultValue(DefaultValueSetInConstructor)] // set in initialize
+            [ConfigurationEntry("Raven/VirtualDirectory")]
+            public string VirtualDirectory
+            {
+                get { return virtualDirectory; }
+                set
+                {
+                    virtualDirectory = value;
+
+                    if (virtualDirectory.EndsWith("/"))
+                        virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
+                    if (virtualDirectory.StartsWith("/") == false)
+                        virtualDirectory = "/" + virtualDirectory;
+                }
+            }
+
+            [DefaultValue(IgnoreSslCertificateErrorsMode.None)]
+            [ConfigurationEntry("Raven/IgnoreSslCertificateErrors")]
+            public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
+
             public override void Initialize(NameValueCollection settings)
             {
                 base.Initialize(settings);
@@ -1185,6 +1109,24 @@ namespace Raven.Database.Config
                     var type = Type.GetType(TaskScheduler);
                     parent.CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
                 }
+            }
+
+            private string GetDefaultVirtualDirectory()
+            {
+                var defaultVirtualDirectory = "/";
+                try
+                {
+                    if (HttpContext.Current != null)
+                        defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
+                }
+                catch (HttpException)
+                {
+                    // explicitly ignoring this because we might be running in embedded mode
+                    // inside IIS during init stages, in which case we can't access the HttpContext
+                    // nor do we actually care
+                }
+
+                return defaultVirtualDirectory;
             }
 
             private string GetDefaultWebDir()

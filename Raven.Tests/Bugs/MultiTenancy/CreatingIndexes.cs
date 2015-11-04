@@ -30,8 +30,8 @@ namespace Raven.Tests.Bugs.MultiTenancy
                     RunInMemory = true,
                     DataDirectory = "Data",
                     Port = port,
-                },
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                }
             })
             {
                 UseEmbeddedHttpServer = true
