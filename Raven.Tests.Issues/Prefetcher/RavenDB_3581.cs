@@ -180,7 +180,9 @@ namespace Raven.Tests.Issues.Prefetcher
                 count += i;
 
                 if (count == 1536)
+                {
                     mre.Set();
+                }
             };
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);

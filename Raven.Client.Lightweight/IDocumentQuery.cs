@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Indexes;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
 
@@ -90,7 +91,7 @@ namespace Raven.Client
         /// </summary>
         /// <typeparam name="TProjection">Type of the projection from which fields will be taken.</typeparam>
         IDocumentQuery<TProjection> SelectFields<TProjection>();
-        
+
         /// <summary>
         ///     Ability to use one factory to determine spatial shape that will be used in query.
         /// </summary>
@@ -104,5 +105,12 @@ namespace Raven.Client
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="clause">function with spatial criteria factory</param>
         IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+        /// <summary>
+        ///     Sets a transformer to use after executing a query
+        /// </summary>
+        /// <param name="resultsTransformer"></param>
+        IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+            where TTransformer : AbstractTransformerCreationTask, new();
     }
 }

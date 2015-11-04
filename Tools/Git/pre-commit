@@ -1,5 +1,11 @@
 #!/bin/sh
 
+version=`git --version`
+if [[ "$version" == *" 1."* ]]; then
+    echo "This pre-commit hook only supports git 2.0 or higher. Your git version is: $version"
+    exit -1
+fi
+
 if git-rev-parse --verify HEAD >/dev/null 2>&1 ; then
    against=HEAD
 else
