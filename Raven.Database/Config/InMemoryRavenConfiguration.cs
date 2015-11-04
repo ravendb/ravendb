@@ -79,8 +79,6 @@ namespace Raven.Database.Config
 
         public MemoryConfiguration Memory { get; }
 
-        public FacetsConfiguration Facets { get; }
-
         public OAuthConfiguration OAuth { get; private set; }
 
         public InMemoryRavenConfiguration()
@@ -106,9 +104,6 @@ namespace Raven.Database.Config
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
             Memory = new MemoryConfiguration();
-            
-            CreatePluginsDirectoryIfNotExisting = true;
-            CreateAnalyzersDirectoryIfNotExisting = true;
 
             IndexingClassifier = new DefaultIndexingClassifier();
 
@@ -325,15 +320,6 @@ namespace Raven.Database.Config
         /// The indexing scheduler to use
         /// </summary>
         public IIndexingClassifier IndexingClassifier { get; set; }
-
-        #endregion
-
-        #region Misc settings
-
-        public bool CreatePluginsDirectoryIfNotExisting { get; set; }
-        public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
-
-        
 
         #endregion
 
@@ -948,15 +934,6 @@ namespace Raven.Database.Config
             public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
             /// <summary>
-            /// If set local request don't require authentication
-            /// Allowed values: true/false
-            /// Default: false
-            /// </summary>
-            [DefaultValue(false)]
-            [ConfigurationEntry("Raven/AllowLocalAccessWithoutAuthorization")]
-            public bool AllowLocalAccessWithoutAuthorization { get; set; } // TODO arek - 0 references
-
-            /// <summary>
             /// If set all client request to the server will be rejected with 
             /// the http 503 response.
             /// Other servers or the studio could still access the server.
@@ -973,13 +950,6 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/DatabaseOperationTimeoutInMin")]
             [ConfigurationEntry("Raven/DatabaseOperationTimeout")]
             public TimeSetting DatabaseOperationTimeout { get; set; }
-
-            /// <summary>
-            /// If True, cluster discovery will be disabled. Default is False
-            /// </summary>
-            [DefaultValue(false)]
-            [ConfigurationEntry("Raven/DisableClusterDiscovery")]
-            public bool DisableClusterDiscovery { get; set; } // TODO arek - 0 references
 
             /// <summary>
             /// If True, turns off the discovery client.
@@ -1174,15 +1144,6 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/MaxConcurrentMultiGetRequests")]
             public int MaxConcurrentMultiGetRequests { get; set; }
 
-            /// <summary>
-            /// Whether to use http compression or not. 
-            /// Allowed values: true/false; 
-            /// Default: true
-            /// </summary>
-            [DefaultValue(true)]
-            [ConfigurationEntry("Raven/Server/HttpCompression")]
-            [ConfigurationEntry("Raven/HttpCompression")]
-            public bool HttpCompression { get; set; } // TODO arek - 0 references?
 
             /// <summary>
             /// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
@@ -1608,33 +1569,6 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/Query/MaxClauseCount")]
             [ConfigurationEntry("Raven/MaxClauseCount")]
             public int MaxClauseCount { get; set; }
-        }
-
-        public class FacetsConfiguration : ConfigurationBase
-        {
-            // TODO arek - both options seem to be unused
-
-            /// <summary>
-            /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
-            /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
-            /// Facet queries that will try to use it will have to wait until it is over
-            /// </summary>
-            [DefaultValue(3)]
-            [TimeUnit(TimeUnit.Seconds)]
-            [ConfigurationEntry("Raven/Facets/PrewarmSyncronousWaitTimeInSec")]
-            [ConfigurationEntry("Raven/PrewarmFacetsSyncronousWaitTime")]
-            public TimeSetting PrewarmSyncronousWaitTime { get; set; }
-
-            /// <summary>
-            /// What is the maximum age of a facet query that we should consider when prewarming
-            /// the facet cache when finishing an indexing batch
-            /// </summary>
-            [Browsable(false)]
-            [DefaultValue(10)]
-            [TimeUnit(TimeUnit.Minutes)]
-            [ConfigurationEntry("Raven/Facets/PrewarmOnIndexingMaxAgeInMin")]
-            [ConfigurationEntry("Raven/PrewarmFacetsOnIndexingMaxAge")]
-            public TimeSetting PrewarmFacetsOnIndexingMaxAge { get; set; }
         }
 
         public class PatchingConfiguration : ConfigurationBase
