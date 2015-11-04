@@ -46,6 +46,11 @@ namespace Raven.Tests.Common.Attributes
                 if(connectionString == null)
                     continue;
 
+                if (connectionString.Name == "CiHost")
+                {
+                    connectionString.ConnectionString = connectionString.ConnectionString.Replace("Initial Catalog=Raven.Tests", "Initial Catalog=Raven.Tests" + Environment.MachineName);
+                }
+
                 var providerFactory = DbProviderFactories.GetFactory(connectionString.ProviderName);
                 try
                 {
