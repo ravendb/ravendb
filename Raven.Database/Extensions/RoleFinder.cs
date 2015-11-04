@@ -158,13 +158,20 @@ namespace Raven.Database.Extensions
             {
                 var ctx = GeneratePrincipalContext();
                 var up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
-                if (up != null)
+
+                if (useLocalMachine == false && up == null)
                 {
-                    PrincipalSearchResult<Principal> authGroups = up.GetAuthorizationGroups();
-                    return authGroups.ToList();
+                    //we can't find the UserPrincipal inside the domain
+                    //we need to look for it in the local machine
+                    ctx = new PrincipalContext(ContextType.Machine);
+                    up = UserPrincipal.FindByIdentity(ctx, IdentityType.SamAccountName, username);
                 }
 
-                return new List<Principal>();
+                if (up == null)
+                    return new List<Principal>();
+
+                PrincipalSearchResult<Principal> authGroups = up.GetAuthorizationGroups();
+                return authGroups.ToList();
             }
 
             private static bool IsAdministratorNoCache(IEnumerable<Principal> authorizationGroups)
