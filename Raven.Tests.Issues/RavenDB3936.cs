@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucene.Net.Support;
@@ -33,6 +34,10 @@ namespace Raven.Tests.Issues
             }
         }
 
+        public class Result
+        {
+            public string Name;
+        }
         [Fact]
         public async Task CanUseAsyncTransformer()
         {
@@ -54,12 +59,26 @@ namespace Raven.Tests.Issues
                 shardedDocumentStore.Initialize();
                 new Transformer().Execute(shardedDocumentStore);
 
+
+                using (var session = shardedDocumentStore.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Profile
+                    {
+                        Name = "Oren",
+                        Location = "Shard1"
+                    });
+                    await session.SaveChangesAsync();
+                }
+
                 using (var session = shardedDocumentStore.OpenAsyncSession())
                 {
                     var results = await session.Query<Profile>()
-                        .Where(x => x.Name == null)
-                        .TransformWith<Transformer, Profile>()
+                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Where(x => x.Name == "Oren")
+                        .TransformWith<Transformer, Result>()
                         .ToListAsync();
+
+                    Assert.Equal("Oren", results[0].Name);
                 }
 
             }
