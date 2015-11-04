@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -40,11 +40,7 @@ namespace Raven.Database.TimeSeries.Controllers
 
             using (var writer = TimeSeries.CreateWriter())
             {
-                writer.CreateType(new TimeSeriesType
-                {
-                    Type = type.Type,
-                    Fields = type.Fields,
-                });
+                writer.CreateType(type.Type, type.Fields);
                 writer.Commit();
             }
 
@@ -85,7 +81,7 @@ namespace Raven.Database.TimeSeries.Controllers
                 writer.Commit();
 
                 TimeSeries.MetricsTimeSeries.ClientRequests.Mark();
-                TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
+                TimeSeries.Publisher.RaiseNotification(new TimeSeriesChangeNotification
                 {
                     Type = point.Type,
                     Key = point.Key,
@@ -301,7 +297,7 @@ namespace Raven.Database.TimeSeries.Controllers
                 writer.Commit();
 
                 TimeSeries.MetricsTimeSeries.Deletes.Mark();
-                TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
+                TimeSeries.Publisher.RaiseNotification(new TimeSeriesChangeNotification
                 {
                     Type = type,
                     Key = key,
@@ -335,7 +331,7 @@ namespace Raven.Database.TimeSeries.Controllers
                     writer.DeletePointInRollups(point);
 
                     TimeSeries.MetricsTimeSeries.Deletes.Mark();
-                    TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
+                    TimeSeries.Publisher.RaiseNotification(new TimeSeriesChangeNotification
                     {
                         Type = point.Type,
                         Key = point.Key,
@@ -366,7 +362,7 @@ namespace Raven.Database.TimeSeries.Controllers
                 writer.Commit();
 
                 TimeSeries.MetricsTimeSeries.Deletes.Mark();
-                TimeSeries.Publisher.RaiseNotification(new KeyChangeNotification
+                TimeSeries.Publisher.RaiseNotification(new TimeSeriesChangeNotification
                 {
                     Type = range.Type,
                     Key = range.Key,

@@ -34,7 +34,6 @@ namespace Raven.Client.Counters.Changes
             onCounterChangeNotification?.Invoke(changeNotification);
         }
 
-        private StartingWithNotification lastNotification = null;
         public event Action<InGroupNotification> OnCountersInGroupNotification = (x) => { };
         public void Send(InGroupNotification changeNotification)
         {

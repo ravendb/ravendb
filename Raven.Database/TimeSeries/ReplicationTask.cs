@@ -371,8 +371,7 @@ namespace Raven.Database.TimeSeries
             using (var reader = storage.CreateReader())
             {
                 message.Logs = reader.GetLogsSinceEtag(etag + 1).Take(1024).ToList();
-                throw new NotImplementedException();
-                //lastEtagSent = message.LoMaxEtagIsTheLatset.Count > 0 ? message.Counters.Max(x => x.Etag) : etag; // change this once changed this function do a reall paging
+                lastEtagSent = message.Logs.LastOrDefault()?.Etag ?? etag; // change this once changed this function do a reall paging
             }
 
             return message;

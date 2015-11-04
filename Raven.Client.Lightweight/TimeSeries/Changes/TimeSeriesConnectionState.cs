@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.TimeSeries.Notifications;
 using Raven.Client.Changes;
@@ -20,12 +20,12 @@ namespace Raven.Client.TimeSeries.Changes
             return ensureConnection(this);
         }
 
-        public event Action<KeyChangeNotification> OnChangeNotification = (x) => { };
-        public void Send(KeyChangeNotification keyNotification)
+        public event Action<TimeSeriesChangeNotification> OnChangeNotification = (x) => { };
+        public void Send(TimeSeriesChangeNotification changeNotification)
         {
             var onTimeSeriesChangeNotification = OnChangeNotification;
             if (onTimeSeriesChangeNotification != null)
-                onTimeSeriesChangeNotification(keyNotification);
+                onTimeSeriesChangeNotification(changeNotification);
         }
 
         public event Action<BulkOperationNotification> OnBulkOperationNotification = (x) => { };

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -39,8 +39,8 @@ namespace Raven.Database.TimeSeries
         private readonly NotificationPublisher notificationPublisher;
         private readonly TimeSeriesMetricsManager metricsTimeSeries;
 
-        public ReplicationTask ReplicationTask { get; set; }
-        public int ReplicationTimeoutInMs { get; set; }
+        public ReplicationTask ReplicationTask { get; }
+        public int ReplicationTimeoutInMs { get; }
 
         public event Action TimeSeriesUpdated = () => { };
 
@@ -56,8 +56,6 @@ namespace Raven.Database.TimeSeries
         public AtomicDictionary<object> ExtensionsState { get; private set; }
         public InMemoryRavenConfiguration Configuration { get; private set; }
         public DateTime LastWrite { get; set; }
-
-        public JsonSerializer JsonSerializer { get; set; }
 
         [CLSCompliant(false)]
         public TimeSeriesMetricsManager MetricsTimeSeries
@@ -76,7 +74,6 @@ namespace Raven.Database.TimeSeries
             var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : CreateStorageOptionsFromConfiguration(configuration.TimeSeries.DataDirectory, configuration.Settings);
 
-            JsonSerializer = new JsonSerializer();
             storageEnvironment = new StorageEnvironment(options);
             TransportState = receivedTransportState ?? new TransportState();
             notificationPublisher = new NotificationPublisher(TransportState);
@@ -113,6 +110,8 @@ namespace Raven.Database.TimeSeries
 
                 tx.Commit();
             }
+
+            ReplicationTask.StartReplication();
         }
 
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
@@ -650,9 +649,13 @@ namespace Raven.Database.TimeSeries
             private readonly TimeSeriesLogStorage logStorage;
             private readonly Tree metadata;
 
+            public JsonSerializer JsonSerializer { get; set; }
+
+
             public Writer(TimeSeriesStorage storage)
             {
                 this.storage = storage;
+                JsonSerializer = new JsonSerializer();
                 currentType = new TimeSeriesType();
                 tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite);
                 logStorage = new TimeSeriesLogStorage(tx);
@@ -907,60 +910,66 @@ namespace Raven.Database.TimeSeries
                 logStorage.DeleteRange(typeName, key, start, end);
             }
 
-            public void CreateType(TimeSeriesType type)
+            public void CreateType(string type, string[] fields)
             {
-                if (type == null || string.IsNullOrWhiteSpace(type.Type))
+                DoCreateType(type, fields);
+                logStorage.CreateType(type, fields);
+            }
+
+            internal void DoCreateType(string type, string[] fields)
+            {
+                if (string.IsNullOrWhiteSpace(type))
                     throw new InvalidOperationException("Type cannot be empty");
 
-                if (type.Fields.Length < 1)
+                if (fields.Length < 1)
                     throw new InvalidOperationException("Fields length should be equal or greater than 1");
 
-                if (type.Fields.Any(string.IsNullOrWhiteSpace))
+                if (fields.Any(string.IsNullOrWhiteSpace))
                     throw new InvalidOperationException("Field name cannot be empty.");
 
-                using (var tx = storage.storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
+                var existingType = GetTimeSeriesType(type);
+                if (existingType != null && existingType.KeysCount > 0)
                 {
-                    var existingType = storage.GetTimeSeriesType(metadata, type.Type);
-                    if (existingType != null)
-                    {
-                        var tree = tx.ReadTree(SeriesTreePrefix + type.Type);
-                        if (tree != null)
-                        {
-                            existingType.KeysCount = tree.State.EntriesCount;
-                            if (existingType.KeysCount > 0)
-                            {
-                                throw new InvalidOperationException(string.Format("Type '{0}' is already created, and cannot be overwritten", type.Type));
-                            }
-                        }
-                    }
+                    var message = string.Format("There an existing type with the same name but with different fields. " +
+                                                "Since the type has already {2} keys, the replication failed to overwrite this type. " +
+                                                "{0} <=> {1}", string.Join(",", existingType.Fields), string.Join(",", fields), existingType.KeysCount);
+                    throw new InvalidOperationException(message);
+                }
 
-                    using (var ms = new MemoryStream())
-                    using (var writer = new StreamWriter(ms))
-                    using (var jsonTextWriter = new JsonTextWriter(writer))
+                using (var ms = new MemoryStream())
+                using (var sw = new StreamWriter(ms))
+                using (var jsonTextWriter = new JsonTextWriter(sw))
+                {
+                    JsonSerializer.Serialize(jsonTextWriter, new TimeSeriesType
                     {
-                        storage.JsonSerializer.Serialize(jsonTextWriter, type);
-                        writer.Flush();
-                        ms.Position = 0;
-                        metadata.Add(TypesPrefix + type.Type, ms);
-                        if (existingType == null) // A new type, not an overwrited type
-                        {
-                            UpdateTypesCount(1);
-                        }
-                    }
+                        Type = type,
+                        Fields = fields,
+                    });
+                    sw.Flush();
+                    ms.Position = 0;
+                    metadata.Add(TypesPrefix + type, ms);
+                }
+
+                if (existingType == null) // A new type, not an overwritten type
+                {
+                    UpdateTypesCount(1);
                 }
             }
 
             public void DeleteType(string type)
             {
-                var existingType = storage.GetTimeSeriesType(metadata, type);
+                DoDeleteType(type);
+                logStorage.DeleteType(type);
+            }
+
+            public void DoDeleteType(string type)
+            {
+                var existingType = GetTimeSeriesType(type);
                 if (existingType == null)
                     throw new InvalidOperationException(string.Format("Type {0} does not exist", type));
 
-                var tree = tx.ReadTree(SeriesTreePrefix + type);
-                if (tree != null)
-                    existingType.KeysCount = tree.State.EntriesCount;
                 if (existingType.KeysCount > 0)
-                    throw new InvalidOperationException(string.Format("Cannot delete type '{0}' ({1} key{2}) because it has associated keys.", type, existingType.KeysCount, existingType.KeysCount == 1 ? "" : "s"));
+                    throw new InvalidOperationException(string.Format("Cannot delete type '{0}' because it has {1} associated key{2}.", type, existingType.KeysCount, existingType.KeysCount == 1 ? "" : "s"));
 
                 metadata.Delete(TypesPrefix + type);
                 UpdateTypesCount(-1);
@@ -972,7 +981,7 @@ namespace Raven.Database.TimeSeries
                 using (var streamWriter = new StreamWriter(memoryStream))
                 using (var jsonTextWriter = new JsonTextWriter(streamWriter))
                 {
-                    storage.JsonSerializer.Serialize(jsonTextWriter, newReplicationDocument);
+                    JsonSerializer.Serialize(jsonTextWriter, newReplicationDocument);
                     streamWriter.Flush();
                     memoryStream.Position = 0;
 
@@ -980,6 +989,25 @@ namespace Raven.Database.TimeSeries
                 }
 
                 storage.ReplicationTask.SignalUpdate();
+            }
+
+            public void PostReplicationLogItem(ReplicationLogItem logItem)
+            {
+                logStorage.PostReplicationLogItem(logItem, this);
+            }
+
+            public TimeSeriesType GetTimeSeriesType(string type)
+            {
+                var timeSeriesType = storage.GetTimeSeriesType(metadata, type);
+                if (timeSeriesType == null)
+                    return null;
+
+                var seriesTree = tx.ReadTree(SeriesTreePrefix + type);
+                if (seriesTree != null)
+                {
+                    timeSeriesType.KeysCount = seriesTree.State.EntriesCount;
+                }
+                return timeSeriesType;
             }
         }
 
@@ -1083,6 +1111,9 @@ namespace Raven.Database.TimeSeries
                 TypesCount = reader.GetTypesCount(),
                 KeysCount = reader.GetKeysCount(),
                 PointsCount = reader.GetPointsCount(),
+                LastEtag = reader.GetLastEtag(),
+                ReplicationTasksCount = ReplicationTask.GetActiveTasksCount(),
+                ReplicatedServersCount = 0, //TODO: get the correct number
                 TimeSeriesSize = SizeHelper.Humane(TimeSeriesEnvironment.Stats().UsedDataFileSizeInBytes),
                 RequestsPerSecond = Math.Round(metricsTimeSeries.RequestsPerSecondCounter.CurrentValue, 3),
             };

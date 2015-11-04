@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 
 namespace Raven.Abstractions.TimeSeries.Notifications
 {
-    public class KeyChangeNotification : TimeSeriesNotification
+    public class TimeSeriesChangeNotification : TimeSeriesNotification
     {
         public string Type { get; set; }
 
@@ -17,11 +17,6 @@ namespace Raven.Abstractions.TimeSeries.Notifications
         public DateTimeOffset Start { get; set; }
 
         public DateTimeOffset End { get; set; }
-    }
-
-    public class RangeKeyNotification : KeyChangeNotification
-    {
-        
     }
 
     public enum TimeSeriesChangeAction

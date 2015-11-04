@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -47,7 +47,7 @@ namespace Raven.Client.TimeSeries.Changes
             switch (type)
             {
                 case "KeyChangeNotification":
-                    var changeNotification = value.JsonDeserialization<KeyChangeNotification>();
+                    var changeNotification = value.JsonDeserialization<TimeSeriesChangeNotification>();
                     foreach (var timeSeries in connections)
                     {
                         timeSeries.Value.Send(changeNotification);
@@ -65,14 +65,14 @@ namespace Raven.Client.TimeSeries.Changes
             }
         }
 
-        public IObservableWithTask<KeyChangeNotification> ForAllTimeSeries()
+        public IObservableWithTask<TimeSeriesChangeNotification> ForAllTimeSeries()
         {
             var timeSeries = GetOrAddConnectionState("all-time-series", "watch-time-series-key-change", "unwatch-time-series-key-change",
                 () => watchAllTimeSeries = true,
                 () => watchAllTimeSeries = false,
                 null);
 
-            var taskedObservable = new TaskedObservable<KeyChangeNotification, TimeSeriesConnectionState>(
+            var taskedObservable = new TaskedObservable<TimeSeriesChangeNotification, TimeSeriesConnectionState>(
                 timeSeries,
                 notification => true);
 
@@ -82,7 +82,7 @@ namespace Raven.Client.TimeSeries.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<KeyChangeNotification> ForKey(string type, string key)
+        public IObservableWithTask<TimeSeriesChangeNotification> ForKey(string type, string key)
         {
             if (string.IsNullOrWhiteSpace(type))
                 throw new ArgumentException("Type cannot be empty!");
@@ -96,7 +96,7 @@ namespace Raven.Client.TimeSeries.Changes
                 () => watchedKeysChanges.TryRemove(keyWithType),
                 keyWithType);
 
-            var taskedObservable = new TaskedObservable<KeyChangeNotification, TimeSeriesConnectionState>(
+            var taskedObservable = new TaskedObservable<TimeSeriesChangeNotification, TimeSeriesConnectionState>(
                 timeSeries,
                 notification => string.Equals(notification.Type, type, StringComparison.InvariantCulture) &&
                                 string.Equals(notification.Key, key, StringComparison.InvariantCulture));

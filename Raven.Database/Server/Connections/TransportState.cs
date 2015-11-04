@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="TransportState.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Connections
         }
 
         public event Action<object, ChangeNotification> OnChangeNotification = delegate { };
-        public event Action<object, KeyChangeNotification> OnTimeSeriesChangeNotification = delegate { };
+        public event Action<object, TimeSeriesChangeNotification> OnTimeSeriesChangeNotification = delegate { };
 
         public void Send(ChangeNotification localChangeNotification)
         {
@@ -142,12 +142,12 @@ namespace Raven.Database.Server.Connections
             }
         }
 
-        public void Send(KeyChangeNotification localKeyNotification)
+        public void Send(TimeSeriesChangeNotification localChangeNotification)
         {
-            OnTimeSeriesChangeNotification(this, localKeyNotification);
+            OnTimeSeriesChangeNotification(this, localChangeNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.TimeSeries.Send(localKeyNotification);
+                connectionState.Value.TimeSeries.Send(localChangeNotification);
             }
         }
 

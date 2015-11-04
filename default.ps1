@@ -56,17 +56,7 @@ task Compile -depends Init, CompileHtml5 {
     
     Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    $_decSep = [System.Threading.Thread]::CurrentThread.CurrentUICulture.NumberFormat.CurrencyDecimalSeparator;
- 
-    $highestToolVersion = $(Get-ChildItem -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions\" | 
-        Where { $_.Name -match '\\\d+.\d+$' } | 
-        Sort-Object -property  @{Expression={[System.Convert]::ToDecimal($_.Name.Substring($_.Name.LastIndexOf("\") + 1).Replace(".",$_decSep).Replace(",",$_decSep))}} -Descending |
-        Select-Object -First 1)		
-        
-    $highestToolVersion = $highestToolVersion.ToString().Substring($highestToolVersion.ToString().LastIndexOf("\") + 1)	
-    $msbuild_command = "C:\Program Files (x86)\MSBuild\" + $highestToolVersion + "\Bin\MSBuild.exe"
-    $build_config = "/p:Configuration=" + $global:configuration
-    & $msbuild_command @($sln_file,$build_config,"/p:nowarn='1591 1573'","/p:VisualStudioVersion=12.0","/maxcpucount")
+    &"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount
     
     Write-Host "msbuild exit code:  $LastExitCode"
 

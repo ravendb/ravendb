@@ -1,4 +1,4 @@
-using Raven.Abstractions.TimeSeries.Notifications;
+﻿using Raven.Abstractions.TimeSeries.Notifications;
 using Raven.Database.Server.Connections;
 
 namespace Raven.Database.TimeSeries.Notifications
@@ -12,7 +12,7 @@ namespace Raven.Database.TimeSeries.Notifications
             this.transportState = transportState;
         }
 
-        public void RaiseNotification(KeyChangeNotification notification)
+        public void RaiseNotification(TimeSeriesChangeNotification notification)
         {
             transportState.Send(notification);
         }
