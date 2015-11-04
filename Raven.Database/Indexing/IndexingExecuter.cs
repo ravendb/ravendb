@@ -347,9 +347,26 @@ namespace Raven.Database.Indexing
             using (LogContext.WithDatabase(context.DatabaseName))
             using (MapIndexingInProgress(new List<IndexToWorkOn> { indexToWorkOn }))
             {
-                var indexingBatchForIndex =
-                    FilterIndexes(new List<IndexToWorkOn> { indexToWorkOn }, precomputedBatch.Documents,
-                                    precomputedBatch.LastIndexed).FirstOrDefault();
+                IndexingBatchForIndex indexingBatchForIndex;
+                if (precomputedBatch.Documents.Count > 0)
+                {
+                    indexingBatchForIndex = 
+                        FilterIndexes(
+                                new List<IndexToWorkOn> {indexToWorkOn}, 
+                                precomputedBatch.Documents,
+                                precomputedBatch.LastIndexed)
+                          .FirstOrDefault();
+                }
+                else
+                {
+                    indexingBatchForIndex = new IndexingBatchForIndex
+                    {
+                        Batch = new IndexingBatch(precomputedBatch.LastIndexed),
+                        Index = precomputedBatch.Index,
+                        IndexId = precomputedBatch.Index.indexId,
+                        LastIndexedEtag = precomputedBatch.LastIndexed
+                    };
+                }
 
                 if (indexingBatchForIndex == null)
                     return;
