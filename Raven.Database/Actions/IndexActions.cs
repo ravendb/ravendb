@@ -189,7 +189,7 @@ namespace Raven.Database.Actions
 
         private static void IsIndexNameValid(string name)
         {
-            var error = string.Format("Index name {0} not permitted. ", name).Replace("//","__");
+            var error = string.Format("Index name {0} not permitted. ", name).Replace("//", "__");
 
             if (name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
             {
@@ -421,7 +421,7 @@ namespace Raven.Database.Actions
                 {
                     maxId = Database.IndexStorage.Indexes.Max();
                 }
-                definition.IndexId = (int) Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
+                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
                 if (definition.IndexId <= maxId)
                 {
                     actions.General.SetIdentityValue("IndexId", maxId + 1);
@@ -604,7 +604,7 @@ namespace Raven.Database.Actions
                     }
 
                     if (Log.IsDebugEnabled)
-                        Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
+                    Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
                               op.Header.TotalResults);
                     op.Execute(document =>
                     {
@@ -626,17 +626,17 @@ namespace Raven.Database.Actions
 
                         docsToIndex.Add(doc);
                     });
-                result = new PrecomputedIndexingBatch
-                {
+                    result = new PrecomputedIndexingBatch
+                    {
                         LastIndexed = op.Header.IndexEtag,
                         LastModified = op.Header.IndexTimestamp,
-                    Documents = docsToIndex,
-                    Index = index
-                };
+                        Documents = docsToIndex,
+                        Index = index
+                    };
                 }
             });
 
-            if (result != null && result.Documents != null && result.Documents.Count > 0)
+            if (result != null && result.Documents != null && result.Documents.Count >= 0)
             {
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 {
@@ -651,27 +651,36 @@ namespace Raven.Database.Actions
 
         private string GetQueryForAllMatchingDocumentsForIndex(AbstractViewGenerator generator)
         {
-            var terms = new TermsQueryRunner(Database).GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
+            var terms = new TermsQueryRunner(Database)
+                .GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
 
             var sb = new StringBuilder();
 
             foreach (var entityName in generator.ForEntityNames)
             {
+                bool added = false;
                 foreach (var term in terms)
                 {
                     if (string.Equals(entityName, term, StringComparison.OrdinalIgnoreCase))
                     {
+                        AppendTermToQuery(term, sb);
+                        added = true;
+                    }
+                }
+                if (added == false)
+                    AppendTermToQuery(entityName, sb);
+            }
+
+            return sb.ToString();
+        }
+
+        private static void AppendTermToQuery(string term, StringBuilder sb)
+        {
                         if (sb.Length != 0)
                             sb.Append(" OR ");
 
                         sb.Append("Tag:[[").Append(term).Append("]]");
                     }
-                }
-            }
-
-            var query = sb.ToString();
-            return query;
-        }
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
         {
@@ -827,8 +836,8 @@ namespace Raven.Database.Actions
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => 
                     Database.Notifications.RaiseNotifications(new IndexChangeNotification
-                {
-                    Name = instance.Name,
+                    {
+                        Name = instance.Name,
                         Type = indexChangeType,
                         Version = instance.IndexVersion
                     })

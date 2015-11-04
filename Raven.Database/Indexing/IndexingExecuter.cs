@@ -494,10 +494,28 @@ namespace Raven.Database.Indexing
             using (LogContext.WithDatabase(context.DatabaseName))
             using (MapIndexingInProgress(new List<Index> { indexToWorkOn.Index }))
             {
-                List<IndexToWorkOn> filteredOutIndexes;
-                var indexingBatchForIndex =
-                    FilterIndexes(new List<IndexToWorkOn> { indexToWorkOn }, precomputedBatch.Documents,
-                        precomputedBatch.LastIndexed, out filteredOutIndexes).FirstOrDefault();
+                IndexingBatchForIndex indexingBatchForIndex;
+                if (precomputedBatch.Documents.Count > 0)
+                {
+                    List<IndexToWorkOn> filteredOutIndexes;
+                    indexingBatchForIndex = 
+                        FilterIndexes(
+                                new List<IndexToWorkOn> {indexToWorkOn}, 
+                                precomputedBatch.Documents,
+                                precomputedBatch.LastIndexed,
+                                out filteredOutIndexes)
+                          .FirstOrDefault();
+                }
+                else
+                {
+                    indexingBatchForIndex = new IndexingBatchForIndex
+                    {
+                        Batch = new IndexingBatch(precomputedBatch.LastIndexed),
+                        Index = precomputedBatch.Index,
+                        IndexId = precomputedBatch.Index.indexId,
+                        LastIndexedEtag = precomputedBatch.LastIndexed
+                    };
+                }
 
                 if (indexingBatchForIndex == null)
                     return;
@@ -813,31 +831,31 @@ namespace Raven.Database.Indexing
             }, description: string.Format("Filtering documents for {0} indexes", indexesToWorkOn.Count));
 
             filteredOutIndexes = innerFilteredOutIndexes.ToList();
-            foreach (var action in actions)
-            {
+                foreach (var action in actions)
+                {
                 bool keepTrying = true;
                 for (int i = 0; i < 10 && keepTrying; i++)
                 {
                     keepTrying = false;
                     transactionalStorage.Batch(actionsAccessor =>
                     {
-                        if (action != null)
+                    if (action != null)
+                    {
+                        try
                         {
-                            try
-                            {
-                                action(actionsAccessor);
-                            }
-                            catch (Exception e)
-                            {
+                            action(actionsAccessor);
+                        }
+                        catch (Exception e)
+                        {
                                 if (actionsAccessor.IsWriteConflict(e))
                                 {
                                     keepTrying = true;
                                     return;
-                                }
-                                throw;
-                            }
                         }
-                    });
+                                throw;
+                    }
+                }
+            });
 
                     if (keepTrying)
                         Thread.Sleep(11);
