@@ -1,13 +1,17 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Lucene.Net.Support;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class ShardedIdGenerationTest : RavenTestBase
+    public class ShardingWithAsyncTransformer : RavenTestBase
     {
         public class Profile
         {
@@ -18,8 +22,18 @@ namespace Raven.Tests.Issues
             public string Location { get; set; }
         }
 
+        public class Transformer : AbstractTransformerCreationTask<Profile>
+        {
+            public Transformer()
+            {
+                TransformResults = profiles =>
+                    from profile in profiles
+                    select new {profile.Name};
+            }
+        }
+
         [Fact]
-        public void OverwritingExistingDocumentGeneratesWrongIdWithShardedDocumentStore()
+        public async Task CanUseAsyncTransformer()
         {
             var server1 = GetNewServer(8079);
             var server2 = GetNewServer(8078);
@@ -37,23 +51,17 @@ namespace Raven.Tests.Issues
             using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
             {
                 shardedDocumentStore.Initialize();
+                new Transformer().Execute(shardedDocumentStore);
 
                 var profile = new Profile {Name = "Test", Location = "Shard1"};
 
-                using (var documentSession = shardedDocumentStore.OpenSession())
+                using (var session = shardedDocumentStore.OpenAsyncSession())
                 {
-                    documentSession.Store(profile, profile.Id);
-                    documentSession.SaveChanges();
+                    var results = await session.Query<Profile>()
+                     .TransformWith<Transformer, Profile>()
+                     .ToListAsync();
                 }
 
-                using (var documentSession = shardedDocumentStore.OpenSession())
-                {
-                    var correctId = profile.Id;
-
-                    documentSession.Store(profile, profile.Id);
-
-                    Assert.Equal(correctId, profile.Id);
-                }
             }
         }
     }
