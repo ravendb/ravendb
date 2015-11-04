@@ -40,6 +40,7 @@ namespace Raven.Tests.Common.Attributes
             {
                 ConfigurationManager.ConnectionStrings["SqlExpress"],
                 ConfigurationManager.ConnectionStrings["LocalHost"],
+                ConfigurationManager.ConnectionStrings["CiHost"],
             })
             {
                 if(connectionString == null)
