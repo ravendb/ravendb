@@ -81,6 +81,8 @@ namespace Raven.Database.Config
 
         public OAuthConfiguration OAuth { get; private set; }
 
+        public ExpirationBundleConfiguration Expiration { get; }
+
         public InMemoryRavenConfiguration()
         {
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
@@ -104,6 +106,7 @@ namespace Raven.Database.Config
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
             Memory = new MemoryConfiguration();
+            Expiration = new ExpirationBundleConfiguration();
 
             IndexingClassifier = new DefaultIndexingClassifier();
 
@@ -148,6 +151,7 @@ namespace Raven.Database.Config
             FileSystem.Initialize(Settings);
             Counter.Initialize(Settings);
             TimeSeries.Initialize(Settings);
+            Expiration.Initialize(Settings);
 
             if (Settings["Raven/MaxServicePointIdleTime"] != null)
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(Settings["Raven/MaxServicePointIdleTime"]);
@@ -324,14 +328,6 @@ namespace Raven.Database.Config
             return new Uri(url, UriKind.RelativeOrAbsolute);
         }
 
-        public T? GetConfigurationValue<T>(string configName) where T : struct
-        {
-            // explicitly fail if we can't convert it
-            if (string.IsNullOrEmpty(Settings[configName]) == false)
-                return (T)Convert.ChangeType(Settings[configName], typeof(T));
-            return null;
-        }
-
         [CLSCompliant(false)]
         public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
         {
@@ -346,7 +342,6 @@ namespace Raven.Database.Config
 
             return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible, onNestedTransactionEnter ?? dummyAction, onNestedTransactionExit ?? dummyAction);
         }
-
 
         public static string StorageEngineAssemblyNameByTypeName(string typeName)
         {
@@ -1960,6 +1955,15 @@ namespace Raven.Database.Config
                 }
                 return DefaultOauthKey.Value; // ensure we only create this once per process
             }
+        }
+
+        public class ExpirationBundleConfiguration : ConfigurationBase
+        {
+            [DefaultValue(300)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Expiration/DeleteFrequencyInSec")]
+            [ConfigurationEntry("Raven/Expiration/DeleteFrequencySeconds")]
+            public TimeSetting DeleteFrequency { get; set; }
         }
 
         public void UpdateDataDirForLegacySystemDb()

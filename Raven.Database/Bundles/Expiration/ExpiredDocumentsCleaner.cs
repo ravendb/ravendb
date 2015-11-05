@@ -50,11 +50,11 @@ namespace Raven.Bundles.Expiration
                                   });
             }
 
-            var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
-            logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
-                        deleteFrequencyInSeconds);
+            var deleteFrequency = database.Configuration.Expiration.DeleteFrequency.AsTimeSpan;
+            logger.Info("Initialized expired document cleaner, will check for expired documents every {0}",
+                        deleteFrequency);
 
-            timer = database.TimerManager.NewTimer(state => TimerCallback(), TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
+            timer = database.TimerManager.NewTimer(state => TimerCallback(), deleteFrequency, deleteFrequency);
         }
 
         private object locker = new object();
