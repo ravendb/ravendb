@@ -40,7 +40,6 @@ namespace Raven.Database.Server
                 HttpEndpointRegistration.RegisterAdminLogsTarget();
                 if (db == null)
                 {
-                    configuration.UpdateDataDirForLegacySystemDb();
                     systemDatabase = new DocumentDatabase(configuration, null);
                     systemDatabase.SpinBackgroundWorkers(false);
                 }
