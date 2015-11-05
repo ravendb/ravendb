@@ -202,7 +202,10 @@ namespace Rachis.Tests
             {
                 var n = node;
 
-                n.ElectedAsLeader += () => rcs.TrySetResult(n);
+                n.ElectedAsLeader += () =>
+                 {
+                     n.CommitApplied += command => rcs.TrySetResult(n);
+                 };
             }
 
             return rcs.Task;
