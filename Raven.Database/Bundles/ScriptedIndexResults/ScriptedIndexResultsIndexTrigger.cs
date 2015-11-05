@@ -127,7 +127,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                         }
                                         catch (Exception e)
                                         {
-                                            Log.Warn("Could not apply delete script " + scriptedIndexResults.Id + " to index result with key: " + kvp.Key, e);
+                                            Log.WarnException("Could not apply delete script " + scriptedIndexResults.Id + " to index result with key: " + kvp.Key, e);
                                         }
                                         finally
                                         {
@@ -166,7 +166,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                     }
                                     catch (Exception e)
                                     {
-                                        Log.Warn("Could not apply index script " + scriptedIndexResults.Id + " to index result with key: " + kvp.Key, e);
+                                        Log.WarnException("Could not apply index script " + scriptedIndexResults.Id + " to index result with key: " + kvp.Key, e);
                                     }
                                     finally
                                     {
@@ -217,7 +217,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                         rand = new Random();
 
                                     if (Log.IsDebugEnabled)
-                                        Log.Debug("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception. Retrying. Exception Details: {1}", scriptedIndexResults.Id, ex);
+                                        Log.DebugException(string.Format("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception. Retrying", scriptedIndexResults.Id), ex);
 
                                     Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
 
@@ -225,7 +225,7 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                 }
 
                                 if (Log.IsDebugEnabled)
-                                    Log.Debug("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception {1} times. Exception Details: {2}", scriptedIndexResults.Id, ex, 128 - retries + 1);
+                                    Log.DebugException(string.Format("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception {1} times.", scriptedIndexResults.Id, 128 - retries + 1), ex);
 
                                 throw;
                             }
