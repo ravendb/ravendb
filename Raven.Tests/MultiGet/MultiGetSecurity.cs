@@ -17,7 +17,7 @@ namespace Raven.Tests.MultiGet
     {
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration ravenConfiguration)
         {
-            ravenConfiguration.AnonymousUserAccessMode =AnonymousUserAccessMode.Get;
+            ravenConfiguration.Core.AnonymousUserAccessMode =AnonymousUserAccessMode.Get;
             Authentication.EnableOnce();
         }
 

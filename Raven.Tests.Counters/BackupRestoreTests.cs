@@ -42,14 +42,12 @@ namespace Raven.Tests.Counters
                     RunInMemory = false,
                     DataDirectory = DocumentDatabaseDirectory,
                     Port = 8090,
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 },
-                DefaultStorageTypeName = "Voron",
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 Encryption = { UseFips = SettingsHelper.UseFipsEncryptionAlgorithms },
             };
 
             config.Counter.DataDirectory = BackupSourceDirectory;
-            config.Settings["Raven/StorageTypeName"] = config.DefaultStorageTypeName;
             config.PostInit();
 
             storage = new CounterStorage("http://localhost:8080","TestCounter",config);

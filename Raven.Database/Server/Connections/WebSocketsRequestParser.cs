@@ -86,7 +86,7 @@ namespace Raven.Database.Server.Connections
                 return;
             }
 
-            switch (DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode)
+            switch (DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode)
             {
                 case AnonymousUserAccessMode.Admin:
                 case AnonymousUserAccessMode.All:
@@ -98,7 +98,7 @@ namespace Raven.Database.Server.Connections
                 case AnonymousUserAccessMode.None:
                     throw new WebSocketRequestValidationException(HttpStatusCode.Forbidden, "Single use token is required for authenticated web sockets connections.");
                 default:
-                    throw new ArgumentOutOfRangeException(DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode.ToString());
+                    throw new ArgumentOutOfRangeException(DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode.ToString());
             }
         }
 
@@ -147,8 +147,8 @@ namespace Raven.Database.Server.Connections
             if (string.IsNullOrEmpty(localPath))
                 return null;
 
-            if (localPath.StartsWith(DatabasesLandlord.SystemDatabase.Configuration.VirtualDirectory))
-                localPath = localPath.Substring(DatabasesLandlord.SystemDatabase.Configuration.VirtualDirectory.Length);
+            if (localPath.StartsWith(DatabasesLandlord.SystemDatabase.Configuration.Core.VirtualDirectory))
+                localPath = localPath.Substring(DatabasesLandlord.SystemDatabase.Configuration.Core.VirtualDirectory.Length);
 
             if (localPath.StartsWith("/") == false)
                 localPath = "/" + localPath;
@@ -198,7 +198,7 @@ namespace Raven.Database.Server.Connections
                 var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
 
                 if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-                    DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                    DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
                 {
                     throw new WebSocketRequestValidationException(HttpStatusCode.Forbidden, "Administrator user is required in order to trace the whole server.");
                 }
@@ -228,7 +228,7 @@ namespace Raven.Database.Server.Connections
             var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
 
             if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-                DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
             {
                 throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Administrator user is required in order to trace the whole server.");
             }

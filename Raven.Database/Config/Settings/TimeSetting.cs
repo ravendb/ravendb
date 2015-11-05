@@ -10,6 +10,7 @@ namespace Raven.Database.Config.Settings
     public struct TimeSetting
     {
         public static readonly Type TypeOf = typeof (TimeSetting);
+        public static readonly Type NullableTypeOf = typeof(TimeSetting?);
 
         private readonly long value;
         private readonly TimeUnit unit;

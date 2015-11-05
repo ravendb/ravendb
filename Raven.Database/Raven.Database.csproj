@@ -270,7 +270,8 @@
     <Compile Include="Config\Attributes\MinValueAttribute.cs" />
     <Compile Include="Config\Attributes\SizeUnitAttribute.cs" />
     <Compile Include="Config\Attributes\TimeUnitAttribute.cs" />
-    <Compile Include="Config\Settings\SizeSetting.cs" />
+    <Compile Include="Config\ImplicitFetchFieldsMode.cs" />
+    <Compile Include="Config\Settings\Size.cs" />
     <Compile Include="Config\Settings\TimeSetting.cs" />
     <Compile Include="Config\SystemInfoLogging.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
@@ -388,8 +389,6 @@
     <Compile Include="Config\Retriever\ReplicationConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\SqlReplicationConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\VersioningConfigurationRetriever.cs" />
-    <Compile Include="Config\Settings\EnumSetting.cs" />
-    <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="Counters\Controllers\CountersChangesController.cs" />
     <Compile Include="Counters\Notifications\NotificationPublisher.cs" />
     <Compile Include="Data\DiskSpaceNotification.cs" />
@@ -607,7 +606,6 @@
     <Compile Include="Counters\CountersMetricsManager.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
     <Compile Include="Counters\CounterStorage.cs" />
-    <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Extensions\MetricExtension.cs" />
@@ -875,14 +873,6 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
-    <Compile Include="Config\StronglyTypedRavenSettings.cs" />
-    <Compile Include="Config\Settings\BooleanSetting.cs" />
-    <Compile Include="Config\Settings\IntegerSetting.cs" />
-    <Compile Include="Config\Settings\IntegerSettingWithMin.cs" />
-    <Compile Include="Config\Settings\MultipliedIntegerSetting.cs" />
-    <Compile Include="Config\Settings\Setting.cs" />
-    <Compile Include="Config\Settings\StringSetting.cs" />
-    <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
     <Compile Include="Extensions\RoleFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />

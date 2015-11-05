@@ -191,12 +191,12 @@ namespace Raven.Database.Prefetching
         {
             var result = new List<JsonDocument>();
             bool docsLoaded;
-            int prefetchingQueueSizeInBytes;
+            Size prefetchingQueueSizeInBytes;
             var prefetchingDurationTimer = Stopwatch.StartNew();
 
             // We take an snapshot because the implementation of accessing Values from a ConcurrentDictionary involves a lock.
             // Taking the snapshot should be safe enough. 
-            long currentlyUsedBatchSizesInBytes = autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum();
+            var currentlyUsedBatchSizesInBytes = Size.Sum(autoTuner.CurrentlyUsedBatchSizesInBytes.Values);
             do
             {
                 var nextEtagToIndex = GetNextDocEtag(etag);
@@ -246,7 +246,7 @@ namespace Raven.Database.Prefetching
                 (take.HasValue == false || result.Count < take.Value) && 
                 docsLoaded &&
                 prefetchingDurationTimer.Elapsed <= context.Configuration.Prefetcher.DurationLimit.AsTimeSpan &&
-                ((prefetchingQueueSizeInBytes + currentlyUsedBatchSizesInBytes) < (context.Configuration.Memory.DynamicLimitForProcessing.Bytes)));
+                ((prefetchingQueueSizeInBytes + currentlyUsedBatchSizesInBytes) < (context.Configuration.Memory.DynamicLimitForProcessing)));
 
             return result;
         }
@@ -427,25 +427,25 @@ namespace Raven.Database.Prefetching
             }
         }
 
+        private readonly Size minSizeToLoadDocs = new Size(512, SizeUnit.Kilobytes);
+
         private List<JsonDocument> GetJsonDocsFromDisk(Etag etag, Etag untilEtag, Reference<bool> earlyExit = null)
         {
             List<JsonDocument> jsonDocs = null;
 
             // We take an snapshot because the implementation of accessing Values from a ConcurrentDictionary involves a lock.
             // Taking the snapshot should be safe enough. 
-            long currentlyUsedBatchSizesInBytes = autoTuner.CurrentlyUsedBatchSizesInBytes.Values.Sum();
+            var currentlyUsedBatchSizesInBytes = Size.Sum(autoTuner.CurrentlyUsedBatchSizesInBytes.Values);
 
             context.TransactionalStorage.Batch(actions =>
             {
                 //limit how much data we load from disk --> better adhere to memory limits
                 var totalSizeAllowedToLoadInBytes =
-                    (context.Configuration.Memory.DynamicLimitForProcessing.Bytes) -
+                    (context.Configuration.Memory.DynamicLimitForProcessing) -
                     (prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
 
                 // at any rate, we will load a min of 512Kb docs
-                long? maxSize = Math.Max(
-                    Math.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes),
-                    1024 * 512);
+                long maxSize = Size.Max(Size.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorage), minSizeToLoadDocs).ValueInBytes;
 
                 var sp = Stopwatch.StartNew();
                 var totalSize = 0L;
@@ -502,11 +502,11 @@ namespace Raven.Database.Prefetching
                 return;
             if (past.Count == 0)
                 return;
-            if (prefetchingQueue.LoadedSize > autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes)
+            if (prefetchingQueue.LoadedSize > autoTuner.MaximumSizeAllowedToFetchFromStorage)
             {
-                log.Info("Skipping background prefetching because we already have {0:#,#;;0} kb in the prefetching queue and we have a limit of {1:#,#;;0} kb",
-                    prefetchingQueue.LoadedSize / 1024,
-                    autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes / 1024);
+                log.Info("Skipping background prefetching because we already have {0} in the prefetching queue and we have a limit of {1}",
+                    prefetchingQueue.LoadedSize,
+                    autoTuner.MaximumSizeAllowedToFetchFromStorage);
                 return; // already have too much in memory
             }
             // don't keep _too_ much in memory
@@ -525,20 +525,18 @@ namespace Raven.Database.Prefetching
                 size = context.LastActualIndexingBatchInfo.Aggregate(0, (o, c) => o + c.TotalDocumentCount) / count;
             }
 
-            var alreadyLoadedSizeInBytes = futureIndexBatches.Values.Sum(x =>
+            var alreadyLoadedSize = new Size(futureIndexBatches.Values.Sum(x =>
             {
                 if (x.Task.Status == TaskStatus.RanToCompletion)
                     return x.Task.Result.Sum(doc => doc.SerializedSizeOnDisk);
 
                 return size;
-            }) + prefetchingQueue.LoadedSize;
-
-            var alreadyLoadedSizeInMb = alreadyLoadedSizeInBytes / 1024 / 1024;
-            if (alreadyLoadedSizeInMb > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
+            }), SizeUnit.Bytes) + prefetchingQueue.LoadedSize;
+            
+            if (alreadyLoadedSize > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit)
             {
-                log.Info("Skipping background prefetching because we already have {0:#,#;;0} kb in the future tasks and prefetcher queue and our limit is {1:#,#;;0} kb",
-                    alreadyLoadedSizeInMb / 1024,
-                    context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Kilobytes);
+                log.Info("Skipping background prefetching because we already have {0} in the future tasks and prefetcher queue and our limit is {1} kb",
+                    alreadyLoadedSize, context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit);
                 return;
             }
 
@@ -558,15 +556,15 @@ namespace Raven.Database.Prefetching
                     log.Info("Skipping background prefetching because we have {0} future index batches and we already have {1:#,#;;0} documents loaded and our limit is {2:#,#;;0}",
                         futureIndexBatches.Count, alreadyLoaded, autoTuner.NumberOfItemsToProcessInSingleBatch);
                     return;
-            }
+                }
             }
 
             // ensure we don't do TOO much future caching
-            if (MemoryStatistics.AvailableMemoryInMb <
-                context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
+            if (MemoryStatistics.AvailableMemory <
+                context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit)
             {
-                log.Info("Skipping background prefetching because we have {0}mb of availiable memory and the availiable memory for raising the batch size limit is: {1}mb",
-                        MemoryStatistics.AvailableMemoryInMb, context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes);
+                log.Info("Skipping background prefetching because we have {0}mb of available memory and the available memory for raising the batch size limit is: {1}",
+                        MemoryStatistics.AvailableMemory, context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit);
                 return;
             }
             // we loaded the maximum amount, there are probably more items to read now.
@@ -614,7 +612,7 @@ namespace Raven.Database.Prefetching
                 var numOfDocsToTakeInEachSplit = Math.Max(
                     context.Configuration.Core.InitialNumberOfItemsToProcessInSingleBatch,
                     (int)Math.Min((autoTuner.FetchingDocumentsFromDiskTimeout.TotalMilliseconds * 0.7) / loadTimePerDocMs,
-                        (autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes * 0.7) / largestDocSize));
+                        (autoTuner.MaximumSizeAllowedToFetchFromStorage.ValueInBytes * 0.7) / largestDocSize));
 
                 if (log.IsDebugEnabled)
                 {
@@ -835,7 +833,7 @@ namespace Raven.Database.Prefetching
 
             if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
                 context.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch ||
-                prefetchingQueue.LoadedSize > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Bytes)
+                prefetchingQueue.LoadedSize > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit)
                 return;
 
             Etag lowestEtag = null;
@@ -925,10 +923,10 @@ namespace Raven.Database.Prefetching
         {
             var batchId = Guid.NewGuid();
 
-            autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, docBatch.Sum(x => x.SerializedSizeOnDisk));
+            autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, new Size(docBatch.Sum(x => x.SerializedSizeOnDisk), SizeUnit.Bytes));
             return new DisposableAction(() =>
             {
-                long _;
+                Size _;
                 autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(batchId, out _);
             });
         }
@@ -957,7 +955,7 @@ namespace Raven.Database.Prefetching
 
             autoTuner.AutoThrottleBatchSize(
                 jsonDocs.Count + futureLen,
-                futureSize + jsonDocs.Sum(x => (long)x.SerializedSizeOnDisk),
+                new Size(futureSize + jsonDocs.Sum(x => (long)x.SerializedSizeOnDisk), SizeUnit.Bytes),
                 indexingDuration);
         }
 
@@ -984,7 +982,7 @@ namespace Raven.Database.Prefetching
             {
                 Name = "PrefetchingBehavior",
                 DatabaseName = context.DatabaseName,
-                EstimatedUsedMemory = prefetchingQueue.LoadedSize + futureIndexBatchesSize,
+                EstimatedUsedMemory = prefetchingQueue.LoadedSize.ValueInBytes + futureIndexBatchesSize,
                 Metadata = new
                 {
                     PrefetchingUserType = this.PrefetchingUser,

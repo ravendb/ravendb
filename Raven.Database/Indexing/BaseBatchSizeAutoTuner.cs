@@ -5,7 +5,7 @@ using Raven.Abstractions;
 using Raven.Database.Config;
 using System.Linq;
 using System.Collections.Generic;
-
+using Raven.Database.Config.Settings;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 
@@ -20,20 +20,20 @@ namespace Raven.Database.Indexing
         private int currentNumber;
 
         private DateTime lastIncrease;
-        private readonly ConcurrentDictionary<Guid, long> _currentlyUsedBatchSizesInBytes;
+        private readonly ConcurrentDictionary<Guid, Size> _currentlyUsedBatchSizesInBytes;
 
-        private readonly int maximumSizeAllowedToFetchFromStorageInMb;
+        private readonly Size maximumSizeAllowedToFetchFromStorageInMb;
 
         protected BaseBatchSizeAutoTuner(WorkContext context)
         {
             this.context = context;
-            FetchingDocumentsFromDiskTimeout = TimeSpan.FromSeconds(context.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
+            FetchingDocumentsFromDiskTimeout = context.Configuration.Prefetcher.FetchingDocumentsFromDiskTimeout.AsTimeSpan;
             maximumSizeAllowedToFetchFromStorageInMb = context.Configuration.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb;
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
             NumberOfItemsToProcessInSingleBatch = InitialNumberOfItems;
             MemoryStatistics.RegisterLowMemoryHandler(this);
             context.TransactionalStorage.RegisterTransactionalStorageNotificationHandler(this);
-            _currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, long>();
+            _currentlyUsedBatchSizesInBytes = new ConcurrentDictionary<Guid, Size>();
         }
 
     
@@ -76,7 +76,7 @@ namespace Raven.Database.Indexing
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void AutoThrottleBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
+        public void AutoThrottleBatchSize(int amountOfItemsToProcess, Size size, TimeSpan processingDuration)
         {
             try
             {
@@ -93,10 +93,10 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private bool ConsiderIncreasingBatchSize(int amountOfItemsToProcess, long size, TimeSpan processingDuration)
+        private bool ConsiderIncreasingBatchSize(int amountOfItemsToProcess, Size size, TimeSpan processingDuration)
         {
             //if we are using too much memory for indexing, do not even consider to increase batch size
-            if (amountOfItemsToProcess < NumberOfItemsToProcessInSingleBatch || CurrentlyUsedBatchSizesInBytes.Values.Sum() > context.Configuration.Memory.DynamicLimitForProcessing.Bytes)
+            if (amountOfItemsToProcess < NumberOfItemsToProcessInSingleBatch || Size.Sum(CurrentlyUsedBatchSizesInBytes.Values) > context.Configuration.Memory.DynamicLimitForProcessing)
             {
                 return false;
             }
@@ -114,19 +114,17 @@ namespace Raven.Database.Indexing
             // that we used for the last batch (note that this is only an estimate number, but should be close enough), would we still be
             // within the limits that governs us
 
-            var sizeInMegabytes = size / 1024 / 1024;
-
             // we don't actually *know* what the actual cost of indexing, because that depends on many factors (how the index
             // is structured, is it analyzed/default/not analyzed, etc). We just assume for now that it takes 25% of the actual
             // on disk structure per each active index. That should give us a good guesstimate about the value.
             // Because of the way we are executing indexes, only N are running at once, where N is the parallel level, so we take
             // that into account, you may have 10 indexes but only 2 CPUs, so we only consider the cost of executing 2 indexes,
             // not all 10
-            var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.Core.MaxNumberOfParallelProcessingTasks)));
+            var sizedPlusIndexingCost = size * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.Core.MaxNumberOfParallelProcessingTasks)));
 
-            var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemoryInMb - sizedPlusIndexingCost;
+            var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemory - sizedPlusIndexingCost;
 
-            if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes)
+            if (remainingMemoryAfterBatchSizeIncrease < context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit)
                 return false;
 
             // here we assume that the next batch would be 175% as long as the current one
@@ -161,17 +159,19 @@ namespace Raven.Database.Indexing
 
         public TimeSpan FetchingDocumentsFromDiskTimeout { get; private set; }
 
-        public long MaximumSizeAllowedToFetchFromStorageInBytes
+        private readonly Size minSizeToFetchFromStorage = new Size(8, SizeUnit.Megabytes);
+
+        public Size MaximumSizeAllowedToFetchFromStorage
         {
             get
             {
                 // we take just a bit more to account for indexing costs as well
-                var sizeToKeepFree = context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes * 1.33;
+                var sizeToKeepFree = context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit * 1.33;
                 // if we just loaded > 256 MB to index, that is big enough for right now
                 // remember, this value refer to just the data on disk, not including
                 // the memory to do the actual indexing
-                double sizeInMb = Math.Min(maximumSizeAllowedToFetchFromStorageInMb, Math.Max(8, MemoryStatistics.AvailableMemoryInMb - sizeToKeepFree));
-                return (long)sizeInMb * 1024 * 1024;
+
+                return Size.Min(maximumSizeAllowedToFetchFromStorageInMb, Size.Max(minSizeToFetchFromStorage, MemoryStatistics.AvailableMemory - sizeToKeepFree));
             }
         }
 
@@ -179,13 +179,13 @@ namespace Raven.Database.Indexing
         {
             get
             {
-                return _currentlyUsedBatchSizesInBytes.Values.Sum() * 4 > context.Configuration.Memory.DynamicLimitForProcessing.Bytes;
+                return Size.Sum(_currentlyUsedBatchSizesInBytes.Values) * 4 > context.Configuration.Memory.DynamicLimitForProcessing;
             }
         }
 
         private bool ReduceBatchSizeIfCloseToMemoryCeiling(bool forceReducing = false)
         {
-            if (MemoryStatistics.AvailableMemoryInMb >= context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes && forceReducing == false &&
+            if (MemoryStatistics.AvailableMemory >= context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false &&
                 IsProcessingUsingTooMuchMemory == false)
             {
                 // there is enough memory available for the next indexing run
@@ -204,7 +204,7 @@ namespace Raven.Database.Indexing
 
             // let us check again after the GC call, do we still need to reduce the batch size?
 
-            if (MemoryStatistics.AvailableMemoryInMb > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit.Megabytes && forceReducing == false)
+            if (MemoryStatistics.AvailableMemory > context.Configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit && forceReducing == false)
             {
                 // we don't want to try increasing things, we just hit the ceiling, maybe on the next try
                 return true;
@@ -303,7 +303,7 @@ namespace Raven.Database.Indexing
         protected abstract int MaxNumberOfItems { get; }
         protected abstract int CurrentNumberOfItems { get; set; }
         protected abstract int LastAmountOfItemsToRemember { get; set; }
-        public ConcurrentDictionary<Guid, long> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }		
+        public ConcurrentDictionary<Guid, Size> CurrentlyUsedBatchSizesInBytes { get { return _currentlyUsedBatchSizesInBytes; } }		
         protected abstract void RecordAmountOfItems(int numberOfItems);
         protected abstract IEnumerable<int> GetLastAmountOfItems();
         protected abstract string GetName { get; }

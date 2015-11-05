@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Controllers
             {
 
                 if (!User.IsAdministrator(AnonymousUserAccessMode.None) &&
-                    DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                    DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
                 {
                     return GetMessageWithObject(new
                     {

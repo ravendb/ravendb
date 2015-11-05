@@ -12,6 +12,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
@@ -595,7 +596,7 @@ namespace Raven.Tests.FileSystem
                 Id = "Raven/FileSystem/" + newFileSystemName,
                 Settings =
                  {
-                     {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             }, newFileSystemName);
 
@@ -656,7 +657,7 @@ namespace Raven.Tests.FileSystem
                 Id = Constants.FileSystem.Prefix + newFileSystemName,
                 Settings =
                  {
-                     {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             };
 

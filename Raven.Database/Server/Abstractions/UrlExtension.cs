@@ -18,10 +18,10 @@ namespace Raven.Database.Server.Abstractions
                 localPath = localPath.Substring(0, indexOfQuery);
             if (localPath.StartsWith("//"))
                 localPath = localPath.Substring(1);
-            if (configuration.VirtualDirectory != "/" &&
-                localPath.StartsWith(configuration.VirtualDirectory, StringComparison.OrdinalIgnoreCase))
+            if (configuration.Core.VirtualDirectory != "/" &&
+                localPath.StartsWith(configuration.Core.VirtualDirectory, StringComparison.OrdinalIgnoreCase))
             {
-                localPath = localPath.Substring(configuration.VirtualDirectory.Length);
+                localPath = localPath.Substring(configuration.Core.VirtualDirectory.Length);
                 if (localPath.Length == 0)
                     localPath = "/";
             }

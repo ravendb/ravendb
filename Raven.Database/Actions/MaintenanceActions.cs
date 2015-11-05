@@ -16,12 +16,10 @@ using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-
-using Voron.Impl.Backup;
 using Raven.Abstractions.Exceptions;
+using Raven.Storage.Voron;
 
 namespace Raven.Database.Actions
 {
@@ -52,26 +50,15 @@ namespace Raven.Database.Actions
                 throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);
             }
 
-            var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
-            var databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
-
-            string storage;
-            if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
-            {	          
-                if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
-                    storage = InMemoryRavenConfiguration.VoronTypeName;
-                else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-                    throw new StorageNotSupportedException("Esent is no longer supported. Use Voron instead.");
-                else // Default
-                    storage = InMemoryRavenConfiguration.VoronTypeName;
-            }
+            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+                throw new StorageNotSupportedException("Esent is no longer supported. Use Voron instead.");
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
             {
                 configuration.Core.DataDirectory = restoreRequest.DatabaseLocation;
             }
 
-            using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }, () => { }))
+            using (var transactionalStorage = new TransactionalStorage(configuration, () => { }, () => { }, () => { }, () => { }))
             {
                 transactionalStorage.Restore(restoreRequest, output);
             }
@@ -92,7 +79,7 @@ namespace Raven.Database.Actions
 
             if (incrementalBackup &&
                 TransactionalStorage is Raven.Storage.Voron.TransactionalStorage &&
-                Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+                Database.Configuration.Storage.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }
@@ -106,9 +93,6 @@ namespace Raven.Database.Actions
             Database.IndexStorage.FlushMapIndexes();
             Database.IndexStorage.FlushReduceIndexes();
 
-            if (databaseDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
-                databaseDocument.Settings["Raven/StorageTypeName"] = TransactionalStorage.FriendlyName ?? TransactionalStorage.GetType().AssemblyQualifiedName;
-
             TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument);
         }
 
@@ -120,7 +104,7 @@ namespace Raven.Database.Actions
                 Constants.RavenReplicationDocsTombstones
             };
 
-            var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.TombstoneRetentionTime);
+            var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.Core.TombstoneRetentionTime.AsTimeSpan);
 
             foreach (var listName in tomstoneLists)
             {

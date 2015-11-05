@@ -25,7 +25,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
         {
-            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 
@@ -64,7 +64,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
                 Id = "repl",
                 Settings =
                 {
-                    {Constants.RunInMemory, "true"},
+                    {InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
                     {"Raven/DataDir", "~/db1"},
                     {"Raven/ActiveBundles", "Replication"}
                 }
@@ -74,7 +74,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
                 Id = "repl",
                 Settings =
                 {
-                    {Constants.RunInMemory, "true"},
+                    {InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
                     {"Raven/DataDir", "~/db2"},
                     {"Raven/ActiveBundles", "Replication"}
                 }

@@ -51,29 +51,29 @@ namespace Raven.Database.Plugins.Builtins
 
             options.DatabaseLandlord.ForAllDatabases(database =>
             {
-                pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Core.IndexStoragePath, PathType = PathType.Index, ResourceName = database.Name, ResourceType = ResourceType.Database });
-                pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = database.Name, ResourceType = ResourceType.Database });
+                pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Core.IndexStoragePath, PathType = PathType.Index, ResourceName = database.Name, ResourceType = ResourceType.Database });				
+                pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Storage.JournalsStoragePath, PathType = PathType.Journal, ResourceName = database.Name, ResourceType = ResourceType.Database });
                 pathsToCheck.Add(new PathToCheck { Path = database.Configuration.Core.DataDirectory, PathType = PathType.Data, ResourceName = database.Name, ResourceType = ResourceType.Database });
             });
 
             options.FileSystemLandlord.ForAllFileSystems(filesystem =>
             {
                 pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.DataDirectory, PathType = PathType.Data, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
-                pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.IndexStoragePath, PathType = PathType.Index, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
-                pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
+                pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.IndexStoragePath, PathType = PathType.Index, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });				
+                pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
             });
 
             options.CountersLandlord.ForAllCounters(cs =>
             {
                 pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Core.IndexStoragePath, PathType = PathType.Index, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
-                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
                 pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Core.DataDirectory, PathType = PathType.Data, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
             });
 
             options.TimeSeriesLandlord.ForAllTimeSeries(ts =>
             {
                 pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Core.IndexStoragePath, PathType = PathType.Index, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
-                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
                 pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Core.DataDirectory, PathType = PathType.Data, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
             });
 

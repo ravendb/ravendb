@@ -19,7 +19,7 @@ namespace Raven.Tests.Issues
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             Authentication.EnableOnce();
-            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
         }
 
         [Fact]

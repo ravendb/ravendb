@@ -13,12 +13,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Rachis;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
@@ -26,13 +28,9 @@ using Raven.Database.Indexing;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.FileSystem.Util;
-using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
-using Enum = System.Enum;
-using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Util;
 using Raven.Database.Config.Attributes;
 using Raven.Database.Config.Settings;
 
@@ -40,8 +38,6 @@ namespace Raven.Database.Config
 {
     public class InMemoryRavenConfiguration
     {
-        public const string VoronTypeName = "voron";
-
         private CompositionContainer container;
         private bool containerExternallySet;
 
@@ -79,17 +75,23 @@ namespace Raven.Database.Config
 
         public MemoryConfiguration Memory { get; }
 
-        public FacetsConfiguration Facets { get; }
+        public OAuthConfiguration OAuth { get; private set; }
+
+        public ExpirationBundleConfiguration Expiration { get; }
 
         public InMemoryRavenConfiguration()
         {
-            
+            Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
+
+            Core = new CoreConfiguration(this);
+
+            FileSystem = new FileSystemConfiguration(Core);
+            Counter = new CounterConfiguration(Core);
+            TimeSeries = new TimeSeriesConfiguration(Core);
+
             Replication = new ReplicationConfiguration();
             Prefetcher = new PrefetcherConfiguration();
             Storage = new StorageConfiguration();
-            FileSystem = new FileSystemConfiguration();
-            Counter = new CounterConfiguration();
-            TimeSeries = new TimeSeriesConfiguration();
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
@@ -100,12 +102,7 @@ namespace Raven.Database.Config
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
             Memory = new MemoryConfiguration();
-
-            Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
-            Core = new CoreConfiguration(this);
-
-            CreatePluginsDirectoryIfNotExisting = true;
-            CreateAnalyzersDirectoryIfNotExisting = true;
+            Expiration = new ExpirationBundleConfiguration();
 
             IndexingClassifier = new DefaultIndexingClassifier();
 
@@ -128,28 +125,12 @@ namespace Raven.Database.Config
 
             FilterActiveBundles();
 
-            SetupOAuth();
-
-            SetupGC();
+            OAuth = new OAuthConfiguration(ServerUrl);
+            OAuth.Initialize(Settings);
         }
 
         public InMemoryRavenConfiguration Initialize()
         {
-            int defaultMaxNumberOfItemsToIndexInSingleBatch = -1;
-            int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
-
-            var ravenSettings = new StronglyTypedRavenSettings(Settings);
-            ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
-            
-            
-
-            var configurations = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(ConfigurationBase));
-
-            //foreach (var configuration in configurations)
-            //{
-            //	configuration.
-            //}
-
             Core.Initialize(Settings);
             Replication.Initialize(Settings);
             Queries.Initialize(Settings);
@@ -159,152 +140,25 @@ namespace Raven.Database.Config
             Memory.Initialize(Settings);
             Indexing.Initialize(Settings);
             Prefetcher.Initialize(Settings);
-            
-            FileSystem.InitializeFrom(this);
-            Counter.InitializeFrom(this);
-            TimeSeries.InitializeFrom(this);
+            Storage.Initialize(Settings);
+            Encryption.Initialize(Settings);
+            Cluster.Initialize(Settings);
+            Monitoring.Initialize(Settings);
+            FileSystem.Initialize(Settings);
+            Counter.Initialize(Settings);
+            TimeSeries.Initialize(Settings);
+            Expiration.Initialize(Settings);
+
+            if (Settings["Raven/MaxServicePointIdleTime"] != null)
+                ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(Settings["Raven/MaxServicePointIdleTime"]);
 
             if (ConcurrentMultiGetRequests == null)
                 ConcurrentMultiGetRequests = new SemaphoreSlim(Server.MaxConcurrentMultiGetRequests);
 
-            // Discovery
-            DisableClusterDiscovery = ravenSettings.DisableClusterDiscovery.Value;
-
-            ServerName = ravenSettings.ServerName.Value;
-
-            MaxStepsForScript = ravenSettings.MaxStepsForScript.Value;
-            AdditionalStepsForScriptBasedOnDocumentSize = ravenSettings.AdditionalStepsForScriptBasedOnDocumentSize.Value;
-            TurnOffDiscoveryClient = ravenSettings.TurnOffDiscoveryClient.Value;
-
-            // Index settings
-            
-            FlushIndexToDiskSizeInMb = ravenSettings.FlushIndexToDiskSizeInMb.Value;
-
-            
-
-            MaxIndexCommitPointStoreTimeInterval = ravenSettings.MaxIndexCommitPointStoreTimeInterval.Value;
-
-            MinIndexingTimeIntervalToStoreCommitPoint = ravenSettings.MinIndexingTimeIntervalToStoreCommitPoint.Value;
-
-            MaxNumberOfStoredCommitPoints = ravenSettings.MaxNumberOfStoredCommitPoints.Value;
-
-            // Data settings
-
-            if (string.IsNullOrEmpty(DefaultStorageTypeName))
-            {
-                DefaultStorageTypeName = ravenSettings.DefaultStorageTypeName.Value;
-            }
-
-            DatabaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
-
-            TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
-            TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
-
-            TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
-            TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
-
-            SetupTransactionMode();
-
-            MaxRecentTouchesToRemember = ravenSettings.MaxRecentTouchesToRemember.Value;
-
-            // HTTP settings
-            
-            if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
-            {
-                Encryption.UseSsl = ravenSettings.Encryption.UseSsl.Value;
-                Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
-            }
-
-            SetVirtualDirectory();
-            
-
-            AnonymousUserAccessMode = GetAnonymousUserAccessMode();
-            
-            // Misc settings
-
-            AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
-            RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
-
-            Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
-            Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
-            Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
-            Storage.Voron.ScratchBufferSizeNotificationThreshold = ravenSettings.Voron.ScratchBufferSizeNotificationThreshold.Value;
-            Storage.Voron.AllowIncrementalBackups = ravenSettings.Voron.AllowIncrementalBackups.Value;
-            Storage.Voron.TempPath = ravenSettings.Voron.TempPath.Value;
-            Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
-            Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
-
-            Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
-            
-            Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
-            Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
-
-            Replication.FetchingFromDiskTimeoutInSeconds = ravenSettings.Replication.FetchingFromDiskTimeoutInSeconds.Value;
-            Replication.ReplicationRequestTimeoutInMilliseconds = ravenSettings.Replication.ReplicationRequestTimeoutInMilliseconds.Value;
-            Replication.ForceReplicationRequestBuffering = ravenSettings.Replication.ForceReplicationRequestBuffering.Value;
-            Replication.MaxNumberOfItemsToReceiveInSingleBatch = ravenSettings.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value;
-
-            FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
-            FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
-            FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
-            if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
-                FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
-
-            Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
-            Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
-            Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
-            Counter.ReplicationLatencyInMs = ravenSettings.Counter.ReplicationLatencyInMs.Value;
-
-            TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
-            TimeSeries.TombstoneRetentionTime = ravenSettings.TimeSeries.TombstoneRetentionTime.Value;
-            TimeSeries.DeletedTombstonesInBatch = ravenSettings.TimeSeries.DeletedTombstonesInBatch.Value;
-            TimeSeries.ReplicationLatencyInMs = ravenSettings.TimeSeries.ReplicationLatencyInMs.Value;
-
-            Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
-
-            Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
-            Indexing.MaxNumberOfStoredIndexingBatchInfoElements = ravenSettings.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value;
-            Indexing.UseLuceneASTParser = ravenSettings.Indexing.UseLuceneASTParser.Value;
-            Indexing.DisableIndexingFreeSpaceThreshold = ravenSettings.Indexing.DisableIndexingFreeSpaceThreshold.Value;
-            Indexing.DisableMapReduceInMemoryTracking = ravenSettings.Indexing.DisableMapReduceInMemoryTracking.Value;
-
-            Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
-            Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
-            Cluster.MaxLogLengthBeforeCompaction = ravenSettings.Cluster.MaxLogLengthBeforeCompaction.Value;
-            Cluster.MaxEntriesPerRequest = ravenSettings.Cluster.MaxEntriesPerRequest.Value;
-            Cluster.MaxStepDownDrainTime = ravenSettings.Cluster.MaxStepDownDrainTime.Value;
-
-            TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
-
-            ImplicitFetchFieldsFromDocumentMode = ravenSettings.ImplicitFetchFieldsFromDocumentMode.Value;
-
-            IgnoreSslCertificateErrors = GetIgnoreSslCertificateErrorModeMode();
-
-            WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
-
-            TempPath = ravenSettings.TempPath.Value;
-
-            FillMonitoringSettings(ravenSettings);
-
             PostInit();
-
-            // TODO arek
 
             return this;
         }
-
-        private void FillMonitoringSettings(StronglyTypedRavenSettings settings)
-        {
-            Monitoring.Snmp.Enabled = settings.Monitoring.Snmp.Enabled.Value;
-            Monitoring.Snmp.Community = settings.Monitoring.Snmp.Community.Value;
-            Monitoring.Snmp.Port = settings.Monitoring.Snmp.Port.Value;
-        }		
-
-        /// <summary>
-        /// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
-        /// purged on next database startup. Default: 14 days.
-        /// </summary>
-        public TimeSpan TombstoneRetentionTime { get; set; }
 
         /// <summary>
         /// This limits the number of concurrent multi get requests,
@@ -314,22 +168,9 @@ namespace Raven.Database.Config
         [JsonIgnore]
         public SemaphoreSlim ConcurrentMultiGetRequests;
 
-        /// <summary>
-        /// The time to wait before canceling a database operation such as load (many) or query
-        /// </summary>
-        public TimeSpan DatabaseOperationTimeout { get; private set; }
-
-        public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
-
-        public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
-
-        public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
-
-        public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
-
         private void CheckDirectoryPermissions()
         {
-            var tempPath = TempPath;
+            var tempPath = Core.TempPath;
             var tempFileName = Guid.NewGuid().ToString("N");
             var tempFilePath = Path.Combine(tempPath, tempFileName);
 
@@ -367,19 +208,6 @@ namespace Raven.Database.Config
             }
         }
 
-        private HashSet<string> headersToIgnore;
-        public HashSet<string> HeadersToIgnore
-        {
-            get
-            {
-                if (headersToIgnore != null)
-                    return headersToIgnore;
-
-                var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
-                return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
-            }
-        } 
-
         internal static ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
         {
             if (catalogs.Count != 1)
@@ -396,69 +224,6 @@ namespace Raven.Database.Config
         }
 
         public TaskScheduler CustomTaskScheduler { get; set; }
-
-        private void SetupTransactionMode()
-        {
-            var transactionMode = Settings["Raven/TransactionMode"];
-            TransactionMode result;
-            if (Enum.TryParse(transactionMode, true, out result) == false)
-                result = TransactionMode.Safe;
-            TransactionMode = result;
-        }
-
-        private void SetVirtualDirectory()
-        {
-            var defaultVirtualDirectory = "/";
-            try
-            {
-                if (HttpContext.Current != null)
-                    defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
-            }
-            catch (HttpException)
-            {
-                // explicitly ignoring this because we might be running in embedded mode
-                // inside IIS during init stages, in which case we can't access the HttpContext
-                // nor do we actually care
-            }
-
-            VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
-
-        }
-
-        public bool UseDefaultOAuthTokenServer
-        {
-            get { return Settings["Raven/OAuthTokenServer"] == null;  }
-        }
-
-        private void SetupOAuth()
-        {
-            OAuthTokenServer = Settings["Raven/OAuthTokenServer"] ??
-                               (ServerUrl.EndsWith("/") ? ServerUrl + "OAuth/API-Key" : ServerUrl + "/OAuth/API-Key");
-            OAuthTokenKey = GetOAuthKey();
-        }
-
-        private void SetupGC()
-        {
-            //GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
-        }
-
-        private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
-            {
-            using (var rsa = Encryptor.Current.CreateAsymmetrical())
-            {
-                return rsa.ExportCspBlob(true);
-            }
-        });
-
-        private byte[] GetOAuthKey()
-        {
-            var key = Settings["Raven/OAuthTokenCertificate"];
-            if (string.IsNullOrEmpty(key) == false)
-            {
-                return Convert.FromBase64String(key);
-            }
-            return DefaultOauthKey.Value; // ensure we only create this once per process
-        }
 
         public NameValueCollection Settings { get; set; }
 
@@ -486,7 +251,7 @@ namespace Raven.Database.Config
                         Query = ""
                     }.Uri.ToString();
                 }
-                return new UriBuilder(Encryption.UseSsl ? "https" : "http", (Core.HostName ?? Environment.MachineName), Core.Port, VirtualDirectory).Uri.ToString();
+                return new UriBuilder(Encryption.UseSsl ? "https" : "http", (Core.HostName ?? Environment.MachineName), Core.Port, Core.VirtualDirectory).Uri.ToString();
             }
         }
 
@@ -496,93 +261,6 @@ namespace Raven.Database.Config
         /// The indexing scheduler to use
         /// </summary>
         public IIndexingClassifier IndexingClassifier { get; set; }
-
-        #endregion
-
-        #region HTTP settings
-
-
-        private string virtualDirectory;
-
-        /// <summary>
-        /// The virtual directory to use when creating the http listener. 
-        /// Default: / 
-        /// </summary>
-        public string VirtualDirectory
-        {
-            get { return virtualDirectory; }
-            set
-            {
-                virtualDirectory = value;
-
-                if (virtualDirectory.EndsWith("/"))
-                    virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
-                if (virtualDirectory.StartsWith("/") == false)
-                    virtualDirectory = "/" + virtualDirectory;
-            }
-        }
-
-        /// <summary>
-        /// Defines which operations are allowed for anonymous users.
-        /// Allowed values: All, Get, None
-        /// Default: Get
-        /// </summary>
-        public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
-
-        /// <summary>
-        /// If set local request don't require authentication
-        /// Allowed values: true/false
-        /// Default: false
-        /// </summary>
-        public bool AllowLocalAccessWithoutAuthorization { get; set; }
-
-        /// <summary>
-        /// If set all client request to the server will be rejected with 
-        /// the http 503 response.
-        /// Other servers or the studio could still access the server.
-        /// </summary>
-        public bool RejectClientsMode { get; set; }
-
-        /// <summary>
-        /// The certificate to use when verifying access token signatures for OAuth
-        /// </summary>
-        public byte[] OAuthTokenKey { get; set; }
-
-        public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
-
-        #endregion
-
-        #region Data settings
-
-        /// <summary>
-        /// What storage type to use (see: RavenDB Storage engines)
-        /// Allowed values: voron
-        /// Default: voron
-        /// </summary>
-        public string DefaultStorageTypeName
-        {
-            get { return defaultStorageTypeName; }
-            set { if (!string.IsNullOrEmpty(value)) defaultStorageTypeName = value; }
-        }
-        private string defaultStorageTypeName;
-
-        /// <summary>
-        /// What sort of transaction mode to use. 
-        /// Allowed values: 
-        /// Lazy - faster, but can result in data loss in the case of server crash. 
-        /// Safe - slower, but will never lose data 
-        /// Default: Safe 
-        /// </summary>
-        public TransactionMode TransactionMode { get; set; }
-
-        #endregion
-
-        #region Misc settings
-
-        public bool CreatePluginsDirectoryIfNotExisting { get; set; }
-        public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
-
-        public string OAuthTokenServer { get; set; }
 
         #endregion
 
@@ -601,88 +279,13 @@ namespace Raven.Database.Config
         public AggregateCatalog Catalog { get; set; }
 
         public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
-        
-        private int? maxNumberOfParallelIndexTasks;
 
         //this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
         private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof (DocumentDatabase).Assembly);
 
-        /// <summary>
-        /// Maximum time interval for storing commit points for map indexes when new items were added.
-        /// The commit points are used to restore index if unclean shutdown was detected.
-        /// Default: 00:05:00 
-        /// </summary>
-        public TimeSpan MaxIndexCommitPointStoreTimeInterval { get; set; }
-
-        /// <summary>
-        /// Minumum interval between between successive indexing that will allow to store a  commit point
-        /// Default: 00:01:00
-        /// </summary>
-        public TimeSpan MinIndexingTimeIntervalToStoreCommitPoint { get; set; }
-
-        /// <summary>
-        /// Maximum number of kept commit points to restore map index after unclean shutdown
-        /// Default: 5
-        /// </summary>
-        public int MaxNumberOfStoredCommitPoints { get; set; }
-
         internal bool IsTenantDatabase { get; set; }
-        
-        /// <summary>
-        /// If True, cluster discovery will be disabled. Default is False
-        /// </summary>
-        public bool DisableClusterDiscovery { get; set; }
-
-        /// <summary>
-        /// If True, turns off the discovery client.
-        /// </summary>
-        public bool TurnOffDiscoveryClient { get; set; }
-
-        /// <summary>
-        /// The server name
-        /// </summary>
-        public string ServerName { get; set; }
-        
-        /// <summary>
-        /// The maximum number of steps (instructions) to give a script before timing out.
-        /// Default: 10,000
-        /// </summary>
-        public int MaxStepsForScript { get; set; }
-
-        /// <summary>
-        /// The maximum number of recent document touches to store (i.e. updates done in
-        /// order to initiate indexing rather than because something has actually changed).
-        /// </summary>
-        public int MaxRecentTouchesToRemember { get; set; }
-
-        /// <summary>
-        /// The number of additional steps to add to a given script based on the processed document's quota.
-        /// Set to 0 to give use a fixed size quota. This value is multiplied with the doucment size.
-        /// Default: 5
-        /// </summary>
-        public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
-
-        /// <summary>
-        /// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
-        /// </summary>
-        public long FlushIndexToDiskSizeInMb { get; set; }
 
         public bool EnableResponseLoggingForEmbeddedDatabases { get; set; }
-
-        /// <summary>
-        /// How FieldsToFetch are extracted from the document.
-        /// Default: Enabled. 
-        /// Other values are: 
-        ///     DoNothing (fields are not fetched from the document)
-        ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
-        /// </summary>
-        public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
-
-        /// <summary>
-        /// Path to temporary directory used by server.
-        /// Default: Current user's temporary directory
-        /// </summary>
-        public string TempPath { get; set; }
 
         [Browsable(false)]
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -708,26 +311,6 @@ namespace Raven.Database.Config
             }
         }
 
-        protected AnonymousUserAccessMode GetAnonymousUserAccessMode()
-        {
-            if (string.IsNullOrEmpty(Settings["Raven/AnonymousAccess"]) == false)
-            {
-                var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
-                return (AnonymousUserAccessMode)val;
-            }
-            return AnonymousUserAccessMode.Admin;
-        }
-
-        protected IgnoreSslCertificateErrorsMode GetIgnoreSslCertificateErrorModeMode()
-        {
-            if (string.IsNullOrEmpty(Settings["Raven/IgnoreSslCertificateErrors"]) == false)
-            {
-                var val = Enum.Parse(typeof(IgnoreSslCertificateErrorsMode), Settings["Raven/IgnoreSslCertificateErrors"]);
-                return (IgnoreSslCertificateErrorsMode)val;
-            }
-            return IgnoreSslCertificateErrorsMode.None;
-        }
-
         public Uri GetFullUrl(string baseUrl)
         {
             baseUrl = Uri.EscapeUriString(baseUrl);
@@ -735,63 +318,8 @@ namespace Raven.Database.Config
             if (baseUrl.StartsWith("/"))
                 baseUrl = baseUrl.Substring(1);
 
-            var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
+            var url = Core.VirtualDirectory.EndsWith("/") ? Core.VirtualDirectory + baseUrl : Core.VirtualDirectory + "/" + baseUrl;
             return new Uri(url, UriKind.RelativeOrAbsolute);
-        }
-
-        public T? GetConfigurationValue<T>(string configName) where T : struct
-        {
-            // explicitly fail if we can't convert it
-            if (string.IsNullOrEmpty(Settings[configName]) == false)
-                return (T)Convert.ChangeType(Settings[configName], typeof(T));
-            return null;
-        }
-
-        [CLSCompliant(false)]
-        public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
-        {
-            if (EnvironmentUtils.RunningOnPosix)
-                storageEngine = "voron";
-            storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
-            var type = Type.GetType(storageEngine);
-
-            if (type == null)
-                throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
-            Action dummyAction = () => { };
-
-            return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible, onNestedTransactionEnter ?? dummyAction, onNestedTransactionExit ?? dummyAction);
-        }
-
-
-        public static string StorageEngineAssemblyNameByTypeName(string typeName)
-        {
-            switch (typeName.ToLowerInvariant())
-            {
-                case VoronTypeName:
-                    typeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-                    break;
-                default:
-                    throw new ArgumentException("Invalid storage engine type name: " + typeName);
-            }
-            return typeName;
-        }	  
-
-        public string SelectStorageEngineAndFetchTypeName()
-        {
-            if (Core.RunInMemory)
-            {
-                return VoronTypeName;                
-            }
-
-            if (String.IsNullOrEmpty(Core.DataDirectory) == false && Directory.Exists(Core.DataDirectory))
-            {
-                if (File.Exists(Path.Combine(Core.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                {
-                    return VoronTypeName;
-                }
-            }
-
-            return DefaultStorageTypeName;
         }
 
         public void Dispose()
@@ -833,11 +361,8 @@ namespace Raven.Database.Config
             if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
                 Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
 
-            if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
-                Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Databases", tenantId);
-
-            if (string.IsNullOrEmpty(Settings[Constants.RavenTxJournalPath]) == false)
-                Settings[Constants.RavenTxJournalPath] = Path.Combine(Settings[Constants.RavenTxJournalPath], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings[GetKey(x => x.Storage.JournalsStoragePath)]) == false)
+                Settings[GetKey(x => x.Storage.JournalsStoragePath)] = Path.Combine(Settings[GetKey(x => x.Storage.JournalsStoragePath)], "Databases", tenantId);
 
             if (string.IsNullOrEmpty(Settings["Raven/Voron/TempPath"]) == false)
                 Settings["Raven/Voron/TempPath"] = Path.Combine(Settings["Raven/Voron/TempPath"], "Databases", tenantId, "VoronTemp");
@@ -845,27 +370,27 @@ namespace Raven.Database.Config
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)
         {                                             
-            if (string.IsNullOrEmpty(Settings[Constants.FileSystem.DataDirectory]) == false)
-                Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
+            if (string.IsNullOrEmpty(Settings[GetKey(x => x.FileSystem.DataDirectory)]) == false)
+                Settings[GetKey(x => x.FileSystem.DataDirectory)] = Path.Combine(Settings[GetKey(x => x.FileSystem.DataDirectory)], "FileSystems", tenantId);
         }
 
         public void CustomizeValuesForCounterStorageTenant(string tenantId)
         {
-            if (string.IsNullOrEmpty(Settings[Constants.Counter.DataDirectory]) == false)
-                Settings[Constants.Counter.DataDirectory] = Path.Combine(Settings[Constants.Counter.DataDirectory], "Counters", tenantId);
+            if (string.IsNullOrEmpty(Settings[GetKey(x => x.Counter.DataDirectory)]) == false)
+                Settings[GetKey(x => x.Counter.DataDirectory)] = Path.Combine(Settings[GetKey(x => x.Counter.DataDirectory)], "Counters", tenantId);
         }
 
         public void CustomizeValuesForTimeSeriesTenant(string tenantId)
         {
-            if (string.IsNullOrEmpty(Settings[Constants.TimeSeries.DataDirectory]) == false)
-                Settings[Constants.TimeSeries.DataDirectory] = Path.Combine(Settings[Constants.TimeSeries.DataDirectory], "TimeSeries", tenantId);
+            if (string.IsNullOrEmpty(Settings[GetKey(x => x.TimeSeries.DataDirectory)]) == false)
+                Settings[GetKey(x => x.TimeSeries.DataDirectory)] = Path.Combine(Settings[GetKey(x => x.TimeSeries.DataDirectory)], "TimeSeries", tenantId);
         }
 
         public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
         {
             Core.Port = defaultConfiguration.Core.Port;
-            OAuthTokenKey = defaultConfiguration.OAuthTokenKey;
-            OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
+            OAuth.TokenKey = defaultConfiguration.OAuth.TokenKey;
+            OAuth.TokenServer = defaultConfiguration.OAuth.TokenServer;
 
             FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
 
@@ -873,7 +398,7 @@ namespace Raven.Database.Config
             Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
 
             Core.AssembliesDirectory = defaultConfiguration.Core.AssembliesDirectory;
-            Storage.Voron.AllowOn32Bits = defaultConfiguration.Storage.Voron.AllowOn32Bits;
+            Storage.AllowOn32Bits = defaultConfiguration.Storage.AllowOn32Bits;
         }
 
         public IEnumerable<string> GetConfigOptionsDocs()
@@ -893,24 +418,23 @@ namespace Raven.Database.Config
 
             public virtual void Initialize(NameValueCollection settings)
             {
-                var properties = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance); //TODO arek
+                var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                 let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
+                                 where configurationEntryAttribute != null // filter out properties which are marked as configuration entry
+                                 orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
+                                 select property;
 
-                foreach (var property in properties)
+                foreach (var property in configurationProperties)
                 {
-                    var entries = property.GetCustomAttributes<ConfigurationEntryAttribute>().ToList();
-
-                    if (entries.Count == 0)
-                        continue;
-
                     TimeUnitAttribute timeUnit = null;
                     SizeUnitAttribute sizeUnit = null;
 
-                    if (property.PropertyType == TimeSetting.TypeOf)
+                    if (property.PropertyType == TimeSetting.TypeOf || property.PropertyType == TimeSetting.NullableTypeOf)
                     {
                         timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
                         Debug.Assert(timeUnit != null);
                     }
-                    else if (property.PropertyType == SizeSetting.TypeOf)
+                    else if (property.PropertyType == Size.TypeOf || property.PropertyType == Size.NullableTypeOf)
                     {
                         sizeUnit = property.GetCustomAttribute<SizeUnitAttribute>();
                         Debug.Assert(sizeUnit != null);
@@ -918,7 +442,7 @@ namespace Raven.Database.Config
 
                     var configuredValueSet = false;
 
-                    foreach (var entry in entries)
+                    foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>())
                     {
                         var value = settings[entry.Key];
 
@@ -927,33 +451,40 @@ namespace Raven.Database.Config
 
                         try
                         {
-                            if (timeUnit != null)
-                            {
-                                property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));
-                            }
-                            else if (sizeUnit != null)
-                            {
-                                property.SetValue(this, new SizeSetting(Convert.ToInt64(value), sizeUnit.Unit));
-                            }
-                            else
-                            {
-                                var minValue = property.GetCustomAttribute<MinValueAttribute>();
+                            var minValue = property.GetCustomAttribute<MinValueAttribute>();
 
-                                if (minValue == null)
+                            if (minValue == null)
+                            {
+                                if (property.PropertyType.IsEnum)
                                 {
-                                    property.SetValue(this, Convert.ChangeType(value, property.PropertyType));
+                                    property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
+                                }
+                                else if (timeUnit != null)
+                                {
+                                    property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));
+                                }
+                                else if (sizeUnit != null)
+                                {
+                                    property.SetValue(this, new Size(Convert.ToInt64(value), sizeUnit.Unit));
                                 }
                                 else
                                 {
-                                    if (property.PropertyType == typeof(int))
-                                    {
-                                        var currentValue = property.GetValue(this);
-                                        property.SetValue(this, Math.Max(Convert.ToInt32(currentValue), minValue.Int32Value));
-                                    }
-                                    else
-                                    {
-                                        throw new NotSupportedException("Min value for " + property.PropertyType + " is not supported. Property name: " + property.Name);
-                                    }
+                                    property.SetValue(this, Convert.ChangeType(value, property.PropertyType));
+                                }
+                            }
+                            else
+                            {
+                                if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
+                                {
+                                    property.SetValue(this, Math.Max(Convert.ToInt32(value), minValue.Int32Value));
+                                }
+                                else if (property.PropertyType == Size.TypeOf)
+                                {
+                                    property.SetValue(this, new Size(Math.Max(Convert.ToInt32(value), minValue.Int32Value), sizeUnit.Unit));
+                                }
+                                else
+                                {
+                                    throw new NotSupportedException("Min value for " + property.PropertyType + " is not supported. Property name: " + property.Name);
                                 }
                             }
                         }
@@ -974,13 +505,13 @@ namespace Raven.Database.Config
                     if (DefaultValueSetInConstructor.Equals(defaultValue))
                         continue;
 
-                    if (timeUnit != null)
+                    if (timeUnit != null && defaultValue != null)
                     {
                         property.SetValue(this, new TimeSetting(Convert.ToInt64(defaultValue), timeUnit.Unit));
                     }
-                    else if (sizeUnit != null)
+                    else if (sizeUnit != null && defaultValue != null)
                     {
-                        property.SetValue(this, new SizeSetting(Convert.ToInt64(defaultValue), sizeUnit.Unit));
+                        property.SetValue(this, new Size(Convert.ToInt64(defaultValue), sizeUnit.Unit));
                     }
                     else
                     {
@@ -1018,6 +549,7 @@ namespace Raven.Database.Config
             private string assembliesDirectory;
             private string embeddedFilesDirectory;
             private string compiledIndexCacheDirectory;
+            private string virtualDirectory;
 
             public CoreConfiguration(InMemoryRavenConfiguration parent)
             {
@@ -1026,6 +558,8 @@ namespace Raven.Database.Config
                 MaxNumberOfItemsToReduceInSingleBatch = DefaultMaxNumberOfItemsToProcessInSingleBatch / 2;
                 MaxNumberOfParallelProcessingTasks = Environment.ProcessorCount;
                 WebDir = GetDefaultWebDir();
+                TempPath = Path.GetTempPath();
+                VirtualDirectory = GetDefaultVirtualDirectory();
             }
 
             /// <summary>
@@ -1110,7 +644,7 @@ namespace Raven.Database.Config
                 set
                 {
                     runInMemory = value;
-                    parent.Settings[Constants.RunInMemory] = value.ToString(); //TODO arek - that is needed for DatabaseLandlord.CreateConfiguration - Settings = new NameValueCollection(parentConfiguration.Settings),
+                    parent.Settings[GetKey(x => x.Core.RunInMemory)] = value.ToString(); //TODO arek - that is needed for DatabaseLandlord.CreateConfiguration - Settings = new NameValueCollection(parentConfiguration.Settings),
                 }
             }
 
@@ -1136,7 +670,7 @@ namespace Raven.Database.Config
             }
 
             [DefaultValue((string)null)]
-            [ConfigurationEntry("Raven/IndexStoragePath")] // TODO arek - add initialization order
+            [ConfigurationEntry("Raven/IndexStoragePath")]
             public string IndexStoragePath
             {
                 get
@@ -1284,17 +818,126 @@ namespace Raven.Database.Config
             /// The initial number of items to take when processing a batch
             /// Default: 512 or 256 depending on CPU architecture
             /// </summary>
-            // TODO arek
-            //[ConfigurationEntry("Raven/InitialNumberOfItemsToProcessInSingleBatch")]
-            //[ConfigurationEntry("Raven/InitialNumberOfItemsToIndexInSingleBatch")]
             public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
             /// <summary>
             /// The initial number of items to take when reducing a batch
             /// Default: 256 or 128 depending on CPU architecture
             /// </summary>
-            //TODO arek
             public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
+
+            /// <summary>
+            /// If set all client request to the server will be rejected with 
+            /// the http 503 response.
+            /// Other servers or the studio could still access the server.
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/RejectClientsModeEnabled")]
+            public bool RejectClientsMode { get; set; }
+
+            /// <summary>
+            /// The time to wait before canceling a database operation such as load (many) or query
+            /// </summary>
+            [DefaultValue(5)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/DatabaseOperationTimeoutInMin")]
+            [ConfigurationEntry("Raven/DatabaseOperationTimeout")]
+            public TimeSetting DatabaseOperationTimeout { get; set; }
+
+            /// <summary>
+            /// If True, turns off the discovery client.
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/TurnOffDiscoveryClient")]
+            public bool TurnOffDiscoveryClient { get; set; }
+
+            /// <summary>
+            /// The maximum number of recent document touches to store (i.e. updates done in
+            /// order to initiate indexing rather than because something has actually changed).
+            /// </summary>
+            [DefaultValue(1024)]
+            [ConfigurationEntry("Raven/MaxRecentTouchesToRemember")]
+            public int MaxRecentTouchesToRemember { get; set; }
+
+
+            /// <summary>
+            /// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
+            /// purged on next database startup. Default: 14 days.
+            /// </summary>
+            [DefaultValue(14)]
+            [TimeUnit(TimeUnit.Days)]
+            [ConfigurationEntry("Raven/TombstoneRetentionTimeInDays")]
+            [ConfigurationEntry("Raven/TombstoneRetentionTime")]
+            public TimeSetting TombstoneRetentionTime { get; set; }
+
+            /// <summary>
+            /// How FieldsToFetch are extracted from the document.
+            /// Default: Enabled. 
+            /// Other values are: 
+            ///     DoNothing (fields are not fetched from the document)
+            ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
+            /// </summary>
+            [DefaultValue(ImplicitFetchFieldsMode.Enabled)]
+            [ConfigurationEntry("Raven/ImplicitFetchFieldsFromDocumentMode")]
+            public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
+
+            /// <summary>
+            /// Path to temporary directory used by server.
+            /// Default: Current user's temporary directory
+            /// </summary>
+            [DefaultValue(DefaultValueSetInConstructor)]
+            [ConfigurationEntry("Raven/TempPath")]
+            public string TempPath { get; set; }
+
+            /// <summary>
+            /// What sort of transaction mode to use. 
+            /// Allowed values: 
+            /// Lazy - faster, but can result in data loss in the case of server crash. 
+            /// Safe - slower, but will never lose data 
+            /// Default: Safe 
+            /// </summary>
+            [DefaultValue(TransactionMode.Safe)]
+            [ConfigurationEntry("Raven/TransactionMode")]
+            public TransactionMode TransactionMode { get; set; }
+
+            /// <summary>
+            /// Defines which operations are allowed for anonymous users.
+            /// Allowed values: All, Get, None
+            /// Default: Get
+            /// </summary>
+            [DefaultValue(AnonymousUserAccessMode.Admin)]
+            [ConfigurationEntry("Raven/AnonymousAccess")]
+            public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
+
+            /// <summary>
+            /// The virtual directory to use when creating the http listener. 
+            /// Default: / 
+            /// </summary>
+            [DefaultValue(DefaultValueSetInConstructor)] // set in initialize
+            [ConfigurationEntry("Raven/VirtualDirectory")]
+            public string VirtualDirectory
+            {
+                get { return virtualDirectory; }
+                set
+                {
+                    virtualDirectory = value;
+
+                    if (virtualDirectory.EndsWith("/"))
+                        virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
+                    if (virtualDirectory.StartsWith("/") == false)
+                        virtualDirectory = "/" + virtualDirectory;
+                }
+            }
+
+            [DefaultValue(IgnoreSslCertificateErrorsMode.None)]
+            [ConfigurationEntry("Raven/IgnoreSslCertificateErrors")]
+            public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
+
+            [DefaultValue("")]
+            [ConfigurationEntry("Raven/Headers/Ignore")]
+            public string HeadersToIgnoreStringValue { get; set; }
+            
+            public HashSet<string> HeadersToIgnore { get; private set; }
 
             public override void Initialize(NameValueCollection settings)
             {
@@ -1335,6 +978,26 @@ namespace Raven.Database.Config
                     var type = Type.GetType(TaskScheduler);
                     parent.CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
                 }
+
+                HeadersToIgnore = new HashSet<string>(HeadersToIgnoreStringValue.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
+            }
+
+            private string GetDefaultVirtualDirectory()
+            {
+                var defaultVirtualDirectory = "/";
+                try
+                {
+                    if (HttpContext.Current != null)
+                        defaultVirtualDirectory = HttpContext.Current.Request.ApplicationPath;
+                }
+                catch (HttpException)
+                {
+                    // explicitly ignoring this because we might be running in embedded mode
+                    // inside IIS during init stages, in which case we can't access the HttpContext
+                    // nor do we actually care
+                }
+
+                return defaultVirtualDirectory;
             }
 
             private string GetDefaultWebDir()
@@ -1382,15 +1045,6 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/MaxConcurrentMultiGetRequests")]
             public int MaxConcurrentMultiGetRequests { get; set; }
 
-            /// <summary>
-            /// Whether to use http compression or not. 
-            /// Allowed values: true/false; 
-            /// Default: true
-            /// </summary>
-            [DefaultValue(true)]
-            [ConfigurationEntry("Raven/Server/HttpCompression")]
-            [ConfigurationEntry("Raven/HttpCompression")]
-            public bool HttpCompression { get; set; } // TODO arek - 0 references?
 
             /// <summary>
             /// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
@@ -1442,6 +1096,14 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/RedirectStudioUrl")]
             public string RedirectStudioUrl { get; set; }
 
+            /// <summary>
+            /// The server name
+            /// </summary>
+            [DefaultValue((string)null)]
+            [ConfigurationEntry("Raven/Server/Name")]
+            [ConfigurationEntry("Raven/ServerName")]
+            public string Name { get; set; }
+
             public override void Initialize(NameValueCollection settings)
             {
                 base.Initialize(settings);
@@ -1455,15 +1117,15 @@ namespace Raven.Database.Config
             public MemoryConfiguration()
             {
                 // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-                LimitForProcessing = new SizeSetting(Math.Min(1024, (int)(MemoryStatistics.AvailableMemoryInMb * 0.75)), SizeUnit.Megabytes);
+                LimitForProcessing = Size.Min(new Size(1024, SizeUnit.Megabytes), MemoryStatistics.AvailableMemory * 0.75);
 
-                LowMemoryForLinuxDetection = new SizeSetting(Math.Min(16, (int)(MemoryStatistics.AvailableMemoryInMb * 0.10)), SizeUnit.Megabytes);
+                LowMemoryForLinuxDetection = Size.Min(new Size(16, SizeUnit.Megabytes), MemoryStatistics.AvailableMemory * 0.10);
 
-                MemoryCacheLimit = new SizeSetting(GetDefaultMemoryCacheLimitMegabytes(), SizeUnit.Megabytes);
+                MemoryCacheLimit = GetDefaultMemoryCacheLimit();
 
                 MemoryCacheLimitCheckInterval = new TimeSetting((long) MemoryCache.Default.PollingInterval.TotalSeconds, TimeUnit.Seconds);
 
-                AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(Math.Min(768, MemoryStatistics.TotalPhysicalMemory / 2), SizeUnit.Megabytes);
+                AvailableMemoryForRaisingBatchSizeLimit = Size.Min(new Size(768, SizeUnit.Megabytes), MemoryStatistics.TotalPhysicalMemory / 2);
             }
 
             /// <summary>
@@ -1471,20 +1133,20 @@ namespace Raven.Database.Config
             /// </summary>
             [DefaultValue(DefaultValueSetInConstructor)]
             [SizeUnit(SizeUnit.Megabytes)]
-            [ConfigurationEntry("Raven/Memory/LimitForProcessing")]
+            [ConfigurationEntry("Raven/Memory/LimitForProcessingInMB")]
             [ConfigurationEntry("Raven/MemoryLimitForProcessing")]
             [ConfigurationEntry("Raven/MemoryLimitForIndexing")]
-            public SizeSetting LimitForProcessing { get; set; }
+            public Size LimitForProcessing { get; set; }
 
-            public SizeSetting DynamicLimitForProcessing
+            public Size DynamicLimitForProcessing
             {
                 get
                 {
-                    var availableMemory = MemoryStatistics.AvailableMemoryInMb;
-                    var minFreeMemory = (LimitForProcessing.Megabytes * 2L);
+                    var availableMemory = MemoryStatistics.AvailableMemory;
+                    var minFreeMemory = LimitForProcessing * 2L;
                     // we have more memory than the twice the limit, we can use the default limit
                     if (availableMemory > minFreeMemory)
-                        return new SizeSetting(LimitForProcessing.Megabytes * 1024L * 1024L, SizeUnit.Bytes);
+                        return LimitForProcessing;
 
                     // we don't have enough room to play with, if two databases will request the max memory limit
                     // at the same time, we'll start paging because we'll run out of free memory. 
@@ -1492,7 +1154,7 @@ namespace Raven.Database.Config
                     // of memory available for processing based on the amount of memory we actually have available,
                     // assuming that we have multiple concurrent users of memory at the same time.
                     // we limit that at 16 MB, if we have less memory than that, we can't really do much anyway
-                    return new SizeSetting(Math.Min(availableMemory * 1024L * 1024L / 4, 16 * 1024 * 1024), SizeUnit.Bytes);
+                    return Size.Min(availableMemory / 4, new Size(16, SizeUnit.Megabytes));
                 }
             }
 
@@ -1503,7 +1165,7 @@ namespace Raven.Database.Config
             [SizeUnit(SizeUnit.Megabytes)]
             [ConfigurationEntry("Raven/Memory/LowMemoryLimitForLinuxDetectionInMB")]
             [ConfigurationEntry("Raven/LowMemoryLimitForLinuxDetectionInMB")]
-            public SizeSetting LowMemoryForLinuxDetection { get; set; }
+            public Size LowMemoryForLinuxDetection { get; set; }
 
             /// <summary>
             /// An integer value that specifies the maximum allowable size, in megabytes, that caching 
@@ -1513,7 +1175,7 @@ namespace Raven.Database.Config
             [SizeUnit(SizeUnit.Megabytes)]
             [ConfigurationEntry("Raven/Memory/MemoryCacheLimitInMB")]
             [ConfigurationEntry("Raven/MemoryCacheLimitMegabytes")]
-            public SizeSetting MemoryCacheLimit { get; set; }
+            public Size MemoryCacheLimit { get; set; }
 
             /// <summary>
             /// The expiration value for documents in the internal managed cache
@@ -1546,84 +1208,116 @@ namespace Raven.Database.Config
 
             [DefaultValue(DefaultValueSetInConstructor)]
             [SizeUnit(SizeUnit.Megabytes)]
-            [ConfigurationEntry("Raven/Memory/AvailableMemoryForRaisingBatchSizeLimit")]
+            [ConfigurationEntry("Raven/Memory/AvailableMemoryForRaisingBatchSizeLimitInMB")]
             [ConfigurationEntry("Raven/AvailableMemoryForRaisingBatchSizeLimit")]
             [ConfigurationEntry("Raven/AvailableMemoryForRaisingIndexBatchSizeLimit")]
-            public SizeSetting AvailableMemoryForRaisingBatchSizeLimit { get; set; }
+            public Size AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
-            private int GetDefaultMemoryCacheLimitMegabytes()
+            private Size GetDefaultMemoryCacheLimit()
             {
-                // TODO: This used to use an esent key. Ensure that this is not needed anymore and kill this method. 
-                var cacheSizeMaxSetting = 1024;
+                if(MemoryStatistics.TotalPhysicalMemory < new Size(1024, SizeUnit.Megabytes))
+                    return new Size(128, SizeUnit.Megabytes); // if machine has less than 1024 MB, then only use 128 MB 
 
                 // we need to leave ( a lot ) of room for other things as well, so we min the cache size
-                var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
-                                        // reduce the unmanaged cache size from the default min
-                                        cacheSizeMaxSetting;
-
-                if (val < 0)
-                    return 128; // if machine has less than 1024 MB, then only use 128 MB 
-
-                return val;
+                return MemoryStatistics.TotalPhysicalMemory/2;
             }
         }
 
-        public class StorageConfiguration
+        public class StorageConfiguration : ConfigurationBase
         {
-            public StorageConfiguration()
-            {
-                Voron = new VoronConfiguration();
-            }
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Storage/PreventSchemaUpdate")]
+            [ConfigurationEntry("Raven/PreventSchemaUpdate")]
             public bool PreventSchemaUpdate { get; set; }
 
-            public VoronConfiguration Voron { get; private set; }
+            /// <summary>
+            /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
+            /// By default it is 4.
+            /// Minimum value is 2.
+            /// </summary>
+            [DefaultValue(4)]
+            [MinValue(2)]
+            [SizeUnit(SizeUnit.Gigabytes)]
+            [ConfigurationEntry("Raven/Storage/MaxBufferPoolSizeInGB")]
+            [ConfigurationEntry("Raven/Voron/MaxBufferPoolSize")]
+            public Size MaxBufferPoolSize { get; set; }
 
-            public class VoronConfiguration
+            /// <summary>
+            /// You can use this setting to specify an initial file size for data file (in bytes).
+            /// </summary>
+            [DefaultValue(null)]
+            [SizeUnit(SizeUnit.Bytes)]
+            [ConfigurationEntry("Raven/Storage/InitialFileSize")]
+            [ConfigurationEntry("Raven/Voron/InitialFileSize")]
+            public Size? InitialFileSize { get; set; }
+
+            /// <summary>
+            /// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
+            /// Default: 6144.
+            /// </summary>
+            [DefaultValue(6144)]
+            [SizeUnit(SizeUnit.Megabytes)]
+            [ConfigurationEntry("Raven/Storage/MaxScratchBufferSizeInMB")]
+            [ConfigurationEntry("Raven/Voron/MaxScratchBufferSize")]
+            public Size MaxScratchBufferSize { get; set; }
+
+            /// <summary>
+            /// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.
+            /// Default: 
+            /// 1024 when MaxScratchBufferSize > 1024, 
+            /// 512 when MaxScratchBufferSize > 512
+            /// null otherwise (disabled) 
+            /// </summary>
+            [DefaultValue(null)]
+            [SizeUnit(SizeUnit.Megabytes)]
+            [ConfigurationEntry("Raven/Storage/ScratchBufferSizeNotificationThresholdInMB")]
+            [ConfigurationEntry("Raven/Voron/ScratchBufferSizeNotificationThreshold")]
+            public Size? ScratchBufferSizeNotificationThreshold { get; set; }
+
+            /// <summary>
+            /// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
+            /// Default: false.
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Storage/AllowIncrementalBackups")]
+            [ConfigurationEntry("Raven/Voron/AllowIncrementalBackups")]
+            public bool AllowIncrementalBackups { get; set; }
+
+            /// <summary>
+            /// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
+            /// </summary>
+            [DefaultValue(null)]
+            [ConfigurationEntry("Raven/Storage/TempPath")]
+            [ConfigurationEntry("Raven/Voron/TempPath")]
+            public string TempPath { get; set; }
+
+            [DefaultValue(null)]
+            [ConfigurationEntry("Raven/Storage/TransactionJournalsPath")]
+            [ConfigurationEntry("Raven/TransactionJournalsPath")]
+            public string JournalsStoragePath { get; set; }
+
+            /// <summary>
+            /// Whether to allow Voron to run in 32 bits process.
+            /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Storage/AllowOn32Bits")]
+            [ConfigurationEntry("Raven/Voron/AllowOn32Bits")]
+            public bool AllowOn32Bits { get; set; }
+
+            public override void Initialize(NameValueCollection settings)
             {
-                /// <summary>
-                /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
-                /// By default it is 4.
-                /// Minimum value is 2.
-                /// </summary>
-                public int MaxBufferPoolSize { get; set; }
+                base.Initialize(settings);
 
-                /// <summary>
-                /// You can use this setting to specify an initial file size for data file (in bytes).
-                /// </summary>
-                public int? InitialFileSize { get; set; }
+                if (ScratchBufferSizeNotificationThreshold == null)
+                {
+                    var _1024MB = new Size(1024, SizeUnit.Megabytes);
+                    var _512MB = new Size(512, SizeUnit.Megabytes);
 
-                /// <summary>
-                /// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
-                /// Default: 6144.
-                /// </summary>
-                public int MaxScratchBufferSize { get; set; }
-
-                /// <summary>
-                /// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.
-                /// Default: 
-                /// 1024 when MaxScratchBufferSize > 1024, 
-                /// 512 when MaxScratchBufferSize > 512
-                /// -1 otherwise (disabled) 
-                /// </summary>
-                public int ScratchBufferSizeNotificationThreshold { get; set; }
-
-                /// <summary>
-                /// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
-                /// Default: false.
-                /// </summary>
-                public bool AllowIncrementalBackups { get; set; }
-
-                /// <summary>
-                /// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
-                /// </summary>
-                public string TempPath { get; set; }
-
-                public string JournalsStoragePath { get; set; }
-
-                /// <summary>
-                /// Whether to allow Voron to run in 32 bits process.
-                /// </summary>
-                public bool AllowOn32Bits { get; set; }
+                    if (MaxScratchBufferSize > _1024MB)
+                        ScratchBufferSizeNotificationThreshold = _1024MB;
+                    else if (MaxScratchBufferSize > _512MB)
+                        ScratchBufferSizeNotificationThreshold = _512MB;
+                }
             }
         }
 
@@ -1656,12 +1350,20 @@ namespace Raven.Database.Config
             /// <summary>
             /// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
             /// </summary>
-            public int FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+            [DefaultValue(5)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Prefetching/FetchingDocumentsFromDiskTimeoutInSec")]
+            [ConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
+            public TimeSetting FetchingDocumentsFromDiskTimeout { get; set; }
 
             /// <summary>
             /// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
             /// </summary>
-            public int MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
+            [DefaultValue(256)]
+            [SizeUnit(SizeUnit.Megabytes)]
+            [ConfigurationEntry("Raven/Prefetching/MaximumSizeAllowedToFetchFromStorageInMB")]
+            [ConfigurationEntry("Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage")]
+            public Size MaximumSizeAllowedToFetchFromStorageInMb { get; set; }
         }
 
         public class ReplicationConfiguration : ConfigurationBase
@@ -1675,51 +1377,69 @@ namespace Raven.Database.Config
             /// <summary>
             /// Number of seconds after which replication will stop reading documents from disk. Default: 30.
             /// </summary>
-            public int FetchingFromDiskTimeoutInSeconds { get; set; }
+            [DefaultValue(30)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Replication/FetchingFromDiskTimeoutInSec")]
+            [ConfigurationEntry("Raven/Replication/FetchingFromDiskTimeout")]
+            public TimeSetting FetchingFromDiskTimeoutInSeconds { get; set; }
 
             /// <summary>
             /// Number of milliseconds before replication requests will timeout. Default: 60 * 1000.
             /// </summary>
-            public int ReplicationRequestTimeoutInMilliseconds { get; set; }
+            [DefaultValue(60 * 1000)]
+            [TimeUnit(TimeUnit.Milliseconds)]
+            [ConfigurationEntry("Raven/Replication/ReplicationRequestTimeoutInMs")]
+            [ConfigurationEntry("Raven/Replication/ReplicationRequestTimeout")]
+            public TimeSetting ReplicationRequestTimeout { get; set; }
 
             /// <summary>
             /// Force us to buffer replication requests (useful if using windows auth under certain scenarios).
             /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Replication/ForceReplicationRequestBuffering")]
             public bool ForceReplicationRequestBuffering { get; set; }
 
             /// <summary>
             /// Maximum number of items replication will receive in single batch. Min: 512. Default: null (let source server decide).
             /// </summary>
+            [DefaultValue(null)]
+            [MinValue(512)]
+            [ConfigurationEntry("Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch")]
             public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
         }
 
-        public class FileSystemConfiguration
+        public class FileSystemConfiguration : ConfigurationBase
         {
-            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            private readonly CoreConfiguration core;
+            public FileSystemConfiguration(CoreConfiguration coreConfiguration)
             {
-                workingDirectory = configuration.Core.WorkingDirectory;
+                core = coreConfiguration;
             }
 
             private string fileSystemDataDirectory;
 
             private string fileSystemIndexStoragePath;
 
-            private string defaultFileSystemStorageTypeName;
-
-            private string workingDirectory;
-
-            public TimeSpan MaximumSynchronizationInterval { get; set; }
+            [DefaultValue(60)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/FileSystem/MaximumSynchronizationIntervalInSec")]
+            [ConfigurationEntry("Raven/FileSystem/MaximumSynchronizationInterval")]
+            public TimeSetting MaximumSynchronizationInterval { get; set; }
 
             /// <summary>
             /// The directory for the RavenDB file system. 
             /// You can use the ~\ prefix to refer to RavenDB's base directory. 
             /// </summary>
+            [DefaultValue(@"~\FileSystems")]
+            [ConfigurationEntry("Raven/FileSystem/DataDir")]
             public string DataDirectory
             {
                 get { return fileSystemDataDirectory; }
-                set { fileSystemDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+                set { fileSystemDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(core.WorkingDirectory, value); }
             }
 
+            [DefaultValue("")]
+            [ConfigurationEntry("Raven/FileSystem/IndexStoragePath")]
             public string IndexStoragePath
             {
                 get
@@ -1728,18 +1448,10 @@ namespace Raven.Database.Config
                         fileSystemIndexStoragePath = Path.Combine(DataDirectory, "Indexes");
                     return fileSystemIndexStoragePath;
                 }
-                set { fileSystemIndexStoragePath = value.ToFullPath(); }
-            }
-
-            /// <summary>
-            /// What storage type to use in RavenFS (see: RavenFS Storage engines)
-            /// Allowed values: voron
-            /// Default: voron
-            /// </summary>
-            public string DefaultStorageTypeName
-            {
-                get { return defaultFileSystemStorageTypeName; }
-                set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
+                set
+                {
+                    fileSystemIndexStoragePath = value.ToFullPath();
+                }
             }
         }
 
@@ -1751,39 +1463,30 @@ namespace Raven.Database.Config
             public int MaxClauseCount { get; set; }
         }
 
-        public class FacetsConfiguration : ConfigurationBase
-        {
-            // TODO arek - both options seem to be unused
-
-            /// <summary>
-            /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
-            /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
-            /// Facet queries that will try to use it will have to wait until it is over
-            /// </summary>
-            [DefaultValue(3)]
-            [TimeUnit(TimeUnit.Seconds)]
-            [ConfigurationEntry("Raven/Facets/PrewarmSyncronousWaitTimeInSec")]
-            [ConfigurationEntry("Raven/PrewarmFacetsSyncronousWaitTime")]
-            public TimeSetting PrewarmSyncronousWaitTime { get; set; }
-
-            /// <summary>
-            /// What is the maximum age of a facet query that we should consider when prewarming
-            /// the facet cache when finishing an indexing batch
-            /// </summary>
-            [Browsable(false)]
-            [DefaultValue(10)]
-            [TimeUnit(TimeUnit.Minutes)]
-            [ConfigurationEntry("Raven/Facets/PrewarmOnIndexingMaxAgeInMin")]
-            [ConfigurationEntry("Raven/PrewarmFacetsOnIndexingMaxAge")]
-            public TimeSetting PrewarmFacetsOnIndexingMaxAge { get; set; }
-        }
-
         public class PatchingConfiguration : ConfigurationBase
         {
             [DefaultValue(false)]
             [ConfigurationEntry("Raven/Patching/AllowScriptsToAdjustNumberOfSteps")]
             [ConfigurationEntry("Raven/AllowScriptsToAdjustNumberOfSteps")]
             public bool AllowScriptsToAdjustNumberOfSteps { get; set; }
+
+            /// <summary>
+            /// The maximum number of steps (instructions) to give a script before timing out.
+            /// Default: 10,000
+            /// </summary>
+            [DefaultValue(10 * 1000)]
+            [ConfigurationEntry("Raven/Patching/MaxStepsForScript")]
+            [ConfigurationEntry("Raven/MaxStepsForScript")]
+            public int MaxStepsForScript { get; set; }
+
+            /// <summary>
+            /// The number of additional steps to add to a given script based on the processed document's quota.
+            /// Set to 0 to give use a fixed size quota. This value is multiplied with the doucment size.
+            /// Default: 5
+            /// </summary>
+            [DefaultValue(5)]
+            [ConfigurationEntry("Raven/AdditionalStepsForScriptBasedOnDocumentSize")]
+            public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
         }
 
         public class BulkInsertConfiguration : ConfigurationBase
@@ -1795,14 +1498,15 @@ namespace Raven.Database.Config
             public TimeSetting ImportBatchTimeout { get; set; }
         }
 
-        public class CounterConfiguration
+        public class CounterConfiguration : ConfigurationBase
         {
-            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            private readonly CoreConfiguration coreConfiguration;
+
+            public CounterConfiguration(CoreConfiguration coreConfiguration)
             {
-                workingDirectory = configuration.Core.WorkingDirectory;
+                this.coreConfiguration = coreConfiguration;
             }
 
-            private string workingDirectory;
 
             private string countersDataDirectory;
 
@@ -1810,31 +1514,43 @@ namespace Raven.Database.Config
             /// The directory for the RavenDB counters. 
             /// You can use the ~\ prefix to refer to RavenDB's base directory. 
             /// </summary>
+            [DefaultValue(@"~\Counters")]
+            [ConfigurationEntry("Raven/Counter/DataDir")]
+            [ConfigurationEntry("Raven/Counters/DataDir")]
             public string DataDirectory
             {
                 get { return countersDataDirectory; }
-                set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+                set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(coreConfiguration.WorkingDirectory, value); }
             }
 
             /// <summary>
             /// Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically
             /// Purged on next counter storage startup. Default: 14 days.
             /// </summary>
-            public TimeSpan TombstoneRetentionTime { get; set; }
+            [DefaultValue(14)]
+            [TimeUnit(TimeUnit.Days)]
+            [ConfigurationEntry("Raven/Counter/TombstoneRetentionTimeInDays")]
+            [ConfigurationEntry("Raven/Counter/TombstoneRetentionTime")]
+            public TimeSetting TombstoneRetentionTime { get; set; }
 
+            [DefaultValue(1000)]
+            [ConfigurationEntry("Raven/Counter/DeletedTombstonesInBatch")]
             public int DeletedTombstonesInBatch { get; set; }
 
-            public int ReplicationLatencyInMs { get; set; }
+            [DefaultValue(30 * 1000)]
+            [TimeUnit(TimeUnit.Milliseconds)]
+            [ConfigurationEntry("Raven/Counter/ReplicationLatency")]
+            public TimeSetting ReplicationLatency { get; set; }
         }
 
-        public class TimeSeriesConfiguration
+        public class TimeSeriesConfiguration : ConfigurationBase
         {
-            public void InitializeFrom(InMemoryRavenConfiguration configuration)
-            {
-                workingDirectory = configuration.Core.WorkingDirectory;
-            }
+            private readonly CoreConfiguration coreConfiguration;
 
-            private string workingDirectory;
+            public TimeSeriesConfiguration(CoreConfiguration coreConfiguration)
+            {
+                this.coreConfiguration = coreConfiguration;
+            }
 
             private string timeSeriesDataDirectory;
 
@@ -1842,40 +1558,71 @@ namespace Raven.Database.Config
             /// The directory for the RavenDB time series. 
             /// You can use the ~\ prefix to refer to RavenDB's base directory. 
             /// </summary>
+            [DefaultValue(@"~\TimeSeries")]
+            [ConfigurationEntry("Raven/TimeSeries/DataDir")]
             public string DataDirectory
             {
                 get { return timeSeriesDataDirectory; }
-                set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+                set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(coreConfiguration.WorkingDirectory, value); }
             }
 
             /// <summary>
             /// Determines how long tombstones will be kept by a time series. After the specified time they will be automatically
             /// Purged on next time series startup. Default: 14 days.
             /// </summary>
-            public TimeSpan TombstoneRetentionTime { get; set; }
+            [DefaultValue(14)]
+            [TimeUnit(TimeUnit.Days)]
+            [ConfigurationEntry("Raven/TimeSeries/TombstoneRetentionTimeInDays")]
+            [ConfigurationEntry("Raven/TimeSeries/TombstoneRetentionTime")]
+            public TimeSetting TombstoneRetentionTime { get; set; }
 
+            [DefaultValue(1000)]
+            [ConfigurationEntry("Raven/TimeSeries/DeletedTombstonesInBatch")]
             public int DeletedTombstonesInBatch { get; set; }
 
-            public int ReplicationLatencyInMs { get; set; }
+            [DefaultValue(30 * 1000)]
+            [TimeUnit(TimeUnit.Milliseconds)]
+            [ConfigurationEntry("Raven/TimeSeries/ReplicationLatency")]
+            public TimeSetting ReplicationLatency { get; set; }
         }
 
-        public class EncryptionConfiguration
+        public class EncryptionConfiguration : ConfigurationBase
         {
             /// <summary>
             /// Whatever we should use FIPS compliant encryption algorithms
             /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Encryption/FIPS")]
             public bool UseFips { get; set; }
 
+            [DefaultValue(128)]
+            [ConfigurationEntry("Raven/Encryption/KeyBitsPreference")]
             public int EncryptionKeyBitsPreference { get; set; }
 
             /// <summary>
             /// Whatever we should use SSL for this connection
             /// </summary>
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/UseSsl")]
             public bool UseSsl { get; set; }
+
+            public override void Initialize(NameValueCollection settings)
+            {
+                base.Initialize(settings);
+          
+                //TODO arek - verify that
+                //if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+                //{
+                //    Encryption.UseSsl = ravenSettings.Encryption.UseSsl.Value;
+                //    Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
+                //}
+            }
         }
 
         public class IndexingConfiguration : ConfigurationBase
         {
+            private bool useLuceneASTParser = true;
+
             [DefaultValue(256 * 1024)]
             [ConfigurationEntry("Raven/Indexing/MaxWritesBeforeRecreate")]
             [ConfigurationEntry("Raven/MaxIndexWritesBeforeRecreate")]
@@ -1922,7 +1669,7 @@ namespace Raven.Database.Config
             [SizeUnit(SizeUnit.Megabytes)]
             [ConfigurationEntry("Raven/Indexing/NewIndexInMemoryMaxInMB")]
             [ConfigurationEntry("Raven/NewIndexInMemoryMaxMB")]
-            public SizeSetting NewIndexInMemoryMaxSize { get; set; }
+            public Size NewIndexInMemoryMaxSize { get; set; }
 
             /// <summary>
             /// Controls whatever RavenDB will create temporary indexes 
@@ -1950,12 +1697,78 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/DisableInMemoryIndexing")]
             public bool DisableInMemoryIndexing { get; set; }
 
+            /// <summary>
+            /// Maximum time interval for storing commit points for map indexes when new items were added.
+            /// The commit points are used to restore index if unclean shutdown was detected.
+            /// Default: 00:05:00 
+            /// </summary>
+            [DefaultValue(5)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/MaxIndexCommitPointStoreIntervalInMin")]
+            [ConfigurationEntry("Raven/MaxIndexCommitPointStoreTimeInterval")]
+            public TimeSetting MaxIndexCommitPointStoreInterval { get; set; }
+
+            /// <summary>
+            /// Maximum number of kept commit points to restore map index after unclean shutdown
+            /// Default: 5
+            /// </summary>
+            [DefaultValue(5)]
+            [ConfigurationEntry("Raven/Indexing/MaxNumberOfStoredCommitPoints")]
+            [ConfigurationEntry("Raven/MaxNumberOfStoredCommitPoints")]
+            public int MaxNumberOfStoredCommitPoints { get; set; }
+
+            /// <summary>
+            /// Minimum interval between between successive indexing that will allow to store a  commit point
+            /// Default: 00:01:00
+            /// </summary>
+            [DefaultValue(1)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/MinIndexingIntervalToStoreCommitPointInMin")]
+            [ConfigurationEntry("Raven/MinIndexingTimeIntervalToStoreCommitPoint")]
+            public TimeSetting MinIndexingIntervalToStoreCommitPoint { get; set; }
+
+            [DefaultValue(10)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningIdleIndexesInMin")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeRunningIdleIndexes")]
+            public TimeSetting TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
+
+            [DefaultValue(60)]
+            [TimeUnit(TimeUnit.Minutes)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle")]
+            public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; set; }
+
+            [DefaultValue(72)]
+            [TimeUnit(TimeUnit.Hours)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingIdleIndexAsAbandonedInHrs")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned")]
+            public TimeSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; set; }
+
+            [DefaultValue(3)]
+            [TimeUnit(TimeUnit.Hours)]
+            [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningAbandonedIndexesInHrs")]
+            [ConfigurationEntry("Raven/TimeToWaitBeforeRunningAbandonedIndexes")]
+            public TimeSetting TimeToWaitBeforeRunningAbandonedIndexes { get; set; }
+
+            [DefaultValue(512)]
+            [ConfigurationEntry("Raven/Indexing/MaxNumberOfItemsToProcessInTestIndexes")]
             public int MaxNumberOfItemsToProcessInTestIndexes { get; set; }
 
+            [DefaultValue(2048)]
+            [ConfigurationEntry("Raven/Indexing/DisableIndexingFreeSpaceThreshold")]
             public int DisableIndexingFreeSpaceThreshold { get; set; }
 
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Indexing/DisableMapReduceInMemoryTracking")]
             public bool DisableMapReduceInMemoryTracking { get; set; }
+
+            [DefaultValue(512)]
+            [ConfigurationEntry("Raven/Indexing/MaxNumberOfStoredIndexingBatchInfoElements")]
             public int MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
+
+            [DefaultValue(true)]
+            [ConfigurationEntry("Raven/Indexing/UseLuceneASTParser")]
             public bool UseLuceneASTParser
             {
                 get { return useLuceneASTParser; }
@@ -1964,60 +1777,141 @@ namespace Raven.Database.Config
                     if (value == useLuceneASTParser)
                         return;
                     QueryBuilder.UseLuceneASTParser = useLuceneASTParser = value;
-        }
+                }
             }
-            private bool useLuceneASTParser = true;
+
+            /// <summary>
+            /// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
+            /// </summary>
+            [DefaultValue(5)]
+            [SizeUnit(SizeUnit.Megabytes)]
+            [ConfigurationEntry("Raven/Indexing/FlushIndexToDiskSizeInMB")]
+            public Size FlushIndexToDiskSize { get; set; }
         }
 
-        public class ClusterConfiguration
+        public class ClusterConfiguration : ConfigurationBase
         {
-            public int ElectionTimeout { get; set; }
-            public int HeartbeatTimeout { get; set; }
+            public ClusterConfiguration()
+            {
+                MaxStepDownDrainTime = new TimeSetting((long) RaftEngineOptions.DefaultMaxStepDownDrainTime.TotalSeconds, TimeUnit.Seconds);
+            }
+
+            [DefaultValue(RaftEngineOptions.DefaultElectionTimeout * 5)] // 6000ms
+            [TimeUnit(TimeUnit.Milliseconds)]
+            [ConfigurationEntry("Raven/Cluster/ElectionTimeoutInMs")]
+            [ConfigurationEntry("Raven/Cluster/ElectionTimeout")]
+            public TimeSetting ElectionTimeout { get; set; }
+
+            [DefaultValue(RaftEngineOptions.DefaultHeartbeatTimeout * 5)] // 1500ms
+            [TimeUnit(TimeUnit.Milliseconds)]
+            [ConfigurationEntry("Raven/Cluster/HeartbeatTimeoutInMs")]
+            [ConfigurationEntry("Raven/Cluster/HeartbeatTimeout")]
+            public TimeSetting HeartbeatTimeout { get; set; }
+
+            [DefaultValue(RaftEngineOptions.DefaultMaxLogLengthBeforeCompaction)]
+            [ConfigurationEntry("Raven/Cluster/MaxLogLengthBeforeCompaction")]
             public int MaxLogLengthBeforeCompaction { get; set; }
-            public TimeSpan MaxStepDownDrainTime { get; set; }
+
+            [DefaultValue(DefaultValueSetInConstructor)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Cluster/MaxStepDownDrainTime")]
+            public TimeSetting MaxStepDownDrainTime { get; set; }
+
+            [DefaultValue(RaftEngineOptions.DefaultMaxEntiresPerRequest)]
+            [ConfigurationEntry("Raven/Cluster/MaxEntriesPerRequest")]
             public int MaxEntriesPerRequest { get; set; }
         }
 
-        public class MonitoringConfiguration
+        public class MonitoringConfiguration : ConfigurationBase
         {
             public MonitoringConfiguration()
             {
                 Snmp = new SnmpConfiguration();
             }
 
-            public SnmpConfiguration Snmp { get; private set; }
+            public SnmpConfiguration Snmp { get; }
 
-            public class SnmpConfiguration
+            public override void Initialize(NameValueCollection settings)
             {
+                Snmp.Initialize(settings);
+            }
+
+            public class SnmpConfiguration : ConfigurationBase
+            {
+                [DefaultValue(false)]
+                [ConfigurationEntry("Raven/Monitoring/Snmp/Enabled")]
                 public bool Enabled { get; set; }
 
+                [DefaultValue(161)]
+                [ConfigurationEntry("Raven/Monitoring/Snmp/Port")]
                 public int Port { get; set; }
 
+                [DefaultValue("ravendb")]
+                [ConfigurationEntry("Raven/Monitoring/Snmp/Community")]
                 public string Community { get; set; }
             }
         }
 
         public class WebSocketsConfiguration
         {
-            public int InitialBufferPoolSize { get; set; }
+            [DefaultValue(128 * 1024)]
+            [SizeUnit(SizeUnit.Bytes)]
+            [ConfigurationEntry("Raven/WebSockets/InitialBufferPoolSize")]
+            public Size InitialBufferPoolSize { get; set; }
         }
 
-        public void UpdateDataDirForLegacySystemDb()
+        public class OAuthConfiguration : ConfigurationBase
         {
-            if (Core.RunInMemory)
-                return;
-            var legacyPath = Settings["Raven/DataDir/Legacy"];
-            if (string.IsNullOrEmpty(legacyPath))
-                return;
-            var fullLegacyPath = FilePathTools.MakeSureEndsWithSlash(legacyPath.ToFullPath());
-
-            // if we already have a system database in the legacy path, we want to keep it.
-            // The idea is that we don't want to have the user experience "missing databases" because
-            // we change the path to make it nicer.
-            if (Directory.Exists(fullLegacyPath))
+            public OAuthConfiguration(string serverUrl)
             {
-                Core.DataDirectory = legacyPath;
+                TokenServer = serverUrl.EndsWith("/") ? serverUrl + "OAuth/API-Key" : serverUrl + "/OAuth/API-Key";
             }
+
+            [DefaultValue(DefaultValueSetInConstructor)]
+            [ConfigurationEntry("Raven/OAuthTokenServer")]
+            public string TokenServer { get; set; }
+
+            public bool UseDefaultTokenServer { get; private set; }
+
+            /// <summary>
+            /// The certificate to use when verifying access token signatures for OAuth
+            /// </summary>
+            public byte[] TokenKey { get; set; }
+
+            public override void Initialize(NameValueCollection settings)
+            {
+                base.Initialize(settings);
+
+                TokenKey = GetOAuthKey(settings);
+                UseDefaultTokenServer = settings[GetKey(x => x.OAuth.TokenServer)] == null;
+            }
+
+            private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
+            {
+                using (var rsa = Encryptor.Current.CreateAsymmetrical())
+                {
+                    return rsa.ExportCspBlob(true);
+                }
+            });
+
+            private byte[] GetOAuthKey(NameValueCollection settings)
+            {
+                var key = settings["Raven/OAuthTokenCertificate"];
+                if (string.IsNullOrEmpty(key) == false)
+                {
+                    return Convert.FromBase64String(key);
+                }
+                return DefaultOauthKey.Value; // ensure we only create this once per process
+            }
+        }
+
+        public class ExpirationBundleConfiguration : ConfigurationBase
+        {
+            [DefaultValue(300)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Expiration/DeleteFrequencyInSec")]
+            [ConfigurationEntry("Raven/Expiration/DeleteFrequencySeconds")]
+            public TimeSetting DeleteFrequency { get; set; }
         }
     }
 }

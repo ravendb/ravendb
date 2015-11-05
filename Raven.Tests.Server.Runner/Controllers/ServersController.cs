@@ -43,7 +43,7 @@ namespace Raven.Tests.Server.Runner.Controllers
 
             if (serverConfiguration.HasApiKey)
             {
-                configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+                configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
                 Authentication.EnableOnce();
             }
 

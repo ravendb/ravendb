@@ -103,16 +103,16 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
         {
             bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
+            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)] ?? "false", out allowIncrementalBackupsSetting) == false)
+                throw new ArgumentException(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups) + " settings key contains invalid value");
 
             var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
 
-            var tempPath = settings[Constants.Voron.TempPath];
-            var journalPath = settings[Constants.RavenTxJournalPath];
+            var tempPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.TempPath)];
+            var journalPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)];
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
             return options;
@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             uuidGenerator = generator;
 
             bool runInMemory;
-            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
+            bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)], out runInMemory);
 
             var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
                 CreateStorageOptionsFromConfiguration(path, settings);
@@ -255,7 +255,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
         public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
         {
             bool runInMemory;
-            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
+            bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)], out runInMemory);
 
             if (runInMemory)
                 throw new InvalidOperationException("Cannot compact in-memory running Voron storage");

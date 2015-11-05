@@ -194,7 +194,7 @@ namespace Raven.Database.FileSystem.Synchronization
             {
                 Log.Debug("Starting the synchronization task");
 
-                var timeToWait = systemConfiguration.FileSystem.MaximumSynchronizationInterval;
+                var timeToWait = systemConfiguration.FileSystem.MaximumSynchronizationInterval.AsTimeSpan;
 
                 while (context.DoWork)
                 {
@@ -214,7 +214,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
                     timeToWait = runningBecauseOfDataModifications
                         ? TimeSpan.FromSeconds(30)
-                        : systemConfiguration.FileSystem.MaximumSynchronizationInterval;
+                        : systemConfiguration.FileSystem.MaximumSynchronizationInterval.AsTimeSpan;
                 }
             }, TaskCreationOptions.LongRunning);
 

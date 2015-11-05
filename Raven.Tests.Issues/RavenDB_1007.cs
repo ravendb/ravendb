@@ -44,10 +44,9 @@ namespace Raven.Tests.Issues
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                DefaultStorageTypeName = storageName,
                 Settings =
                 {
-                    {Constants.Voron.AllowIncrementalBackups, "true"}
+                    {InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
                 }
             }.Initialize(), null))
             {
@@ -131,7 +130,6 @@ namespace Raven.Tests.Issues
         {
             using (var db = new DocumentDatabase(new RavenConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     DataDirectory = DataDir

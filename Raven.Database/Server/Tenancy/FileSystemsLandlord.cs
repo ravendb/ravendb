@@ -76,7 +76,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.FileSystem.DataDirectory, this.SystemConfiguration);
+            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), this.SystemConfiguration);
         }
 
         protected InMemoryRavenConfiguration CreateConfiguration(
@@ -93,7 +93,6 @@ namespace Raven.Database.Server.Tenancy
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForFileSystemTenant(tenantId);
-            config.Settings[Constants.FileSystem.Storage] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
             foreach (var setting in document.Settings)
             {
@@ -174,8 +173,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
-            if (document.Settings.Keys.Contains(Constants.FileSystem.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find " + Constants.FileSystem.DataDirectory);
+            if (document.Settings.Keys.Contains(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledFileSystem)
                 throw new InvalidOperationException("The file system has been disabled.");

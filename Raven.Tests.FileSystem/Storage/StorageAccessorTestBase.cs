@@ -62,7 +62,7 @@ namespace Raven.Tests.FileSystem.Storage
                 },
                 Settings = new NameValueCollection
                            {
-                               { Constants.RunInMemory, runInMemory.ToString() }
+                               { InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory.ToString() }
                            }
             };
 

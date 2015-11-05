@@ -233,7 +233,7 @@ namespace Raven.Database.Indexing
 
                         var dateTime = read.Data.Value<DateTime>("LastQueryTime");
 
-                        if (IsIdleAutoIndex(indexImplementation) && SystemTime.UtcNow - dateTime > configuration.TimeToWaitBeforeRunningAbandonedIndexes)
+                        if (IsIdleAutoIndex(indexImplementation) && SystemTime.UtcNow - dateTime > configuration.Indexing.TimeToWaitBeforeRunningAbandonedIndexes.AsTimeSpan)
                             indexImplementation.MarkQueried(); // prevent index abandoning right after startup
                         else
                             indexImplementation.MarkQueried(dateTime);
@@ -732,9 +732,9 @@ namespace Raven.Database.Indexing
 
             var storedCommitPoints = System.IO.Directory.GetDirectories(commitPointDirectory.AllCommitPointsFullPath);
 
-            if (storedCommitPoints.Length > configuration.MaxNumberOfStoredCommitPoints)
+            if (storedCommitPoints.Length > configuration.Indexing.MaxNumberOfStoredCommitPoints)
             {
-                foreach (var toDelete in storedCommitPoints.Take(storedCommitPoints.Length - configuration.MaxNumberOfStoredCommitPoints))
+                foreach (var toDelete in storedCommitPoints.Take(storedCommitPoints.Length - configuration.Indexing.MaxNumberOfStoredCommitPoints))
                 {
                     IOExtensions.DeleteDirectory(toDelete);
                 }
@@ -1386,7 +1386,7 @@ namespace Raven.Database.Indexing
                              CreationDate = stats.CreatedTimestamp
                          }).ToArray();
 
-                var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
+                var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan;
                 var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
 
                 for (var i = 0; i < autoIndexesSortedByLastQueryTime.Length; i++)
@@ -1460,7 +1460,7 @@ namespace Raven.Database.Indexing
                 return;
             }
 
-            if (lastQuery < configuration.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.TotalMinutes)
+            if (lastQuery < configuration.Indexing.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.AsTimeSpan.TotalMinutes)
                 return;
 
             // old enough, and haven't been queried for a while, mark it as abandoned

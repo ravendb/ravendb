@@ -50,8 +50,8 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("")]
         public HttpResponseMessage RavenRoot()
         {
-            var location = DatabasesLandlord.SystemConfiguration.VirtualDirectory != "/" 
-                ? DatabasesLandlord.SystemConfiguration.VirtualDirectory + "/" + RootPath : RootPath;
+            var location = DatabasesLandlord.SystemConfiguration.Core.VirtualDirectory != "/" 
+                ? DatabasesLandlord.SystemConfiguration.Core.VirtualDirectory + "/" + RootPath : RootPath;
 
             var result = InnerRequest.CreateResponse(HttpStatusCode.Found);
             result.Headers.Location = new Uri(location, UriKind.Relative);

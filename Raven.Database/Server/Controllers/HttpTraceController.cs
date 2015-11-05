@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Controllers
             {
                 var oneTimetokenPrincipal =  User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
                 if ((oneTimetokenPrincipal != null && oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) ||
-                    SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin)
+                    SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin)
                 {
                     RequestManager.RegisterServerHttpTraceTransport(traceTransport);
                 }

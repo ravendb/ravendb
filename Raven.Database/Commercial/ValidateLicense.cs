@@ -108,7 +108,7 @@ namespace Raven.Database.Commercial
                                 config.Catalog.Catalogs.Remove(catalog);
                             }
                         }
-                    }, config.TurnOffDiscoveryClient);
+                    }, config.Core.TurnOffDiscoveryClient);
                 }
                 catch (LicenseExpiredException ex)
                 {

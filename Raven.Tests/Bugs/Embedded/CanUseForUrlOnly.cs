@@ -25,10 +25,6 @@ namespace Raven.Tests.Bugs.Embedded
         {
             using (var embeddableDocumentStore = new EmbeddableDocumentStore
             {
-                Configuration =
-                {
-                    DefaultStorageTypeName = "voron"
-                },
                 Url = "http://localhost:8079"
             })
             {

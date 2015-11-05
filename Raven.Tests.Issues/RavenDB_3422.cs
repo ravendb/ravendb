@@ -31,7 +31,7 @@ namespace Raven.Tests.Issues
             })
 
             {
-                store.Configuration.Storage.Voron.AllowOn32Bits = true;
+                store.Configuration.Storage.AllowOn32Bits = true;
                 store.Initialize();
 
                 using (var insert = store.BulkInsert())

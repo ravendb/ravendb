@@ -43,7 +43,7 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Storage.Voron.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
+            configuration.Storage.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
             configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
             configuration.Core.RunInMemory = false;
         }
@@ -111,7 +111,7 @@ namespace Raven.Tests.Issues
                     {
                         Settings =
                         {
-                            {Constants.Voron.AllowIncrementalBackups, "true"}
+                            {InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
                         }
                     }, new DatabaseRestoreRequest
                     {

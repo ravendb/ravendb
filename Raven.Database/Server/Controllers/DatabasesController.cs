@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi.Attributes;
@@ -43,10 +44,10 @@ namespace Raven.Database.Server.Controllers
                         Name = dbName,
                         Disabled = database.Value<bool>("Disabled"),
                         IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.IndexingDisabled),
-                        RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
+                        RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)),
                         ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.Cluster.NonClusterDatabaseMarker),
                         Bundles = bundles,
-                        IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
+                        IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
                         IsLoaded = DatabasesLandlord.IsDatabaseLoaded(dbName)
                     };
                 }).ToList();

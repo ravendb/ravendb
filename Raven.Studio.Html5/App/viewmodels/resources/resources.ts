@@ -409,7 +409,8 @@ class resources extends viewModelBase {
                     "Raven/ActiveBundles": bundles.join(";")
                 };
                 if (storageEngine) {
-                    settings["Raven/StorageTypeName"] = storageEngine;
+                    // TODO arek - v4.0 just Voron 
+                    // settings["Raven/StorageTypeName"] = storageEngine;
                 }
                 if (!clusterWide) {
                     settings["Raven-Non-Cluster-Database"] = "true";
@@ -428,7 +429,7 @@ class resources extends viewModelBase {
                 }
                 settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/" + databaseName;
                 if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
-                    settings["Raven/Esent/LogsPath"] = databaseLogs;
+                    settings["Raven/Esent/LogsPath"] = databaseLogs;// TODO arek - v4.0 just Voron 
                 }
                 if (!this.isEmptyStringOrWhitespace(databaseIndexes)) {
                     settings["Raven/IndexStoragePath"] = databaseIndexes;

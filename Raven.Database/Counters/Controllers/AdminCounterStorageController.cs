@@ -366,7 +366,7 @@ namespace Raven.Database.Counters.Controllers
             }
 
             if (incrementalBackup &&
-                Counters.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+                Counters.Configuration.Storage.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }

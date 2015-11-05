@@ -184,7 +184,7 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage IndexGet(string id)
         {
             using (var cts = new CancellationTokenSource())
-            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan))
             {
                 var index = id;
                 if (string.IsNullOrEmpty(GetQueryStringValue("definition")) == false) 
@@ -205,7 +205,7 @@ namespace Raven.Database.Server.Controllers
             }
                 catch (OperationCanceledException e)
                 {
-                    throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
+                    throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan), e);
         }
             }
         }

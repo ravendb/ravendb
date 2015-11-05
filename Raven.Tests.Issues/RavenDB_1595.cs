@@ -54,15 +54,14 @@ namespace Raven.Tests.Issues
 
             var serverConfiguration = new Database.Config.RavenConfiguration
             {
-                AnonymousUserAccessMode = Database.Server.AnonymousUserAccessMode.Admin,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =
                 {
                     RunInMemory = false,
                     DataDirectory = dataDirectory,
                     Port = port,
-                },
-                DefaultStorageTypeName = "voron"
+                    AnonymousUserAccessMode = Database.Server.AnonymousUserAccessMode.Admin,
+                }
             };
 
             if (removeDataDirectory)

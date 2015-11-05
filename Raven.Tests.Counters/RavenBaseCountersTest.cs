@@ -56,7 +56,7 @@ namespace Raven.Tests.Counters
 
         protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
         {
-            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 

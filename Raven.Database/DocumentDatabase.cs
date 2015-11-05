@@ -49,6 +49,7 @@ using Raven.Abstractions.Threading;
 using Raven.Database.Common;
 using Raven.Database.Server.WebApi;
 using Raven.Json.Linq;
+using Raven.Storage.Voron;
 
 namespace Raven.Database
 {
@@ -129,7 +130,7 @@ namespace Raven.Database
 
                 backgroundTaskScheduler = configuration.CustomTaskScheduler ?? TaskScheduler.Default;
 
-                recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
+                recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.Core.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
 
                 workContext = new WorkContext
                 {
@@ -1184,12 +1185,10 @@ namespace Raven.Database
 
             public void ValidateStorage()
             {
-                var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-                if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
-                    && configuration.Storage.Voron.AllowOn32Bits == false && 
+                if (configuration.Storage.AllowOn32Bits == false && 
                     Environment.Is64BitProcess == false)
                 {
-                    throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+                    throw new Exception("Voron is prone to failure in 32-bits mode. Use " + InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
                 }
             }
 
@@ -1269,13 +1268,13 @@ namespace Raven.Database
 
             public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
             {
-                string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
-                database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
-                            {
-                                if (database.StorageInaccessible != null)
-                                    database.StorageInaccessible(database, EventArgs.Empty);
+                database.TransactionalStorage = new TransactionalStorage(database.Configuration, database.WorkContext.HandleWorkNotifications, () =>
+                {
+                    if (database.StorageInaccessible != null)
+                        database.StorageInaccessible(database, EventArgs.Empty);
 
-                            }, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
+                }, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
+
                 database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
             }
 

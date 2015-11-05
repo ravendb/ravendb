@@ -88,7 +88,7 @@ namespace Raven.Tests.Issues
             {
                 documentStore.Configuration.Core.DataDirectory = dataDir;
                 documentStore.Configuration.Core.IndexStoragePath = indexesDir;
-                documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
+                documentStore.Configuration.Storage.JournalsStoragePath = jouranlDir;
             }))
             {
                 using (var sesion = store.OpenSession())
@@ -104,8 +104,6 @@ namespace Raven.Tests.Issues
             string storage;
             using (var store = NewDocumentStore(runInMemory: false))
             {
-                storage = store.Configuration.DefaultStorageTypeName;
-
                 new User_ByName().Execute(store);
 
                 using (var sesion = store.OpenSession())
@@ -131,7 +129,6 @@ namespace Raven.Tests.Issues
 
             var ravenConfiguration = new RavenConfiguration
             {
-                DefaultStorageTypeName = storage,
                 Core =
                 {
                     DataDirectory = dataDir,
@@ -139,7 +136,7 @@ namespace Raven.Tests.Issues
                 }
             };
 
-            ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
+            ravenConfiguration.Storage.JournalsStoragePath = jouranlDir;
 
             using (var db = new DocumentDatabase(ravenConfiguration, null))
             {
@@ -211,7 +208,7 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {Constants.Voron.AllowIncrementalBackups, "true"}
+                        {InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
                     }
                 });
 

@@ -40,7 +40,6 @@ namespace Raven.Database.Server
                 HttpEndpointRegistration.RegisterAdminLogsTarget();
                 if (db == null)
                 {
-                    configuration.UpdateDataDirForLegacySystemDb();
                     systemDatabase = new DocumentDatabase(configuration, null);
                     systemDatabase.SpinBackgroundWorkers(false);
                 }
@@ -49,7 +48,7 @@ namespace Raven.Database.Server
                     systemDatabase = db;
                 }
 
-                WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
+                WebSocketBufferPool.Initialize((int) configuration.WebSockets.InitialBufferPoolSize.ValueInBytes);
                 fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
                 databasesLandlord = new DatabasesLandlord(systemDatabase);
                 countersLandlord = new CountersLandlord(systemDatabase);

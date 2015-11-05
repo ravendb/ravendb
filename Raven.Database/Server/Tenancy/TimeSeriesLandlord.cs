@@ -66,7 +66,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.TimeSeries.DataDirectory, systemDatabase.Configuration);
+            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), systemDatabase.Configuration);
         }
 
         protected InMemoryRavenConfiguration CreateConfiguration(
@@ -84,10 +84,7 @@ namespace Raven.Database.Server.Tenancy
 
             config.CustomizeValuesForTimeSeriesTenant(tenantId);
 
-            config.Settings[Constants.TimeSeries.DataDirectory] = parentConfiguration.TimeSeries.DataDirectory;
-            //config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            //TODO: what time series dir path?
-            //config.Settings["Raven/TimeSeries/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory)] = parentConfiguration.TimeSeries.DataDirectory;
 
             foreach (var setting in document.Settings)
             {
@@ -101,8 +98,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Core.DataDirectory);
-            //config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.Core.DataDirectory);
+            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
 
             config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
             config.TimeSeriesName = tenantId;
@@ -123,8 +119,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<TimeSeriesDocument>();
-            if (document.Settings.Keys.Contains(Constants.TimeSeries.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find " + Constants.TimeSeries.DataDirectory);
+            if (document.Settings.Keys.Contains(InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledTimeSeriesStorage)
                 throw new InvalidOperationException("The time series has been disabled.");

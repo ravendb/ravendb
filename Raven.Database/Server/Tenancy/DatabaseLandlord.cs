@@ -48,7 +48,7 @@ namespace Raven.Database.Server.Tenancy
 
             FrequencyToCheckForIdleDatabasesInSec = val;
 
-            string tempPath = SystemConfiguration.TempPath;
+            string tempPath = SystemConfiguration.Core.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
             {
@@ -97,7 +97,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.RavenDataDir, systemConfiguration);
+            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory), systemConfiguration);
         }
 
         private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
@@ -112,8 +112,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (document.Settings[Constants.RavenDataDir] == null)
-                throw new InvalidOperationException("Could not find " + Constants.RavenDataDir);
+            if (document.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory)] == null)
+                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
@@ -225,14 +225,12 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
             }
 
-            if (config.Settings[Constants.TempPath] == null)
-                config.Settings[Constants.TempPath] = parentConfiguration.TempPath;  
+            if (config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath)] == null)
+                config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath)] = parentConfiguration.Core.TempPath;  
 
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForDatabaseTenant(tenantId);
-
-            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;           
 
             foreach (var setting in document.Settings)
             {
@@ -246,9 +244,8 @@ namespace Raven.Database.Server.Tenancy
             }
 
             config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Core.DataDirectory);
-
-            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.Core.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.Core.DataDirectory);
+            
+            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
 
             config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 

@@ -179,7 +179,7 @@ namespace Raven.Server
             optionSet.Add("stop", OptionCategory.Service, "Stops the RavenDB service", key => actionToTake = () => AdminRequired(StopService));
             optionSet.Add("ram", OptionCategory.General, "Run RavenDB in RAM only", key =>
             {
-                ravenConfiguration.Settings[Constants.RunInMemory] = "true";
+                ravenConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
                 ravenConfiguration.Core.RunInMemory = true;
                 ravenConfiguration.Initialize();
                 actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);
@@ -745,11 +745,7 @@ Configuration databaseOptions:
             try
             {
                 var ravenConfiguration = new RavenConfiguration();
-                if (File.Exists(Path.Combine(backupLocation, "Raven.voron")))
-                {
-                    ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-                }
-
+ 
                 MaintenanceActions.Restore(ravenConfiguration, new DatabaseRestoreRequest
                 {
                     BackupLocation = backupLocation,
@@ -812,7 +808,7 @@ Configuration databaseOptions:
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Core.Port, ravenConfiguration.Encryption.UseSsl);
             if (anonymousUserAccessMode.HasValue)
-                ravenConfiguration.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
+                ravenConfiguration.Core.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
             while (RunServerInDebugMode(ravenConfiguration, launchBrowser, server => InteractiveRun(server)))
             {
                 launchBrowser = false;

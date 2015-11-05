@@ -34,6 +34,7 @@ using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing.Analyzers;
@@ -65,7 +66,7 @@ namespace Raven.Database.Indexing
         protected Directory directory;
         protected readonly IndexDefinition indexDefinition;
         private volatile string waitReason;
-        private readonly long flushSize;
+        private readonly Size flushSize;
         private long writeErrors;
         // Users sometimes configure index outputs without realizing that we need to count on that for memory 
         // management. That can result in very small batch sizes, so we want to make sure that we don't trust
@@ -118,7 +119,7 @@ namespace Raven.Database.Indexing
             if (logIndexing.IsDebugEnabled)
                 logIndexing.Debug("Creating index for {0}", PublicName);
             this.directory = directory;
-            flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
+            flushSize = context.Configuration.Indexing.FlushIndexToDiskSize;
             _indexCreationTime = SystemTime.UtcNow;
             RecreateSearcher();
 
@@ -591,7 +592,7 @@ namespace Raven.Database.Indexing
                             {
                                 WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
 
-                                if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
+                                if (indexWriter != null && indexWriter.RamSize() >= flushSize)
                                 {
                                     Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
                                     flushed = true;
@@ -745,7 +746,7 @@ namespace Raven.Database.Indexing
                 return;
 
             var stale = IsUpToDateEnoughToWriteToDisk(highestETag) == false;
-            var toobig = dir.SizeInBytes() >= context.Configuration.Indexing.NewIndexInMemoryMaxSize.Bytes;
+            var toobig = new Size(dir.SizeInBytes(), SizeUnit.Bytes) >= context.Configuration.Indexing.NewIndexInMemoryMaxSize;
 
             var tooOld = (SystemTime.UtcNow - _indexCreationTime) > context.Configuration.Indexing.NewIndexInMemoryMaxTime.AsTimeSpan;
 

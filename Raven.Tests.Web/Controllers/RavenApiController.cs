@@ -26,10 +26,7 @@ namespace Raven.Tests.Web.Controllers
                             {
                                 Storage =
                                 {
-                                    Voron =
-                                    {
-                                        AllowOn32Bits = true
-                                    }
+                                    AllowOn32Bits = true
                                 }
                             }
                         }.Initialize();

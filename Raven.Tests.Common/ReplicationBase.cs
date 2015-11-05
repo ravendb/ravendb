@@ -173,15 +173,14 @@ namespace Raven.Tests.Common
             var serverConfiguration = new RavenConfiguration
             {
                 Settings = { { "Raven/ActiveBundles", "replication" } },
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =
                 {
                     RunInMemory = previousServer.SystemDatabase.Configuration.Core.RunInMemory,
                     DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
                     Port = previousServer.SystemDatabase.Configuration.Core.Port,
-                },
-                DefaultStorageTypeName = GetDefaultStorageType()
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+                }
             };
 
             serverConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;

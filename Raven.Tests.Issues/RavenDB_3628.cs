@@ -78,7 +78,7 @@ namespace Raven.Tests.Issues
         {
             configuration.Settings["Raven/Esent/MaxVerPages"] = "1";
             configuration.Settings["Raven/Esent/PreferredVerPages"] = "1";
-            configuration.Settings[Constants.Voron.MaxScratchBufferSize] = "7";
+            configuration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize)] = "7";
         }
 
         [Theory]

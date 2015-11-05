@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
             {
                 var timeSinceLastIndexing = (SystemTime.UtcNow - indexesStat.LastIndexingTime);
 
-                return (timeSinceLastIndexing > context.Configuration.TimeToWaitBeforeRunningAbandonedIndexes);
+                return (timeSinceLastIndexing > context.Configuration.Indexing.TimeToWaitBeforeRunningAbandonedIndexes.AsTimeSpan);
             }
 
             throw new InvalidOperationException("Unknown indexing priority for index " + indexesStat.Id + ": " + indexesStat.Priority);
@@ -284,7 +284,7 @@ namespace Raven.Database.Indexing
                                 context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, e,string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
                             }
                         }
-                    }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.Memory.LimitForProcessing.Megabytes, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
+                    }, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.Memory.LimitForProcessing, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
                 Interlocked.Increment(ref executedPartially);
             }
             catch (InvalidDataException e)
@@ -661,11 +661,7 @@ namespace Raven.Database.Indexing
 
                 Log.Error("Disabled index '{0}'. Reason: out of memory.", instance.PublicName);
 
-                string configurationKey = null;
-                if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.VoronTypeName, StringComparison.OrdinalIgnoreCase))
-                {
-                    configurationKey = Constants.Voron.MaxScratchBufferSize;
-                }
+                var configurationKey = InMemoryRavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize);
 
                 Debug.Assert(configurationKey != null);
 

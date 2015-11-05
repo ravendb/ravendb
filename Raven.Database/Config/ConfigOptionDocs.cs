@@ -44,9 +44,6 @@ namespace Raven.Database.Config
             {"Raven/Tenants/MaxIdleTimeForTenantDatabase", "int", null, "The time in seconds to allow a tenant database to be idle"},
             {"Raven/Tenants/FrequencyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
-            // Storage
-            {"Raven/StorageTypeName", "string", "voron or Assembly Qualified Name", "The storage engine to use for the database. Default: voron."},
-
             // Indexing
             {"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The max number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
             {"Raven/InitialNumberOfItemsToIndexInSingleBatch", "int", null, "The number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},

@@ -16,7 +16,7 @@ namespace Raven.Tests.Core.Auth
         public void CanUseApiKeyAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
-            this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            this.Server.Configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
                        "Raven/ApiKeys/CanUseApiKeyAuthentication",
                        null,
@@ -59,7 +59,7 @@ namespace Raven.Tests.Core.Auth
         public void CanUseWindowsAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
-            this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            this.Server.Configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
                 "Raven/Authorization/WindowsSettings", 
                 null,

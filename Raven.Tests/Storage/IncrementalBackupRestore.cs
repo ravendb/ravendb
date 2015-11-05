@@ -31,7 +31,6 @@ namespace Raven.Tests.Storage
         {
             db = new DocumentDatabase(new RavenConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     RunInMemory = false,
@@ -74,7 +73,6 @@ namespace Raven.Tests.Storage
 
             MaintenanceActions.Restore(new RavenConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     RunInMemory = false,
@@ -145,7 +143,6 @@ namespace Raven.Tests.Storage
 
             MaintenanceActions.Restore(new RavenConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     RunInMemory = false,
@@ -206,7 +203,6 @@ namespace Raven.Tests.Storage
                     RunInMemory = false,
                     DataDirectory = DataDir
                 },
-                DefaultStorageTypeName = storageName,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
             }, null);
 

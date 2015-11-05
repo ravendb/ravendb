@@ -69,7 +69,7 @@ namespace Raven.Database.TimeSeries
         private void ReplicationAction()
         {
             var runningBecauseOfDataModification = false;
-            var timeToWait = TimeSpan.FromMilliseconds(storage.Configuration.TimeSeries.ReplicationLatencyInMs * 10);
+            var timeToWait = TimeSpan.FromMilliseconds(storage.Configuration.TimeSeries.ReplicationLatency.AsTimeSpan.TotalMilliseconds * 10);
 
             //NotifySiblings(); //TODO: implement
 
@@ -78,8 +78,8 @@ namespace Raven.Database.TimeSeries
                 SendReplicationToAllServers(runningBecauseOfDataModification);
                 runningBecauseOfDataModification = WaitForTimeSeriesUpdate(timeToWait);
                 timeToWait = runningBecauseOfDataModification ? 
-                    TimeSpan.FromMilliseconds(storage.Configuration.TimeSeries.ReplicationLatencyInMs) : //by default this is 30 sec
-                    TimeSpan.FromMilliseconds(storage.Configuration.TimeSeries.ReplicationLatencyInMs * 10); //by default this is 5 min
+                    storage.Configuration.TimeSeries.ReplicationLatency.AsTimeSpan : //by default this is 30 sec
+                    TimeSpan.FromMilliseconds(storage.Configuration.TimeSeries.ReplicationLatency.AsTimeSpan.TotalMilliseconds * 10); //by default this is 5 min
             }
         }
 

@@ -272,9 +272,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
 
-            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
-                ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
                 throw new StorageNotSupportedException("Esent is no longer supported. Use Voron instead."); ;
 
             ravenConfiguration.CustomizeValuesForDatabaseTenant(databaseName);
@@ -338,15 +336,15 @@ namespace Raven.Database.Server.Controllers.Admin
                     if (databaseDocument == null)
                         return;
 
-                    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
+                    databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory)] = documentDataDir;
                     databaseDocument.Settings.Remove(Constants.RavenIndexPath);
-                    databaseDocument.Settings.Remove(Constants.RavenTxJournalPath);
+                    databaseDocument.Settings.Remove(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath));
 
                     if (restoreRequest.IndexesLocation != null)
                         databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
 
                     if (restoreRequest.JournalsLocation != null)
-                        databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                        databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
 
                     bool replicationBundleRemoved = false;
                     if (restoreRequest.DisableReplicationDestinations)
@@ -725,7 +723,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var stats = new AdminStatistics
             {
-                ServerName = currentConfiguration.ServerName,
+                ServerName = currentConfiguration.Server.Name,
                 TotalNumberOfRequests = RequestManager.NumberOfRequests,
                 Uptime = SystemTime.UtcNow - RequestManager.StartUpTime,
                 Memory = new AdminMemoryStatistics
@@ -893,7 +891,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/debug/info-package")]
         public HttpResponseMessage InfoPackage()
         {
-            var tempFileName = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
+            var tempFileName = Path.Combine(Database.Configuration.Core.TempPath, Path.GetRandomFileName());
             try
             {
                 var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -960,7 +958,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 {
                     if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
 
-                    ravenDebugDir = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
+                    ravenDebugDir = Path.Combine(Database.Configuration.Core.TempPath, Path.GetRandomFileName());
                     var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
                     var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
 

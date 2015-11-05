@@ -15,9 +15,9 @@ namespace Raven.Database.Server.Security.OAuth
         {
             var isGetRequest = IsGetRequest(controller);
             var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
-                Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All ||
-                Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin ||
-                    Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+                Settings.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.All ||
+                Settings.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin ||
+                    Settings.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
                     isGetRequest;
 
             var token = GetToken(controller);
@@ -36,7 +36,7 @@ namespace Raven.Database.Server.Security.OAuth
             }
 
             AccessTokenBody tokenBody;
-            if (!AccessToken.TryParseBody(Settings.OAuthTokenKey, token, out tokenBody))
+            if (!AccessToken.TryParseBody(Settings.OAuth.TokenKey, token, out tokenBody))
             {
                 if (allowUnauthenticatedUsers)
                 {
@@ -123,15 +123,15 @@ namespace Raven.Database.Server.Security.OAuth
         {
             var msg = controller.GetEmptyMessage();
             var systemConfiguration = controller.SystemConfiguration;
-            if (string.IsNullOrEmpty(systemConfiguration.OAuthTokenServer) == false)
+            if (string.IsNullOrEmpty(systemConfiguration.OAuth.TokenServer) == false)
             {
-                if (systemConfiguration.UseDefaultOAuthTokenServer == false)
+                if (systemConfiguration.OAuth.UseDefaultTokenServer == false)
                 {
-                    controller.AddHeader("OAuth-Source", systemConfiguration.OAuthTokenServer, msg);
+                    controller.AddHeader("OAuth-Source", systemConfiguration.OAuth.TokenServer, msg);
                 }
                 else
                 {
-                    controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuthTokenServer)
+                    controller.AddHeader("OAuth-Source", new UriBuilder(systemConfiguration.OAuth.TokenServer)
                     {
                         Scheme = controller.InnerRequest.RequestUri.Scheme,
                         Host = controller.InnerRequest.RequestUri.Host,
@@ -158,7 +158,7 @@ namespace Raven.Database.Server.Security.OAuth
             }
 
             AccessTokenBody tokenBody;
-            if (!AccessToken.TryParseBody(controller.DatabasesLandlord.SystemConfiguration.OAuthTokenKey, token, out tokenBody))
+            if (!AccessToken.TryParseBody(controller.DatabasesLandlord.SystemConfiguration.OAuth.TokenKey, token, out tokenBody))
             {
                 WriteAuthorizationChallenge(controller, 401, "invalid_token", "The access token is invalid");
 
