@@ -36,7 +36,7 @@ namespace Raven.Database.Plugins.Builtins
         public void Execute(RavenDBOptions serverOptions)
         {
             options = serverOptions;
-            timer = options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
+            timer = options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromSeconds(13), TimeSpan.FromMinutes(100));
         }
 
         private void ExecuteCheck(object state)
@@ -63,6 +63,22 @@ namespace Raven.Database.Plugins.Builtins
                 pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.FileSystem.IndexStoragePath, PathType = PathType.Index, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
                 pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
                 pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
+            });
+
+            options.CountersLandlord.ForAllCounters(cs =>
+            {
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Counter.DataDirectory, PathType = PathType.Data, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.DataDirectory, PathType = PathType.Data, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+            });
+
+            options.TimeSeriesLandlord.ForAllTimeSeries(ts =>
+            {
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.TimeSeries.DataDirectory, PathType = PathType.Data, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries});
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.DataDirectory, PathType = PathType.Data, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
             });
 
             var roots = new List<PathToCheck>();
@@ -176,7 +192,9 @@ namespace Raven.Database.Plugins.Builtins
         private enum ResourceType
         {
             Database,
-            FileSystem
+            FileSystem,
+            Counters,
+            TimeSeries
         }
 
         public static class DiskSpaceChecker
