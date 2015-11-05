@@ -279,8 +279,6 @@ namespace Raven.Database.Config
         public AggregateCatalog Catalog { get; set; }
 
         public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
-        
-        private int? maxNumberOfParallelIndexTasks;
 
         //this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
         private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof (DocumentDatabase).Assembly);
@@ -453,39 +451,40 @@ namespace Raven.Database.Config
 
                         try
                         {
-                            if (timeUnit != null)
-                            {
-                                property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));
-                            }
-                            else if (sizeUnit != null)
-                            {
-                                property.SetValue(this, new Size(Convert.ToInt64(value), sizeUnit.Unit));
-                            }
-                            else
-                            {
-                                var minValue = property.GetCustomAttribute<MinValueAttribute>();
+                            var minValue = property.GetCustomAttribute<MinValueAttribute>();
 
-                                if (minValue == null)
+                            if (minValue == null)
+                            {
+                                if (property.PropertyType.IsEnum)
                                 {
-                                    if (property.PropertyType.IsEnum)
-                                    {
-                                        property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
-                                    }
-                                    else
-                                    {
-                                        property.SetValue(this, Convert.ChangeType(value, property.PropertyType));
-                                    }
+                                    property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
+                                }
+                                else if (timeUnit != null)
+                                {
+                                    property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));
+                                }
+                                else if (sizeUnit != null)
+                                {
+                                    property.SetValue(this, new Size(Convert.ToInt64(value), sizeUnit.Unit));
                                 }
                                 else
                                 {
-                                    if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
-                                    {
-                                        property.SetValue(this, Math.Max(Convert.ToInt32(value), minValue.Int32Value));
-                                    }
-                                    else
-                                    {
-                                        throw new NotSupportedException("Min value for " + property.PropertyType + " is not supported. Property name: " + property.Name);
-                                    }
+                                    property.SetValue(this, Convert.ChangeType(value, property.PropertyType));
+                                }
+                            }
+                            else
+                            {
+                                if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
+                                {
+                                    property.SetValue(this, Math.Max(Convert.ToInt32(value), minValue.Int32Value));
+                                }
+                                else if (property.PropertyType == Size.TypeOf)
+                                {
+                                    property.SetValue(this, new Size(Math.Max(Convert.ToInt32(value), minValue.Int32Value), sizeUnit.Unit));
+                                }
+                                else
+                                {
+                                    throw new NotSupportedException("Min value for " + property.PropertyType + " is not supported. Property name: " + property.Name);
                                 }
                             }
                         }
@@ -819,16 +818,12 @@ namespace Raven.Database.Config
             /// The initial number of items to take when processing a batch
             /// Default: 512 or 256 depending on CPU architecture
             /// </summary>
-            // TODO arek
-            //[ConfigurationEntry("Raven/InitialNumberOfItemsToProcessInSingleBatch")]
-            //[ConfigurationEntry("Raven/InitialNumberOfItemsToIndexInSingleBatch")]
             public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
             /// <summary>
             /// The initial number of items to take when reducing a batch
             /// Default: 256 or 128 depending on CPU architecture
             /// </summary>
-            //TODO arek
             public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
             /// <summary>
@@ -1415,7 +1410,7 @@ namespace Raven.Database.Config
 
         public class FileSystemConfiguration : ConfigurationBase
         {
-            private CoreConfiguration core;
+            private readonly CoreConfiguration core;
             public FileSystemConfiguration(CoreConfiguration coreConfiguration)
             {
                 core = coreConfiguration;
