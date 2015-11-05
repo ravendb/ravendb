@@ -24,7 +24,7 @@ namespace Raven.Tests.Counters
                 var changes = store.Changes();
                 var notificationTask = changes.Task.Result
                     .ForChange(GroupName, CounterName)
-                    .Timeout(TimeSpan.FromSeconds(300))
+                    .Timeout(TimeSpan.FromSeconds(5))
                     .Take(1).ToTask();
 
                 changes.WaitForAllPendingSubscriptions();
@@ -38,7 +38,7 @@ namespace Raven.Tests.Counters
 
                 notificationTask = changes.Task.Result
                     .ForChange(GroupName, CounterName)
-                    .Timeout(TimeSpan.FromSeconds(300))
+                    .Timeout(TimeSpan.FromSeconds(5))
                     .Take(1).ToTask();
 
                 changes.WaitForAllPendingSubscriptions();
@@ -58,25 +58,64 @@ namespace Raven.Tests.Counters
             using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
             {
                 var changes = store.Changes();
-                var notificationTask1 = changes.Task.Result
+                var notificationTask = changes.Task.Result
                     .ForCountersStartingWith(GroupName, CounterName.Substring(0, 2))
-                    .Timeout(TimeSpan.FromSeconds(300))
+                    .Timeout(TimeSpan.FromSeconds(5))
                     .Take(1).ToTask();
 
                 changes.WaitForAllPendingSubscriptions();
                 await store.ChangeAsync(GroupName, CounterName, 2);
 
-                var counterChange1= await notificationTask1;
-                Assert.Equal(GroupName, counterChange1.GroupName);
-                Assert.Equal(CounterName, counterChange1.CounterName);
-                Assert.Equal(CounterChangeAction.Add, counterChange1.Action);
-                Assert.Equal(2, counterChange1.Total);
-                
+                var counterChange = await notificationTask;
+                Assert.Equal(GroupName, counterChange.GroupName);
+                Assert.Equal(CounterName, counterChange.CounterName);
+                Assert.Equal(CounterChangeAction.Add, counterChange.Action);
+                Assert.Equal(2, counterChange.Total);
+
+                notificationTask = changes.Task.Result
+                 .ForCountersStartingWith(GroupName, CounterName)
+                 .Timeout(TimeSpan.FromSeconds(5))
+                 .Take(1).ToTask();
+
+                changes.WaitForAllPendingSubscriptions();
+                await store.DecrementAsync(GroupName, CounterName2);
+
+                counterChange = await notificationTask;
+                Assert.Equal(GroupName, counterChange.GroupName);
+                Assert.Equal(CounterName2, counterChange.CounterName);
+                Assert.Equal(CounterChangeAction.Add, counterChange.Action);
+                Assert.Equal(-1, counterChange.Total);
+            }
+        }
+
+        [Fact]
+        public async Task NotificationReceivedForCountersStartingWith2()
+        {
+            using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
+            {
+                var changes = store.Changes();
+                var finished = false;
+                changes.Task.Result
+                    .ForCountersStartingWith(GroupName, CounterName.Substring(0, 2))
+                    .Subscribe(counterChange =>
+                    {
+                        if (finished)
+                            return;
+
+                        Assert.Equal(GroupName, counterChange.GroupName);
+                        Assert.Equal(CounterName, counterChange.CounterName);
+                        Assert.Equal(CounterChangeAction.Add, counterChange.Action);
+                        Assert.Equal(2, counterChange.Total);
+                        finished = true;
+                    });
+
+                changes.WaitForAllPendingSubscriptions();
+                await store.ChangeAsync(GroupName, CounterName, 2);
+
                 var notificationTask2 = changes.Task.Result
                  .ForCountersStartingWith(GroupName, CounterName)
-                 .Timeout(TimeSpan.FromSeconds(300))
-                 .Skip(1).Take(1).ToTask();
-
+                 .Timeout(TimeSpan.FromSeconds(5))
+                 .Take(1).ToTask();
 
                 changes.WaitForAllPendingSubscriptions();
                 await store.DecrementAsync(GroupName, CounterName2);
@@ -97,7 +136,7 @@ namespace Raven.Tests.Counters
                 var changes = store.Changes();
                 var notificationTask = changes.Task.Result
                     .ForCountersInGroup(GroupName)
-                    .Timeout(TimeSpan.FromSeconds(300))
+                    .Timeout(TimeSpan.FromSeconds(5))
                     .Take(1).ToTask();
 
                 changes.WaitForAllPendingSubscriptions();
@@ -111,7 +150,7 @@ namespace Raven.Tests.Counters
 
                 notificationTask = changes.Task.Result
                     .ForCountersInGroup(GroupName)
-                    .Timeout(TimeSpan.FromSeconds(300))
+                    .Timeout(TimeSpan.FromSeconds(5))
                     .Take(1).ToTask();
 
                 changes.WaitForAllPendingSubscriptions();
@@ -180,7 +219,7 @@ namespace Raven.Tests.Counters
                 var changesB = storeB.Changes();
                 var notificationTask = changesB.Task.Result
                     .ForCountersInGroup(GroupName)
-                    .Timeout(TimeSpan.FromSeconds(30))
+                    .Timeout(TimeSpan.FromSeconds(10))
                     .Take(1).ToTask();
                 await storeA.IncrementAsync(GroupName, CounterName);
 
@@ -195,7 +234,7 @@ namespace Raven.Tests.Counters
                 var changesA = storeA.Changes();
                 notificationTask = changesA.Task.Result
                     .ForCountersInGroup(GroupName)
-                    .Timeout(TimeSpan.FromSeconds(30))
+                    .Timeout(TimeSpan.FromSeconds(10))
                     .Take(1).ToTask();
 
                 changesA.WaitForAllPendingSubscriptions();
@@ -246,7 +285,7 @@ namespace Raven.Tests.Counters
                     }
                 }
 
-                var ratio = (int)Math.Ceiling((double)actionsCount/batchSizeLimit);
+                var ratio = (int)Math.Ceiling((double)actionsCount / batchSizeLimit);
                 WaitUntilCount(startCount, ratio);
                 WaitUntilCount(endCount, ratio);
             }

@@ -255,6 +255,8 @@
     <Compile Include="Actions\QueryActions.cs" />
     <Compile Include="Actions\SubscriptionActions.cs" />
     <Compile Include="Actions\TaskActions.cs" />
+    <Compile Include="Bundles\Replication\RavenConflictDocumentsTransformer.cs" />
+    <Compile Include="Bundles\Replication\RavenConflictDocuments.cs" />
     <Compile Include="Bundles\Replication\Data\GlobalReplicationTopologyRequest.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\FilterReplicatedDocs.cs" />
     <Compile Include="Bundles\Replication\Tasks\Handlers\IReplicatedDocsHandler.cs" />

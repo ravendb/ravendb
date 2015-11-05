@@ -27,7 +27,7 @@ namespace Raven.Client.Changes
         private readonly string url;
         private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
-        private readonly Action onDispose;                
+        private readonly Action onDispose;
 
         private IDisposable connection;
         private DateTime lastHeartbeat;
@@ -37,7 +37,7 @@ namespace Raven.Client.Changes
 
         // This is the StateCounters, it is not related to the counters database
         protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
-        
+
         protected RemoteChangesClientBase(
             string url,
             string apiKey,
@@ -146,7 +146,7 @@ namespace Raven.Client.Changes
             {
                 Connected = false;
                 ConnectionStatusChanged(this, EventArgs.Empty);
-                throw new ObjectDisposedException( this.GetType().Name );
+                throw new ObjectDisposedException(this.GetType().Name);
             }
 
             Connected = true;
@@ -295,7 +295,7 @@ namespace Raven.Client.Changes
                 case "Heartbeat":
                     break;
                 default:
-                    NotifySubscribers(type, value, Counters);
+                    NotifySubscribers(type, value, Counters.Snapshot);
                     break;
             }
         }
@@ -312,7 +312,6 @@ namespace Raven.Client.Changes
 
         protected abstract Task SubscribeOnServer();
         protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);
-
 
         public virtual void OnCompleted()
         { }

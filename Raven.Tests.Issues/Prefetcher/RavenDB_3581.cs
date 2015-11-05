@@ -181,10 +181,6 @@ namespace Raven.Tests.Issues.Prefetcher
 
                 if (count == 1536)
                 {
-                    //The reason i have added this wait is because the 'FutureBatchCompleted'
-                    //event is fired before the task ends resulting in prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize
-                    //not calculating the correct batches size. 
-                    SpinWait.SpinUntil(() => false, TimeSpan.FromMilliseconds(16));
                     mre.Set();
                 }
             };
