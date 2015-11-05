@@ -419,6 +419,8 @@ namespace Raven.Database.Config
         public abstract class ConfigurationBase
         {
             public const string DefaultValueSetInConstructor = "default-value-set-in-constructor";
+            
+            internal bool Initialized = false;
 
             public virtual void Initialize(NameValueCollection settings)
             {
@@ -522,6 +524,8 @@ namespace Raven.Database.Config
                         property.SetValue(this, defaultValue);
                     }
                 }
+
+                Initialized = true;
             }
 
             protected object GetDefaultValue<T>(Expression<Func<T, object>> getValue)
@@ -1826,6 +1830,8 @@ namespace Raven.Database.Config
             public override void Initialize(NameValueCollection settings)
             {
                 Snmp.Initialize(settings);
+
+                Initialized = true;
             }
 
             public class SnmpConfiguration : ConfigurationBase

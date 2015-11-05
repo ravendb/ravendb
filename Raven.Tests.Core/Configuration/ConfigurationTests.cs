@@ -150,7 +150,7 @@ namespace Raven.Tests.Core.Configuration
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
             inMemoryConfiguration.Initialize();
 
-            var sizeSettings = ConfigurationExtractor.GetConfigurationItems(inMemoryConfiguration).Where(x => x.PropertyInfo.PropertyType == Size.TypeOf || x.PropertyInfo.PropertyType == Size.NullableTypeOf);
+            var sizeSettings = GetConfigurationItems(inMemoryConfiguration).Where(x => x.PropertyInfo.PropertyType == Size.TypeOf || x.PropertyInfo.PropertyType == Size.NullableTypeOf);
 
             foreach (var sizeSetting in sizeSettings)
             {
@@ -164,7 +164,7 @@ namespace Raven.Tests.Core.Configuration
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
             inMemoryConfiguration.Initialize();
 
-            var timeSettings = ConfigurationExtractor.GetConfigurationItems(inMemoryConfiguration).Where(x => x.PropertyInfo.PropertyType == TimeSetting.TypeOf || x.PropertyInfo.PropertyType == TimeSetting.NullableTypeOf);
+            var timeSettings = GetConfigurationItems(inMemoryConfiguration).Where(x => x.PropertyInfo.PropertyType == TimeSetting.TypeOf || x.PropertyInfo.PropertyType == TimeSetting.NullableTypeOf);
 
             foreach (var timeSetting in timeSettings)
             {
@@ -178,7 +178,7 @@ namespace Raven.Tests.Core.Configuration
             var sut = new InMemoryRavenConfiguration();
             sut.Initialize();
 
-            var configurationsWithMinValue = ConfigurationExtractor.GetConfigurationItems(sut).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null);
+            var configurationsWithMinValue = GetConfigurationItems(sut).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null);
 
             foreach (var item in configurationsWithMinValue)
             {
@@ -212,7 +212,7 @@ namespace Raven.Tests.Core.Configuration
             var fake = new InMemoryRavenConfiguration();
             fake.Initialize();
 
-            var keys = ConfigurationExtractor.GetConfigurationItems(fake).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null).Select(c => c.Key);
+            var keys = GetConfigurationItems(fake).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null).Select(c => c.Key);
 
             var sut = new InMemoryRavenConfiguration();
 
@@ -223,7 +223,7 @@ namespace Raven.Tests.Core.Configuration
 
             sut.Initialize();
 
-            var configurationsWithMinValue = ConfigurationExtractor.GetConfigurationItems(sut).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null).ToList();
+            var configurationsWithMinValue = GetConfigurationItems(sut).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null).ToList();
 
             foreach (var item in configurationsWithMinValue)
             {
@@ -257,7 +257,7 @@ namespace Raven.Tests.Core.Configuration
             var fake = new InMemoryRavenConfiguration();
             fake.Initialize();
 
-            var enumItems = ConfigurationExtractor.GetConfigurationItems(fake).Where(x => x.PropertyInfo.PropertyType.IsEnum).ToArray();
+            var enumItems = GetConfigurationItems(fake).Where(x => x.PropertyInfo.PropertyType.IsEnum).ToArray();
 
             var sut = new InMemoryRavenConfiguration();
 
@@ -275,7 +275,7 @@ namespace Raven.Tests.Core.Configuration
             
             sut.Initialize();
 
-            var actual = ConfigurationExtractor.GetConfigurationItems(sut).Where(x => x.PropertyInfo.PropertyType.IsEnum).ToArray();
+            var actual = GetConfigurationItems(sut).Where(x => x.PropertyInfo.PropertyType.IsEnum).ToArray();
 
             for (int i = 0; i < actual.Length; i++)
             {
@@ -289,7 +289,7 @@ namespace Raven.Tests.Core.Configuration
             var sut = new InMemoryRavenConfiguration();
             sut.Initialize();
 
-            var configurations = ConfigurationExtractor.GetConfigurationItems(sut).ToList();
+            var configurations = GetConfigurationItems(sut).ToList();
 
             foreach (var configuration in configurations)
             {
@@ -327,7 +327,7 @@ namespace Raven.Tests.Core.Configuration
             var sut = new InMemoryRavenConfiguration();
             sut.Initialize();
 
-            var configurations = ConfigurationExtractor.GetConfigurationItems(sut).ToList();
+            var configurations = GetConfigurationItems(sut).ToList();
 
             foreach (var configuration in configurations)
             {
@@ -335,34 +335,56 @@ namespace Raven.Tests.Core.Configuration
             }
         }
 
-        private class ConfigurationExtractor
+        [Fact]
+        public void AllConfigurationClassesHaveToBeInitialized()
         {
-            public static List<ConfigurationItem> GetConfigurationItems(InMemoryRavenConfiguration inMemoryConfiguration)
+            var sut = new InMemoryRavenConfiguration();
+            sut.Initialize();
+
+            var configurations = GetConfigurationClasses(sut).ToList();
+
+            foreach (var configuration in configurations)
             {
-                var configurationClasses = inMemoryConfiguration.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(InMemoryRavenConfiguration.ConfigurationBase));
-
-                var result = new List<ConfigurationItem>();
-
-                foreach (var configurationClass in configurationClasses)
-                {
-                    var configurationClassInstance = configurationClass.GetValue(inMemoryConfiguration);
-
-                    foreach (var configuration in configurationClassInstance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.GetCustomAttributes<ConfigurationEntryAttribute>().Any()))
-                    {
-                        result.Add(new ConfigurationItem
-                        {
-                            PropertyInfo = configuration,
-                            Value = configuration.GetValue(configurationClassInstance),
-                            Key = configuration.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key
-                    });
-                    }
-                    
-                }
-
-                return result;
+                Assert.True(configuration.Initialized);
             }
         }
 
+        private List<ConfigurationItem> GetConfigurationItems(InMemoryRavenConfiguration inMemoryConfiguration)
+        {
+            var result = new List<ConfigurationItem>();
+
+            foreach (var configurationClassInstance in GetConfigurationClasses(inMemoryConfiguration))
+            {
+                foreach (var configuration in configurationClassInstance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.GetCustomAttributes<ConfigurationEntryAttribute>().Any()))
+                {
+                    result.Add(new ConfigurationItem
+                    {
+                        PropertyInfo = configuration,
+                        Value = configuration.GetValue(configurationClassInstance),
+                        Key = configuration.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key
+                    });
+                }
+
+            }
+
+            return result;
+        }
+
+        private List<InMemoryRavenConfiguration.ConfigurationBase> GetConfigurationClasses(InMemoryRavenConfiguration inMemoryConfiguration)
+        {
+            var configurationClasses = inMemoryConfiguration.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(InMemoryRavenConfiguration.ConfigurationBase));
+
+            var result = new List<InMemoryRavenConfiguration.ConfigurationBase>();
+
+            foreach (var configurationClass in configurationClasses)
+            {
+                var configurationClassInstance = (InMemoryRavenConfiguration.ConfigurationBase) configurationClass.GetValue(inMemoryConfiguration);
+
+                result.Add(configurationClassInstance);
+            }
+
+            return result;
+        }
         private class ConfigurationItem
         {
             public PropertyInfo PropertyInfo;
