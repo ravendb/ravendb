@@ -420,15 +420,14 @@ namespace Raven.Database.Config
 
             public virtual void Initialize(NameValueCollection settings)
             {
-                var properties = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                 let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
+                                 where configurationEntryAttribute != null // filter out properties which are marked as configuration entry
+                                 orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
+                                 select property;
 
-                foreach (var property in properties)
+                foreach (var property in configurationProperties)
                 {
-                    var entries = property.GetCustomAttributes<ConfigurationEntryAttribute>().ToList();
-
-                    if (entries.Count == 0)
-                        continue;
-
                     TimeUnitAttribute timeUnit = null;
                     SizeUnitAttribute sizeUnit = null;
 
@@ -445,7 +444,7 @@ namespace Raven.Database.Config
 
                     var configuredValueSet = false;
 
-                    foreach (var entry in entries)
+                    foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>())
                     {
                         var value = settings[entry.Key];
 
@@ -672,7 +671,7 @@ namespace Raven.Database.Config
             }
 
             [DefaultValue((string)null)]
-            [ConfigurationEntry("Raven/IndexStoragePath")] // TODO arek - add initialization order
+            [ConfigurationEntry("Raven/IndexStoragePath")]
             public string IndexStoragePath
             {
                 get
