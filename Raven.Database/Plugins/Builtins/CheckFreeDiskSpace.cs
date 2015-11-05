@@ -36,7 +36,7 @@ namespace Raven.Database.Plugins.Builtins
         public void Execute(RavenDBOptions serverOptions)
         {
             options = serverOptions;
-            timer = options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromSeconds(13), TimeSpan.FromMinutes(100));
+            timer = options.SystemDatabase.TimerManager.NewTimer(ExecuteCheck, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
         }
 
         private void ExecuteCheck(object state)
