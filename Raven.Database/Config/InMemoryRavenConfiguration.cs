@@ -420,7 +420,7 @@ namespace Raven.Database.Config
 
             public virtual void Initialize(NameValueCollection settings)
             {
-                var properties = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance); //TODO arek
+                var properties = GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
                 foreach (var property in properties)
                 {
@@ -646,7 +646,7 @@ namespace Raven.Database.Config
                 set
                 {
                     runInMemory = value;
-                    parent.Settings[Constants.RunInMemory] = value.ToString(); //TODO arek - that is needed for DatabaseLandlord.CreateConfiguration - Settings = new NameValueCollection(parentConfiguration.Settings),
+                    parent.Settings[GetKey(x => x.Core.RunInMemory)] = value.ToString(); //TODO arek - that is needed for DatabaseLandlord.CreateConfiguration - Settings = new NameValueCollection(parentConfiguration.Settings),
                 }
             }
 
@@ -1842,7 +1842,7 @@ namespace Raven.Database.Config
                 Snmp = new SnmpConfiguration();
             }
 
-            public SnmpConfiguration Snmp { get; private set; }
+            public SnmpConfiguration Snmp { get; }
 
             public override void Initialize(NameValueCollection settings)
             {

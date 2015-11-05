@@ -118,7 +118,7 @@ namespace Raven.Database.TimeSeries
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
         {
             bool result;
-            if (bool.TryParse(settings[Constants.RunInMemory] ?? "false", out result) && result)
+            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] ?? "false", out result) && result)
                 return StorageEnvironmentOptions.CreateMemoryOnly();
 
             bool allowIncrementalBackupsSetting;

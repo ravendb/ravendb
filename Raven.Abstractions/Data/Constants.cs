@@ -86,8 +86,6 @@ namespace Raven.Abstractions.Data
 
         public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
 
-        public const string RunInMemory = "Raven/RunInMemory"; //TODO arek - remove that
-
         // Server
         public const string RavenServerBuild = "Raven-Server-Build";
 

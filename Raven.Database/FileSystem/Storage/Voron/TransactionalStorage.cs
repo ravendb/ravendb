@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             uuidGenerator = generator;
 
             bool runInMemory;
-            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
+            bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)], out runInMemory);
 
             var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
                 CreateStorageOptionsFromConfiguration(path, settings);
@@ -255,7 +255,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
         public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
         {
             bool runInMemory;
-            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
+            bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)], out runInMemory);
 
             if (runInMemory)
                 throw new InvalidOperationException("Cannot compact in-memory running Voron storage");

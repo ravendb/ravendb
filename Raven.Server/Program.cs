@@ -179,7 +179,7 @@ namespace Raven.Server
             optionSet.Add("stop", OptionCategory.Service, "Stops the RavenDB service", key => actionToTake = () => AdminRequired(StopService));
             optionSet.Add("ram", OptionCategory.General, "Run RavenDB in RAM only", key =>
             {
-                ravenConfiguration.Settings[Constants.RunInMemory] = "true";
+                ravenConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
                 ravenConfiguration.Core.RunInMemory = true;
                 ravenConfiguration.Initialize();
                 actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);

@@ -9,6 +9,7 @@ using Raven.Tests.Core.Utils.Entities;
 using System;
 using System.IO;
 using System.Linq;
+using Raven.Database.Config;
 using Xunit;
 
 namespace Raven.Tests.Core.Commands
@@ -110,7 +111,7 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public void CanDoBackupAndRestore()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(Constants.RunInMemory, "false")))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "false")))
             {
                 store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
 
@@ -118,7 +119,7 @@ namespace Raven.Tests.Core.Commands
                 {
                     Settings = new Dictionary<string, string>()
                     {
-                        { Constants.RunInMemory, "false" }
+                        { InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" }
                     }
                 }, false, store.DefaultDatabase);
                 WaitForBackup(store.DatabaseCommands, true);

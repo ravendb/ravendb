@@ -53,7 +53,7 @@ namespace Raven.Tests.Bundles.LiveTest
                 databaseDocument.Settings[Constants.SizeSoftLimitInKB] = "321";
                 databaseDocument.Settings[Constants.DocsHardLimit] = "456";
                 databaseDocument.Settings[Constants.DocsSoftLimit] = "654";
-                databaseDocument.Settings[Constants.RunInMemory] = "false";
+                databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
 
                 store.DatabaseCommands.Put("Raven/Databases/Northwind", null, RavenJObject.FromObject(databaseDocument), document.Metadata);
 
@@ -77,7 +77,7 @@ namespace Raven.Tests.Bundles.LiveTest
             Assert.Null(databaseDocument.Settings[Constants.DocsHardLimit]);
             Assert.Null(databaseDocument.Settings[Constants.DocsSoftLimit]);
 
-            Assert.True(bool.Parse(databaseDocument.Settings[Constants.RunInMemory]));
+            Assert.True(bool.Parse(databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)]));
         }
     }
 }
