@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
@@ -82,6 +83,8 @@ namespace Voron.Data.Tables
 
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
+            //TODO: Primary key
+            //TODO: Update indexes
             throw new NotImplementedException();
         }
 
@@ -184,7 +187,7 @@ namespace Voron.Data.Tables
             var ptr = DirectRead(id, out size);
             if (ptr == null)
                 return;
-            var keySlice = GetPrimaryKeySlice(new StructureReader<T>(ptr,_schema.StructureSchema));
+            var keySlice = GetPrimaryKeySlice(new StructureReader<T>(ptr, _schema.StructureSchema));
             var tree = GetTree(_schema.Key.Name);
             tree.Delete(keySlice);
 
@@ -203,14 +206,37 @@ namespace Voron.Data.Tables
             }
 
             var density = ActiveDataSmallSection.Free(id);
-            if (density <= 0.15 && ActiveDataSmallSection.Contains(id) == false )
+            if (ActiveDataSmallSection.Contains(id) || density > 0.5)
+                return;
+
+            var sectionPageNumber = ActiveDataSmallSection.GetSectionPageNumber(id);
+            if (density > 0.15)
             {
-                // TODO: Move all data to active section and release this section
+                ActiveCandidateSection.Add(sectionPageNumber);
+                return;
             }
-            else if (density <= 0.50 && ActiveDataSmallSection.Contains(id) == false)
+
+            // move all the data to the current active section (maybe creating a new one 
+            // if this is busy)
+
+            // if this is in the active candidate list, remove it so it cannot be reused if the current
+            // active is full and need a new one
+            ActiveCandidateSection.Delete(sectionPageNumber);
+
+            var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
+            foreach (var idToMove in idsInSection)
             {
-                ActiveCandidateSection.Add(ActiveDataSmallSection.GetSectionPageNumber(id));
+                int itemSize;
+                var pos = ActiveDataSmallSection.DirectRead(idToMove, out itemSize);
+                var newId = AllocateFromSmallActiveSection(size);
+                OnDataMoved(idToMove, newId, pos, itemSize);
+                byte* writePos;
+                if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out writePos) == false)
+                    throw new InvalidDataException(
+                        $"Cannot write to newly allocated size in {_schema.Name} during delete");
+                Memory.Copy(writePos, pos, itemSize);
             }
+            ActiveDataSmallSection.DeleteSection(sectionPageNumber);
         }
 
         private void Insert(Structure<T> value)

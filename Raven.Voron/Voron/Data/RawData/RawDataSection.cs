@@ -44,6 +44,36 @@ namespace Voron.Data.RawData
             }
         }
 
+        public List<long> GetAllIdsInSectionContaining(long id)
+        {
+            if (Contains(id) == false)
+            {
+                var posInPage = (int)(id % _pageSize);
+                var pageNumberInSection = (id - posInPage) / _pageSize;
+                var pageHeaderForId = PageHeaderFor(pageNumberInSection);
+
+                // this is in another section, cannot free it directly, so we'll forward to the right section
+                var sectionPageNumber = pageHeaderForId->PageNumber - pageHeaderForId->PageNumberInSection;
+                return new RawDataSection(_tx, sectionPageNumber).GetAllIdsInSectionContaining(id);
+            }
+
+            var ids = new List<long>(_sectionHeader->NumberOfEntries);
+            for (int i = 0; i < _sectionHeader->NumberOfPages; i++)
+            {
+                var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
+                var offset = sizeof (RawDataSmallPageHeader);
+                while (offset < _pageSize)
+                {
+                    var sizes = (short*) ((byte*) pageHeader + offset);
+                    if (sizes[1] != -1)
+                    {
+                        ids.Add((pageHeader->PageNumber*_pageSize) + offset);
+                    }
+                    offset += sizeof (short)*2 + sizes[0];
+                }
+            }
+            return ids;
+        } 
 
         public int NumberOfEntries => _sectionHeader->NumberOfEntries;
 
@@ -150,6 +180,22 @@ namespace Voron.Data.RawData
             return sectionPageNumber;
         }
 
+
+        public void DeleteSection(long sectionPageNumber)
+        {
+            if (sectionPageNumber != _sectionHeader->PageNumber)
+            {
+                // this is in another section, cannot delete it directly, so we'll forward to the right section
+                new RawDataSection(_tx, sectionPageNumber).DeleteSection(sectionPageNumber);
+            }
+
+            for (int i = 0; i < _sectionHeader->NumberOfPages; i++)
+            {
+                _tx.FreePage(_sectionHeader->PageNumber + i + 1);
+            }
+            _tx.FreePage(_sectionHeader->PageNumber);
+        }
+
         public double Free(long id)
         {
             var posInPage = (int) (id%_pageSize);
@@ -219,6 +265,11 @@ namespace Voron.Data.RawData
         protected RawDataSmallPageHeader* PageHeaderFor(long pageNumber)
         {
             return (RawDataSmallPageHeader*) (_tx.GetPage(pageNumber).Pointer);
+        }
+
+        protected virtual void OnDataMoved(long previousid, long newid, byte* data, int size)
+        {
+            DataMoved?.Invoke(previousid, newid, data, size);
         }
     }
 }

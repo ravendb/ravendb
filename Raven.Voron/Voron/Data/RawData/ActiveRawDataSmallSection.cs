@@ -123,15 +123,11 @@ namespace Voron.Data.RawData
                         pos += (ushort) (allocatedSize + sizeof (short) + sizeof (short));
                         continue; // this was freed
                     }
-
-                    if (DataMoved != null)
+                    var prevId = (pageHeader->PageNumber)*_pageSize + pos;
+                    var newId = (pageHeader->PageNumber)*_pageSize + pageHeader->NextAllocation;
+                    if (prevId != newId)
                     {
-                        var prevId = (pageHeader->PageNumber)*_pageSize + pos;
-                        var newId = (pageHeader->PageNumber)*_pageSize + pageHeader->NextAllocation;
-                        if (prevId != newId)
-                        {
-                            DataMoved(prevId, newId, tmp.TempPagePointer + pos, usedSize);
-                        }
+                        OnDataMoved(prevId, newId, tmp.TempPagePointer + pos, usedSize);
                     }
 
                     sizes = (short*) (((byte*) pageHeader) + pageHeader->NextAllocation);
@@ -189,5 +185,6 @@ namespace Voron.Data.RawData
 
             return new ActiveRawDataSmallSection(tx, sectionStart.PageNumber);
         }
+
     }
 }
