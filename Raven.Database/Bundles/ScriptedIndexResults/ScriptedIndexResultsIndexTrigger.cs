@@ -46,7 +46,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
 		public class Batcher : AbstractIndexUpdateTriggerBatcher
 		{
-			private readonly DocumentDatabase database;
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
+            private readonly DocumentDatabase database;
 			private readonly Abstractions.Data.ScriptedIndexResults scriptedIndexResults;
 			private readonly HashSet<string> forEntityNames;
 
@@ -58,6 +60,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 				this.database = database;
 				this.scriptedIndexResults = scriptedIndexResults;
 				this.forEntityNames = forEntityNames;
+
+			    if (Log.IsDebugEnabled)
+			        Log.Debug("Created ScriptedIndexResultsBatcher for {0}", scriptedIndexResults.Id);
 			}
 
 			public override bool RequiresDocumentOnIndexEntryDeleted { get { return true; } }
@@ -68,7 +73,11 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 				{
 					created[entryKey] = new List<RavenJObject>();
 				}
-				created[entryKey].Add(CreateJsonDocumentFromLuceneDocument(document));
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Schedule create with key {0} for scripted index results {1}", entryKey, scriptedIndexResults.Id);
+
+                created[entryKey].Add(CreateJsonDocumentFromLuceneDocument(document));
 			}
 
 			public override void OnIndexEntryDeleted(string entryKey, Document document = null)
@@ -77,7 +86,11 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 				{
 					removed[entryKey] = new List<RavenJObject>();
 				}
-				removed[entryKey].Add(document != null ? CreateJsonDocumentFromLuceneDocument(document) : new RavenJObject());
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Schedule delete with key {0} for scripted index results {1}", entryKey, scriptedIndexResults.Id);
+
+                removed[entryKey].Add(document != null ? CreateJsonDocumentFromLuceneDocument(document) : new RavenJObject());
 			}
 
 			public override void Dispose()
@@ -167,10 +180,16 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 										switch (operation.Type)
 										{
 											case ScriptedJsonPatcher.OperationType.Put:
-												database.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson, operation.Document.Metadata, null);
+                                                if (Log.IsDebugEnabled)
+                                                    Log.Debug("Perform PUT on {0} for scripted index results {1}", operation.Document.Key, scriptedIndexResults.Id);
+
+                                                database.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson, operation.Document.Metadata, null);
 												break;
 											case ScriptedJsonPatcher.OperationType.Delete:
-												database.Documents.Delete(operation.DocumentKey, null, null);
+                                                if (Log.IsDebugEnabled)
+                                                    Log.Debug("Perform DELETE on {0} for scripted index results {1}", operation.DocumentKey, scriptedIndexResults.Id);
+
+                                                database.Documents.Delete(operation.DocumentKey, null, null);
 												break;
 											default:
 												throw new ArgumentOutOfRangeException("operation.Type: " + operation.Type);
@@ -180,19 +199,26 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
 								shouldRetry = false;
 							}
-							catch (ConcurrencyException)
+							catch (ConcurrencyException ex)
 							{
 								if (scriptedIndexResults.RetryOnConcurrencyExceptions && retries-- > 0)
 								{
 									shouldRetry = true;
 									if (rand == null)
 										rand = new Random();
-									Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
+
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception. Retrying. Exception Details: {1}", scriptedIndexResults.Id, ex);
+
+                                    Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
 
 									continue;
 								}
 
-								throw;
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception {1} times. Exception Details: {2}", scriptedIndexResults.Id, ex, 128-retries+1);
+
+                                throw;
 							}
 						}
 					}
