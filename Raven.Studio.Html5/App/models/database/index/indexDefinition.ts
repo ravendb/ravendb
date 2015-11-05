@@ -166,7 +166,7 @@ class indexDefinition {
             if (src == null)
                 continue;
             for (var key in src) {
-                if (!keys.contains(key))
+                if (src.hasOwnProperty(key) === true && !keys.contains(key))
                     keys.push(key);
             }
         }
