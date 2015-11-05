@@ -91,8 +91,8 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 var sideBySideIndexes = database.Indexes.Definitions.Where(x => x.IsSideBySideIndex)
                                                                                  .ToDictionary(x => x.Name, x => x);
-
-                                foreach (var indexDefinition in database.Indexes.Definitions.Where(x => !x.IsSideBySideIndex))
+                                //filtering system indexes like Raven/DocumentsByEntityName and Raven/ConflictDocuments
+                                foreach (var indexDefinition in database.Indexes.Definitions.Where(x => !x.IsSideBySideIndex && !x.Name.StartsWith("Raven/")))
                                 {
                                     IndexDefinition sideBySideIndexDefinition;
                                     if (sideBySideIndexes.TryGetValue("ReplacementOf/" + indexDefinition.Name, out sideBySideIndexDefinition))
