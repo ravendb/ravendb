@@ -65,6 +65,22 @@ namespace Raven.Database.Plugins.Builtins
                 pathsToCheck.Add(new PathToCheck { Path = filesystem.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = filesystem.Name, ResourceType = ResourceType.FileSystem });
             });
 
+            options.CountersLandlord.ForAllCounters(cs =>
+            {
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Counter.DataDirectory, PathType = PathType.Data, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.DataDirectory, PathType = PathType.Data, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+            });
+
+            options.TimeSeriesLandlord.ForAllTimeSeries(ts =>
+            {
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.TimeSeries.DataDirectory, PathType = PathType.Data, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries});
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.Esent.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.DataDirectory, PathType = PathType.Data, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
+            });
+
             var roots = new List<PathToCheck>();
             var unc = new List<PathToCheck>();
             foreach (var pathToCheck in pathsToCheck.Where(pathToCheck => pathToCheck.Path != null && Path.IsPathRooted(pathToCheck.Path) && pathToCheck.Path.StartsWith("\\\\") == false))
@@ -176,7 +192,9 @@ namespace Raven.Database.Plugins.Builtins
         private enum ResourceType
         {
             Database,
-            FileSystem
+            FileSystem,
+            Counters,
+            TimeSeries
         }
 
         public static class DiskSpaceChecker
