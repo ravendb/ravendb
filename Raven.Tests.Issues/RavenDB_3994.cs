@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_XXXX : RavenTest
+    public class RavenDB_3994 : RavenTest
     {
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
