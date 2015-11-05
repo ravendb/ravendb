@@ -46,6 +46,8 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
         public class Batcher : AbstractIndexUpdateTriggerBatcher
         {
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
             private readonly DocumentDatabase database;
             private readonly Abstractions.Data.ScriptedIndexResults scriptedIndexResults;
             private readonly HashSet<string> forEntityNames;
@@ -58,6 +60,9 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 this.database = database;
                 this.scriptedIndexResults = scriptedIndexResults;
                 this.forEntityNames = forEntityNames;
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Created ScriptedIndexResultsBatcher for {0}", scriptedIndexResults.Id);
             }
 
             public override bool RequiresDocumentOnIndexEntryDeleted { get { return true; } }
@@ -68,6 +73,10 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 {
                     created[entryKey] = new List<RavenJObject>();
                 }
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Schedule create with key {0} for scripted index results {1}", entryKey, scriptedIndexResults.Id);
+
                 created[entryKey].Add(CreateJsonDocumentFromLuceneDocument(document));
             }
 
@@ -77,6 +86,10 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 {
                     removed[entryKey] = new List<RavenJObject>();
                 }
+
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Schedule delete with key {0} for scripted index results {1}", entryKey, scriptedIndexResults.Id);
+
                 removed[entryKey].Add(document != null ? CreateJsonDocumentFromLuceneDocument(document) : new RavenJObject());
             }
 
@@ -101,16 +114,16 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                     {
                                         try
                                         {
-                                            patcher.Apply(scope, entry, new ScriptedPatchRequest
+                                        patcher.Apply(scope, entry, new ScriptedPatchRequest
+                                        {
+                                            Script = scriptedIndexResults.DeleteScript,
+                                            Values =
                                             {
-                                                Script = scriptedIndexResults.DeleteScript,
-                                                Values =
                                                 {
-                                                    {
-                                                        "key", kvp.Key
-                                                    }
+                                                    "key", kvp.Key
                                                 }
-                                            });
+                                            }
+                                        });
                                         }
                                         catch (Exception e)
                                         {
@@ -118,13 +131,13 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                         }
                                         finally
                                         {
-                                            if (Log.IsDebugEnabled && patcher.Debug.Count > 0)
-                                            {
-                                                Log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", kvp.Key, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
+                                        if (Log.IsDebugEnabled && patcher.Debug.Count > 0)
+                                        {
+                                            Log.Debug("Debug output for doc: {0} for index {1} (delete):\r\n.{2}", kvp.Key, scriptedIndexResults.Id, string.Join("\r\n", patcher.Debug));
 
-                                                patcher.Debug.Clear();
-                                            }
+                                            patcher.Debug.Clear();
                                         }
+                                    }
                                     }
 
                                 }
@@ -176,9 +189,15 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                                         switch (operation.Type)
                                         {
                                             case ScriptedJsonPatcher.OperationType.Put:
+                                                if (Log.IsDebugEnabled)
+                                                    Log.Debug("Perform PUT on {0} for scripted index results {1}", operation.Document.Key, scriptedIndexResults.Id);
+
                                                 database.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson, operation.Document.Metadata, null);
                                                 break;
                                             case ScriptedJsonPatcher.OperationType.Delete:
+                                                if (Log.IsDebugEnabled)
+                                                    Log.Debug("Perform DELETE on {0} for scripted index results {1}", operation.DocumentKey, scriptedIndexResults.Id);
+
                                                 database.Documents.Delete(operation.DocumentKey, null, null);
                                                 break;
                                             default:
@@ -189,17 +208,24 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                                 shouldRetry = false;
                             }
-                            catch (ConcurrencyException)
+                            catch (ConcurrencyException ex)
                             {
                                 if (scriptedIndexResults.RetryOnConcurrencyExceptions && retries-- > 0)
                                 {
                                     shouldRetry = true;
                                     if (rand == null)
                                         rand = new Random();
+
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception. Retrying. Exception Details: {1}", scriptedIndexResults.Id, ex);
+
                                     Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
 
                                     continue;
                                 }
+
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug("Applying PUT/DELETE for scripted index results {0} failed with concurrency exception {1} times. Exception Details: {2}", scriptedIndexResults.Id, ex, 128-retries+1);
 
                                 throw;
                             }
