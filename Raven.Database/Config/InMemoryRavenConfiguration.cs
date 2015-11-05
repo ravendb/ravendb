@@ -1605,18 +1605,6 @@ namespace Raven.Database.Config
             [DefaultValue(false)]
             [ConfigurationEntry("Raven/UseSsl")]
             public bool UseSsl { get; set; }
-
-            public override void Initialize(NameValueCollection settings)
-            {
-                base.Initialize(settings);
-          
-                //TODO arek - verify that
-                //if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
-                //{
-                //    Encryption.UseSsl = ravenSettings.Encryption.UseSsl.Value;
-                //    Encryption.UseFips = ravenSettings.Encryption.UseFips.Value;
-                //}
-            }
         }
 
         public class IndexingConfiguration : ConfigurationBase
