@@ -11,6 +11,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Security;
 
 namespace Raven.Database.Extensions
 {
@@ -44,19 +45,22 @@ namespace Raven.Database.Extensions
                     return true;
 
                 if (windowsIdentity.User == null)
-                    return false; // we aren't sure who this use is, probably anonymous?
+                    return false; // we aren't sure who this user is, probably anonymous?
                 // we still need to make this check, to by pass UAC non elevated admin issue
                 return cachingRoleFinder.IsInRole(windowsIdentity, role);
             }
 
             var oauthPrincipal = principal as OAuthPrincipal;
-            if (oauthPrincipal == null)
-                return false;
+            if (oauthPrincipal != null)
+            {
+                if (role != WindowsBuiltInRole.Administrator)
+                    return false;
 
-            if (role != WindowsBuiltInRole.Administrator)
-                return false;
+                return oauthPrincipal.IsGlobalAdmin();
+            }
 
-            return oauthPrincipal.IsGlobalAdmin();
+            var oneTimeTokenPrincipal = principal as OneTimeTokenPrincipal;
+            return oneTimeTokenPrincipal != null && oneTimeTokenPrincipal.IsAdministratorInAnonymouseMode;
         }
 
 
@@ -258,7 +262,11 @@ namespace Raven.Database.Extensions
                 }
             }
 
-
+            var oneTimeTokenPrincipal = principal as OneTimeTokenPrincipal;
+            if (oneTimeTokenPrincipal != null)
+            {
+                //if (oneTimeTokenPrincipal.IsAdministratorInAnonymouseMode)
+            }
             return false;
         }
     }
