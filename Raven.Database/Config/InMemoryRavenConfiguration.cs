@@ -79,6 +79,8 @@ namespace Raven.Database.Config
 
         public ExpirationBundleConfiguration Expiration { get; }
 
+        public VersioningBundleConfiguration Versioning { get; }
+
         public InMemoryRavenConfiguration()
         {
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
@@ -103,6 +105,7 @@ namespace Raven.Database.Config
             Server = new ServerConfiguration();
             Memory = new MemoryConfiguration();
             Expiration = new ExpirationBundleConfiguration();
+            Versioning = new VersioningBundleConfiguration();
 
             IndexingClassifier = new DefaultIndexingClassifier();
 
@@ -148,6 +151,7 @@ namespace Raven.Database.Config
             Counter.Initialize(Settings);
             TimeSeries.Initialize(Settings);
             Expiration.Initialize(Settings);
+            Versioning.Initialize(Settings);
 
             if (Settings["Raven/MaxServicePointIdleTime"] != null)
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(Settings["Raven/MaxServicePointIdleTime"]);
@@ -536,7 +540,7 @@ namespace Raven.Database.Config
 
         public class CoreConfiguration : ConfigurationBase
         {
-            private readonly InMemoryRavenConfiguration parent; // TODO arek - remove
+            private readonly InMemoryRavenConfiguration parent;
             internal static readonly int DefaultMaxNumberOfItemsToProcessInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
             private readonly int defaultInitialNumberOfItemsToProcessInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
@@ -644,7 +648,7 @@ namespace Raven.Database.Config
                 set
                 {
                     runInMemory = value;
-                    parent.Settings[GetKey(x => x.Core.RunInMemory)] = value.ToString(); //TODO arek - that is needed for DatabaseLandlord.CreateConfiguration - Settings = new NameValueCollection(parentConfiguration.Settings),
+                    parent.Settings[GetKey(x => x.Core.RunInMemory)] = value.ToString();
                 }
             }
 
@@ -1026,7 +1030,7 @@ namespace Raven.Database.Config
         {
             [DefaultValue(512)]
             [ConfigurationEntry("Raven/Server/MaxConcurrentRequests")]
-            [ConfigurationEntry("Raven/MaxConcurrentServerRequests")] // TODO arek - remove legacy keys
+            [ConfigurationEntry("Raven/MaxConcurrentServerRequests")]
             public int MaxConcurrentRequests { get; set; }
 
             [DefaultValue(50)]
@@ -1900,6 +1904,13 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/Expiration/DeleteFrequencyInSec")]
             [ConfigurationEntry("Raven/Expiration/DeleteFrequencySeconds")]
             public TimeSetting DeleteFrequency { get; set; }
+        }
+
+        public class VersioningBundleConfiguration : ConfigurationBase
+        {
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Versioning/ChangesToRevisionsAllowed")]
+            public bool ChangesToRevisionsAllowed { get; set; }
         }
     }
 }

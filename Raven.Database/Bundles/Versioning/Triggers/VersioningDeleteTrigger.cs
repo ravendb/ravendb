@@ -37,7 +37,7 @@ namespace Raven.Bundles.Versioning.Triggers
             if (document.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) != "Historical")
                 return VetoResult.Allowed;
 
-            if (Database.ChangesToRevisionsAllowed() == false &&
+            if (Database.Configuration.Versioning.ChangesToRevisionsAllowed == false &&
                 Database.IsVersioningActive(document.Metadata))
             {
                 var revisionPos = key.LastIndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);

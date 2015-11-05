@@ -295,10 +295,6 @@ namespace Raven.Database.Util
         {
             var cfg = RavenJObject.FromObject(database.Configuration);
             cfg["OAuthTokenKey"] = "<not shown>";
-            var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
-
-            if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-                cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
 
             return cfg;
         }
