@@ -35,6 +35,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Database.Bundles.Replication;
+
 namespace Raven.Bundles.Replication.Tasks
 {
     using Database.Indexing;
@@ -104,6 +106,8 @@ namespace Raven.Bundles.Replication.Tasks
             // make sure that the doc db waits for the replication task shutdown
             docDb.ExtensionsState.GetOrAdd(Guid.NewGuid().ToString(), s => disposableAction);
 
+            DeployIndexesAndTransformers(database);
+
             IndexReplication = new IndexReplicationTask(database, httpRavenRequestFactory, this);
             TransformerReplication = new TransformerReplicationTask(database, httpRavenRequestFactory, this);
 
@@ -111,7 +115,30 @@ namespace Raven.Bundles.Replication.Tasks
 
             IndexReplication.Start();
             TransformerReplication.Start();
+        }
+
+        private static void DeployIndexesAndTransformers(DocumentDatabase database)
+        {
+            try
+            {
+                var index = new RavenConflictDocuments();
+                database.Indexes.PutIndex(index.IndexName, index.CreateIndexDefinition());
             }
+            catch (Exception e)
+            {
+                log.ErrorException("Could not deploy 'Raven/ConflictDocuments' index.", e);
+            }
+
+            try
+            {
+                var transformer = new RavenConflictDocumentsTransformer();
+                database.Transformers.PutTransform(transformer.TransformerName, transformer.CreateTransformerDefinition());
+            }
+            catch (Exception e)
+            {
+                log.ErrorException("Could not deploy 'Raven/ConflictDocumentsTransformer' transformer.", e);
+            }
+        }
 
         public void Pause()
         {
