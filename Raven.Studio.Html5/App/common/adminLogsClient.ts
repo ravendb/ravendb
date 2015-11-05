@@ -40,7 +40,7 @@ class adminLogsClient {
 
     public connect() {
         var connectionString = 'singleUseAuthToken=' + this.token + '&id=' + this.eventsId;
-        if ("WebSocket" in window && changesApi.isServerSupportingWebSockets && false) {
+        if ("WebSocket" in window && changesApi.isServerSupportingWebSockets) {
             this.connectWebSocket(connectionString);
         }
         else if ("EventSource" in window) {
