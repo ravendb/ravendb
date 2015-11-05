@@ -87,11 +87,6 @@ namespace Raven.Database.Server.Tenancy
 
             config.CustomizeValuesForCounterStorageTenant(tenantId);
 
-            /*config.Settings[Constants.Counter.DataDirectory] = parentConfiguration.Counter.DataDirectory;
-            //config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            //TODO: what counters storage dir path?
-            //config.Settings["Raven/Counters/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;*/
-
             foreach (var setting in document.Settings)
             {
                 config.Settings[setting.Key] = setting.Value;

@@ -48,7 +48,6 @@ namespace Raven.Tests.TimeSeries
             };
 
             config.TimeSeries.DataDirectory = BackupSourceDirectory;
-            config.Settings["Raven/StorageTypeName"] = config.DefaultStorageTypeName;
             config.PostInit();
 
             storage = new TimeSeriesStorage("http://localhost:8080","TestTimeSeries",config);

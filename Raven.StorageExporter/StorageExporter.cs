@@ -15,6 +15,7 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database.Util;
+using Raven.Storage.Voron;
 
 namespace Raven.StorageExporter
 {
@@ -213,7 +214,7 @@ namespace Raven.StorageExporter
         {
             storage = null;
             if (File.Exists(Path.Combine(ravenConfiguration.Core.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
+                storage = new TransactionalStorage(ravenConfiguration, () => { }, () => { }, () => { }, () => { });
 
             if (storage != null)
             {
@@ -223,10 +224,9 @@ namespace Raven.StorageExporter
             return false;
         }
 
-        public static bool ValidateStorageExsist(string dataDir)
+        public static bool ValidateStorageExist(string dataDir)
         {
-            return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename))
-                   || File.Exists(Path.Combine(dataDir, "Data"));
+            return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename));
         }
 
 

@@ -85,9 +85,6 @@ namespace Raven.Database.Server.Tenancy
             config.CustomizeValuesForTimeSeriesTenant(tenantId);
 
             config.Settings[InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory)] = parentConfiguration.TimeSeries.DataDirectory;
-            //config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            //TODO: what time series dir path?
-            //config.Settings["Raven/TimeSeries/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
             foreach (var setting in document.Settings)
             {

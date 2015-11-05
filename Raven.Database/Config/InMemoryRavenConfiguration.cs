@@ -28,10 +28,8 @@ using Raven.Database.Indexing;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.FileSystem.Util;
-using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config.Attributes;
 using Raven.Database.Config.Settings;
@@ -40,8 +38,6 @@ namespace Raven.Database.Config
 {
     public class InMemoryRavenConfiguration
     {
-        public const string VoronTypeName = "voron";
-
         private CompositionContainer container;
         private bool containerExternallySet;
 
@@ -326,39 +322,6 @@ namespace Raven.Database.Config
 
             var url = Core.VirtualDirectory.EndsWith("/") ? Core.VirtualDirectory + baseUrl : Core.VirtualDirectory + "/" + baseUrl;
             return new Uri(url, UriKind.RelativeOrAbsolute);
-        }
-
-        [CLSCompliant(false)]
-        public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
-        {
-            if (EnvironmentUtils.RunningOnPosix)
-                storageEngine = "voron";
-            storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
-            var type = Type.GetType(storageEngine);
-
-            if (type == null)
-                throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
-            Action dummyAction = () => { };
-
-            return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork, handleStorageInaccessible, onNestedTransactionEnter ?? dummyAction, onNestedTransactionExit ?? dummyAction);
-        }
-
-        public static string StorageEngineAssemblyNameByTypeName(string typeName)
-        {
-            switch (typeName.ToLowerInvariant())
-            {
-                case VoronTypeName:
-                    typeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-                    break;
-                default:
-                    throw new ArgumentException("Invalid storage engine type name: " + typeName);
-            }
-            return typeName;
-        }	  
-
-        public string SelectStorageEngineAndFetchTypeName()
-        {
-            return VoronTypeName; //TODO arek - no need to have that method
         }
 
         public void Dispose()
@@ -1469,8 +1432,6 @@ namespace Raven.Database.Config
             private string fileSystemDataDirectory;
 
             private string fileSystemIndexStoragePath;
-
-            private string defaultFileSystemStorageTypeName;
 
             [DefaultValue(60)]
             [TimeUnit(TimeUnit.Seconds)]

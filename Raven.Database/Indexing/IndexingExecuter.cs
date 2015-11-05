@@ -661,11 +661,7 @@ namespace Raven.Database.Indexing
 
                 Log.Error("Disabled index '{0}'. Reason: out of memory.", instance.PublicName);
 
-                string configurationKey = null;
-                if (string.Equals(context.Database.TransactionalStorage.FriendlyName, InMemoryRavenConfiguration.VoronTypeName, StringComparison.OrdinalIgnoreCase))
-                {
-                    configurationKey = InMemoryRavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize);
-                }
+                var configurationKey = InMemoryRavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize);
 
                 Debug.Assert(configurationKey != null);
 

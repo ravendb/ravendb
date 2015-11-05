@@ -37,7 +37,7 @@ namespace Raven.StorageExporter
                 ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Directory {0} does not exists.\n",args[0]);                
                 return false; 
             }
-            if (!StorageExporter.ValidateStorageExsist(args[0]))
+            if (!StorageExporter.ValidateStorageExist(args[0]))
             {
                 ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Directory {0} is not a valid RavenDB storage directory.\n", args[0]);
                 return false; 
