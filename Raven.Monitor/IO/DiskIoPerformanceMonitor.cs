@@ -137,8 +137,8 @@ namespace Raven.Monitor.IO
                 var request = commands.CreateRequest("/debug/config", HttpMethods.Get);
                 var configuration = (RavenJObject)request.ReadResponseJson();
 
-                var indexStoragePath = configuration.Value<string>("IndexStoragePath");
-                var dataDirectory = configuration.Value<string>("DataDirectory");
+                var indexStoragePath = configuration["Core"].Value<string>("IndexStoragePath");
+                var dataDirectory = configuration["Core"].Value<string>("DataDirectory");
 
                 results.Add(new ResourceToMonitor
                 {

@@ -30,7 +30,7 @@ namespace Raven.Smuggler.Database.Remote
                 {
                     var configuration = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
-                    var maxNumberOfItemsToProcessInSingleBatch = configuration.Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
+                    var maxNumberOfItemsToProcessInSingleBatch = configuration["Core"].Value<int>("MaxNumberOfItemsToProcessInSingleBatch");
                     if (maxNumberOfItemsToProcessInSingleBatch <= 0)
                         return;
 
