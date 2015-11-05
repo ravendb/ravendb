@@ -1127,7 +1127,7 @@ namespace Raven.Database.Config
 
                 LowMemoryForLinuxDetection = Size.Min(new Size(16, SizeUnit.Megabytes), MemoryStatistics.AvailableMemory * 0.10);
 
-                MemoryCacheLimit = new Size(GetDefaultMemoryCacheLimitMegabytes(), SizeUnit.Megabytes);
+                MemoryCacheLimit = GetDefaultMemoryCacheLimit();
 
                 MemoryCacheLimitCheckInterval = new TimeSetting((long) MemoryCache.Default.PollingInterval.TotalSeconds, TimeUnit.Seconds);
 
@@ -1219,20 +1219,13 @@ namespace Raven.Database.Config
             [ConfigurationEntry("Raven/AvailableMemoryForRaisingIndexBatchSizeLimit")]
             public Size AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
-            private int GetDefaultMemoryCacheLimitMegabytes()
+            private Size GetDefaultMemoryCacheLimit()
             {
-                // TODO: This used to use an esent key. Ensure that this is not needed anymore and kill this method. 
-                var cacheSizeMaxSetting = 1024;
+                if(MemoryStatistics.TotalPhysicalMemory < new Size(1024, SizeUnit.Megabytes))
+                    return new Size(128, SizeUnit.Megabytes); // if machine has less than 1024 MB, then only use 128 MB 
 
                 // we need to leave ( a lot ) of room for other things as well, so we min the cache size
-                int val = (int) ((MemoryStatistics.TotalPhysicalMemory.ValueInBytes / 2) -
-                                 // reduce the unmanaged cache size from the default min
-                                 cacheSizeMaxSetting);
-
-                if (val < 0)
-                    return 128; // if machine has less than 1024 MB, then only use 128 MB 
-
-                return val;
+                return MemoryStatistics.TotalPhysicalMemory/2;
             }
         }
 
