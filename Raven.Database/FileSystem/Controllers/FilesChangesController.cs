@@ -1,23 +1,15 @@
-﻿using Raven.Abstractions.Logging;
 using Raven.Database.Server.Connections;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Http;
-
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class FilesChangesController : RavenFsApiController
+    public class FilesChangesController : BaseFileSystemApiController
     {
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
-
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/changes/config")]
         public HttpResponseMessage GetChangeConfig()
@@ -32,9 +24,9 @@ namespace Raven.Database.FileSystem.Controllers
                 }, HttpStatusCode.BadRequest);
             }
 
-            var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
-
-            var connectionState = this.FileSystem.TransportState.For(id, this);
+            var name = (!string.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : string.Empty;
+            var globalConnectionState = FileSystem.TransportState.For(id, this);
+            var connectionState = globalConnectionState.FileSystem;
 
             var cmd = GetQueryStringValue("command");
             if (Match(cmd, "disconnect"))
@@ -59,11 +51,11 @@ namespace Raven.Database.FileSystem.Controllers
             }
             else if (Match(cmd, "watch-folder"))
             {
-                connectionState.WatchFolder(value);
+                connectionState.WatchFolder(name);
             }
             else if (Match(cmd, "unwatch-folder"))
             {
-                connectionState.UnwatchFolder(value);
+                connectionState.UnwatchFolder(name);
             }
             else if (Match(cmd, "watch-config"))
             {
@@ -81,22 +73,17 @@ namespace Raven.Database.FileSystem.Controllers
                 }, HttpStatusCode.BadRequest);
             }
 
-            return GetMessageWithObject(connectionState);
+            return GetMessageWithObject(globalConnectionState);
         }
 
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/changes/events")]
-		public HttpResponseMessage GetChangesEvents()
+        public HttpResponseMessage GetChangesEvents()
         {
             var eventsTransport = new ChangesPushContent(this);
             eventsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
             FileSystem.TransportState.Register(eventsTransport);
             return new HttpResponseMessage { Content = eventsTransport };
         }
-
-        private bool Match(string x, string y)
-        {
-            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
         }
     }
-}

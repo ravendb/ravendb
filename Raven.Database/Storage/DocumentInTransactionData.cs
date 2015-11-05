@@ -9,14 +9,14 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
 {
-	public class DocumentInTransactionData
-	{
-		public Etag Etag { get; set; }
-		public bool Delete { get; set; }
-		public RavenJObject Metadata { get; set; }
-		public RavenJObject Data { get; set; }
-		public string Key { get; set; }
-		public DateTime LastModified { get; set; }
+    public class DocumentInTransactionData
+    {
+        public Etag Etag { get; set; }
+        public bool Delete { get; set; }
+        public RavenJObject Metadata { get; set; }
+        public RavenJObject Data { get; set; }
+        public string Key { get; set; }
+        public DateTime LastModified { get; set; }
 
-	}
+    }
 }

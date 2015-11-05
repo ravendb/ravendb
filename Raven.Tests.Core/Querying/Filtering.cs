@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Includes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -16,7 +16,7 @@ namespace Raven.Tests.Core.Querying
 {
     public class Filtering : RavenCoreTestBase
     {
-		[Fact]
+        [Fact]
         public void BasicFiltering()
         {
             using (var store = GetDocumentStore())

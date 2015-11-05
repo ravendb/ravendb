@@ -25,18 +25,18 @@ internal enum Tokens {error=48,
 
 internal partial struct ValueType
 { 
-	internal string name;
-	internal string stringValue;
-	internal long intValue;
-	internal double realValue;
-	internal object value;
+    internal string name;
+    internal string stringValue;
+    internal long intValue;
+    internal double realValue;
+    internal object value;
 
-	internal ColumnType coltyp; 	
-	internal ColumnDefinition columndef;
-	internal List<ColumnDefinition> columndefs;
-	
-	internal List<string> columnNames;
-	internal List<object> columnValues;
+    internal ColumnType coltyp; 	
+    internal ColumnDefinition columndef;
+    internal List<ColumnDefinition> columndefs;
+    
+    internal List<string> columnNames;
+    internal List<object> columnValues;
 }
 // Abstract base class for GPLEX scanners
 internal abstract class ScanBase : IScanner<ValueType,LexLocation> {
@@ -218,21 +218,21 @@ internal partial class Parser: ShiftReduceParser<ValueType, LexLocation>
         break;
       case 18: // columncreate_list -> columncreate
 {
-							yyval.columndefs = new List<ColumnDefinition>();
-							yyval.columndefs.Add(value_stack.array[value_stack.top-1].columndef);
-					}
+                            yyval.columndefs = new List<ColumnDefinition>();
+                            yyval.columndefs.Add(value_stack.array[value_stack.top-1].columndef);
+                    }
         break;
       case 19: // columncreate_list -> columncreate_list, ',', columncreate
 {
-							yyval.columndefs = new List<ColumnDefinition>();
-							yyval.columndefs.AddRange(value_stack.array[value_stack.top-3].columndefs);
-							yyval.columndefs.Add(value_stack.array[value_stack.top-1].columndef);
-					}
+                            yyval.columndefs = new List<ColumnDefinition>();
+                            yyval.columndefs.AddRange(value_stack.array[value_stack.top-3].columndefs);
+                            yyval.columndefs.Add(value_stack.array[value_stack.top-1].columndef);
+                    }
         break;
       case 20: // columncreate -> column, data_type
 {
-						yyval.columndef = new ColumnDefinition(value_stack.array[value_stack.top-2].name, value_stack.array[value_stack.top-1].coltyp);
-					}
+                        yyval.columndef = new ColumnDefinition(value_stack.array[value_stack.top-2].name, value_stack.array[value_stack.top-1].coltyp);
+                    }
         break;
       case 21: // data_type -> BOOL
 { yyval.coltyp = ColumnType.Bool; }
@@ -285,47 +285,47 @@ internal partial class Parser: ShiftReduceParser<ValueType, LexLocation>
       case 41: // insert -> INSERT, INTO, table, '(', columnname_list, ')', VALUES, '(', 
                //           value_list, ')'
 {
-							string tablename = value_stack.array[value_stack.top-8].name;
-							string[] columnNames = value_stack.array[value_stack.top-6].columnNames.ToArray();
-							object[] columnValues = value_stack.array[value_stack.top-2].columnValues.ToArray();
-							
-							if (columnNames.Length != columnValues.Length)
-							{
-								throw new EsentSqlParseException("Different number of column names and column values");
-							}
-							
-							KeyValuePair<string, object>[] dataToSet = new KeyValuePair<string, object>[columnNames.Length];
-							for (int i = 0; i < columnNames.Length; ++i)
-							{
-								dataToSet[i] = new KeyValuePair<string, object>( columnNames[i], columnValues[i] );
-							}														
-							
-							this.SqlImplementation.InsertRecord(tablename, dataToSet);
-					}
+                            string tablename = value_stack.array[value_stack.top-8].name;
+                            string[] columnNames = value_stack.array[value_stack.top-6].columnNames.ToArray();
+                            object[] columnValues = value_stack.array[value_stack.top-2].columnValues.ToArray();
+                            
+                            if (columnNames.Length != columnValues.Length)
+                            {
+                                throw new EsentSqlParseException("Different number of column names and column values");
+                            }
+                            
+                            KeyValuePair<string, object>[] dataToSet = new KeyValuePair<string, object>[columnNames.Length];
+                            for (int i = 0; i < columnNames.Length; ++i)
+                            {
+                                dataToSet[i] = new KeyValuePair<string, object>( columnNames[i], columnValues[i] );
+                            }														
+                            
+                            this.SqlImplementation.InsertRecord(tablename, dataToSet);
+                    }
         break;
       case 42: // columnname_list -> column
 {
-						yyval.columnNames = new List<string>();
-						yyval.columnNames.Add(value_stack.array[value_stack.top-1].name);
-					}
+                        yyval.columnNames = new List<string>();
+                        yyval.columnNames.Add(value_stack.array[value_stack.top-1].name);
+                    }
         break;
       case 43: // columnname_list -> columnname_list, ',', column
 {
-						yyval.columnNames = value_stack.array[value_stack.top-3].columnNames;
-						yyval.columnNames.Add(value_stack.array[value_stack.top-1].name);
-					}
+                        yyval.columnNames = value_stack.array[value_stack.top-3].columnNames;
+                        yyval.columnNames.Add(value_stack.array[value_stack.top-1].name);
+                    }
         break;
       case 44: // value_list -> value
 {
-						yyval.columnValues = new List<object>();
-						yyval.columnValues.Add(value_stack.array[value_stack.top-1].value);
-					}
+                        yyval.columnValues = new List<object>();
+                        yyval.columnValues.Add(value_stack.array[value_stack.top-1].value);
+                    }
         break;
       case 45: // value_list -> value_list, ',', value
 {
-						yyval.columnValues = value_stack.array[value_stack.top-3].columnValues;
-						yyval.columnValues.Add(value_stack.array[value_stack.top-1].value);
-					}
+                        yyval.columnValues = value_stack.array[value_stack.top-3].columnValues;
+                        yyval.columnValues.Add(value_stack.array[value_stack.top-1].value);
+                    }
         break;
       case 46: // value -> STRING
 { yyval.value = value_stack.array[value_stack.top-1].stringValue; }

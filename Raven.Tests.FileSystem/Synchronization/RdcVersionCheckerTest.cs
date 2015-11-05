@@ -1,4 +1,4 @@
-﻿using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
+using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Xunit;
 
 namespace Raven.Tests.FileSystem.Synchronization

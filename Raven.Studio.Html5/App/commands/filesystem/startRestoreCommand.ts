@@ -1,8 +1,6 @@
-import deleteDocumentCommand = require("commands/deleteDocumentCommand");
+import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import commandBase = require("commands/commandBase");
-import database = require("models/database");
-import shell = require("viewmodels/shell");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import database = require("models/resources/database");
 import monitorRestoreCommand = require("commands/filesystem/monitorRestoreCommand");
 import appUrl = require("common/appUrl");
 

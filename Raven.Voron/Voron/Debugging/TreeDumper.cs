@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -10,67 +10,67 @@ namespace Voron.Debugging
 {
     public unsafe class TreeDumper
     {
-	    public static void DumpHumanReadable(Transaction tx, string path, Page start)
-	    {
-		    using (var writer = File.CreateText(path))
-		    {
-                var stack = new Stack<Page>();
+        public static void DumpHumanReadable(Transaction tx, string path, TreePage start)
+        {
+            using (var writer = File.CreateText(path))
+            {
+                var stack = new Stack<TreePage>();
                 stack.Push(start);
-				writer.WriteLine("Root page #{0}",start.PageNumber);
-			    while (stack.Count > 0)
-			    {
-					var currentPage = stack.Pop();
-				    if (currentPage.IsLeaf)
-				    {						
-						writer.WriteLine();
-						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Leaf), Used: {3} : {4}", currentPage.PageNumber,currentPage.NumberOfEntries,currentPage.Flags, currentPage.SizeUsed, currentPage.CalcSizeUsed());
-						if(currentPage.NumberOfEntries <= 0)
-							writer.WriteLine("Empty page (tree corrupted?)");
-					    
-						
-					    for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries;nodeIndex++)
-					    {
-						    var node = currentPage.GetNode(nodeIndex);
-						    var key = currentPage.GetNodeKey(node);
+                writer.WriteLine("Root page #{0}",start.PageNumber);
+                while (stack.Count > 0)
+                {
+                    var currentPage = stack.Pop();
+                    if (currentPage.IsLeaf)
+                    {						
+                        writer.WriteLine();
+                        writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Leaf), Used: {3} : {4}", currentPage.PageNumber,currentPage.NumberOfEntries,currentPage.Flags, currentPage.SizeUsed, currentPage.CalcSizeUsed());
+                        if(currentPage.NumberOfEntries <= 0)
+                            writer.WriteLine("Empty page (tree corrupted?)");
+                        
+                        
+                        for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries;nodeIndex++)
+                        {
+                            var node = currentPage.GetNode(nodeIndex);
+                            var key = currentPage.GetNodeKey(node);
 
-							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == NodeFlags.Data ? "Size" : "Page",
+                            writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == TreeNodeFlags.Data ? "Size" : "Page",
                                 SizeOf.NodeEntry(node));
-					    }
-						writer.WriteLine();
-				    }
-				    else if(currentPage.IsBranch) 
-				    {
-						writer.WriteLine();
-						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Branch), Used: {3} : {4}", currentPage.PageNumber, currentPage.NumberOfEntries, currentPage.Flags, currentPage.SizeUsed, currentPage.SizeUsed);
+                        }
+                        writer.WriteLine();
+                    }
+                    else if(currentPage.IsBranch) 
+                    {
+                        writer.WriteLine();
+                        writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Branch), Used: {3} : {4}", currentPage.PageNumber, currentPage.NumberOfEntries, currentPage.Flags, currentPage.SizeUsed, currentPage.SizeUsed);
 
-						var key = new Slice(SliceOptions.Key);
-						for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
-						{
-							var node = currentPage.GetNode(nodeIndex);
-							writer.WriteLine("Node #{2}, {0}  / to page #{1}, Entry Size: {3}", GetBranchNodeString(nodeIndex, key, currentPage, node), node->PageNumber, nodeIndex,
+                        var key = new Slice(SliceOptions.Key);
+                        for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
+                        {
+                            var node = currentPage.GetNode(nodeIndex);
+                            writer.WriteLine("Node #{2}, {0}  / to page #{1}, Entry Size: {3}", GetBranchNodeString(nodeIndex, key, currentPage, node), node->PageNumber, nodeIndex,
                                 SizeOf.NodeEntry(node));
-						}
+                        }
 
-						for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
-						{
-							var node = currentPage.GetNode(nodeIndex);
-							if (node->PageNumber < 0 || node->PageNumber > tx.State.NextPageNumber)
-							{
-								writer.Write("Found invalid reference to page #{0}", currentPage.PageNumber);
-								stack.Clear();
-								break;
-							}
+                        for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
+                        {
+                            var node = currentPage.GetNode(nodeIndex);
+                            if (node->PageNumber < 0 || node->PageNumber > tx.State.NextPageNumber)
+                            {
+                                writer.Write("Found invalid reference to page #{0}", currentPage.PageNumber);
+                                stack.Clear();
+                                break;
+                            }
 
-							var child = tx.GetReadOnlyPage(node->PageNumber);
-							stack.Push(child);
-						}
-						
-						writer.WriteLine();
-					}
-			    }
-		    }
-	    }
-        public static void Dump(Transaction tx, string path, Page start, int showNodesEvery = 25)
+                            var child = tx.GetReadOnlyPage(node->PageNumber);
+                            stack.Push(child);
+                        }
+                        
+                        writer.WriteLine();
+                    }
+                }
+            }
+        }
+        public static void Dump(Transaction tx, string path, TreePage start, int showNodesEvery = 25)
         {
             using (var writer = File.CreateText(path))
             {
@@ -78,10 +78,10 @@ namespace Voron.Debugging
 digraph structs {
     node [shape=Mrecord]
     rankdir=LR;
-	bgcolor=transparent;
+    bgcolor=transparent;
 ");
 
-                var stack = new Stack<Page>();
+                var stack = new Stack<TreePage>();
                 stack.Push(start);
                 var references = new StringBuilder();
                 while (stack.Count > 0)
@@ -89,15 +89,15 @@ digraph structs {
                     var p = stack.Pop();
 
                     writer.WriteLine(@"
-	subgraph cluster_p_{0} {{ 
-		label=""Page #{0}"";
-		color={3};
-	p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | {4:p} : {5:p} utilization""];
+    subgraph cluster_p_{0} {{ 
+        label=""Page #{0}"";
+        color={3};
+    p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | {4:p} : {5:p} utilization""];
 
 ", p.PageNumber, p.Flags, p.NumberOfEntries, p.IsLeaf ? "black" : "blue",
-	Math.Round(((AbstractPager.PageSize - p.SizeLeft) / (double)AbstractPager.PageSize), 2),
-    Math.Round(((AbstractPager.PageSize - p.CalcSizeLeft()) / (double)AbstractPager.PageSize), 2));
-                    MemorySlice key = new Slice(SliceOptions.Key);
+    Math.Round(((tx.Environment.Options.PageSize - p.SizeLeft) / (double)tx.Environment.Options.PageSize), 2),
+    Math.Round(((tx.Environment.Options.PageSize - p.CalcSizeLeft()) / (double)tx.Environment.Options.PageSize), 2));
+                    Slice key = new Slice(SliceOptions.Key);
                     if (p.IsLeaf && showNodesEvery > 0)
                     {
                         writer.WriteLine("		p_{0}_nodes [label=\" Entries:", p.PageNumber);
@@ -110,7 +110,7 @@ digraph structs {
                             var node = p.GetNode(i);
                             key = p.GetNodeKey(node);
                             writer.WriteLine("{0} - {2} {1:#,#}", MaxString(key.ToString(), 25),
-                                node->DataSize, node->Flags == NodeFlags.Data ? "Size" : "Page");
+                                node->DataSize, node->Flags == TreeNodeFlags.Data ? "Size" : "Page");
                         }
                         if (p.NumberOfEntries < showNodesEvery)
                         {
@@ -164,7 +164,7 @@ digraph structs {
             return key.Substring(0, (size/2)) + "..." + key.Substring(key.Length - size/2, size/2);
         }
 
-        private static string GetBranchNodeString(int i, MemorySlice key, Page p, NodeHeader* node)
+        private static string GetBranchNodeString(int i, Slice key, TreePage p, TreeNodeHeader* node)
         {
             string keyStr;
             if (i == 0 && key.KeyLength == 0)

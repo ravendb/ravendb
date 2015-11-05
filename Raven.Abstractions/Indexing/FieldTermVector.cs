@@ -1,4 +1,4 @@
-﻿namespace Raven.Abstractions.Indexing
+namespace Raven.Abstractions.Indexing
 {
     /// <summary>
     /// Specifies whether to include term vectors for a field

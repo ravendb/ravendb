@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 
 namespace Raven.Tests.Bugs
 {
-	public class EntityWithNullableDateTimeOffset
-	{
-		public DateTimeOffset? At { get; set; }
-	}
+    public class EntityWithNullableDateTimeOffset
+    {
+        public DateTimeOffset? At { get; set; }
+    }
 }

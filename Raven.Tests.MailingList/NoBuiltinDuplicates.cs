@@ -12,26 +12,26 @@ using System.Linq;
 
 namespace Raven.Tests.MailingList
 {
-	public class NoBuiltinDuplicates : NoDisposalNeeded
-	{
-		[Fact]
-		public void ShouldNotHaveDuplicates()
-		{
-			var compositionContainer = new InMemoryRavenConfiguration
-			{
-				// can't use that, we have some unloadable assemblies in the base directory, 
-				// instead, testing the filtering catalog itself
-				Catalog =
-					{
-						Catalogs =
-							{
-								new BuiltinFilteringCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly))
-							}
-					}
-			}.Container;
+    public class NoBuiltinDuplicates : NoDisposalNeeded
+    {
+        [Fact]
+        public void ShouldNotHaveDuplicates()
+        {
+            var compositionContainer = new InMemoryRavenConfiguration
+            {
+                // can't use that, we have some unloadable assemblies in the base directory, 
+                // instead, testing the filtering catalog itself
+                Catalog =
+                    {
+                        Catalogs =
+                            {
+                                new BuiltinFilteringCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly))
+                            }
+                    }
+            }.Container;
 
-			var enumerable = compositionContainer.GetExportedValues<AbstractReadTrigger>().ToList();
-			Assert.Equal(1, enumerable.Count(x => x is FilterRavenInternalDocumentsReadTrigger));
-		}
-	}
+            var enumerable = compositionContainer.GetExportedValues<AbstractReadTrigger>().ToList();
+            Assert.Equal(1, enumerable.Count(x => x is FilterRavenInternalDocumentsReadTrigger));
+        }
+    }
 }

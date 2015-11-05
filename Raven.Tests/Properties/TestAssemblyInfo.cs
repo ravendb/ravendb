@@ -1,3 +1,3 @@
-﻿using Raven.Tests.Common.Attributes;
+using Raven.Tests.Common.Attributes;
 
 [assembly: EnsureTestCleanup]

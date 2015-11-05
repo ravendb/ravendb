@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,86 +13,89 @@ namespace Voron.Impl.Paging
     public unsafe abstract class AbstractPager : IVirtualPager
     {
         protected int MinIncreaseSize { get { return 16 * PageSize; } } // 64 KB
-		protected int MaxIncreaseSize { get { return 262144 * PageSize; } } // 1 GB
+        protected int MaxIncreaseSize { get { return 262144 * PageSize; } } // 1 GB
 
         private long _increaseSize;
         private DateTime _lastIncrease;
 
         public PagerState PagerState
         {
-	        get
-	        {
-		        ThrowObjectDisposedIfNeeded();
-		        return _pagerState;
-	        }
-	        set
+            get
             {
-				ThrowObjectDisposedIfNeeded();
-				
+                ThrowObjectDisposedIfNeeded();
+                return _pagerState;
+            }
+            set
+            {
+                ThrowObjectDisposedIfNeeded();
+                
                 _source = GetSourceName();
                 _pagerState = value;
             }
         }
 
-	    private string _source;
-        protected AbstractPager()
+        private string _source;
+        protected AbstractPager(int pageSize)
         {
-            _increaseSize = MinIncreaseSize;
+            Debug.Assert((pageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
+            PageSize = pageSize;
+            PageMaxSpace = PageSize - Constants.PageHeaderSize;
+            NodeMaxSize = PageMaxSpace/2 - 1;
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
             Debug.Assert(NodeMaxSize < ushort.MaxValue);
-            Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
             
+            _increaseSize = MinIncreaseSize;
+
             PageMinSpace = (int)(PageMaxSpace * 0.33);
             PagerState = new PagerState(this);
           
             PagerState.AddRef();
         }
 
+        public int PageSize { get; private set; }
         public int PageMinSpace { get; private set; }
 
         public bool DeleteOnClose { get; set; }
 
-        public const int PageSize = 4096;
-		public readonly static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+        public int NodeMaxSize { get; private set; }
 
-	    public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
-		public static readonly int RequiredSpaceForNewNodePrefixedKeys = Constants.NodeHeaderSize + Constants.NodeOffsetSize + Constants.PrefixedSliceHeaderSize;
+        public int PageMaxSpace { get; private set; }
 
-		public readonly static int NodeMaxSize = PageMaxSpace / 2 - 1;
-	    public static readonly int NodeMaxSizePrefixedKeys = (PageMaxSpace - (Constants.PrefixInfoSectionSize + (Page.PrefixCount*Constants.PrefixNodeHeaderSize) + Page.PrefixCount /* possible 2-byte alignment for each prefix */))/2 - 1;
+        public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
+
 
         private PagerState _pagerState;
         private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
         public long NumberOfAllocatedPages { get; protected set; }
 
-        public Page Read(long pageNumber, PagerState pagerState = null)
+        public TreePage Read(long pageNumber, PagerState pagerState = null)
         {
-			ThrowObjectDisposedIfNeeded();
-			
+            ThrowObjectDisposedIfNeeded();
+            
             if (pageNumber + 1 > NumberOfAllocatedPages)
             {
                 throw new InvalidOperationException("Cannot get page number " + pageNumber +
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
             }
 
-            return new Page(AcquirePagePointer(pageNumber, pagerState), _source, PageSize);
+            return new TreePage(AcquirePagePointer(pageNumber, pagerState), _source, PageSize);
         }
 
         protected abstract string GetSourceName();
 
-        public virtual Page GetWritable(long pageNumber)
+        public virtual TreePage GetWritable(long pageNumber)
         {
-			ThrowObjectDisposedIfNeeded();
-			
+            ThrowObjectDisposedIfNeeded();
+            
             if (pageNumber + 1 > NumberOfAllocatedPages)
             {
                 throw new InvalidOperationException("Cannot get page number " + pageNumber +
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
             }
 
-            return new Page(AcquirePagePointer(pageNumber), _source, PageSize);
+            return new TreePage(AcquirePagePointer(pageNumber), _source, PageSize);
         }
 
         public virtual void TryPrefetchingWholeFile()
@@ -100,7 +103,7 @@ namespace Voron.Impl.Paging
             // do nothing
         }
 
-        public virtual void MaybePrefetchMemory(List<Page> sortedPages)
+        public virtual void MaybePrefetchMemory(List<TreePage> sortedPages)
         {
             // do nothing
         }
@@ -111,7 +114,7 @@ namespace Voron.Impl.Paging
 
         public virtual PagerState TransactionBegan()
         {
-			ThrowObjectDisposedIfNeeded();
+            ThrowObjectDisposedIfNeeded();
 
             var state = PagerState;
             state.AddRef();
@@ -120,14 +123,14 @@ namespace Voron.Impl.Paging
 
         public bool WillRequireExtension(long requestedPageNumber, int numberOfPages)
         {
-			ThrowObjectDisposedIfNeeded();
-			
+            ThrowObjectDisposedIfNeeded();
+            
             return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
         }
 
         public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
         {
-			ThrowObjectDisposedIfNeeded();
+            ThrowObjectDisposedIfNeeded();
 
             if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
                 return;
@@ -147,21 +150,21 @@ namespace Voron.Impl.Paging
 
         public bool ShouldGoToOverflowPage(int len)
         {
-			ThrowObjectDisposedIfNeeded();
+            ThrowObjectDisposedIfNeeded();
 
-			return len + Constants.PageHeaderSize > NodeMaxSize;
+            return len + Constants.PageHeaderSize > NodeMaxSize;
         }
 
         public int GetNumberOfOverflowPages(int overflowSize)
         {
-			ThrowObjectDisposedIfNeeded();
+            ThrowObjectDisposedIfNeeded();
 
             overflowSize += Constants.PageHeaderSize;
             return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
         }
 
 
-        public virtual int Write(Page page, long? pageNumber)
+        public virtual int Write(TreePage page, long? pageNumber)
         {
             long startPage = pageNumber ?? page.PageNumber;
 
@@ -177,22 +180,22 @@ namespace Voron.Impl.Paging
             if (Disposed)
                 return;
 
-		    if (PagerState != null)
-		    {
-			    PagerState.Release();
-			    PagerState = null;
-		    }
+            if (PagerState != null)
+            {
+                PagerState.Release();
+                PagerState = null;
+            }
 
-		    Task.WaitAll(_tasks.ToArray());
+            Task.WaitAll(_tasks.ToArray());
 
-		    Disposed = true;
-		    GC.SuppressFinalize(this);
-	    }
+            Disposed = true;
+            GC.SuppressFinalize(this);
+        }
 
-	    ~AbstractPager()
-		{
-			Dispose();
-		}
+        ~AbstractPager()
+        {
+            Dispose();
+        }
 
         public abstract void AllocateMorePages(Transaction tx, long newLength);
 
@@ -227,10 +230,10 @@ namespace Voron.Impl.Paging
             var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
-			return current + Utils.NearestPowerOfTwo(actualIncrease);
+            return current + Utils.NearestPowerOfTwo(actualIncrease);
         }
 
-        public virtual int WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        public virtual int WriteDirect(TreePage start, long pagePosition, int pagesToWrite)
         {
             ThrowObjectDisposedIfNeeded();
 
@@ -246,13 +249,28 @@ namespace Voron.Impl.Paging
             _tasks.Add(run);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected void ThrowObjectDisposedIfNeeded()
-		{
-			if (Disposed)
-				throw new ObjectDisposedException("The pager is already disposed");
-		}
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void ThrowObjectDisposedIfNeeded()
+        {
+            if (Disposed)
+                throw new ObjectDisposedException("The pager is already disposed");
+        }
 
-	    public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
+        public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
+
+        public static int GetMaxKeySize()
+        {
+            // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
+            return 2000;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsKeySizeValid(int keySize)
+        {
+            if (keySize + RequiredSpaceForNewNode > 2000)
+                return false;
+
+            return true;
+        }
     }
 }

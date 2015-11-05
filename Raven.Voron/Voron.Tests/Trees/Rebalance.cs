@@ -1,11 +1,12 @@
-﻿using System.IO;
+using System.IO;
+using Voron.Debugging;
 using Xunit;
 
 namespace Voron.Tests.Trees
 {
     public class Rebalance : StorageTest
     {
-        [PrefixesFact]
+        [Fact]
         public void CanMergeRight()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -18,18 +19,17 @@ namespace Voron.Tests.Trees
                 tx.Root.Delete("3");
                 tx.Root.Add("6", new MemoryStream(new byte[1096]));
 
-                RenderAndShow(tx, 1);
-
+                DebugStuff.RenderAndShow(tx, 1);
                 tx.Root.Delete("6");
                 tx.Root.Delete("4");
 
-                RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShow(tx, 1);
 
                 tx.Commit();
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanMergeLeft()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -39,20 +39,20 @@ namespace Voron.Tests.Trees
                 tx.Root.Add("3", new MemoryStream(new byte[1024]));
                 tx.Root.Add("4", new MemoryStream(new byte[64]));
 
-                RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShow(tx, 1);
 
                 tx.Root.Delete("2");
 
-                RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShow(tx, 1);
 
                 tx.Root.Delete("3");
-                RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShow(tx, 1);
 
                 tx.Commit();
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void StressTest()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -70,7 +70,8 @@ namespace Voron.Tests.Trees
                     tx.Root.Add(string.Format("{0}9", i), new MemoryStream(new byte[8192]));
                 }
 
-                RenderAndShow(tx, 1);
+                DebugStuff.RenderAndShow(tx,1);
+
 
                 for (int i = 79; i >= 0; --i)
                 {

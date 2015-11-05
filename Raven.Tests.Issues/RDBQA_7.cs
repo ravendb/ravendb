@@ -1,26 +1,29 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RDBQA_7.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.IO;
+
+using Lucene.Net.Support;
+
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Common;
+using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Client;
+using Raven.Database.Extensions;
+using Raven.Json.Linq;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
+
+using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    using System;
-    using System.IO;
-
-    using Lucene.Net.Support;
-
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Smuggler;
-    using Raven.Client;
-    using Raven.Database.Extensions;
-    using Raven.Json.Linq;
-    using Raven.Smuggler;
-
-    using Xunit;
-
     public class RDBQA_7 : RavenTest
     {
         private class Product
@@ -35,19 +38,13 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-	        var options = new SmugglerDatabaseOptions
-		        {
-			        Filters =
-				        new EquatableList<FilterSetting>
-				        {
-					        new FilterSetting
-					        {
-						        Path = "Value",
-						        ShouldMatch = false,
-						        Values = new EquatableList<string> {"Value1"}
-					        }
-				        }
-		        };
+            var options = new DatabaseSmugglerOptions();
+            options.Filters.Add(new FilterSetting
+            {
+                Path = "Value",
+                ShouldMatch = false,
+                Values = new EquatableList<string> { "Value1" }
+            });
 
             try
             {
@@ -55,14 +52,30 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new DatabaseSmuggler(
+                        options, 
+                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Url = store.Url,
+                            Database = store.DefaultDatabase
+                        }),
+                        new DatabaseSmugglerFileDestination(path));
+
+                    smuggler.Execute();
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new DatabaseSmuggler(
+                        options,
+                        new DatabaseSmugglerFileSource(path),
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Url = store.Url,
+                            Database = store.DefaultDatabase
+                        }));
+
+                    smuggler.Execute();
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 
@@ -89,19 +102,13 @@ namespace Raven.Tests.Issues
         {
             var path = Path.GetTempFileName();
 
-	        var options = new SmugglerDatabaseOptions
-		        {
-			        Filters =
-				        new EquatableList<FilterSetting>
-				        {
-					        new FilterSetting
-					        {
-						        Path = "@metadata.Raven-Entity-Name",
-						        ShouldMatch = false,
-						        Values = new EquatableList<string> {"Products"}
-					        }
-				        }
-		        };
+            var options = new DatabaseSmugglerOptions();
+            options.Filters.Add(new FilterSetting
+            {
+                Path = "@metadata.Raven-Entity-Name",
+                ShouldMatch = false,
+                Values = new EquatableList<string> { "Products" }
+            });
 
             try
             {
@@ -109,14 +116,30 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new DatabaseSmuggler(
+                        options,
+                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Database = store.DefaultDatabase,
+                            Url = store.Url
+                        }),
+                        new DatabaseSmugglerFileDestination(path));
+
+                    smuggler.Execute();
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    var smuggler = new DatabaseSmuggler(
+                        options,
+                        new DatabaseSmugglerFileSource(path), 
+                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                            Database = store.DefaultDatabase,
+                            Url = store.Url
+                        }));
+
+                    smuggler.Execute();
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 

@@ -1,4 +1,4 @@
-﻿using Raven.Client;
+using Raven.Client;
 using Raven.Client.Listeners;
 
 namespace Raven.Tests.Helpers

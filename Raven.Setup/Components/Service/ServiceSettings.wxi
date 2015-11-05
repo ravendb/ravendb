@@ -3,7 +3,7 @@
   <Property Id="SERVICE_NAME" Value="RavenDB">
     <RegistrySearch Id="ServiceNameFromRegistry"
                      Root="HKLM"
-                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                      Name="SERVICE_NAME"
                      Type="raw" />
   </Property>
@@ -11,7 +11,7 @@
 	<Property Id="SERVICE_PORT" Value="8080">
 		<RegistrySearch Id="ServicePortFromRegistry"
 												 Root="HKLM"
-												 Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+												 Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
 												 Name="SERVICE_PORT"
 												 Type="raw" />
 	</Property>

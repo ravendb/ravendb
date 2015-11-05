@@ -1,10 +1,9 @@
-import document = require("models/document");
 import cell = require("widgets/virtualTable/cell");
 import viewModel = require("widgets/virtualTable/viewModel");
-import customColumns = require('models/customColumns');
-import customFunctions = require("models/customFunctions");
-import execJs = require('common/execJs');
-import collection = require("models/collection");
+import customFunctions = require("models/database/documents/customFunctions");
+import execJs = require("common/execJs");
+import collection = require("models/database/documents/collection");
+import counterGroup = require("models/counter/counterGroup");
 
 class row {
     top = ko.observable(0);
@@ -17,18 +16,27 @@ class row {
     compiledCustomFunctions = {};
 
     calculateExternalIdCellColor(cellValue: string) {
-        var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf('/')).toLocaleLowerCase();
-        var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() == cellCollectionName);
+        var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf("/")).toLocaleLowerCase();
+        var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() === cellCollectionName);
 
         if (!!matchingCollection) {
             return matchingCollection.colorClass;
         }
-        return '';
+        return "";
+    }
+
+    calculateExternalGroupCellColor(cellValue: string) {
+        var matchingGroup = this.viewModel.settings.collections.first((c: counterGroup) => c.name === cellValue);
+
+        if (!!matchingGroup) {
+            return matchingGroup.colorClass;
+        }
+        return "";
     }
 
     constructor(addIdCell: boolean, public viewModel: viewModel) {
         if (addIdCell) {
-            this.addOrUpdateCellMap('Id', null);
+            this.addOrUpdateCellMap("Id", null);
         }
 
         this.viewModel.settings.customFunctions.subscribe(this.extractCustomFunctions);
@@ -46,7 +54,7 @@ class row {
                 cellVal.reset();
             }
         }
-        this.collectionClass('');
+        this.collectionClass("");
         this.isChecked(false);
     }
 
@@ -123,13 +131,13 @@ class row {
             return cellVal.data;
         }
 
-        return '';
+        return "";
     }
 
     getCellTemplate(cellName: string): string {
         var cellVal: cell = this.cellMap[cellName];
         if (cellVal) {
-            if (cellVal.resetFlag === true) {
+            if (cellVal.resetFlag) {
                 cellVal.templateName = this.getCellTemplateName(cellName, this.cellMap[cellName].data());
                 cellVal.resetFlag = false;
                 return cellVal.templateName;
@@ -156,7 +164,23 @@ class row {
             return cell.checkboxTemplate;
         }
 
-        // See if this is an ID or external ID cell.
+        switch (this.viewModel.settings.viewType) {
+            case viewType.Counters:
+                if (propertyName === "Counter Name") {
+                    return cell.counterNameTemplate;
+                }
+                else if (this.viewModel.settings.isCounterAllGroupsGroup() && propertyName === "Group Name") {
+                    return cell.counterGroupTemplate;
+                }
+                return cell.defaultTemplate;
+            case viewType.TimeSeries:
+                if (propertyName === "Key") {
+                    return cell.timeSeriesKeyTemplate;
+                }
+                return cell.defaultTemplate;
+        }
+
+        // see if this is an ID or external ID cell.
         if (!!data) {
             if (typeof data == "string") {
                 var cleanData = data.replace('/\t+/g', '')
@@ -179,9 +203,9 @@ class row {
 
         // note: we just inform here about custom template - without specific name of this template.
         var colParam = this.viewModel.settings.customColumns().findConfigFor(propertyName);
-        if (colParam && colParam.template() !== cell.defaultTemplate) {
+        if (colParam && colParam.template() !== cell.defaultTemplate && colParam.template() !== cell.counterGroupTemplate) {
             return cell.customTemplate;
-        } 
+        }
 
         return cell.defaultTemplate;
     }

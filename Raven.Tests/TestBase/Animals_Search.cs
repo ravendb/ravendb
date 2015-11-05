@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Client.Indexes;
 
 namespace Raven.Tests.TestBase

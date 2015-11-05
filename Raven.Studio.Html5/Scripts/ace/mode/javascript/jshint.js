@@ -11533,7 +11533,7 @@ exports.mootools = {
   Event         : false,
   Events        : false,
   Fx            : false,
-  Group         : false,
+  GroupName         : false,
   Hash          : false,
   HtmlTable     : false,
   IFrame        : false,

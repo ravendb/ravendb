@@ -1,0 +1,34 @@
+<section data-bind="with: data">
+    <form class="form-horizontal" role="form">
+        <div class="form-group">
+            <label class="col-md-2 control-label">Remark</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: Remark"></p>
+            </div>
+        </div>
+        <div class="form-group" data-bind="visible: User">
+            <label class="col-md-2 control-label">User</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: User"></p>
+            </div>
+        </div>
+        <div class="form-group" data-bind="visible: Principal">
+            <label class="col-md-2 control-label">Principal</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: Principal"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Admin (global)</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: IsAdminGlobal"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-2 control-label">Admin (current database)</label>
+            <div class="col-md-10">
+                <p class="form-control-static" data-bind="text: IsAdminCurrentDb"></p>
+            </div>
+        </div>
+    </form>
+</section>

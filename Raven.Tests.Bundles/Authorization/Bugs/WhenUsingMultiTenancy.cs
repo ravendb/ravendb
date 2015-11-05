@@ -10,50 +10,50 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Authorization.Bugs
 {
-	public class WhenUsingMultiTenancy : AuthorizationTest
-	{
-		[Fact]
-		public void BugWhenSavingDocumentOnDatabase()
-		{
-			string database = "test_auth";
-			store.DatabaseCommands.EnsureDatabaseExists(database);
+    public class WhenUsingMultiTenancy : AuthorizationTest
+    {
+        [Fact]
+        public void BugWhenSavingDocumentOnDatabase()
+        {
+            string database = "test_auth";
+            store.DatabaseCommands.EnsureDatabaseExists(database);
 
-			var company = new Company
-			{
-				Name = "Hibernating Rhinos"
-			};
-			using (var s = store.OpenSession(database))
-			{
-				s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
-				{
-					Id = UserId,
-					Name = "Ayende Rahien",
-				});
+            var company = new Company
+            {
+                Name = "Hibernating Rhinos"
+            };
+            using (var s = store.OpenSession(database))
+            {
+                s.Store(new client::Raven.Bundles.Authorization.Model.AuthorizationUser
+                {
+                    Id = UserId,
+                    Name = "Ayende Rahien",
+                });
 
-				s.Store(company);
+                s.Store(company);
 
-				client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
-				{
-					Permissions =
-						{
-							new client::Raven.Bundles.Authorization.Model.DocumentPermission
-							{
-								User = UserId,
-								Allow = true,
-								Operation = "Company/Bid"
-							}
-						}
-				});
+                client::Raven.Client.Authorization.AuthorizationClientExtensions.SetAuthorizationFor(s, company, new client::Raven.Bundles.Authorization.Model.DocumentAuthorization
+                {
+                    Permissions =
+                        {
+                            new client::Raven.Bundles.Authorization.Model.DocumentPermission
+                            {
+                                User = UserId,
+                                Allow = true,
+                                Operation = "Company/Bid"
+                            }
+                        }
+                });
 
-				s.SaveChanges();
-			}
+                s.SaveChanges();
+            }
 
-			using (var s = store.OpenSession(database))
-			{
-				client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
+            using (var s = store.OpenSession(database))
+            {
+                client::Raven.Client.Authorization.AuthorizationClientExtensions.SecureFor(s, UserId, "Company/Bid");
 
-				Assert.NotNull(s.Load<Company>(company.Id));
-			}
-		}
-	}
+                Assert.NotNull(s.Load<Company>(company.Id));
+            }
+        }
+    }
 }

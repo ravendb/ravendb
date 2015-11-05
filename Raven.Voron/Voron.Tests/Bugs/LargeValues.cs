@@ -1,4 +1,4 @@
-﻿namespace Voron.Tests.Bugs
+namespace Voron.Tests.Bugs
 {
     using System;
     using System.Collections.Generic;
@@ -9,7 +9,7 @@
 
     public class LargeValues : StorageTest
     {
-        [PrefixesFact]
+        [Fact]
         public void ShouldProperlyRecover()
         {
             var sequentialLargeIds = ReadData("non-leaf-page-seq-id-large-values-2.txt");

@@ -1,4 +1,4 @@
-﻿using FizzWare.NBuilder.Extensions;
+using FizzWare.NBuilder.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;

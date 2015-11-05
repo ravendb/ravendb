@@ -1,4 +1,4 @@
-﻿using Raven.Client;
+using Raven.Client;
 using Raven.Client.Shard;
 using Raven.Tests.Core.Replication;
 using Raven.Tests.Core.Utils.Entities;

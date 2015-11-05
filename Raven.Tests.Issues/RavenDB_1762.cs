@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1762.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
                 Enabled = false;
             }
 
-	        protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
+            protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {
@@ -80,7 +80,7 @@ namespace Raven.Tests.Issues
                     target.Add(key, source[key]);
             }
 
-	        protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
+            protected override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave, out RavenJObject documentToSave)
             {
                 if (Enabled)
                 {
@@ -97,14 +97,14 @@ namespace Raven.Tests.Issues
                 return Enabled;
             }
         }
-	    protected override void ConfigureServer(RavenDBOptions dbOptions)
-	    {
-	        dbOptions.DatabaseLandlord.SetupTenantConfiguration += configuration =>
-	        {
+        protected override void ConfigureServer(RavenDBOptions dbOptions)
+        {
+            dbOptions.DatabaseLandlord.SetupTenantConfiguration += configuration =>
+            {
                 configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(DeleteOnConflict)));
                 configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(PutOnConflict)));
-	        };
-	    }
+            };
+        }
 
         const string docId = "users/1";
 

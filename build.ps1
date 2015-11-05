@@ -1,4 +1,4 @@
-﻿param($task = "default")
+param($task = "default")
 
 $scriptPath = $MyInvocation.MyCommand.Path
 $scriptDir = Split-Path $scriptPath

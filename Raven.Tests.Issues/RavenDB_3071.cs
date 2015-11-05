@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
@@ -56,18 +56,18 @@ namespace Raven.Tests.Issues
         public RavenDb_3071()
         {
             servers = new[]
-			{
-				GetNewServer(8079),
-				GetNewServer(8078),
-				GetNewServer(8077),
-			};
+            {
+                GetNewServer(8079),
+                GetNewServer(8078),
+                GetNewServer(8077),
+            };
 
             documentStore = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
-			{
-				{"1", CreateDocumentStore(8079)},
-				{"2", CreateDocumentStore(8078)},
-				{"3", CreateDocumentStore(8077)}
-			}));
+            {
+                {"1", CreateDocumentStore(8079)},
+                {"2", CreateDocumentStore(8078)},
+                {"3", CreateDocumentStore(8077)}
+            }));
             documentStore.Initialize();
         }
 

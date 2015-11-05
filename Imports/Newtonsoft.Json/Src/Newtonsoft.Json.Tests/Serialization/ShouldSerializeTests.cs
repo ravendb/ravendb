@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -77,25 +77,25 @@ namespace Newtonsoft.Json.Tests.Serialization
                 {
                     name = Guid.NewGuid().ToString(),
                     myBaz = new Baz1[] { 
-						new Baz1(){
-							name = Guid.NewGuid().ToString(),
-							myFrob = new Frob1[]{
-								new Frob1{name = Guid.NewGuid().ToString()}
-							}
-						},
-						new Baz1(){
-							name = Guid.NewGuid().ToString(),
-							myFrob = new Frob1[]{
-								new Frob1{name = Guid.NewGuid().ToString()}
-							}
-						},
-						new Baz1(){
-							name = Guid.NewGuid().ToString(),
-							myFrob = new Frob1[]{
-								new Frob1{name = Guid.NewGuid().ToString()}
-							}
-						},
-					}
+                        new Baz1(){
+                            name = Guid.NewGuid().ToString(),
+                            myFrob = new Frob1[]{
+                                new Frob1{name = Guid.NewGuid().ToString()}
+                            }
+                        },
+                        new Baz1(){
+                            name = Guid.NewGuid().ToString(),
+                            myFrob = new Frob1[]{
+                                new Frob1{name = Guid.NewGuid().ToString()}
+                            }
+                        },
+                        new Baz1(){
+                            name = Guid.NewGuid().ToString(),
+                            myFrob = new Frob1[]{
+                                new Frob1{name = Guid.NewGuid().ToString()}
+                            }
+                        },
+                    }
                 }
             };
 

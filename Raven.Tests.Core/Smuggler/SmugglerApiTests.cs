@@ -1,5 +1,4 @@
-﻿using Raven.Abstractions.Data;
-using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -15,7 +14,15 @@ using Raven.Tests.Core.Utils.Transformers;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Smuggler.Database;
+using Raven.Smuggler.Database.Files;
+using Raven.Smuggler.Database.Remote;
+
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Core.Smuggler
 {
@@ -30,8 +37,8 @@ namespace Raven.Tests.Core.Smuggler
 
         public SmugglerApiTests()
         {
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port1);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port2);
             IOExtensions.DeleteDirectory(BackupDir);
         }
 
@@ -46,7 +53,10 @@ namespace Raven.Tests.Core.Smuggler
         {
             using (var server1 = new RavenDbServer(new RavenConfiguration()
             {
-                Port = Port1,
+                Core =
+                {
+                    Port = Port1
+                },
                 ServerName = ServerName1
             })
             {
@@ -73,11 +83,12 @@ namespace Raven.Tests.Core.Smuggler
                         session.SaveChanges();
                     }
 
-                    store1.DatabaseCommands.PutAttachment("attachement1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
-
                     using (var server2 = new RavenDbServer(new RavenConfiguration()
                     {
-                        Port = Port2,
+                        Core =
+                        {
+                            Port = Port2
+                        },
                         ServerName = ServerName2
                     })
                     {
@@ -94,35 +105,44 @@ namespace Raven.Tests.Core.Smuggler
                             DefaultDatabase = "db2"
                         }.Initialize())
                         {
-
-                            var smugglerApi = new SmugglerDatabaseApi();
-                            await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                            var smuggler = new DatabaseSmuggler(
+                                new DatabaseSmugglerOptions(),
+                                new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
                             {
-                                From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
-                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }
-                            });
+                                    Url = "http://localhost:" + Port1,
+                                    Database = "db1"
+                                }),
+                                new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                                {
+                                    Url = "http://localhost:" + Port2,
+                                    Database = "db2"
+                                }));
+
+                            await smuggler.ExecuteAsync();
 
                             var docs = store2.DatabaseCommands.GetDocuments(0, 10);
                             Assert.Equal(3, docs.Length);
-                            var indexes = store2.DatabaseCommands.GetIndexes(0,10);
+                            var indexes = store2.DatabaseCommands.GetIndexes(0, 10);
                             Assert.Equal(1, indexes.Length);
                             var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
                             Assert.Equal(1, transformers.Length);
-                            var attachments = store2.DatabaseCommands.GetAttachments(0, new Etag(), 10);
-                            Assert.Equal(1, attachments.Length);
-
                         }
                     }
                 }
             }
         }
 
-        [Fact]
-        public async Task CanExportAndImportData()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanExportAndImportData(bool disableCompressionOnImport)
         {
-            using (var server1 = new RavenDbServer(new RavenConfiguration()
+            using (var server1 = new RavenDbServer(new RavenConfiguration
             {
-                Port = Port1,
+                Core =
+                {
+                    Port = Port1
+                },
                 ServerName = ServerName1
             })
             {
@@ -149,18 +169,25 @@ namespace Raven.Tests.Core.Smuggler
                         session.SaveChanges();
                     }
 
-                    store1.DatabaseCommands.PutAttachment("attachement1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
+                    var connectionOptions = new DatabaseSmugglerRemoteConnectionOptions
+                        {
+                        Url = "http://localhost:" + Port1,
+                        Database = "db1"
+                    };
 
-                    var smugglerApi = new SmugglerDatabaseApi();
-                    await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> 
-                        { 
-                            From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
-                            ToFile = BackupDir
-                        });
+                    var smuggler = new DatabaseSmuggler(
+                        new DatabaseSmugglerOptions(),
+                        new DatabaseSmugglerRemoteSource(connectionOptions),
+                        new DatabaseSmugglerFileDestination(BackupDir));
+
+                    await smuggler.ExecuteAsync();
 
                     using (var server2 = new RavenDbServer(new RavenConfiguration()
                     {
+                        Core =
+                        {
                         Port = Port2,
+                        },
                         ServerName = ServerName2
                     })
                     {
@@ -177,20 +204,30 @@ namespace Raven.Tests.Core.Smuggler
                             DefaultDatabase = "db2"
                         }.Initialize())
                         {
-                            await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
+                            connectionOptions = new DatabaseSmugglerRemoteConnectionOptions
                             {
-                                FromFile = BackupDir,
-                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }
-                            });
+                                Url = "http://localhost:" + Port2,
+                                Database = "db2"
+                            };
                             
+                            smuggler = new DatabaseSmuggler(
+                                new DatabaseSmugglerOptions(),
+                                new DatabaseSmugglerFileSource(BackupDir),
+                                new DatabaseSmugglerRemoteDestination(
+                                    connectionOptions,
+                                    new DatabaseSmugglerRemoteDestinationOptions
+                                    {
+                                        DisableCompression = disableCompressionOnImport
+                                    }));
+
+                            await smuggler.ExecuteAsync();
+
                             var docs = store2.DatabaseCommands.GetDocuments(0, 10);
                             Assert.Equal(3, docs.Length);
-                            var indexes = store2.DatabaseCommands.GetIndexes(0,10);
+                            var indexes = store2.DatabaseCommands.GetIndexes(0, 10);
                             Assert.Equal(1, indexes.Length);
                             var transformers = store2.DatabaseCommands.GetTransformers(0, 10);
                             Assert.Equal(1, transformers.Length);
-                            var attachments = store2.DatabaseCommands.GetAttachments(0, new Etag(), 10);
-                            Assert.Equal(1, attachments.Length);
                         }
                     }
                 }

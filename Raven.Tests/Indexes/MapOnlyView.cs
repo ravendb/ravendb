@@ -10,14 +10,14 @@ using Raven.Database.Linq;
 
 namespace Raven.Tests.Indexes
 {
-	[CLSCompliant(false)]
-	[DisplayName("Compiled/View")]
-	public class MapOnlyView : AbstractViewGenerator
-	{
-		public MapOnlyView()
-		{
-			AddField("CustomerId");
-			AddMapDefinition(source => from doc in source select doc);
-		}
-	}
+    [CLSCompliant(false)]
+    [DisplayName("Compiled/View")]
+    public class MapOnlyView : AbstractViewGenerator
+    {
+        public MapOnlyView()
+        {
+            AddField("CustomerId");
+            AddMapDefinition(source => from doc in source select doc);
+        }
+    }
 }

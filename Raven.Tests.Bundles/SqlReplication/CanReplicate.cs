@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CanReplicate.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -36,21 +36,21 @@ namespace Raven.Tests.Bundles.SqlReplication
 
         private const string defaultScript = @"
 var orderData = {
-	Id: documentId,
-	OrderLinesCount: this.OrderLines.length,
-	TotalCost: 0
+    Id: documentId,
+    OrderLinesCount: this.OrderLines.length,
+    TotalCost: 0
 };
 replicateToOrders(orderData);
 
 for (var i = 0; i < this.OrderLines.length; i++) {
-	var line = this.OrderLines[i];
-	orderData.TotalCost += line.Cost;
-	replicateToOrderLines({
-		OrderId: documentId,
-		Qty: line.Quantity,
-		Product: line.Product,
-		Cost: line.Cost
-	});
+    var line = this.OrderLines[i];
+    orderData.TotalCost += line.Cost;
+    replicateToOrderLines({
+        OrderId: documentId,
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.Cost
+    });
 }";
 
 
@@ -66,27 +66,27 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                 {
                     dbCommand.CommandText = @"
 IF OBJECT_ID('Orders') is not null 
-	DROP TABLE [dbo].[Orders]
+    DROP TABLE [dbo].[Orders]
 IF OBJECT_ID('OrderLines') is not null 
-	DROP TABLE [dbo].[OrderLines]
+    DROP TABLE [dbo].[OrderLines]
 ";
                     dbCommand.ExecuteNonQuery();
 
                     dbCommand.CommandText = @"
 CREATE TABLE [dbo].[OrderLines]
 (
-	[Id] int identity primary key,
-	[OrderId] [nvarchar](50) NOT NULL,
-	[Qty] [int] NOT NULL,
-	[Product] [nvarchar](255) NOT NULL,
-	[Cost] [int] NOT NULL
+    [Id] int identity primary key,
+    [OrderId] [nvarchar](50) NOT NULL,
+    [Qty] [int] NOT NULL,
+    [Product] [nvarchar](255) NOT NULL,
+    [Cost] [int] NOT NULL
 )
 
 CREATE TABLE [dbo].[Orders]
 (
-	[Id] [nvarchar](50) NOT NULL,
-	[OrderLinesCount] [int]  NULL,
-	[TotalCost] [int] NOT NULL,
+    [Id] [nvarchar](50) NOT NULL,
+    [OrderLinesCount] [int]  NULL,
+    [TotalCost] [int] NOT NULL,
     [City] [nvarchar](50) NULL
 )
 ";
@@ -114,10 +114,10 @@ CREATE TABLE [dbo].[Orders]
                     session.Store(new Order
                     {
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
                     session.SaveChanges();
                 }
@@ -163,18 +163,18 @@ CREATE TABLE [dbo].[Orders]
                     session.Store(new Order
                     {
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
                     session.SaveChanges();
                 }
 
                 SetupSqlReplication(store, @"var orderData = {
-	Id: documentId,
-	OrderLinesCount: this.OrderLines_Missing.length,
-	TotalCost: 0
+    Id: documentId,
+    OrderLinesCount: this.OrderLines_Missing.length,
+    TotalCost: 0
 };
 replicateToOrders(orderData);");
 
@@ -218,18 +218,18 @@ replicateToOrders(orderData);");
                     {
                         Address = null,
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
                     session.SaveChanges();
                 }
 
                 SetupSqlReplication(store, @"var orderData = {
-	Id: documentId,
-	City: this.Address.City,
-	TotalCost: 0
+    Id: documentId,
+    City: this.Address.City,
+    TotalCost: 0
 };
 replicateToOrders(orderData);");
 
@@ -276,10 +276,10 @@ replicateToOrders(orderData);");
                         session.Store(new Order
                                       {
                                           OrderLines = new List<OrderLine>
-							                           {
-								                           new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
-								                           new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
-							                           }
+                                                       {
+                                                           new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
+                                                           new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                                                       }
 
                                       });
                     }
@@ -313,9 +313,9 @@ replicateToOrders(orderData);");
                     session.Store(new Order
                     {
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
 
                     session.SaveChanges();
@@ -379,10 +379,10 @@ replicateToOrders(orderData);");
                     session.Store(new Order
                     {
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
                     session.SaveChanges();
                 }
@@ -427,10 +427,10 @@ replicateToOrders(orderData);");
                     session.Store(new Order
                     {
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
                     session.SaveChanges();
                 }
@@ -472,10 +472,10 @@ replicateToOrders(orderData);");
                     {
                         Id = "orders/1",
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
                     session.SaveChanges();
                 }
@@ -545,7 +545,7 @@ var nameArr = this.StepName.split('.');");
         }
 
         [Fact]
-        public async Task RavenDB_3106()
+        public void RavenDB_3106()
         {
             CreateRdbmsSchema();
             using (var store = NewDocumentStore())
@@ -567,10 +567,10 @@ var nameArr = this.StepName.split('.');");
                         session.Store(new Order
                         {
                             OrderLines = new List<OrderLine>
-							{
-								new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-								new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-							}
+                            {
+                                new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                                new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                            }
                         });
                     }
 
@@ -601,10 +601,10 @@ var nameArr = this.StepName.split('.');");
                     session.Store(new Order
                     {
                         OrderLines = new List<OrderLine>
-						{
-							new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-							new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-						}
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
                     });
 
                     session.SaveChanges();
@@ -671,10 +671,10 @@ var nameArr = this.StepName.split('.');");
                     FactoryName = MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
                     RavenEntityName = "Orders",
                     SqlReplicationTables =
-					{
-						new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
-						new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
-					},
+                    {
+                        new SqlReplicationTable {TableName = "Orders", DocumentKeyColumn = "Id", InsertOnlyMode = insertOnly},
+                        new SqlReplicationTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId", InsertOnlyMode = insertOnly},
+                    },
                     Script = script
                 });
                 session.SaveChanges();

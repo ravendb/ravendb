@@ -109,42 +109,42 @@ namespace Lucene.Net.Search.Vectorhighlight
 
         protected virtual string MakeFragment(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo fragInfo, int fragCharSize)
         {
-	        int adjustedStartPos;
-	        var fragmentSource = GetFragmentSource(buffer, index, values, fragInfo, out adjustedStartPos);
+            int adjustedStartPos;
+            var fragmentSource = GetFragmentSource(buffer, index, values, fragInfo, out adjustedStartPos);
             return MakeFragment(fragInfo, fragmentSource, adjustedStartPos, fragCharSize);
         }
 
         private String MakeFragment(WeightedFragInfo fragInfo, String src, int adjustedStart, int fragCharSize)
-	    {
-		    StringBuilder fragment = new StringBuilder();
-		    int srcIndex = 0;
-		    var items = from subInfo in fragInfo.subInfos
-			    from to in subInfo.termsOffsets
-			    orderby to.startOffset
-			    select new
-			    {
-				    to,
-				    subInfo
-			    };
-			foreach (var item in items)
-		    {
-			    var headerIndex = item.to.startOffset - adjustedStart;
-		        var matchLen = item.to.endOffset - item.to.startOffset;
-		        var startLen = Math.Max(0, Math.Min(headerIndex - srcIndex, (fragCharSize - matchLen)/2));
+        {
+            StringBuilder fragment = new StringBuilder();
+            int srcIndex = 0;
+            var items = from subInfo in fragInfo.subInfos
+                from to in subInfo.termsOffsets
+                orderby to.startOffset
+                select new
+                {
+                    to,
+                    subInfo
+                };
+            foreach (var item in items)
+            {
+                var headerIndex = item.to.startOffset - adjustedStart;
+                var matchLen = item.to.endOffset - item.to.startOffset;
+                var startLen = Math.Max(0, Math.Min(headerIndex - srcIndex, (fragCharSize - matchLen)/2));
 
-		        fragCharSize -= matchLen + startLen;
+                fragCharSize -= matchLen + startLen;
 
                 fragment.Append(src.Substring(headerIndex-startLen, startLen))
-					.Append(GetPreTag(item.subInfo.seqnum))
-					.Append(src.Substring(headerIndex, matchLen))
-					.Append(GetPostTag(item.subInfo.seqnum));
-				srcIndex = item.to.endOffset - adjustedStart;
-		    }
+                    .Append(GetPreTag(item.subInfo.seqnum))
+                    .Append(src.Substring(headerIndex, matchLen))
+                    .Append(GetPostTag(item.subInfo.seqnum));
+                srcIndex = item.to.endOffset - adjustedStart;
+            }
             fragment.Append(src.Substring(srcIndex, Math.Min(Math.Max(0, fragCharSize), src.Length - srcIndex)));
-		    return fragment.ToString();
-	    }
+            return fragment.ToString();
+        }
 
-	    /*
+        /*
         [Obsolete]
         protected String MakeFragment(StringBuilder buffer, int[] index, String[] values, WeightedFragInfo fragInfo)
         {
@@ -195,104 +195,104 @@ namespace Lucene.Net.Search.Vectorhighlight
             return buffer.ToString(startOffset, eo - startOffset);
         }
 
-		private string GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo weightedFragInfo, out int startOffset)
-		{
-			while (buffer.Length < weightedFragInfo.endOffset && index[0] < values.Length)
-			{
-				buffer.Append(values[index[0]].StringValue);
-				if (values[index[0]].IsTokenized && values[index[0]].StringValue.Length > 0 && index[0] + 1 < values.Length)
-					buffer.Append(' ');
-				index[0]++;
-			}
+        private string GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo weightedFragInfo, out int startOffset)
+        {
+            while (buffer.Length < weightedFragInfo.endOffset && index[0] < values.Length)
+            {
+                buffer.Append(values[index[0]].StringValue);
+                if (values[index[0]].IsTokenized && values[index[0]].StringValue.Length > 0 && index[0] + 1 < values.Length)
+                    buffer.Append(' ');
+                index[0]++;
+            }
 
-			var endOffset = 0;
-			startOffset = buffer.Length - 1;
+            var endOffset = 0;
+            startOffset = buffer.Length - 1;
 
-			foreach (var subInfo in weightedFragInfo.subInfos)
-			{
-				foreach (var termsOffset in subInfo.termsOffsets)
-				{
-					if (termsOffset.startOffset < startOffset)
-						startOffset = termsOffset.startOffset;
-					if (termsOffset.endOffset > endOffset)
-						endOffset = termsOffset.endOffset;
-				}
-			}
+            foreach (var subInfo in weightedFragInfo.subInfos)
+            {
+                foreach (var termsOffset in subInfo.termsOffsets)
+                {
+                    if (termsOffset.startOffset < startOffset)
+                        startOffset = termsOffset.startOffset;
+                    if (termsOffset.endOffset > endOffset)
+                        endOffset = termsOffset.endOffset;
+                }
+            }
 
-			int maxStart = startOffset;
-			int minEnd = endOffset;
+            int maxStart = startOffset;
+            int minEnd = endOffset;
 
-			var maxLength = weightedFragInfo.endOffset - weightedFragInfo.startOffset;
-			var bufferLength = buffer.Length;
-			var stopChars = new[] {',', '.', ';','!','?'};
+            var maxLength = weightedFragInfo.endOffset - weightedFragInfo.startOffset;
+            var bufferLength = buffer.Length;
+            var stopChars = new[] {',', '.', ';','!','?'};
 
-			while (endOffset - startOffset < maxLength - 2) // limit the size of the returned string
-			{
-				if (endOffset >= bufferLength) // out of range
-				{
-					endOffset = bufferLength;
+            while (endOffset - startOffset < maxLength - 2) // limit the size of the returned string
+            {
+                if (endOffset >= bufferLength) // out of range
+                {
+                    endOffset = bufferLength;
 
-					startOffset = Math.Max(0, startOffset - maxLength - endOffset);
-					break;
-				}
-				if (startOffset == 0) // out of range
-				{
-					endOffset = Math.Min(bufferLength, startOffset + maxLength);
-					break;
-				}
-				var localStartOffset = startOffset;
-				if (stopChars.Any(c => c == buffer[localStartOffset]) && buffer[startOffset + 1] == ' ')
-				{
-					startOffset += 2; //remove the char and the white space
+                    startOffset = Math.Max(0, startOffset - maxLength - endOffset);
+                    break;
+                }
+                if (startOffset == 0) // out of range
+                {
+                    endOffset = Math.Min(bufferLength, startOffset + maxLength);
+                    break;
+                }
+                var localStartOffset = startOffset;
+                if (stopChars.Any(c => c == buffer[localStartOffset]) && buffer[startOffset + 1] == ' ')
+                {
+                    startOffset += 2; //remove the char and the white space
 
-					endOffset = Math.Min(bufferLength, startOffset + maxLength);
-					break;
-				}
+                    endOffset = Math.Min(bufferLength, startOffset + maxLength);
+                    break;
+                }
 
-				endOffset++;
-				startOffset--;
-			}
+                endOffset++;
+                startOffset--;
+            }
 
-			int retStartOffset;
-			var retVal = TrimEdges(buffer, startOffset, endOffset, out retStartOffset, maxStart, minEnd); // cuts part words
-			startOffset = retStartOffset;
-			return retVal;
-		}
+            int retStartOffset;
+            var retVal = TrimEdges(buffer, startOffset, endOffset, out retStartOffset, maxStart, minEnd); // cuts part words
+            startOffset = retStartOffset;
+            return retVal;
+        }
 
-	    private string TrimEdges(StringBuilder buffer, int startOffset, int endOffset, out int retStartOffset, int maxStart, int minEnd)
-	    {
-		    var localStart = startOffset;
-		    var localEnd = endOffset;
-			if (startOffset != 0 && buffer[startOffset - 1] != ' ')
-		    {
-				while (buffer[localStart] != ' ' && localStart != endOffset && localStart < maxStart)
-			    {
-				    localStart++;
-			    }
+        private string TrimEdges(StringBuilder buffer, int startOffset, int endOffset, out int retStartOffset, int maxStart, int minEnd)
+        {
+            var localStart = startOffset;
+            var localEnd = endOffset;
+            if (startOffset != 0 && buffer[startOffset - 1] != ' ')
+            {
+                while (buffer[localStart] != ' ' && localStart != endOffset && localStart < maxStart)
+                {
+                    localStart++;
+                }
 
-				if(localStart == endOffset)
-					localStart = startOffset;
-		    }
+                if(localStart == endOffset)
+                    localStart = startOffset;
+            }
 
-		    if (endOffset + 1 < buffer.Length && buffer[endOffset + 1] != ' ')
-		    {
-			    while (buffer[localEnd] != ' ' && localEnd != localStart && localEnd > minEnd)
-			    {
-				    localEnd--;
-			    }
+            if (endOffset + 1 < buffer.Length && buffer[endOffset + 1] != ' ')
+            {
+                while (buffer[localEnd] != ' ' && localEnd != localStart && localEnd > minEnd)
+                {
+                    localEnd--;
+                }
 
-			    if (localEnd == localStart)
-			    {
-				    localEnd = endOffset;
-				    localStart = startOffset;
-			    }
-		    }
+                if (localEnd == localStart)
+                {
+                    localEnd = endOffset;
+                    localStart = startOffset;
+                }
+            }
 
-		    retStartOffset = localStart;
-			return buffer.ToString(localStart, localEnd - localStart);
-	    }
+            retStartOffset = localStart;
+            return buffer.ToString(localStart, localEnd - localStart);
+        }
 
-	    protected virtual String GetPreTag(int num)
+        protected virtual String GetPreTag(int num)
         {
             int n = num % preTags.Length;
             return preTags[n];

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
@@ -10,33 +10,33 @@ namespace Raven.Tests.MailingList
 {
     public class LateBoundValue : RavenTestBase
     {
-		public class SampleData : AggregateBaseEx<string>
-		{
+        public class SampleData : AggregateBaseEx<string>
+        {
 
-		}
+        }
 
-		public class SampleData_Index : AbstractMultiMapIndexCreationTask<SampleData>
-		{
-			public SampleData_Index()
-			{
-				AddMapForAll<AggregateBase>(docs => from doc in docs
-													select new
-													{
-														doc.Name
-													});
-				StoreAllFields(FieldStorage.Yes);
-			}
-		}
+        public class SampleData_Index : AbstractMultiMapIndexCreationTask<SampleData>
+        {
+            public SampleData_Index()
+            {
+                AddMapForAll<AggregateBase>(docs => from doc in docs
+                                                    select new
+                                                    {
+                                                        doc.Name
+                                                    });
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
 
-		public abstract class AggregateBaseEx<TType> : AggregateBase
-		{
-			public TType AnotherProp { get; set; }
-		}
-		public abstract class AggregateBase
-		{
-			public string Id { get; set; }
-			public string Name { get; set; }
-		}
+        public abstract class AggregateBaseEx<TType> : AggregateBase
+        {
+            public TType AnotherProp { get; set; }
+        }
+        public abstract class AggregateBase
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
 
         [Fact]
         public void CanIndexAndQuery()

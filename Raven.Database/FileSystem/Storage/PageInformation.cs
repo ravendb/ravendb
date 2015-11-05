@@ -1,27 +1,27 @@
-﻿namespace Raven.Database.FileSystem.Storage
+namespace Raven.Database.FileSystem.Storage
 {
-	public class PageInformation
-	{
-		public int Id { get; set; }
-		public int Size { get; set; }
-		public int PositionInFile { get; set; }
+    public class PageInformation
+    {
+        public int Id { get; set; }
+        public int Size { get; set; }
+        public int PositionInFile { get; set; }
 
-		public override bool Equals(object obj)
-		{
-			if (obj == null || GetType() != obj.GetType())
-				return false;
+        public override bool Equals(object obj)
+        {
+            if (obj == null || GetType() != obj.GetType())
+                return false;
 
-			var page = obj as PageInformation;
+            var page = obj as PageInformation;
 
-			if (page == null)
-				return false;
+            if (page == null)
+                return false;
 
-			return page.Id == Id && page.Size == Size && page.PositionInFile == PositionInFile;
-		}
+            return page.Id == Id && page.Size == Size && page.PositionInFile == PositionInFile;
+        }
 
-		public override int GetHashCode()
-		{
-			return Id.GetHashCode() ^ Size.GetHashCode() ^ PositionInFile.GetHashCode();
-		}
-	}
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode() ^ Size.GetHashCode() ^ PositionInFile.GetHashCode();
+        }
+    }
 }

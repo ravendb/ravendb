@@ -1,4 +1,4 @@
-﻿import synchronizationDestination = require("models/filesystem/synchronizationDestination");
+import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 
 class synchronizationReplicationSetup {
 

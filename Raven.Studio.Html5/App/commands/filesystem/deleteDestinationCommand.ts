@@ -1,8 +1,7 @@
-﻿/// <reference path="../../../Scripts/typings/jquery/jquery.d.ts" />
+/// <reference path="../../../Scripts/typings/jquery/jquery.d.ts" />
 
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import synchronizationDestination = require("models/filesystem/synchronizationDestination");
 
 class deleteDestinationCommand extends commandBase {
 

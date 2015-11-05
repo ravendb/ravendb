@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Linq;
 using Raven.Client.Indexes;

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenFsWebApiTest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,7 +14,7 @@ namespace Raven.Tests.FileSystem
 
         public RavenFilesWebApiTest()
         {
-			var ravenFsClient = (IAsyncFilesCommandsImpl)NewAsyncClient(fileSystemName: WebApiTestName, activeBundles: "Versioning");
+            var ravenFsClient = (IAsyncFilesCommandsImpl)NewAsyncClient(fileSystemName: WebApiTestName, activeBundles: "Versioning");
 
             WebClient = new WebClient()
             {

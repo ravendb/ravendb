@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2936.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,138 +12,138 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2936 : RavenTest
-	{
-		[Fact]
-		public void ShouldNotRetrieveOperationDetails()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.PutIndex("Users/ByName", new IndexDefinition()
-				{
-					Map = "from user in docs.Users select new { user.Name }"
-				});
+    public class RavenDB_2936 : RavenTest
+    {
+        [Fact]
+        public void ShouldNotRetrieveOperationDetails()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("Users/ByName", new IndexDefinition()
+                {
+                    Map = "from user in docs.Users select new { user.Name }"
+                });
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User()
-					{
-						Name = "Arek"
-					});
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Arek"
+                    });
 
-					session.Store(new User()
-					{
-						Name = "Oren"
-					});
+                    session.Store(new User()
+                    {
+                        Name = "Oren"
+                    });
 
-					session.Store(new User()
-					{
-						Name = "Ayende"
-					});
+                    session.Store(new User()
+                    {
+                        Name = "Ayende"
+                    });
 
-					session.SaveChanges();
-				}
-
-				WaitForIndexing(store);
-
-				var result = store.DatabaseCommands.UpdateByIndex("Users/ByName",
-					new IndexQuery(),
-					new ScriptedPatchRequest
-					{
-						Script = @"this.LastName = 'Smith'"
-					})
-					.WaitForCompletion();
-
-				Assert.Empty((RavenJArray)result);
+                    session.SaveChanges();
+                }
 
                 WaitForIndexing(store);
 
-				result = store.DatabaseCommands.UpdateByIndex("Users/ByName", 
-					new IndexQuery(),
-					new[]
-					{
-						new PatchRequest
-						{
-							Type = PatchCommandType.Set,
-							Name = "NewProp",
-							Value = "Value"
-						}
-					}).WaitForCompletion();
+                var result = store.DatabaseCommands.UpdateByIndex("Users/ByName",
+                    new IndexQuery(),
+                    new ScriptedPatchRequest
+                    {
+                        Script = @"this.LastName = 'Smith'"
+                    })
+                    .WaitForCompletion();
 
-				Assert.Empty((RavenJArray)result);
+                Assert.Empty((RavenJArray)result);
+
+                WaitForIndexing(store);
+
+                result = store.DatabaseCommands.UpdateByIndex("Users/ByName", 
+                    new IndexQuery(),
+                    new[]
+                    {
+                        new PatchRequest
+                        {
+                            Type = PatchCommandType.Set,
+                            Name = "NewProp",
+                            Value = "Value"
+                        }
+                    }).WaitForCompletion();
+
+                Assert.Empty((RavenJArray)result);
 
                 WaitForIndexing(store);
 
                 result = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery())
-					.WaitForCompletion();
+                    .WaitForCompletion();
 
                 WaitForIndexing(store);
 
                 Assert.Empty((RavenJArray)result);
-			}
-		}
+            }
+        }
 
-		[Fact]
-		public void ShouldRetrieveOperationDetailsWhenTheyWereRequested()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.DatabaseCommands.PutIndex("Users/ByName", new IndexDefinition()
-				{
-					Map = "from user in docs.Users select new { user.Name }"
-				});
+        [Fact]
+        public void ShouldRetrieveOperationDetailsWhenTheyWereRequested()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("Users/ByName", new IndexDefinition()
+                {
+                    Map = "from user in docs.Users select new { user.Name }"
+                });
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User()
-					{
-						Name = "Arek"
-					});
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Arek"
+                    });
 
-					session.Store(new User()
-					{
-						Name = "Oren"
-					});
+                    session.Store(new User()
+                    {
+                        Name = "Oren"
+                    });
 
-					session.Store(new User()
-					{
-						Name = "Ayende"
-					});
+                    session.Store(new User()
+                    {
+                        Name = "Ayende"
+                    });
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				var result = store.DatabaseCommands.UpdateByIndex("Users/ByName",
-					new IndexQuery(),
-					new ScriptedPatchRequest
-					{
-						Script = @"this.LastName = 'Smith'"
-					}, new BulkOperationOptions { RetrieveDetails = true })
-					.WaitForCompletion();
+                var result = store.DatabaseCommands.UpdateByIndex("Users/ByName",
+                    new IndexQuery(),
+                    new ScriptedPatchRequest
+                    {
+                        Script = @"this.LastName = 'Smith'"
+                    }, new BulkOperationOptions { RetrieveDetails = true })
+                    .WaitForCompletion();
 
-				Assert.NotNull(result);
+                Assert.NotNull(result);
 
-				result = store.DatabaseCommands.UpdateByIndex("Users/ByName",
-					new IndexQuery(),
-					new[]
-					{
-						new PatchRequest
-						{
-							Type = PatchCommandType.Set,
-							Name = "NewProp",
-							Value = "Value"
-						}
-					}, new BulkOperationOptions { RetrieveDetails = true }).WaitForCompletion();
+                result = store.DatabaseCommands.UpdateByIndex("Users/ByName",
+                    new IndexQuery(),
+                    new[]
+                    {
+                        new PatchRequest
+                        {
+                            Type = PatchCommandType.Set,
+                            Name = "NewProp",
+                            Value = "Value"
+                        }
+                    }, new BulkOperationOptions { RetrieveDetails = true }).WaitForCompletion();
 
-				Assert.NotNull(result);
+                Assert.NotNull(result);
 
-				result = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery(), new BulkOperationOptions { RetrieveDetails = true })
-					.WaitForCompletion();
+                result = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery(), new BulkOperationOptions { RetrieveDetails = true })
+                    .WaitForCompletion();
 
-				Assert.NotNull(result);
-			}
-		}
-	}
+                Assert.NotNull(result);
+            }
+        }
+    }
 }

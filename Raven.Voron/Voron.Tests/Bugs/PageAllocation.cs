@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SomeIssue.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,7 +14,7 @@ namespace Voron.Tests.Bugs
         /// <summary>
         /// http://issues.hibernatingrhinos.com/issue/RavenDB-1707
         /// </summary>
-        [PrefixesFact]
+        [Fact]
         public void MultipleTxPagesCanPointToOnePageNumberWhichShouldNotBeCausingIssuesDuringFlushing()
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnly();

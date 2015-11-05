@@ -9,11 +9,11 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Json
 {
-	public static class JsonToExpando
-	{
-		public static object Convert(RavenJObject obj)
-		{
-			return new DynamicJsonObject(obj);
-		}
-	}
+    public static class JsonToExpando
+    {
+        public static object Convert(RavenJObject obj)
+        {
+            return new DynamicJsonObject(obj);
+        }
+    }
 }

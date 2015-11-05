@@ -14,42 +14,42 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class TranslatingLinqQueryUsingNestedId : RavenTest
-	{
-		[Fact]
-		public void Id_on_member_should_not_be_converted_to_document_id()
-		{
-			var generated = new IndexDefinitionBuilder<SubCategory>()
-			{
-				Map = subs => from subCategory in subs
-							  select new
-							  {
-								  CategoryId = subCategory.Id,
-								  SubCategoryId = subCategory.Parent.Id
-							  }
-			}.ToIndexDefinition(new DocumentConvention());
-			
-			Assert.Contains("CategoryId = subCategory.__document_id", generated.Map);
-			Assert.Contains("SubCategoryId = subCategory.Parent.Id", generated.Map);
-		}
+    public class TranslatingLinqQueryUsingNestedId : RavenTest
+    {
+        [Fact]
+        public void Id_on_member_should_not_be_converted_to_document_id()
+        {
+            var generated = new IndexDefinitionBuilder<SubCategory>()
+            {
+                Map = subs => from subCategory in subs
+                              select new
+                              {
+                                  CategoryId = subCategory.Id,
+                                  SubCategoryId = subCategory.Parent.Id
+                              }
+            }.ToIndexDefinition(new DocumentConvention());
+            
+            Assert.Contains("CategoryId = subCategory.__document_id", generated.Map);
+            Assert.Contains("SubCategoryId = subCategory.Parent.Id", generated.Map);
+        }
 
-		#region Nested type: Category
+        #region Nested type: Category
 
-		public class Category
-		{
-			public string Id { get; set; }
-		}
+        public class Category
+        {
+            public string Id { get; set; }
+        }
 
-		#endregion
+        #endregion
 
-		#region Nested type: SubCategory
+        #region Nested type: SubCategory
 
-		public class SubCategory
-		{
-			public string Id { get; set; }
-			public Category Parent { get; set; }
-		}
+        public class SubCategory
+        {
+            public string Id { get; set; }
+            public Category Parent { get; set; }
+        }
 
-		#endregion
-	}
+        #endregion
+    }
 }

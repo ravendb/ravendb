@@ -7,16 +7,16 @@ using System;
 
 namespace Raven.Bundles.Tryouts
 {
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			for (int i = 0; i < 150; i++)
-			{
-				Console.Clear();
-				Console.WriteLine(i);
-				
-			}
-		}
-	}
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            for (int i = 0; i < 150; i++)
+            {
+                Console.Clear();
+                Console.WriteLine(i);
+                
+            }
+        }
+    }
 }

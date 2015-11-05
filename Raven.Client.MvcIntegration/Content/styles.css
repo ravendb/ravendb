@@ -75,13 +75,13 @@
 }
 
 pre.query {
-	margin: 0;
-	border: none;
-	background-color: white;
+    margin: 0;
+    border: none;
+    background-color: white;
     padding: 0;
     word-break: normal;    
 }
 
 .ravendb-profiler-results h1 {
-	font-size: 24px;
+    font-size: 24px;
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Trees;
@@ -8,7 +8,7 @@ namespace Voron.Tests.Trees
 {
     public class CanDefrag : StorageTest
     {
-        [PrefixesFact]
+        [Fact]
         public void CanDeleteAtRoot()
         {
             var size = 250;

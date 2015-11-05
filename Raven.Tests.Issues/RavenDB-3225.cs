@@ -1,4 +1,4 @@
-﻿using Raven.Tests.Common;
+using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -8,10 +8,10 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Storage
 {
-	public interface IQueueStorageActions
-	{
-		void EnqueueToQueue(string name, byte[] data);
-		IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name);
-		void DeleteFromQueue(string name, object id);
-	}
+    public interface IQueueStorageActions
+    {
+        void EnqueueToQueue(string name, byte[] data);
+        IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name);
+        void DeleteFromQueue(string name, object id);
+    }
 }

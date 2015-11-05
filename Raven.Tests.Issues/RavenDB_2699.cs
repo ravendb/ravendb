@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1716.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -18,7 +18,6 @@ namespace Raven.Tests.Issues
     {
         protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
         {
-            config.Settings[Constants.Esent.CircularLog] = "false";
             config.Settings[Constants.Voron.AllowIncrementalBackups] = "true";
             config.Storage.Voron.AllowIncrementalBackups = true;
         }

@@ -1,4 +1,4 @@
-﻿      7-Zip Command line version
+      7-Zip Command line version
       ~~~~~~~~~~~~~~~~~~~~~~~~~~
       License for use and distribution
       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

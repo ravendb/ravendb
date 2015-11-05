@@ -13,7 +13,7 @@ using Raven.Client.Linq;
 namespace Raven.Tests.MailingList
 {
     public class CanRetrieveFacetCountsOfQueryResults : RavenTestBase
-	{
+    {
 
         public enum Tag
         {
@@ -66,13 +66,13 @@ namespace Raven.Tests.MailingList
             }
         }
 
-		[Fact]
+        [Fact]
         public void CanRetrieveFacetCounts()
-		{
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
                     var item1 = new AccItem { Lat = 52.156161, Lon = 1.602483, Name = "House one", Bedrooms = 2 };
                     item1.Attributes.Add(Tag.HasGarden);
                     item1.Attributes.Add(Tag.HasPool);
@@ -95,41 +95,41 @@ namespace Raven.Tests.MailingList
                     session.Store(new FacetSetup { Id = "facets/AttributeFacets", Facets = _facets });
                     session.SaveChanges();
                     session.SaveChanges();
-				}
+                }
 
                 new AccItems_Spatial().Execute(store);
                 new AccItems_Attributes().Execute(store);
 
-				WaitForIndexing(store);
+                WaitForIndexing(store);
 
-				using (var session = store.OpenSession())
-				{
-					var query = session.Query<AccItem, AccItems_Spatial>()
-					                   .Customize(customization => customization.WaitForNonStaleResults())
-					                   .Customize(x => x.WithinRadiusOf(radius: 10, latitude: 52.156161, longitude: 1.602483))
-					                   .Where(x => x.Bedrooms == 2);
-					var partialFacetResults = query
-						.ToFacets("facets/AttributeFacets");
-					var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
-					                              .ToFacets("facets/AttributeFacets");
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<AccItem, AccItems_Spatial>()
+                                       .Customize(customization => customization.WaitForNonStaleResults())
+                                       .Customize(x => x.WithinRadiusOf(radius: 10, latitude: 52.156161, longitude: 1.602483))
+                                       .Where(x => x.Bedrooms == 2);
+                    var partialFacetResults = query
+                        .ToFacets("facets/AttributeFacets");
+                    var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
+                                                  .ToFacets("facets/AttributeFacets");
 
-					Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
 
-					var partialGardenFacet =
-						partialFacetResults.Results["Attributes"].Values.First(
-							x => x.Range.Contains("hasgarden"));
-					Assert.Equal(2, partialGardenFacet.Hits);
+                    var partialGardenFacet =
+                        partialFacetResults.Results["Attributes"].Values.First(
+                            x => x.Range.Contains("hasgarden"));
+                    Assert.Equal(2, partialGardenFacet.Hits);
 
-					var fullGardenFacet =
-						fullFacetResults.Results["Attributes"].Values.First(
-							x => x.Range.Contains("hasgarden"));
-					Assert.Equal(3, fullGardenFacet.Hits);
+                    var fullGardenFacet =
+                        fullFacetResults.Results["Attributes"].Values.First(
+                            x => x.Range.Contains("hasgarden"));
+                    Assert.Equal(3, fullGardenFacet.Hits);
 
 
-					Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
-				}
-			}
-		}
+                    Assert.Empty(store.DatabaseCommands.GetStatistics().Errors);
+                }
+            }
+        }
 
-	}
+    }
 }

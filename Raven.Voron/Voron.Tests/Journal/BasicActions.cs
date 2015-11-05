@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ForceLogFlushes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -17,12 +17,12 @@ namespace Voron.Tests.Journal
         // all tests here relay on the fact than one log file can contains max 10 pages
         protected override void Configure(StorageEnvironmentOptions options)
         {
-			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+            options.MaxLogFileSize = 10 * options.PageSize;
 
-	        options.ManualFlushing = true;
+            options.ManualFlushing = true;
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanUseMultipleLogFiles()
         {
             var bytes = new byte[1024];
@@ -48,7 +48,7 @@ namespace Voron.Tests.Journal
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void ShouldNotReadUncommittedTransaction()
         {
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -63,7 +63,7 @@ namespace Voron.Tests.Journal
             }
         }
 
-        [PrefixesFact]
+        [Fact]
         public void CanFlushDataFromLogToDataFile()
         {
             for (var i = 0; i < 100; i++)

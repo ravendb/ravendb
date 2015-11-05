@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -387,7 +387,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 #if (NETFX_CORE || PORTABLE || PORTABLE40)
                     _fullyTrusted = false;
 #elif !(NET20 || NET35 || PORTABLE40 || MONO)
-					AppDomain appDomain = AppDomain.CurrentDomain;
+                    AppDomain appDomain = AppDomain.CurrentDomain;
 
                     _fullyTrusted = appDomain.IsHomogenous && appDomain.IsFullyTrusted;
 #else

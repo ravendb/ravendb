@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Client.Connection;
 using Raven.Tests.Common;
 
@@ -6,42 +6,42 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Replication
 {
-	public class FailoverDisabled : ReplicationBase
-	{
-		[Fact]
-		public void CanDisableFailoverByDisablingDestination()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+    public class FailoverDisabled : ReplicationBase
+    {
+        [Fact]
+        public void CanDisableFailoverByDisablingDestination()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
-			RunReplication(store1, store2, disabled: true);
-			RunReplication(store1, store3, disabled: false);
+            RunReplication(store1, store2, disabled: true);
+            RunReplication(store1, store3, disabled: false);
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
-			Assert.Equal(1, serverClient.ReplicationInformer.ReplicationDestinationsUrls.Count());
-			
-			var expectedDestinationUrl = serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url;
-			Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", expectedDestinationUrl);
-		}
+            Assert.Equal(1, GetReplicationInformer(serverClient).ReplicationDestinationsUrls.Count());
 
-		[Fact]
-		public void CanDisableFailoverByDisablingDestinationOnClientOnly()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-			var store3 = CreateStore();
+            var expectedDestinationUrl = GetReplicationInformer(serverClient).ReplicationDestinationsUrls[0].Url;
+            Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", expectedDestinationUrl);
+        }
 
-			RunReplication(store1, store2, ignoredClient: true);
-			RunReplication(store1, store3, ignoredClient: false);
+        [Fact]
+        public void CanDisableFailoverByDisablingDestinationOnClientOnly()
+        {
+            var store1 = CreateStore();
+            var store2 = CreateStore();
+            var store3 = CreateStore();
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            RunReplication(store1, store2, ignoredClient: true);
+            RunReplication(store1, store3, ignoredClient: false);
 
-			Assert.Equal(1, serverClient.ReplicationInformer.ReplicationDestinationsUrls.Count());
-			Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url);
-		}
-	}
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
+
+            Assert.Equal(1, GetReplicationInformer(serverClient).ReplicationDestinationsUrls.Count());
+            Assert.Equal(store3.Url + "/databases/" + store3.DefaultDatabase + "/", GetReplicationInformer(serverClient).ReplicationDestinationsUrls[0].Url);
+        }
+    }
 }

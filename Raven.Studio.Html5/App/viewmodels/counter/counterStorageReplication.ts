@@ -1,6 +1,3 @@
-﻿import app = require("durandal/app");
-import system = require("durandal/system");
-import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import counterStorageReplicationSetup = require("models/counter/counterStorageReplicationSetup");
@@ -9,9 +6,15 @@ import getCounterStorageReplicationCommand = require("commands/counter/getCounte
 import saveCounterStorageReplicationCommand = require("commands/counter/saveCounterStorageReplicationCommand");
 
 class counterStorageReplication extends viewModelBase {
-
+    appUrls: computedAppUrls;
     replicationsSetup = ko.observable<counterStorageReplicationSetup>().extend({ required: true });
     isSaveEnabled: KnockoutComputed<boolean>;
+
+    constructor() {
+        super();
+
+        this.appUrls = appUrl.forCurrentCounterStorage();
+    }
 
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();

@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -14,6 +15,7 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>29e5a0a1</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,6 +36,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -49,69 +52,62 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FizzWare.NBuilder">
+    <Reference Include="FizzWare.NBuilder, Version=3.0.1.0, Culture=neutral, PublicKeyToken=5651b03e12e42c12, processorArchitecture=MSIL">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentAssertions">
-      <HintPath>..\packages\FluentAssertions.3.4.0\lib\net45\FluentAssertions.dll</HintPath>
-    </Reference>
-    <Reference Include="FluentAssertions.Core">
-      <HintPath>..\packages\FluentAssertions.3.4.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Jint, Version=2.4.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Jint.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Lucene.Net">
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Owin, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.3.0.0\lib\net45\Microsoft.Owin.dll</HintPath>
+    <Reference Include="Microsoft.Owin, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.Owin.Host.HttpListener, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.0\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
+    <Reference Include="Microsoft.Owin.Host.HttpListener, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.1\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.Owin.Hosting, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
+    <Reference Include="Microsoft.Owin.Hosting, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.1\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices" />
     <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Net.Http" />
-    <Reference Include="System.Net.Http.Formatting, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Reactive.Core, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Rx-Core.2.2.5\lib\net45\System.Reactive.Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Reactive.Interfaces, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Rx-Interfaces.2.2.5\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
-    <Reference Include="System.Web.Http, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
+    <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -123,6 +119,9 @@
     </Reference>
     <Reference Include="xunit.extensions">
       <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="Jint">
+      <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -137,7 +136,19 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-3931.cs" />
+    <Compile Include="RavenDB-3973.cs" />
+    <Compile Include="RavenDB-3974.cs" />
     <Compile Include="BackupRestore.cs" />
+    <Compile Include="RavenDB-3559.cs" />
+    <Compile Include="RavenDB-3609.cs" />
+    <Compile Include="RavenDB-3726.cs" />
+    <Compile Include="RavenDB-3763.cs" />
+    <Compile Include="RavenDB-3818.cs" />
+    <Compile Include="RavenDB_3981.cs" />
+    <Compile Include="RavenDB_3488.cs" />
+    <Compile Include="RavenDB-3472-async.cs" />
+    <Compile Include="RavenDB_3646.cs" />
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />
     <Compile Include="RavenDB-3179.cs" />
@@ -146,10 +157,11 @@
     <Compile Include="RavenDB-3314.cs" />
     <Compile Include="RavenDB-3326.cs" />
     <Compile Include="RavenDB-3420.cs" />
-    <Compile Include="RavenDB-3460.cs" />
     <Compile Include="RavenDB-3465.cs" />
     <Compile Include="RavenDB-3472.cs" />
+    <Compile Include="RavenDB_3199.cs" />
     <Compile Include="RavenDB-3383.cs" />
+    <Compile Include="RavenDB_2706.cs" />
     <Compile Include="RavenDB-3393.cs" />
     <Compile Include="RavenDB-3401.cs" />
     <Compile Include="RavenDB-3451.cs" />
@@ -158,10 +170,11 @@
     <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB-3632.cs" />
     <Compile Include="RavenDB_3230.cs" />
+    <Compile Include="RavenDB_3460.cs" />
+    <Compile Include="RavenDB_3573.cs" />
     <Compile Include="RavenDB_3400.cs" />
     <Compile Include="RavenDB_3543.cs" />
     <Compile Include="RavenDB_3570.cs" />
-    <Compile Include="RavenDB_3573.cs" />
     <Compile Include="RavenDB_3365.cs" />
     <Compile Include="RavenDB_3580.cs" />
     <Compile Include="RavenDB_3271.cs" />
@@ -178,6 +191,14 @@
     <Compile Include="RavenDB-3300.cs" />
     <Compile Include="RavenDB-3301.cs" />
     <Compile Include="RavenDB3075.cs" />
+    <Compile Include="RavenDB_2712\GlobalConfigurationTest.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_JavascriptFunctions.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_PeriodicExport.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Quotas.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Replication.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_SqlReplication.cs" />
+    <Compile Include="RavenDB_2712\RavenDB_2712_Versioning.cs" />
     <Compile Include="RavenDB_2867.cs" />
     <Compile Include="RavenDB_2879.cs" />
     <Compile Include="RavenDB-2716.cs" />
@@ -186,7 +207,6 @@
     <Compile Include="RavenDB2854.cs" />
     <Compile Include="RavenDB_1344 .cs" />
     <Compile Include="RavenDB_1733.cs" />
-    <Compile Include="RavenDB_2115.cs" />
     <Compile Include="RavenDB_2699.cs" />
     <Compile Include="DatabaseConfiguration.cs" />
     <Compile Include="EmbeddedMultipleDatabases.cs" />
@@ -198,24 +218,20 @@
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
     <Compile Include="RavenDB-2036.cs" />
-    <Compile Include="RavenDB-2334.cs" />
     <Compile Include="RavenDB-2643.cs" />
     <Compile Include="RavenDB1009.cs" />
     <Compile Include="RavenDB1019.cs" />
     <Compile Include="RavenDB1025.cs" />
-    <Compile Include="RavenDB1067.cs" />
     <Compile Include="RavenDB1229.cs" />
     <Compile Include="RavenDB1247.cs" />
     <Compile Include="RavenDB1259.cs" />
     <Compile Include="RavenDB1260.cs" />
     <Compile Include="RavenDB1261.cs" />
-    <Compile Include="RavenDB1316.cs" />
     <Compile Include="RavenDB1369.cs" />
     <Compile Include="RavenDB1508.cs" />
     <Compile Include="RavenDB1519.cs" />
     <Compile Include="RavenDb1962.cs" />
     <Compile Include="RavenDB2408.cs" />
-    <Compile Include="RavenDB2537.cs" />
     <Compile Include="RavenDB2568.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_LoadTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryDynamicTests.cs" />
@@ -309,13 +325,10 @@
     <Compile Include="RavenDB_1600.cs" />
     <Compile Include="RavenDB_1601.cs" />
     <Compile Include="RavenDB_1609.cs" />
-    <Compile Include="RavenDB_1610.cs" />
-    <Compile Include="RavenDB_1650.cs" />
     <Compile Include="RavenDB_1666.cs" />
     <Compile Include="RavenDB_1716.cs" />
     <Compile Include="RavenDB_1717.cs" />
     <Compile Include="RavenDB_1735.cs" />
-    <Compile Include="RavenDB_1749.cs" />
     <Compile Include="RavenDB_1760.cs" />
     <Compile Include="RavenDB_1761.cs" />
     <Compile Include="RavenDB_1762.cs" />
@@ -349,7 +362,6 @@
     <Compile Include="RavenDB_2314.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="RavenDB_2387.cs" />
     <Compile Include="RavenDB_2424.cs" />
     <Compile Include="RavenDB_2391.cs" />
     <Compile Include="RavenDB_2432.cs" />
@@ -416,6 +428,7 @@
     <Compile Include="RavenDB_3237.cs" />
     <Compile Include="RavenDB_3248.cs" />
     <Compile Include="RavenDB_3264.cs" />
+    <Compile Include="RavenDB_3286.cs" />
     <Compile Include="RavenDB_3298.cs" />
     <Compile Include="RavenDB_3335.cs" />
     <Compile Include="Ravendb_334.cs" />
@@ -423,6 +436,8 @@
     <Compile Include="RavenDB_3373.cs" />
     <Compile Include="RavenDB_3375.cs" />
     <Compile Include="RavenDB_3381.cs" />
+    <Compile Include="RavenDB_3390.cs" />
+    <Compile Include="RavenDB_3417.cs" />
     <Compile Include="RavenDB_3418.cs" />
     <Compile Include="RavenDB_3422.cs" />
     <Compile Include="RavenDB_3435.cs" />
@@ -430,21 +445,26 @@
     <Compile Include="RavenDB_3448.cs" />
     <Compile Include="RavenDB_3462.cs" />
     <Compile Include="RavenDB_3484.cs" />
-    <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_3501.cs" />
     <Compile Include="RavenDB_3525.cs" />
     <Compile Include="RavenDB_3574.cs" />
     <Compile Include="Prefetcher\RavenDB_3581.cs" />
+    <Compile Include="RavenDB_3605.cs" />
     <Compile Include="RavenDB_3612.cs" />
     <Compile Include="RavenDB_3628.cs" />
     <Compile Include="RavenDB_3629.cs" />
+    <Compile Include="RavenDB_3639.cs" />
+    <Compile Include="RavenDB_3659.cs" />
     <Compile Include="RavenDB_3625.cs" />
     <Compile Include="RavenDB_3647.cs" />
     <Compile Include="RavenDB_3658.cs" />
     <Compile Include="RavenDB_367.cs" />
+    <Compile Include="RavenDB_3760.cs" />
     <Compile Include="RavenDB_381.cs" />
-    <Compile Include="RavenDB_384.cs" />
     <Compile Include="RavenDB_3864.cs" />
+    <Compile Include="RavenDB_3917.cs" />
+    <Compile Include="RavenDB_3929.cs" />
+    <Compile Include="RavenDB_3938.cs" />
     <Compile Include="RavenDB_406.cs" />
     <Compile Include="RavenDB_410.cs" />
     <Compile Include="RavenDB_421.cs" />
@@ -492,7 +512,6 @@
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
-    <Compile Include="RDBQA_16.cs" />
     <Compile Include="RDBQA_17.cs" />
     <Compile Include="RDBQA_18.cs" />
     <Compile Include="RDBQA_4.cs" />
@@ -510,6 +529,7 @@
     <Compile Include="RavenDB_3106.cs" />
     <Compile Include="RavenDB-3225.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
+    <Compile Include="windowsAuthGetUserInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
@@ -517,27 +537,27 @@
       <Name>Raven.Client.Authorization</Name>
     </ProjectReference>
     <ProjectReference Include="..\Bundles\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
-      <Project>{d185331d-2b7c-4251-8ebe-140ede1fab9f}</Project>
+      <Project>{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}</Project>
       <Name>Raven.Client.UniqueConstraints</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
+      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
+      <Name>Raven.Abstractions.Database</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
-      <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Backup\Raven.Backup.csproj">
-      <Project>{dbb6561c-6264-430d-8f3c-e11c6268981e}</Project>
-      <Name>Raven.Backup</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
-      <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
-      <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Migration\Raven.Migration.csproj">
-      <Project>{e6c2eaa5-b5bc-4be2-b981-0064e819dbeb}</Project>
+      <Project>{E6C2EAA5-B5BC-4BE2-B981-0064E819DBEB}</Project>
       <Name>Raven.Migration</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
@@ -553,7 +573,7 @@
       <Name>Raven.Tests.Bundles</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
-      <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
+      <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Core\Raven.Tests.Core.csproj">
@@ -561,23 +581,37 @@
       <Name>Raven.Tests.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
-      <Project>{1B88473F-743B-4F6B-8E5E-97BB816E6C68}</Project>
+      <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
       <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>
       <Name>Raven.Tests.MailingList</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Smuggler\Raven.Tests.Smuggler.csproj">
+      <Project>{44a7d299-5ae6-4e2e-9e32-18cb9fd82264}</Project>
+      <Name>Raven.Tests.Smuggler</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
-      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
+      <Name>Raven.Smuggler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Backup\Raven.Backup.csproj">
+      <Project>{DBB6561C-6264-430D-8F3C-E11C6268981E}</Project>
+      <Name>Raven.Backup</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -590,6 +624,7 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+    <Error Condition="!Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

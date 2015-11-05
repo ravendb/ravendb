@@ -14,29 +14,29 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class MissingAnalyzer : RavenTest
-	{
-		[Fact]
-		public void Should_give_clear_error_when_starting()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var e = Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("foo",
-																							   new IndexDefinition
-																							   {
-																								   Map =
-																									   "from doc in docs select new { doc.Name}",
-																								   Analyzers =
-																									   {
-																										   {
-																											   "Name",
-																											   "foo bar"
-																											   }
-																									   }
-																							   }));
+    public class MissingAnalyzer : RavenTest
+    {
+        [Fact]
+        public void Should_give_clear_error_when_starting()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var e = Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("foo",
+                                                                                               new IndexDefinition
+                                                                                               {
+                                                                                                   Map =
+                                                                                                       "from doc in docs select new { doc.Name}",
+                                                                                                   Analyzers =
+                                                                                                       {
+                                                                                                           {
+                                                                                                               "Name",
+                                                                                                               "foo bar"
+                                                                                                               }
+                                                                                                       }
+                                                                                               }));
 
-				Assert.Equal("Cannot find analyzer type 'foo bar' for field: Name", e.Message);
-			}
-		}
-	}
+                Assert.Equal("Cannot find analyzer type 'foo bar' for field: Name", e.Message);
+            }
+        }
+    }
 }

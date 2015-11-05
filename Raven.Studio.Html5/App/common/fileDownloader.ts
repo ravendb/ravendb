@@ -1,4 +1,4 @@
-﻿class fileDownloader {
+class fileDownloader {
 
     private static cleanup(domCacheElementName: string) {
         // clean previous elements (in any)

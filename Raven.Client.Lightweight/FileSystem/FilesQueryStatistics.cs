@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 namespace Raven.Client.FileSystem
 {
     /// <summary>
@@ -25,11 +20,5 @@ namespace Raven.Client.FileSystem
         /// Gets or sets the skipped results
         /// </summary>
         public int SkippedResults { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether any of the documents returned by this query
-        /// are non authoritative (modified by uncommitted transaction).
-        /// </summary>
-        public bool NonAuthoritativeInformation { get; set; }
     }
 }

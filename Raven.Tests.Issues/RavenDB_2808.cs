@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2808.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,69 +15,69 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2808 : ReplicationBase
-	{
-		[Fact]
-		public void DuringRestoreReplicationDestinationsCanBeDisabled()
-		{
-			var backupPath = NewDataPath();
+    public class RavenDB_2808 : ReplicationBase
+    {
+        [Fact]
+        public void DuringRestoreReplicationDestinationsCanBeDisabled()
+        {
+            var backupPath = NewDataPath();
 
-			using (var store = NewRemoteDocumentStore(runInMemory: false))
-			{
-				store
-					.DatabaseCommands
-					.GlobalAdmin
-					.CreateDatabase(new DatabaseDocument
-					{
-						Id = "N1", 
-						Settings =
-						{
-							{ Constants.ActiveBundles, "Replication" },
-							{ "Raven/DataDir", NewDataPath() }
-						}
-					});
+            using (var store = NewRemoteDocumentStore(runInMemory: false))
+            {
+                store
+                    .DatabaseCommands
+                    .GlobalAdmin
+                    .CreateDatabase(new DatabaseDocument
+                    {
+                        Id = "N1", 
+                        Settings =
+                        {
+                            { Constants.ActiveBundles, "Replication" },
+                            { "Raven/DataDir", NewDataPath() }
+                        }
+                    });
 
-				var commands = store.DatabaseCommands.ForDatabase("N1");
+                var commands = store.DatabaseCommands.ForDatabase("N1");
 
-				commands
-					.Put(
-						Constants.RavenReplicationDestinations,
-						null,
-						RavenJObject.FromObject(new ReplicationDocument
-						{
-							Destinations = new List<ReplicationDestination>
-							{
-								new ReplicationDestination { Database = "N2", Url = store.Url }
-							}
-						}),
-						new RavenJObject());
+                commands
+                    .Put(
+                        Constants.RavenReplicationDestinations,
+                        null,
+                        RavenJObject.FromObject(new ReplicationDocument
+                        {
+                            Destinations = new List<ReplicationDestination>
+                            {
+                                new ReplicationDestination { Database = "N2", Url = store.Url }
+                            }
+                        }),
+                        new RavenJObject());
 
-				commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1");
+                commands.GlobalAdmin.StartBackup(backupPath, null, incremental: false, databaseName: "N1");
 
-				WaitForBackup(commands, true);
+                WaitForBackup(commands, true);
 
-				var operation = commands
-					.GlobalAdmin
-					.StartRestore(new DatabaseRestoreRequest
-					{
-						BackupLocation = backupPath,
-						DatabaseName = "N3",
-						DisableReplicationDestinations = true
-					});
+                var operation = commands
+                    .GlobalAdmin
+                    .StartRestore(new DatabaseRestoreRequest
+                    {
+                        BackupLocation = backupPath,
+                        DatabaseName = "N3",
+                        DisableReplicationDestinations = true
+                    });
 
-				var status = operation.WaitForCompletion();
+                var status = operation.WaitForCompletion();
 
-				var replicationDestinationsAsJson = commands
-					.ForDatabase("N3")
-					.Get(Constants.RavenReplicationDestinations);
+                var replicationDestinationsAsJson = commands
+                    .ForDatabase("N3")
+                    .Get(Constants.RavenReplicationDestinations);
 
-				var replicationDocument = replicationDestinationsAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
-				Assert.Equal(1, replicationDocument.Destinations.Count);
-				foreach (var destination in replicationDocument.Destinations)
-				{
-					Assert.True(destination.Disabled);
-				}
-			}
-		}
-	}
+                var replicationDocument = replicationDestinationsAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
+                Assert.Equal(1, replicationDocument.Destinations.Count);
+                foreach (var destination in replicationDocument.Destinations)
+                {
+                    Assert.True(destination.Disabled);
+                }
+            }
+        }
+    }
 }

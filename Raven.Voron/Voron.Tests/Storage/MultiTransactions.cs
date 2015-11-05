@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Voron.Impl;
 using Xunit;
@@ -7,7 +7,7 @@ namespace Voron.Tests.Storage
 {
     public class MultiTransactions
     {
-        [PrefixesFact]
+        [Fact]
         public void ShouldWork()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))

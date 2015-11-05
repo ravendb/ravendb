@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Mono.Unix.Native;
+using Raven.Unix.Native;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Trees;
@@ -19,7 +19,7 @@ namespace Voron.Platform.Posix
         public readonly long SysPageSize;
         private long _totalAllocationSize;
 
-        public PosixMemoryMapPager(string file, long? initialFileSize = null)
+        public PosixMemoryMapPager(int pageSize,string file, long? initialFileSize = null):base(pageSize)
         {
             _file = file;
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,

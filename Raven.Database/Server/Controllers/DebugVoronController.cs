@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DebugVoronController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -17,7 +17,7 @@ using Voron.Trees;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class DebugVoronController : BaseAdminController
+    public class DebugVoronController : BaseAdminDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("admin/voron/tree")]

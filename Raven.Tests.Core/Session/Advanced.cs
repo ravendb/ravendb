@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Commands;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection.Profiling;
@@ -16,180 +16,180 @@ namespace Raven.Tests.Core.Session
     public class Advanced : RavenCoreTestBase
     {
         [Fact]
-		public void CanGetChangesInformation()
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					Assert.False(session.Advanced.HasChanges);
+        public void CanGetChangesInformation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.False(session.Advanced.HasChanges);
 
-					var user = new User { Id = "users/1", Name = "John" };
-					session.Store(user);
+                    var user = new User { Id = "users/1", Name = "John" };
+                    session.Store(user);
 
-					Assert.True(session.Advanced.HasChanged(user));
-					Assert.True(session.Advanced.HasChanges);
+                    Assert.True(session.Advanced.HasChanged(user));
+                    Assert.True(session.Advanced.HasChanges);
 
-					session.SaveChanges();
+                    session.SaveChanges();
 
-					Assert.False(session.Advanced.HasChanged(user));
-					Assert.False(session.Advanced.HasChanges);
+                    Assert.False(session.Advanced.HasChanged(user));
+                    Assert.False(session.Advanced.HasChanges);
 
-					user.AddressId = "addresses/1";
-					Assert.True(session.Advanced.HasChanged(user));
-					Assert.True(session.Advanced.HasChanges);
+                    user.AddressId = "addresses/1";
+                    Assert.True(session.Advanced.HasChanged(user));
+                    Assert.True(session.Advanced.HasChanges);
 
                     var whatChanged = session.Advanced.WhatChanged();
                     Assert.Equal("AddressId", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldName);
                     Assert.Equal("", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldOldValue);
                     Assert.Equal("addresses/1", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldNewValue);
 
-					session.Advanced.Clear();
-					Assert.False(session.Advanced.HasChanges);
+                    session.Advanced.Clear();
+                    Assert.False(session.Advanced.HasChanges);
 
-					var user2 = new User { Id = "users/2", Name = "John" };
-					session.Store(user2);
-					session.Delete(user2);
+                    var user2 = new User { Id = "users/2", Name = "John" };
+                    session.Store(user2);
+                    session.Delete(user2);
 
-					Assert.True(session.Advanced.HasChanged(user2));
-					Assert.True(session.Advanced.HasChanges);
-				}
-			}
-		}
+                    Assert.True(session.Advanced.HasChanged(user2));
+                    Assert.True(session.Advanced.HasChanges);
+                }
+            }
+        }
 
-		[Fact]
-		public void CanUseEvict()
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					var user = new User { Id = "users/1", Name = "John" };
+        [Fact]
+        public void CanUseEvict()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
 
-					session.Store(user);
-					session.SaveChanges();
-				}
+                    session.Store(user);
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					Assert.Equal(0, session.Advanced.NumberOfRequests);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
 
-					session.Load<User>("users/1");
+                    session.Load<User>("users/1");
 
-					Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-					var user = session.Load<User>("users/1");
+                    var user = session.Load<User>("users/1");
 
-					Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-					session.Advanced.Evict(user);
+                    session.Advanced.Evict(user);
 
-					session.Load<User>("users/1");
+                    session.Load<User>("users/1");
 
-					Assert.Equal(2, session.Advanced.NumberOfRequests);
-				}
-			}
-		}
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
 
-		[Fact]
-		public void CanUseClear()
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					var user = new User { Id = "users/1", Name = "John" };
+        [Fact]
+        public void CanUseClear()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
 
-					session.Store(user);
-					session.SaveChanges();
-				}
+                    session.Store(user);
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					Assert.Equal(0, session.Advanced.NumberOfRequests);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
 
-					session.Load<User>("users/1");
+                    session.Load<User>("users/1");
 
-					Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-					session.Load<User>("users/1");
+                    session.Load<User>("users/1");
 
-					Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-					session.Advanced.Clear();
+                    session.Advanced.Clear();
 
-					session.Load<User>("users/1");
+                    session.Load<User>("users/1");
 
-					Assert.Equal(2, session.Advanced.NumberOfRequests);
-				}
-			}
-		}
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
 
-		[Fact]
-		public void CanUseIsLoaded()
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					var user = new User { Id = "users/1", Name = "John" };
+        [Fact]
+        public void CanUseIsLoaded()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
 
-					session.Store(user);
-					session.SaveChanges();
-				}
+                    session.Store(user);
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					Assert.False(session.Advanced.IsLoaded("users/1"));
+                using (var session = store.OpenSession())
+                {
+                    Assert.False(session.Advanced.IsLoaded("users/1"));
 
-					session.Load<User>("users/1");
+                    session.Load<User>("users/1");
 
-					Assert.True(session.Advanced.IsLoaded("users/1"));
-					Assert.False(session.Advanced.IsLoaded("users/2"));
+                    Assert.True(session.Advanced.IsLoaded("users/1"));
+                    Assert.False(session.Advanced.IsLoaded("users/2"));
 
-					session.Advanced.Clear();
+                    session.Advanced.Clear();
 
-					Assert.False(session.Advanced.IsLoaded("users/1"));
-				}
-			}
-		}
+                    Assert.False(session.Advanced.IsLoaded("users/1"));
+                }
+            }
+        }
 
-		[Fact]
-		public void CanUseRefresh()
-		{
-			using (var store = GetDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					var user = new User { Id = "users/1", Name = "John" };
+        [Fact]
+        public void CanUseRefresh()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Id = "users/1", Name = "John" };
 
-					session.Store(user);
-					session.SaveChanges();
-				}
+                    session.Store(user);
+                    session.SaveChanges();
+                }
 
-				using (var session = store.OpenSession())
-				{
-					var user = session.Load<User>("users/1");
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
 
-					Assert.NotNull(user);
-					Assert.Equal("John", user.Name);
+                    Assert.NotNull(user);
+                    Assert.Equal("John", user.Name);
 
-					var u = store.DatabaseCommands.Get("users/1");
-					u.DataAsJson["Name"] = "Jonathan";
-					store.DatabaseCommands.Put("users/1", u.Etag, u.DataAsJson, u.Metadata);
+                    var u = store.DatabaseCommands.Get("users/1");
+                    u.DataAsJson["Name"] = "Jonathan";
+                    store.DatabaseCommands.Put("users/1", u.Etag, u.DataAsJson, u.Metadata);
 
-					user = session.Load<User>("users/1");
+                    user = session.Load<User>("users/1");
 
-					Assert.NotNull(user);
-					Assert.Equal("John", user.Name);
+                    Assert.NotNull(user);
+                    Assert.Equal("John", user.Name);
 
-					session.Advanced.Refresh(user);
+                    session.Advanced.Refresh(user);
 
-					Assert.NotNull(user);
-					Assert.Equal("Jonathan", user.Name);
-				}
-			}
-		}
+                    Assert.NotNull(user);
+                    Assert.Equal("Jonathan", user.Name);
+                }
+            }
+        }
 
         [Fact]
         public void CanUseOptmisticConcurrency()

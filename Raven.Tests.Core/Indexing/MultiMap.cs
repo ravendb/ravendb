@@ -1,4 +1,4 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
 using Raven.Client;
 using System;

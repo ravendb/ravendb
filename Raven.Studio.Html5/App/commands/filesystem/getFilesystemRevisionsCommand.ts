@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import file = require("models/filesystem/file");
 import filesystem = require("models/filesystem/filesystem");
 import pagedResultSet = require("common/pagedResultSet");
@@ -16,7 +16,7 @@ class getFilesystemRevisionsCommand extends commandBase {
         filesTask.done((results: filesystemFileHeaderDto[]) => {
             var wrappedResult = {
                 Files: results,
-                FileCount: (results.length == this.take) ? this.take + this.skip + 10 : this.skip + results.length,
+                FileCount: (results.length === this.take) ? this.take + this.skip + 10 : this.skip + results.length,
                 Start: this.skip,
                 PageSize: this.take
             }

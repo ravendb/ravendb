@@ -6,20 +6,20 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class EmbeddableDocumentStoreUsingUrlWithConnectionString : RavenTest
-	{
-		[Fact]
-		public void ShouldWork()
-		{
-			using (var store = new EmbeddableDocumentStore
-			{
-				ConnectionStringName = "Server"
-			})
-			{
-				store.Initialize();
-				Assert.IsType<ServerClient>(store.DatabaseCommands);
-				Assert.Null(store.SystemDatabase);
-			}
-		}
-	}
+    public class EmbeddableDocumentStoreUsingUrlWithConnectionString : RavenTest
+    {
+        [Fact]
+        public void ShouldWork()
+        {
+            using (var store = new EmbeddableDocumentStore
+            {
+                ConnectionStringName = "Server"
+            })
+            {
+                store.Initialize();
+                Assert.IsType<ServerClient>(store.DatabaseCommands);
+                Assert.Null(store.SystemDatabase);
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿import inputCursor = require('common/inputCursor');
+import inputCursor = require('common/inputCursor');
 
 class autoCompleterSupport {
   constructor(private autoCompleteBase: KnockoutObservableArray<KnockoutObservable<string>>, private autoCompleteResults: KnockoutObservableArray<KnockoutObservable<string>>,private showAllOptionOnEmptyInput: boolean = false) {
