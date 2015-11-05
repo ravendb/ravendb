@@ -66,14 +66,14 @@ namespace Raven.Database.Plugins.Builtins
             options.CountersLandlord.ForAllCounters(cs =>
             {
                 pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Core.IndexStoragePath, PathType = PathType.Index, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
-                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
+                pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Storage.JournalsStoragePath, PathType = PathType.Journal, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
                 pathsToCheck.Add(new PathToCheck { Path = cs.Configuration.Core.DataDirectory, PathType = PathType.Data, ResourceName = cs.Name, ResourceType = ResourceType.Counters });
             });
 
             options.TimeSeriesLandlord.ForAllTimeSeries(ts =>
             {
                 pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Core.IndexStoragePath, PathType = PathType.Index, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
-                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.Voron.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
+                pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Storage.JournalsStoragePath, PathType = PathType.Journal, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
                 pathsToCheck.Add(new PathToCheck { Path = ts.Configuration.Core.DataDirectory, PathType = PathType.Data, ResourceName = ts.Name, ResourceType = ResourceType.TimeSeries });
             });
 
