@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Database.Json
         public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
         {
             var rjo = new RavenJObject();
-            foreach (var property in jsObject.AsObject().Properties)
+            foreach (var property in jsObject.AsObject().GetOwnProperties())
             {
                 if (property.Key == Constants.ReduceKeyFieldName || property.Key == Constants.DocumentIdFieldName)
                     continue;
@@ -93,7 +93,7 @@ namespace Raven.Abstractions.Database.Json
                 var jsArray = v.AsArray();
                 var rja = new RavenJArray();
 
-                foreach (var property in jsArray.Properties)
+                foreach (var property in jsArray.GetOwnProperties())
                 {
                     if (property.Key == "length")
                         continue;
