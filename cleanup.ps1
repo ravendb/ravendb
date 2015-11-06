@@ -1,16 +1,24 @@
 $path = split-path -parent $MyInvocation.MyCommand.Definition
-$title = "Cleanup"
-$message = "Do you want to DELETE all uncommited files in " + $path + "?"
 
-$yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", `
-    "Deletes all uncommited files in the folder."
+if (($args.Count -gt 0) -and ($args[0] -eq "force"))
+{
+    $result = 0
+} 
+else
+{
+    $title = "Cleanup"
+    $message = "Do you want to DELETE all uncommited files in " + $path + "?"
 
-$no = New-Object System.Management.Automation.Host.ChoiceDescription "&No", `
-    "Retains all uncommited files in the folder."
+    $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", `
+        "Deletes all uncommited files in the folder."
 
-$options = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
+    $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No", `
+        "Retains all uncommited files in the folder."
+
+    $options = [System.Management.Automation.Host.ChoiceDescription[]]($yes, $no)
     
-$result = $host.ui.PromptForChoice($title, $message, $options, 1) 
+    $result = $host.ui.PromptForChoice($title, $message, $options, 1) 
+}
 
 $gitPath = "C:\Program Files\Git\bin\git.exe";
 If (Test-Path $gitPath) {
@@ -21,6 +29,7 @@ If (Test-Path $gitPath) {
 switch ($result)
     {
         0 {
+            Write-Host "Performing cleanup"
             Get-ChildItem $path -Include bin,obj,build -Recurse -Force | Select -ExpandProperty FullName | Where {$_ -notlike '*Imports*' -and $_ -notlike '*pvc-packages*'} | Remove-Item -Force -Recurse
             &$gitPath clean -f -x -d
         }
