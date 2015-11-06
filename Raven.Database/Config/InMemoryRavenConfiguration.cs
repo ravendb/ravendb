@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
@@ -264,14 +263,10 @@ namespace Raven.Database.Config
             }
         }
 
-        #region Index settings
-
         /// <summary>
         /// The indexing scheduler to use
         /// </summary>
         public IIndexingClassifier IndexingClassifier { get; set; }
-
-        #endregion
 
         [JsonIgnore]
         public CompositionContainer Container
@@ -295,20 +290,6 @@ namespace Raven.Database.Config
         internal bool IsTenantDatabase { get; set; }
 
         public bool EnableResponseLoggingForEmbeddedDatabases { get; set; }
-
-        [Browsable(false)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public void SetSystemDatabase()
-        {
-            IsTenantDatabase = false;
-        }
-
-        [Browsable(false)]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool IsSystemDatabase()
-        {
-            return IsTenantDatabase == false;
-        }
 
         internal void ResetContainer()
         {

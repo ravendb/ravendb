@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Security
 
         public void Execute(DocumentDatabase database)
         {
-            if (database.Configuration.IsSystemDatabase() == false)
+            if (database.Configuration.IsTenantDatabase)
                 return;
 
             if (ValidateLicense.CurrentLicense.IsCommercial && ValidateLicense.CurrentLicense.Error == false)
