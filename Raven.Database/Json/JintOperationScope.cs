@@ -47,7 +47,8 @@ namespace Raven.Database.Json
             if (v.IsString())
             {
                 const string RavenDataByteArrayToBase64 = "raven-data:byte[];base64,";
-                var value = v.AsString();
+                var valueAsObject = v.ToObject();
+                var value = valueAsObject != null ? valueAsObject.ToString() : null;
                 if (value != null && value.StartsWith(RavenDataByteArrayToBase64))
                 {
                     value = value.Remove(0, RavenDataByteArrayToBase64.Length);

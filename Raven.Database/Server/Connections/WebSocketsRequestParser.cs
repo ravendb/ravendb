@@ -195,7 +195,7 @@ namespace Raven.Database.Server.Connections
 
             if (request.ResourceName == Constants.SystemDatabase)
             {
-                var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+                var oneTimetokenPrincipal = request.User as OneTimeTokenPrincipal;
 
                 if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
                     DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
@@ -225,7 +225,7 @@ namespace Raven.Database.Server.Connections
         {
             base.AuthenticateRequest(request);
 
-            var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+            var oneTimetokenPrincipal = request.User as OneTimeTokenPrincipal;
 
             if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
                 DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)

@@ -152,7 +152,7 @@ namespace Raven.Database.Actions
                                 {
                                     var entityName = docMetadata.Metadata.Value<string>(Constants.RavenEntityName);
 
-                                    if (string.IsNullOrEmpty(entityName) == false) 
+                                    if (string.IsNullOrEmpty(entityName) == false)
                                         Database.LastCollectionEtags.Update(entityName, afterTouchEtag);
                                 }
                             }
@@ -188,7 +188,7 @@ namespace Raven.Database.Actions
 
         private static void IsIndexNameValid(string name)
         {
-            var error = string.Format("Index name {0} not permitted. ", name).Replace("//","__");
+            var error = string.Format("Index name {0} not permitted. ", name).Replace("//", "__");
 
             if (name.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
             {
@@ -311,7 +311,7 @@ namespace Raven.Database.Actions
 
                 var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x).indexId).ToArray();
                 Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
-            
+
                 return createdIndexes.ToArray();
             }
             catch (Exception e)
@@ -420,7 +420,7 @@ namespace Raven.Database.Actions
                 {
                     maxId = Database.IndexStorage.Indexes.Max();
                 }
-                definition.IndexId = (int) Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
+                definition.IndexId = (int)Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions);
                 if (definition.IndexId <= maxId)
                 {
                     actions.General.SetIdentityValue("IndexId", maxId + 1);
@@ -583,7 +583,7 @@ namespace Raven.Database.Actions
                 })
                 {
                     op.Init();
-                    
+
                     if ((op.Header.TotalResults > Database.Configuration.MaxNumberOfItemsToProcessInSingleBatch))
                     {
                         // we don't apply this optimization if the total number of results 
@@ -636,13 +636,13 @@ namespace Raven.Database.Actions
                 }
             });
 
-            if (result != null && result.Documents != null && result.Documents.Count > 0)
+            if (result != null && result.Documents != null && result.Documents.Count >= 0)
             {
                 using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, WorkContext.CancellationToken))
                 {
                     Database.IndexingExecuter.IndexPrecomputedBatch(result, linked.Token);
 
-                    if (index.IsTestIndex) 
+                    if (index.IsTestIndex)
                         TransactionalStorage.Batch(accessor => accessor.Indexing.TouchIndexEtag(index.IndexId));
                 }
             }
@@ -651,26 +651,35 @@ namespace Raven.Database.Actions
 
         private string GetQueryForAllMatchingDocumentsForIndex(AbstractViewGenerator generator)
         {
-            var terms = new TermsQueryRunner(Database).GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
+            var terms = new TermsQueryRunner(Database)
+                .GetTerms(Constants.DocumentsByEntityNameIndex, "Tag", null, int.MaxValue);
 
             var sb = new StringBuilder();
 
             foreach (var entityName in generator.ForEntityNames)
             {
+                bool added = false;
                 foreach (var term in terms)
                 {
                     if (string.Equals(entityName, term, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (sb.Length != 0)
-                            sb.Append(" OR ");
-
-                        sb.Append("Tag:[[").Append(term).Append("]]");
+                        AppendTermToQuery(term, sb);
+                        added = true;
                     }
                 }
+                if (added == false)
+                    AppendTermToQuery(entityName, sb);
             }
 
-            var query = sb.ToString();
-            return query;
+            return sb.ToString();
+        }
+
+        private static void AppendTermToQuery(string term, StringBuilder sb)
+        {
+            if (sb.Length != 0)
+                sb.Append(" OR ");
+
+            sb.Append("Tag:[[").Append(term).Append("]]");
         }
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
@@ -725,11 +734,11 @@ namespace Raven.Database.Actions
 
             long taskId;
             Database.Tasks.AddTask(deleteIndexTask, null, new TaskActions.PendingTaskDescription
-                                                          {
-                                                              StartTime = SystemTime.UtcNow,
-                                                              TaskType = TaskActions.PendingTaskType.IndexDeleteOperation,
-                                                              Payload = indexName
-                                                          }, out taskId);
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.IndexDeleteOperation,
+                Payload = indexName
+            }, out taskId);
 
             deleteIndexTask.ContinueWith(t =>
             {
@@ -783,7 +792,7 @@ namespace Raven.Database.Actions
         public bool DeleteIndex(string name)
         {
             var instance = IndexDefinitionStorage.GetIndexDefinition(name);
-            if (instance == null) 
+            if (instance == null)
                 return false;
 
             DeleteIndex(instance);
@@ -794,7 +803,7 @@ namespace Raven.Database.Actions
         {
             using (IndexDefinitionStorage.TryRemoveIndexContext())
             {
-                if (instance == null) 
+                if (instance == null)
                     return;
 
                 // Set up a flag to signal that this is something we're doing
@@ -825,7 +834,7 @@ namespace Raven.Database.Actions
                 var indexChangeType = isSideBySideReplacement ? IndexChangeTypes.SideBySideReplace : IndexChangeTypes.IndexRemoved;
 
                 // We raise the notification now because as far as we're concerned it is done *now*
-                TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => 
+                TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
                     Database.Notifications.RaiseNotifications(new IndexChangeNotification
                 {
                     Name = instance.Name,

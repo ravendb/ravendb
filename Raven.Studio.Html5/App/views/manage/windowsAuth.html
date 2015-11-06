@@ -1,10 +1,14 @@
 <form class="form-horizontal" role="form" data-bind="submit: saveChanges">
-    <div class="panel panel-default">
+    <div data-bind="visible: isForbidden" class="text-center">
+        <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+    </div>
+
+    <div class="panel panel-default" data-bind="visible: isForbidden() == false">
         <div class="panel-heading">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
             <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes(Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-            <button type="button" class="btn btn-default" data-bind="click: addUserSettings, visible: isUsersSectionActive" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
-            <button type="button" class="btn btn-default" data-bind="click: addGroupSettings, visible: !isUsersSectionActive()"><i class="fa fa-plus"></i> Add Group Settings</button>
+            <button type="button" class="btn btn-default" data-bind="click: addUserSettings, disable: isReadOnly, visible: isUsersSectionActive" title="Add user settings(Alt+N)" accesskey="N"><i class="fa fa-plus"></i> Add User Settings</button>
+            <button type="button" class="btn btn-default" data-bind="click: addGroupSettings, disable: isReadOnly, visible: !isUsersSectionActive()"><i class="fa fa-plus"></i> Add Group Settings</button>
         </div>
         <div class="panel-body">
             <!-- Nav tabs -->
@@ -21,7 +25,9 @@
                             <div class="panel-heading">
                                 <h3 class="panel-title">
                                     <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
-                                    <button type="button" style="display:inline-block;" class="close" title="Remove" data-bind="click: $parent.removeUserSettings.bind($parent)">×</button>
+                                    <button type="button" style="display: inline-block;" class="close" title="Remove" data-bind="click: $parent.removeUserSettings.bind($parent), visible: $root.isReadOnly() == false">
+                                        <i class="fa fa-times"></i>
+                                    </button>
                                 </h3>
                             </div>
                             <div class="panel-body">
@@ -56,7 +62,7 @@
                                                     <td>Name</td>
                                                     <td>Type</td>
                                                     <td>
-                                                        <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase">
+                                                        <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: $root.isReadOnly() == false">
                                                             <i class="fa fa-plus"></i>
                                                         </button>
                                                     </td>
@@ -96,7 +102,7 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <button type="button" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data)" title="Remove this database">
+                                                        <button type="button" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.isReadOnly() == false" title="Remove this database">
                                                             <i class="fa fa-times"></i>
                                                         </button>
                                                     </td>
@@ -115,7 +121,9 @@
                             <div class="panel-heading">
                                 <h3 class="panel-title">
                                     <span><span data-bind="text: name() ? name() : 'untitled'"></span></span>
-                                    <button type="button" style="display:inline-block;" class="close" title="Remove" data-bind="click: $parent.removeGroupSettings.bind($parent)">×</button>
+                                    <button type="button" style="display: inline-block;" class="close" title="Remove" data-bind="click: $parent.removeGroupSettings.bind($parent), visible: $root.isReadOnly() == false">
+                                        <i class="fa fa-times"></i>
+                                    </button>
                                 </h3>
                             </div>
                             <div class="panel-body">
@@ -150,7 +158,7 @@
                                                     <td>Name</td>
                                                     <td>Type</td>
                                                     <td>
-                                                        <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase">
+                                                        <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: $root.isReadOnly() == false">
                                                             <i class="fa fa-plus"></i>
                                                         </button>
                                                     </td>
@@ -190,7 +198,7 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <button type="button" class="close" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data)" title="Remove this database">
+                                                        <button type="button" class="close" style="display: inline-block; font-size: 14px;" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: $root.isReadOnly() == false" title="Remove this database">
                                                             <i class="fa fa-times"></i>
                                                         </button>
                                                     </td>

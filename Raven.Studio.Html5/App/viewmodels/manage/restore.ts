@@ -60,38 +60,44 @@ class restore extends viewModelBase {
 
     disableReplicationDestinations = ko.observable<boolean>(false);
     generateNewDatabaseId = ko.observable<boolean>(false);
-
+    isForbidden = ko.observable<boolean>();
     isBusy = ko.observable<boolean>();
     anotherRestoreInProgres = ko.observable<boolean>(false);
 
     canActivate(args): any {
-        this.isBusy(true);
         var deferred = $.Deferred();
-        var db = appUrl.getSystemDatabase();
-        var self = this;
 
-        new getDocumentWithMetadataCommand("Raven/Restore/InProgress", db, true).execute()
-            .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }))
-            .done((result) => {
-                if (result) {
-                    // looks like another restore is in progress
-                    this.anotherRestoreInProgres(true);
-                    new monitorRestoreCommand($.Deferred(), s => {
-                        self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions)(s);
-                        self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions)(s);
-                    })
-                        .execute()
-                        .always(() => {
-                            $("#databaseRawLogsContainer").resize();
-                            $("#filesystemRawLogsContainer").resize();
-                            this.anotherRestoreInProgres(false);
-                        });
+        this.isForbidden(shell.isGlobalAdmin() === false);
+        if (this.isForbidden() === false) {
+            this.isBusy(true);
+            var db = appUrl.getSystemDatabase();
+            var self = this;
 
-                } else {
-                    this.isBusy(false);
-                }
-                deferred.resolve({ can: true })
-            });
+            new getDocumentWithMetadataCommand("Raven/Restore/InProgress", db, true).execute()
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }))
+                .done((result) => {
+                    if (result) {
+                        // looks like another restore is in progress
+                        this.anotherRestoreInProgres(true);
+                        new monitorRestoreCommand($.Deferred(), s => {
+                            self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions)(s);
+                            self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions)(s);
+                        })
+                            .execute()
+                            .always(() => {
+                                $("#databaseRawLogsContainer").resize();
+                                $("#filesystemRawLogsContainer").resize();
+                                this.anotherRestoreInProgres(false);
+                            });
+
+                    } else {
+                        this.isBusy(false);
+                    }
+                    deferred.resolve({ can: true });
+                });
+        } else {
+            deferred.resolve({ can: true });
+        }
 
         return deferred;
     }

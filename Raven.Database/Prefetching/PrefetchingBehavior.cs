@@ -902,6 +902,16 @@ namespace Raven.Database.Prefetching
 
         public void AfterDelete(string key, Etag deletedEtag)
         {
+            if (context.RunIndexing == false && PrefetchingUser == PrefetchingUser.Indexer)
+            {
+                // no need to collect info about deleted documents for the indexer's prefetcher when the indexing is disabled
+                // we use documentsToRemove collection to filter out already deleted documents retrieved by the prefetcher (FilterDocuments)
+                // and in order to skip deletions of docs inserted for the first time from an index (ShouldSkipDeleteFromIndex)
+                // because those two cases are important for the live indexing process, we can safely omit that when the indexing is off
+
+                return;
+            }
+
             documentsToRemove.AddOrUpdate(key, s => new HashSet<Etag> { deletedEtag },
                                           (s, set) => new HashSet<Etag>(set) { deletedEtag });
         }

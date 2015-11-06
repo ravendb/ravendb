@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Controllers
             }
             else
             {
-                var oneTimetokenPrincipal =  User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+                var oneTimetokenPrincipal =  User as OneTimeTokenPrincipal;
                 if ((oneTimetokenPrincipal != null && oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) ||
                     SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin)
                 {

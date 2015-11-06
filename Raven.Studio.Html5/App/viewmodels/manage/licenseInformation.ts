@@ -5,18 +5,28 @@ import licensingStatus = require("viewmodels/common/licensingStatus");
 import app = require("durandal/app");
 import license = require("models/auth/license");
 import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
+import shell = require("viewmodels/shell");
 
 class licenseInformation extends viewModelBase {
 
     connectivityStatus = ko.observable<string>("pending");
+    isForbidden = ko.observable<boolean>();
+
+    constructor() {
+        super();
+        this.isForbidden(shell.isGlobalAdmin() === false);
+    }
 
     attached() {
         super.attached();
-        this.checkConnectivity()
-            .done((result) => {
-                this.connectivityStatus(result ? "success" : "failed");
-            })
-            .fail(() => this.connectivityStatus("failed"));
+
+        if (this.isForbidden() === false) {
+            this.checkConnectivity()
+                .done((result) => {
+                    this.connectivityStatus(result ? "success" : "failed");
+                })
+                .fail(() => this.connectivityStatus("failed"));
+        }
     }
 
     fetchLicenseStatus() {

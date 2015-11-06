@@ -75,7 +75,7 @@
             <select data-bind="options: visibleOptions, optionsText: 'name', optionsValue: 'value', value: visibleResource" class="form-control"></select>
         </div>
         <div class="btn-group pull-right">
-            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: isGlobalAdmin">Manage Your Server</button>
+            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: canNavigateToAdminSettings">Manage Your Server</button>
         </div>
     </div>
 
