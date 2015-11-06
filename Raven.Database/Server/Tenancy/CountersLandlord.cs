@@ -101,7 +101,7 @@ namespace Raven.Database.Server.Tenancy
             config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Counter.DataDirectory);
             config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
 
-            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)] + "/" + tenantId;
 
             config.CounterStorageName = tenantId;
 

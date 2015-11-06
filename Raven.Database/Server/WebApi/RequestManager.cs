@@ -96,8 +96,8 @@ namespace Raven.Database.Server.WebApi
             cancellationTokenSource = new CancellationTokenSource();
             this.landlord = landlord;
 
-            maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(landlord.MaxIdleTimeForTenantDatabaseInSec);
-            frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(landlord.FrequencyToCheckForIdleDatabasesInSec);
+            maxTimeDatabaseCanBeIdle = landlord.MaxIdleTimeForTenantDatabase;
+            frequencyToCheckForIdleDatabases = landlord.FrequencyToCheckForIdleDatabases;
 
             Init();
             cancellationToken = cancellationTokenSource.Token;

@@ -19,6 +19,7 @@ using Xunit;
 using Raven.Abstractions;
 using Raven.Database.Config.Attributes;
 using Raven.Database.Config.Settings;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Core.Configuration
 {
@@ -332,6 +333,50 @@ namespace Raven.Tests.Core.Configuration
             foreach (var configuration in configurations)
             {
                 Assert.NotNull(configuration.PropertyInfo.GetCustomAttribute<DefaultValueAttribute>());
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void BooleanSettingsTest(bool expected)
+        {
+            var fake = new InMemoryRavenConfiguration();
+            fake.Initialize();
+
+            var booleanConfigurations = GetConfigurationItems(fake).Where(x => x.PropertyInfo.PropertyType == typeof (bool)).ToArray();
+
+            var sut = new InMemoryRavenConfiguration();
+            
+            var r = new Random();
+
+            foreach (var item in booleanConfigurations)
+            {
+                var stringValue = expected.ToString();
+
+                switch (r.Next() % 3)
+                {
+                    // make sure size of letters doesn't matter
+                    case 0:
+                        break;
+                    case 1:
+                        stringValue = stringValue.ToLowerInvariant();
+                        break;
+                    case 2:
+                        stringValue = stringValue.ToUpperInvariant();
+                        break;
+                }
+
+                sut.Settings.Add(item.Key, stringValue);
+            }
+
+            sut.Initialize();
+
+            var actual = GetConfigurationItems(sut).Where(x => x.PropertyInfo.PropertyType == typeof (bool));
+
+            foreach (var item in actual)
+            {
+                Assert.Equal(expected, (bool) item.Value);
             }
         }
 

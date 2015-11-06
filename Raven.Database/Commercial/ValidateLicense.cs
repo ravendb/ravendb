@@ -291,23 +291,31 @@ namespace Raven.Database.Commercial
 
         private string GetLicenseText(InMemoryRavenConfiguration config)
         {
-            var value = config.Settings["Raven/License"];
+            var value = config.Licensing.License;
+
             if (string.IsNullOrEmpty(value) == false)
                 return value;
+
             var fullPath = GetLicensePath(config).ToFullPath();
+
             if (File.Exists(fullPath))
                 return File.ReadAllText(fullPath);
+
             return string.Empty;
         }
 
         private static string GetLicensePath(InMemoryRavenConfiguration config)
         {
-            var value = config.Settings["Raven/License"];
+            var value = config.Licensing.License;
+
             if (string.IsNullOrEmpty(value) == false)
                 return "configuration";
-            value = config.Settings["Raven/LicensePath"];
+
+            value = config.Licensing.LicensePath;
+
             if (string.IsNullOrEmpty(value) == false)
                 return value;
+
             return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.xml");
         }
 

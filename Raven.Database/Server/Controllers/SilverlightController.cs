@@ -19,9 +19,7 @@ namespace Raven.Database.Server.Controllers
         {
             Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
             {
-                var skipCreatingStudioIndexes = Database.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
-                if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false &&
-                    "true".Equals(skipCreatingStudioIndexes, StringComparison.OrdinalIgnoreCase))
+                if (Database.Configuration.Studio.SkipCreatingIndexes)
                     return true;
 
                 new CreateSilverlightIndexes().SilverlightWasRequested(Database);

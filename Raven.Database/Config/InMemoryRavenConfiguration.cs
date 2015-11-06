@@ -81,6 +81,12 @@ namespace Raven.Database.Config
 
         public VersioningBundleConfiguration Versioning { get; }
 
+        public StudioConfiguration Studio { get; }
+
+        public TenantConfiguration Tenants { get; }
+
+        public LicenseConfiguration Licensing { get; }
+
         public InMemoryRavenConfiguration()
         {
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
@@ -106,6 +112,9 @@ namespace Raven.Database.Config
             Memory = new MemoryConfiguration();
             Expiration = new ExpirationBundleConfiguration();
             Versioning = new VersioningBundleConfiguration();
+            Studio = new StudioConfiguration();
+            Tenants = new TenantConfiguration();
+            Licensing = new LicenseConfiguration();
 
             IndexingClassifier = new DefaultIndexingClassifier();
 
@@ -152,6 +161,9 @@ namespace Raven.Database.Config
             TimeSeries.Initialize(Settings);
             Expiration.Initialize(Settings);
             Versioning.Initialize(Settings);
+            Studio.Initialize(Settings);
+            Tenants.Initialize(Settings);
+            Licensing.Initialize(Settings);
 
             if (Settings["Raven/MaxServicePointIdleTime"] != null)
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(Settings["Raven/MaxServicePointIdleTime"]);
@@ -362,14 +374,14 @@ namespace Raven.Database.Config
 
         public void CustomizeValuesForDatabaseTenant(string tenantId)
         {
-            if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
-                Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Databases", tenantId);
+            if (string.IsNullOrEmpty(Settings[GetKey(x => x.Core.IndexStoragePath)]) == false)
+                Settings[GetKey(x => x.Core.IndexStoragePath)] = Path.Combine(Settings[GetKey(x => x.Core.IndexStoragePath)], "Databases", tenantId);
 
             if (string.IsNullOrEmpty(Settings[GetKey(x => x.Storage.JournalsStoragePath)]) == false)
                 Settings[GetKey(x => x.Storage.JournalsStoragePath)] = Path.Combine(Settings[GetKey(x => x.Storage.JournalsStoragePath)], "Databases", tenantId);
 
-            if (string.IsNullOrEmpty(Settings["Raven/Voron/TempPath"]) == false)
-                Settings["Raven/Voron/TempPath"] = Path.Combine(Settings["Raven/Voron/TempPath"], "Databases", tenantId, "VoronTemp");
+            if (string.IsNullOrEmpty(Settings[GetKey(x => x.Storage.TempPath)]) == false)
+                Settings[GetKey(x => x.Storage.TempPath)] = Path.Combine(Settings[GetKey(x => x.Storage.TempPath)], "Databases", tenantId, "VoronTemp");
         }
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)
@@ -420,7 +432,7 @@ namespace Raven.Database.Config
         {
             public const string DefaultValueSetInConstructor = "default-value-set-in-constructor";
             
-            internal bool Initialized = false;
+            protected internal bool Initialized { get; set; }
 
             public virtual void Initialize(NameValueCollection settings)
             {
@@ -1917,6 +1929,44 @@ namespace Raven.Database.Config
             [DefaultValue(false)]
             [ConfigurationEntry("Raven/Versioning/ChangesToRevisionsAllowed")]
             public bool ChangesToRevisionsAllowed { get; set; }
+        }
+
+        public class StudioConfiguration : ConfigurationBase
+        {
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Studio/SkipCreatingIndexes")]
+            [ConfigurationEntry("Raven/SkipCreatingStudioIndexes")]
+            public bool SkipCreatingIndexes { get; set; }
+        }
+
+        public class TenantConfiguration : ConfigurationBase
+        {
+            [DefaultValue(900)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Tenants/MaxIdleTimeForTenantDatabaseInSec")]
+            [ConfigurationEntry("Raven/Tenants/MaxIdleTimeForTenantDatabase")]
+            public TimeSetting MaxIdleTime { get; set; }
+
+            [DefaultValue(60)]
+            [TimeUnit(TimeUnit.Seconds)]
+            [ConfigurationEntry("Raven/Tenants/FrequencyToCheckForIdleDatabasesInSec")]
+            [ConfigurationEntry("Raven/Tenants/FrequencyToCheckForIdleDatabases")]
+            public TimeSetting FrequencyToCheckForIdle { get; set; }
+        }
+
+        public class LicenseConfiguration : ConfigurationBase
+        {
+            [DefaultValue(null)]
+            [ConfigurationEntry("Raven/License")]
+            public string License { get; set; }
+
+            [DefaultValue(null)]
+            [ConfigurationEntry("Raven/LicensePath")]
+            public string LicensePath { get; set; }
+
+            [DefaultValue(false)]
+            [ConfigurationEntry("Raven/Licensing/AllowAdminAnonymousAccessForCommercialUse")]
+            public bool AllowAdminAnonymousAccessForCommercialUse { get; set; }
         }
     }
 }
