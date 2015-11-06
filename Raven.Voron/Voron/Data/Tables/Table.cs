@@ -15,7 +15,8 @@ namespace Voron.Data.Tables
 {
     public unsafe class Table<T>
     {
-        private Dictionary<Slice, Tree> _trees;
+        private Dictionary<Slice, Tree> _treesBySlice;
+        private Dictionary<string, Slice> _sliceByName;
         private readonly TableSchema<T> _schema;
         private readonly Transaction _tx;
         private readonly Tree _tableTree;
@@ -41,7 +42,7 @@ namespace Voron.Data.Tables
             {
                 if (_inactiveSections == null)
                 {
-                    var inactiveSectionSlice = TableSchema<T>.InactiveSectionSlice;
+                    var inactiveSectionSlice = TableSchema.InactiveSectionSlice;
                     _inactiveSections = new FixedSizeTree(_tx.LowLevelTransaction,
                         _tableTree, inactiveSectionSlice, 0);
                 }
@@ -56,7 +57,7 @@ namespace Voron.Data.Tables
             {
                 if (_activeCandidateSection == null)
                 {
-                    var availableSectionSlice = TableSchema<T>.ActiveCandidateSection;
+                    var availableSectionSlice = TableSchema.ActiveCandidateSection;
                     _activeCandidateSection = new FixedSizeTree(_tx.LowLevelTransaction,
                         _tableTree, availableSectionSlice, 0);
                 }
@@ -70,7 +71,7 @@ namespace Voron.Data.Tables
             {
                 if (_activeDataSmallSection == null)
                 {
-                    var readResult = _tableTree.Read(TableSchema<T>.ActiveSectionSlice);
+                    var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
                     if (readResult == null)
                         throw new InvalidDataException($"Could not find active sections for {_schema.Name}");
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
@@ -83,9 +84,8 @@ namespace Voron.Data.Tables
 
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
-            //TODO: Primary key
-            //TODO: Update indexes
-            throw new NotImplementedException();
+            DeleteValueFromIndex(previousId, new StructureReader<T>(data, _schema.StructureSchema));
+            DeleteValueFromIndex(newId, new StructureReader<T>(data, _schema.StructureSchema));
         }
 
         public Table(TableSchema<T> schema, Transaction tx)
@@ -95,7 +95,7 @@ namespace Voron.Data.Tables
             _tableTree = _tx.ReadTree(_schema.Name);
             _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
-            var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema<T>.StatsSlice);
+            var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
                 throw new InvalidDataException($"Cannot find stats value for table {_schema.Name}");
             NumberOfEntries = stats->NumberOfEntries;
@@ -131,7 +131,7 @@ namespace Voron.Data.Tables
         public void Set(Structure<T> value)
         {
             var reader = new StructureReader<T>(value, _schema.StructureSchema);
-            var pkVal = GetPrimaryKeySlice(reader);
+            var pkVal = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
             var pkIndex = GetTree(_schema.Key.Name);
             var readResult = pkIndex.Read(pkVal);
             if (readResult == null)
@@ -150,19 +150,23 @@ namespace Voron.Data.Tables
             // first, try to fit in place, either in small or large sections
             if (size < ActiveDataSmallSection.MaxItemSize)
             {
-                byte* pos; 
+                int _;
+                byte* pos;
                 if (prevIsSmall &&
                     ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
                 {
-                    // the size fits, so we just write it and we are done
+                    var oldData = ActiveDataSmallSection.DirectRead(id, out _);
+
+                    DeleteValueFromIndex(id, new StructureReader<T>(oldData, _schema.StructureSchema));
                     value.Write(pos);
-                    //TODO: Update indexes
+                    InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
+
                     return;
                 }
             }
             else if (prevIsSmall == false)
             {
-                var pageNumber = id/_pageSize;
+                var pageNumber = id / _pageSize;
                 var page = _tx.LowLevelTransaction.GetPage(pageNumber);
                 var existingNumberOfPages = _tx.LowLevelTransaction
                     .DataPager.GetNumberOfOverflowPages(page.OverflowSize);
@@ -171,8 +175,11 @@ namespace Voron.Data.Tables
                 if (existingNumberOfPages == newNumberOfPages)
                 {
                     page.OverflowSize = size;
-                    value.Write(page.Pointer + sizeof (PageHeader));
-                    //TODO: Update indexes
+                    var pos = page.Pointer + sizeof(PageHeader);
+                    DeleteValueFromIndex(id, new StructureReader<T>(pos, _schema.StructureSchema));
+                    value.Write(pos);
+                    InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
+
                     return;
                 }
             }
@@ -187,16 +194,13 @@ namespace Voron.Data.Tables
             var ptr = DirectRead(id, out size);
             if (ptr == null)
                 return;
-            var keySlice = GetPrimaryKeySlice(new StructureReader<T>(ptr, _schema.StructureSchema));
-            var tree = GetTree(_schema.Key.Name);
-            tree.Delete(keySlice);
 
-            //TODO: Delete value from indexes
+            DeleteValueFromIndex(id, new StructureReader<T>(ptr, _schema.StructureSchema));
 
-            var largeValue = (id%_pageSize) == 0;
+            var largeValue = (id % _pageSize) == 0;
             if (largeValue)
             {
-                var page = _tx.LowLevelTransaction.GetPage(id/_pageSize);
+                var page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
                 var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
                 for (int i = 0; i < numberOfPages; i++)
                 {
@@ -239,9 +243,24 @@ namespace Voron.Data.Tables
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
         }
 
+        private void DeleteValueFromIndex(long id, StructureReader<T> value)
+        {
+            var keySlice = GetSliceFromStructure(value, _schema.Key.IndexedFields);
+            var pkTree = GetTree(_schema.Key.Name);
+            pkTree.Delete(keySlice);
+
+            foreach (var indexDef in _schema.Indexes.Values)
+            {
+                var indexTree = GetTree(indexDef.Name);
+                var val = GetSliceFromStructure(value, indexDef.IndexedFields);
+                var fst = new FixedSizeTree(_tx.LowLevelTransaction,indexTree, val,0);
+                fst.Delete(id);
+            }
+        }
+
         private void Insert(Structure<T> value)
         {
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema<T>.StatsSlice, sizeof(TableSchemaStats));
+            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
@@ -269,14 +288,24 @@ namespace Voron.Data.Tables
                 value.Write(pos);
                 id = page.PageNumber;
             }
-            var isAsBytes = EndianBitConverter.Little.GetBytes(id);
-            var reader = new StructureReader<T>(value, _schema.StructureSchema);
+            InsertIndexValuesFor(id, new StructureReader<T>(value, _schema.StructureSchema));
+        }
 
-            var pkval = GetPrimaryKeySlice(reader);
+        private void InsertIndexValuesFor(long id, StructureReader<T> reader)
+        {
+            var isAsBytes = EndianBitConverter.Little.GetBytes(id);
+
+            var pkval = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
             var pkIndex = GetTree(_schema.Key.Name);
             pkIndex.Add(pkval, isAsBytes, 0);
 
-            // TODO: Update indexes
+            foreach (var indexDef in _schema.Indexes.Values)
+            {
+                var indexTree = GetTree(indexDef.Name);
+                var val = GetSliceFromStructure(reader, indexDef.IndexedFields);
+                var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
+                index.Add(id);
+            }
         }
 
         private long AllocateFromSmallActiveSection(int size)
@@ -306,7 +335,7 @@ namespace Voron.Data.Tables
                 }
 
                 _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction);
-                _tableTree.Add(TableSchema<T>.ActiveSectionSlice,
+                _tableTree.Add(TableSchema.ActiveSectionSlice,
                     EndianBitConverter.Little.GetBytes(_activeDataSmallSection.PageNumber));
                 var allocationResult = _activeDataSmallSection.TryAllocate(size, out id);
                 Debug.Assert(allocationResult);
@@ -314,10 +343,10 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        private unsafe Slice GetPrimaryKeySlice(StructureReader<T> reader)
+        private Slice GetSliceFromStructure(StructureReader<T> reader, T[] fieldsToIndex)
         {
             var pkSize = 0;
-            foreach (var indexedField in _schema.Key.IndexedFields)
+            foreach (var indexedField in fieldsToIndex)
             {
                 pkSize += reader.GetSize(indexedField);
             }
@@ -326,7 +355,7 @@ namespace Voron.Data.Tables
             fixed (byte* pKey = key)
             {
                 var written = 0;
-                foreach (var indexedField in _schema.Key.IndexedFields)
+                foreach (var indexedField in fieldsToIndex)
                 {
                     written += reader.CopyToIndex(indexedField, pKey + written);
                 }
@@ -336,12 +365,26 @@ namespace Voron.Data.Tables
 
         public long NumberOfEntries { get; private set; }
 
+        private Tree GetTree(string name, out Slice slice)
+        {
+            if (_sliceByName == null)
+                _sliceByName = new Dictionary<string, Slice>();
+            if (_sliceByName.TryGetValue(name, out slice) == false)
+            {
+                slice = name;
+                _sliceByName[name] = slice;
+            }
+            return GetTree(slice);
+
+        }
+
         private Tree GetTree(Slice name)
         {
-            if (_trees == null)
-                _trees = new Dictionary<Slice, Tree>();
+            if (_treesBySlice == null)
+                _treesBySlice = new Dictionary<Slice, Tree>();
+
             Tree tree;
-            if (_trees.TryGetValue(name, out tree))
+            if (_treesBySlice.TryGetValue(name, out tree))
                 return tree;
 
             var treeHeader = _tableTree.DirectRead(name);
@@ -349,7 +392,7 @@ namespace Voron.Data.Tables
                 throw new InvalidOperationException($"Cannot find tree {name} in table {_schema.Name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader);
-            _trees[name] = tree;
+            _treesBySlice[name] = tree;
             return tree;
         }
 
@@ -360,6 +403,56 @@ namespace Voron.Data.Tables
                 return;
             var id = readResult.Reader.ReadLittleEndianInt64();
             Delete(id);
+        }
+
+        private IEnumerable<StructureReader<T>> GetSecondaryIndexForValue(Tree tree, Slice value)
+        {
+            var fstIndex = new FixedSizeTree(_tx.LowLevelTransaction, tree, value, 0);
+            using (var it = fstIndex.Iterate())
+            {
+                if (it.Seek(long.MinValue) == false)
+                    yield break;
+
+                do
+                {
+                    var id = it.CurrentKey;
+                    yield return ReadById(id);
+                } while (it.MoveNext());
+            }
+        }
+
+        public class SeekResult
+        {
+            public Slice Key;
+            public IEnumerable<StructureReader<T>> Results;
+        }
+
+        //TODO: need a proper way to handle this instead of just saying slice
+        public IEnumerable<SeekResult> SeekTo(string indexName, Slice secondaryIndexValue)
+        {
+            Slice treeNameSlice;
+            var tree = GetTree(indexName, out treeNameSlice);
+            using (var it = tree.Iterate())
+            {
+                if(it.Seek(secondaryIndexValue) == false)
+                    yield break;
+
+                do
+                {
+                    yield return new SeekResult
+                    {
+                        Key = it.CurrentKey,
+                        Results = GetSecondaryIndexForValue(tree, it.CurrentKey)
+                    };
+                    
+                } while (it.MoveNext());
+            }
+        }
+
+        private StructureReader<T> ReadById(long id)
+        {
+            int size;
+            return new StructureReader<T>(DirectRead(id, out size), _schema.StructureSchema);
         }
     }
 }

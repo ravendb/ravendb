@@ -8,6 +8,13 @@ using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
 {
+    public class TableSchema
+    {
+        public static readonly Slice ActiveSectionSlice = "Active-Section";
+        public static readonly Slice InactiveSectionSlice = "Inactive-Section";
+        public static readonly Slice ActiveCandidateSection = "Active-Candidate-Section";
+        public static readonly Slice StatsSlice = "Stats";
+    }
     public unsafe class TableSchema<T>
     {
         public SchemaIndexDef Key => _pk;
@@ -29,8 +36,6 @@ namespace Voron.Data.Tables
                 MultiValue == false;
         }
 
-        private bool? _keyUseFixedSizeTree;
-
         public string Name { get; }
         public StructureSchema<T> StructureSchema => _schema;
 
@@ -38,10 +43,6 @@ namespace Voron.Data.Tables
         private readonly StructureSchema<T> _schema = new StructureSchema<T>();
         private SchemaIndexDef _pk;
         private readonly Dictionary<string, SchemaIndexDef> _indexes = new Dictionary<string, SchemaIndexDef>();
-        public static readonly Slice ActiveSectionSlice = "Active-Section";
-        public static readonly Slice InactiveSectionSlice = "Inactive-Section";
-        public static readonly Slice ActiveCandidateSection = "Active-Candidate-Section";
-        public static readonly Slice StatsSlice = "Stats";
 
 
         public TableSchema(string name)
@@ -117,8 +118,8 @@ namespace Voron.Data.Tables
 
             var tableTree = tx.CreateTree(Name);
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
-            tableTree.Add(ActiveSectionSlice, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber));
-            var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
+            tableTree.Add(TableSchema.ActiveSectionSlice, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber));
+            var stats = (TableSchemaStats*)tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             stats->NumberOfEntries = 0;
 
             if (_pk.CanUseFixedSizeTree == false)
@@ -130,8 +131,6 @@ namespace Voron.Data.Tables
 
             foreach (var indexDef in _indexes.Values)
             {
-                if (indexDef.CanUseFixedSizeTree)
-                    continue;
                 var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
                 var treeHeader = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader));
                 indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
