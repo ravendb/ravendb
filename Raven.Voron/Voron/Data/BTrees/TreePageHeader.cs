@@ -22,16 +22,6 @@ namespace Voron.Data.BTrees
 
 		[FieldOffset(16)]
 		public ushort Upper;
-	
-		[FieldOffset(8)]
-		public ushort FixedSize_StartPosition;
-
-        [FieldOffset(10)]
-        public ushort FixedSize_NumberOfEntries;
-        
-        [FieldOffset(14)]
-        public ushort FixedSize_ValueSize;
-
 	}
 
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
