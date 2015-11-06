@@ -445,7 +445,7 @@ namespace Raven.Database.Prefetching
                     (prefetchingQueue.LoadedSize + currentlyUsedBatchSizesInBytes);
 
                 // at any rate, we will load a min of 512Kb docs
-                long maxSize = Size.Max(Size.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorage), minSizeToLoadDocs).ValueInBytes;
+                long maxSize = Size.Max(Size.Min(totalSizeAllowedToLoadInBytes, autoTuner.MaximumSizeAllowedToFetchFromStorage), minSizeToLoadDocs).GetValue(SizeUnit.Bytes);
 
                 var sp = Stopwatch.StartNew();
                 var totalSize = 0L;
@@ -612,7 +612,7 @@ namespace Raven.Database.Prefetching
                 var numOfDocsToTakeInEachSplit = Math.Max(
                     context.Configuration.Core.InitialNumberOfItemsToProcessInSingleBatch,
                     (int)Math.Min((autoTuner.FetchingDocumentsFromDiskTimeout.TotalMilliseconds * 0.7) / loadTimePerDocMs,
-                        (autoTuner.MaximumSizeAllowedToFetchFromStorage.ValueInBytes * 0.7) / largestDocSize));
+                        (autoTuner.MaximumSizeAllowedToFetchFromStorage.GetValue(SizeUnit.Bytes) * 0.7) / largestDocSize));
 
                 if (log.IsDebugEnabled)
                 {
@@ -997,7 +997,7 @@ namespace Raven.Database.Prefetching
             {
                 Name = "PrefetchingBehavior",
                 DatabaseName = context.DatabaseName,
-                EstimatedUsedMemory = prefetchingQueue.LoadedSize.ValueInBytes + futureIndexBatchesSize,
+                EstimatedUsedMemory = prefetchingQueue.LoadedSize.GetValue(SizeUnit.Bytes) + futureIndexBatchesSize,
                 Metadata = new
                 {
                     PrefetchingUserType = this.PrefetchingUser,

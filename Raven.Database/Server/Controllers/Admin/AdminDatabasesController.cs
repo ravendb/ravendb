@@ -73,8 +73,8 @@ namespace Raven.Database.Server.Controllers.Admin
             string bundles;			
             if (dbDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.Contains("Encryption"))
             {
-                if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
-                    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+                if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
+                    !dbDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
                 {
                     return GetMessageWithString(string.Format("Failed to create '{0}' database, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
                 }
@@ -390,17 +390,17 @@ namespace Raven.Database.Server.Controllers.Admin
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
             var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (dbDoc.Settings.ContainsKey(Constants.IndexingDisabled))
+            if (dbDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)))
             {
                 bool indexDisabled;
-                var success = bool.TryParse(dbDoc.Settings[Constants.IndexingDisabled], out indexDisabled);
+                var success = bool.TryParse(dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)], out indexDisabled);
                 if (success && indexDisabled == isindexingDisabled)
                 {
                     var state = isindexingDisabled ? "disabled" : "enabled";
                     return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "indexing is already " + state};
                 }
             }
-            dbDoc.Settings[Constants.IndexingDisabled] = isindexingDisabled.ToString();
+            dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)] = isindexingDisabled.ToString();
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
             Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);

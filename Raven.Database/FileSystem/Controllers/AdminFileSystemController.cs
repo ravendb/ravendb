@@ -69,8 +69,8 @@ namespace Raven.Database.FileSystem.Controllers
             string bundles;
             if (fsDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
             {
-                if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
-                    !fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+                if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
+                    !fsDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
                 {
                     return GetMessageWithString(string.Format("Failed to create '{0}' file system, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
                 }
@@ -492,7 +492,7 @@ namespace Raven.Database.FileSystem.Controllers
                     filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = documentDataDir;
 
                     if (restoreRequest.IndexesLocation != null)
-                        filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                        filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
                     if (restoreRequest.JournalsLocation != null)
                         filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
                     filesystemDocument.Id = filesystemName;

@@ -11,6 +11,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Tenancy;
@@ -115,40 +116,18 @@ namespace Raven.Database.Plugins.Builtins
             return false;
         }
 
-        private static bool IsIncrementalBackupIsAllowed(DatabasesLandlord databaseLandlord,DatabaseDocument dbDoc)
+        private static bool IsIncrementalBackupIsAllowed(DatabasesLandlord databaseLandlord, DatabaseDocument dbDoc)
         {
-            // check if DatabaseDocument contains either of the incremental flags
-            bool isVoronIncrementalBackup = dbDoc.Settings.ContainsKey("Raven/Voron/AllowIncrementalBackups");
-            bool isEsentCircularLog = dbDoc.Settings.ContainsKey("Raven/Esent/CircularLog");
-            if ( isVoronIncrementalBackup || isEsentCircularLog)
+            // check if DatabaseDocument contains the incremental flag
+            var isIncrementalBackup = dbDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups));
+
+            if (isIncrementalBackup && bool.TryParse(dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)], out isIncrementalBackup))
             {
-                if (isEsentCircularLog && bool.TryParse(dbDoc.Settings["Raven/Esent/CircularLog"], out isEsentCircularLog))
-                {
-                    return (isEsentCircularLog) ? false : true;
-
-                }
-                else if (isVoronIncrementalBackup && bool.TryParse(dbDoc.Settings["Raven/Voron/AllowIncrementalBackups"], out isVoronIncrementalBackup))
-                {
-                    return isVoronIncrementalBackup;
-                }
+                return isIncrementalBackup;
             }
-            // if not check if system configuration has one of the incremental flags up.
-            string isVoronIncrementalBackupStr = databaseLandlord.SystemConfiguration.Settings["Raven/Voron/AllowIncrementalBackups"];
-            string isEsentCircularLogStr = databaseLandlord.SystemConfiguration.Settings["Raven/Esent/CircularLog"];
-            if (isVoronIncrementalBackupStr != null || isEsentCircularLogStr != null)
-            {
-                if (isEsentCircularLogStr != null && bool.TryParse(isEsentCircularLogStr, out isEsentCircularLog))
-                {
-                    return (isEsentCircularLog) ? false : true;
 
-                }
-                else if (isVoronIncrementalBackupStr != null && bool.TryParse(isVoronIncrementalBackupStr, out isVoronIncrementalBackup))
-                {
-                    return isVoronIncrementalBackup;
-                }
-            }
-            return false;
-
+            // if not check system configuration
+            return databaseLandlord.SystemConfiguration.Storage.AllowIncrementalBackups;
         }
         public void Dispose()
         {

@@ -31,22 +31,15 @@ namespace Raven.Database.Server.Tenancy
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
-        public int MaxIdleTimeForTenantDatabaseInSec { get; private set; }
+        public TimeSpan MaxIdleTimeForTenantDatabase { get; private set; }
         
-        public int FrequencyToCheckForIdleDatabasesInSec { get; private set; }
+        public TimeSpan FrequencyToCheckForIdleDatabases { get; private set; }
 
         public DatabasesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
-            int val;
-            if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
-                val = 900;
+            MaxIdleTimeForTenantDatabase = SystemConfiguration.Tenants.MaxIdleTime.AsTimeSpan;
 
-            MaxIdleTimeForTenantDatabaseInSec = val;
-
-            if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
-                val = 60;
-
-            FrequencyToCheckForIdleDatabasesInSec = val;
+            FrequencyToCheckForIdleDatabases = systemConfiguration.Tenants.FrequencyToCheckForIdle.AsTimeSpan;
 
             string tempPath = SystemConfiguration.Core.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
@@ -219,10 +212,10 @@ namespace Raven.Database.Server.Tenancy
                 Settings = new NameValueCollection(parentConfiguration.Settings),
             };
 
-            if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
+            if (config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory)] == null)
             {
                 var compiledIndexCacheDirectory = parentConfiguration.Core.CompiledIndexCacheDirectory;
-                config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
+                config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory)] = compiledIndexCacheDirectory;  
             }
 
             if (config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath)] == null)
@@ -246,8 +239,7 @@ namespace Raven.Database.Server.Tenancy
             config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Core.DataDirectory);
             
             config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
-
-            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)];
 
             config.DatabaseName = tenantId;
             config.IsTenantDatabase = true;

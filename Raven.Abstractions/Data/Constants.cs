@@ -91,13 +91,8 @@ namespace Raven.Abstractions.Data
 
         public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
 
-        public const string IndexingDisabled = "Raven/IndexingDisabled";
-
         public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
         public const string SideBySideIndexNamePrefix = "ReplacementOf/";
-
-        //Paths
-        public const string RavenIndexPath = "Raven/IndexStoragePath";
 
         //Files
         public const int WindowsMaxPath = 260 - 30;
@@ -110,12 +105,6 @@ namespace Raven.Abstractions.Data
 
         //Encryption
         public const string DontEncryptDocumentsStartingWith = "Raven/";
-
-        public const string AlgorithmTypeSetting = "Raven/Encryption/Algorithm";
-
-        public const string EncryptionKeySetting = "Raven/Encryption/Key";
-
-        public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
 
         public const string InResourceKeyVerificationDocumentName = "Raven/Encryption/Verification";
 

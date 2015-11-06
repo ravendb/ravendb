@@ -294,11 +294,8 @@ namespace Raven.Database.Util
         internal static RavenJObject GetConfigForDebug(DocumentDatabase database)
         {
             var cfg = RavenJObject.FromObject(database.Configuration);
-            cfg["OAuthTokenKey"] = "<not shown>";
-            var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
 
-            if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-                cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
+            ((RavenJObject) cfg["OAuth"])["TokenKey"] = "<not shown>";
 
             return cfg;
         }
