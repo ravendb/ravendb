@@ -278,6 +278,8 @@ interface userInfoDto {
 
 interface serverConfigsDto {
     IsGlobalAdmin: boolean;
+    CanReadWriteSettings: boolean;
+    CanReadSettings: boolean;
     CanExposeConfigOverTheWire: boolean;
 }
 

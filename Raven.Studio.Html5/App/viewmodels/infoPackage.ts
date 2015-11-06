@@ -4,15 +4,14 @@ import app = require("durandal/app");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
 import jszip = require('jszip/jszip');
-import zipUtils = require('jszip/jszip-utils.min');
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import getInfoPackage = require('commands/getInfoPackage');
-import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
 import infoPackageImport = require("viewmodels/infoPackageImport");
+import shell = require("viewmodels/shell");
 
 const enum parserState {
   pid,
@@ -89,7 +88,7 @@ class infoPackage extends viewModelBase {
         var hasDetails = !!this.fetchExceptionDetails();
         var detailsDisplayed = this.showMoreDetails();
         return hasDetails && !detailsDisplayed;
-    })
+    });
     private stacksJson = ko.observable<stackInfo[]>(null);
 
     hasFetchException = ko.computed(() => !!this.fetchException());
@@ -100,6 +99,7 @@ class infoPackage extends viewModelBase {
     });
     appUrls: computedAppUrls;
     adminView: KnockoutComputed<boolean>;
+    isForbidden = ko.observable<boolean>();
 
     constructor() {
         super();
@@ -110,6 +110,7 @@ class infoPackage extends viewModelBase {
             var appUrls = this.appUrls;
             return (!!activeDb && activeDb.isSystem || !!appUrls && appUrls.isAreaActive('admin')());
         });
+        this.isForbidden(shell.isGlobalAdmin() === false);
     }
 
     canActivate(args): any {

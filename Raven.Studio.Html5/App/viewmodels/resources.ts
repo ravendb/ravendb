@@ -1,9 +1,7 @@
 import app = require("durandal/app");
-import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
 import license = require("models/license");
 import alert = require("models/alert");
@@ -31,9 +29,12 @@ class resources extends viewModelBase {
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
+    canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     constructor() {
         super();
+
+        this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
 
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;

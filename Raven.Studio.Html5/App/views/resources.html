@@ -2,10 +2,12 @@
     <div class="text-center" data-bind="visible: resources().length == 1">
         <h2 class="page-header text-info">
             No databases and no filesystems are available.
-            <small>
-                Go ahead and
-                <span data-bind="visible: isGlobalAdmin"><a href="#" data-bind="click: newResource">create a database or distributed file system</a> or</span>
-                <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a>
+            <small data-bind="visible: isGlobalAdmin() || canNavigateToAdminSettings()">
+                <span data-bind="visible: isGlobalAdmin">
+                    Go ahead and
+                    <a href="#" data-bind="click: newResource">create a database or a distributed file system</a> or
+                </span>
+                <span data-bind="visible: canNavigateToAdminSettings"><a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
             </small>
         </h2>
     </div>
@@ -59,7 +61,7 @@
             </select>
         </div>
         <div class="btn-group pull-right">
-            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: isGlobalAdmin">Manage Your Server</button>
+            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: canNavigateToAdminSettings">Manage Your Server</button>
         </div>
     </div>
 

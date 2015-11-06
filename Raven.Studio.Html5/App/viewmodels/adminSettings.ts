@@ -2,16 +2,19 @@ import durandalRouter = require("plugins/router");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
+import shell = require("viewmodels/shell");
 
 class adminSettings extends viewModelBase {
 
     router: DurandalRootRouter = null;
     activeSubViewTitle: KnockoutComputed<string>;
     docsForSystemUrl: string;
+    isSystemDatabaseForbidden = ko.observable<boolean>();
 
     constructor() {
         super();
 
+        this.isSystemDatabaseForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
         this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
 
         var apiKeyRoute = { route: ['admin/settings', 'admin/settings/apiKeys'], moduleId: 'viewmodels/apiKeys', title: 'API Keys', nav: true, hash: appUrl.forApiKeys() };

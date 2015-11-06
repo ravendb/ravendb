@@ -1,5 +1,8 @@
-<div role="tabpanel">
+<div data-bind="visible: isForbidden" class="text-center">
+    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+</div>
 
+<div role="tabpanel" data-bind="visible: isForbidden() == false">
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active"><a href="#compactDb" aria-controls="compactDb" role="tab" data-toggle="tab">Database</a></li>
         <li role="presentation"><a href="#compactFs" aria-controls="compactFs" role="tab" data-toggle="tab">File system</a></li>
