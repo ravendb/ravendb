@@ -492,7 +492,7 @@ namespace Raven.Database.FileSystem.Controllers
                     filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = documentDataDir;
 
                     if (restoreRequest.IndexesLocation != null)
-                        filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                        filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
                     if (restoreRequest.JournalsLocation != null)
                         filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
                     filesystemDocument.Id = filesystemName;

@@ -678,7 +678,7 @@ class shell extends viewModelBase {
                         existingResource.activeBundles(bundles);
 
 
-                        var indexingDisabled = this.getIndexingDisbaledValue(dto.Settings["Raven/IndexingDisabled"]);
+                        var indexingDisabled = this.getIndexingDisbaledValue(dto.Settings["Raven/Indexing/Disable"]);
                         existingResource.indexingDisabled(indexingDisabled);
 
                         var isRejectclientsEnabled = this.getIndexingDisbaledValue(dto.Settings["Raven/RejectClientsModeEnabled"]);

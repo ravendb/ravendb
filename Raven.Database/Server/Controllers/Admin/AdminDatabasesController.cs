@@ -390,17 +390,17 @@ namespace Raven.Database.Server.Controllers.Admin
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
             var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (dbDoc.Settings.ContainsKey(Constants.IndexingDisabled))
+            if (dbDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)))
             {
                 bool indexDisabled;
-                var success = bool.TryParse(dbDoc.Settings[Constants.IndexingDisabled], out indexDisabled);
+                var success = bool.TryParse(dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)], out indexDisabled);
                 if (success && indexDisabled == isindexingDisabled)
                 {
                     var state = isindexingDisabled ? "disabled" : "enabled";
                     return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "indexing is already " + state};
                 }
             }
-            dbDoc.Settings[Constants.IndexingDisabled] = isindexingDisabled.ToString();
+            dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)] = isindexingDisabled.ToString();
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
             Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);

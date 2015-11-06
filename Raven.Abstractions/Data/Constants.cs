@@ -91,13 +91,8 @@ namespace Raven.Abstractions.Data
 
         public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
 
-        public const string IndexingDisabled = "Raven/IndexingDisabled";
-
         public const string IndexReplacePrefix = "Raven/Indexes/Replace/";
         public const string SideBySideIndexNamePrefix = "ReplacementOf/";
-
-        //Paths
-        public const string RavenIndexPath = "Raven/IndexStoragePath";
 
         //Files
         public const int WindowsMaxPath = 260 - 30;

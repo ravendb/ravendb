@@ -173,5 +173,10 @@ namespace Raven.Database.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Indexing/FlushIndexToDiskSizeInMB")]
         public Size FlushIndexToDiskSize { get; set; }
+
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/Indexing/Disable")]
+        [ConfigurationEntry("Raven/IndexingDisabled")]
+        public bool Disabled { get; set; }
     }
 }

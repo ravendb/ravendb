@@ -337,11 +337,11 @@ namespace Raven.Database.Server.Controllers.Admin
                         return;
 
                     databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory)] = documentDataDir;
-                    databaseDocument.Settings.Remove(Constants.RavenIndexPath);
+                    databaseDocument.Settings.Remove(InMemoryRavenConfiguration.GetKey(x => x.Core.IndexStoragePath));
                     databaseDocument.Settings.Remove(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath));
 
                     if (restoreRequest.IndexesLocation != null)
-                        databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                        databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
 
                     if (restoreRequest.JournalsLocation != null)
                         databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
@@ -646,8 +646,8 @@ namespace Raven.Database.Server.Controllers.Admin
         public HttpResponseMessage IndexingStatus()
         {
             string indexDisableStatus;
-            bool result;
-            if (bool.TryParse(Database.Configuration.Settings[Constants.IndexingDisabled], out result) && result)
+
+            if (Database.Configuration.Indexing.Disabled)
             {
                 indexDisableStatus = "Disabled";
             }
