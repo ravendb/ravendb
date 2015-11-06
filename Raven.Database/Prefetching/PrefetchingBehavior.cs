@@ -10,6 +10,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using metrics;
+using metrics.Core;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -27,6 +29,7 @@ namespace Raven.Database.Prefetching
             public Etag Etag;
             public DateTime AddedAt;
         }
+
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         private readonly BaseBatchSizeAutoTuner autoTuner;
@@ -55,6 +58,9 @@ namespace Raven.Database.Prefetching
         private string userDescription;
 
         public Action<int> FutureBatchCompleted = delegate { };
+        private readonly MeterMetric ingestMeter;
+        private readonly MeterMetric returnedDocsMeter;
+        private int numberOfTimesIngestRateWasTooHigh;
 
         public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
         {
@@ -63,6 +69,11 @@ namespace Raven.Database.Prefetching
             PrefetchingUser = prefetchingUser;
             this.userDescription = prefetchingUserDescription;
             MemoryStatistics.RegisterLowMemoryHandler(this);
+
+            ingestMeter = context.MetricsCounters.DbMetrics.Meter("metrics",
+                "ingest/sec", "In memory documents held by this prefetcher", TimeUnit.Seconds);
+            returnedDocsMeter = context.MetricsCounters.DbMetrics.Meter("metrics",
+                  "returned docs/sec", "Documents being served by this prefetcher", TimeUnit.Seconds);
         }
 
         public PrefetchingUser PrefetchingUser { get; private set; }
@@ -122,6 +133,7 @@ namespace Raven.Database.Prefetching
                     results.RemoveAt(i);
                 }
             }
+            returnedDocsMeter.Mark(results.Count);
             return results;
         }
 
@@ -137,12 +149,18 @@ namespace Raven.Database.Prefetching
                 {
                     lowestInMemoryDocumentAddedAfterCommit = null;
                     DisableCollectingDocumentsAfterCommit = false;
+                    numberOfTimesIngestRateWasTooHigh = 0;
                 }
             }
-            else if(current != null)
+            else if (current != null)
             {
                 var oldestTimeInQueue = SystemTime.UtcNow - current.AddedAt;
-                if (oldestTimeInQueue > TimeSpan.FromMinutes(10))
+                if (
+                    // this can happen if we have a very long indexing time, which takes
+                    // us a long while to process, so we might as might as well stop keeping
+                    // stuff in memory, because we lag
+                    oldestTimeInQueue > TimeSpan.FromMinutes(10)
+                    )
                 {
                     DisableCollectingDocumentsAfterCommit = true;
                     //If we disable in memory collection of data, we need to also remove all the
@@ -461,9 +479,9 @@ namespace Raven.Database.Prefetching
                 jsonDocs = actions.Documents
                     .GetDocumentsAfter(
                         etag,
-                        autoTuner.NumberOfItemsToProcessInSingleBatch ,
+                        autoTuner.NumberOfItemsToProcessInSingleBatch,
                         context.CancellationToken,
-                        maxSize ,
+                        maxSize,
                         untilEtag,
                         autoTuner.FetchingDocumentsFromDiskTimeout,
                         earlyExit: earlyExit
@@ -835,7 +853,7 @@ namespace Raven.Database.Prefetching
 
         public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
         {
-            if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 || 
+            if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 ||
                 DisableCollectingDocumentsAfterCommit)
                 return;
 
@@ -843,6 +861,32 @@ namespace Raven.Database.Prefetching
                 context.Configuration.MaxNumberOfItemsToPreFetch ||
                 prefetchingQueue.LoadedSize > context.Configuration.AvailableMemoryForRaisingBatchSizeLimit)
                 return;
+
+            ingestMeter.Mark(docs.Length);
+
+            var current = lowestInMemoryDocumentAddedAfterCommit;
+            if (current != null &&
+                // ingest rate is too high, maybe we need to protect ourselves from 
+                // ingest overflow that can cause high memory usage
+                ingestMeter.OneMinuteRate > returnedDocsMeter.OneMinuteRate*1.5
+                )
+            {
+                // we don't want to trigger it too soon, so we need a few commits
+                // with the high ingest rate before we'll decide that we need
+                // to take such measures
+                if (numberOfTimesIngestRateWasTooHigh++ > 3)
+                {
+                    DisableCollectingDocumentsAfterCommit = true;
+                    // remove everything after this
+                    prefetchingQueue.RemoveAfter(current.Etag);
+                }
+
+                return;
+            }
+            else
+            {
+                numberOfTimesIngestRateWasTooHigh = 0;
+            }
 
             Etag lowestEtag = null;
 

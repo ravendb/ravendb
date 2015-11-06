@@ -79,6 +79,11 @@ namespace Raven.Database.Util
             dbMetrics.Gauge(type, name, function);
         }
 
+        public Metrics DbMetrics
+        {
+            get { return dbMetrics; }
+        }
+
         public Dictionary<string, Dictionary<string, string>> Gauges
         {
             get
