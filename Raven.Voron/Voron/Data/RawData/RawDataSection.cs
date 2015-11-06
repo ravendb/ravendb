@@ -226,7 +226,7 @@ namespace Voron.Data.RawData
             _sectionHeader->NumberOfEntries--;
             var sizeFreed = sizes[0] + (sizeof (short)*2);
             _sectionHeader->AllocatedSize -= sizeFreed;
-            AvailableSpace[pageHeader->PageNumber - _sectionHeader->PageNumber] += (ushort) sizeFreed;
+            AvailableSpace[pageHeader->PageNumberInSection] += (ushort) sizeFreed;
 
             return Density;
         }

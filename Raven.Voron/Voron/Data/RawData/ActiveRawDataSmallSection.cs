@@ -176,7 +176,7 @@ namespace Voron.Data.RawData
                 var pageHeader = (RawDataSmallPageHeader*) (sectionStart.Pointer + (i + 1)*tx.DataPager.PageSize);
                 Debug.Assert(pageHeader->PageNumber == sectionStart.PageNumber + i + 1);
                 pageHeader->NumberOfEntries = 0;
-                pageHeader->PageNumberInSection = (ushort)(i + 1);
+                pageHeader->PageNumberInSection = i;
                 pageHeader->RawDataFlags = RawDataPageFlags.Small;
                 pageHeader->Flags = PageFlags.RawData | PageFlags.Single;
                 pageHeader->NextAllocation = (ushort) sizeof (RawDataSmallPageHeader);
