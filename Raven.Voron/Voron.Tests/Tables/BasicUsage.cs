@@ -17,16 +17,16 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                _schema.Create(tx);
+                _docsSchema.Create(tx);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_schema.StructureSchema)
+                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
@@ -37,7 +37,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
                 var reader = docs.ReadByKey("users/1");
                 var result = reader.ReadString(DocumentsFields.Data);
@@ -51,16 +51,16 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                _schema.Create(tx);
+                _docsSchema.Create(tx);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_schema.StructureSchema)
+                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
@@ -71,9 +71,9 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_schema.StructureSchema)
+                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
@@ -84,7 +84,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
                 var reader = docs.ReadByKey("users/1");
                 var result = reader.ReadString(DocumentsFields.Data);
@@ -98,16 +98,16 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                _schema.Create(tx);
+                _docsSchema.Create(tx);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_schema.StructureSchema)
+                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
@@ -118,7 +118,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -127,7 +127,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_schema, tx);
+                var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
                 var reader = docs.ReadByKey("users/1");
                 Assert.Null(reader);

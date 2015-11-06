@@ -1,15 +1,16 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
 using Xunit;
 
 namespace Voron.Tests.Tables
 {
-    public class SecondayIndex : TableStorageTest
+    public class CompositeIndex : TableStorageTest
     {
 
         [Fact]
-        public void CanInsertThenReadBySecondary()
+        public void CanInsertThenReadByComposite()
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -25,7 +26,15 @@ namespace Voron.Tests.Tables
                 var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}");
+                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users");
+                docs.Set(structure);
+
+                structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                   .Set(DocumentsFields.Etag, 2L)
+                   .Set(DocumentsFields.Key, "users/2")
+                   .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
+                   .Set(DocumentsFields.Collection, "Users");
                 docs.Set(structure);
 
                 tx.Commit();
@@ -35,20 +44,32 @@ namespace Voron.Tests.Tables
             {
                 var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
-                var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekTo("By/Etag", etag)
-                    .First();
+                var seekResults = docs.SeekTo("By/Etag&Collection", "Users").GetEnumerator();
+                Assert.True(seekResults.MoveNext());
+                var reader = seekResults.Current;
 
-                Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
+                var valueReader = reader.Key.CreateReader();
+                Assert.Equal("Users", valueReader.ReadString(5));
+                Assert.Equal(1L, valueReader.ReadBigEndianInt64());
                 var result = reader.Results.Single().ReadString(DocumentsFields.Data);
                 Assert.Equal("{'Name': 'Oren'}", result);
 
+                Assert.True(seekResults.MoveNext());
+                reader = seekResults.Current;
+
+                valueReader = reader.Key.CreateReader();
+                Assert.Equal("Users", valueReader.ReadString(5));
+                Assert.Equal(2L, valueReader.ReadBigEndianInt64());
+                result = reader.Results.Single().ReadString(DocumentsFields.Data);
+                Assert.Equal("{'Name': 'Eini'}", result);
+
+                Assert.False(seekResults.MoveNext());
                 tx.Commit();
             }
         }
 
         [Fact]
-        public void CanInsertThenDeleteBySecondary()
+        public void CanInsertThenDeleteByComposite()
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -65,6 +86,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();
@@ -83,14 +105,14 @@ namespace Voron.Tests.Tables
             {
                 var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
-                var reader = docs.SeekTo("By/Etag", new Slice(EndianBitConverter.Big.GetBytes(1)));
+                var reader = docs.SeekTo("By/Etag&Collection", "Users");
                 Assert.Empty(reader);
             }
         }
 
 
         [Fact]
-        public void CanInsertThenUpdateThenBySecondary()
+        public void CanInsertThenUpdateThenByComposite()
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -107,6 +129,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();
@@ -119,7 +142,8 @@ namespace Voron.Tests.Tables
                 var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 2L)
                     .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Eini'}");
+                    .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
+                    .Set(DocumentsFields.Collection, "Users");
                 docs.Set(structure);
 
                 tx.Commit();
@@ -129,11 +153,13 @@ namespace Voron.Tests.Tables
             {
                 var docs = new Table<DocumentsFields>(_docsSchema, tx);
 
-                var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekTo("By/Etag", etag)
+                var reader = docs.SeekTo("By/Etag&Collection", "Users")
                     .First();
 
-                Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
+                var valueReader = reader.Key.CreateReader();
+                Assert.Equal("Users", valueReader.ReadString(5));
+                Assert.Equal(2L, valueReader.ReadBigEndianInt64());
+
                 var result = reader.Results.Single().ReadString(DocumentsFields.Data);
                 Assert.Equal("{'Name': 'Eini'}", result);
 
