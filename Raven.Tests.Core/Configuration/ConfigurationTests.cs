@@ -18,6 +18,7 @@ using Raven.Database.FileSystem.Util;
 using Xunit;
 using Raven.Abstractions;
 using Raven.Database.Config.Attributes;
+using Raven.Database.Config.Categories;
 using Raven.Database.Config.Settings;
 using Xunit.Extensions;
 
@@ -296,7 +297,7 @@ namespace Raven.Tests.Core.Configuration
             {
                 var expected = configuration.PropertyInfo.GetCustomAttribute<DefaultValueAttribute>().Value;
 
-                if (InMemoryRavenConfiguration.ConfigurationBase.DefaultValueSetInConstructor.Equals(expected))
+                if (ConfigurationCategory.DefaultValueSetInConstructor.Equals(expected))
                     continue; // cannot verify default values set in ctor automatically
 
                 if (expected == null)
@@ -415,15 +416,15 @@ namespace Raven.Tests.Core.Configuration
             return result;
         }
 
-        private List<InMemoryRavenConfiguration.ConfigurationBase> GetConfigurationClasses(InMemoryRavenConfiguration inMemoryConfiguration)
+        private List<ConfigurationCategory> GetConfigurationClasses(InMemoryRavenConfiguration inMemoryConfiguration)
         {
-            var configurationClasses = inMemoryConfiguration.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(InMemoryRavenConfiguration.ConfigurationBase));
+            var configurationClasses = inMemoryConfiguration.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(ConfigurationCategory));
 
-            var result = new List<InMemoryRavenConfiguration.ConfigurationBase>();
+            var result = new List<ConfigurationCategory>();
 
             foreach (var configurationClass in configurationClasses)
             {
-                var configurationClassInstance = (InMemoryRavenConfiguration.ConfigurationBase) configurationClass.GetValue(inMemoryConfiguration);
+                var configurationClassInstance = (ConfigurationCategory) configurationClass.GetValue(inMemoryConfiguration);
 
                 result.Add(configurationClassInstance);
             }
