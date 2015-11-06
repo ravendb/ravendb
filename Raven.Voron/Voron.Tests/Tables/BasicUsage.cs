@@ -30,6 +30,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();
@@ -64,6 +65,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();
@@ -77,6 +79,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();
@@ -111,6 +114,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();

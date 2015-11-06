@@ -25,7 +25,8 @@ namespace Voron.Tests.Tables
                 var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}");
+                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users");
                 docs.Set(structure);
 
                 tx.Commit();
@@ -65,6 +66,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();
@@ -107,6 +109,7 @@ namespace Voron.Tests.Tables
                     .Set(DocumentsFields.Etag, 1L)
                     .Set(DocumentsFields.Key, "users/1")
                     .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                    .Set(DocumentsFields.Collection, "Users")
                     );
 
                 tx.Commit();
@@ -119,6 +122,7 @@ namespace Voron.Tests.Tables
                 var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
                     .Set(DocumentsFields.Etag, 2L)
                     .Set(DocumentsFields.Key, "users/1")
+                    .Set(DocumentsFields.Collection, "Users")
                     .Set(DocumentsFields.Data, "{'Name': 'Eini'}");
                 docs.Set(structure);
 
