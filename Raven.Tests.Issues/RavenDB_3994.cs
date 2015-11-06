@@ -1,13 +1,12 @@
-using System;
 using System.Linq;
-using FluentAssertions;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Database.Linq.PrivateExtensions;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.ScriptedIndexResults;
 using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -60,7 +59,7 @@ namespace Raven.Tests.Issues
 
                 using (var s = store.OpenSession())
                 {
-                    s.Load<RavenJObject>("DeleteScriptRan").Should().NotBeNull();
+                    Assert.NotNull(s.Load<RavenJObject>("DeleteScriptRan"));
                 }
             }
         }
