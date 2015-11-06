@@ -130,9 +130,10 @@ namespace Raven.Database.Prefetching
             if (ShouldHandleUnusedDocumentsAddedAfterCommit == false)
                 return;
 
+            var currentInMemoryDocumentAddedAfterCommit = lowestInMemoryDocumentAddedAfterCommit;
             if (DisableCollectingDocumentsAfterCommit)
             {
-                if (lowestInMemoryDocumentAddedAfterCommit != null && requestedEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) > 0)
+                if (currentInMemoryDocumentAddedAfterCommit != null && requestedEtag.CompareTo(currentInMemoryDocumentAddedAfterCommit.Etag) > 0)
                 {
                     lowestInMemoryDocumentAddedAfterCommit = null;
                     DisableCollectingDocumentsAfterCommit = false;
@@ -140,9 +141,14 @@ namespace Raven.Database.Prefetching
             }
             else
             {
-                if (lowestInMemoryDocumentAddedAfterCommit != null && SystemTime.UtcNow - lowestInMemoryDocumentAddedAfterCommit.AddedAt > TimeSpan.FromMinutes(10))
+                if (currentInMemoryDocumentAddedAfterCommit != null && SystemTime.UtcNow - currentInMemoryDocumentAddedAfterCommit.AddedAt > TimeSpan.FromMinutes(10))
                 {
                     DisableCollectingDocumentsAfterCommit = true;
+                    //If we disable in memory collection of data, we need to also remove all the
+                    // items in the prefetching queue that are after the last in memory docs
+                    // immediately, not wait for them to be indexed. They have already been in 
+                    // memory for ten minutes
+                    prefetchingQueue.RemoveAfter(currentInMemoryDocumentAddedAfterCommit.Etag);
                 }
             }
         }
@@ -155,10 +161,11 @@ namespace Raven.Database.Prefetching
             if (DisableCollectingDocumentsAfterCommit == false)
                 return;
 
-            if (lowestInMemoryDocumentAddedAfterCommit == null)
+            var current = lowestInMemoryDocumentAddedAfterCommit;
+            if (current == null)
                 return;
 
-            prefetchingQueue.RemoveAfter(lowestInMemoryDocumentAddedAfterCommit.Etag);
+            prefetchingQueue.RemoveAfter(current.Etag);
         }
 
         private bool CanBeConsideredAsDuplicate(JsonDocument document)
@@ -827,7 +834,8 @@ namespace Raven.Database.Prefetching
 
         public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
         {
-            if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 || DisableCollectingDocumentsAfterCommit)
+            if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 || 
+                DisableCollectingDocumentsAfterCommit)
                 return;
 
             if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
