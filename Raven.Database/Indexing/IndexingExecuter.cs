@@ -497,11 +497,13 @@ namespace Raven.Database.Indexing
                 IndexingBatchForIndex indexingBatchForIndex;
                 if (precomputedBatch.Documents.Count > 0)
                 {
+                    List<IndexToWorkOn> filteredOutIndexes;
                     indexingBatchForIndex = 
                         FilterIndexes(
                                 new List<IndexToWorkOn> {indexToWorkOn}, 
                                 precomputedBatch.Documents,
-                                precomputedBatch.LastIndexed)
+                                precomputedBatch.LastIndexed,
+                                out filteredOutIndexes)
                           .FirstOrDefault();
                 }
                 else

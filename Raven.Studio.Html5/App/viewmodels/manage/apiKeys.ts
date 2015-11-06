@@ -2,6 +2,7 @@ import getApiKeysCommand = require("commands/auth/getApiKeysCommand");
 import saveApiKeysCommand = require("commands/auth/saveApiKeysCommand");
 import apiKey = require("models/auth/apiKey");
 import viewModelBase = require("viewmodels/viewModelBase");
+import shell = require("viewmodels/shell");
 
 class apiKeys extends viewModelBase {
     apiKeys = ko.observableArray<apiKey>().extend({ required: true });
