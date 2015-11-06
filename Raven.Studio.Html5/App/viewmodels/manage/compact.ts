@@ -63,8 +63,10 @@ class compact extends viewModelBase {
     private fsCompactOptions = new resourceCompact(this, filesystem.type, shell.fileSystems);
 
     isBusy = ko.observable<boolean>();
+    isForbidden = ko.observable<boolean>();
 
     canActivate(args): any {
+        this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
 

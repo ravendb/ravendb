@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -128,7 +128,6 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
-    <TypeScriptCompile Include="App\viewmodels\manage\licenseInformation.ts" />
     <TypeScriptCompile Include="App\common\changesApi.ts" />
     <TypeScriptCompile Include="App\common\changesCallback.ts" />
     <TypeScriptCompile Include="App\common\execJs.ts" />
@@ -163,11 +162,9 @@
     <Content Include="App\views\database\status\indexing\perfDialogs\mapBatchInfo.html" />
     <Content Include="App\views\filesystem\search\fieldRangeFilter.html" />
     <Content Include="App\views\filesystem\search\fieldStringFilter.html" />
-    <Content Include="App\views\backup.html" />
     <Content Include="App\views\databaseStudioConfig.html" />
     <Content Include="App\views\filesystem\deleteFilesMatchingQueryConfirm.html" />
     <Content Include="App\views\filesystem\search\inMethodFilter.html" />
-    <Content Include="App\views\manage\licenseInformation.html" />
     <Content Include="App\views\counter\counterStorageConfiguration.html" />
     <Content Include="App\views\counter\counterStorageCounters.html" />
     <Content Include="App\views\counter\counterStorageReplication.html" />
@@ -1319,7 +1316,7 @@
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
-    <Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
+  <Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
   <ProjectExtensions>
     <VisualStudio>
       <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">

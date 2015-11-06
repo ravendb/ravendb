@@ -30,10 +30,10 @@ namespace Raven.Database.Server.Controllers
         public string DatabaseName
         {
             get
-            {
+        {
                 return ResourceName;
-            }
         }
+                    }
 
         public DocumentDatabase Database
         {
@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
             {
                 return Resource;
             }
-        }
+            }
 
         public override ResourceType ResourceType
         {
@@ -49,20 +49,20 @@ namespace Raven.Database.Server.Controllers
             {
                 return ResourceType.Database;
             }
-        }
+            }
 
         public override void MarkRequestDuration(long duration)
-        {
+            {
             if (Resource == null)
                 return;
             Resource.WorkContext.MetricsCounters.RequestDurationMetric.Update(duration);
             Resource.WorkContext.MetricsCounters.RequestDurationLastMinute.AddRecord(duration);
-        }
+            }
 
         private string queryFromPostRequest;
-        
+
         public void SetPostRequestQuery(string query)
-        {
+            {
             queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
         }
 
@@ -74,7 +74,7 @@ namespace Raven.Database.Server.Controllers
                 Configuration = other.Configuration;
             ControllerContext = other.ControllerContext;
             ActionContext = other.ActionContext;
-        }
+            }
 
         public override HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
         {
@@ -443,27 +443,27 @@ namespace Raven.Database.Server.Controllers
             long documentsCount = 0;
             Resource.TransactionalStorage.Batch(
                 accessor =>
-                {
+            {                
                     lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
                     documentsCount = accessor.Documents.GetDocumentsCount();
                 });
 
             lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
             return lastDocEtag;
-        }
+            }
 
         protected class TenantData
-        {
+            {
             public bool IsLoaded { get; set; }
             public string Name { get; set; }
             public bool Disabled { get; set; }
             public string[] Bundles { get; set; }
             public bool IsAdminCurrentTenant { get; set; }
-        }
+            }
 
         protected HttpResponseMessage Resources<T>(string prefix, Func<RavenJArray, List<T>> getResourcesData, bool getAdditionalData = false)
             where T : TenantData
-        {
+            {
             if (EnsureSystemDatabase() == false)
                 return
                     GetMessageWithString(
@@ -499,39 +499,39 @@ namespace Raven.Database.Server.Controllers
                     return authMsg;
 
                 if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
-                {
+                        {
                     approvedResources = authorizer.GetApprovedResources(user, this, resourcesNames);
-                }
+                            }
 
                 resourcesData.ForEach(x =>
-                {
+                    {
                     var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
                     if (principalWithDatabaseAccess != null)
-                    {
+                {
                         var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
                         x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Resource);
-                    }
-                    else
-                    {
+                }
+            else
+            {
                         x.IsAdminCurrentTenant = user.IsAdministrator(x.Name);
-                    }
-                });
             }
+                });
+        }
 
             var lastDocEtag = GetLastDocEtag();
             if (MatchEtag(lastDocEtag))
                 return GetEmptyMessage(HttpStatusCode.NotModified);
 
             if (approvedResources != null)
-            {
+        {
                 resourcesData = resourcesData.Where(data => approvedResources.Contains(data.Name)).ToList();
                 resourcesNames = resourcesNames.Where(name => approvedResources.Contains(name)).ToArray();
-            }
+        }
 
             var responseMessage = getAdditionalData ? GetMessageWithObject(resourcesData) : GetMessageWithObject(resourcesNames);
             WriteHeaders(new RavenJObject(), lastDocEtag, responseMessage);
             return responseMessage.WithNoCache();
-        }
+            }
 
         protected RavenJArray GetResourcesDocuments(string resourcePrefix)
         {
@@ -546,13 +546,18 @@ namespace Raven.Database.Server.Controllers
         protected UserInfo GetUserInfo()
         {
             var principal = User;
+            var anonymousUserAccessMode = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode;
             if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
             {
                 var anonymous = new UserInfo
                 {
                     Remark = "Using anonymous user",
-                    IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+                    IsAdminGlobal = anonymousUserAccessMode == AnonymousUserAccessMode.Admin,
+                    IsAdminCurrentDb = anonymousUserAccessMode == AnonymousUserAccessMode.Admin ||
+                                       anonymousUserAccessMode == AnonymousUserAccessMode.All ||
+                                       anonymousUserAccessMode == AnonymousUserAccessMode.Get
                 };
+
                 return anonymous;
             }
 
@@ -564,7 +569,7 @@ namespace Raven.Database.Server.Controllers
                     Remark = "Using windows auth",
                     User = windowsPrincipal.Identity.Name,
                     IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
-                                    windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+                                    windowsPrincipal.IsAdministrator(anonymousUserAccessMode)
                 };
 
                 windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Resource);
@@ -580,8 +585,7 @@ namespace Raven.Database.Server.Controllers
                     Remark = "Using windows auth",
                     User = principalWithDatabaseAccess.Identity.Name,
                     IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
-                        principalWithDatabaseAccess.IsAdministrator(
-                            DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                                    principalWithDatabaseAccess.IsAdministrator(anonymousUserAccessMode),
                     IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Resource),
                     Databases =
                         principalWithDatabaseAccess.AdminDatabases.Concat(
@@ -612,7 +616,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     Remark = "Using OAuth",
                     User = oAuthPrincipal.Name,
-                    IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                    IsAdminGlobal = oAuthPrincipal.IsAdministrator(anonymousUserAccessMode),
                     IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Resource),
                     Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
                                               .Select(db => db.TenantId != null ? new DatabaseInfo

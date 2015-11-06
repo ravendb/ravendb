@@ -56,6 +56,10 @@ class databaseAccess {
         });
 
         this.searchResults = ko.computed(() => {
+            var readOnly = shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings();
+            if (readOnly)
+                return [];
+
             var newResourceName: string = this.tenantId();
             return this.resourceNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });

@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 
 using Raven.SpecificPlatform.Windows;
@@ -181,7 +182,7 @@ namespace Raven.Database.Extensions
             var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
             if (databaseAccessPrincipal != null)
             {
-                if(databaseName != null && databaseAccessPrincipal.ReadOnlyDatabases.Contains(databaseName))
+                if (databaseName != null && databaseAccessPrincipal.ReadOnlyDatabases.Contains(databaseName))
                     return true;
             }
             return false;

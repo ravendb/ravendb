@@ -75,6 +75,8 @@ class shell extends viewModelBase {
     showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption());
     showLogOutButton: KnockoutComputed<boolean>;
     static isGlobalAdmin = ko.observable<boolean>(false);
+    static canReadWriteSettings = ko.observable<boolean>(false);
+    static canReadSettings = ko.observable<boolean>(false);
     static canExposeConfigOverTheWire = ko.observable<boolean>(false);
     maxResourceNameWidth: KnockoutComputed<string>;
     isLoadingStatistics = ko.computed(() => !!this.lastActivatedResource() && !this.lastActivatedResource().statistics()).extend({ rateLimit: 100 });
@@ -584,6 +586,7 @@ class shell extends viewModelBase {
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
+            this.loadServerConfig();
 
             var databasesLoadTask = shell.reloadDatabases();
             var fileSystemsLoadTask = shell.reloadFileSystems();
@@ -803,6 +806,8 @@ class shell extends viewModelBase {
             .execute()
             .done((serverConfigs: serverConfigsDto) => {
                 shell.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
+                shell.canReadWriteSettings(serverConfigs.CanReadWriteSettings);
+                shell.canReadSettings(serverConfigs.CanReadSettings);
                 shell.canExposeConfigOverTheWire(serverConfigs.CanExposeConfigOverTheWire);
             })
             .always(() => deferred.resolve());

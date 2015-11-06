@@ -1,6 +1,10 @@
-<div data-bind="visible: anotherRestoreInProgres()" class="badge pull-right"><span class="fa fa-spinner fa-spin"></span>Another restore in progress</div>
-<div role="tabpanel">
+<div data-bind="visible: anotherRestoreInProgres() && isForbidden() == false" class="badge pull-right"><span class="fa fa-spinner fa-spin"></span>Another restore in progress</div>
 
+<div data-bind="visible: isForbidden" class="text-center">
+    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+</div>
+
+<div role="tabpanel" data-bind="visible: isForbidden() == false">
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active"><a href="#restoreDb" aria-controls="restoreDb" role="tab" data-toggle="tab">Database</a></li>
         <li role="presentation"><a href="#restoreFs" aria-controls="restoreFs" role="tab" data-toggle="tab">File System</a></li>

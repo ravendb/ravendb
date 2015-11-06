@@ -1,13 +1,11 @@
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Server;
 using Raven.Tests.Helpers;
 using Xunit;
 
-namespace RavenDbShardingTests
+namespace Raven.Tests.Issues
 {
     public class ShardedIdGenerationTest : RavenTestBase
     {

@@ -7,6 +7,7 @@ import adminLogsConfig = require("models/database/debug/adminLogsConfig");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
 import appUrl = require('common/appUrl');
+import shell = require("viewmodels/shell");
 
 class adminLogs extends viewModelBase {
    
@@ -19,9 +20,10 @@ class adminLogs extends viewModelBase {
     logsContainer: Element;
     entriesCount = ko.computed(() => this.rawLogs().length);
     adminLogsConfig = ko.observable<adminLogsConfig>();
-
+    isForbidden = ko.observable<boolean>();
 
     canActivate(args): any {
+        this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
     
