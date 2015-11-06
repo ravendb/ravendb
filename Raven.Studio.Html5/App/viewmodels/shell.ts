@@ -586,6 +586,7 @@ class shell extends viewModelBase {
             this.fetchServerBuildVersion();
             this.fetchClientBuildVersion();
             this.fetchLicenseStatus();
+            this.loadServerConfig();
 
             var databasesLoadTask = shell.reloadDatabases();
             var fileSystemsLoadTask = shell.reloadFileSystems();

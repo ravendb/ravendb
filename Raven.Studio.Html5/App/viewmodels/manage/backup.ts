@@ -48,7 +48,10 @@ class backupDatabase extends viewModelBase {
     private fsBackupOptions = new resourceBackup(TenantType.FileSystem, shell.fileSystems);
     private csBackupOptions = new resourceBackup(TenantType.CounterStorage, shell.counterStorages);
     
+    isForbidden = ko.observable<boolean>();
+
     canActivate(args): any {
+        this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
 
