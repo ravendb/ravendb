@@ -111,12 +111,6 @@ namespace Raven.Abstractions.Data
         //Encryption
         public const string DontEncryptDocumentsStartingWith = "Raven/";
 
-        public const string AlgorithmTypeSetting = "Raven/Encryption/Algorithm";
-
-        public const string EncryptionKeySetting = "Raven/Encryption/Key";
-
-        public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
-
         public const string InResourceKeyVerificationDocumentName = "Raven/Encryption/Verification";
 
         public static readonly RavenJObject InResourceKeyVerificationDocumentContents;

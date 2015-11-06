@@ -73,8 +73,8 @@ namespace Raven.Database.Server.Controllers.Admin
             string bundles;			
             if (dbDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.Contains("Encryption"))
             {
-                if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
-                    !dbDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+                if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
+                    !dbDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
                 {
                     return GetMessageWithString(string.Format("Failed to create '{0}' database, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
                 }

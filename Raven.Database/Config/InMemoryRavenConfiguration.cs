@@ -1625,6 +1625,18 @@ namespace Raven.Database.Config
             [DefaultValue(false)]
             [ConfigurationEntry("Raven/UseSsl")]
             public bool UseSsl { get; set; }
+
+            [DefaultValue(null)]
+            [ConfigurationEntry("Raven/Encryption/Algorithm")]
+            public string AlgorithmType { get; set; }
+
+            [DefaultValue(null)]
+            [ConfigurationEntry("Raven/Encryption/Key")]
+            public string EncryptionKey { get; set; }
+
+            [DefaultValue(true)]
+            [ConfigurationEntry("Raven/Encryption/EncryptIndexes")]
+            public bool EncryptIndexes { get; set; }
         }
 
         public class IndexingConfiguration : ConfigurationBase

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Config;
 using Raven.Tests.Helpers;
 
 using Xunit;
@@ -63,7 +64,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 },
                 SecuredSettings = new Dictionary<string, string>()
                 {
-                    {Constants.EncryptionKeySetting, ""}
+                    {InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey), ""}
                 }
             }).Wait());
 
@@ -81,7 +82,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 },
                 SecuredSettings = new Dictionary<string, string>()
                 {
-                    {Constants.AlgorithmTypeSetting, ""}
+                    {InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType), ""}
                 }
             }).Wait());
 
