@@ -84,7 +84,7 @@ namespace Raven.Storage.Voron
             documentCacher = new DocumentCacher(configuration);
             exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(
-                configuration.Storage.MaxBufferPoolSize.ValueInBytes, 
+                configuration.Storage.MaxBufferPoolSize.GetValue(SizeUnit.Bytes), 
                 int.MaxValue); // 2GB max buffer size (voron limit)
             this.onNestedTransactionEnter = onNestedTransactionEnter;
             this.onNestedTransactionExit = onNestedTransactionExit;
@@ -364,8 +364,8 @@ namespace Raven.Storage.Voron
         private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnly();
-            options.InitialFileSize = configuration.Storage.InitialFileSize?.ValueInBytes;
-            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.ValueInBytes;
+            options.InitialFileSize = configuration.Storage.InitialFileSize?.GetValue(SizeUnit.Bytes);
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.GetValue(SizeUnit.Bytes);
 
             return options;
         }
@@ -388,8 +388,8 @@ namespace Raven.Storage.Voron
             var journalPath = configuration.Storage.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
             options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
-            options.InitialFileSize = configuration.Storage.InitialFileSize?.ValueInBytes;
-            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.ValueInBytes;
+            options.InitialFileSize = configuration.Storage.InitialFileSize?.GetValue(SizeUnit.Bytes);
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.GetValue(SizeUnit.Bytes);
 
             return options;
         }

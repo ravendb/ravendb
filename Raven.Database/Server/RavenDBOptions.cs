@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.DiskIO;
 using Raven.Database.Plugins;
 using Raven.Database.Raft;
@@ -48,7 +49,7 @@ namespace Raven.Database.Server
                     systemDatabase = db;
                 }
 
-                WebSocketBufferPool.Initialize((int) configuration.WebSockets.InitialBufferPoolSize.ValueInBytes);
+                WebSocketBufferPool.Initialize((int) configuration.WebSockets.InitialBufferPoolSize.GetValue(SizeUnit.Bytes));
                 fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
                 databasesLandlord = new DatabasesLandlord(systemDatabase);
                 countersLandlord = new CountersLandlord(systemDatabase);

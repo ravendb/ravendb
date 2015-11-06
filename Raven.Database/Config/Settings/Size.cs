@@ -51,7 +51,24 @@ namespace Raven.Database.Config.Settings
             }
         }
 
-        public long ValueInBytes => valueInBytes;
+        public long GetValue(SizeUnit requestedUnit)
+        {
+            switch (requestedUnit)
+            {
+                case SizeUnit.Bytes:
+                    return valueInBytes;
+                case SizeUnit.Kilobytes:
+                    return valueInBytes / OneKb;
+                case SizeUnit.Megabytes:
+                    return valueInBytes / OneMb;
+                case SizeUnit.Gigabytes:
+                    return valueInBytes / OneGb;
+                case SizeUnit.Terabytes:
+                    return valueInBytes / OneTb;
+                default:
+                    throw new NotSupportedException("Not supported size unit: " + unit);
+            }
+        }
 
         public static bool operator <(Size x, Size y)
         {
