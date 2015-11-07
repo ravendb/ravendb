@@ -123,7 +123,7 @@ namespace Raven.Database.Indexing
                         token.ThrowIfCancellationRequested();
                         var parallelStats = new ParallelBatchStats
                         {
-                            StartDelay = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
+                            StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
                         };
 
                         var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(context.Database, indexDefinition, viewGenerator, logIndexing);
@@ -236,7 +236,7 @@ namespace Raven.Database.Indexing
                     performanceStats.Add(new ParallelPerformanceStats
                     {
                         NumberOfThreads = parallelOperations.Count,
-                        DurationMs = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
+                        DurationMs = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
                         BatchedOperations = parallelOperations.ToList()
                     });
 
@@ -321,7 +321,7 @@ namespace Raven.Database.Indexing
                 return false;
             // no often than specified indexing interval
             return (LastIndexTime - PreviousIndexTime > context.Configuration.MinIndexingTimeIntervalToStoreCommitPoint ||
-                // at least once for specified time interval
+                    // at least once for specified time interval
                     LastIndexTime - LastCommitPointStoreTime > context.Configuration.MaxIndexCommitPointStoreTimeInterval);
         }
 
@@ -425,14 +425,16 @@ namespace Raven.Database.Indexing
             Write((writer, analyzer, stats) =>
             {
                 stats.Operation = IndexingWorkStats.Status.Ignore;
-                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+                if (logIndexing.IsDebugEnabled)
+                    logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+
                 var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
                     .Where(x => x != null)
                     .ToList();
 
                 keys.Apply(
                     key =>
-                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.DocumentIdFieldName, key)));
+                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.DocumentIdFieldName, key.ToLowerInvariant())));
 
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
                 batchers.ApplyAndIgnoreAllErrors(

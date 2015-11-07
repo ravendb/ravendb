@@ -695,13 +695,18 @@ namespace Raven.Database.Server.Controllers
         protected UserInfo GetUserInfo()
         {
             var principal = User;
+            var anonymousUserAccessMode = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode;
             if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
             {
                 var anonymous = new UserInfo
                 {
                     Remark = "Using anonymous user",
-                    IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+                    IsAdminGlobal = anonymousUserAccessMode == AnonymousUserAccessMode.Admin,
+                    IsAdminCurrentDb = anonymousUserAccessMode == AnonymousUserAccessMode.Admin ||
+                                       anonymousUserAccessMode == AnonymousUserAccessMode.All ||
+                                       anonymousUserAccessMode == AnonymousUserAccessMode.Get
                 };
+
                 return anonymous;
             }
 
@@ -713,7 +718,7 @@ namespace Raven.Database.Server.Controllers
                     Remark = "Using windows auth",
                     User = windowsPrincipal.Identity.Name,
                     IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
-                                    windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+                                    windowsPrincipal.IsAdministrator(anonymousUserAccessMode)
                 };
 
                 windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Database);
@@ -729,8 +734,7 @@ namespace Raven.Database.Server.Controllers
                     Remark = "Using windows auth",
                     User = principalWithDatabaseAccess.Identity.Name,
                     IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
-                        principalWithDatabaseAccess.IsAdministrator(
-                            DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                                    principalWithDatabaseAccess.IsAdministrator(anonymousUserAccessMode),
                     IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
                     Databases =
                         principalWithDatabaseAccess.AdminDatabases.Concat(
@@ -758,7 +762,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     Remark = "Using OAuth",
                     User = oAuthPrincipal.Name,
-                    IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                    IsAdminGlobal = oAuthPrincipal.IsAdministrator(anonymousUserAccessMode),
                     IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
                     Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
                                               .Select(db => new DatabaseInfo

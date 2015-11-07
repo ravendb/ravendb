@@ -4,13 +4,14 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 
 class apiKeys extends viewModelBase {
-
     apiKeys = ko.observableArray<apiKey>().extend({ required: true });
     static globalApiKeys: KnockoutObservableArray<apiKey>;
     loadedApiKeys = ko.observableArray<apiKey>().extend({ required: true });
     allDatabases = ko.observableArray<string>();
     searchText = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
+    isForbidden = ko.observable<boolean>();
+    isReadOnly: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -22,23 +23,36 @@ class apiKeys extends viewModelBase {
             .filter(db => db.name != "<system>").map(db => db.name)
             .concat(shell.fileSystems().map(fs => fs.name));
         this.allDatabases(resourceNames);
+
+        this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
+        this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
     }
 
     canActivate(args) {
-        var deffered = $.Deferred();
-        this.fetchApiKeys().done(() => deffered.resolve({ can: true }));
-        return deffered;
+        var deferred = $.Deferred();
+
+        if (this.isForbidden() === false) {
+            this.fetchApiKeys().done(() => deferred.resolve({ can: true }));
+        } else {
+            deferred.resolve({ can: true });
+        }
+        
+        return deferred;
     }
 
     activate(args) {
         super.activate(args);
         this.updateHelpLink('9CGJ4Y');
         this.dirtyFlag = new ko.DirtyFlag([this.apiKeys]);
-        this.isSaveEnabled = ko.computed(() => this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.computed(() => this.isReadOnly() === false && this.dirtyFlag().isDirty());
     }
 
     compositionComplete() {
         super.compositionComplete();
+        if (this.isReadOnly()) {
+            $('form input').attr('readonly', 'readonly');
+            $('button').attr('disabled', 'true');
+        }
         $("form").on("keypress", 'input[name="databaseName"]', (e) => e.which != 13);
     }
 
