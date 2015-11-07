@@ -167,7 +167,9 @@ namespace Raven.Database.Prefetching
                     // items in the prefetching queue that are after the last in memory docs
                     // immediately, not wait for them to be indexed. They have already been in 
                     // memory for ten minutes
-                    prefetchingQueue.RemoveAfter(current.Etag);
+                    // But not if our time has finally been reached
+                    if (requestedEtag.CompareTo(current.Etag) >= 0)
+                        prefetchingQueue.RemoveAfter(current.Etag);
                 }
             }
         }
