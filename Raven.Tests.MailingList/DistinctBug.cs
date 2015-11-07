@@ -31,6 +31,10 @@ namespace Raven.Tests.MailingList
                 RunInMemory = true,
                 Conventions = { IdentityPartsSeparator = "-" },
                 UseEmbeddedHttpServer = true,
+                Configuration =
+                {
+                    Port = 8079
+                }
 
             };
             str.Configuration.Storage.Voron.AllowOn32Bits = true;
