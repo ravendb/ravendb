@@ -20,7 +20,14 @@ namespace Rhino.Licensing.Discovery
 		///</summary>
 		public void Start()
 		{
-			IsStop = false;
+            if (socket != null)
+            {
+                if (!IsStop) return;
+                StartListening();
+                IsStop = false;
+                return;
+            }
+            IsStop = false;
 			socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
 			NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
@@ -136,9 +143,13 @@ namespace Rhino.Licensing.Discovery
 
 		public void Dispose()
 		{
-			if (socket != null)
-				socket.Dispose();
-		}
+            IsStop = true;
+            if (socket != null)
+            {
+                socket.Dispose();
+                socket = null;
+            }
+        }
 
 		public void Stop()
 		{
