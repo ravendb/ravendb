@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using Sparrow.Platform;
 using System;
 using System.Reflection.Emit;
@@ -306,3 +307,4 @@ namespace Sparrow
         }
     }
 }
+#endif

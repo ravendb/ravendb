@@ -35,6 +35,7 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Initializes a new instance of the <see cref="ImplicitFetchFieldsFromDocumentNotAllowedException"/> class.
         /// </summary>
@@ -45,5 +46,6 @@ namespace Raven.Abstractions.Exceptions
             StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }
