@@ -156,7 +156,7 @@ namespace Raven.Server
             Action actionToTake = null;
             bool launchBrowser = false;
             bool noLog = false;
-            var ravenConfiguration = new RavenConfiguration();
+            var ravenConfiguration = new AppSettingsBasedConfiguration();
             bool waitForRestore = true;
             int? restoreStartTimeout = 15;
 
@@ -164,7 +164,7 @@ namespace Raven.Server
             optionSet.OnWarning += s => ConsoleWriteLineWithColor(ConsoleColor.Yellow, s);
             optionSet.Add("set={==}", OptionCategory.None, "The configuration {0:option} to set to the specified {1:value}", (key, value) =>
             {
-                ravenConfiguration.Settings[key] = value;
+                ravenConfiguration.SetSetting(key, value);
                 ravenConfiguration.Initialize();
             });
             optionSet.Add("nolog", OptionCategory.General, "Don't use the default log", s => noLog = true);
@@ -179,7 +179,7 @@ namespace Raven.Server
             optionSet.Add("stop", OptionCategory.Service, "Stops the RavenDB service", key => actionToTake = () => AdminRequired(StopService));
             optionSet.Add("ram", OptionCategory.General, "Run RavenDB in RAM only", key =>
             {
-                ravenConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
+                ravenConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
                 ravenConfiguration.Core.RunInMemory = true;
                 ravenConfiguration.Initialize();
                 actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);
@@ -615,15 +615,15 @@ namespace Raven.Server
 
         }
 
-        public static void DumpToCsv(RavenConfiguration ravenConfiguration)
+        public static void DumpToCsv(AppSettingsBasedConfiguration appSettingsBasedConfiguration)
         {
-            using (var db = new DocumentDatabase(ravenConfiguration, null))
+            using (var db = new DocumentDatabase(appSettingsBasedConfiguration, null))
             {
                 db.TransactionalStorage.DumpAllStorageTables();
             }
         }
 
-        private static void InstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+        private static void InstallSsl(string sslCertificateFile, string sslCertificatePassword, AppSettingsBasedConfiguration configuration)
         {
             if (string.IsNullOrEmpty(sslCertificateFile))
                 throw new InvalidOperationException("X509 certificate path cannot be empty.");
@@ -635,7 +635,7 @@ namespace Raven.Server
             NonAdminHttp.BindCertificate(configuration.Core.Port, certificate);
         }
 
-        private static void UninstallSsl(string sslCertificateFile, string sslCertificatePassword, RavenConfiguration configuration)
+        private static void UninstallSsl(string sslCertificateFile, string sslCertificatePassword, AppSettingsBasedConfiguration configuration)
         {
             X509Certificate2 certificate = null;
 
@@ -649,7 +649,7 @@ namespace Raven.Server
 
         private static void UpdateVersion(string dbToUpdate)
         {
-            var ravenConfiguration = new RavenConfiguration();
+            var ravenConfiguration = new AppSettingsBasedConfiguration();
             ConfigureDebugLogging();
 
             RunServerInDebugMode(ravenConfiguration, false, server =>
@@ -744,7 +744,7 @@ Configuration databaseOptions:
         {
             try
             {
-                var ravenConfiguration = new RavenConfiguration();
+                var ravenConfiguration = new AppSettingsBasedConfiguration();
  
                 MaintenanceActions.Restore(ravenConfiguration, new DatabaseRestoreRequest
                 {
@@ -799,17 +799,17 @@ Configuration databaseOptions:
 
         private static void RunInDebugMode(
             AnonymousUserAccessMode? anonymousUserAccessMode,
-            RavenConfiguration ravenConfiguration,
+            AppSettingsBasedConfiguration appSettingsBasedConfiguration,
             bool launchBrowser,
             bool noLog)
         {
             if (noLog == false)
                 ConfigureDebugLogging();
 
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Core.Port, ravenConfiguration.Encryption.UseSsl);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(appSettingsBasedConfiguration.Core.Port, appSettingsBasedConfiguration.Encryption.UseSsl);
             if (anonymousUserAccessMode.HasValue)
-                ravenConfiguration.Core.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
-            while (RunServerInDebugMode(ravenConfiguration, launchBrowser, server => InteractiveRun(server)))
+                appSettingsBasedConfiguration.Core.AnonymousUserAccessMode = anonymousUserAccessMode.Value;
+            while (RunServerInDebugMode(appSettingsBasedConfiguration, launchBrowser, server => InteractiveRun(server)))
             {
                 launchBrowser = false;
             }
@@ -828,10 +828,10 @@ Configuration databaseOptions:
             }
         }
 
-        private static bool RunServerInDebugMode(RavenConfiguration ravenConfiguration, bool launchBrowser, Func<RavenDbServer, bool> afterOpen, bool useEmbeddedServer = true)
+        private static bool RunServerInDebugMode(AppSettingsBasedConfiguration appSettingsBasedConfiguration, bool launchBrowser, Func<RavenDbServer, bool> afterOpen, bool useEmbeddedServer = true)
         {
             var sp = Stopwatch.StartNew();
-            using (var server = new RavenDbServer(ravenConfiguration)
+            using (var server = new RavenDbServer(appSettingsBasedConfiguration)
             {
                 UseEmbeddedHttpServer = useEmbeddedServer
             }.Initialize())
@@ -866,49 +866,49 @@ Configuration databaseOptions:
                 ConsoleWriteWithColor(new ConsoleText {Message = "  Working directory    : "},
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.Core.RunInMemory ? " RAM " : ravenConfiguration.Core.WorkingDirectory.TrimEnd('\\'),
-                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        Message = appSettingsBasedConfiguration.Core.RunInMemory ? " RAM " : appSettingsBasedConfiguration.Core.WorkingDirectory.TrimEnd('\\'),
+                        ForegroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
                     });
 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Data directory       : " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.Core.WorkingDirectory, ravenConfiguration.Core.DataDirectory),
-                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        Message = appSettingsBasedConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(appSettingsBasedConfiguration.Core.WorkingDirectory, appSettingsBasedConfiguration.Core.DataDirectory),
+                        ForegroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
                     }); 
 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Index cache directory: " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.Core.WorkingDirectory, ravenConfiguration.Core.CompiledIndexCacheDirectory),
-                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        Message = appSettingsBasedConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(appSettingsBasedConfiguration.Core.WorkingDirectory, appSettingsBasedConfiguration.Core.CompiledIndexCacheDirectory),
+                        ForegroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
                     }); 
                 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Plugins directory    : " },
                     new ConsoleText
                     {
-                        Message = ravenConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(ravenConfiguration.Core.WorkingDirectory, ravenConfiguration.Core.PluginsDirectory),
-                        ForegroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
-                        BackgroundColor = ravenConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
+                        Message = appSettingsBasedConfiguration.Core.RunInMemory ? " RAM " : FilePathTools.StripWorkingDirectory(appSettingsBasedConfiguration.Core.WorkingDirectory, appSettingsBasedConfiguration.Core.PluginsDirectory),
+                        ForegroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.White : ConsoleColor.Green,
+                        BackgroundColor = appSettingsBasedConfiguration.Core.RunInMemory ? ConsoleColor.Red : Console.BackgroundColor,
                         IsNewLinePostPended = true
                     }); 
                 
-                var hostName = ravenConfiguration.Core.HostName ?? "<any>";
+                var hostName = appSettingsBasedConfiguration.Core.HostName ?? "<any>";
                 ConsoleWriteWithColor(new ConsoleText { Message = "  HostName             : " },
                     new ConsoleText { Message = hostName, ForegroundColor = ConsoleColor.White });
                 ConsoleWriteWithColor(new ConsoleText { Message = " Port: " },
-                    new ConsoleText { Message = ravenConfiguration.Core.Port.ToString(), ForegroundColor = ConsoleColor.White, IsNewLinePostPended = true });
+                    new ConsoleText { Message = appSettingsBasedConfiguration.Core.Port.ToString(), ForegroundColor = ConsoleColor.White, IsNewLinePostPended = true });
                 
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Storage              : " },
                     new ConsoleText { Message = server.SystemDatabase.TransactionalStorage.FriendlyName, ForegroundColor = ConsoleColor.Red, IsNewLinePostPended = true });
                 ConsoleWriteWithColor(new ConsoleText { Message = "  Server Url           : " },
-                    new ConsoleText { Message = ravenConfiguration.ServerUrl, ForegroundColor = ConsoleColor.DarkCyan, IsNewLinePostPended = true }); 
+                    new ConsoleText { Message = appSettingsBasedConfiguration.ServerUrl, ForegroundColor = ConsoleColor.DarkCyan, IsNewLinePostPended = true }); 
                 
                 Console.WriteLine();
                 ConsoleWriteWithColor(new ConsoleText 
@@ -932,7 +932,7 @@ Configuration databaseOptions:
                 {
                     try
                     {
-                        Process.Start(ravenConfiguration.ServerUrl);
+                        Process.Start(appSettingsBasedConfiguration.ServerUrl);
                     }
                     catch (Exception e)
                     {

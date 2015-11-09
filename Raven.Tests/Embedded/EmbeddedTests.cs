@@ -106,7 +106,7 @@ namespace Raven.Tests.Embedded
         [Fact]
         public void CanInsertSeveralDocuments()
         {
-            var configuration = new RavenConfiguration();
+            var configuration = new AppSettingsBasedConfiguration();
             configuration.Core.RunInMemory = true;
             using (var server = new RavenDbServer(configuration).Initialize())
             {

@@ -30,15 +30,15 @@ namespace Raven.SlowTests.Issues
             path = NewDataPath();
             pathsToDelete.Add("~/Databases");
             Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-            var config = new Raven.Database.Config.RavenConfiguration
+            var config = new Raven.Database.Config.AppSettingsBasedConfiguration
                             {
                                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                                 Core =
                                 {
                                     DataDirectory = path,
                                     Port = 8079,
+                                    ActiveBundlesStringValue = "PeriodicBackup"
                                  },
-                                Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
                             };
             config.PostInit();
             ravenDbServer = new RavenDbServer(config)
@@ -68,9 +68,9 @@ namespace Raven.SlowTests.Issues
             public string Data { get; set; }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
+            configuration.Core.ActiveBundlesStringValue = "PeriodicBackup";
         }
 
         [Fact, Trait("Category", "Smuggler")]

@@ -29,7 +29,7 @@ namespace Raven.Tests.Storage
 
         private void InitializeDocumentDatabase(string storageName)
         {
-            db = new DocumentDatabase(new RavenConfiguration
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -37,10 +37,9 @@ namespace Raven.Tests.Storage
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = true
                 }
             }.Initialize(), null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -71,7 +70,7 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -79,12 +78,10 @@ namespace Raven.Tests.Storage
                     DataDirectory = DataDir,
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = true
                 }
-
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -92,7 +89,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -141,7 +138,7 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -149,12 +146,10 @@ namespace Raven.Tests.Storage
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = true
                 }
-
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -162,7 +157,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -196,7 +191,7 @@ namespace Raven.Tests.Storage
         [PropertyData("Storages")]
         public void IncrementalBackupWithCircularLogOrVoronIncrementalBackupsNotEnabledThrows(string storageName)
         {
-            db = new DocumentDatabase(new RavenConfiguration
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {

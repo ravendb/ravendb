@@ -35,14 +35,14 @@ namespace Raven.Database.Server.Tenancy
 
         public override string ResourcePrefix { get { return Constants.Counter.Prefix; } }
 
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        public event Action<RavenConfiguration> SetupTenantConfiguration = delegate { };
 
         public CountersLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
             Init();
         }
 
-        public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+        public RavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
         public void Init()
         {
@@ -61,7 +61,7 @@ namespace Raven.Database.Server.Tenancy
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledCounterStorage = false)
+        public RavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledCounterStorage = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
@@ -69,19 +69,16 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory), systemDatabase.Configuration);		
+            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.Counter.DataDirectory), systemDatabase.Configuration);		
         }
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
+        protected RavenConfiguration CreateConfiguration(
                         string tenantId,
                         CounterStorageDocument document,
                         string folderPropName,
-                        InMemoryRavenConfiguration parentConfiguration)
+                        RavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+            var config = RavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
@@ -89,18 +86,20 @@ namespace Raven.Database.Server.Tenancy
 
             foreach (var setting in document.Settings)
             {
-                config.Settings[setting.Key] = setting.Value;
+                config.SetSetting(setting.Key, setting.Value);
             }
+
             Unprotect(document);
 
             foreach (var securedSetting in document.SecuredSettings)
             {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
+                config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Counter.DataDirectory);
-            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
-            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)];
+            //TODO arek - verify that
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Counter.DataDirectory));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath),config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
 
             config.CounterStorageName = tenantId;
 
@@ -120,8 +119,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
-            if (document.Settings.Keys.Contains(InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory)) == false)
-                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory));
+            if (document.Settings.Keys.Contains(RavenConfiguration.GetKey(x => x.Counter.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.Counter.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledCounterStorage)
                 throw new InvalidOperationException("The counter storage has been disabled.");
@@ -234,7 +233,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+        private void AssertLicenseParameters(RavenConfiguration config)
         {
             string maxDatabases;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfCounters", out maxDatabases))
@@ -260,7 +259,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException("Your license does not allow the use of the Counters");
         }
 
-            Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.Core.ActiveBundles);
         }
 
         public void ForAllCountersInCacheOnly(Action<CounterStorage> action)

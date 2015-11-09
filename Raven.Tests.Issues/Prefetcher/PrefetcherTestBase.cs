@@ -22,9 +22,9 @@ namespace Raven.Tests.Issues.Prefetcher
 {
     public abstract class PrefetcherTestBase : NoDisposalNeeded
     {
-        protected PrefetcherWithContext CreatePrefetcher(Action<InMemoryRavenConfiguration> modifyConfiguration = null, Action<WorkContext> modifyWorkContext = null)
+        protected PrefetcherWithContext CreatePrefetcher(Action<RavenConfiguration> modifyConfiguration = null, Action<WorkContext> modifyWorkContext = null)
         {
-            var configuration = new InMemoryRavenConfiguration
+            var configuration = new RavenConfiguration
             {
                 Core = { RunInMemory = true }
             };
@@ -83,7 +83,7 @@ namespace Raven.Tests.Issues.Prefetcher
         {
             public PrefetchingBehavior PrefetchingBehavior { get; set; }
 
-            public InMemoryRavenConfiguration Configuration { get; set; }
+            public RavenConfiguration Configuration { get; set; }
 
             public WorkContext WorkContext { get; set; }
 

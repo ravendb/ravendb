@@ -111,7 +111,7 @@ namespace Raven.Tests.Core.Commands
         [Fact]
         public void CanDoBackupAndRestore()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "false")))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false")))
             {
                 store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
 
@@ -119,13 +119,13 @@ namespace Raven.Tests.Core.Commands
                 {
                     Settings = new Dictionary<string, string>()
                     {
-                        { InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" }
+                        { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" }
                     }
                 }, false, store.DefaultDatabase);
                 WaitForBackup(store.DatabaseCommands, true);
             }
 
-            Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
+          Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = RestoreDir,

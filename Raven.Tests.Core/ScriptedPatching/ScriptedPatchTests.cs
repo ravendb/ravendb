@@ -31,7 +31,7 @@ namespace Raven.Tests.Core.ScriptedPatching
             using (var store = GetDocumentStore(modifyDatabaseDocument: document =>
             {
                 document.Settings["Raven/MaxStepsForScript"] = "5000";
-                document.Settings[InMemoryRavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";
+                document.Settings[RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";
             }))
             {
                 var foo = new Foo
@@ -74,7 +74,7 @@ namespace Raven.Tests.Core.ScriptedPatching
             using (var store = GetDocumentStore(modifyDatabaseDocument: document =>
             {
                 document.Settings["Raven/MaxStepsForScript"] = "5000";
-                document.Settings[InMemoryRavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";
+                document.Settings[RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)] = "true";
             }))
             {
                 var foo = new Foo

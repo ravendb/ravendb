@@ -50,7 +50,7 @@ namespace Raven.SlowTests.Issues
             public string Name { get; set; }
             public string Id { get; set; }
         }
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Container = new CompositionContainer(new TypeCatalog(
                                                                typeof(HiddenDocumentsTrigger)));

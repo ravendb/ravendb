@@ -52,7 +52,7 @@ namespace Raven.Tests.Issues
         {
             Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
-            var serverConfiguration = new Database.Config.RavenConfiguration
+            var serverConfiguration = new Database.Config.AppSettingsBasedConfiguration
             {
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =

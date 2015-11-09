@@ -19,7 +19,7 @@ namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1280_ReOpen : RavenTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 50;
             configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 50;

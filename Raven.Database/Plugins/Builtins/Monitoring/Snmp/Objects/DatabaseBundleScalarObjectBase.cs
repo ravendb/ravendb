@@ -30,7 +30,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects
                 if (Landlord.IsDatabaseLoaded(DatabaseName))
                 {
                     var database = Landlord.GetResourceInternal(DatabaseName).Result;
-                    var isBundleActive = database.Configuration.ActiveBundles.Any(x => x.Equals(BundleName, StringComparison.OrdinalIgnoreCase));
+                    var isBundleActive = database.Configuration.Core.ActiveBundles.Any(x => x.Equals(BundleName, StringComparison.OrdinalIgnoreCase));
                     if (isBundleActive)
                         return GetData(database);
                 }

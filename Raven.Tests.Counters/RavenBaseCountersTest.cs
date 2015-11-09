@@ -42,7 +42,7 @@ namespace Raven.Tests.Counters
 
         protected CounterStorage NewCounterStorage()
         {
-            var newCounterStorage = new CounterStorage(String.Empty, DefaultCounterStorageName, new InMemoryRavenConfiguration
+            var newCounterStorage = new CounterStorage(String.Empty, DefaultCounterStorageName, new RavenConfiguration
             {
                 Core = {
                     RunInMemory = true
@@ -54,7 +54,7 @@ namespace Raven.Tests.Counters
         }
 
 
-        protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
+        protected void ConfigureServerForAuth(RavenConfiguration serverConfiguration)
         {
             serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();

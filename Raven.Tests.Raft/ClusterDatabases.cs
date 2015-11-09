@@ -11,7 +11,7 @@ using Rachis.Transport;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -85,7 +85,7 @@ namespace Raven.Tests.Raft
                     Settings =
                     {
                         {"Raven/DataDir", "~/Databases/Northwind"},
-                        {Constants.Cluster.NonClusterDatabaseMarker, "false"}
+                        {RavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), "false"}
                     }
                 });
 
@@ -114,7 +114,7 @@ namespace Raven.Tests.Raft
                     Settings =
                     {
                         {"Raven/DataDir", "~/Databases/Northwind"},
-                        {Constants.Cluster.NonClusterDatabaseMarker, "true"}
+                        {RavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), "true"}
                     }
                 });
 

@@ -174,7 +174,7 @@ namespace Raven.Database.Config
                             }
                             else
                             {
-                                RavenConfiguration configuration = new RavenConfiguration();
+                                AppSettingsBasedConfiguration configuration = new AppSettingsBasedConfiguration();
                                 var availableMem = new Size((long) info.AvailableRam, SizeUnit.Bytes);
                                 if (availableMem < configuration.Memory.LowMemoryForLinuxDetection)
                                 {

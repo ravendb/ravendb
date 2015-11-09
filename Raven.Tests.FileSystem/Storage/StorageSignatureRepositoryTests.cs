@@ -9,11 +9,11 @@ namespace Raven.Tests.FileSystem
 {
     public class StorageSignatureRepositoryTests : StorageTest
     {
-        private InMemoryRavenConfiguration configuration;
+        private RavenConfiguration configuration;
 
         public StorageSignatureRepositoryTests()
         {
-            configuration = new InMemoryRavenConfiguration();
+            configuration = new RavenConfiguration();
             configuration.Initialize();
         }
 

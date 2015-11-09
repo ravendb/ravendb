@@ -22,21 +22,21 @@ namespace Raven.Tests.Indexes.Recovery
 
     public class MapIndexRecoveryTests : RavenTest
     {
-        private void CommitPointAfterEachCommit(InMemoryRavenConfiguration configuration)
+        private void CommitPointAfterEachCommit(RavenConfiguration configuration)
         {
             // force commit point creation after each commit
             configuration.Indexing.MinIndexingIntervalToStoreCommitPoint = new TimeSetting(0, TimeUnit.Seconds);
             configuration.Indexing.MaxIndexCommitPointStoreInterval = new TimeSetting(0, TimeUnit.Seconds);
         }
 
-        private void CommitPointAfterFirstCommitOnly(InMemoryRavenConfiguration configuration)
+        private void CommitPointAfterFirstCommitOnly(RavenConfiguration configuration)
         {
             // by default first commit will force creating commit point, here we don't need more
             configuration.Indexing.MinIndexingIntervalToStoreCommitPoint = new TimeSetting(30, TimeUnit.Minutes);
             configuration.Indexing.MaxIndexCommitPointStoreInterval = new TimeSetting((long) TimeSpan.MaxValue.TotalSeconds, TimeUnit.Seconds);
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Indexing.FlushIndexToDiskSize = new Size(0, SizeUnit.Bytes);
         }

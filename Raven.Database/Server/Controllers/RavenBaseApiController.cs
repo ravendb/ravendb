@@ -631,7 +631,7 @@ namespace Raven.Database.Server.Controllers
 
         public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
 
-        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+        public abstract RavenConfiguration ResourceConfiguration { get; }
 
         public HttpResponseMessage WriteFile(string filePath)
         {
@@ -758,7 +758,7 @@ namespace Raven.Database.Server.Controllers
             return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, SystemConfiguration);
         }
 
-        public abstract InMemoryRavenConfiguration SystemConfiguration { get; }
+        public abstract RavenConfiguration SystemConfiguration { get; }
 
 
         protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)

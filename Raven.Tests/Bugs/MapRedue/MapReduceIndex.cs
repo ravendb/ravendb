@@ -28,7 +28,7 @@ namespace Raven.Tests.Bugs.MapRedue
             };
         }
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
             configuration.Core.MaxNumberOfParallelProcessingTasks = 1;
         }

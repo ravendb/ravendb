@@ -62,19 +62,19 @@ namespace Raven.Database.Commercial
             };
         }
 
-        public void Execute(InMemoryRavenConfiguration config)
+        public void Execute(RavenConfiguration config)
         {
             timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));
 
             ExecuteInternal(config);
         }
 
-        public void ForceExecute(InMemoryRavenConfiguration config)
+        public void ForceExecute(RavenConfiguration config)
         {
             ExecuteInternal(config);
         }
 
-        private void ExecuteInternal(InMemoryRavenConfiguration config)
+        private void ExecuteInternal(RavenConfiguration config)
         {
             var licensePath = GetLicensePath(config);
             var licenseText = GetLicenseText(config);
@@ -175,7 +175,7 @@ namespace Raven.Database.Commercial
             }
         }
 
-        private bool TryLoadLicense(InMemoryRavenConfiguration config)
+        private bool TryLoadLicense(RavenConfiguration config)
         {
             string publicKey;
             using (
@@ -289,7 +289,7 @@ namespace Raven.Database.Commercial
             return errorMessage;
         }
 
-        private string GetLicenseText(InMemoryRavenConfiguration config)
+        private string GetLicenseText(RavenConfiguration config)
         {
             var value = config.Licensing.License;
 
@@ -304,7 +304,7 @@ namespace Raven.Database.Commercial
             return string.Empty;
         }
 
-        private static string GetLicensePath(InMemoryRavenConfiguration config)
+        private static string GetLicensePath(RavenConfiguration config)
         {
             var value = config.Licensing.License;
 

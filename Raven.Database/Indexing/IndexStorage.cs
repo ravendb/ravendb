@@ -55,7 +55,7 @@ namespace Raven.Database.Indexing
         private const string MapReduceIndexVersion = "2.5.0.1";
 
         private readonly IndexDefinitionStorage indexDefinitionStorage;
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
         private readonly string path;
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         private static readonly ILog startupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
@@ -112,7 +112,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
+        public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, RavenConfiguration configuration, DocumentDatabase documentDatabase)
         {
             try
             {

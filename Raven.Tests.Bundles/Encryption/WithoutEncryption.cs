@@ -8,9 +8,9 @@ namespace Raven.Tests.Bundles.Encryption
 {
     public class WithoutEncryption : Encryption
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "none";
+            configuration.Core.ActiveBundlesStringValue = "none";
         }
 
         [Fact]

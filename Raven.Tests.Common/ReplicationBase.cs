@@ -138,7 +138,7 @@ namespace Raven.Tests.Common
             
         }
 
-        protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
+        protected virtual void ConfigureConfig(RavenConfiguration ravenConfiguration)
         {
             
         }
@@ -170,9 +170,8 @@ namespace Raven.Tests.Common
             var previousServer = servers[index];
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Core.Port);
-            var serverConfiguration = new RavenConfiguration
+            var serverConfiguration = new AppSettingsBasedConfiguration
             {
-                Settings = { { "Raven/ActiveBundles", "replication" } },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =
                 {
@@ -180,6 +179,7 @@ namespace Raven.Tests.Common
                     DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
                     Port = previousServer.SystemDatabase.Configuration.Core.Port,
                     AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+                    ActiveBundlesStringValue = "replication"
                 }
             };
 

@@ -101,7 +101,7 @@ namespace Raven.Database
             public Exception Ex;
         }
 
-        public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
+        public DocumentDatabase(RavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
         {
             TimerManager = new ResourceTimerManager();
             DocumentLock = new PutSerialLock();
@@ -296,7 +296,7 @@ namespace Raven.Database
             get { return backgroundTaskScheduler; }
         }
 
-        public InMemoryRavenConfiguration Configuration { get; private set; }
+        public RavenConfiguration Configuration { get; private set; }
 
         public ConfigurationRetriever ConfigurationRetriever { get; private set; }
 
@@ -478,7 +478,7 @@ namespace Raven.Database
 
         private List<string> FindPluginBundles(Type[] types)
         {
-            var unfilteredCatalogs = InMemoryRavenConfiguration.GetUnfilteredCatalogs(Configuration.Catalog.Catalogs);
+            var unfilteredCatalogs = RavenConfiguration.GetUnfilteredCatalogs(Configuration.Catalog.Catalogs);
 
             AggregateCatalog unfilteredAggregate = null;
 
@@ -1168,11 +1168,11 @@ namespace Raven.Database
         {
             private readonly DocumentDatabase database;
 
-            private readonly InMemoryRavenConfiguration configuration;
+            private readonly RavenConfiguration configuration;
 
             internal ValidateLicense validateLicense;
 
-            public DocumentDatabaseInitializer(DocumentDatabase database, InMemoryRavenConfiguration configuration)
+            public DocumentDatabaseInitializer(DocumentDatabase database, RavenConfiguration configuration)
             {
                 this.database = database;
                 this.configuration = configuration;
@@ -1183,7 +1183,7 @@ namespace Raven.Database
                 if (configuration.Storage.AllowOn32Bits == false && 
                     Environment.Is64BitProcess == false)
                 {
-                    throw new Exception("Voron is prone to failure in 32-bits mode. Use " + InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
+                    throw new Exception("Voron is prone to failure in 32-bits mode. Use " + RavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
                 }
             }
 

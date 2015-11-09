@@ -47,7 +47,7 @@ namespace Raven.Database.FileSystem
         private readonly SigGenerator sigGenerator;
         private readonly ITransactionalStorage storage;
         private readonly SynchronizationTask synchronizationTask;
-        private readonly InMemoryRavenConfiguration systemConfiguration;
+        private readonly RavenConfiguration systemConfiguration;
         private readonly TransportState transportState;
         private readonly MetricsCountersManager metricsCounters;
 
@@ -61,7 +61,7 @@ namespace Raven.Database.FileSystem
 
         public string ResourceName { get; private set; }
 
-        public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
+        public RavenFileSystem(RavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
         {
             ExtensionsState = new AtomicDictionary<object>();
 
@@ -142,11 +142,11 @@ namespace Raven.Database.FileSystem
             }
         }
 
-        internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
+        internal static ITransactionalStorage CreateTransactionalStorage(RavenConfiguration configuration)
         {
             if (Environment.Is64BitProcess == false && configuration.Storage.AllowOn32Bits == false)
             {
-                throw new Exception("Voron is prone to failure in 32-bits mode. Use " + InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
+                throw new Exception("Voron is prone to failure in 32-bits mode. Use " + RavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
             }
             return new TransactionalStorage(configuration);
         }
@@ -248,7 +248,7 @@ namespace Raven.Database.FileSystem
 
         public BufferPool BufferPool { get; private set; }
 
-        public InMemoryRavenConfiguration Configuration
+        public RavenConfiguration Configuration
         {
             get { return systemConfiguration; }
         }

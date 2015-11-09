@@ -16,6 +16,6 @@ namespace Raven.Database.Common
 
         AtomicDictionary<object> ExtensionsState { get; }
 
-        InMemoryRavenConfiguration Configuration { get; }
+        RavenConfiguration Configuration { get; }
     }
 }

@@ -34,7 +34,7 @@ namespace Raven.Tests.Storage
             BackupDir = NewDataPath("BackupDatabase");
             DataDir = NewDataPath("DataDirectory");
 
-            db = new DocumentDatabase(new RavenConfiguration
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -62,14 +62,14 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -95,13 +95,13 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -142,14 +142,14 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -225,14 +225,14 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir

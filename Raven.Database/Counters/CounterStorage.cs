@@ -64,14 +64,13 @@ namespace Raven.Database.Counters
 
         public int ReplicationTimeoutInMs { get; private set; }
 
-        public unsafe CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
+        public unsafe CounterStorage(string serverUrl, string storageName, RavenConfiguration configuration, TransportState receivedTransportState = null)
         {
             CounterStorageUrl = string.Format("{0}cs/{1}", serverUrl, storageName);
             Name = storageName;
             ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
 
-            var options = configuration.Core.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : CreateStorageOptionsFromConfiguration(configuration.Counter.DataDirectory, configuration.Settings);
+            var options = CreateStorageOptionsFromConfiguration(configuration);
 
             storageEnvironment = new StorageEnvironment(options);
             transportState = receivedTransportState ?? new TransportState();
@@ -206,7 +205,7 @@ namespace Raven.Database.Counters
 
         public AtomicDictionary<object> ExtensionsState { get; private set; }
 
-        public InMemoryRavenConfiguration Configuration { get; private set; }
+        public RavenConfiguration Configuration { get; private set; }
 
         public CounterStorageStats CreateStats()
         {
@@ -253,25 +252,18 @@ namespace Raven.Database.Counters
             };
         }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
-            bool result;
-            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] ?? "false", out result) && result)
+            if (configuration.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly();
 
-            bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups) + " settings key contains invalid value");
-
-            var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
+            var directoryPath = configuration.Counter.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
-
-            var tempPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.TempPath)];
-            var journalPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)];
-            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, configuration.Storage.TempPath, configuration.Storage.JournalsStoragePath);
+            options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
             return options;
         }
 

@@ -854,7 +854,7 @@ namespace Raven.Database.Bundles.SqlReplication
             }
             else if (string.IsNullOrWhiteSpace(cfg.ConnectionStringSettingName) == false)
             {
-                var setting = Database.Configuration.Settings[cfg.ConnectionStringSettingName];
+                var setting = Database.Configuration.GetSetting(cfg.ConnectionStringSettingName);
                 if (string.IsNullOrWhiteSpace(setting))
                 {
                     if (writeToLog)

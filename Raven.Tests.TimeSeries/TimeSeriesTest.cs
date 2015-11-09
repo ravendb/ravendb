@@ -8,7 +8,7 @@ namespace Raven.Tests.TimeSeries
     {
         public static TimeSeriesStorage GetStorage()
         {
-            var storage = new TimeSeriesStorage("http://localhost:8080/", "TimeSeriesTest", new RavenConfiguration { Core = { RunInMemory = true }});
+            var storage = new TimeSeriesStorage("http://localhost:8080/", "TimeSeriesTest", new AppSettingsBasedConfiguration { Core = { RunInMemory = true }});
             using (var writer = storage.CreateWriter())
             {
                 writer.CreateType(new TimeSeriesType {Type = "Simple", Fields = new[] {"Value"}});

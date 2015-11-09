@@ -17,7 +17,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void ShouldNotHaveDuplicates()
         {
-            var compositionContainer = new InMemoryRavenConfiguration
+            var compositionContainer = new RavenConfiguration
             {
                 // can't use that, we have some unloadable assemblies in the base directory, 
                 // instead, testing the filtering catalog itself

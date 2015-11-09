@@ -9,7 +9,7 @@ namespace Raven.Database.Server.Security
     public abstract class AbstractRequestAuthorizer : IDisposable
     {
         [CLSCompliant(false)]
-        protected InMemoryRavenConfiguration settings;
+        protected RavenConfiguration settings;
         [CLSCompliant(false)]
         protected DocumentDatabase database;
         [CLSCompliant(false)]
@@ -18,10 +18,10 @@ namespace Raven.Database.Server.Security
         protected Func<string> tenantId;
 
         public DocumentDatabase Database { get { return database; } }
-        public InMemoryRavenConfiguration Settings { get { return settings; } }
+        public RavenConfiguration Settings { get { return settings; } }
         public string TenantId { get { return tenantId(); } }
 
-        public void Initialize(DocumentDatabase database, InMemoryRavenConfiguration settings, Func<string> tenantIdGetter, IRavenServer theServer)
+        public void Initialize(DocumentDatabase database, RavenConfiguration settings, Func<string> tenantIdGetter, IRavenServer theServer)
         {
             server = theServer;
             this.database = database;

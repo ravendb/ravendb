@@ -9,6 +9,7 @@ using Raven.Bundles.CascadeDelete;
 using Raven.Bundles.Expiration;
 using Raven.Client.Document;
 using Raven.Database;
+using Raven.Database.Config.Settings;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;
@@ -29,7 +30,7 @@ namespace Raven.Tests.Bundles.Expiration
             ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, activeBundles: "documentExpiration", configureConfig: configuration =>
             {
                 configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
-                configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
+                configuration.Expiration.DeleteFrequency = new TimeSetting(1, TimeUnit.Seconds);
             });
             documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: Constants.SystemDatabase);
 

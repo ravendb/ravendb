@@ -23,7 +23,7 @@ namespace Raven.Tests.Counters
         private const string CounterStorageId = "FooBar";
 
         private readonly CounterStorage storage;
-        private readonly RavenConfiguration config;
+        private readonly AppSettingsBasedConfiguration config;
 
         public BackupRestoreTests()
         {
@@ -35,7 +35,7 @@ namespace Raven.Tests.Counters
             RestoreToDirectory += uniqueId;
             DocumentDatabaseDirectory += uniqueId;
 
-            config = new RavenConfiguration
+            config = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -89,7 +89,7 @@ namespace Raven.Tests.Counters
             var restoreOperation = NewRestoreOperation();
             restoreOperation.Execute();
 
-            var restoreConfig = new RavenConfiguration
+            var restoreConfig = new AppSettingsBasedConfiguration
             {
                 Core = { RunInMemory = false }
             };
@@ -128,7 +128,7 @@ namespace Raven.Tests.Counters
             var restoreOperation = NewRestoreOperation();
             restoreOperation.Execute();
 
-            var restoreConfig = new RavenConfiguration
+            var restoreConfig = new AppSettingsBasedConfiguration
             {
                 Core = { RunInMemory = false }
             };

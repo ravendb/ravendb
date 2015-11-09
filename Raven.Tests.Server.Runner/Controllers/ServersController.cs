@@ -47,8 +47,6 @@ namespace Raven.Tests.Server.Runner.Controllers
                 Authentication.EnableOnce();
             }
 
-            configuration.PostInit();
-
             MaybeRemoveServer(configuration.Core.Port);
             var server = CreateNewServer(configuration, deleteData);
 
@@ -100,7 +98,7 @@ namespace Raven.Tests.Server.Runner.Controllers
             GC.WaitForPendingFinalizers();
         }
 
-        private static RavenDbServer CreateNewServer(InMemoryRavenConfiguration configuration, bool deleteData)
+        private static RavenDbServer CreateNewServer(RavenConfiguration configuration, bool deleteData)
         {
             var port = configuration.Core.Port.ToString(CultureInfo.InvariantCulture);
 

@@ -67,10 +67,10 @@ namespace Raven.Database.FileSystem.Controllers
             EnsureFileSystemHasRequiredSettings(id, fsDoc);
 
             string bundles;
-            if (fsDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
+            if (fsDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
             {
-                if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
-                    !fsDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
+                if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
+                    !fsDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
                 {
                     return GetMessageWithString(string.Format("Failed to create '{0}' file system, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
                 }
@@ -87,8 +87,8 @@ namespace Raven.Database.FileSystem.Controllers
 
         private static void EnsureFileSystemHasRequiredSettings(string id, FileSystemDocument fsDoc)
         {
-            if (!fsDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)))
-                fsDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = "~/FileSystems/" + id;
+            if (!fsDoc.Settings.ContainsKey(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)))
+                fsDoc.Settings[RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = "~/FileSystems/" + id;
         }
 
         [HttpDelete]
@@ -409,7 +409,7 @@ namespace Raven.Database.FileSystem.Controllers
                 return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
             }
 
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 FileSystemName = filesystemName,
             };
@@ -418,7 +418,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 foreach (var setting in filesystemDocument.Settings)
                 {
-                    ravenConfiguration.Settings[setting.Key] = setting.Value;
+                    ravenConfiguration.SetSetting(setting.Key, setting.Value);
                 }
             }
 
@@ -489,12 +489,12 @@ namespace Raven.Database.FileSystem.Controllers
                     if (filesystemDocument == null)
                         return;
 
-                    filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = documentDataDir;
+                    filesystemDocument.Settings[RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = documentDataDir;
 
                     if (restoreRequest.IndexesLocation != null)
-                        filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
+                        filesystemDocument.Settings[RavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
                     if (restoreRequest.JournalsLocation != null)
-                        filesystemDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
+                        filesystemDocument.Settings[RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
                     filesystemDocument.Id = filesystemName;
 
                     FileSystemsLandlord.Protect(filesystemDocument);

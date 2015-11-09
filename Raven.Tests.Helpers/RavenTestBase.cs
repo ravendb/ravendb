@@ -190,7 +190,8 @@ namespace Raven.Tests.Helpers
                         RunInMemory = runInMemory,
                         DataDirectory = Path.Combine(dataDirectory, "System"),
                         Port = port ?? 8079,
-                        AnonymousUserAccessMode = anonymousUserAccessMode
+                        AnonymousUserAccessMode = anonymousUserAccessMode,
+                        ActiveBundlesStringValue = activeBundles ?? string.Empty
                     }
                 },
                 Conventions = conventions ?? new DocumentConvention()
@@ -198,11 +199,6 @@ namespace Raven.Tests.Helpers
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
             documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-
-            if (activeBundles != null)
-            {
-                documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
-            }
 
             if (catalog != null)
             {
@@ -391,7 +387,7 @@ namespace Raven.Tests.Helpers
             bool enableAuthentication = false,
             string activeBundles = null,
             Action<RavenDBOptions> configureServer = null,
-            Action<InMemoryRavenConfiguration> configureConfig = null,
+            Action<RavenConfiguration> configureConfig = null,
             [CallerMemberName] string databaseName = null)
         {
             if (databaseName == ".ctor")
@@ -403,7 +399,7 @@ namespace Raven.Tests.Helpers
                 pathsToDelete.Add(dataDirectory);
             
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -411,6 +407,7 @@ namespace Raven.Tests.Helpers
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
+                    ActiveBundlesStringValue = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -419,11 +416,6 @@ namespace Raven.Tests.Helpers
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
             ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-
-            if (activeBundles != null)
-            {
-                ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
-            }
 
             if (configureConfig != null)
                 configureConfig(ravenConfiguration);
@@ -475,7 +467,7 @@ namespace Raven.Tests.Helpers
             ITransactionalStorage newTransactionalStorage;
 
             var dataDirectory = dataDir ?? NewDataPath();
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -506,7 +498,7 @@ namespace Raven.Tests.Helpers
         {
         }
 
-        protected virtual void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected virtual void ModifyConfiguration(RavenConfiguration configuration)
         {
         }
 

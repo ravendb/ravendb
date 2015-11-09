@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Abstractions
 {
     public static class UrlExtension
     {
-        public static string GetRequestUrlFromRawUrl(string rawUrl, InMemoryRavenConfiguration configuration)
+        public static string GetRequestUrlFromRawUrl(string rawUrl, RavenConfiguration configuration)
         {
             string localPath = rawUrl;
             var indexOfQuery = localPath.IndexOf('?');

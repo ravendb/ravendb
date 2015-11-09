@@ -30,7 +30,7 @@ namespace Raven.Client.Embedded
     {
         private IDocumentStore _inner;
         private string _connectionStringName;
-        public RavenConfiguration Configuration { get; private set; }
+        public AppSettingsBasedConfiguration Configuration { get; private set; }
 
         public string ConnectionStringName
         {
@@ -84,13 +84,13 @@ namespace Raven.Client.Embedded
         {
             Conventions = new DocumentConvention();
             Listeners = new DocumentSessionListeners();
-            Configuration = new RavenConfiguration();
+            Configuration = new AppSettingsBasedConfiguration();
             LegacyDataDirSupport(Configuration);
 
             EnlistInDistributedTransactions = true;
         }
 
-        private static void LegacyDataDirSupport(InMemoryRavenConfiguration configuration)
+        private static void LegacyDataDirSupport(RavenConfiguration configuration)
         {
             if (System.IO.Directory.Exists(configuration.Core.DataDirectory))
                 return;

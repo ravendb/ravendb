@@ -29,7 +29,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 // SecuredSettings = new Dictionary<string, string>() - intentionally not saving them - should avoid NRE on server side 
@@ -44,7 +44,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
@@ -59,12 +59,12 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
                 {
-                    {InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey), ""}
+                    {RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey), ""}
                 }
             }).Wait());
 
@@ -77,12 +77,12 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
                 {
-                    {InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType), ""}
+                    {RavenConfiguration.GetKey(x => x.Encryption.AlgorithmType), ""}
                 }
             }).Wait());
 

@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 {
     public class TenantsName : RavenTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
+        protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
         {
             ravenConfiguration.Core.RunInMemory = false;
         }

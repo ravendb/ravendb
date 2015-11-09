@@ -60,12 +60,11 @@ namespace Raven.SlowTests
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/Esent/CircularLog"] = "false";
-            configuration.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
             configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
             configuration.Initialize();
+            configuration.Storage.AllowIncrementalBackups = true;
         }
 
         public override void Dispose()

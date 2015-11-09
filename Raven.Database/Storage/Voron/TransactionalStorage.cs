@@ -59,7 +59,7 @@ namespace Raven.Storage.Voron
         private IDocumentCacher documentCacher;
         private IUuidGenerator uuidGenerator;
 
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
 
         private readonly Action onCommit;
         private readonly Action onStorageInaccessible;
@@ -73,7 +73,7 @@ namespace Raven.Storage.Voron
         private Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>> scheduledReductionsPerViewAndLevel
             = new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
+        public TransactionalStorage(RavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
         {
             this.configuration = configuration;
             this.onCommit = onCommit;
@@ -361,7 +361,7 @@ namespace Raven.Storage.Voron
             Id = tableStorage.Id;
         }
 
-        private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnly();
             options.InitialFileSize = configuration.Storage.InitialFileSize?.GetValue(SizeUnit.Bytes);
@@ -370,7 +370,7 @@ namespace Raven.Storage.Voron
             return options;
         }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             var directoryPath = configuration.Core.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo (directoryPath);
@@ -478,7 +478,7 @@ namespace Raven.Storage.Voron
         }
         public bool SupportsDtc { get { return false; } }
 
-        public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
+        public void Compact(RavenConfiguration ravenConfiguration, Action<string> output)
         {
             if (ravenConfiguration.Core.RunInMemory)
                 throw new InvalidOperationException("Cannot compact in-memory running Voron storage");

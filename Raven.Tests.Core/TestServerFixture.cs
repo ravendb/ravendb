@@ -21,7 +21,7 @@ namespace Raven.Tests.Core
 
         public TestServerFixture()
         {
-            var configuration = new RavenConfiguration();
+            var configuration = new AppSettingsBasedConfiguration();
             configuration.Core.Port = Port;
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;

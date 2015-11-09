@@ -122,7 +122,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
         private static ISignatureRepository CreateSignatureRepositoryFor(string fileName)
         {
-            var configuration = new InMemoryRavenConfiguration();
+            var configuration = new RavenConfiguration();
             configuration.Initialize();
             return new VolatileSignatureRepository(fileName, configuration);
         }

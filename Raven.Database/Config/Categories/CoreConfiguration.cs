@@ -21,7 +21,7 @@ namespace Raven.Database.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
-        private readonly InMemoryRavenConfiguration parent;
+        private readonly RavenConfiguration parent;
         internal static readonly int DefaultMaxNumberOfItemsToProcessInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
         private readonly int defaultInitialNumberOfItemsToProcessInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
@@ -36,7 +36,7 @@ namespace Raven.Database.Config.Categories
         private string compiledIndexCacheDirectory;
         private string virtualDirectory;
 
-        public CoreConfiguration(InMemoryRavenConfiguration parent)
+        public CoreConfiguration(RavenConfiguration parent)
         {
             this.parent = parent;
             MaxNumberOfItemsToProcessInSingleBatch = DefaultMaxNumberOfItemsToProcessInSingleBatch;
@@ -129,7 +129,6 @@ namespace Raven.Database.Config.Categories
             set
             {
                 runInMemory = value;
-                parent.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] = value.ToString();
             }
         }
 
@@ -238,7 +237,7 @@ namespace Raven.Database.Config.Categories
                 // add new one
                 if (Directory.Exists(pluginsDirectory))
                 {
-                    var patterns = parent.Settings["Raven/BundlesSearchPattern"] ?? "*.dll";
+                    var patterns = parent.GetSetting("Raven/BundlesSearchPattern") ?? "*.dll";
                     foreach (var pattern in patterns.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
                     {
                         parent.Catalog.Catalogs.Add(new BuiltinFilteringCatalog(new DirectoryCatalog(pluginsDirectory, pattern)));
@@ -421,6 +420,14 @@ namespace Raven.Database.Config.Categories
         [DefaultValue("")]
         [ConfigurationEntry("Raven/Headers/Ignore")]
         public string HeadersToIgnoreStringValue { get; set; }
+
+        [DefaultValue("")]
+        [ConfigurationEntry("Raven/ActiveBundles")]
+        public string ActiveBundlesStringValue { get; set; }
+
+        public IEnumerable<string> ActiveBundles => BundlesHelper.ProcessActiveBundles(ActiveBundlesStringValue)
+            .GetSemicolonSeparatedValues()
+            .Distinct();
 
         public HashSet<string> HeadersToIgnore { get; private set; }
 

@@ -36,7 +36,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Schema
 
         private static readonly object UpdateLocker = new object();
 
-        public SchemaCreator(InMemoryRavenConfiguration configuration, TableStorage storage, Action<string> output, ILog log)
+        public SchemaCreator(RavenConfiguration configuration, TableStorage storage, Action<string> output, ILog log)
         {
             this.storage = storage;
             this.output = output;

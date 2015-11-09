@@ -16,7 +16,7 @@ namespace Raven.Tests.Counters
         private const string GoodApiKey = "thisIsApiKeyName/thisIsSecret";
         private const string BadApiKey = "NotThisIsApiKeyName/thisIsSecret";
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             ConfigureServerForAuth(configuration);
         }

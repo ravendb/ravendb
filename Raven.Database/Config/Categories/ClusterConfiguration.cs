@@ -30,11 +30,16 @@ namespace Raven.Database.Config.Categories
 
         [DefaultValue(DefaultValueSetInConstructor)]
         [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Cluster/MaxStepDownDrainTimeInSec")]
         [ConfigurationEntry("Raven/Cluster/MaxStepDownDrainTime")]
         public TimeSetting MaxStepDownDrainTime { get; set; }
 
         [DefaultValue(RaftEngineOptions.DefaultMaxEntiresPerRequest)]
         [ConfigurationEntry("Raven/Cluster/MaxEntriesPerRequest")]
         public int MaxEntriesPerRequest { get; set; }
+
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven-Non-Cluster-Database")]
+        public bool NonClusterDatabaseMarker { get; set; }
     }
 }

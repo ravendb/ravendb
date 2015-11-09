@@ -68,7 +68,7 @@ namespace Raven.Tests.Issues
                         Settings =
                         {
                             { "Raven/DataDir", NewDataPath() },
-                            { InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath), path2 }
+                            { RavenConfiguration.GetKey(x => x.Core.TempPath), path2 }
                         }
                     });
 

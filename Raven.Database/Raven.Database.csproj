@@ -278,6 +278,8 @@
     <Compile Include="Config\Categories\EncryptionConfiguration.cs" />
     <Compile Include="Config\Categories\ExpirationBundleConfiguration.cs" />
     <Compile Include="Config\Categories\FileSystemConfiguration.cs" />
+    <Compile Include="Config\Categories\FileSystemVersioningBundleConfiguration.cs" />
+    <Compile Include="Config\Categories\QuotasBundleConfiguration.cs" />
     <Compile Include="Config\ImplicitFetchFieldsMode.cs" />
     <Compile Include="Config\Categories\IndexingConfiguration.cs" />
     <Compile Include="Config\Categories\LicenseConfiguration.cs" />
@@ -1201,7 +1203,7 @@
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialField.cs" />
     <Compile Include="Indexing\SimpleQueryParser.cs" />
-    <Compile Include="Config\InMemoryRavenConfiguration.cs" />
+    <Compile Include="Config\RavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
     <Compile Include="Linq\Ast\CaptureSelectNewFieldNamesVisitor.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
@@ -1244,7 +1246,7 @@
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="Plugins\VetoResult.cs" />
-    <Compile Include="Config\RavenConfiguration.cs" />
+    <Compile Include="Config\AppSettingsBasedConfiguration.cs" />
     <Compile Include="Queries\SuggestionQueryExtensions.cs" />
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />

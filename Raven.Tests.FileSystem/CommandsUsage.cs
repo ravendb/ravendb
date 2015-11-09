@@ -596,7 +596,7 @@ namespace Raven.Tests.FileSystem
                 Id = "Raven/FileSystem/" + newFileSystemName,
                 Settings =
                  {
-                     {InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             }, newFileSystemName);
 
@@ -657,7 +657,7 @@ namespace Raven.Tests.FileSystem
                 Id = Constants.FileSystem.Prefix + newFileSystemName,
                 Settings =
                  {
-                     {InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             };
 

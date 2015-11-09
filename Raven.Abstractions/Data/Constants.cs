@@ -78,8 +78,6 @@ namespace Raven.Abstractions.Data
 
         public const string TemporaryTransformerPrefix = "Temp/";
 
-        public const string ActiveBundles = "Raven/ActiveBundles";
-
         public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 
         public const string RavenAlerts = "Raven/Alerts";
@@ -119,15 +117,6 @@ namespace Raven.Abstractions.Data
         public const int DefaultIndexFileBlockSize = 12 * 1024;
 
         public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
-
-        //Quotas
-        public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";
-
-        public const string DocsSoftLimit = "Raven/Quotas/Documents/SoftLimit";
-
-        public const string SizeHardLimitInKB = "Raven/Quotas/Size/HardLimitInKB";
-
-        public const string SizeSoftLimitInKB = "Raven/Quotas/Size/SoftMarginInKB";
 
         //Replications
         public const string RavenReplicationSource = "Raven-Replication-Source";
@@ -235,11 +224,6 @@ namespace Raven.Abstractions.Data
             public const string UrlPrefix = "fs";
 
             public const string RavenFsSize = "RavenFS-Size";
-
-            public static class Versioning
-            {
-                public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
-            }
         }
 
         //Counters
@@ -311,8 +295,6 @@ namespace Raven.Abstractions.Data
         public static class Cluster
         {
             public const string ClusterConfigurationDocumentKey = "Raven/Cluster/Configuration";
-
-            public const string NonClusterDatabaseMarker = "Raven-Non-Cluster-Database";
 
             public const string ClusterAwareHeader = "Raven-Cluster-Aware";
 

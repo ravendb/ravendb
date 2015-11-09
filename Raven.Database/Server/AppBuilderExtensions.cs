@@ -40,10 +40,10 @@ namespace Owin
 
         public static IAppBuilder UseRavenDB(this IAppBuilder app)
         {
-            return UseRavenDB(app, new RavenConfiguration());
+            return UseRavenDB(app, new AppSettingsBasedConfiguration());
         }
 
-        public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)
+        public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenConfiguration configuration)
         {
             return UseRavenDB(app, new RavenDBOptions(configuration));
         }
@@ -125,7 +125,7 @@ namespace Owin
             cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
             cfg.Properties[typeof(RequestManager)] = options.RequestManager;
             cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
-            cfg.Properties[InMemoryRavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)] = new SemaphoreSlim(options.SystemDatabase.Configuration.Server.MaxConcurrentRequestsForDatabaseDuringLoad);
+            cfg.Properties[RavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)] = new SemaphoreSlim(options.SystemDatabase.Configuration.Server.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
             cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
             cfg.Services.Replace(typeof(IAssembliesResolver), new RavenAssemblyResolver());

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Client.Bundles.Versioning;
+using Raven.Database.Config;
 using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database;
@@ -199,7 +200,7 @@ namespace Raven.Tests.Smuggler
                         Id = "Import",
                         Settings =
                         {
-                            { Constants.ActiveBundles, "Versioning" },
+                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Versioning" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });

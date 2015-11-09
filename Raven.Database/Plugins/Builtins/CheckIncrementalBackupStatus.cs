@@ -119,9 +119,9 @@ namespace Raven.Database.Plugins.Builtins
         private static bool IsIncrementalBackupIsAllowed(DatabasesLandlord databaseLandlord, DatabaseDocument dbDoc)
         {
             // check if DatabaseDocument contains the incremental flag
-            var isIncrementalBackup = dbDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups));
+            var isIncrementalBackup = dbDoc.Settings.ContainsKey(RavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups));
 
-            if (isIncrementalBackup && bool.TryParse(dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)], out isIncrementalBackup))
+            if (isIncrementalBackup && bool.TryParse(dbDoc.Settings[RavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)], out isIncrementalBackup))
             {
                 return isIncrementalBackup;
             }

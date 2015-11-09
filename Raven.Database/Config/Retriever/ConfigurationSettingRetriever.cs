@@ -65,7 +65,7 @@ namespace Raven.Database.Config.Retriever
                 }
             }
 
-            var localValue = localDatabase.Configuration.Settings[key];
+            var localValue = localDatabase.Configuration.GetSetting(key);
 
             var effectiveValue = localValue ?? globalValue;
 

@@ -41,7 +41,7 @@ namespace Raven.Database.Bundles.Encryption.Settings
         private static byte[] GetKeyFromBase64(string base64, int defaultEncryptionKeySize)
         {
             if (string.IsNullOrWhiteSpace(base64))
-                throw new ConfigurationErrorsException("The " + InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey) + " setting must be set to an encryption key. "
+                throw new ConfigurationErrorsException("The " + RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey) + " setting must be set to an encryption key. "
                     + "The key should be in base 64, and should be at least " + Constants.MinimumAcceptableEncryptionKeyLength
                     + " bytes long. You may use EncryptionSettings.GenerateRandomEncryptionKey() to generate a key.\n"
                     + "If you'd like, here's a key that was randomly generated:\n"
@@ -53,14 +53,14 @@ namespace Raven.Database.Bundles.Encryption.Settings
             {
                 var result = Convert.FromBase64String(base64);
                 if (result.Length < Constants.MinimumAcceptableEncryptionKeyLength)
-                    throw new ConfigurationErrorsException("The " + InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey) + " setting must be at least "
+                    throw new ConfigurationErrorsException("The " + RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey) + " setting must be at least "
                         + Constants.MinimumAcceptableEncryptionKeyLength + " bytes long.");
 
                 return result;
             }
             catch (FormatException e)
             {
-                throw new ConfigurationErrorsException("The " + InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey) + " setting has an invalid base 64 value.", e);
+                throw new ConfigurationErrorsException("The " + RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey) + " setting has an invalid base 64 value.", e);
             }
         }
 

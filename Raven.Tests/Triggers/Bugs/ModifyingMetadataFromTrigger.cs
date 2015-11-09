@@ -21,7 +21,7 @@ namespace Raven.Tests.Triggers.Bugs
             store = NewRemoteDocumentStore(databaseName: Constants.SystemDatabase);
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
             configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (AuditTrigger)));
