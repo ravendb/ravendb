@@ -60,10 +60,10 @@ namespace Raven.Tests.FileSystem.Storage
                 {
                     DataDirectory = path
                 },
-                Settings = new NameValueCollection
-                           {
-                               { InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory.ToString() }
-                           }
+                Core =
+                {
+                    RunInMemory = runInMemory
+                }
             };
 
             ITransactionalStorage storage;

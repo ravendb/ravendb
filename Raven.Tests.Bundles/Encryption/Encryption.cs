@@ -30,7 +30,7 @@ namespace Raven.Tests.Bundles.Encryption
                 runInMemory: false, dataDirectory: path, activeBundles: "Encryption",
                 configureConfig: configuration =>
             {
-                configuration.Settings["Raven/Encryption/Key"] = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
+                configuration.Encryption.EncryptionKey = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
             });
         }
 

@@ -84,8 +84,6 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
             {
-                config.Settings["Raven/Esent/CircularLog"] = "false";
-                config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
                 config.Storage.AllowIncrementalBackups = true;
             }))
             {
@@ -129,8 +127,6 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
             {
-                config.Settings["Raven/Esent/CircularLog"] = "false";
-                config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
                 config.Storage.AllowIncrementalBackups = true;
             }, fileSystemName: "RavenDB_2824_one"))
             {
@@ -147,8 +143,6 @@ namespace Raven.Tests.FileSystem.Storage
 
             using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
             {
-                config.Settings["Raven/Esent/CircularLog"] = "false";
-                config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
                 config.Storage.AllowIncrementalBackups = true;
             }, fileSystemName: "RavenDB_2824_two"))
             {

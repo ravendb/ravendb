@@ -207,19 +207,16 @@ namespace Raven.Database.Server.Tenancy
                         string folderPropName,
                         InMemoryRavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+            var config = InMemoryRavenConfiguration.CreateFrom(parentConfiguration);
 
-            if (config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory)] == null)
+            if (config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory)) == null)
             {
                 var compiledIndexCacheDirectory = parentConfiguration.Core.CompiledIndexCacheDirectory;
-                config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory)] = compiledIndexCacheDirectory;  
+                config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory), compiledIndexCacheDirectory);  
             }
 
-            if (config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath)] == null)
-                config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath)] = parentConfiguration.Core.TempPath;  
+            if (config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath)) == null)
+                config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath), parentConfiguration.Core.TempPath);  
 
             SetupTenantConfiguration(config);
 
@@ -227,19 +224,19 @@ namespace Raven.Database.Server.Tenancy
 
             foreach (var setting in document.Settings)
             {
-                config.Settings[setting.Key] = setting.Value;
+                config.SetSetting(setting.Key, setting.Value);
             }
             Unprotect(document);
 
             foreach (var securedSetting in document.SecuredSettings)
             {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
+                config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Core.DataDirectory);
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Core.DataDirectory));
             
-            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
-            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)];
+            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
+            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
 
             config.DatabaseName = tenantId;
             config.IsTenantDatabase = true;
@@ -305,7 +302,7 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-            Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.Core.ActiveBundles);
                 }
 
         public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)

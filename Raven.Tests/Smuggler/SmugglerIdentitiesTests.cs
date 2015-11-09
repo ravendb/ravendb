@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Database.Config;
 using Raven.Database.Smuggler.Embedded;
 using Raven.Json.Linq;
 using Raven.Smuggler.Database;
@@ -114,7 +115,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N1",
                         Settings =
                         {
-                            { Constants.ActiveBundles, "Replication" },
+                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -161,7 +162,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N1",
                         Settings =
                         {
-                            { Constants.ActiveBundles, "Replication" },
+                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -209,7 +210,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N1",
                         Settings =
                         {
-                            { Constants.ActiveBundles, "Replication" },
+                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -242,7 +243,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N2",
                         Settings =
                         {
-                            { Constants.ActiveBundles, "" },
+                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -271,7 +272,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N3",
                         Settings =
                         {
-                            { Constants.ActiveBundles, "Replication" },
+                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });

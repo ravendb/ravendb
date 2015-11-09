@@ -17,7 +17,7 @@ namespace Raven.Database.Server.Controllers
         {
             InnerInitialization(controllerContext);
             var config = DatabasesLandlord.CreateTenantConfiguration(DatabaseName);
-            if (!config.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
+            if (!config.Core.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
             {
                 return GetMessageWithObject(new
                 {

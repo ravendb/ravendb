@@ -22,7 +22,7 @@ namespace Raven.Tests.Replication
     {
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "Replication";
+            configuration.Core.ActiveBundlesStringValue = "Replication";
         }
 
         public class User

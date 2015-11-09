@@ -17,7 +17,7 @@ namespace Raven.Tests.Issues
             using (var store = new EmbeddableDocumentStore())
             {				
                 store.Configuration.Core.RunInMemory = true;
-                store.Configuration.Settings[Constants.ActiveBundles] = "Versioning";
+                store.Configuration.Core.ActiveBundlesStringValue = "Versioning";
                 store.Initialize();
 
                 DoTest(store);
@@ -37,7 +37,7 @@ namespace Raven.Tests.Issues
                     Id = "Raven/Databases/FooDB",
                     Settings =
                     {
-                        { Constants.ActiveBundles, "Versioning"},
+                        { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Versioning"},
                         { InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory), "~/Data"}
                     }
                 });

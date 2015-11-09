@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -76,9 +77,7 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings["Raven/Esent/MaxVerPages"] = "1";
-            configuration.Settings["Raven/Esent/PreferredVerPages"] = "1";
-            configuration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize)] = "7";
+            configuration.Storage.MaxScratchBufferSize = new Size(7, SizeUnit.Megabytes);
         }
 
         [Theory]

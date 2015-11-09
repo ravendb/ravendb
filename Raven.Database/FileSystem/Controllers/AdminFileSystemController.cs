@@ -67,7 +67,7 @@ namespace Raven.Database.FileSystem.Controllers
             EnsureFileSystemHasRequiredSettings(id, fsDoc);
 
             string bundles;
-            if (fsDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
+            if (fsDoc.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
             {
                 if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
                     !fsDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
@@ -418,7 +418,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 foreach (var setting in filesystemDocument.Settings)
                 {
-                    ravenConfiguration.Settings[setting.Key] = setting.Value;
+                    ravenConfiguration.SetSetting(setting.Key, setting.Value);
                 }
             }
 

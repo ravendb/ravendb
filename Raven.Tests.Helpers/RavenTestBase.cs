@@ -190,7 +190,8 @@ namespace Raven.Tests.Helpers
                         RunInMemory = runInMemory,
                         DataDirectory = Path.Combine(dataDirectory, "System"),
                         Port = port ?? 8079,
-                        AnonymousUserAccessMode = anonymousUserAccessMode
+                        AnonymousUserAccessMode = anonymousUserAccessMode,
+                        ActiveBundlesStringValue = activeBundles ?? string.Empty
                     }
                 },
                 Conventions = conventions ?? new DocumentConvention()
@@ -198,11 +199,6 @@ namespace Raven.Tests.Helpers
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
             documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-
-            if (activeBundles != null)
-            {
-                documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
-            }
 
             if (catalog != null)
             {
@@ -411,6 +407,7 @@ namespace Raven.Tests.Helpers
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
+                    ActiveBundlesStringValue = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -419,11 +416,6 @@ namespace Raven.Tests.Helpers
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
             ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-
-            if (activeBundles != null)
-            {
-                ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
-            }
 
             if (configureConfig != null)
                 configureConfig(ravenConfiguration);

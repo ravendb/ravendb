@@ -78,10 +78,7 @@ namespace Raven.Database.Server.Tenancy
                         string folderPropName,
                         InMemoryRavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+            var config = InMemoryRavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
@@ -89,18 +86,20 @@ namespace Raven.Database.Server.Tenancy
 
             foreach (var setting in document.Settings)
             {
-                config.Settings[setting.Key] = setting.Value;
+                config.SetSetting(setting.Key, setting.Value);
             }
+
             Unprotect(document);
 
             foreach (var securedSetting in document.SecuredSettings)
             {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
+                config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Counter.DataDirectory);
-            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)].ToFullPath(parentConfiguration.Core.DataDirectory);
-            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)] = config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)];
+            //TODO arek - verify that
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Counter.DataDirectory));
+            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath),config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
+            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
 
             config.CounterStorageName = tenantId;
 
@@ -260,7 +259,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException("Your license does not allow the use of the Counters");
         }
 
-            Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.Core.ActiveBundles);
         }
 
         public void ForAllCountersInCacheOnly(Action<CounterStorage> action)

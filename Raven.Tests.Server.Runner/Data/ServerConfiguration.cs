@@ -29,21 +29,23 @@ namespace Raven.Tests.Server.Runner.Data
 
         public bool HasApiKey { get { return !string.IsNullOrEmpty(ApiKeyName) && !string.IsNullOrEmpty(ApiKeySecret); } }
 
-        public RavenConfiguration ConvertToRavenConfiguration()
+        public InMemoryRavenConfiguration ConvertToRavenConfiguration()
         {
-            var configuration = new RavenConfiguration
+            var configuration = new InMemoryRavenConfiguration()
                                 {
                                     Core =
                                     {
                                         RunInMemory = RunInMemory,
-                                         Port = Port,
+                                        Port = Port,
                                     },
                                 };
 
             foreach (var key in Settings.Keys)
             {
-                configuration.Settings.Add(key, Settings[key]);
+                configuration.SetSetting(key, Settings[key]);
             }
+
+            configuration.Initialize();
 
             return configuration;
         }

@@ -15,7 +15,7 @@ namespace Raven.Tests.Bundles.Versioning.Bugs
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "Versioning";
+            configuration.Core.ActiveBundlesStringValue = "Versioning";
         }
 
         public MultiTenant()

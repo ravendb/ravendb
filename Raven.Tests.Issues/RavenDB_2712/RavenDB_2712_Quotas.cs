@@ -66,10 +66,11 @@ namespace Raven.Tests.Issues.RavenDB_2712
                 };
                 systemDatabase.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, null, RavenJObject.FromObject(globalSettings), new RavenJObject(), null);
 
-                database.Configuration.Settings[Constants.SizeSoftLimitInKB] = "20";
-                database.Configuration.Settings[Constants.SizeHardLimitInKB] = "21";
-                database.Configuration.Settings[Constants.DocsHardLimit] = "22";
-                database.Configuration.Settings[Constants.DocsSoftLimit] = "23";
+                // TODO arek
+                //database.Configuration.Settings[Constants.SizeSoftLimitInKB] = "20";
+                //database.Configuration.Settings[Constants.SizeHardLimitInKB] = "21";
+                //database.Configuration.Settings[Constants.DocsHardLimit] = "22";
+                //database.Configuration.Settings[Constants.DocsSoftLimit] = "23";
 
                 Assert.Equal("20", retriever.GetEffectiveConfigurationSetting(Constants.SizeSoftLimitInKB));
                 Assert.Equal("21", retriever.GetEffectiveConfigurationSetting(Constants.SizeHardLimitInKB));

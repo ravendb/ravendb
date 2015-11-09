@@ -52,7 +52,7 @@ namespace Raven.Tests.Core.Configuration
                 WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
             
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -76,9 +76,9 @@ namespace Raven.Tests.Core.Configuration
                 WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
             
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
-            inMemoryConfiguration.Settings["Raven/AssembliesDirectory"] = "./my-assemblies";
-            inMemoryConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = "my-files";
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.AssembliesDirectory), "./my-assemblies");
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), "my-files");
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -102,11 +102,11 @@ namespace Raven.Tests.Core.Configuration
                 WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
             
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
-            inMemoryConfiguration.Settings["Raven/DataDir"] = @"\\server1\ravendb\data";
-            inMemoryConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = @"\\server1\ravenfs\data";
-            inMemoryConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory)] = @"\\server1\ravenfs\data";
-            inMemoryConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory)] = @"\\server1\ravenfs\data";
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory), @"\\server1\ravendb\data");
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), @"\\server1\ravenfs\data");
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory), @"\\server1\ravenfs\data");
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), @"\\server1\ravenfs\data");
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -135,7 +135,7 @@ namespace Raven.Tests.Core.Configuration
         {
             const string WorkingDirectoryValue = "appDrive:\\Raven\\";
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
+            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -220,7 +220,7 @@ namespace Raven.Tests.Core.Configuration
 
             foreach (var key in keys)
             {
-                sut.Settings.Add(key, "0");
+                sut.SetSetting(key, "0");
             }
 
             sut.Initialize();
@@ -272,7 +272,7 @@ namespace Raven.Tests.Core.Configuration
                 var values = Enum.GetValues(enumItems[i].PropertyInfo.PropertyType).OfType<object>().Except(new [] { enumItems[i].PropertyInfo.GetCustomAttribute<DefaultValueAttribute>().Value }).ToArray();
                 expectedEnumValues[i] = values.GetValue(random.Next(values.Length));
 
-                sut.Settings.Add(enumItems[i].Key, expectedEnumValues[i].ToString());
+                sut.SetSetting(enumItems[i].Key, expectedEnumValues[i].ToString());
             }
             
             sut.Initialize();
@@ -368,7 +368,7 @@ namespace Raven.Tests.Core.Configuration
                         break;
                 }
 
-                sut.Settings.Add(item.Key, stringValue);
+                sut.SetSetting(item.Key, stringValue);
             }
 
             sut.Initialize();

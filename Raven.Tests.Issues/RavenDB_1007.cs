@@ -44,9 +44,9 @@ namespace Raven.Tests.Issues
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
+                    AllowIncrementalBackups = true
                 }
             }.Initialize(), null))
             {

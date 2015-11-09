@@ -53,7 +53,7 @@ namespace Raven.Database.Raft.Util
             if (database.IsSystemDatabase())
                 return false;
 
-            var value = database.Configuration.Settings.Get(Constants.Cluster.NonClusterDatabaseMarker);
+            var value = database.Configuration.GetSetting(Constants.Cluster.NonClusterDatabaseMarker);
             if (string.IsNullOrEmpty(value)) 
                 return true;
 

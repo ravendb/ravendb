@@ -109,10 +109,7 @@ namespace Raven.Tests.Issues
 
                 MaintenanceActions.Restore(new RavenConfiguration
                     {
-                        Settings =
-                        {
-                            {InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
-                        }
+                        Storage = { AllowIncrementalBackups = true }
                     }, new DatabaseRestoreRequest
                     {
                         BackupLocation = BackupDir,

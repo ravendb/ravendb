@@ -12,7 +12,6 @@ namespace Raven.Tests.TimeSeries
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
-            configuration.Settings[InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.ReplicationLatency)] = "10";
             configuration.TimeSeries.ReplicationLatency = new TimeSetting(10, TimeUnit.Milliseconds);
         }
 

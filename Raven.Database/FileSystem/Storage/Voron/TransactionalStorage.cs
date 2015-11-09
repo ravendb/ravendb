@@ -43,8 +43,6 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         private readonly string path;
 
-        private readonly NameValueCollection settings;
-
         private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
         private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
@@ -64,7 +62,6 @@ namespace Raven.Database.FileSystem.Storage.Voron
         {
             this.configuration = configuration;
             path = configuration.FileSystem.DataDirectory.ToFullPath();
-            settings = configuration.Settings;
 
             RecoverFromFailedCompact(path);
 
@@ -100,21 +97,18 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         public Guid Id { get; private set; }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, InMemoryRavenConfiguration configuration)
         {
-            bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups) + " settings key contains invalid value");
+            if (configuration.Core.RunInMemory)
+                return StorageEnvironmentOptions.CreateMemoryOnly();
 
             var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
-
-            var tempPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.TempPath)];
-            var journalPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)];
-            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, configuration.Storage.TempPath, configuration.Storage.JournalsStoragePath);
+            options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
             return options;
         }
 
@@ -125,12 +119,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             fileCodecs = codecs;
             uuidGenerator = generator;
-
-            bool runInMemory;
-            bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)], out runInMemory);
-
-            var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
-                CreateStorageOptionsFromConfiguration(path, settings);
+            
+            var persistenceSource = CreateStorageOptionsFromConfiguration(path, configuration);
 
             tableStorage = new TableStorage(persistenceSource, bufferPool);
             var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
@@ -254,10 +244,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
         {
-            bool runInMemory;
-            bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)], out runInMemory);
-
-            if (runInMemory)
+            if (configuration.Core.RunInMemory)
                 throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
 
             tableStorage.Dispose();
@@ -270,7 +257,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             RecoverFromFailedCompact(sourcePath);
 
-            var sourceOptions = CreateStorageOptionsFromConfiguration(path, settings);
+            var sourceOptions = CreateStorageOptionsFromConfiguration(path, configuration);
             var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath);
 
             output("Executing storage compaction");

@@ -13,7 +13,7 @@ namespace Raven.Tests.MailingList
     {
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings.Add("Raven/ActiveBundles", "IndexedProperties");
+            configuration.Core.ActiveBundlesStringValue = "IndexedProperties";
         }
 
         [Fact]

@@ -19,6 +19,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using Raven.Database.Config.Settings;
 
 namespace Raven.Tests.Bundles.Expiration
 {
@@ -32,7 +33,7 @@ namespace Raven.Tests.Bundles.Expiration
             SystemTime.UtcDateTime = () => DateTime.UtcNow;
             ravenDbServer = GetNewServer(activeBundles: "DocumentExpiration", configureConfig: configuration =>
             {
-                configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
+                configuration.Expiration.DeleteFrequency = new TimeSetting(1, TimeUnit.Seconds);
             });
             documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
         }

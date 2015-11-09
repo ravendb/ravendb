@@ -67,7 +67,7 @@ namespace Raven.Tests.Bundles.LiveTest
 
         private static void AsserDatabaseDocument(DatabaseDocument databaseDocument)
         {
-            var activeBundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
+            var activeBundles = databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)].GetSemicolonSeparatedValues();
 
             Assert.Contains("Replication", activeBundles);
 

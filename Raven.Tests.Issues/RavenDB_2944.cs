@@ -24,7 +24,7 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Indexing.MaxNumberOfItemsToProcessInTestIndexes)] = MaxNumberOfItemsToProcessInTestIndexes.ToString(CultureInfo.InvariantCulture);
+            configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes = MaxNumberOfItemsToProcessInTestIndexes;
         }
 
         private class Order

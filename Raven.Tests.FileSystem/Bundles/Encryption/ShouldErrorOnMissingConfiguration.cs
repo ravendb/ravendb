@@ -29,7 +29,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 // SecuredSettings = new Dictionary<string, string>() - intentionally not saving them - should avoid NRE on server side 
@@ -44,7 +44,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
@@ -59,7 +59,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
@@ -77,7 +77,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()

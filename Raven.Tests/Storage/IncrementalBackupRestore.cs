@@ -37,10 +37,9 @@ namespace Raven.Tests.Storage
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = true
                 }
             }.Initialize(), null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -79,12 +78,10 @@ namespace Raven.Tests.Storage
                     DataDirectory = DataDir,
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = true
                 }
-
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -149,12 +146,10 @@ namespace Raven.Tests.Storage
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = true
                 }
-
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,

@@ -164,7 +164,7 @@ namespace Raven.Server
             optionSet.OnWarning += s => ConsoleWriteLineWithColor(ConsoleColor.Yellow, s);
             optionSet.Add("set={==}", OptionCategory.None, "The configuration {0:option} to set to the specified {1:value}", (key, value) =>
             {
-                ravenConfiguration.Settings[key] = value;
+                ravenConfiguration.SetSetting(key, value);
                 ravenConfiguration.Initialize();
             });
             optionSet.Add("nolog", OptionCategory.General, "Don't use the default log", s => noLog = true);
@@ -179,7 +179,7 @@ namespace Raven.Server
             optionSet.Add("stop", OptionCategory.Service, "Stops the RavenDB service", key => actionToTake = () => AdminRequired(StopService));
             optionSet.Add("ram", OptionCategory.General, "Run RavenDB in RAM only", key =>
             {
-                ravenConfiguration.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
+                ravenConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
                 ravenConfiguration.Core.RunInMemory = true;
                 ravenConfiguration.Initialize();
                 actionToTake = () => RunInDebugMode(AnonymousUserAccessMode.Admin, ravenConfiguration, launchBrowser, noLog);

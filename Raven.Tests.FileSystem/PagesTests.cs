@@ -25,11 +25,7 @@ namespace Raven.Tests.FileSystem
                 FileSystem =
                 {
                     DataDirectory = "test"
-                },
-                Settings = new NameValueCollection
-                           {
-                               { Constants.MetadataEtagField, Guid.Empty.ToString() }
-                           }
+                }
             };
 
             IOExtensions.DeleteDirectory("test");

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -32,7 +33,7 @@ namespace Raven.Tests.Issues
                         Id = "N1", 
                         Settings =
                         {
-                            { Constants.ActiveBundles, "Replication" },
+                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });

@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using Raven.Database.Config.Attributes;
@@ -10,9 +11,11 @@ namespace Raven.Database.Config.Categories
     public class FileSystemConfiguration : ConfigurationCategory
     {
         private readonly CoreConfiguration core;
+        
         public FileSystemConfiguration(CoreConfiguration coreConfiguration)
         {
             core = coreConfiguration;
+            Versioning = new FileSystemVersioningBundleConfiguration();
         }
 
         private string fileSystemDataDirectory;
@@ -51,6 +54,15 @@ namespace Raven.Database.Config.Categories
             {
                 fileSystemIndexStoragePath = value.ToFullPath();
             }
+        }
+
+        public FileSystemVersioningBundleConfiguration Versioning { get; }
+
+        public override void Initialize(NameValueCollection settings)
+        {
+            base.Initialize(settings);
+
+            Versioning.Initialize(settings);
         }
     }
 }

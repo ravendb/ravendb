@@ -13,20 +13,21 @@ namespace Raven.Database.Config
 {
     public class RavenConfiguration : InMemoryRavenConfiguration
     {
-        public RavenConfiguration()
+        public RavenConfiguration(bool initialize = true)
         {
-            LoadConfigurationAndInitialize(ConfigurationManager.AppSettings.AllKeys.Select(k=> Tuple.Create(k,ConfigurationManager.AppSettings[k])));
+            LoadConfiguration(ConfigurationManager.AppSettings.AllKeys.Select(k=> Tuple.Create(k,ConfigurationManager.AppSettings[k])));
+
+            if (initialize)
+                Initialize();
         }
         
-        private void LoadConfigurationAndInitialize(IEnumerable<Tuple<string,string>> values)
+        private void LoadConfiguration(IEnumerable<Tuple<string,string>> values)
         {
             foreach (var setting in values)
             {
                 if (setting.Item1.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
                     Settings[setting.Item1] = setting.Item2;
             }
-
-            Initialize();
         }
 
         public void LoadFrom(string path)
@@ -51,7 +52,7 @@ namespace Raven.Database.Config
                         ).ToList();
 
 
-            LoadConfigurationAndInitialize(list);
+            LoadConfiguration(list);
         }
     }
 }

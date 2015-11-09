@@ -25,7 +25,7 @@ namespace Raven.Tests.Security.OAuth
 
         protected override void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
         {
-            inMemoryRavenConfiguration.Settings["Raven/Licensing/AllowAdminAnonymousAccessForCommercialUse"] = "true";
+            inMemoryRavenConfiguration.Licensing.AllowAdminAnonymousAccessForCommercialUse = true;
         }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)

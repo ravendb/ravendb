@@ -29,7 +29,7 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "DocumentExpiration";
+            configuration.Core.ActiveBundlesStringValue = "DocumentExpiration";
         }
 
         [Fact, Trait("Category", "Smuggler")]

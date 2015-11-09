@@ -48,8 +48,8 @@ namespace Raven.Bundles.LiveTest
         private static void EnsureQuotasBundleActivated(RavenJObject settings)
         {
             RavenJToken value;
-            if (settings.TryGetValue(Constants.ActiveBundles, out value) == false)
-                settings[Constants.ActiveBundles] = value = new RavenJValue(string.Empty);
+            if (settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out value) == false)
+                settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = value = new RavenJValue(string.Empty);
 
             var activeBundles = value.Value<string>();
             var bundles = activeBundles.GetSemicolonSeparatedValues();
@@ -65,7 +65,7 @@ namespace Raven.Bundles.LiveTest
             if (int.TryParse(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Quotas/Size/SoftLimitInKB"], out softMarginInKb) == false)
                 softMarginInKb = QuotasSoftMarginInKb;
 
-            settings[Constants.ActiveBundles] = string.Join(";", bundles);
+            settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = string.Join(";", bundles);
             settings[Constants.SizeHardLimitInKB] = hardLimitInKb;
             settings[Constants.SizeSoftLimitInKB] = softMarginInKb;
             settings[Constants.DocsHardLimit] = null;

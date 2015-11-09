@@ -101,7 +101,7 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
+            configuration.Core.ActiveBundlesStringValue = "ScriptedIndexResults";
         }
 
         [Fact]

@@ -47,8 +47,6 @@ namespace Raven.Tests.Server.Runner.Controllers
                 Authentication.EnableOnce();
             }
 
-            configuration.PostInit();
-
             MaybeRemoveServer(configuration.Core.Port);
             var server = CreateNewServer(configuration, deleteData);
 

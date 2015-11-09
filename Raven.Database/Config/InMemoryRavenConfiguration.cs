@@ -32,6 +32,7 @@ namespace Raven.Database.Config
     {
         private CompositionContainer container;
         private bool containerExternallySet;
+        private bool initialized = false;
 
         public CoreConfiguration Core { get; }
 
@@ -165,6 +166,8 @@ namespace Raven.Database.Config
 
             PostInit();
 
+            initialized = true;
+
             return this;
         }
 
@@ -196,24 +199,11 @@ namespace Raven.Database.Config
 
         private void FilterActiveBundles()
         {
-            if (container != null)
-                container.Dispose();
+            container?.Dispose();
             container = null;
 
             var catalog = GetUnfilteredCatalogs(Catalog.Catalogs);
-            Catalog = new AggregateCatalog(new List<ComposablePartCatalog> { new BundlesFilteredCatalog(catalog, ActiveBundles.ToArray()) });
-        }
-
-        public IEnumerable<string> ActiveBundles
-        {
-            get
-            {
-                var activeBundles = Settings[Constants.ActiveBundles] ?? string.Empty;
-
-                return BundlesHelper.ProcessActiveBundles(activeBundles)
-                    .GetSemicolonSeparatedValues()
-                    .Distinct();
-            }
+            Catalog = new AggregateCatalog(new List<ComposablePartCatalog> { new BundlesFilteredCatalog(catalog, Core.ActiveBundles.ToArray()) });
         }
 
         internal static ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
@@ -233,7 +223,7 @@ namespace Raven.Database.Config
 
         public TaskScheduler CustomTaskScheduler { get; set; }
 
-        public NameValueCollection Settings { get; set; }
+        protected NameValueCollection Settings { get; set; }
 
         public string ServerUrl
         {
@@ -376,24 +366,37 @@ namespace Raven.Database.Config
                 Settings[GetKey(x => x.TimeSeries.DataDirectory)] = Path.Combine(Settings[GetKey(x => x.TimeSeries.DataDirectory)], "TimeSeries", tenantId);
         }
 
-        public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
+        public void CopyParentSettings(InMemoryRavenConfiguration parentConfiguration)
         {
-            Core.Port = defaultConfiguration.Core.Port;
-            OAuth.TokenKey = defaultConfiguration.OAuth.TokenKey;
-            OAuth.TokenServer = defaultConfiguration.OAuth.TokenServer;
+            Core.Port = parentConfiguration.Core.Port;
+            OAuth.TokenKey = parentConfiguration.OAuth.TokenKey;
+            OAuth.TokenServer = parentConfiguration.OAuth.TokenServer;
 
-            FileSystem.MaximumSynchronizationInterval = defaultConfiguration.FileSystem.MaximumSynchronizationInterval;
+            FileSystem.MaximumSynchronizationInterval = parentConfiguration.FileSystem.MaximumSynchronizationInterval;
 
-            Encryption.UseSsl = defaultConfiguration.Encryption.UseSsl;
-            Encryption.UseFips = defaultConfiguration.Encryption.UseFips;
+            Encryption.UseSsl = parentConfiguration.Encryption.UseSsl;
+            Encryption.UseFips = parentConfiguration.Encryption.UseFips;
 
-            Core.AssembliesDirectory = defaultConfiguration.Core.AssembliesDirectory;
-            Storage.AllowOn32Bits = defaultConfiguration.Storage.AllowOn32Bits;
+            Core.AssembliesDirectory = parentConfiguration.Core.AssembliesDirectory;
+            Storage.AllowOn32Bits = parentConfiguration.Storage.AllowOn32Bits;
         }
 
         public IEnumerable<string> GetConfigOptionsDocs()
         {
             return ConfigOptionDocs.OptionsDocs;
+        }
+
+        public void SetSetting(string key, string value)
+        {
+            if (initialized)
+                throw new InvalidOperationException("Configuration already initialized. You cannot specify already initialized settings.");
+
+            Settings[key] = value;
+        }
+
+        public string GetSetting(string key)
+        {
+            return Settings[key];
         }
 
         public static string GetKey(Expression<Func<InMemoryRavenConfiguration, object>> getKey)
@@ -402,5 +405,16 @@ namespace Raven.Database.Config
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key;
         }
 
+        public static InMemoryRavenConfiguration CreateFrom(InMemoryRavenConfiguration parent)
+        {
+            var result = new InMemoryRavenConfiguration
+            {
+                Settings = new NameValueCollection(parent.Settings)
+            };
+
+            result.Settings[GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString();
+
+            return result;
+        }
     }
 }

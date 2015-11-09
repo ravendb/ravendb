@@ -172,7 +172,6 @@ namespace Raven.Tests.Common
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Core.Port);
             var serverConfiguration = new RavenConfiguration
             {
-                Settings = { { "Raven/ActiveBundles", "replication" } },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =
                 {
@@ -180,6 +179,7 @@ namespace Raven.Tests.Common
                     DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
                     Port = previousServer.SystemDatabase.Configuration.Core.Port,
                     AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+                    ActiveBundlesStringValue = "replication"
                 }
             };
 

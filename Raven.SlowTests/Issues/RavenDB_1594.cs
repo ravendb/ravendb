@@ -37,8 +37,8 @@ namespace Raven.SlowTests.Issues
                                 {
                                     DataDirectory = path,
                                     Port = 8079,
+                                    ActiveBundlesStringValue = "PeriodicBackup"
                                  },
-                                Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
                             };
             config.PostInit();
             ravenDbServer = new RavenDbServer(config)
@@ -70,7 +70,7 @@ namespace Raven.SlowTests.Issues
 
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
+            configuration.Core.ActiveBundlesStringValue = "PeriodicBackup";
         }
 
         [Fact, Trait("Category", "Smuggler")]

@@ -18,7 +18,6 @@ namespace Raven.Tests.Issues
     {
         protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
         {
-            config.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)] = "true";
             config.Storage.AllowIncrementalBackups = true;
         }
 

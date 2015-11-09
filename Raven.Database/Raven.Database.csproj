@@ -278,6 +278,7 @@
     <Compile Include="Config\Categories\EncryptionConfiguration.cs" />
     <Compile Include="Config\Categories\ExpirationBundleConfiguration.cs" />
     <Compile Include="Config\Categories\FileSystemConfiguration.cs" />
+    <Compile Include="Config\Categories\FileSystemVersioningBundleConfiguration.cs" />
     <Compile Include="Config\ImplicitFetchFieldsMode.cs" />
     <Compile Include="Config\Categories\IndexingConfiguration.cs" />
     <Compile Include="Config\Categories\LicenseConfiguration.cs" />

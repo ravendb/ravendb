@@ -73,8 +73,7 @@ namespace Raven.Database.TimeSeries
 
             metricsTimeSeries = new TimeSeriesMetricsManager();
 
-            var options = configuration.Core.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : CreateStorageOptionsFromConfiguration(configuration.TimeSeries.DataDirectory, configuration.Settings);
+            var options = CreateStorageOptionsFromConfiguration(configuration);
 
             JsonSerializer = new JsonSerializer();
             storageEnvironment = new StorageEnvironment(options);
@@ -115,25 +114,18 @@ namespace Raven.Database.TimeSeries
             }
         }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
-            bool result;
-            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory)] ?? "false", out result) && result)
+            if (configuration.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly();
 
-            bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups)] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups) + " settings key contains invalid value");
-
-            var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
+            var directoryPath = configuration.TimeSeries.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
-
-            var tempPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.TempPath)];
-            var journalPath = settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)];
-            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, configuration.Storage.TempPath, configuration.Storage.JournalsStoragePath);
+            options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
             return options;
         }
 

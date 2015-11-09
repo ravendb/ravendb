@@ -159,7 +159,7 @@ namespace Raven.Tests.Smuggler
 
         protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
+            configuration.Core.ActiveBundlesStringValue = "PeriodicBackup";
         }
 
         public class User

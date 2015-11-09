@@ -78,8 +78,6 @@ namespace Raven.Abstractions.Data
 
         public const string TemporaryTransformerPrefix = "Temp/";
 
-        public const string ActiveBundles = "Raven/ActiveBundles";
-
         public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 
         public const string RavenAlerts = "Raven/Alerts";
@@ -235,11 +233,6 @@ namespace Raven.Abstractions.Data
             public const string UrlPrefix = "fs";
 
             public const string RavenFsSize = "RavenFS-Size";
-
-            public static class Versioning
-            {
-                public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";
-            }
         }
 
         //Counters
@@ -312,7 +305,7 @@ namespace Raven.Abstractions.Data
         {
             public const string ClusterConfigurationDocumentKey = "Raven/Cluster/Configuration";
 
-            public const string NonClusterDatabaseMarker = "Raven-Non-Cluster-Database";
+            public const string NonClusterDatabaseMarker = "Raven-Non-Cluster-Database"; //TODO arek
 
             public const string ClusterAwareHeader = "Raven-Cluster-Aware";
 

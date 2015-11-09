@@ -85,10 +85,7 @@ namespace Raven.Database.Server.Tenancy
                                 string folderPropName,
                                 InMemoryRavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+            var config = InMemoryRavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
@@ -96,16 +93,16 @@ namespace Raven.Database.Server.Tenancy
 
             foreach (var setting in document.Settings)
             {
-                config.Settings[setting.Key] = setting.Value;
+                config.SetSetting(setting.Key, setting.Value);
             }
             Unprotect(document);
 
             foreach (var securedSetting in document.SecuredSettings)
             {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
+                config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.FileSystem.DataDirectory));
             config.FileSystemName = tenantId;
 
             config.Initialize();
@@ -274,7 +271,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
             }
 
-            Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.Core.ActiveBundles);
         }
 
         protected override DateTime LastWork(RavenFileSystem resource)

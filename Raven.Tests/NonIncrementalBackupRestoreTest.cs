@@ -48,10 +48,6 @@ namespace Raven.Tests
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
-                {
-                    {"Raven/Esent/CircularLog", "false"}
-                }
             }, null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
         }
@@ -79,12 +75,10 @@ namespace Raven.Tests
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = false
                 }
-
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -133,11 +127,6 @@ namespace Raven.Tests
                         DataDirectory = DataDir
                     },
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                    Settings =
-                    {
-                        {"Raven/Esent/CircularLog", "false"}
-                    }
-
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -174,11 +163,6 @@ namespace Raven.Tests
                         DataDirectory = DataDir,
                     },
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                    Settings =
-                    {
-                        {"Raven/Esent/CircularLog", "false"}
-                    }
-
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -233,11 +217,6 @@ namespace Raven.Tests
                         DataDirectory = DataDir,
                     },
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                    Settings =
-                    {
-                        {"Raven/Esent/CircularLog", "false"}
-                    }
-
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,

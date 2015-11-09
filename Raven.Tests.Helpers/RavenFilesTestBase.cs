@@ -88,6 +88,7 @@ namespace Raven.Tests.Helpers
                     DataDirectory = directory,
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+                    ActiveBundlesStringValue = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -102,11 +103,6 @@ namespace Raven.Tests.Helpers
                     DataDirectory = Path.Combine(directory, "FileSystems"),
                 },
             };
-
-            if (activeBundles != null)
-            {
-                ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
-            }
 
             if (customConfig != null)
             {
