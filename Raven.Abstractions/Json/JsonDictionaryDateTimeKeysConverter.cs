@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Utilities;
@@ -17,10 +18,10 @@ namespace Raven.Abstractions.Json
         {
             var genericArguments = value.GetType().GetGenericArguments();
             var makeGenericMethod = genericWriteJsonMethodInfo.MakeGenericMethod(genericArguments);
-            makeGenericMethod.Invoke(this, new[] {writer, value, serializer});
+            makeGenericMethod.Invoke(this, new[] { writer, value, serializer });
         }
 
-        public void GenericWriteJson<TKey,TValue>(JsonWriter writer, Dictionary<TKey,TValue> value, JsonSerializer serializer)
+        public void GenericWriteJson<TKey, TValue>(JsonWriter writer, Dictionary<TKey, TValue> value, JsonSerializer serializer)
         {
             writer.WriteStartObject();
 
@@ -63,14 +64,14 @@ namespace Raven.Abstractions.Json
                 reader.Read();
                 if (reader.TokenType == JsonToken.EndObject)
                     return result;
-                if(reader.TokenType!=JsonToken.PropertyName)
+                if (reader.TokenType != JsonToken.PropertyName)
                     throw new InvalidOperationException("Expected PropertyName, Got " + reader.TokenType);
 
                 object key;
                 var s = reader.Value as string;
                 if (s != null)
                 {
-                    if (typeof (TKey) == typeof (DateTime) || typeof (TKey) == typeof (DateTime?))
+                    if (typeof(TKey) == typeof(DateTime) || typeof(TKey) == typeof(DateTime?))
                     {
                         DateTime time;
                         if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
@@ -83,7 +84,7 @@ namespace Raven.Abstractions.Json
                             throw new InvalidOperationException("Could not parse date time from " + s);
                         }
                     }
-                    else if (typeof (TKey) == typeof (DateTimeOffset) || typeof (TKey) == typeof (DateTimeOffset?))
+                    else if (typeof(TKey) == typeof(DateTimeOffset) || typeof(TKey) == typeof(DateTimeOffset?))
                     {
                         DateTimeOffset time;
                         if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
@@ -95,19 +96,19 @@ namespace Raven.Abstractions.Json
                         {
                             throw new InvalidOperationException("Could not parse date time offset from " + s);
                         }
-                
+
                     }
                     else
                     {
-                        throw new InvalidOperationException("No idea how to parse " + typeof (TKey));
+                        throw new InvalidOperationException("No idea how to parse " + typeof(TKey));
                     }
                 }
                 else
                 {
-                    key = DeferReadToNextConverter(reader, typeof (TKey), serializer, existingValue);
+                    key = DeferReadToNextConverter(reader, typeof(TKey), serializer, existingValue);
                 }
                 reader.Read();// read the value
-                result[(TKey)key] = (TValue)serializer.Deserialize(reader, typeof (TValue));
+                result[(TKey)key] = (TValue)serializer.Deserialize(reader, typeof(TValue));
             } while (true);
         }
 

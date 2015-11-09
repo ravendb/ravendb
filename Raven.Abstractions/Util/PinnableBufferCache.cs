@@ -1,3 +1,4 @@
+#if !DNXCORE50
 #define ENABLE
 #define MINBUFFERS
 // Copyright (c) Microsoft. All rights reserved.
@@ -180,7 +181,7 @@ namespace Raven.Abstractions.Util
             m_FreeList.Push(buffer);
         }
 
-        #region Private
+#region Private
 
         /// <summary>
         /// Called when we don't have any buffers in our free list to give out.    
@@ -470,7 +471,7 @@ namespace Raven.Abstractions.Util
         /// </summary>
         private int m_numAllocCalls;
 
-        #endregion
+#endregion
     }
 
     /// <summary>
@@ -499,7 +500,7 @@ namespace Raven.Abstractions.Util
             gcCallback.Setup(callback, targetObj);
         }
 
-        #region Private
+#region Private
 
         private Func<object, bool> m_callback;
         private GCHandle m_weakTargetObj;
@@ -544,7 +545,7 @@ namespace Raven.Abstractions.Util
             }
         }
 
-        #endregion
+#endregion
     }
 
 
@@ -662,3 +663,4 @@ namespace Raven.Abstractions.Util
     }
 #endif
 }
+#endif

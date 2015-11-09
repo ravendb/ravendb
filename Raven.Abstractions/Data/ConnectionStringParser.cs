@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if !DNXCORE50
 using System.Configuration;
+#endif
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -89,11 +91,10 @@ namespace Raven.Abstractions.Data
     {
         public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
         {
-#if !MONODROID
+#if !(MONODROID || DNXCORE50)
             var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
             if (connectionStringSettings == null)
                 throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
-
         
             return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
 #else
@@ -230,7 +231,7 @@ namespace Raven.Abstractions.Data
                     bool result;
                     if (bool.TryParse(value, out result) == false)
                     {
-#if !MONODROID
+#if !(MONODROID || DNXCORE50)
                         throw new ConfigurationErrorsException(string.Format("Could not understand memory setting: '{0}'", value));
 #else
                         throw new Exception(string.Format("Could not understand memory setting: '{0}'", value));

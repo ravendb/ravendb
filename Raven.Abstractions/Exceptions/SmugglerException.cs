@@ -31,10 +31,12 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
+#if !DNXCORE50
         protected SmugglerException(
             SerializationInfo info,
             StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

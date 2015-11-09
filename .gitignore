@@ -89,3 +89,7 @@ RavenDB.sln.ide/
 _NCrunch_RavenDB/
 /Raven.Tests.Web/CompiledIndexCache
 .vs/
+
+# DNX
+project.lock.json
+artifacts/
