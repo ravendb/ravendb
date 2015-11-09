@@ -246,17 +246,12 @@ namespace Raven.Database.Indexing
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag, prefetchingBehavior == defaultPrefetchingBehavior)
+                        && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
-            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner,string.Format("Etags from: {0}", fromEtag));
-
-            var recentEtag = Etag.Empty;
-            context.Database.TransactionalStorage.Batch(accessor =>
-            {
-                recentEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-            });
+            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, string.Format("Etags from: {0}", fromEtag));
 
             prefetchingBehaviors.Add(newPrefetcher);
             usedPrefetchers.Add(newPrefetcher);

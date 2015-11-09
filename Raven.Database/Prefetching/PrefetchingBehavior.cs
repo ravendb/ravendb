@@ -163,7 +163,7 @@ namespace Raven.Database.Prefetching
                     )
                 {
                     DisableCollectingDocumentsAfterCommit = true;
-                    //If we disable in memory collection of data, we need to also remove all the
+                    // If we disable in memory collection of data, we need to also remove all the
                     // items in the prefetching queue that are after the last in memory docs
                     // immediately, not wait for them to be indexed. They have already been in 
                     // memory for ten minutes
@@ -197,7 +197,7 @@ namespace Raven.Database.Prefetching
             return true;
         }
 
-        public bool CanUsePrefetcherToLoadFrom(Etag fromEtag)
+        public bool CanUsePrefetcherToLoadFrom(Etag fromEtag, bool isDefaultPrefetcher = false)
         {
             var nextEtagToIndex = GetNextDocEtag(fromEtag);
 
@@ -209,6 +209,13 @@ namespace Raven.Database.Prefetching
                 return true;
 
             if (CanLoadDocumentsFromFutureBatches(nextEtagToIndex) != null)
+                return true;
+
+            // we assume that the default prefetcher should be ahead of all other prefetchers.
+            // if we find the next etag bigger than the first one in the queue - 
+            // than we use the default prefetcher. the documents with the smaller etags will be removed
+            // when trying to remove the documents from the queue.
+            if (isDefaultPrefetcher && nextEtagToIndex.CompareTo(firstEtagInQueue) >= 0)
                 return true;
 
             return false;
@@ -901,14 +908,14 @@ namespace Raven.Database.Prefetching
                     JsonDocument.EnsureIdInMetadata(jsonDocument);
                     prefetchingQueue.Add(jsonDocument);
 
-                    if (ShouldHandleUnusedDocumentsAddedAfterCommit && (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0))
+                    if (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0)
                     {
                         lowestEtag = jsonDocument.Etag;
                     }
                 }
             }
 
-            if (ShouldHandleUnusedDocumentsAddedAfterCommit && lowestEtag != null)
+            if (lowestEtag != null)
             {
                 if (lowestInMemoryDocumentAddedAfterCommit == null || lowestEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) < 0)
                 {
