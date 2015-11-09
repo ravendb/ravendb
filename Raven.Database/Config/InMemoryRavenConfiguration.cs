@@ -20,7 +20,6 @@ using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins.Catalogs;
-using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Config.Attributes;
@@ -80,6 +79,8 @@ namespace Raven.Database.Config
 
         public LicenseConfiguration Licensing { get; }
 
+        public QuotasBundleConfiguration Quotas { get; }
+
         public InMemoryRavenConfiguration()
         {
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
@@ -108,6 +109,7 @@ namespace Raven.Database.Config
             Studio = new StudioConfiguration();
             Tenants = new TenantConfiguration();
             Licensing = new LicenseConfiguration();
+            Quotas = new QuotasBundleConfiguration();
 
             IndexingClassifier = new DefaultIndexingClassifier();
 
@@ -157,6 +159,7 @@ namespace Raven.Database.Config
             Studio.Initialize(Settings);
             Tenants.Initialize(Settings);
             Licensing.Initialize(Settings);
+            Quotas.Initialize(Settings);
 
             if (Settings["Raven/MaxServicePointIdleTime"] != null)
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(Settings["Raven/MaxServicePointIdleTime"]);

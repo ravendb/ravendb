@@ -66,10 +66,10 @@ namespace Raven.Bundles.LiveTest
                 softMarginInKb = QuotasSoftMarginInKb;
 
             settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = string.Join(";", bundles);
-            settings[Constants.SizeHardLimitInKB] = hardLimitInKb;
-            settings[Constants.SizeSoftLimitInKB] = softMarginInKb;
-            settings[Constants.DocsHardLimit] = null;
-            settings[Constants.DocsSoftLimit] = null;
+            settings[InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit)] = hardLimitInKb;
+            settings[InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit)] = softMarginInKb;
+            settings[InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit)] = null;
+            settings[InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit)] = null;
         }
     }
 }
