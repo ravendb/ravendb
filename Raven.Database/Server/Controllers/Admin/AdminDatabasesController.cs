@@ -41,8 +41,8 @@ namespace Raven.Database.Server.Controllers.Admin
             DatabasesLandlord.Unprotect(dbDoc);
 
             string activeBundles;
-            if (dbDoc.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out activeBundles))
-                dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = BundlesHelper.ProcessActiveBundles(activeBundles);
+            if (dbDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out activeBundles))
+                dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = BundlesHelper.ProcessActiveBundles(activeBundles);
 
             return GetMessageWithObject(dbDoc, HttpStatusCode.OK, document.Etag);
         }
@@ -71,10 +71,10 @@ namespace Raven.Database.Server.Controllers.Admin
             var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>().ConfigureAwait(false);
             
             string bundles;			
-            if (dbDoc.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out bundles) && bundles.Contains("Encryption"))
+            if (dbDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out bundles) && bundles.Contains("Encryption"))
             {
-                if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
-                    !dbDoc.SecuredSettings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
+                if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
+                    !dbDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
                 {
                     return GetMessageWithString(string.Format("Failed to create '{0}' database, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
                 }
@@ -390,17 +390,17 @@ namespace Raven.Database.Server.Controllers.Admin
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
             var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (dbDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)))
+            if (dbDoc.Settings.ContainsKey(RavenConfiguration.GetKey(x => x.Indexing.Disabled)))
             {
                 bool indexDisabled;
-                var success = bool.TryParse(dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)], out indexDisabled);
+                var success = bool.TryParse(dbDoc.Settings[RavenConfiguration.GetKey(x => x.Indexing.Disabled)], out indexDisabled);
                 if (success && indexDisabled == isindexingDisabled)
                 {
                     var state = isindexingDisabled ? "disabled" : "enabled";
                     return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "indexing is already " + state};
                 }
             }
-            dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)] = isindexingDisabled.ToString();
+            dbDoc.Settings[RavenConfiguration.GetKey(x => x.Indexing.Disabled)] = isindexingDisabled.ToString();
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
             Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);
@@ -418,17 +418,17 @@ namespace Raven.Database.Server.Controllers.Admin
                 return new MessageWithStatusCode { ErrorCode = HttpStatusCode.NotFound, Message = "Database " + databaseId + " wasn't found" };
 
             var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (dbDoc.Settings.ContainsKey(InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)))
+            if (dbDoc.Settings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.RejectClientsMode)))
             {
                 bool rejectClientsEnabled;
-                var success = bool.TryParse(dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)], out rejectClientsEnabled);
+                var success = bool.TryParse(dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core.RejectClientsMode)], out rejectClientsEnabled);
                 if (success && rejectClientsEnabled == isRejectClientsEnabled)
                 {
                     var state = rejectClientsEnabled ? "reject clients mode" : "accept clients mode";
                     return new MessageWithStatusCode {ErrorCode = HttpStatusCode.BadRequest, Message = "Database " + databaseId + "is already in " + state};
                 }
             }
-            dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)] = isRejectClientsEnabled.ToString();
+            dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core.RejectClientsMode)] = isRejectClientsEnabled.ToString();
             var json = RavenJObject.FromObject(dbDoc);
             json.Remove("Id");
             Database.Documents.Put(docKey, document.Etag, json, new RavenJObject(), null);

@@ -20,11 +20,11 @@ namespace Raven.Tests.FileSystem.Synchronization
         private readonly IAsyncFilesCommandsImpl source;
         private readonly RavenFileSystem sourceRfs;
 
-        private InMemoryRavenConfiguration configuration;
+        private RavenConfiguration configuration;
 
         public SynchronizationStorageTests()
         {
-            configuration = new InMemoryRavenConfiguration();
+            configuration = new RavenConfiguration();
             configuration.Initialize();
 
             source = (IAsyncFilesCommandsImpl)NewAsyncClient(0);

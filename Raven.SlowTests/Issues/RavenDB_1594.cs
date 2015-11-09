@@ -68,7 +68,7 @@ namespace Raven.SlowTests.Issues
             public string Data { get; set; }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Core.ActiveBundlesStringValue = "PeriodicBackup";
         }

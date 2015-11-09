@@ -336,15 +336,15 @@ namespace Raven.Database.Server.Controllers.Admin
                     if (databaseDocument == null)
                         return;
 
-                    databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory)] = documentDataDir;
-                    databaseDocument.Settings.Remove(InMemoryRavenConfiguration.GetKey(x => x.Core.IndexStoragePath));
-                    databaseDocument.Settings.Remove(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath));
+                    databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = documentDataDir;
+                    databaseDocument.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.IndexStoragePath));
+                    databaseDocument.Settings.Remove(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath));
 
                     if (restoreRequest.IndexesLocation != null)
-                        databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
+                        databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
 
                     if (restoreRequest.JournalsLocation != null)
-                        databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
+                        databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
 
                     bool replicationBundleRemoved = false;
                     if (restoreRequest.DisableReplicationDestinations)
@@ -414,13 +414,13 @@ namespace Raven.Database.Server.Controllers.Admin
         private static bool TryRemoveReplicationBundle(DatabaseDocument databaseDocument)
         {
             string value;
-            if (databaseDocument.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out value) == false)
+            if (databaseDocument.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out value) == false)
                 return false;
 
             var bundles = value.GetSemicolonSeparatedValues();
             var removed = bundles.RemoveAll(n => n.Equals("Replication", StringComparison.OrdinalIgnoreCase)) > 0;
 
-            databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = string.Join(";", bundles);
+            databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = string.Join(";", bundles);
             return removed;
         }
 
@@ -448,10 +448,10 @@ namespace Raven.Database.Server.Controllers.Admin
             var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Database.Prefix + databaseName);
             var databaseDocument = databaseDocumentAsJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-            var bundles = databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)].GetSemicolonSeparatedValues();
+            var bundles = databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)].GetSemicolonSeparatedValues();
             bundles.Add("Replication");
 
-            databaseDocument.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = string.Join(";", bundles);
+            databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = string.Join(";", bundles);
 
             DatabasesLandlord
                     .SystemDatabase

@@ -19,7 +19,7 @@ namespace Raven.Database.Server
         private static readonly byte[] NotFoundBody = Encoding.UTF8.GetBytes("Route invalid");
         private readonly OwinEmbeddedHost owinEmbeddedHost;
 
-        public OwinHttpServer(InMemoryRavenConfiguration config, DocumentDatabase db = null, bool useHttpServer = true, Action<RavenDBOptions> configure = null)
+        public OwinHttpServer(RavenConfiguration config, DocumentDatabase db = null, bool useHttpServer = true, Action<RavenDBOptions> configure = null)
         {
             startup = new Startup(config, db);
             if (configure != null)
@@ -34,7 +34,7 @@ namespace Raven.Database.Server
             EnableHttpServer(config);
         }
 
-        public void EnableHttpServer(InMemoryRavenConfiguration config)
+        public void EnableHttpServer(RavenConfiguration config)
         {
             if(server != null)
                 throw new InvalidOperationException("Http server is already running");

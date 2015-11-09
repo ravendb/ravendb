@@ -21,7 +21,7 @@ namespace Raven.Tests.Bundles.Authorization.Bugs
                         Id = "Raven/Databases/Testing",
                         Settings =
                            {
-                               { InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" },
+                               { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" },
                                { "Raven/DataDir", "~\\Testing" }
                            }
                     }

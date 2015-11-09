@@ -9,7 +9,7 @@ namespace Raven.Tests.TimeSeries
 {
     public class TimeSeriesReplicationTests : RavenBaseTimeSeriesTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
             configuration.TimeSeries.ReplicationLatency = new TimeSetting(10, TimeUnit.Milliseconds);

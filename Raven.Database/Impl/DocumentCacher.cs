@@ -14,14 +14,14 @@ namespace Raven.Database.Impl
 {
     public class DocumentCacher : IDocumentCacher, ILowMemoryHandler
     {
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
         private MemoryCache cachedSerializedDocuments;
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         
         [ThreadStatic]
         private static bool skipSettingDocumentInCache;
 
-        public DocumentCacher(InMemoryRavenConfiguration configuration)
+        public DocumentCacher(RavenConfiguration configuration)
         {
             this.configuration = configuration;
             cachedSerializedDocuments = CreateCache();

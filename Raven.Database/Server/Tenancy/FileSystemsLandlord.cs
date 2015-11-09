@@ -33,9 +33,9 @@ namespace Raven.Database.Server.Tenancy
 
         public override string ResourcePrefix { get { return Constants.FileSystem.Prefix; } }
 
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        public event Action<RavenConfiguration> SetupTenantConfiguration = delegate { };
 
-        public InMemoryRavenConfiguration SystemConfiguration
+        public RavenConfiguration SystemConfiguration
         {
             get { return systemDatabase.Configuration; }
         }
@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Tenancy
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
+        public RavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
@@ -76,16 +76,16 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), this.SystemConfiguration);
+            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), this.SystemConfiguration);
         }
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
+        protected RavenConfiguration CreateConfiguration(
                                 string tenantId,
                                 FileSystemDocument document,
                                 string folderPropName,
-                                InMemoryRavenConfiguration parentConfiguration)
+                                RavenConfiguration parentConfiguration)
         {
-            var config = InMemoryRavenConfiguration.CreateFrom(parentConfiguration);
+            var config = RavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
@@ -170,8 +170,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
-            if (document.Settings.Keys.Contains(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)) == false)
-                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory));
+            if (document.Settings.Keys.Contains(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledFileSystem)
                 throw new InvalidOperationException("The file system has been disabled.");
@@ -245,7 +245,7 @@ namespace Raven.Database.Server.Tenancy
             return true;
         }
 
-        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+        private void AssertLicenseParameters(RavenConfiguration config)
         {
             string maxFileSystmes;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxFileSystmes))

@@ -42,16 +42,16 @@ namespace Raven.Database.Server.Security
 
             if (ValidateLicense.CurrentLicense.IsCommercial && database.Configuration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin && database.Configuration.Licensing.AllowAdminAnonymousAccessForCommercialUse == false)
             {
-                throw new InvalidOperationException("Your '" + InMemoryRavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + "' is set to '" + AnonymousUserAccessMode.Admin + 
+                throw new InvalidOperationException("Your '" + RavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + "' is set to '" + AnonymousUserAccessMode.Admin + 
                                                     "', which disables all user authentication on server. If you are aware of the consequences of this, please change the '" +
-                                                    InMemoryRavenConfiguration.GetKey(x => x.Licensing.AllowAdminAnonymousAccessForCommercialUse) +"' to 'true'.");
+                                                    RavenConfiguration.GetKey(x => x.Licensing.AllowAdminAnonymousAccessForCommercialUse) +"' to 'true'.");
             }
 
             if (Authentication.IsEnabled == false && database.Configuration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
             {
-                throw new InvalidOperationException("Cannot set " + InMemoryRavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + " to '" + database.Configuration.Core.AnonymousUserAccessMode + "' without a valid license.\r\n" +
-                                                    "This RavenDB instance doesn't have a license, and the only valid " + InMemoryRavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + " setting is: Admin\r\n" +
-                                                    "Please change to " + InMemoryRavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + " to Admin, or install a valid license.");
+                throw new InvalidOperationException("Cannot set " + RavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + " to '" + database.Configuration.Core.AnonymousUserAccessMode + "' without a valid license.\r\n" +
+                                                    "This RavenDB instance doesn't have a license, and the only valid " + RavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + " setting is: Admin\r\n" +
+                                                    "Please change to " + RavenConfiguration.GetKey(x => x.Core.AnonymousUserAccessMode) + " to Admin, or install a valid license.");
             }
         }
 

@@ -16,7 +16,7 @@ namespace Raven.Tests.Issues
     public class SanityCheck : AuthorizationTest
 {
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             Authentication.EnableOnce();
             configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;

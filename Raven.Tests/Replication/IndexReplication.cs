@@ -20,7 +20,7 @@ namespace Raven.Tests.Replication
 {
     public class IndexReplication : ReplicationBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Core.ActiveBundlesStringValue = "Replication";
         }

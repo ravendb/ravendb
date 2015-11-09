@@ -387,7 +387,7 @@ namespace Raven.Tests.Helpers
             bool enableAuthentication = false,
             string activeBundles = null,
             Action<RavenDBOptions> configureServer = null,
-            Action<InMemoryRavenConfiguration> configureConfig = null,
+            Action<RavenConfiguration> configureConfig = null,
             [CallerMemberName] string databaseName = null)
         {
             if (databaseName == ".ctor")
@@ -498,7 +498,7 @@ namespace Raven.Tests.Helpers
         {
         }
 
-        protected virtual void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected virtual void ModifyConfiguration(RavenConfiguration configuration)
         {
         }
 

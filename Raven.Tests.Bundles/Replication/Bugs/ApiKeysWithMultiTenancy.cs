@@ -23,7 +23,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
     {
         private const string apikey = "test/ThisIsMySecret";
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(RavenConfiguration serverConfiguration)
         {
             serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
@@ -64,7 +64,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
                 Id = "repl",
                 Settings =
                 {
-                    {InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
+                    {RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
                     {"Raven/DataDir", "~/db1"},
                     {"Raven/ActiveBundles", "Replication"}
                 }
@@ -74,7 +74,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
                 Id = "repl",
                 Settings =
                 {
-                    {InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
+                    {RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
                     {"Raven/DataDir", "~/db2"},
                     {"Raven/ActiveBundles", "Replication"}
                 }

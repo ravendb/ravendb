@@ -21,7 +21,7 @@ namespace Raven.Database.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
-        private readonly InMemoryRavenConfiguration parent;
+        private readonly RavenConfiguration parent;
         internal static readonly int DefaultMaxNumberOfItemsToProcessInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
         private readonly int defaultInitialNumberOfItemsToProcessInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
@@ -36,7 +36,7 @@ namespace Raven.Database.Config.Categories
         private string compiledIndexCacheDirectory;
         private string virtualDirectory;
 
-        public CoreConfiguration(InMemoryRavenConfiguration parent)
+        public CoreConfiguration(RavenConfiguration parent)
         {
             this.parent = parent;
             MaxNumberOfItemsToProcessInSingleBatch = DefaultMaxNumberOfItemsToProcessInSingleBatch;

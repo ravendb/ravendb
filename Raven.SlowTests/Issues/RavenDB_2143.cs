@@ -12,7 +12,7 @@ namespace Raven.SlowTests.Issues
 {
     public class RavenDB_2143 : RavenTestBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Tenants.FrequencyToCheckForIdle = new TimeSetting(3, TimeUnit.Seconds);
             configuration.Tenants.MaxIdleTime = new TimeSetting(1, TimeUnit.Seconds);

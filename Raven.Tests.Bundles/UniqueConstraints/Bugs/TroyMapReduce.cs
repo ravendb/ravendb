@@ -17,7 +17,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
         private Guid _appKey;
         private Guid _privateKey;
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(Raven.Bundles.UniqueConstraints.UniqueConstraintsPutTrigger).Assembly));
         }

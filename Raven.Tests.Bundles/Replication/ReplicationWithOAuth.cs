@@ -16,7 +16,7 @@ namespace Raven.Tests.Bundles.Replication
 {
     public class ReplicationWithOAuth : ReplicationBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(RavenConfiguration serverConfiguration)
         {
             serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();

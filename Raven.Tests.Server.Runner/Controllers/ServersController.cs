@@ -98,7 +98,7 @@ namespace Raven.Tests.Server.Runner.Controllers
             GC.WaitForPendingFinalizers();
         }
 
-        private static RavenDbServer CreateNewServer(InMemoryRavenConfiguration configuration, bool deleteData)
+        private static RavenDbServer CreateNewServer(RavenConfiguration configuration, bool deleteData)
         {
             var port = configuration.Core.Port.ToString(CultureInfo.InvariantCulture);
 

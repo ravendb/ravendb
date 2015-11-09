@@ -33,7 +33,7 @@ namespace Raven.Tests.Issues
                         Id = "N1", 
                         Settings =
                         {
-                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
+                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });

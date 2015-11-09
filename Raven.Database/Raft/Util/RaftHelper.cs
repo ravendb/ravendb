@@ -60,7 +60,7 @@ namespace Raven.Database.Raft.Util
         public static bool IsClusterDatabase(this DatabaseDocument document)
         {
             string value;
-            if (document.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), out value) == false)
+            if (document.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), out value) == false)
                 return true;
 
             bool result;

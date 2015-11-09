@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Tenancy
 
         public override string ResourcePrefix { get { return Constants.TimeSeries.Prefix; } }
 
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        public event Action<RavenConfiguration> SetupTenantConfiguration = delegate { };
 
         public TimeSeriesLandlord(DocumentDatabase systemDatabase)
             : base(systemDatabase)
@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Tenancy
             Init();
         }
 
-        public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+        public RavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
         public void Init()
         {
@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Tenancy
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledTimeSeries = false)
+        public RavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledTimeSeries = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
@@ -66,22 +66,22 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), systemDatabase.Configuration);
+            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), systemDatabase.Configuration);
         }
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
+        protected RavenConfiguration CreateConfiguration(
                         string tenantId,
                         TimeSeriesDocument document,
                         string folderPropName,
-                        InMemoryRavenConfiguration parentConfiguration)
+                        RavenConfiguration parentConfiguration)
         {
-            var config = InMemoryRavenConfiguration.CreateFrom(parentConfiguration);
+            var config = RavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForTimeSeriesTenant(tenantId);
 
-            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), parentConfiguration.TimeSeries.DataDirectory);
+            config.SetSetting(RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), parentConfiguration.TimeSeries.DataDirectory);
 
             foreach (var setting in document.Settings)
             {
@@ -95,8 +95,8 @@ namespace Raven.Database.Server.Tenancy
             }
 
             config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Core.DataDirectory));
-            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath).ToFullPath(parentConfiguration.Core.DataDirectory)));
-            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath).ToFullPath(parentConfiguration.Core.DataDirectory)));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
 
             config.TimeSeriesName = tenantId;
 
@@ -116,8 +116,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<TimeSeriesDocument>();
-            if (document.Settings.Keys.Contains(InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory)) == false)
-                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory));
+            if (document.Settings.Keys.Contains(RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledTimeSeriesStorage)
                 throw new InvalidOperationException("The time series has been disabled.");
@@ -230,7 +230,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+        private void AssertLicenseParameters(RavenConfiguration config)
         {
             string maxDatabases;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfTimeSeries", out maxDatabases))

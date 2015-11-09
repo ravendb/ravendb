@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
             public int StatusId { get; set; }
         }
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
             configuration.Core.RunInMemory = false;
         }

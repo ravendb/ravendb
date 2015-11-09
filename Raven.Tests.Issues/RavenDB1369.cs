@@ -208,7 +208,7 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
+                        {RavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
                     }
                 });
 

@@ -25,14 +25,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), ""
+                            RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), ""
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject(), null);
 
-                dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "Replication";
+                dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "Replication";
 
                 Assert.Throws<OperationVetoedException>(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject(), null));
 
@@ -42,14 +42,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
+                            RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject(), null);
 
-                dbDoc2.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "";
+                dbDoc2.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "";
 
                 Assert.Throws<OperationVetoedException>(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject(), null));
 
@@ -58,14 +58,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
+                            RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject(), null);
 
-                dbDoc3.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "SqlReplication";
+                dbDoc3.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "SqlReplication";
 
                 Assert.Throws<OperationVetoedException>(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject(), null));
             }
@@ -81,14 +81,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), ""
+                            RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), ""
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject(), null);
 
-                dbDoc.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "Replication";
+                dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "Replication";
 
                 Assert.DoesNotThrow(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject()
                 {
@@ -103,14 +103,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
+                            RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject(), null);
 
-                dbDoc2.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "";
+                dbDoc2.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "";
 
                 Assert.DoesNotThrow(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject()
                 {
@@ -124,14 +124,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
+                            RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject(), null);
 
-                dbDoc3.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "SqlReplication";
+                dbDoc3.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = "SqlReplication";
 
                 Assert.DoesNotThrow(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject()
                 {

@@ -85,7 +85,7 @@ namespace Raven.Tests.Raft
                     Settings =
                     {
                         {"Raven/DataDir", "~/Databases/Northwind"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), "false"}
+                        {RavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), "false"}
                     }
                 });
 
@@ -114,7 +114,7 @@ namespace Raven.Tests.Raft
                     Settings =
                     {
                         {"Raven/DataDir", "~/Databases/Northwind"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), "true"}
+                        {RavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), "true"}
                     }
                 });
 

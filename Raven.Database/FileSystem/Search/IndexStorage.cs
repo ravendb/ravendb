@@ -55,7 +55,7 @@ namespace Raven.Database.FileSystem.Search
         };
 
         private readonly string name;
-        private readonly InMemoryRavenConfiguration configuration; 
+        private readonly RavenConfiguration configuration; 
         private readonly object writerLock = new object();
         private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
@@ -70,7 +70,7 @@ namespace Raven.Database.FileSystem.Search
         private FileStream crashMarker;
         private bool resetIndexOnUncleanShutdown = false;
 
-        public IndexStorage(string name, InMemoryRavenConfiguration configuration)
+        public IndexStorage(string name, RavenConfiguration configuration)
         {
             if (configuration == null)
                 throw new ArgumentNullException("configuration");

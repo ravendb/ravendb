@@ -27,7 +27,7 @@ using Raven.Database.Config.Categories;
 
 namespace Raven.Database.Config
 {
-    public class InMemoryRavenConfiguration
+    public class RavenConfiguration
     {
         private CompositionContainer container;
         private bool containerExternallySet;
@@ -81,7 +81,7 @@ namespace Raven.Database.Config
 
         public QuotasBundleConfiguration Quotas { get; }
 
-        public InMemoryRavenConfiguration()
+        public RavenConfiguration()
         {
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -136,7 +136,7 @@ namespace Raven.Database.Config
             OAuth.Initialize(Settings);
         }
 
-        public InMemoryRavenConfiguration Initialize()
+        public RavenConfiguration Initialize()
         {
             Core.Initialize(Settings);
             Replication.Initialize(Settings);
@@ -369,7 +369,7 @@ namespace Raven.Database.Config
                 Settings[GetKey(x => x.TimeSeries.DataDirectory)] = Path.Combine(Settings[GetKey(x => x.TimeSeries.DataDirectory)], "TimeSeries", tenantId);
         }
 
-        public void CopyParentSettings(InMemoryRavenConfiguration parentConfiguration)
+        public void CopyParentSettings(RavenConfiguration parentConfiguration)
         {
             Core.Port = parentConfiguration.Core.Port;
             OAuth.TokenKey = parentConfiguration.OAuth.TokenKey;
@@ -402,15 +402,15 @@ namespace Raven.Database.Config
             return Settings[key];
         }
 
-        public static string GetKey(Expression<Func<InMemoryRavenConfiguration, object>> getKey)
+        public static string GetKey(Expression<Func<RavenConfiguration, object>> getKey)
         {
             var prop = getKey.ToProperty();
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key;
         }
 
-        public static InMemoryRavenConfiguration CreateFrom(InMemoryRavenConfiguration parent)
+        public static RavenConfiguration CreateFrom(RavenConfiguration parent)
         {
-            var result = new InMemoryRavenConfiguration
+            var result = new RavenConfiguration
             {
                 Settings = new NameValueCollection(parent.Settings)
             };

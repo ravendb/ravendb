@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
             BackupDir = NewDataPath("BackupDatabase");
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
+        protected override void ModifyConfiguration(RavenConfiguration config)
         {
             config.Storage.AllowIncrementalBackups = true;
         }

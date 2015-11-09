@@ -11,7 +11,7 @@ namespace Raven.Tests.MailingList
 {
     public class SortTest : RavenTestBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Core.ActiveBundlesStringValue = "IndexedProperties";
         }

@@ -90,7 +90,7 @@ namespace Raven.Client.Embedded
             EnlistInDistributedTransactions = true;
         }
 
-        private static void LegacyDataDirSupport(InMemoryRavenConfiguration configuration)
+        private static void LegacyDataDirSupport(RavenConfiguration configuration)
         {
             if (System.IO.Directory.Exists(configuration.Core.DataDirectory))
                 return;

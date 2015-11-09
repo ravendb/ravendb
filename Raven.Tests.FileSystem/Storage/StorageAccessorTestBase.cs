@@ -54,7 +54,7 @@ namespace Raven.Tests.FileSystem.Storage
         {
             path = path ?? NewDataPath();
 
-            var configuration = new InMemoryRavenConfiguration
+            var configuration = new RavenConfiguration
             {
                 FileSystem =
                 {

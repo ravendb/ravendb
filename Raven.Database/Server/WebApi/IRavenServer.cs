@@ -6,6 +6,6 @@ namespace Raven.Database.Server.WebApi
     {
         DocumentDatabase SystemDatabase { get; }
 
-        InMemoryRavenConfiguration SystemConfiguration { get; }
+        RavenConfiguration SystemConfiguration { get; }
     }
 }

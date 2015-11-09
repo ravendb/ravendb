@@ -37,8 +37,8 @@ namespace Raven.Tests.Issues
                     Id = "Raven/Databases/FooDB",
                     Settings =
                     {
-                        { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Versioning"},
-                        { InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory), "~/Data"}
+                        { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Versioning"},
+                        { RavenConfiguration.GetKey(x => x.Core.DataDirectory), "~/Data"}
                     }
                 });
 

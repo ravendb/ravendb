@@ -15,11 +15,11 @@ namespace Raven.Tests.FileSystem.Synchronization
     {
         private readonly Stream _stream = new MemoryStream();
 
-        private InMemoryRavenConfiguration configuration;
+        private RavenConfiguration configuration;
 
         public SigGeneratorTest()
         {
-            configuration = new InMemoryRavenConfiguration();
+            configuration = new RavenConfiguration();
             configuration.Initialize();
 
             TestDataGenerators.WriteNumbers(_stream, 10000);

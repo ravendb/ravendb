@@ -60,7 +60,7 @@ namespace Raven.SlowTests
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
             configuration.Initialize();

@@ -46,7 +46,7 @@ namespace Raven.Database.Util
             return key;
         }
 
-        public static void DeleteDatabaseFiles(InMemoryRavenConfiguration configuration)
+        public static void DeleteDatabaseFiles(RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
                 return;

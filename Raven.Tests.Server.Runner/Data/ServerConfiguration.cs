@@ -29,9 +29,9 @@ namespace Raven.Tests.Server.Runner.Data
 
         public bool HasApiKey { get { return !string.IsNullOrEmpty(ApiKeyName) && !string.IsNullOrEmpty(ApiKeySecret); } }
 
-        public InMemoryRavenConfiguration ConvertToRavenConfiguration()
+        public RavenConfiguration ConvertToRavenConfiguration()
         {
-            var configuration = new InMemoryRavenConfiguration()
+            var configuration = new RavenConfiguration()
                                 {
                                     Core =
                                     {

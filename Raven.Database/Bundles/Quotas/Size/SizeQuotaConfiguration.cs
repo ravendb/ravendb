@@ -32,8 +32,8 @@ namespace Raven.Bundles.Quotas.Size
         public SizeQuotaConfiguration(DocumentDatabase database)
         {
             this.database = database;
-            var hardLimitQuotaAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit));
-            var marginAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit));
+            var hardLimitQuotaAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit));
+            var marginAsString = database.ConfigurationRetriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit));
 
             if (int.TryParse(marginAsString, out margin) == false)
                 margin = 1024 * 1024;// 1 MB by default

@@ -22,7 +22,7 @@ namespace Raven.Database.Linq
 
         public DynamicTransformerCompiler(
             TransformerDefinition transformerDefinition,
-            InMemoryRavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath) : base(configuration, extensions, name, basePath)
+            RavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath) : base(configuration, extensions, name, basePath)
         {
             this.transformerDefinition = transformerDefinition;
         }

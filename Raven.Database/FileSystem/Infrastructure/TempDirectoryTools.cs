@@ -6,7 +6,7 @@ namespace Raven.Database.FileSystem.Infrastructure
 {
     public class TempDirectoryTools
     {
-        public static string Create(InMemoryRavenConfiguration configuration)
+        public static string Create(RavenConfiguration configuration)
         {
             string tempDirectory;
             do

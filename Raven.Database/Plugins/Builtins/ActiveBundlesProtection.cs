@@ -47,12 +47,12 @@ namespace Raven.Database.Plugins.Builtins
 
             var currentBundles = new List<string>();
             string value;
-            if (currentDbDocument.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out value))
+            if (currentDbDocument.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out value))
                 currentBundles = value.GetSemicolonSeparatedValues();
 
             var newDbDocument = document.JsonDeserialization<DatabaseDocument>();
             var newBundles = new List<string>();
-            if (newDbDocument.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out value))
+            if (newDbDocument.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out value))
                 newBundles = value.GetSemicolonSeparatedValues();
 
             if (currentBundles.Count != newBundles.Count || currentBundles.TrueForAll(x => newBundles.Contains(x, StringComparer.InvariantCultureIgnoreCase)) == false)

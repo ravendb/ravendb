@@ -25,7 +25,7 @@ namespace Raven.Server
         private readonly DocumentStore documentStore;
         private readonly FilesStore filesStore;
 
-        private InMemoryRavenConfiguration configuration;
+        private RavenConfiguration configuration;
         private IServerThingsForTests serverThingsForTests;
         private RavenDBOptions options;
         private OwinHttpServer owinHttpServer;
@@ -36,7 +36,7 @@ namespace Raven.Server
             : this(new AppSettingsBasedConfiguration())
         {}
 
-        public RavenDbServer(InMemoryRavenConfiguration configuration)
+        public RavenDbServer(RavenConfiguration configuration)
         {
             this.configuration = configuration;
             documentStore = new DocumentStore
@@ -55,7 +55,7 @@ namespace Raven.Server
             };
         }
 
-        public InMemoryRavenConfiguration Configuration
+        public RavenConfiguration Configuration
         {
             get { return configuration; }
             set { configuration = value; }

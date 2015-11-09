@@ -20,7 +20,7 @@ namespace Raven.Tests.FileSystem
         private readonly RavenJObject metadataWithEtag = new RavenJObject();
         public PagesTests()
         {
-            var configuration = new InMemoryRavenConfiguration
+            var configuration = new RavenConfiguration
             {
                 FileSystem =
                 {

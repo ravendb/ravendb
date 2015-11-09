@@ -64,7 +64,7 @@ namespace Raven.Database.Counters
 
         public int ReplicationTimeoutInMs { get; private set; }
 
-        public unsafe CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
+        public unsafe CounterStorage(string serverUrl, string storageName, RavenConfiguration configuration, TransportState receivedTransportState = null)
         {
             CounterStorageUrl = string.Format("{0}cs/{1}", serverUrl, storageName);
             Name = storageName;
@@ -205,7 +205,7 @@ namespace Raven.Database.Counters
 
         public AtomicDictionary<object> ExtensionsState { get; private set; }
 
-        public InMemoryRavenConfiguration Configuration { get; private set; }
+        public RavenConfiguration Configuration { get; private set; }
 
         public CounterStorageStats CreateStats()
         {
@@ -252,7 +252,7 @@ namespace Raven.Database.Counters
             };
         }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly();

@@ -28,18 +28,18 @@ namespace Raven.Tests.Issues.RavenDB_2712
                 {
                     Settings =
                     {
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit), "10"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit), "11"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit), "12"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit), "13"}
+                        {RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit), "10"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit), "11"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit), "12"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit), "13"}
                     }
                 };
                 systemDatabase.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, null, RavenJObject.FromObject(globalSettings), new RavenJObject(), null);
 
-                Assert.Equal("10", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit)));
-                Assert.Equal("11", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit)));
-                Assert.Equal("12", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit)));
-                Assert.Equal("13", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit)));
+                Assert.Equal("10", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit)));
+                Assert.Equal("11", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit)));
+                Assert.Equal("12", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit)));
+                Assert.Equal("13", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit)));
             }
         }
 
@@ -54,10 +54,10 @@ namespace Raven.Tests.Issues.RavenDB_2712
                     Settings =
                     {
                         {"Raven/DataDir", @"~\Databases\Mine"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit), "20"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit), "21"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit), "22"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit), "23"}
+                        {RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit), "20"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit), "21"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit), "22"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit), "23"}
                     }
                 });
 
@@ -69,18 +69,18 @@ namespace Raven.Tests.Issues.RavenDB_2712
                 {
                     Settings =
                     {
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit), "10"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit), "11"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit), "12"},
-                        {InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit), "13"}
+                        {RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit), "10"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit), "11"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit), "12"},
+                        {RavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit), "13"}
                     }
                 };
                 systemDatabase.Documents.Put(Constants.Global.GlobalSettingsDocumentKey, null, RavenJObject.FromObject(globalSettings), new RavenJObject(), null);
 
-                Assert.Equal("20", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit)));
-                Assert.Equal("21", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit)));
-                Assert.Equal("22", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit)));
-                Assert.Equal("23", retriever.GetEffectiveConfigurationSetting(InMemoryRavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit)));
+                Assert.Equal("20", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit)));
+                Assert.Equal("21", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit)));
+                Assert.Equal("22", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit)));
+                Assert.Equal("23", retriever.GetEffectiveConfigurationSetting(RavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit)));
             }
         }
     }

@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Storage.MaxScratchBufferSize = new Size(7, SizeUnit.Megabytes);
         }

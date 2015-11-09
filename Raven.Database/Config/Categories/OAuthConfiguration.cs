@@ -29,7 +29,7 @@ namespace Raven.Database.Config.Categories
             base.Initialize(settings);
 
             TokenKey = GetOAuthKey(settings);
-            UseDefaultTokenServer = settings[InMemoryRavenConfiguration.GetKey(x => x.OAuth.TokenServer)] == null;
+            UseDefaultTokenServer = settings[RavenConfiguration.GetKey(x => x.OAuth.TokenServer)] == null;
         }
 
         private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>

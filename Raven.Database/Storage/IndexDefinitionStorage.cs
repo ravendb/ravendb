@@ -63,7 +63,7 @@ namespace Raven.Database.Storage
 
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         private readonly string path;
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
 
         private readonly ITransactionalStorage transactionalStorage;
 
@@ -71,7 +71,7 @@ namespace Raven.Database.Storage
 
         [CLSCompliant(false)]
         public IndexDefinitionStorage(
-            InMemoryRavenConfiguration configuration,
+            RavenConfiguration configuration,
             ITransactionalStorage transactionalStorage,
             string path,
             OrderedPartCollection<AbstractDynamicCompilationExtension> extensions)

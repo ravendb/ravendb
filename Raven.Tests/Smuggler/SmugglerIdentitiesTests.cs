@@ -115,7 +115,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N1",
                         Settings =
                         {
-                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
+                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -162,7 +162,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N1",
                         Settings =
                         {
-                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
+                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -210,7 +210,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N1",
                         Settings =
                         {
-                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
+                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -243,7 +243,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N2",
                         Settings =
                         {
-                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "" },
+                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });
@@ -272,7 +272,7 @@ namespace Raven.Tests.Smuggler
                         Id = "N3",
                         Settings =
                         {
-                            { InMemoryRavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
+                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Replication" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });

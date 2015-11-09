@@ -17,7 +17,7 @@ namespace Raven.Tests.Issues
     {
         public class User { public string Name { get; set; } }
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
             configuration.Core.InitialNumberOfItemsToReduceInSingleBatch = 2;
             configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 2;

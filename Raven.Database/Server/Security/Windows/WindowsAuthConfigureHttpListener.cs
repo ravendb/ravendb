@@ -10,8 +10,8 @@ namespace Raven.Database.Server.Security.Windows
     {
         public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/[\w\.\-_]+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        private InMemoryRavenConfiguration configuration;
-        public void Configure(HttpListener listener, InMemoryRavenConfiguration config)
+        private RavenConfiguration configuration;
+        public void Configure(HttpListener listener, RavenConfiguration config)
         {
             configuration = config;
             listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |

@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
     {
         private const int MaxNumberOfItemsToProcessInTestIndexes = 256;
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes = MaxNumberOfItemsToProcessInTestIndexes;
         }

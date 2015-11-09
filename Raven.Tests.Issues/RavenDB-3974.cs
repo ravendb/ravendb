@@ -13,9 +13,9 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_3974 : ReplicationBase
     {
-        protected override void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
+        protected override void ConfigureConfig(RavenConfiguration ravenConfiguration)
         {
-            inMemoryRavenConfiguration.Licensing.AllowAdminAnonymousAccessForCommercialUse = true;
+            ravenConfiguration.Licensing.AllowAdminAnonymousAccessForCommercialUse = true;
         }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)

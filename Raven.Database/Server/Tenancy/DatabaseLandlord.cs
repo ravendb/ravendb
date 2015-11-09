@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Tenancy
 {
     public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        public event Action<RavenConfiguration> SetupTenantConfiguration = delegate { };
 
         public event Action<string> OnDatabaseLoaded = delegate { };
 
@@ -77,12 +77,12 @@ namespace Raven.Database.Server.Tenancy
             get { return systemDatabase; }
         }
 
-        public InMemoryRavenConfiguration SystemConfiguration
+        public RavenConfiguration SystemConfiguration
         {
             get { return systemConfiguration; }
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledDatabase = false)
+        public RavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledDatabase = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId) || tenantId.Equals("<system>", StringComparison.OrdinalIgnoreCase))
                 return systemConfiguration;
@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory), systemConfiguration);
+            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.Core.DataDirectory), systemConfiguration);
         }
 
         private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
@@ -105,8 +105,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (document.Settings[InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory)] == null)
-                throw new InvalidOperationException("Could not find " + InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory));
+            if (document.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] == null)
+                throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.Core.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
@@ -201,22 +201,22 @@ namespace Raven.Database.Server.Tenancy
             return true;
         }
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
+        protected RavenConfiguration CreateConfiguration(
                         string tenantId,
                         DatabaseDocument document,
                         string folderPropName,
-                        InMemoryRavenConfiguration parentConfiguration)
+                        RavenConfiguration parentConfiguration)
         {
-            var config = InMemoryRavenConfiguration.CreateFrom(parentConfiguration);
+            var config = RavenConfiguration.CreateFrom(parentConfiguration);
 
-            if (config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory)) == null)
+            if (config.GetSetting(RavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory)) == null)
             {
                 var compiledIndexCacheDirectory = parentConfiguration.Core.CompiledIndexCacheDirectory;
-                config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory), compiledIndexCacheDirectory);  
+                config.SetSetting(RavenConfiguration.GetKey(x => x.Core.CompiledIndexCacheDirectory), compiledIndexCacheDirectory);  
             }
 
-            if (config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath)) == null)
-                config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.TempPath), parentConfiguration.Core.TempPath);  
+            if (config.GetSetting(RavenConfiguration.GetKey(x => x.Core.TempPath)) == null)
+                config.SetSetting(RavenConfiguration.GetKey(x => x.Core.TempPath), parentConfiguration.Core.TempPath);  
 
             SetupTenantConfiguration(config);
 
@@ -235,8 +235,8 @@ namespace Raven.Database.Server.Tenancy
 
             config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Core.DataDirectory));
             
-            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
-            config.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
 
             config.DatabaseName = tenantId;
             config.IsTenantDatabase = true;
@@ -284,7 +284,7 @@ namespace Raven.Database.Server.Tenancy
             systemDatabase.Documents.Put(dbStatusKey, null, json, new RavenJObject(), null);
         }
 
-        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+        private void AssertLicenseParameters(RavenConfiguration config)
         {
             string maxDatabases;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfDatabases", out maxDatabases))

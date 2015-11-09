@@ -14,7 +14,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Server
     {
         private readonly OctetString name;
 
-        public ServerName(InMemoryRavenConfiguration configuration)
+        public ServerName(RavenConfiguration configuration)
             : base("1.1")
         {
             name = new OctetString(configuration.Server.Name ?? string.Empty);

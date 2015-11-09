@@ -27,7 +27,7 @@ namespace Raven.Tests.Issues
         {
             store = NewRemoteDocumentStore(enableAuthentication:true);
         }
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             Authentication.EnableOnce();
             configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;

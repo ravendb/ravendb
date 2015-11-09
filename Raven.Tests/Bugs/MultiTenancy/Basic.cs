@@ -190,7 +190,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
                         Id = "Raven/Databases/Northwind",
                         Settings =
                             {
-                                { InMemoryRavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
+                                { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
                                 {"Raven/DataDir", "Northwind"}
                             }
                     });

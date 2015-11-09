@@ -22,7 +22,7 @@ namespace Raven.Tests.Raft
 {
     public class RaftWithAuth : RaftTestBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             Authentication.EnableOnce();
         }

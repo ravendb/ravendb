@@ -43,7 +43,7 @@ namespace Raven.Database.Server.Tenancy
 
         public abstract string ResourcePrefix { get; }
 
-        protected readonly InMemoryRavenConfiguration systemConfiguration;
+        protected readonly RavenConfiguration systemConfiguration;
         protected readonly DocumentDatabase systemDatabase;
 
         protected AbstractLandlord(DocumentDatabase systemDatabase)

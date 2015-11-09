@@ -40,7 +40,7 @@ namespace Raven.Database.Linq
             : this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new AppSettingsBasedConfiguration())
         { }
 
-        public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
+        public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, RavenConfiguration configuration)
             :base(configuration, extensions, name, basePath)
         {
             this.indexDefinition = indexDefinition;

@@ -11,7 +11,7 @@ using System.Xml.Linq;
 
 namespace Raven.Database.Config
 {
-    public class AppSettingsBasedConfiguration : InMemoryRavenConfiguration
+    public class AppSettingsBasedConfiguration : RavenConfiguration
     {
         public AppSettingsBasedConfiguration(bool initialize = true)
         {

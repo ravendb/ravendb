@@ -14,7 +14,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Backup
 {
     internal class RestoreOperation : BaseRestoreOperation
     {
-        public RestoreOperation(FilesystemRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
+        public RestoreOperation(FilesystemRestoreRequest restoreRequest, RavenConfiguration configuration, Action<string> operationOutputCallback)
             : base(restoreRequest, configuration, operationOutputCallback)
         {
         }

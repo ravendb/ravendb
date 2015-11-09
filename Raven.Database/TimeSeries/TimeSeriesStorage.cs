@@ -54,7 +54,7 @@ namespace Raven.Database.TimeSeries
         public string ResourceName { get; private set; }
         public TransportState TransportState { get; private set; }
         public AtomicDictionary<object> ExtensionsState { get; private set; }
-        public InMemoryRavenConfiguration Configuration { get; private set; }
+        public RavenConfiguration Configuration { get; private set; }
         public DateTime LastWrite { get; set; }
 
         public JsonSerializer JsonSerializer { get; set; }
@@ -65,7 +65,7 @@ namespace Raven.Database.TimeSeries
             get { return metricsTimeSeries; }
         }
 
-        public TimeSeriesStorage(string serverUrl, string timeSeriesName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
+        public TimeSeriesStorage(string serverUrl, string timeSeriesName, RavenConfiguration configuration, TransportState receivedTransportState = null)
         {
             Name = timeSeriesName;
             TimeSeriesUrl = string.Format("{0}ts/{1}", serverUrl, timeSeriesName);
@@ -114,7 +114,7 @@ namespace Raven.Database.TimeSeries
             }
         }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly();

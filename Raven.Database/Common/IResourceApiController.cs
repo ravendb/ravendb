@@ -18,10 +18,10 @@ namespace Raven.Database.Common
     public interface IResourceApiController
     {
         IResourceStore Resource { get; }
-        InMemoryRavenConfiguration ResourceConfiguration { get; }
+        RavenConfiguration ResourceConfiguration { get; }
         string ResourceName { get; }
         ResourceType ResourceType { get; }
-        InMemoryRavenConfiguration SystemConfiguration { get; }
+        RavenConfiguration SystemConfiguration { get; }
         DocumentDatabase SystemDatabase { get; }
         Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
         List<Action<StringBuilder>> CustomRequestTraceInfo { get; }

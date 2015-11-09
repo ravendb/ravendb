@@ -17,7 +17,7 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
         private readonly string _tempDirectory;
         private IDictionary<string, FileStream> _createdFiles;
 
-        public StorageSignatureRepository(ITransactionalStorage storage, string fileName, InMemoryRavenConfiguration configuration)
+        public StorageSignatureRepository(ITransactionalStorage storage, string fileName, RavenConfiguration configuration)
         {
             _tempDirectory = TempDirectoryTools.Create(configuration);
             _storage = storage;

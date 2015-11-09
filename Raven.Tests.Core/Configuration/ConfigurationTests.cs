@@ -29,7 +29,7 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void NotChangingWorkingDirectoryShouldNotImpactPaths()
         {
-            var inMemoryConfiguration = new InMemoryRavenConfiguration();
+            var inMemoryConfiguration = new RavenConfiguration();
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -51,8 +51,8 @@ namespace Raven.Tests.Core.Configuration
             if (EnvironmentUtils.RunningOnPosix == true)
                 WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
             
-            var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
+            var inMemoryConfiguration = new RavenConfiguration();
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -75,10 +75,10 @@ namespace Raven.Tests.Core.Configuration
             if (EnvironmentUtils.RunningOnPosix == true)
                 WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
             
-            var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.AssembliesDirectory), "./my-assemblies");
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), "my-files");
+            var inMemoryConfiguration = new RavenConfiguration();
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.AssembliesDirectory), "./my-assemblies");
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), "my-files");
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -101,12 +101,12 @@ namespace Raven.Tests.Core.Configuration
             if (EnvironmentUtils.RunningOnPosix == true)
                 WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
             
-            var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.DataDirectory), @"\\server1\ravendb\data");
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), @"\\server1\ravenfs\data");
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Counter.DataDirectory), @"\\server1\ravenfs\data");
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), @"\\server1\ravenfs\data");
+            var inMemoryConfiguration = new RavenConfiguration();
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"\\server1\ravendb\data");
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), @"\\server1\ravenfs\data");
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Counter.DataDirectory), @"\\server1\ravenfs\data");
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), @"\\server1\ravenfs\data");
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -134,8 +134,8 @@ namespace Raven.Tests.Core.Configuration
         public void CanUseAppDrivePrefixInWorkingDirectoryForAutoDriveLetterCalculations()
         {
             const string WorkingDirectoryValue = "appDrive:\\Raven\\";
-            var inMemoryConfiguration = new InMemoryRavenConfiguration();
-            inMemoryConfiguration.SetSetting(InMemoryRavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
+            var inMemoryConfiguration = new RavenConfiguration();
+            inMemoryConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Core.WorkingDirectory), WorkingDirectoryValue);
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -149,7 +149,7 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void SizeSettingsMustHaveSizeUnitSpecified()
         {
-            var inMemoryConfiguration = new InMemoryRavenConfiguration();
+            var inMemoryConfiguration = new RavenConfiguration();
             inMemoryConfiguration.Initialize();
 
             var sizeSettings = GetConfigurationItems(inMemoryConfiguration).Where(x => x.PropertyInfo.PropertyType == Size.TypeOf || x.PropertyInfo.PropertyType == Size.NullableTypeOf);
@@ -163,7 +163,7 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void TimeSettingsMustHaveTimeUnitSpecified()
         {
-            var inMemoryConfiguration = new InMemoryRavenConfiguration();
+            var inMemoryConfiguration = new RavenConfiguration();
             inMemoryConfiguration.Initialize();
 
             var timeSettings = GetConfigurationItems(inMemoryConfiguration).Where(x => x.PropertyInfo.PropertyType == TimeSetting.TypeOf || x.PropertyInfo.PropertyType == TimeSetting.NullableTypeOf);
@@ -177,7 +177,7 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void DefaultValuesRespectMinSizes()
         {
-            var sut = new InMemoryRavenConfiguration();
+            var sut = new RavenConfiguration();
             sut.Initialize();
 
             var configurationsWithMinValue = GetConfigurationItems(sut).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null);
@@ -211,12 +211,12 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void CannotBeSmallerThanGivenMinValueEvenIfSmallerValueWasSpecified()
         {
-            var fake = new InMemoryRavenConfiguration();
+            var fake = new RavenConfiguration();
             fake.Initialize();
 
             var keys = GetConfigurationItems(fake).Where(x => x.PropertyInfo.GetCustomAttribute<MinValueAttribute>() != null).Select(c => c.Key);
 
-            var sut = new InMemoryRavenConfiguration();
+            var sut = new RavenConfiguration();
 
             foreach (var key in keys)
             {
@@ -256,12 +256,12 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void SettingNonDefaultEnumSettings()
         {
-            var fake = new InMemoryRavenConfiguration();
+            var fake = new RavenConfiguration();
             fake.Initialize();
 
             var enumItems = GetConfigurationItems(fake).Where(x => x.PropertyInfo.PropertyType.IsEnum).ToArray();
 
-            var sut = new InMemoryRavenConfiguration();
+            var sut = new RavenConfiguration();
 
             var expectedEnumValues = new object[enumItems.Length];
 
@@ -288,7 +288,7 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void DefaultConfigurationHasDefaultValues()
         {
-            var sut = new InMemoryRavenConfiguration();
+            var sut = new RavenConfiguration();
             sut.Initialize();
 
             var configurations = GetConfigurationItems(sut).ToList();
@@ -326,7 +326,7 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void AllConfigurationsHaveDefaultValueAttribute()
         {
-            var sut = new InMemoryRavenConfiguration();
+            var sut = new RavenConfiguration();
             sut.Initialize();
 
             var configurations = GetConfigurationItems(sut).ToList();
@@ -342,12 +342,12 @@ namespace Raven.Tests.Core.Configuration
         [InlineData(false)]
         public void BooleanSettingsTest(bool expected)
         {
-            var fake = new InMemoryRavenConfiguration();
+            var fake = new RavenConfiguration();
             fake.Initialize();
 
             var booleanConfigurations = GetConfigurationItems(fake).Where(x => x.PropertyInfo.PropertyType == typeof (bool)).ToArray();
 
-            var sut = new InMemoryRavenConfiguration();
+            var sut = new RavenConfiguration();
             
             var r = new Random();
 
@@ -384,7 +384,7 @@ namespace Raven.Tests.Core.Configuration
         [Fact]
         public void AllConfigurationClassesHaveToBeInitialized()
         {
-            var sut = new InMemoryRavenConfiguration();
+            var sut = new RavenConfiguration();
             sut.Initialize();
 
             var configurations = GetConfigurationClasses(sut).ToList();
@@ -395,11 +395,11 @@ namespace Raven.Tests.Core.Configuration
             }
         }
 
-        private List<ConfigurationItem> GetConfigurationItems(InMemoryRavenConfiguration inMemoryConfiguration)
+        private List<ConfigurationItem> GetConfigurationItems(RavenConfiguration ravenConfiguration)
         {
             var result = new List<ConfigurationItem>();
 
-            foreach (var configurationClassInstance in GetConfigurationClasses(inMemoryConfiguration))
+            foreach (var configurationClassInstance in GetConfigurationClasses(ravenConfiguration))
             {
                 foreach (var configuration in configurationClassInstance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.GetCustomAttributes<ConfigurationEntryAttribute>().Any()))
                 {
@@ -416,15 +416,15 @@ namespace Raven.Tests.Core.Configuration
             return result;
         }
 
-        private List<ConfigurationCategory> GetConfigurationClasses(InMemoryRavenConfiguration inMemoryConfiguration)
+        private List<ConfigurationCategory> GetConfigurationClasses(RavenConfiguration configuration)
         {
-            var configurationClasses = inMemoryConfiguration.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(ConfigurationCategory));
+            var configurationClasses = configuration.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(ConfigurationCategory));
 
             var result = new List<ConfigurationCategory>();
 
             foreach (var configurationClass in configurationClasses)
             {
-                var configurationClassInstance = (ConfigurationCategory) configurationClass.GetValue(inMemoryConfiguration);
+                var configurationClassInstance = (ConfigurationCategory) configurationClass.GetValue(configuration);
 
                 result.Add(configurationClassInstance);
             }

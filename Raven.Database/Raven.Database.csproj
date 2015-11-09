@@ -1203,7 +1203,7 @@
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialField.cs" />
     <Compile Include="Indexing\SimpleQueryParser.cs" />
-    <Compile Include="Config\InMemoryRavenConfiguration.cs" />
+    <Compile Include="Config\RavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
     <Compile Include="Linq\Ast\CaptureSelectNewFieldNamesVisitor.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />

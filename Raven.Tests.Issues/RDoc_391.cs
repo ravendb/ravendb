@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
 {
     public class RDoc_391 : RavenTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Core.ActiveBundlesStringValue = "ScriptedIndexResults";
         }

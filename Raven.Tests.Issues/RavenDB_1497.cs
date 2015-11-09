@@ -41,7 +41,7 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(DataDir);
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Storage.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
             configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;

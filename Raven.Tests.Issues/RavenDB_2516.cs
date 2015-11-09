@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_2516 : ReplicationBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(RavenConfiguration serverConfiguration)
         {
             Authentication.EnableOnce();
         }

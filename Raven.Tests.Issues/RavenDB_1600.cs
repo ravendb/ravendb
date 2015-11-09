@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
             public string Name { get; set; }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
             configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;

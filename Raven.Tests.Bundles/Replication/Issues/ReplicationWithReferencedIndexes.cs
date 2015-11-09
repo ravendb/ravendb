@@ -33,7 +33,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(RavenConfiguration serverConfiguration)
         {
             serverConfiguration.Core.RunInMemory = false;
             serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;

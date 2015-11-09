@@ -138,7 +138,7 @@ namespace Raven.Tests.Common
             
         }
 
-        protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
+        protected virtual void ConfigureConfig(RavenConfiguration ravenConfiguration)
         {
             
         }

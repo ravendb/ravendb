@@ -23,9 +23,9 @@ namespace Raven.Tests.Security.OAuth
             store.ApiKey = apiKey;
         }
 
-        protected override void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
+        protected override void ConfigureConfig(RavenConfiguration ravenConfiguration)
         {
-            inMemoryRavenConfiguration.Licensing.AllowAdminAnonymousAccessForCommercialUse = true;
+            ravenConfiguration.Licensing.AllowAdminAnonymousAccessForCommercialUse = true;
         }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)

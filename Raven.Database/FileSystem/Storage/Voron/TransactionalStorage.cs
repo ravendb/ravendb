@@ -37,7 +37,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 {
     public class TransactionalStorage : ITransactionalStorage
     {
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
 
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -58,7 +58,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private OrderedPartCollection<AbstractFileCodec> fileCodecs;
         private UuidGenerator uuidGenerator;
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration)
+        public TransactionalStorage(RavenConfiguration configuration)
         {
             this.configuration = configuration;
             path = configuration.FileSystem.DataDirectory.ToFullPath();
@@ -97,7 +97,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         public Guid Id { get; private set; }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, InMemoryRavenConfiguration configuration)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly();
@@ -242,7 +242,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-        public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
+        public void Compact(RavenConfiguration ravenConfiguration, Action<string> output)
         {
             if (configuration.Core.RunInMemory)
                 throw new InvalidOperationException("Cannot compact in-memory running Voron storage");

@@ -17,7 +17,7 @@ namespace Raven.SlowTests.Synchronization
 {
     public class IndexationTests : RavenTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.EnableResponseLoggingForEmbeddedDatabases = true;
         }

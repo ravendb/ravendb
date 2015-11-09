@@ -30,7 +30,7 @@ namespace Raven.Database.Server
 
         private bool preventDisposing;
 
-        public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
+        public RavenDBOptions(RavenConfiguration configuration, DocumentDatabase db = null)
         {
             if (configuration == null)
                 throw new ArgumentNullException("configuration");
@@ -163,10 +163,10 @@ namespace Raven.Database.Server
 
         private class RavenServer : IRavenServer
         {
-            private readonly InMemoryRavenConfiguration systemConfiguration;
+            private readonly RavenConfiguration systemConfiguration;
             private readonly DocumentDatabase systemDatabase;
 
-            public RavenServer(DocumentDatabase systemDatabase, InMemoryRavenConfiguration systemConfiguration)
+            public RavenServer(DocumentDatabase systemDatabase, RavenConfiguration systemConfiguration)
             {
                 this.systemDatabase = systemDatabase;
                 this.systemConfiguration = systemConfiguration;
@@ -177,7 +177,7 @@ namespace Raven.Database.Server
                 get { return systemDatabase; }
             }
 
-            public InMemoryRavenConfiguration SystemConfiguration
+            public RavenConfiguration SystemConfiguration
             {
                 get { return systemConfiguration; }
             }

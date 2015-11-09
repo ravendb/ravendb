@@ -9,7 +9,7 @@ namespace Raven.Tests.Counters
 {
     public class CounterReplicationTests : RavenBaseCountersTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
             configuration.Counter.ReplicationLatency = new TimeSetting(10, TimeUnit.Milliseconds);

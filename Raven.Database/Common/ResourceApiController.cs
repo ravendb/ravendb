@@ -107,7 +107,7 @@ namespace Raven.Database.Common
             }
         }
 
-        public override InMemoryRavenConfiguration ResourceConfiguration
+        public override RavenConfiguration ResourceConfiguration
         {
             get
             {
@@ -164,7 +164,7 @@ namespace Raven.Database.Common
             }
         }
 
-        public override InMemoryRavenConfiguration SystemConfiguration
+        public override RavenConfiguration SystemConfiguration
         {
             get
             {
@@ -191,7 +191,7 @@ namespace Raven.Database.Common
         {
             base.InnerInitialization(controllerContext);
 
-            _maxNumberOfThreadsForResourceToLoadSemaphore = (SemaphoreSlim)controllerContext.Configuration.Properties[InMemoryRavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)];
+            _maxNumberOfThreadsForResourceToLoadSemaphore = (SemaphoreSlim)controllerContext.Configuration.Properties[RavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)];
             _resourceLandlord = (TResourceLandlord)controllerContext.Configuration.Properties[typeof(TResourceLandlord)];
 
             ResourceName = GetResourceName(controllerContext, ResourceType);

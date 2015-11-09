@@ -679,7 +679,7 @@ namespace Raven.Database.Indexing
 
                 Log.Error("Disabled index '{0}'. Reason: out of memory.", instance.PublicName);
 
-                var configurationKey = InMemoryRavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize);
+                var configurationKey = RavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize);
 
                 Debug.Assert(configurationKey != null);
 
