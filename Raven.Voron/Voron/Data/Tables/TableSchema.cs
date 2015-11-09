@@ -15,6 +15,7 @@ namespace Voron.Data.Tables
         public static readonly Slice ActiveCandidateSection = "Active-Candidate-Section";
         public static readonly Slice StatsSlice = "Stats";
     }
+
     public unsafe class TableSchema<T>
     {
         public SchemaIndexDef Key => _pk;
@@ -37,10 +38,11 @@ namespace Voron.Data.Tables
         }
 
         public string Name { get; }
-        public StructureSchema<T> StructureSchema => _schema;
+
+        //public StructureSchema<T> StructureSchema => _schema;
 
 
-        private readonly StructureSchema<T> _schema = new StructureSchema<T>();
+        //private readonly StructureSchema<T> _schema = new StructureSchema<T>();
         private SchemaIndexDef _pk;
         private readonly Dictionary<string, SchemaIndexDef> _indexes = new Dictionary<string, SchemaIndexDef>();
 
@@ -50,50 +52,91 @@ namespace Voron.Data.Tables
             Name = name;
         }
 
-        public TableSchema<T> DefineField<TValue>(T field)
+        //public TableSchema<T> DefineField<TValue>(T field)
+        //{
+        //    _schema.Add<TValue>(field);
+        //    return this;
+        //}
+
+        //public TableSchema<T> DefineIndex(string name, params T[] fieldsToIndex)
+        //{
+        //    return DefineIndex(name, false, fieldsToIndex);
+        //}
+
+        //public TableSchema<T> DefineIndex(string name, bool multipleValue, params T[] fieldsToIndex)
+        //{
+        //    _indexes.Add(name, CreateSchemaIndexDef(name, multipleValue, fieldsToIndex));
+        //    return this;
+        //}
+
+        public TableSchema<T> DefineIndex<W1>(string name, Func<T, W1> first, bool multipleValue = false)
         {
-            _schema.Add<TValue>(field);
+            new RuntimeSchema( )
+
+            throw new NotImplementedException();
+        }
+
+        public TableSchema<T> DefineIndex<W1, W2>(string name, Func<T, W1> first, Func<T, W2> second, bool multipleValue = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TableSchema<T> DefineIndex<W1, W2, W3>(string name, Func<T, W1> first, Func<T, W2> second, Func<T, W3> third, bool multipleValue = false)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        //private SchemaIndexDef CreateSchemaIndexDef(string name, bool multipleValue, T[] fieldsToIndex)
+        //{
+        //    var isFixedSize = true;
+        //    var size = 0;
+
+        //    foreach (var field in fieldsToIndex)
+        //    {
+        //        var structureField = _schema.Fields[field.GetHashCode()];
+        //        var fixedSizeField = structureField as FixedSizeField;
+        //        isFixedSize &= fixedSizeField != null;
+        //        size = fixedSizeField?.Size ?? 0;
+        //    }
+
+        //    var schemaIndexDef = new SchemaIndexDef
+        //    {
+        //        IndexedFields = fieldsToIndex,
+        //        IsFixedSize = isFixedSize,
+        //        Size = size,
+        //        MultiValue = multipleValue,
+        //        Name = name
+        //    };
+        //    return schemaIndexDef;
+        //}
+
+
+        //public TableSchema<T> DefineKey(params T[] fieldsToIndex)
+        //{
+        //    _pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
+        //    return this;
+        //}
+
+
+        public TableSchema<T> DefineKey<W1>(Func<T, W1> first)
+        {
+            //_pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
+            throw new NotImplementedException();
             return this;
         }
 
-        public TableSchema<T> DefineIndex(string name, params T[] fieldsToIndex)
+        public TableSchema<T> DefineKey<W1, W2>(Func<T, W1> first, Func<T, W2> second)
         {
-            return DefineIndex(name, false, fieldsToIndex);
-        }
-
-        public TableSchema<T> DefineIndex(string name, bool multipleValue, params T[] fieldsToIndex)
-        {
-            _indexes.Add(name, CreateSchemaIndexDef(name, multipleValue, fieldsToIndex));
+            //_pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
+            throw new NotImplementedException();
             return this;
         }
 
-        private SchemaIndexDef CreateSchemaIndexDef(string name, bool multipleValue, T[] fieldsToIndex)
+        public TableSchema<T> DefineKey<W1, W2, W3>(Func<T, W1> first, Func<T, W2> second, Func<T, W3> third)
         {
-            var isFixedSize = true;
-            var size = 0;
-
-            foreach (var field in fieldsToIndex)
-            {
-                var structureField = _schema.Fields[field.GetHashCode()];
-                var fixedSizeField = structureField as FixedSizeField;
-                isFixedSize &= fixedSizeField != null;
-                size = fixedSizeField?.Size ?? 0;
-            }
-
-            var schemaIndexDef = new SchemaIndexDef
-            {
-                IndexedFields = fieldsToIndex,
-                IsFixedSize = isFixedSize,
-                Size = size,
-                MultiValue = multipleValue,
-                Name = name
-            };
-            return schemaIndexDef;
-        }
-
-        public TableSchema<T> DefineKey(params T[] fieldsToIndex)
-        {
-            _pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
+            //_pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
+            throw new NotImplementedException();
             return this;
         }
 

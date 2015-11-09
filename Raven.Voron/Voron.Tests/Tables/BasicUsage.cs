@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Bond;
 using Voron.Data.Tables;
 using Xunit;
 
@@ -24,24 +25,32 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 1L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                    .Set(DocumentsFields.Collection, "Users")
-                    );
+                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 1L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                //    .Set(DocumentsFields.Collection, "Users")
+                //    );
+
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                //var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                var reader = docs.ReadByKey("users/1");
-                var result = reader.ReadString(DocumentsFields.Data);
+                //var reader = docs.ReadByKey("users/1");
+                //var result = reader.ReadString(DocumentsFields.Data);
+                var doc = docs.ReadByKey("users/1");
+                var result = doc.Data.Deserialize(); // Lazy loading of data. 
+
                 Assert.Equal("{'Name': 'Oren'}", result);
                 tx.Commit();
             }
@@ -59,38 +68,51 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 1L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                    .Set(DocumentsFields.Collection, "Users")
-                    );
+                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 1L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                //    .Set(DocumentsFields.Collection, "Users")
+                //    );
+
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                //var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 1L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
-                    .Set(DocumentsFields.Collection, "Users")
-                    );
+                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 1L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
+                //    .Set(DocumentsFields.Collection, "Users")
+                //    );
+
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Eini'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                //var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                var reader = docs.ReadByKey("users/1");
-                var result = reader.ReadString(DocumentsFields.Data);
+                //var reader = docs.ReadByKey("users/1");
+                //var result = reader.ReadString(DocumentsFields.Data);
+
+                var doc = docs.ReadByKey("users/1");
+                var result = doc.Data.Deserialize();
+
                 Assert.Equal("{'Name': 'Eini'}", result);
                 tx.Commit();
             }
@@ -108,21 +130,26 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                //var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 1L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                    .Set(DocumentsFields.Collection, "Users")
-                    );
+                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 1L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                //    .Set(DocumentsFields.Collection, "Users")
+                //    );
+
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                //var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -131,10 +158,13 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                //var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                var reader = docs.ReadByKey("users/1");
-                Assert.Null(reader);
+                //var reader = docs.ReadByKey("users/1");
+                //Assert.Null(reader);
+                var doc = docs.ReadByKey("users/1");
+                Assert.Null(doc);
             }
         }
 

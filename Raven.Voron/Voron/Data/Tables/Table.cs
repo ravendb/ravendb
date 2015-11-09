@@ -84,8 +84,8 @@ namespace Voron.Data.Tables
 
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
-            DeleteValueFromIndex(previousId, new StructureReader<T>(data, _schema.StructureSchema));
-            DeleteValueFromIndex(newId, new StructureReader<T>(data, _schema.StructureSchema));
+            //DeleteValueFromIndex(previousId, new StructureReader<T>(data, _schema.StructureSchema));
+            //DeleteValueFromIndex(newId, new StructureReader<T>(data, _schema.StructureSchema));
         }
 
         public Table(TableSchema<T> schema, Transaction tx)
@@ -101,16 +101,21 @@ namespace Voron.Data.Tables
             NumberOfEntries = stats->NumberOfEntries;
         }
 
-        public StructureReader<T> ReadByKey(Slice key)
+        public T ReadByKey(Slice key)
         {
-            var readResult = GetTree(_schema.Key.Name).Read(key);
-            if (readResult == null)
-                return null;
-            var id = readResult.Reader.ReadLittleEndianInt64();
-            int size;
-            var ptr = DirectRead(id, out size);
-            return new StructureReader<T>(ptr, _schema.StructureSchema);
+            throw new NotImplementedException();
         }
+
+        //public StructureReader<T> ReadByKey(Slice key)
+        //{
+        //    var readResult = GetTree(_schema.Key.Name).Read(key);
+        //    if (readResult == null)
+        //        return null;
+        //    var id = readResult.Reader.ReadLittleEndianInt64();
+        //    int size;
+        //    var ptr = DirectRead(id, out size);
+        //    return new StructureReader<T>(ptr, _schema.StructureSchema);
+        //}
 
         private byte* DirectRead(long id, out int size)
         {
@@ -128,168 +133,173 @@ namespace Voron.Data.Tables
             return ActiveDataSmallSection.DirectRead(id, out size);
         }
 
-        public void Set(Structure<T> value)
+        public void Set(T value)
         {
-            var reader = new StructureReader<T>(value, _schema.StructureSchema);
-            var pkVal = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
-            var pkIndex = GetTree(_schema.Key.Name);
-            var readResult = pkIndex.Read(pkVal);
-            if (readResult == null)
-            {
-                Insert(value);
-                return;
-            }
-            long id = readResult.Reader.ReadLittleEndianInt64();
-            Update(id, value);
+            throw new NotImplementedException();
         }
 
-        private void Update(long id, Structure<T> value)
-        {
-            var size = value.GetSize();
-            var prevIsSmall = id % _pageSize != 0;
-            // first, try to fit in place, either in small or large sections
-            if (size < ActiveDataSmallSection.MaxItemSize)
-            {
-                int _;
-                byte* pos;
-                if (prevIsSmall &&
-                    ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
-                {
-                    var oldData = ActiveDataSmallSection.DirectRead(id, out _);
+        //public void Set(Structure<T> value)
+        //{
+        //    var reader = new StructureReader<T>(value, _schema.StructureSchema);
+        //    var pkVal = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
+        //    var pkIndex = GetTree(_schema.Key.Name);
+        //    var readResult = pkIndex.Read(pkVal);
+        //    if (readResult == null)
+        //    {
+        //        Insert(value);
+        //        return;
+        //    }
+        //    long id = readResult.Reader.ReadLittleEndianInt64();
+        //    Update(id, value);
+        //}
 
-                    DeleteValueFromIndex(id, new StructureReader<T>(oldData, _schema.StructureSchema));
-                    value.Write(pos);
-                    InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
+        //private void Update(long id, Structure<T> value)
+        //{
+        //    var size = value.GetSize();
+        //    var prevIsSmall = id % _pageSize != 0;
+        //    // first, try to fit in place, either in small or large sections
+        //    if (size < ActiveDataSmallSection.MaxItemSize)
+        //    {
+        //        int _;
+        //        byte* pos;
+        //        if (prevIsSmall &&
+        //            ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
+        //        {
+        //            var oldData = ActiveDataSmallSection.DirectRead(id, out _);
 
-                    return;
-                }
-            }
-            else if (prevIsSmall == false)
-            {
-                var pageNumber = id / _pageSize;
-                var page = _tx.LowLevelTransaction.GetPage(pageNumber);
-                var existingNumberOfPages = _tx.LowLevelTransaction
-                    .DataPager.GetNumberOfOverflowPages(page.OverflowSize);
-                var newNumberOfPages = _tx.LowLevelTransaction
-                    .DataPager.GetNumberOfOverflowPages(size);
-                if (existingNumberOfPages == newNumberOfPages)
-                {
-                    page.OverflowSize = size;
-                    var pos = page.Pointer + sizeof(PageHeader);
-                    DeleteValueFromIndex(id, new StructureReader<T>(pos, _schema.StructureSchema));
-                    value.Write(pos);
-                    InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
+        //            DeleteValueFromIndex(id, new StructureReader<T>(oldData, _schema.StructureSchema));
+        //            value.Write(pos);
+        //            InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
 
-                    return;
-                }
-            }
-            // can't fit in place, will just delete & insert instead
-            Delete(id);
-            Insert(value);
-        }
+        //            return;
+        //        }
+        //    }
+        //    else if (prevIsSmall == false)
+        //    {
+        //        var pageNumber = id / _pageSize;
+        //        var page = _tx.LowLevelTransaction.GetPage(pageNumber);
+        //        var existingNumberOfPages = _tx.LowLevelTransaction
+        //            .DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+        //        var newNumberOfPages = _tx.LowLevelTransaction
+        //            .DataPager.GetNumberOfOverflowPages(size);
+        //        if (existingNumberOfPages == newNumberOfPages)
+        //        {
+        //            page.OverflowSize = size;
+        //            var pos = page.Pointer + sizeof(PageHeader);
+        //            DeleteValueFromIndex(id, new StructureReader<T>(pos, _schema.StructureSchema));
+        //            value.Write(pos);
+        //            InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
 
-        private void Delete(long id)
-        {
-            int size;
-            var ptr = DirectRead(id, out size);
-            if (ptr == null)
-                return;
+        //            return;
+        //        }
+        //    }
+        //    // can't fit in place, will just delete & insert instead
+        //    Delete(id);
+        //    Insert(value);
+        //}
 
-            DeleteValueFromIndex(id, new StructureReader<T>(ptr, _schema.StructureSchema));
+        //private void Delete(long id)
+        //{
+        //    int size;
+        //    var ptr = DirectRead(id, out size);
+        //    if (ptr == null)
+        //        return;
 
-            var largeValue = (id % _pageSize) == 0;
-            if (largeValue)
-            {
-                var page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
-                var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
-                for (int i = 0; i < numberOfPages; i++)
-                {
-                    _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
-                }
-                return;
-            }
+        //    DeleteValueFromIndex(id, new StructureReader<T>(ptr, _schema.StructureSchema));
 
-            var density = ActiveDataSmallSection.Free(id);
-            if (ActiveDataSmallSection.Contains(id) || density > 0.5)
-                return;
+        //    var largeValue = (id % _pageSize) == 0;
+        //    if (largeValue)
+        //    {
+        //        var page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
+        //        var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+        //        for (int i = 0; i < numberOfPages; i++)
+        //        {
+        //            _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
+        //        }
+        //        return;
+        //    }
 
-            var sectionPageNumber = ActiveDataSmallSection.GetSectionPageNumber(id);
-            if (density > 0.15)
-            {
-                ActiveCandidateSection.Add(sectionPageNumber);
-                return;
-            }
+        //    var density = ActiveDataSmallSection.Free(id);
+        //    if (ActiveDataSmallSection.Contains(id) || density > 0.5)
+        //        return;
 
-            // move all the data to the current active section (maybe creating a new one 
-            // if this is busy)
+        //    var sectionPageNumber = ActiveDataSmallSection.GetSectionPageNumber(id);
+        //    if (density > 0.15)
+        //    {
+        //        ActiveCandidateSection.Add(sectionPageNumber);
+        //        return;
+        //    }
 
-            // if this is in the active candidate list, remove it so it cannot be reused if the current
-            // active is full and need a new one
-            ActiveCandidateSection.Delete(sectionPageNumber);
+        //    // move all the data to the current active section (maybe creating a new one 
+        //    // if this is busy)
 
-            var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
-            foreach (var idToMove in idsInSection)
-            {
-                int itemSize;
-                var pos = ActiveDataSmallSection.DirectRead(idToMove, out itemSize);
-                var newId = AllocateFromSmallActiveSection(size);
-                OnDataMoved(idToMove, newId, pos, itemSize);
-                byte* writePos;
-                if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out writePos) == false)
-                    throw new InvalidDataException(
-                        $"Cannot write to newly allocated size in {_schema.Name} during delete");
-                Memory.Copy(writePos, pos, itemSize);
-            }
-            ActiveDataSmallSection.DeleteSection(sectionPageNumber);
-        }
+        //    // if this is in the active candidate list, remove it so it cannot be reused if the current
+        //    // active is full and need a new one
+        //    ActiveCandidateSection.Delete(sectionPageNumber);
 
-        private void DeleteValueFromIndex(long id, StructureReader<T> value)
-        {
-            var keySlice = GetSliceFromStructure(value, _schema.Key.IndexedFields);
-            var pkTree = GetTree(_schema.Key.Name);
-            pkTree.Delete(keySlice);
+        //    var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
+        //    foreach (var idToMove in idsInSection)
+        //    {
+        //        int itemSize;
+        //        var pos = ActiveDataSmallSection.DirectRead(idToMove, out itemSize);
+        //        var newId = AllocateFromSmallActiveSection(size);
+        //        OnDataMoved(idToMove, newId, pos, itemSize);
+        //        byte* writePos;
+        //        if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out writePos) == false)
+        //            throw new InvalidDataException(
+        //                $"Cannot write to newly allocated size in {_schema.Name} during delete");
+        //        Memory.Copy(writePos, pos, itemSize);
+        //    }
+        //    ActiveDataSmallSection.DeleteSection(sectionPageNumber);
+        //}
 
-            foreach (var indexDef in _schema.Indexes.Values)
-            {
-                var indexTree = GetTree(indexDef.Name);
-                var val = GetSliceFromStructure(value, indexDef.IndexedFields);
-                var fst = new FixedSizeTree(_tx.LowLevelTransaction,indexTree, val,0);
-                fst.Delete(id);
-            }
-        }
+        //private void DeleteValueFromIndex(long id, StructureReader<T> value)
+        //{
+        //    var keySlice = GetSliceFromStructure(value, _schema.Key.IndexedFields);
+        //    var pkTree = GetTree(_schema.Key.Name);
+        //    pkTree.Delete(keySlice);
 
-        private void Insert(Structure<T> value)
-        {
-            var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
-            NumberOfEntries++;
-            stats->NumberOfEntries = NumberOfEntries;
+        //    foreach (var indexDef in _schema.Indexes.Values)
+        //    {
+        //        var indexTree = GetTree(indexDef.Name);
+        //        var val = GetSliceFromStructure(value, indexDef.IndexedFields);
+        //        var fst = new FixedSizeTree(_tx.LowLevelTransaction,indexTree, val,0);
+        //        fst.Delete(id);
+        //    }
+        //}
 
-            var size = value.GetSize();
-            long id;
-            if (size < ActiveDataSmallSection.MaxItemSize)
-            {
-                id = AllocateFromSmallActiveSection(size);
-                byte* pos;
-                if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                {
-                    throw new InvalidOperationException(
-                        $"After successfully allocating {size:#,#;;0} bytes," +
-                        $" failed to write them on {_schema.Name}");
-                }
-                value.Write(pos);
-            }
-            else
-            {
-                var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
-                var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
-                page.Flags = PageFlags.Overflow | PageFlags.RawData;
-                page.OverflowSize = size;
-                byte* pos = page.Pointer + sizeof(PageHeader);
-                value.Write(pos);
-                id = page.PageNumber;
-            }
-            InsertIndexValuesFor(id, new StructureReader<T>(value, _schema.StructureSchema));
-        }
+        //private void Insert(Structure<T> value)
+        //{
+        //    var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
+        //    NumberOfEntries++;
+        //    stats->NumberOfEntries = NumberOfEntries;
+
+        //    var size = value.GetSize();
+        //    long id;
+        //    if (size < ActiveDataSmallSection.MaxItemSize)
+        //    {
+        //        id = AllocateFromSmallActiveSection(size);
+        //        byte* pos;
+        //        if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
+        //        {
+        //            throw new InvalidOperationException(
+        //                $"After successfully allocating {size:#,#;;0} bytes," +
+        //                $" failed to write them on {_schema.Name}");
+        //        }
+        //        value.Write(pos);
+        //    }
+        //    else
+        //    {
+        //        var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
+        //        var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
+        //        page.Flags = PageFlags.Overflow | PageFlags.RawData;
+        //        page.OverflowSize = size;
+        //        byte* pos = page.Pointer + sizeof(PageHeader);
+        //        value.Write(pos);
+        //        id = page.PageNumber;
+        //    }
+        //    InsertIndexValuesFor(id, new StructureReader<T>(value, _schema.StructureSchema));
+        //}
 
         private void InsertIndexValuesFor(long id, StructureReader<T> reader)
         {
@@ -402,7 +412,9 @@ namespace Voron.Data.Tables
             if (readResult == null)
                 return;
             var id = readResult.Reader.ReadLittleEndianInt64();
-            Delete(id);
+
+            throw new NotImplementedException();
+            // Delete(id);
         }
 
         private IEnumerable<StructureReader<T>> GetSecondaryIndexForValue(Tree tree, Slice value)
@@ -424,7 +436,7 @@ namespace Voron.Data.Tables
         public class SeekResult
         {
             public Slice Key;
-            public IEnumerable<StructureReader<T>> Results;
+            public IEnumerable<T> Results;
         }
 
         //TODO: need a proper way to handle this instead of just saying slice
@@ -444,15 +456,20 @@ namespace Voron.Data.Tables
                         Key = it.CurrentKey,
                         Results = GetSecondaryIndexForValue(tree, it.CurrentKey)
                     };
-                    
+
                 } while (it.MoveNext());
             }
         }
 
-        private StructureReader<T> ReadById(long id)
+        private T ReadById(long id)
         {
             int size;
-            return new StructureReader<T>(DirectRead(id, out size), _schema.StructureSchema);
+            byte* rawData = DirectRead(id, out size);
+                        
+            // Magic happens here on deserialization.             
+
+            throw new NotImplementedException();
+            // return new StructureReader<T>(, _schema.StructureSchema);
         }
     }
 }

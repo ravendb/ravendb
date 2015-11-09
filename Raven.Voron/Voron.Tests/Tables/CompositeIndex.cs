@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Bond;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
@@ -21,50 +23,60 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 1L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                    .Set(DocumentsFields.Collection, "Users");
-                docs.Set(structure);
+                //var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 1L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                //    .Set(DocumentsFields.Collection, "Users");
+                //docs.Set(structure);
 
-                structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                   .Set(DocumentsFields.Etag, 2L)
-                   .Set(DocumentsFields.Key, "users/2")
-                   .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
-                   .Set(DocumentsFields.Collection, "Users");
-                docs.Set(structure);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                docs.Set(doc);
+
+                //structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //   .Set(DocumentsFields.Etag, 2L)
+                //   .Set(DocumentsFields.Key, "users/2")
+                //   .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
+                //   .Set(DocumentsFields.Collection, "Users");
+                //docs.Set(structure);
+
+                doc = new Documents { Etag = 2L, Key = "users/2", Data = new Bonded<string>("{'Name': 'Eini'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
                 var seekResults = docs.SeekTo("By/Etag&Collection", "Users").GetEnumerator();
                 Assert.True(seekResults.MoveNext());
                 var reader = seekResults.Current;
 
-                var valueReader = reader.Key.CreateReader();
-                Assert.Equal("Users", valueReader.ReadString(5));
-                Assert.Equal(1L, valueReader.ReadBigEndianInt64());
-                var result = reader.Results.Single().ReadString(DocumentsFields.Data);
-                Assert.Equal("{'Name': 'Oren'}", result);
+                throw new NotImplementedException();
 
-                Assert.True(seekResults.MoveNext());
-                reader = seekResults.Current;
+                //var valueReader = reader.Key.CreateReader();
+                //Assert.Equal("Users", valueReader.ReadString(5));
+                //Assert.Equal(1L, valueReader.ReadBigEndianInt64());
+                //var result = reader.Results.Single().ReadString(DocumentsFields.Data);
+                //Assert.Equal("{'Name': 'Oren'}", result);
 
-                valueReader = reader.Key.CreateReader();
-                Assert.Equal("Users", valueReader.ReadString(5));
-                Assert.Equal(2L, valueReader.ReadBigEndianInt64());
-                result = reader.Results.Single().ReadString(DocumentsFields.Data);
-                Assert.Equal("{'Name': 'Eini'}", result);
+                //Assert.True(seekResults.MoveNext());
+                //reader = seekResults.Current;
 
-                Assert.False(seekResults.MoveNext());
-                tx.Commit();
+                //valueReader = reader.Key.CreateReader();
+                //Assert.Equal("Users", valueReader.ReadString(5));
+                //Assert.Equal(2L, valueReader.ReadBigEndianInt64());
+                //result = reader.Results.Single().ReadString(DocumentsFields.Data);
+                //Assert.Equal("{'Name': 'Eini'}", result);
+
+                //Assert.False(seekResults.MoveNext());
+                //tx.Commit();
             }
         }
 
@@ -80,21 +92,26 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 1L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                    .Set(DocumentsFields.Collection, "Users")
-                    );
+                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 1L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                //    .Set(DocumentsFields.Collection, "Users")
+                //    );
+
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -103,7 +120,8 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
                 var reader = docs.SeekTo("By/Etag&Collection", "Users");
                 Assert.Empty(reader);
@@ -123,47 +141,58 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 1L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                    .Set(DocumentsFields.Collection, "Users")
-                    );
+                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 1L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
+                //    .Set(DocumentsFields.Collection, "Users")
+                //    );
+
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
-                var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                    .Set(DocumentsFields.Etag, 2L)
-                    .Set(DocumentsFields.Key, "users/1")
-                    .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
-                    .Set(DocumentsFields.Collection, "Users");
-                docs.Set(structure);
+                //var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+                //    .Set(DocumentsFields.Etag, 2L)
+                //    .Set(DocumentsFields.Key, "users/1")
+                //    .Set(DocumentsFields.Data, "{'Name': 'Eini'}")
+                //    .Set(DocumentsFields.Collection, "Users");
+                //docs.Set(structure);
+
+                var doc = new Documents { Etag = 2L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Eini'}"), Collection = "Users" };
+                docs.Set(doc);
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
+                var docs = new Table<Documents>(_docsSchema, tx);
 
                 var reader = docs.SeekTo("By/Etag&Collection", "Users")
-                    .First();
+                                 .First();
 
                 var valueReader = reader.Key.CreateReader();
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(2L, valueReader.ReadBigEndianInt64());
 
-                var result = reader.Results.Single().ReadString(DocumentsFields.Data);
-                Assert.Equal("{'Name': 'Eini'}", result);
+                throw new NotImplementedException();
 
-                tx.Commit();
+                //var result = reader.Results.Single().ReadString(DocumentsFields.Data);
+                //Assert.Equal("{'Name': 'Eini'}", result);
+
+                //tx.Commit();
             }
         }
 
