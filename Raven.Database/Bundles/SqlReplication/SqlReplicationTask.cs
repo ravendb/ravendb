@@ -440,7 +440,8 @@ namespace Raven.Database.Bundles.SqlReplication
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag, prefetchingBehavior == defaultPrefetchingBehavior) 
+                        && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
