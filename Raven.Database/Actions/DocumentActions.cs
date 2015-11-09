@@ -571,7 +571,7 @@ namespace Raven.Database.Actions
         public JsonDocument Get(string key, TransactionInformation transactionInformation)
         {
             if (key == null)
-                throw new ArgumentNullException("key");
+                throw new ArgumentNullException(nameof(key));
             key = key.Trim();
 
             JsonDocument document = null;

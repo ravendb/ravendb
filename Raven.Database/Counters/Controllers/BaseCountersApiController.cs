@@ -10,35 +10,15 @@ namespace Raven.Database.Counters.Controllers
 {
     public abstract class BaseCountersApiController : ResourceApiController<CounterStorage, CountersLandlord>
     {
-        protected string CountersName
-        {
-            get
-            {
-                return ResourceName;
-            }
-        }
+        protected string CountersName => ResourceName;
 
-        protected CounterStorage CounterStorage
-        {
-            get
-            {
-                return Resource;
-            }
-        }
+	    protected CounterStorage CounterStorage => Resource;
 
-        public override ResourceType ResourceType
-        {
-            get
-            {
-                return ResourceType.Counter;
-            }
-        }
+	    public override ResourceType ResourceType => ResourceType.Counter;
 
-        public override void MarkRequestDuration(long duration)
+	    public override void MarkRequestDuration(long duration)
         {
-            if (Resource == null)
-                return;
-            Resource.MetricsCounters.RequestDurationMetric.Update(duration);
+		    Resource?.MetricsCounters.RequestDurationMetric.Update(duration);
         }
     }
 }

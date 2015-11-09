@@ -86,7 +86,7 @@ namespace Raven.Database.Counters.Controllers
             {
                 return GetMessageWithObject(new
                 {
-                    Message = string.Format("Didn't find counter storage (name = {0})", id)
+                    Message = $"Didn't find counter storage (name = {id})"
                 }, HttpStatusCode.NotFound);
             }
 
@@ -131,7 +131,7 @@ namespace Raven.Database.Counters.Controllers
             {
                 return GetMessageWithObject(new
                 {
-                    Message = string.Format("Didn't find counter storage (name = {0})", counterStorageId)
+                    Message = $"Didn't find counter storage (name = {counterStorageId})"
                 }, HttpStatusCode.NotFound);
             }
 
@@ -210,7 +210,7 @@ namespace Raven.Database.Counters.Controllers
             var counterStorage = SystemDatabase.Documents.Get(docKey, null);
             if (counterStorage != null && isCounterStorageUpdate == false)
             {
-                return GetMessageWithString(string.Format("Counter Storage {0} already exists!", id), HttpStatusCode.Conflict);
+                return GetMessageWithString($"Counter Storage {id} already exists!", HttpStatusCode.Conflict);
             }
 
             var dbDoc = await ReadJsonObjectAsync<CounterStorageDocument>().ConfigureAwait(false);
