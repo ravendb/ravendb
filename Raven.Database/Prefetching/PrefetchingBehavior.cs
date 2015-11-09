@@ -703,7 +703,7 @@ namespace Raven.Database.Prefetching
             }
         }
 
-        private void AddFutureBatch(Etag nextEtag, Etag untilEtag)
+        private void AddFutureBatch(Etag nextEtag, Etag untilEtag, bool isEarlyExitBatch = false)
         {
             var futureBatchStat = new FutureBatchStats
             {
@@ -732,24 +732,33 @@ namespace Raven.Database.Prefetching
                         context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching");
                     }
 
-                    if (log.IsDebugEnabled && jsonDocuments != null)
-                    {
-                        var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk) / 1024;
-                        log.Debug("Got {0} documents ({3:#,#;;0} kb) in a future batch, starting from etag {1}, took {2:#,#;;0}ms", jsonDocuments.Count, nextEtag, sp.ElapsedMilliseconds,
-                            size);
-                        if (size > jsonDocuments.Count * 8 ||
-                            sp.ElapsedMilliseconds > 3000)
-                        {
-                            var topSizes = jsonDocuments.OrderByDescending(x => x.SerializedSizeOnDisk).Take(10).Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
-                            log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
-                        }
-                    }
-
                     futureBatchStat.Duration = sp.Elapsed;
                     futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Count;
 
                     if (jsonDocuments == null)
                         return null;
+
+                    var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk) / 1024;
+                    if (isEarlyExitBatch)
+                    {
+                        log.Warn("After early exit: Got {0} documents ({1:#,#;;0} kb) in a future batch, starting from etag {2} to etag {4}, took {3:#,#;;0}ms",
+                                jsonDocuments.Count, size, nextEtag, sp.ElapsedMilliseconds, untilEtag);
+                    }
+
+                    if (log.IsDebugEnabled)
+                    {
+                        if (isEarlyExitBatch == false)
+                        {
+                            log.Debug("Got {0} documents ({1:#,#;;0} kb) in a future batch, starting from etag {2}, took {3:#,#;;0}ms",
+                                jsonDocuments.Count, size, nextEtag, sp.ElapsedMilliseconds);
+                        }
+
+                        if (size > jsonDocuments.Count * 8 || sp.ElapsedMilliseconds > 3000)
+                        {
+                            var topSizes = jsonDocuments.OrderByDescending(x => x.SerializedSizeOnDisk).Take(10).Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
+                            log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
+                        }
+                    }
 
                     if (untilEtag != null && earlyExit.Value)
                     {
@@ -764,7 +773,7 @@ namespace Raven.Database.Prefetching
                             log.Debug("Early exit from last future splitted batch, need to fetch documents from etag: {0} to etag: {1}",
                                 lastEtag, untilEtag);
                         }
-                        AddFutureBatch(lastEtag, untilEtag);
+                        AddFutureBatch(lastEtag, untilEtag, true);
                     }
                     else
                     {
