@@ -45,7 +45,7 @@ namespace Raven.Database.Server.Controllers
                         Disabled = database.Value<bool>("Disabled"),
                         IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), InMemoryRavenConfiguration.GetKey(x => x.Indexing.Disabled)),
                         RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), InMemoryRavenConfiguration.GetKey(x => x.Core.RejectClientsMode)),
-                        ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.Cluster.NonClusterDatabaseMarker),
+                        ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), InMemoryRavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker)),
                         Bundles = bundles,
                         IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
                         IsLoaded = DatabasesLandlord.IsDatabaseLoaded(dbName)

@@ -296,8 +296,6 @@ namespace Raven.Abstractions.Data
         {
             public const string ClusterConfigurationDocumentKey = "Raven/Cluster/Configuration";
 
-            public const string NonClusterDatabaseMarker = "Raven-Non-Cluster-Database"; //TODO arek
-
             public const string ClusterAwareHeader = "Raven-Cluster-Aware";
 
             public const string ClusterReadBehaviorHeader = "Raven-Cluster-Read-Behavior";

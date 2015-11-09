@@ -11,6 +11,7 @@ using Rachis.Commands;
 using Rachis.Transport;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Util;
 
 namespace Raven.Database.Raft.Util
@@ -53,24 +54,13 @@ namespace Raven.Database.Raft.Util
             if (database.IsSystemDatabase())
                 return false;
 
-            var value = database.Configuration.GetSetting(Constants.Cluster.NonClusterDatabaseMarker);
-            if (string.IsNullOrEmpty(value)) 
-                return true;
-
-            bool result;
-            if (bool.TryParse(value, out result) == false)
-                return true;
-
-            if (result)
-                return false;
-
-            return true;
+            return database.Configuration.Cluster.NonClusterDatabaseMarker == false;
         }
 
         public static bool IsClusterDatabase(this DatabaseDocument document)
         {
             string value;
-            if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
+            if (document.Settings.TryGetValue(InMemoryRavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker), out value) == false)
                 return true;
 
             bool result;
