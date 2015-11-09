@@ -516,29 +516,26 @@ namespace Raven.Database.Counters
                 }
             }
 
-           
 
-            public long GetCounterTotal(string groupName, string counterName)
-            {
-                ThrowIfDisposed();
-                using (var it = groupToCounters.MultiRead(groupName))
-                {
-                    it.RequiredPrefix = counterName;
-                    if (it.Seek(it.RequiredPrefix) == false || it.CurrentKey.Size != it.RequiredPrefix.Size + sizeof(long))
-                    {
-                        var e = new InvalidDataException("Counter doesn't exist!");
-                        e.Data.Add("DoesntExist", true);
-                        throw e;
-                    }
+			public bool TryGetCounterTotal(string groupName, string counterName,out long? total)
+			{
+				ThrowIfDisposed();
+				total = null;
+				using (var it = groupToCounters.MultiRead(groupName))
+				{
+					it.RequiredPrefix = counterName;
+					if (it.Seek(it.RequiredPrefix) == false || it.CurrentKey.Size != it.RequiredPrefix.Size + sizeof (long))
+						return false;
 
-                    var valueReader = it.CurrentKey.CreateReader();
-                    valueReader.Skip(it.RequiredPrefix.Size);
-                    int used;
-                    var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
-                    var slice = new Slice(counterIdBuffer, sizeof(long));
-                    return CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
-                }
-            }
+					var valueReader = it.CurrentKey.CreateReader();
+					valueReader.Skip(it.RequiredPrefix.Size);
+					int used;
+					var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
+					var slice = new Slice(counterIdBuffer, sizeof(long));
+					total = CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
+					return true;
+				}
+			}
 
             public long GetGroupCount()
             {
@@ -965,11 +962,11 @@ namespace Raven.Database.Counters
                 return reader.GetLastEtagFor(serverId);
             }
 
-            public long GetCounterTotal(string groupName, string counterName)
-            {
-                ThrowIfDisposed();
-                return reader.GetCounterTotal(groupName, counterName);
-            }
+			public bool TryGetCounterTotal(string groupName, string counterName, out long? total)
+			{
+				ThrowIfDisposed();
+				return reader.TryGetCounterTotal(groupName, counterName, out total);
+			}
 
             internal IEnumerable<CounterDetails> GetCountersDetails(string groupName)
             {
@@ -1170,14 +1167,19 @@ namespace Raven.Database.Counters
                 ThrowIfDisposed();
                 var doesCounterExist = DoesCounterExist(groupName, counterName);
                 if (doesCounterExist == false)
-                    throw new InvalidOperationException(string.Format("Counter doesn't exist. Group: {0}, Counter Name: {1}", groupName, counterName));
+                    throw new InvalidOperationException($"Counter doesn't exist. Group: {groupName}, Counter Name: {counterName}");
 
                 return ResetCounterInternal(groupName, counterName);
             }
 
             private long ResetCounterInternal(string groupName, string counterName)
             {
-                var difference = GetCounterTotal(groupName, counterName);
+	            long? total;
+	            if (!TryGetCounterTotal(groupName, counterName, out total))
+		            return 0;
+
+	            Debug.Assert(total.HasValue);
+	            var difference = total.Value;
                 if (difference == 0)
                     return 0;
 

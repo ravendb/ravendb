@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 
@@ -59,7 +60,7 @@ namespace Raven.Client.Counters
             }, token).WithCancellation(token).ConfigureAwait(false);
         }
 
-        public async Task<long> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
+        public async Task<CounterTotal> GetOverallTotalAsync(string groupName, string counterName, CancellationToken token = default(CancellationToken))
         {
             AssertInitialized();
 
@@ -71,7 +72,7 @@ namespace Raven.Client.Counters
                     try
                     {
                         var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        return response.Value<long>();
+                        return response.ToObject<CounterTotal>();
                     }
                     catch (ErrorResponseException e)
                     {
