@@ -773,7 +773,7 @@ namespace Raven.Database.Prefetching
                             log.Debug("Early exit from last future splitted batch, need to fetch documents from etag: {0} to etag: {1}",
                                 lastEtag, untilEtag);
                         }
-                        AddFutureBatch(lastEtag, untilEtag, true);
+                        AddFutureBatch(lastEtag, untilEtag, isEarlyExitBatch: true);
                     }
                     else
                     {
