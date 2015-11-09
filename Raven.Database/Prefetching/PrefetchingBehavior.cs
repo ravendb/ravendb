@@ -855,7 +855,9 @@ namespace Raven.Database.Prefetching
 
         public void AfterStorageCommitBeforeWorkNotifications(JsonDocument[] docs)
         {
-            if (context.Configuration.DisableDocumentPreFetching || docs.Length == 0 ||
+            if (ShouldHandleUnusedDocumentsAddedAfterCommit == false ||
+                context.Configuration.DisableDocumentPreFetching || 
+                docs.Length == 0 ||
                 DisableCollectingDocumentsAfterCommit)
                 return;
 
