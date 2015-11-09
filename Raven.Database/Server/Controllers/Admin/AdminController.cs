@@ -40,6 +40,7 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
+using Raven.Client.Linq.Indexing;
 using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Commercial;
@@ -111,7 +112,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 catch (Exception e)
                 {
                     status.Messages.Add("Error: " + e.Message);
-                    status.State = RavenJObject.FromObject(new {Error = e.Message});
+                    status.State = RavenJObject.FromObject(new { Error = e.Message });
                     status.Faulted = true;
                     throw;
                 }
@@ -309,9 +310,9 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
             Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
-                                                                                                                {
-                                                                                                                    Resource = databaseName
-                                                                                                                }), new RavenJObject(), null);
+            {
+                Resource = databaseName
+            }), new RavenJObject(), null);
 
             DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 
@@ -361,7 +362,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                         RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 
-                    if (restoreRequest.GenerateNewDatabaseId) 
+                    if (restoreRequest.GenerateNewDatabaseId)
                         GenerateNewDatabaseId(databaseName);
 
                     if (replicationBundleRemoved)
@@ -521,7 +522,7 @@ namespace Raven.Database.Server.Controllers.Admin
             try
             {
                 request.Timeout = 5000;
-                using (var response = (HttpWebResponse) request.GetResponse())
+                using (var response = (HttpWebResponse)request.GetResponse())
                 {
                     return GetMessageWithObject(new { Success = response.StatusCode == HttpStatusCode.OK });
                 }
@@ -573,7 +574,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     {
                         bool skipProgressReport = false;
                         bool isProgressReport = false;
-                        if(IsUpdateMessage(msg))
+                        if (IsUpdateMessage(msg))
                         {
                             isProgressReport = true;
                             var now = SystemTime.UtcNow;
@@ -585,7 +586,7 @@ namespace Raven.Database.Server.Controllers.Admin
                                 compactStatus.LastProgressMessage = msg;
                             }
                             else skipProgressReport = true;
-                            
+
                         }
                         if (!skipProgressReport)
                         {
@@ -921,8 +922,8 @@ namespace Raven.Database.Server.Controllers.Admin
                 var response = new HttpResponseMessage();
 
                 response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-                                   {
-                                       Headers =
+                {
+                    Headers =
                                        {
                                            ContentDisposition = new ContentDispositionHeaderValue("attachment")
                                                                 {
@@ -930,7 +931,7 @@ namespace Raven.Database.Server.Controllers.Admin
                                                                 },
                                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
                                        }
-                                   };
+                };
 
                 return response;
             }
@@ -980,7 +981,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         EnableRaisingEvents = true
                     };
 
-                    
+
 
                     process.OutputDataReceived += (sender, args) => output += args.Data;
                     process.ErrorDataReceived += (sender, args) => output += args.Data;
@@ -1068,7 +1069,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
                 return GetMessageWithObject(connectionState);
             }
-            
+
             var watchCatogory = GetQueryStringValues("watch-category");
             var categoriesToWatch = watchCatogory.Select(
                 x =>
@@ -1144,11 +1145,11 @@ namespace Raven.Database.Server.Controllers.Admin
                 case BatchPerformanceTestRequest.Mode:
                     ioTestRequest = json.JsonDeserialization<BatchPerformanceTestRequest>();
                     break;
-                default: 
+                default:
                     return GetMessageWithObject(new
-                {
-                    Error = "test type is invalid: " + testType
-                }, HttpStatusCode.BadRequest);
+                    {
+                        Error = "test type is invalid: " + testType
+                    }, HttpStatusCode.BadRequest);
             }
 
             Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
@@ -1177,7 +1178,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
                         {
                             Request = ioTestRequest,
-// ReSharper disable once RedundantAnonymousTypePropertyName
+                            // ReSharper disable once RedundantAnonymousTypePropertyName
                             Result = diskIo.Result,
                             DebugMsgs = debugInfo
                         });
@@ -1187,7 +1188,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
                         {
                             Request = ioTestRequest,
-// ReSharper disable once RedundantAnonymousTypePropertyName
+                            // ReSharper disable once RedundantAnonymousTypePropertyName
                             Result = diskIo.Result,
                             DebugMsgs = debugInfo,
                             diskIo.HasFailed,
@@ -1207,7 +1208,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         throw new Exception("Disk I/O test has failed. See log for more details.");
                 }
             }, killTaskCts.Token);
-            
+
             long id;
             Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
             {
@@ -1235,15 +1236,16 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/low-memory-handlers-statistics")]
         public HttpResponseMessage GetLowMemoryStatistics()
         {
-            return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
+            return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x => x.DatabaseName).Select(x => new
             {
                 DatabaseName = x.Key,
-                Types = x.GroupBy(y=>y.Name).Select(y=> new
+                Types = x.GroupBy(y => y.Name).Select(y => new
                 {
                     MemoryHandlerName = y.Key,
-                    MemoryHandlers = y.Select(z=> new {
-                    z.EstimatedUsedMemory,
-                    z.Metadata
+                    MemoryHandlers = y.Select(z => new
+                    {
+                        z.EstimatedUsedMemory,
+                        z.Metadata
                     })
                 })
             }));
@@ -1265,7 +1267,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (request.Filesystems)
                 filesystemsTopology = CollectFilesystemSynchronizationTopology();
 
-            if (request.Counters) 
+            if (request.Counters)
                 counterStoragesTopology = CollectionCountersReplicationTopology();
 
             return GetMessageWithObject(new
@@ -1381,5 +1383,48 @@ namespace Raven.Database.Server.Controllers.Admin
 
             return mergedTopology;
         }
+
+        [HttpGet]
+        [RavenRoute("admin/dump")]
+        public HttpResponseMessage Dump()
+        {
+            var stop = GetQueryStringValue("stop");
+            if (!string.IsNullOrEmpty(stop))
+            {
+                MiniDumper.Instance.StopTimer();
+                return GetMessageWithString("Dump Timer Canceled", HttpStatusCode.Accepted);
+            }
+
+            var usage = GetQueryStringValue("usage");
+            if (!string.IsNullOrEmpty(usage))
+                return GetMessageWithString(MiniDumper.PrintUsage(), HttpStatusCode.Accepted);
+
+            MiniDumper.Instance.StopTimer();
+
+            int timerCount;
+            int period = 0;
+            bool useTimer = false;
+            if (int.TryParse(GetQueryStringValue("timer"), out timerCount) == true)
+                if (int.TryParse(GetQueryStringValue("period"), out period) == true)
+                    useTimer = true;
+
+            var options = MiniDumper.Option.Normal;
+            var ids = GetQueryStringValues("option");
+            foreach (var id in ids)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    options |= MiniDumper.StringToOption(id);
+                }
+            }
+
+            bool useStats = !string.IsNullOrEmpty(GetQueryStringValue("stats"));
+
+            if (useTimer == false)
+                return GetMessageWithString(MiniDumper.Instance.Write(options), HttpStatusCode.Accepted);
+
+            var url = $"http://{Request.RequestUri.Host}:{Request.RequestUri.Port}";
+            return GetMessageWithString(MiniDumper.Instance.StartTimer(timerCount, period, options, useStats, url), HttpStatusCode.Accepted);
+            }
     }
 }
