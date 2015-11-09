@@ -40,7 +40,7 @@ namespace Owin
 
         public static IAppBuilder UseRavenDB(this IAppBuilder app)
         {
-            return UseRavenDB(app, new RavenConfiguration());
+            return UseRavenDB(app, new AppSettingsBasedConfiguration());
         }
 
         public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)

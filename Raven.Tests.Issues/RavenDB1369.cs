@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -118,7 +118,7 @@ namespace Raven.Tests.Issues
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -127,7 +127,7 @@ namespace Raven.Tests.Issues
                 JournalsLocation = jouranlDir
             }, Console.WriteLine);
 
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {

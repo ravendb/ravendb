@@ -33,7 +33,7 @@ namespace Raven.Server
         private string url;
 
         public RavenDbServer()
-            : this(new RavenConfiguration())
+            : this(new AppSettingsBasedConfiguration())
         {}
 
         public RavenDbServer(InMemoryRavenConfiguration configuration)

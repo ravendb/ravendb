@@ -42,7 +42,7 @@ namespace Raven.Database.Actions
             return backupPath ?? Path.Combine(rootBackupPath, Constants.DatabaseDocumentFilename);
         }
 
-        public static void Restore(RavenConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
+        public static void Restore(AppSettingsBasedConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
         {
             var databaseDocumentPath = FindDatabaseDocument(restoreRequest.BackupLocation);
             if (File.Exists(databaseDocumentPath) == false)

@@ -25,7 +25,7 @@ namespace Raven.StorageExporter
         {
             baseDirectory = databaseBaseDirectory;
             outputDirectory = databaseOutputFile;
-            var ravenConfiguration = new RavenConfiguration();
+            var ravenConfiguration = new AppSettingsBasedConfiguration();
             ravenConfiguration.Core.DataDirectory = databaseBaseDirectory;
             ravenConfiguration.Storage.PreventSchemaUpdate = true;
             CreateTransactionalStorage(ravenConfiguration);

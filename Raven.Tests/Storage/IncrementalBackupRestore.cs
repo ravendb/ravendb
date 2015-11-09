@@ -29,7 +29,7 @@ namespace Raven.Tests.Storage
 
         private void InitializeDocumentDatabase(string storageName)
         {
-            db = new DocumentDatabase(new RavenConfiguration
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -70,7 +70,7 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -89,7 +89,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -138,7 +138,7 @@ namespace Raven.Tests.Storage
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -157,7 +157,7 @@ namespace Raven.Tests.Storage
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -191,7 +191,7 @@ namespace Raven.Tests.Storage
         [PropertyData("Storages")]
         public void IncrementalBackupWithCircularLogOrVoronIncrementalBackupsNotEnabledThrows(string storageName)
         {
-            db = new DocumentDatabase(new RavenConfiguration
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {

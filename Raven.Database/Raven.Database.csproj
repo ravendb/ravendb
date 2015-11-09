@@ -1246,7 +1246,7 @@
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="Plugins\VetoResult.cs" />
-    <Compile Include="Config\RavenConfiguration.cs" />
+    <Compile Include="Config\AppSettingsBasedConfiguration.cs" />
     <Compile Include="Queries\SuggestionQueryExtensions.cs" />
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />

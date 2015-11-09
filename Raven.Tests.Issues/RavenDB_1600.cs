@@ -49,7 +49,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldNotSetAutoIndexesToAbandonedPriorityAfterDatabaseRecovery()
         {
-            using (var db = new DocumentDatabase(new RavenConfiguration
+            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -85,14 +85,14 @@ namespace Raven.Tests.Issues
             }
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
                 Defrag = true
             },s => { });
 
-            using (var db = new DocumentDatabase(new RavenConfiguration
+            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {

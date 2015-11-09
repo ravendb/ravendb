@@ -399,7 +399,7 @@ namespace Raven.Tests.Helpers
                 pathsToDelete.Add(dataDirectory);
             
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -467,7 +467,7 @@ namespace Raven.Tests.Helpers
             ITransactionalStorage newTransactionalStorage;
 
             var dataDirectory = dataDir ?? NewDataPath();
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {

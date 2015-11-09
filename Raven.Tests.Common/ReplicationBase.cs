@@ -170,7 +170,7 @@ namespace Raven.Tests.Common
             var previousServer = servers[index];
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Core.Port);
-            var serverConfiguration = new RavenConfiguration
+            var serverConfiguration = new AppSettingsBasedConfiguration
             {
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =

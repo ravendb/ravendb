@@ -409,7 +409,7 @@ namespace Raven.Database.FileSystem.Controllers
                 return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
             }
 
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 FileSystemName = filesystemName,
             };

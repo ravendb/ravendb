@@ -258,7 +258,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (existingDatabase != null)
                 return GetMessageWithString("Cannot do an online restore for an existing database, delete the database " + databaseName + " and restore again.", HttpStatusCode.BadRequest);
             
-            var ravenConfiguration = new RavenConfiguration(initialize: false)
+            var ravenConfiguration = new AppSettingsBasedConfiguration(initialize: false)
             {
                 DatabaseName = databaseName,
                 IsTenantDatabase = true

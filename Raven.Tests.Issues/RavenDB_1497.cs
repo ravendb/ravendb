@@ -107,7 +107,7 @@ namespace Raven.Tests.Issues
 
                 var output = new StringBuilder();
 
-                MaintenanceActions.Restore(new RavenConfiguration
+                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
                     {
                         Storage = { AllowIncrementalBackups = true }
                     }, new DatabaseRestoreRequest
@@ -119,7 +119,7 @@ namespace Raven.Tests.Issues
 
                 Assert.DoesNotContain("error", output.ToString().ToLower());
 
-                using (var db = new DocumentDatabase(new RavenConfiguration { Core = { DataDirectory = DataDir }}, null))
+                using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration { Core = { DataDirectory = DataDir }}, null))
                 {
                     var indexStats = db.Statistics.Indexes;
 

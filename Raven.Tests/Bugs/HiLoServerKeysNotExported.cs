@@ -47,7 +47,7 @@ namespace Raven.Tests.Bugs
             if(server != null)
                 server.Dispose();
 
-            server = new RavenDbServer(new RavenConfiguration
+            server = new RavenDbServer(new AppSettingsBasedConfiguration
                                         {
                                             Core =
                                             {

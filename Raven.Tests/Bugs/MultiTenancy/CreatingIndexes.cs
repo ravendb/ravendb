@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
     {
         protected RavenDbServer GetNewServer(int port)
         {
-            RavenDbServer ravenDbServer = new RavenDbServer(new RavenConfiguration
+            RavenDbServer ravenDbServer = new RavenDbServer(new AppSettingsBasedConfiguration
             {
                 Core =
                 {

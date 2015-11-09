@@ -37,7 +37,7 @@ namespace Raven.Tests.Issues
         [PropertyData("Storages")]
         public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
         {
-            using (var db = new DocumentDatabase(new RavenConfiguration
+            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -80,7 +80,7 @@ namespace Raven.Tests.Issues
 
             var sb = new StringBuilder();
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir
@@ -91,7 +91,7 @@ namespace Raven.Tests.Issues
                 " Index will be recreated after launching Raven instance",
                 sb.ToString());
 
-            using (var db = new DocumentDatabase(new RavenConfiguration {
+            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
         [PropertyData("Storages")]
         public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
         {
-            using (var db = new DocumentDatabase(new RavenConfiguration
+            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -157,7 +157,7 @@ namespace Raven.Tests.Issues
             {
                 var sb = new StringBuilder();
 
-                MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+                MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
                     DatabaseLocation = DataDir
@@ -169,7 +169,7 @@ namespace Raven.Tests.Issues
                     sb.ToString());
             }
 
-            using (var db = new DocumentDatabase(new RavenConfiguration { Core = { DataDirectory = DataDir }}, null))
+            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration { Core = { DataDirectory = DataDir }}, null))
             {
                 db.SpinBackgroundWorkers();
                 QueryResult queryResult;

@@ -30,7 +30,7 @@ namespace Raven.SlowTests.Issues
             path = NewDataPath();
             pathsToDelete.Add("~/Databases");
             Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-            var config = new Raven.Database.Config.RavenConfiguration
+            var config = new Raven.Database.Config.AppSettingsBasedConfiguration
                             {
                                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                                 Core =

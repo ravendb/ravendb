@@ -27,7 +27,7 @@ namespace Raven.Tests.Triggers
 
         public ReadTriggers()
         {
-            db = new DocumentDatabase(new RavenConfiguration
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core = { RunInMemory = true },
                 Container = new CompositionContainer(new TypeCatalog(

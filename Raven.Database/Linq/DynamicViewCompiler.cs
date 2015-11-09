@@ -37,7 +37,7 @@ namespace Raven.Database.Linq
         private readonly TransformFromClauses transformFromClauses = new TransformFromClauses();
 
         public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
-            : this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new RavenConfiguration())
+            : this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new AppSettingsBasedConfiguration())
         { }
 
         public DynamicViewCompiler(string name, IndexDefinition indexDefinition, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)

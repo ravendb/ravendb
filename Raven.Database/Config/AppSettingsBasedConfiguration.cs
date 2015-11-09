@@ -11,9 +11,9 @@ using System.Xml.Linq;
 
 namespace Raven.Database.Config
 {
-    public class RavenConfiguration : InMemoryRavenConfiguration
+    public class AppSettingsBasedConfiguration : InMemoryRavenConfiguration
     {
-        public RavenConfiguration(bool initialize = true)
+        public AppSettingsBasedConfiguration(bool initialize = true)
         {
             LoadConfiguration(ConfigurationManager.AppSettings.AllKeys.Select(k=> Tuple.Create(k,ConfigurationManager.AppSettings[k])));
 

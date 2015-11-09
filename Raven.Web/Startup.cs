@@ -31,7 +31,7 @@ namespace Raven.Web
                             Log.Info("Startup Configuration Called {0} times, process: {1}, app  domain: {2}", counter, p.Id, aid);
                             counter++;
                             var sp = Stopwatch.StartNew();
-                            _server = new RavenDBOptions(new RavenConfiguration());
+                            _server = new RavenDBOptions(new AppSettingsBasedConfiguration());
                             Log.Info("Startup Configuration completed in {0} , process: {1}, app  domain: {2}", sp.ElapsedMilliseconds, p.Id, aid);
                         }
                         catch (Exception ex)
