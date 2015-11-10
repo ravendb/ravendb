@@ -20,8 +20,8 @@ namespace Raven.Json.Linq
     /// </summary>
     public abstract class RavenJToken
     {
-	    private static readonly JsonSerializer defaultJsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
-	    /// <summary>
+        private static readonly JsonSerializer defaultJsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
+        /// <summary>
         ///     Gets the node type for this <see cref="RavenJToken" />.
         /// </summary>
         /// <value>The type.</value>

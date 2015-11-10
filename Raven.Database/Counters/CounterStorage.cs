@@ -517,25 +517,25 @@ namespace Raven.Database.Counters
             }
 
 
-			public bool TryGetCounterTotal(string groupName, string counterName,out long? total)
-			{
-				ThrowIfDisposed();
-				total = null;
-				using (var it = groupToCounters.MultiRead(groupName))
-				{
-					it.RequiredPrefix = counterName;
-					if (it.Seek(it.RequiredPrefix) == false || it.CurrentKey.Size != it.RequiredPrefix.Size + sizeof (long))
-						return false;
+            public bool TryGetCounterTotal(string groupName, string counterName,out long? total)
+            {
+                ThrowIfDisposed();
+                total = null;
+                using (var it = groupToCounters.MultiRead(groupName))
+                {
+                    it.RequiredPrefix = counterName;
+                    if (it.Seek(it.RequiredPrefix) == false || it.CurrentKey.Size != it.RequiredPrefix.Size + sizeof (long))
+                        return false;
 
-					var valueReader = it.CurrentKey.CreateReader();
-					valueReader.Skip(it.RequiredPrefix.Size);
-					int used;
-					var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
-					var slice = new Slice(counterIdBuffer, sizeof(long));
-					total = CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
-					return true;
-				}
-			}
+                    var valueReader = it.CurrentKey.CreateReader();
+                    valueReader.Skip(it.RequiredPrefix.Size);
+                    int used;
+                    var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
+                    var slice = new Slice(counterIdBuffer, sizeof(long));
+                    total = CalculateCounterTotal(slice, new byte[parent.sizeOfGuid]);
+                    return true;
+                }
+            }
 
             public long GetGroupCount()
             {
@@ -962,11 +962,11 @@ namespace Raven.Database.Counters
                 return reader.GetLastEtagFor(serverId);
             }
 
-			public bool TryGetCounterTotal(string groupName, string counterName, out long? total)
-			{
-				ThrowIfDisposed();
-				return reader.TryGetCounterTotal(groupName, counterName, out total);
-			}
+            public bool TryGetCounterTotal(string groupName, string counterName, out long? total)
+            {
+                ThrowIfDisposed();
+                return reader.TryGetCounterTotal(groupName, counterName, out total);
+            }
 
             internal IEnumerable<CounterDetails> GetCountersDetails(string groupName)
             {
@@ -1174,12 +1174,12 @@ namespace Raven.Database.Counters
 
             private long ResetCounterInternal(string groupName, string counterName)
             {
-	            long? total;
-	            if (!TryGetCounterTotal(groupName, counterName, out total))
-		            return 0;
+                long? total;
+                if (!TryGetCounterTotal(groupName, counterName, out total))
+                    return 0;
 
-	            Debug.Assert(total.HasValue);
-	            var difference = total.Value;
+                Debug.Assert(total.HasValue);
+                var difference = total.Value;
                 if (difference == 0)
                     return 0;
 
