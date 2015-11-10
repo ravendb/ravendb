@@ -417,7 +417,7 @@ namespace Voron.Data.Tables
             // Delete(id);
         }
 
-        private IEnumerable<StructureReader<T>> GetSecondaryIndexForValue(Tree tree, Slice value)
+        private IEnumerable<T> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
             var fstIndex = new FixedSizeTree(_tx.LowLevelTransaction, tree, value, 0);
             using (var it = fstIndex.Iterate())

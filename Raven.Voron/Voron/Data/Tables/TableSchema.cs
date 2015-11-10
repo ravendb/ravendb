@@ -1,5 +1,7 @@
+using Bond;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Impl;
@@ -69,19 +71,52 @@ namespace Voron.Data.Tables
         //    return this;
         //}
 
-        public TableSchema<T> DefineIndex<W1>(string name, Func<T, W1> first, bool multipleValue = false)
+        private bool IsFixedSizeType<X>()
         {
-            new RuntimeSchema( )
+            var fields = Reflection.GetSchemaFields(typeof(X));
+            foreach (var field in fields)
+            {
+                switch (Reflection.GetBondDataType(field.MemberType))
+                {
+                    case BondDataType.BT_LIST:
+                    case BondDataType.BT_MAP:
+                    case BondDataType.BT_SET:
+                    case BondDataType.BT_STOP:
+                    case BondDataType.BT_STOP_BASE:
+                    case BondDataType.BT_STRING:
+                    case BondDataType.BT_WSTRING:
+                    case BondDataType.BT_STRUCT:
+                    case BondDataType.BT_UNAVAILABLE:
+                        {
+                            return false;
+                        }
+                }
+            }
 
+            return true;
+        }
+
+        private int GetTypeSize<W1>()
+        {
             throw new NotImplementedException();
+        }
+
+        public TableSchema<T> DefineIndex<W1>(string name, Expression<Func<T, W1>> first, bool multipleValue = false)
+        {
+            throw new NotImplementedException();
+
+            //var schemaIndexDef = new SchemaIndexDef
+            //{
+            //    IndexedFields = fieldsToIndex,
+            //    IsFixedSize = IsFixedSizeType<W1>(),
+            //    Size = GetTypeSize<W1>(),
+            //    MultiValue = multipleValue,
+            //    Name = name
+            //};
+            //return schemaIndexDef;
         }
 
         public TableSchema<T> DefineIndex<W1, W2>(string name, Func<T, W1> first, Func<T, W2> second, bool multipleValue = false)
-        {
-            throw new NotImplementedException();
-        }
-
-        public TableSchema<T> DefineIndex<W1, W2, W3>(string name, Func<T, W1> first, Func<T, W2> second, Func<T, W3> third, bool multipleValue = false)
         {
             throw new NotImplementedException();
         }
