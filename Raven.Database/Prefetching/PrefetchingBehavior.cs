@@ -878,7 +878,8 @@ namespace Raven.Database.Prefetching
             if (ShouldHandleUnusedDocumentsAddedAfterCommit == false ||
                 context.Configuration.DisableDocumentPreFetching || 
                 docs.Length == 0 ||
-                DisableCollectingDocumentsAfterCommit)
+                DisableCollectingDocumentsAfterCommit || 
+                context.RunIndexing == false)
                 return;
 
             if (prefetchingQueue.Count >= // don't use too much, this is an optimization and we need to be careful about using too much mem
