@@ -315,7 +315,7 @@ namespace Raven.Database.Util
             this.url = url;
             timer = new Timer(Execute, null, TimeSpan.FromMinutes(period), TimeSpan.FromMinutes(period));
             var filepath = Write();
-            return $"Timer set with count=${count}, period=${period}{Environment.NewLine}Starting with {filepath}";
+            return $"Timer set with count={count}, period={period}{Environment.NewLine}Starting with {filepath}";
         }
 
         private void Execute(object state)

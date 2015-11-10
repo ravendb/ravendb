@@ -1401,12 +1401,13 @@ namespace Raven.Database.Server.Controllers.Admin
 
             int timerCount;
             int period = 0;
-            bool useTimer = false;
-            if (int.TryParse(GetQueryStringValue("timer"), out timerCount) == true)
-                if (int.TryParse(GetQueryStringValue("period"), out period) == true)
-                    useTimer = true;
+            bool useTimer = 
+                int.TryParse(GetQueryStringValue("timer"), out timerCount) && 
+                int.TryParse(GetQueryStringValue("period"), out period);
 
-            var options = MiniDumper.Option.Normal;
+            var options = 
+                MiniDumper.Option.WithThreadInfo | 
+                MiniDumper.Option.WithProcessThreadData;
             var ids = GetQueryStringValues("option");
             foreach (var id in ids)
             {
