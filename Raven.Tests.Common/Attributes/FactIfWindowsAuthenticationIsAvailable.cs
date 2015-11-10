@@ -49,7 +49,7 @@ namespace Raven.Tests.Common.Attributes
         private static void ActualLoad()
         {
             var fileName = "WindowsAuthenticationCredentials.txt";
-            var path = Path.Combine(@"..\", fileName);
+            var path = Path.Combine(@"C:\Builds", fileName);
             path = Path.GetFullPath(path);
 
             if (File.Exists(path) == false)
