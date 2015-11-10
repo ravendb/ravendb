@@ -4,12 +4,6 @@
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
 
   "frameworks": {
-    "net45": {
-      "frameworkAssemblies": {
-        "System.Transactions": "4.0.0.0",
-        "Microsoft.VisualBasic": "10.0.0.0"
-      }
-    },
     "dnxcore50": {
       "dependencies": {
         "Microsoft.CSharp": "4.0.1-beta-23509",

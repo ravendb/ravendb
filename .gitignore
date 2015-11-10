@@ -91,5 +91,5 @@ _NCrunch_RavenDB/
 .vs/
 
 # DNX
-project.lock.json
+*project.lock.json
 artifacts/
