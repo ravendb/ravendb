@@ -15,6 +15,14 @@ namespace Raven.Tests.Core.Session
 {
     public class Advanced : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Advanced(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanGetChangesInformation()
         {
@@ -236,7 +244,7 @@ namespace Raven.Tests.Core.Session
                     var company = session.Load<Company>("companies/1");
                     Assert.NotNull(company);
                     var uri = new Uri(session.Advanced.GetDocumentUrl(company));
-                    Assert.Equal("/databases/"+store.DefaultDatabase+"/docs/companies/1", uri.AbsolutePath);
+                    Assert.Equal("/databases/" + store.DefaultDatabase + "/docs/companies/1", uri.AbsolutePath);
                 }
             }
         }
@@ -264,7 +272,7 @@ namespace Raven.Tests.Core.Session
                     Assert.NotNull(result);
                     Assert.Equal(attrVal, result.Value<string>(attrKey));
                 }
-             }
+            }
         }
 
         [Fact]
@@ -397,17 +405,17 @@ namespace Raven.Tests.Core.Session
 
                 using (var session = store.OpenSession())
                 {
-                        Lazy<Company> lazyOrder = session.Advanced.Lazily.Load<Company>(COMPANY1_ID);
-                        Assert.False(lazyOrder.IsValueCreated);
-                        var order = lazyOrder.Value;
-                        Assert.Equal(COMPANY1_ID, order.Id);
+                    Lazy<Company> lazyOrder = session.Advanced.Lazily.Load<Company>(COMPANY1_ID);
+                    Assert.False(lazyOrder.IsValueCreated);
+                    var order = lazyOrder.Value;
+                    Assert.Equal(COMPANY1_ID, order.Id);
 
-                        Lazy<Company[]> lazyOrders = session.Advanced.Lazily.Load<Company>(new String[] { COMPANY1_ID, COMPANY2_ID });
-                        Assert.False(lazyOrders.IsValueCreated);
-                        Company[] orders = lazyOrders.Value;
-                        Assert.Equal(2, orders.Length);
-                        Assert.Equal(COMPANY1_ID, orders[0].Id);
-                        Assert.Equal(COMPANY2_ID, orders[1].Id);
+                    Lazy<Company[]> lazyOrders = session.Advanced.Lazily.Load<Company>(new String[] { COMPANY1_ID, COMPANY2_ID });
+                    Assert.False(lazyOrders.IsValueCreated);
+                    Company[] orders = lazyOrders.Value;
+                    Assert.Equal(2, orders.Length);
+                    Assert.Equal(COMPANY1_ID, orders[0].Id);
+                    Assert.Equal(COMPANY2_ID, orders[1].Id);
                 }
             }
         }
@@ -501,7 +509,9 @@ namespace Raven.Tests.Core.Session
                     session.SaveChanges();
                 }
 
-                this.Server.Server.ResetNumberOfRequests();
+#if !DNXCORE50
+                Server.Server.ResetNumberOfRequests();
+#endif
 
                 using (var session = store.OpenSession())
                 {

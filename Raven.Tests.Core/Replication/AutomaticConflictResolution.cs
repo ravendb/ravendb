@@ -17,6 +17,14 @@ namespace Raven.Tests.Core.Replication
 {
     public class AutomaticConflictResolution : RavenReplicationCoreTest
     {
+#if DNXCORE50
+        public AutomaticConflictResolution(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void ShouldResolveDocumentConflictInFavorOfLocalVersion()
         {
@@ -107,11 +115,8 @@ namespace Raven.Tests.Core.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    User user1 = null;
-                    User user2 = null;
-
-                    Assert.DoesNotThrow(() => { user1 = session.Load<User>("users/1"); });
-                    Assert.DoesNotThrow(() => { user2 = session.Load<User>("users/2"); });
+                    var user1 = session.Load<User>("users/1");
+                    var user2 = session.Load<User>("users/2");
 
                     Assert.Equal("2nd", user1.Name);
                     Assert.Equal("2nd", user2.Name);
@@ -162,9 +167,7 @@ namespace Raven.Tests.Core.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    User item = null;
-
-                    Assert.DoesNotThrow(() => { item = session.Load<User>("users/1"); });
+                    User item = session.Load<User>("users/1");
 
                     switch (docConflictResolution)
                     {
@@ -198,8 +201,8 @@ namespace Raven.Tests.Core.Replication
                     session.SaveChanges();
                 }
 
-                var local = new byte[] {1, 2, 3, 4};
-                var remote = new byte[] {3, 2, 1};
+                var local = new byte[] { 1, 2, 3, 4 };
+                var remote = new byte[] { 3, 2, 1 };
 
                 slave.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(local), new RavenJObject());
 
@@ -209,8 +212,7 @@ namespace Raven.Tests.Core.Replication
 
                 WaitForAttachment(slave, "marker");
 
-                Attachment attachment = null;
-                Assert.DoesNotThrow(() => { attachment = slave.DatabaseCommands.GetAttachment("attach/1"); });
+                Attachment attachment = slave.DatabaseCommands.GetAttachment("attach/1");
 
                 switch (attachmentConflictResolution)
                 {
