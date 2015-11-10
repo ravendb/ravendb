@@ -1,14 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Raven.Imports.Newtonsoft.Json.Linq;
-
-namespace Raven.Bundles.UniqueConstraints
+﻿namespace Raven.Bundles.UniqueConstraints
 {
 	using Abstractions.Data;
 	using Database.Plugins;
 	using Json.Linq;
-	using Raven.Database.Extensions;
-	using System;
 
 	public class UniqueConstraintsDeleteTrigger : AbstractDeleteTrigger
 	{

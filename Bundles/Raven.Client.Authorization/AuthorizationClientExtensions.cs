@@ -9,7 +9,6 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Bundles.Authorization;
 using System.Linq;
 using Raven.Bundles.Authorization.Model;
