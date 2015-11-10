@@ -24,11 +24,11 @@ namespace Raven.Database.Prefetching
             MemoryStatistics.RegisterLowMemoryHandler(this);
         }
 
-        public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
+        public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription, bool isDefault = false)
         {
             lock (this)
             {
-                var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), prefetchingUserDescription);
+                var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), prefetchingUserDescription, isDefault);
 
                 prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
                 {

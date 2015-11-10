@@ -30,7 +30,6 @@ namespace Raven.Database.Prefetching
             public DateTime AddedAt;
         }
 
-
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         private readonly BaseBatchSizeAutoTuner autoTuner;
         private readonly WorkContext context;
@@ -55,19 +54,21 @@ namespace Raven.Database.Prefetching
 
         private DocAddedAfterCommit lowestInMemoryDocumentAddedAfterCommit;
         private int currentIndexingAge;
-        private string userDescription;
-
+       
         public Action<int> FutureBatchCompleted = delegate { };
         private readonly MeterMetric ingestMeter;
         private readonly MeterMetric returnedDocsMeter;
         private int numberOfTimesIngestRateWasTooHigh;
+        private readonly string userDescription;
+        private readonly bool isDefault;
 
-        public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
+        public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription, bool isDefault)
         {
             this.context = context;
             this.autoTuner = autoTuner;
             PrefetchingUser = prefetchingUser;
             this.userDescription = prefetchingUserDescription;
+            this.isDefault = isDefault;
             MemoryStatistics.RegisterLowMemoryHandler(this);
 
             ingestMeter = context.MetricsCounters.DbMetrics.Meter("metrics",
@@ -197,25 +198,28 @@ namespace Raven.Database.Prefetching
             return true;
         }
 
-        public bool CanUsePrefetcherToLoadFrom(Etag fromEtag, bool isDefaultPrefetcher = false)
+        public bool CanUsePrefetcherToLoadFrom(Etag fromEtag)
         {
             var nextEtagToIndex = GetNextDocEtag(fromEtag);
 
             var firstEtagInQueue = prefetchingQueue.NextDocumentETag();
-            if (firstEtagInQueue == null) // queue is empty, let it use this prefetcher
+            // queue isn't empty and docs for requested etag are already in queue
+            if (firstEtagInQueue != null && nextEtagToIndex == firstEtagInQueue)
                 return true;
 
-            if (nextEtagToIndex == firstEtagInQueue) // docs for requested etag are already in queue
-                return true;
-
+            // found a future batch that includes the requested etag in it
             if (CanLoadDocumentsFromFutureBatches(nextEtagToIndex) != null)
+                return true;
+
+            // queue is empty, let it use this prefetcher
+            if (firstEtagInQueue == null) 
                 return true;
 
             // we assume that the default prefetcher should be ahead of all other prefetchers.
             // if we find the next etag bigger than the first one in the queue - 
             // than we use the default prefetcher. the documents with the smaller etags will be removed
             // when trying to remove the documents from the queue.
-            if (isDefaultPrefetcher && nextEtagToIndex.CompareTo(firstEtagInQueue) >= 0)
+            if (isDefault && nextEtagToIndex.CompareTo(firstEtagInQueue) >= 0)
                 return true;
 
             return false;

@@ -77,7 +77,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         public void Execute(DocumentDatabase database)
         {
-            defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication");
+            defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication", true);
             prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 
             Database = database;
@@ -440,8 +440,7 @@ namespace Raven.Database.Bundles.SqlReplication
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag, prefetchingBehavior == defaultPrefetchingBehavior) 
-                        && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
