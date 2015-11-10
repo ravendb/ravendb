@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+#if !DNXCORE50
 using Raven.Database.Extensions;
+#endif
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
-using System;
 using System.IO;
 using System.Linq;
 using Raven.Database.Config;
@@ -16,9 +16,12 @@ namespace Raven.Tests.Core.Commands
 {
     public class Admin : RavenCoreTestBase
     {
+#if !DNXCORE50
         private string RestoreDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Restore.Data");
         private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
+#endif
 
+#if !DNXCORE50
         public Admin()
         {
             IOExtensions.DeleteFile(BackupDir);
@@ -27,12 +30,20 @@ namespace Raven.Tests.Core.Commands
             IOExtensions.DeleteDirectory(BackupDir);
             IOExtensions.DeleteDirectory(RestoreDir);
         }
+#else
+        public Admin(TestServerFixture fixture)
+            : base(fixture)
+        {
+        }
+#endif
 
         public override void Dispose()
         {
             base.Dispose();
+#if !DNXCORE50
             IOExtensions.DeleteDirectory(BackupDir);
             IOExtensions.DeleteDirectory(RestoreDir);
+#endif
         }
 
         [Fact]
@@ -108,6 +119,7 @@ namespace Raven.Tests.Core.Commands
             }
         }
 
+#if !DNXCORE50
         [Fact]
         public void CanDoBackupAndRestore()
         {
@@ -145,5 +157,6 @@ namespace Raven.Tests.Core.Commands
 
             Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase("CanDoBackupAndRestore_Database", hardDelete: true);
         }
+#endif
     }
 }

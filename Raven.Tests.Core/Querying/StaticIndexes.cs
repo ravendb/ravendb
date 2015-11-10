@@ -15,6 +15,14 @@ namespace Raven.Tests.Core.Querying
 {
     public class StaticIndexes : RavenCoreTestBase
     {
+#if DNXCORE50
+        public StaticIndexes(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CreateAndQuerySimpleMapReduceIndexWithMetadataForCall()
         {
@@ -30,31 +38,31 @@ namespace Raven.Tests.Core.Querying
                     var contact3 = new Contact { FirstName = "FirstName3" };
                     session.SaveChanges();
 
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Public, 
-                            Contacts = new List<Contact> {contact1, contact2, contact3}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Public, 
-                            Contacts = new List<Contact> {contact3}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Public, 
-                            Contacts = new List<Contact> {contact1, contact2}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Private, 
-                            Contacts = new List<Contact> {contact1, contact2}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Private, 
-                            Contacts = new List<Contact> {contact1, contact2, contact3}
-                        });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Public,
+                        Contacts = new List<Contact> { contact1, contact2, contact3 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Public,
+                        Contacts = new List<Contact> { contact3 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Public,
+                        Contacts = new List<Contact> { contact1, contact2 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Private,
+                        Contacts = new List<Contact> { contact1, contact2 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Private,
+                        Contacts = new List<Contact> { contact1, contact2, contact3 }
+                    });
                     session.SaveChanges();
                     WaitForIndexing(store);
 
@@ -147,7 +155,7 @@ namespace Raven.Tests.Core.Querying
                 {
                     session.Advanced.MaxNumberOfRequestsPerSession = 100;
 
-                    session.Store(new Company 
+                    session.Store(new Company
                     {
                         Name = "The lazy dogs, Bob@hotmail.com 123432.",
                         Desc = "The lazy dogs, Bob@hotmail.com 123432.",
@@ -344,10 +352,10 @@ namespace Raven.Tests.Core.Querying
                         .Search("Name", "lazy")
                         .ToArray();
                     Assert.Equal(2, companies.Length);
-                    
+
                     var fragments = highlightings.GetFragments(companies[0].Id);
                     Assert.Equal(
-                        "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com <b style=\"background:yellow\">lazy</b> 123432 <b style=\"background:yellow\">lazy</b> dogs.", 
+                        "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com <b style=\"background:yellow\">lazy</b> 123432 <b style=\"background:yellow\">lazy</b> dogs.",
                         fragments.First()
                         ); fragments = highlightings.GetFragments(companies[1].Id);
                     Assert.Equal(
@@ -368,9 +376,9 @@ namespace Raven.Tests.Core.Querying
                 using (var session = store.OpenSession())
                 {
                     var post1 = new Post { Title = "Post1", Desc = "Post1 desc" };
-                    var post2 = new Post { Title = "Post2", Desc = "Post2 desc", Comments = new Post[] {post1} };
-                    var post3 = new Post { Title = "Post3", Desc = "Post3 desc", Comments = new Post[] {post2} };
-                    var post4 = new Post { Title = "Post4", Desc = "Post4 desc", Comments = new Post[] {post3} };
+                    var post2 = new Post { Title = "Post2", Desc = "Post2 desc", Comments = new Post[] { post1 } };
+                    var post3 = new Post { Title = "Post3", Desc = "Post3 desc", Comments = new Post[] { post2 } };
+                    var post4 = new Post { Title = "Post4", Desc = "Post4 desc", Comments = new Post[] { post3 } };
                     session.Store(post4);
                     session.SaveChanges();
                     WaitForIndexing(store);

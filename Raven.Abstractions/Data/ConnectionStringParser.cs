@@ -48,7 +48,7 @@ namespace Raven.Abstractions.Data
     {
         public RavenConnectionStringOptions()
         {
-#if MONO
+#if (MONO || DNXCORE50)
             EnlistInDistributedTransactions = false;
 #else
             EnlistInDistributedTransactions = true;
