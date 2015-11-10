@@ -7,25 +7,27 @@ using Raven.Abstractions.Replication;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
 using Raven.Tests.Common.Dto;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Database.Server;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Security.Windows;
+using Raven.Json.Linq;
+using Xunit;
 
 namespace Raven.Tests.Security
 {
-    using System.Collections.Generic;
-    using System.Net;
-    using System.Threading.Tasks;
-
-    using Raven.Abstractions.Data;
-    using Raven.Client.Connection;
-    using Raven.Client.Document;
-    using Raven.Database.Server;
-    using Raven.Database.Server.Security;
-    using Raven.Database.Server.Security.Windows;
-    using Raven.Json.Linq;
-
-    using Xunit;
-
     public class ReplicationWithMixedSecurity : ReplicationBase
     {
+        public ReplicationWithMixedSecurity()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
+
         private string apiKey = "test1/ThisIsMySecret";
 
         private int _storeCounter, _databaseCounter;
