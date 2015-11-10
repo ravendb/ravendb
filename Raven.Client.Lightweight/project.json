@@ -1,0 +1,18 @@
+{
+  "version": "3.0.0",
+
+  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+
+  "frameworks": {
+    "dnxcore50": {
+      "dependencies": {
+        "Microsoft.CSharp": "4.0.1-beta-23509",
+        "System.Net.Http": "4.0.1-beta-23509"
+      }
+    }
+  },
+  "dependencies": {
+    "Raven.Abstractions": "3.0.0",
+    "Sparrow": "3.0.0"
+  }
+}

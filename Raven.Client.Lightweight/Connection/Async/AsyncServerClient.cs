@@ -1257,7 +1257,7 @@ namespace Raven.Client.Connection.Async
                     var startsWithResults = SerializationHelper.RavenJObjectsToJsonDocuments(docResults.Select(x => (RavenJObject)x.CloneToken())).ToArray();
                     return await RetryOperationBecauseOfConflict(operationMetadata, docResults, startsWithResults, () =>
                         StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude, transformer, transformerParameters, skipAfter, token), conflictedResultId =>
-                            new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+                            new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase)) +
                                 ", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }, token).ConfigureAwait(false);
                 }
             }, token);
@@ -1348,7 +1348,7 @@ namespace Raven.Client.Connection.Async
                         var docResults = queryResult.Results.Concat(queryResult.Includes);
                         return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, 
                             () => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), 
-                            conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+                            conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase)) +
                                     ", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } }, 
                             token).ConfigureAwait(false);
                     }
@@ -1400,7 +1400,7 @@ namespace Raven.Client.Connection.Async
                 var docResults = queryResult.Results.Concat(queryResult.Includes);
                 return await RetryOperationBecauseOfConflict(operationMetadataRef.Value, docResults, queryResult,
                     () => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token),
-                    conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+                    conflictedResultId => new ConflictException("Conflict detected on " + conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.OrdinalIgnoreCase)) +
                             ", conflict must be resolved before the document will be accessible", true) { ConflictedVersionIds = new[] { conflictedResultId } },
                     token).ConfigureAwait(false);
             }
@@ -1533,12 +1533,14 @@ namespace Raven.Client.Connection.Async
             if (convention.EnlistInDistributedTransactions == false)
                 return;
 
+#if !DNXCORE50
             var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
             if (transactionInformation == null)
                 return;
 
             string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
             metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
+#endif
         }
 
         private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -1809,7 +1811,7 @@ namespace Raven.Client.Connection.Async
             {
                 request.Dispose();
 
-                if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
+                if (index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) && request.ResponseStatusCode == HttpStatusCode.NotFound)
                 {
                     throw new InvalidOperationException(
                         @"StreamQuery does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",
@@ -1884,29 +1886,37 @@ namespace Raven.Client.Connection.Async
                 catch (Exception)
                 {
                 }
+
                 try
                 {
+#if !DNXCORE50
                     streamReader.Close();
+#else
+                    streamReader.Dispose();
+#endif
                 }
-                catch (Exception )
+                catch (Exception)
                 {
-                    
                 }
+
                 try
                 {
+#if !DNXCORE50
                     stream.Close();
+#else
+                    stream.Dispose();
+#endif
                 }
-                catch (Exception )
+                catch (Exception)
                 {
-                    
                 }
+
                 try
                 {
                     request.Dispose();
                 }
-                catch (Exception )
+                catch (Exception)
                 {
-                    
                 }
             }
 
