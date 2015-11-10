@@ -81,6 +81,7 @@
     <Compile Include="Platform\Win32\Win32UnmanagedMemory.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Sparrow.project.json" />
     <None Include="RavenDB.snk" />
     <None Include="readme.md" />
   </ItemGroup>

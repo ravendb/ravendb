@@ -12,4 +12,4 @@ $dnx = "$runtimeDir\dnx.exe"
 
 &"$dnu" restore
 
-&"$dnx" Raven.Tests.Core Raven.Tests.Core
+&"$dnx" Raven.Tests.Core test

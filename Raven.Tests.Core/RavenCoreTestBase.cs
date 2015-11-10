@@ -237,11 +237,11 @@ namespace Raven.Tests.Core
         {
 #if !DNXCORE50
             var documentStore = new DocumentStore
-                                    {
-                                        HttpMessageHandler = Server.DocumentStore.HttpMessageHandler,
-                                        Url = Server.SystemDatabase.ServerUrl,
-                                        DefaultDatabase = databaseName
-                                    };
+            {
+                HttpMessageHandlerFactory = Server.DocumentStore.HttpMessageHandlerFactory,
+                Url = Server.SystemDatabase.ServerUrl,
+                DefaultDatabase = databaseName
+            };
 #else
             var documentStore = new DocumentStore
             {

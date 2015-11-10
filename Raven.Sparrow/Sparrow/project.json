@@ -5,10 +5,6 @@
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
 
   "frameworks": {
-    "net45": {
-      "dependencies": {
-      }
-    },
     "dnxcore50": {
       "dependencies": {
         "Microsoft.CSharp": "4.0.1-beta-23509",

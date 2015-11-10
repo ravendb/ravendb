@@ -217,5 +217,5 @@ _NCrunch_RavenDB/
 /Raven.Database/LuceneQueryParser.Language.grammar.lst
 
 # DNX
-project.lock.json
+*project.lock.json
 artifacts/
