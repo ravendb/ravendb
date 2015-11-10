@@ -13,11 +13,6 @@ namespace Raven.Tests.Core.Auth
 {
     public class Authentication : RavenCoreTestBase
     {
-        public Authentication()
-        {
-            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
-        }
-
         [Fact]
         public void CanUseApiKeyAuthentication()
         {
@@ -64,6 +59,7 @@ namespace Raven.Tests.Core.Auth
         [Fact]
         public void CanUseWindowsAuthentication()
         {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
             Raven.Database.Server.Security.Authentication.EnableOnce();
             this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
