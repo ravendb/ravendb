@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB2854.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -21,23 +21,23 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2877 : RavenTest
-	{
+    public class RavenDB_2877 : RavenTest
+    {
         
-		public class Person
-		{
-			public string Name { get; set; }
+        public class Person
+        {
+            public string Name { get; set; }
             public List<string> Offices {get;set;}
-		}
+        }
 
-	    public class Office
-	    {
+        public class Office
+        {
             public string FacilityName { get; set; }
             public int OfficeNumber { get; set; }
-	    }
+        }
 
         public class PersonsIndex:AbstractIndexCreationTask<Person> 
-	    {
+        {
             public class Result
             {
                 public string Name { get; set; }
@@ -50,36 +50,36 @@ namespace Raven.Tests.Issues
                         Name = result.Name
                     };
             }
-	    }
+        }
             
             
         [Fact]
-		public async Task CanHandleHandleLongUrl()
-		{
-			using (var store = NewDocumentStore())
-			{
+        public async Task CanHandleHandleLongUrl()
+        {
+            using (var store = NewDocumentStore())
+            {
                 new PersonsIndex().Execute(store);
-				store.InitializeProfiling();
-			    store.Conventions.MaxLengthOfQueryUsingGetUrl = 32;
+                store.InitializeProfiling();
+                store.Conventions.MaxLengthOfQueryUsingGetUrl = 32;
                 var offices = Enumerable.Range(1, 20).Select(x => new Office() { FacilityName = "Main Offices", OfficeNumber = x });
 
-				using (var s = store.OpenSession())
-				{
-				    foreach (var office in offices)
-				    {
+                using (var s = store.OpenSession())
+                {
+                    foreach (var office in offices)
+                    {
                         s.Store(office, "office/" + office.OfficeNumber);
-				    }
+                    }
 
-				    var person = new Person()
-				    {
-				        Name = "John",
+                    var person = new Person()
+                    {
+                        Name = "John",
                         Offices = offices.Select(x => "office/" + x.OfficeNumber).ToList()
-				    };
+                    };
 
                     s.Store(person, "person/1");
 
                     s.SaveChanges();
-				}
+                }
 
                 using (var s = store.OpenSession())
                 {
@@ -106,10 +106,10 @@ namespace Raven.Tests.Issues
                     
                 }
 
-			    
-			}
-		}
-		
-		
-	}
+                
+            }
+        }
+        
+        
+    }
 }

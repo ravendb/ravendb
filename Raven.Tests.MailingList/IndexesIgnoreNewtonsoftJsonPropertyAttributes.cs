@@ -25,35 +25,35 @@ namespace Raven.Imports.Newtonsoft.Json.Sample
 
 namespace RavenTestConsole.RavenTests
 {
-	public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenTest
-	{
-		private class StudentDto
-		{
-			[Raven.Imports.Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]
-			public string Email { get; set; }
+    public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenTest
+    {
+        private class StudentDto
+        {
+            [Raven.Imports.Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]
+            public string Email { get; set; }
         
             [Raven.Imports.Newtonsoft.Json.JsonProperty("ZipCode")]
             public string Postcode { get; set; }
         }
 
-		private class StudentDtos_ByEmailDomain : AbstractIndexCreationTask<StudentDto, StudentDtos_ByEmailDomain.Result>
-		{
-			public class Result
-			{
+        private class StudentDtos_ByEmailDomain : AbstractIndexCreationTask<StudentDto, StudentDtos_ByEmailDomain.Result>
+        {
+            public class Result
+            {
                 public string Email { get; set; }
                 public string Postcode { get; set; }
             }
 
             public StudentDtos_ByEmailDomain()
-			{
-				Map = studentDtos => from studentDto in studentDtos
-				                  select new Result
-				                  {
+            {
+                Map = studentDtos => from studentDto in studentDtos
+                                  select new Result
+                                  {
                                       Email = studentDto.Email,
                                       Postcode = studentDto.Postcode
-				                  };
-			}
-		}
+                                  };
+            }
+        }
 
         /// <summary>
         /// JsonProperty on Email is not Raven's version of the attribute, which means when objects
@@ -62,12 +62,12 @@ namespace RavenTestConsole.RavenTests
         /// of the attribute. This test ensures that the creation of Maps in Indexes obey the same rule (i.e.
         /// they ignore the attribute on Email but obey the attribute on Postcode.
         /// </summary>
-		[Fact]
-		public void WillIgnoreAttribute()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.Conventions.PrettifyGeneratedLinqExpressions = false;
+        [Fact]
+        public void WillIgnoreAttribute()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new StudentDtos_ByEmailDomain().Execute(store);
 
                 var definition = store.DatabaseCommands.GetIndex(new StudentDtos_ByEmailDomain().IndexName);
@@ -82,6 +82,6 @@ namespace RavenTestConsole.RavenTests
     Postcode = studentDto.ZipCode
 })", definition.Map);
             }
-		}
-	}
+        }
+    }
 }

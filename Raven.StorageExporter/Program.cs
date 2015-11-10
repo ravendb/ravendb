@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -37,7 +37,7 @@ namespace Raven.StorageExporter
                 ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Directory {0} does not exists.\n",args[0]);                
                 return false; 
             }
-            if (!StorageExporter.ValidateStorageExsist(args[0]))
+            if (!StorageExporter.ValidateStorageExist(args[0]))
             {
                 ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Directory {0} is not a valid RavenDB storage directory.\n", args[0]);
                 return false; 
@@ -54,7 +54,7 @@ namespace Raven.StorageExporter
 
             if (!permissionSet.IsSubsetOf(AppDomain.CurrentDomain.PermissionSet))
             {
-                ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "You don't have premissions to write to {0}.\n", args[1]);
+                ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "You don't have permissions to write to {0}.\n", args[1]);
             }
             if (args.Length % 2 != 0)
             {
@@ -67,10 +67,6 @@ namespace Raven.StorageExporter
             {
                 switch (args[currArgPos])
                 {
-                    case "-T":
-                        configuration.TableName = args[currArgPos + 1];
-                        currArgPos += 2;
-                        break;
                     case "-BatchSize":
                         int batchSize;
                         if (int.TryParse(args[currArgPos + 1], out batchSize) && batchSize > 0)
@@ -103,13 +99,10 @@ Copyright (C) 2008 - {0} - Hibernating Rhinos
             Console.WriteLine(@"
 Usage:
   - Export a RavenDB database to a file in raven.dump format.
-	Raven.StorgaeExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\northwind.raven [-BatchSize]
-  - Export an ESENT table from given RavenDB database into a CSV formated file.
-	Raven.StorgaeExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\ref.csv -T ref 
+    Raven.StorageExporter.exe c:\RavenDB\Databases\Northwind\ c:\RavenDB\Dumps\Northwind\northwind.raven [-BatchSize]
 
 Parameters:
- -T <TableName> : The name of the table to be exported.
- -BatchSize <integer number> : The size of the export batch (defualt size is 1024). 
+ -BatchSize <integer number> : The size of the export batch (default size is 1024). 
  ");
             Console.WriteLine();
         }

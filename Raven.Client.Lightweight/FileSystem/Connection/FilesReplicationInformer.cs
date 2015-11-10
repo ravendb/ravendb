@@ -1,17 +1,20 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Request;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+
+using System;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+
+using Raven.Abstractions;
+using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 
 namespace Raven.Client.FileSystem.Connection
 {
@@ -20,57 +23,65 @@ namespace Raven.Client.FileSystem.Connection
     /// </summary>
     public class FilesReplicationInformer : ReplicationInformerBase<IAsyncFilesCommands>, IFilesReplicationInformer
     {
-        public FilesReplicationInformer(Convention conventions, HttpJsonRequestFactory requestFactory)
+        private readonly object replicationLock = new object();
+
+        private bool firstTime = true;
+
+        private DateTime lastReplicationUpdate = DateTime.MinValue;
+
+        private Task refreshReplicationInformationTask;
+
+        public FilesReplicationInformer(FilesConvention conventions, HttpJsonRequestFactory requestFactory)
             : base(conventions, requestFactory)
         {
         }
 
-		public Task UpdateReplicationInformationIfNeeded(IAsyncFilesCommands commands)
-		{
-			return UpdateReplicationInformationIfNeededInternal(commands);
-		}
+        public Task UpdateReplicationInformationIfNeeded(IAsyncFilesCommands commands)
+        {
+            return UpdateReplicationInformationIfNeededInternal(commands);
+        }
 
-		private Task UpdateReplicationInformationIfNeededInternal(IAsyncFilesCommands commands)
-		{
-			if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-				return new CompletedTask();
+        private Task UpdateReplicationInformationIfNeededInternal(IAsyncFilesCommands commands)
+        {
+            if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+                return new CompletedTask();
 
-			if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-				return new CompletedTask();
+            if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+                return new CompletedTask();
 
-			var serverClient = (IAsyncFilesCommandsImpl)commands;
-			lock (ReplicationLock)
-			{
-				if (FirstTime)
-				{
-					var serverHash = ServerHash.GetServerHash(serverClient.ServerUrl);
-					var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
-					if (IsInvalidDestinationsDocument(document) == false)
-					{
-						UpdateReplicationInformationFromDocument(document);
-					}
-				}
+            var serverClient = (IAsyncFilesCommandsImpl)commands;
+            lock (replicationLock)
+            {
+                if (firstTime)
+                {
+                    var serverHash = ServerHash.GetServerHash(serverClient.UrlFor());
+                    var document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+                    if (IsInvalidDestinationsDocument(document) == false)
+                    {
+                        UpdateReplicationInformationFromDocument(document);
+                    }
+                }
 
-				FirstTime = false;
+                firstTime = false;
 
-				if (LastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-					return new CompletedTask();
+                if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+                    return new CompletedTask();
 
-				var taskCopy = RefreshReplicationInformationTask;
-				if (taskCopy != null)
-					return taskCopy;
+                var taskCopy = refreshReplicationInformationTask;
+                if (taskCopy != null)
+                    return taskCopy;
 
-				return RefreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(commands))
-					.ContinueWith(task =>
-					{
-						if (task.Exception != null)
-						{
-							log.ErrorException("Failed to refresh replication information", task.Exception);
-						}
-						RefreshReplicationInformationTask = null;
-					});
-			}
-		}
+                return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(commands))
+                    .ContinueWith(task =>
+                    {
+                        if (task.Exception != null)
+                        {
+                            Log.ErrorException("Failed to refresh replication information", task.Exception);
+                        }
+                        refreshReplicationInformationTask = null;
+                    });
+            }
+        }
 
         /// <summary>
         /// Refreshes the replication information.
@@ -81,55 +92,67 @@ namespace Raven.Client.FileSystem.Connection
             lock (this)
             {
                 var serverClient = (IAsyncFilesCommandsImpl)commands;
-				var urlForFilename = serverClient.UrlFor();
+                var urlForFilename = serverClient.UrlFor();
                 var serverHash = ServerHash.GetServerHash(urlForFilename);
                 JsonDocument document = null;
 
                 try
                 {
                     var config = serverClient.Configuration.GetKeyAsync<RavenJObject>(SynchronizationConstants.RavenSynchronizationDestinations).Result;
-                    failureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
+
+                    FailureCounters.FailureCounts[urlForFilename] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 
                     if (config != null)
                     {
-
                         var destinationsArray = config.Value<RavenJArray>("Destinations");
                         if (destinationsArray != null)
-                        {
-	                        document = new JsonDocument {DataAsJson = new RavenJObject() {{"Destinations", destinationsArray}}};
-                        }
+                            document = new JsonDocument { DataAsJson = new RavenJObject() { { "Destinations", destinationsArray } } };
                     }
                 }
                 catch (Exception e)
                 {
-                    log.ErrorException("Could not contact master for new replication information", e);
+                    Log.ErrorException("Could not contact master for new replication information", e);
                     document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
                 }
 
-
                 if (document == null)
                 {
-                    LastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+                    lastReplicationUpdate = SystemTime.UtcNow;
                     return;
                 }
 
-                ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
+                if (IsInvalidDestinationsDocument(document) == false)
+                {
+                    ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
+                    UpdateReplicationInformationFromDocument(document);
+                }
+                lastReplicationUpdate = SystemTime.UtcNow;
 
-                UpdateReplicationInformationFromDocument(document);
 
-                LastReplicationUpdate = SystemTime.UtcNow;
+
+
             }
         }
 
-	    public override void ClearReplicationInformationLocalCache(IAsyncFilesCommands client)
-	    {
-			var serverClient = (IAsyncFilesCommandsImpl)client;
-			var urlForFilename = serverClient.UrlFor();
-			var serverHash = ServerHash.GetServerHash(urlForFilename);
-			ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
-	    }
+        public override void ClearReplicationInformationLocalCache(IAsyncFilesCommands client)
+        {
+            var serverClient = (IAsyncFilesCommandsImpl)client;
+            var urlForFilename = serverClient.UrlFor();
+            var serverHash = ServerHash.GetServerHash(urlForFilename);
+            ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
+        }
 
-	    protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            var replicationInformationTaskCopy = refreshReplicationInformationTask;
+            if (replicationInformationTaskCopy != null)
+                replicationInformationTaskCopy.Wait();
+        }
+
+        protected override void UpdateReplicationInformationFromDocument(JsonDocument document)
         {
             var destinations = document.DataAsJson.Value<RavenJArray>("Destinations").Select(x => JsonConvert.DeserializeObject<SynchronizationDestination>(x.ToString()));
             ReplicationDestinations = destinations.Select(x =>
@@ -142,7 +165,7 @@ namespace Raven.Client.FileSystem.Connection
                                       : new NetworkCredential(x.Username, x.Password, x.Domain);
                 }
 
-                return new OperationMetadata(x.Url, new OperationCredentials(x.ApiKey, credentials));
+                return new OperationMetadata(x.Url, new OperationCredentials(x.ApiKey, credentials), null);
             })
                 // filter out replication destination that don't have the url setup, we don't know how to reach them
                 // so we might as well ignore them. Probably private replication destination (using connection string names only)
@@ -151,16 +174,16 @@ namespace Raven.Client.FileSystem.Connection
             foreach (var replicationDestination in ReplicationDestinations)
             {
                 FailureCounter value;
-                if (failureCounts.TryGetValue(replicationDestination.Url, out value))
+                if (FailureCounters.FailureCounts.TryGetValue(replicationDestination.Url, out value))
                     continue;
-                failureCounts[replicationDestination.Url] = new FailureCounter();
+                FailureCounters.FailureCounts[replicationDestination.Url] = new FailureCounter();
             }
 
         }
 
         protected override string GetServerCheckUrl(string baseUrl)
         {
-            return baseUrl + "/config?name=" + Uri.EscapeDataString(SynchronizationConstants.RavenSynchronizationDestinations) + "&check-server-reachable";
+            return baseUrl + "/stats?check-server-reachable";
         }
     }
 }

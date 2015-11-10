@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -56,9 +56,9 @@ namespace Newtonsoft.Json.Tests.Serialization
         public void Demo()
         {
             string json = @"{
-	            'Name': 'James',
-	            'Password': 'Password1',
-	            '$type': 'Newtonsoft.Json.Tests.Serialization.MetadataPropertyHandlingTests+User, Newtonsoft.Json.Tests'
+                'Name': 'James',
+                'Password': 'Password1',
+                '$type': 'Newtonsoft.Json.Tests.Serialization.MetadataPropertyHandlingTests+User, Newtonsoft.Json.Tests'
             }";
 
             object o = JsonConvert.DeserializeObject(json, new JsonSerializerSettings

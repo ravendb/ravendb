@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using Voron.Trees;
 
@@ -6,46 +6,46 @@ namespace Voron.Impl.Paging
 {
     public unsafe class TemporaryPage : IDisposable
     {
-        private readonly byte[] _tempPageBuffer = new byte[AbstractPager.PageSize];
+        private readonly StorageEnvironmentOptions _options;
+        private readonly byte[] _tempPageBuffer;
         private GCHandle _tempPageHandle;
         private IntPtr _tempPage;
 
-		public TemporaryPage()
-		{
-			_tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
-			_tempPage = _tempPageHandle.AddrOfPinnedObject();
-		}
+        public TemporaryPage(StorageEnvironmentOptions options)
+        {
+            _options = options;
+            _tempPageBuffer = new byte[options.PageSize];
+            _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
+            _tempPage = _tempPageHandle.AddrOfPinnedObject();
+        }
 
-		public void Dispose()
-		{
-			if (_tempPageHandle.IsAllocated)
-			{
-				_tempPageHandle.Free();
-			}
-		}
+        public void Dispose()
+        {
+            if (_tempPageHandle.IsAllocated)
+            {
+                _tempPageHandle.Free();
+            }
+        }
 
         public byte[] TempPageBuffer
         {
             get { return _tempPageBuffer; }
         }
 
-		public byte* TempPagePointer
-		{
-			get { return (byte*)_tempPage.ToPointer(); }
-		}
-
-        public Page GetTempPage(bool keysPrefixing)
+        public byte* TempPagePointer
         {
-	        return new Page((byte*) _tempPage.ToPointer(), "temp", AbstractPager.PageSize)
-	        {
-		        Upper = (ushort)
-				        (keysPrefixing == false
-					        ? AbstractPager.PageSize
-					        : AbstractPager.PageSize - Constants.PrefixInfoSectionSize),
-		        Lower = (ushort) Constants.PageHeaderSize,
-		        Flags = PageFlags.None,
-	        };
+            get { return (byte*)_tempPage.ToPointer(); }
         }
-	    public IDisposable ReturnTemporaryPageToPool { get; set; }
+
+        public TreePage GetTempPage()
+        {
+            return new TreePage((byte*)_tempPage.ToPointer(), "temp", _options.PageSize)
+            {
+                Upper = (ushort)_options.PageSize,
+                Lower = (ushort) Constants.PageHeaderSize,
+                Flags = TreePageFlags.None,
+            };
+        }
+        public IDisposable ReturnTemporaryPageToPool { get; set; }
     }
 }

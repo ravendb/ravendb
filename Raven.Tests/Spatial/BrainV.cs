@@ -7,74 +7,74 @@ using System.Linq;
 
 namespace Raven.Tests.Spatial
 {
-	public class BrainV : RavenTest
-	{
-		[Fact]
-		public void CanPerformSpatialSearchWithNulls()
-		{
-			using(var store = NewDocumentStore())
-			{
-				var indexDefinition = new IndexDefinition
-				{
-					Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude, e.Longitude) }",
-					Indexes = {
-					{ "Tag", FieldIndexing.NotAnalyzed }
-				}
-				};
+    public class BrainV : RavenTest
+    {
+        [Fact]
+        public void CanPerformSpatialSearchWithNulls()
+        {
+            using(var store = NewDocumentStore())
+            {
+                var indexDefinition = new IndexDefinition
+                {
+                    Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude, e.Longitude) }",
+                    Indexes = {
+                    { "Tag", FieldIndexing.NotAnalyzed }
+                }
+                };
 
-				store.SystemDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
+                store.SystemDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
 
-				store.SystemDatabase.Documents.Put("Events/1", null,
-					RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
-					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+                store.SystemDatabase.Documents.Put("Events/1", null,
+                    RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
+                    RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 
-				using(var session = store.OpenSession())
-				{
-					var objects = session.Query<object>("eventsByLatLng")
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToArray();
+                using(var session = store.OpenSession())
+                {
+                    var objects = session.Query<object>("eventsByLatLng")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToArray();
 
-					Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
-					Assert.Equal(1, objects.Length);
-				}
-			}
+                    Assert.Equal(1, objects.Length);
+                }
+            }
 
-		}
+        }
 
 
-		[Fact]
-		public void CanUseNullCoalescingOperator()
-		{
-			using (var store = NewDocumentStore())
-			{
-				var indexDefinition = new IndexDefinition
-				{
-					Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude ?? 38.9103000, e.Longitude ?? -77.3942) }",
-					Indexes = {
-					{ "Tag", FieldIndexing.NotAnalyzed }
-				}
-				};
+        [Fact]
+        public void CanUseNullCoalescingOperator()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var indexDefinition = new IndexDefinition
+                {
+                    Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialGenerate(e.Latitude ?? 38.9103000, e.Longitude ?? -77.3942) }",
+                    Indexes = {
+                    { "Tag", FieldIndexing.NotAnalyzed }
+                }
+                };
 
-				store.SystemDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
+                store.SystemDatabase.Indexes.PutIndex("eventsByLatLng", indexDefinition);
 
-				store.SystemDatabase.Documents.Put("Events/1", null,
-					RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
-					RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
+                store.SystemDatabase.Documents.Put("Events/1", null,
+                    RavenJObject.Parse(@"{""Venue"": ""Jimmy's Old Town Tavern"", ""Latitude"": null, ""Longitude"": null }"),
+                    RavenJObject.Parse("{'Raven-Entity-Name': 'Events'}"), null);
 
-				using (var session = store.OpenSession())
-				{
-					var objects = session.Query<object>("eventsByLatLng")
-						.Customize(x => x.WithinRadiusOf(6, 38.9103000, -77.3942))
-						.Customize(x => x.WaitForNonStaleResults())
-						.ToArray();
+                using (var session = store.OpenSession())
+                {
+                    var objects = session.Query<object>("eventsByLatLng")
+                        .Customize(x => x.WithinRadiusOf(6, 38.9103000, -77.3942))
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToArray();
 
-					Assert.Empty(store.SystemDatabase.Statistics.Errors);
+                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
 
-					Assert.Equal(1, objects.Length);
-				}
-			}
+                    Assert.Equal(1, objects.Length);
+                }
+            }
 
-		}
-	}
+        }
+    }
 }

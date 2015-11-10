@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -9,62 +9,62 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class SuggestionController : RavenDbApiController
-	{
-		[HttpGet]
-		[RavenRoute("suggest/{*id}")]
-		[RavenRoute("databases/{databaseName}/suggest/{*id}")]
-		public HttpResponseMessage SuggestGet(string id)
-		{
-			var index = id;
+    public class SuggestionController : ClusterAwareRavenDbApiController
+    {
+        [HttpGet]
+        [RavenRoute("suggest/{*id}")]
+        [RavenRoute("databases/{databaseName}/suggest/{*id}")]
+        public HttpResponseMessage SuggestGet(string id)
+        {
+            var index = id;
 
-			var indexEtag = Database.Indexes.GetIndexEtag(index, null);
-			if (MatchEtag(indexEtag))
-				return GetEmptyMessage(HttpStatusCode.NotModified);
+            var indexEtag = Database.Indexes.GetIndexEtag(index, null);
+            if (MatchEtag(indexEtag))
+                return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var term = GetQueryStringValue("term");
-			var field = GetQueryStringValue("field");
+            var term = GetQueryStringValue("term");
+            var field = GetQueryStringValue("field");
 
-			StringDistanceTypes distanceTypes;
-			int numOfSuggestions;
-			float accuracy;
+            StringDistanceTypes distanceTypes;
+            int numOfSuggestions;
+            float accuracy;
 
-			if (Enum.TryParse(GetQueryStringValue("distance"), true, out distanceTypes) == false)
-				distanceTypes = StringDistanceTypes.Default;
+            if (Enum.TryParse(GetQueryStringValue("distance"), true, out distanceTypes) == false)
+                distanceTypes = StringDistanceTypes.Default;
 
-			if (distanceTypes == StringDistanceTypes.None)
-			{
-				return GetMessageWithObject(new
-				{
-					Error = "Suggestion is disabled since you specified the Distance value as 'StringDistanceTypes.None'."
-				}, HttpStatusCode.BadRequest);
-			}
+            if (distanceTypes == StringDistanceTypes.None)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "Suggestion is disabled since you specified the Distance value as 'StringDistanceTypes.None'."
+                }, HttpStatusCode.BadRequest);
+            }
 
-			if (int.TryParse(GetQueryStringValue("max"), out numOfSuggestions) == false)
-				numOfSuggestions = SuggestionQuery.DefaultMaxSuggestions;
+            if (int.TryParse(GetQueryStringValue("max"), out numOfSuggestions) == false)
+                numOfSuggestions = SuggestionQuery.DefaultMaxSuggestions;
 
-			if (float.TryParse(GetQueryStringValue("accuracy"),NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture, out accuracy) == false)
-				accuracy = SuggestionQuery.DefaultAccuracy;
+            if (float.TryParse(GetQueryStringValue("accuracy"),NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture, out accuracy) == false)
+                accuracy = SuggestionQuery.DefaultAccuracy;
 
-			bool popularity;
-			if (bool.TryParse(GetQueryStringValue("popularity"), out popularity) == false)
-				popularity = false;
+            bool popularity;
+            if (bool.TryParse(GetQueryStringValue("popularity"), out popularity) == false)
+                popularity = false;
 
-			var query = new SuggestionQuery
-			{
-				Distance = distanceTypes,
-				Field = field,
-				MaxSuggestions = numOfSuggestions,
-				Term = term,
-				Accuracy = accuracy,
-				Popularity = popularity
-			};
+            var query = new SuggestionQuery
+            {
+                Distance = distanceTypes,
+                Field = field,
+                MaxSuggestions = numOfSuggestions,
+                Term = term,
+                Accuracy = accuracy,
+                Popularity = popularity
+            };
 
-			var suggestionQueryResult = Database.ExecuteSuggestionQuery(index, query);
+            var suggestionQueryResult = Database.ExecuteSuggestionQuery(index, query);
 
-			var msg = GetMessageWithObject(suggestionQueryResult);
-			WriteETag(Database.Indexes.GetIndexEtag(index, null), msg);
-			return msg;
-		}
-	}
+            var msg = GetMessageWithObject(suggestionQueryResult);
+            WriteETag(Database.Indexes.GetIndexEtag(index, null), msg);
+            return msg;
+        }
+    }
 }

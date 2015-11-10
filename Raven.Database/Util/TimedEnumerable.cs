@@ -6,78 +6,78 @@ using System.Diagnostics;
 
 namespace Raven.Database.Util
 {
-	public enum QueryTimings
-	{
+    public enum QueryTimings
+    {
         [Description("Query parsing")]
         Parse,
 
-		
-		[Description("Lucene search")]
-		Lucene,
+        
+        [Description("Lucene search")]
+        Lucene,
 
-		[Description("Loading documents")]
-		LoadDocuments,
+        [Description("Loading documents")]
+        LoadDocuments,
 
-		[Description("Transforming results")]
-		TransformResults
-	}
+        [Description("Transforming results")]
+        TransformResults
+    }
 
-	public class TimedEnumerable<T> : IEnumerator<T>, IEnumerable<T>
-	{
-		private readonly IEnumerator<T> enumerator;
+    public class TimedEnumerable<T> : IEnumerator<T>, IEnumerable<T>
+    {
+        private readonly IEnumerator<T> enumerator;
 
-		private readonly Action<double> _finished;
+        private readonly Action<double> _finished;
 
-		private readonly Stopwatch _watch;
+        private readonly Stopwatch _watch;
 
-		public TimedEnumerable(IEnumerable<T> enumerable, Action<double> finished)
-		{
-			enumerator = enumerable.GetEnumerator();
-			_finished = finished;
-			_watch = new Stopwatch();
-		}
+        public TimedEnumerable(IEnumerable<T> enumerable, Action<double> finished)
+        {
+            enumerator = enumerable.GetEnumerator();
+            _finished = finished;
+            _watch = new Stopwatch();
+        }
 
-		public IEnumerator<T> GetEnumerator()
-		{
-			return this;
-		}
+        public IEnumerator<T> GetEnumerator()
+        {
+            return this;
+        }
 
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
 
-		public void Dispose()
-		{
-			enumerator.Dispose();
-		}
+        public void Dispose()
+        {
+            enumerator.Dispose();
+        }
 
-		public bool MoveNext()
-		{
-			_watch.Start();
-			var moveNext = enumerator.MoveNext();
-			Current = moveNext ? enumerator.Current : default(T);
-			_watch.Stop();
+        public bool MoveNext()
+        {
+            _watch.Start();
+            var moveNext = enumerator.MoveNext();
+            Current = moveNext ? enumerator.Current : default(T);
+            _watch.Stop();
 
-			if (moveNext == false)
-				_finished(_watch.Elapsed.TotalMilliseconds);
+            if (moveNext == false)
+                _finished(_watch.Elapsed.TotalMilliseconds);
 
-			return moveNext;
-		}
+            return moveNext;
+        }
 
-		public void Reset()
-		{
-			throw new NotSupportedException();
-		}
+        public void Reset()
+        {
+            throw new NotSupportedException();
+        }
 
-		public T Current { get; private set; }
+        public T Current { get; private set; }
 
-		object IEnumerator.Current
-		{
-			get
-			{
-				return Current;
-			}
-		}
-	}
+        object IEnumerator.Current
+        {
+            get
+            {
+                return Current;
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
@@ -8,7 +8,7 @@ namespace Raven.Abstractions.Data
 
         public RestoreStatusState State;
 
-		public List<string> Messages { get; set; }
+        public List<string> Messages { get; set; }
 
         public static string RavenFilesystemRestoreStatusDocumentKey(string filesystemName)
         {

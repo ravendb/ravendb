@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Linq;
+using Raven.Abstractions.Linq;
 using Raven.Tests.Helpers;
 using System;
 using System.Collections.Generic;
@@ -41,13 +41,13 @@ namespace Raven.Tests.Issues
                     {
                         Id = parentId,
                         Children = new List<ParentWithoutSharedMetadata>
-						{
-							new ParentWithoutSharedMetadata
-							{
-								Id = Guid.NewGuid(),
-								ChildrenWithoutSharedMetadata = new List<SomeChildType>(){new SomeChildType()}
-							}
-						}
+                        {
+                            new ParentWithoutSharedMetadata
+                            {
+                                Id = Guid.NewGuid(),
+                                ChildrenWithoutSharedMetadata = new List<SomeChildType>(){new SomeChildType()}
+                            }
+                        }
                     });
                     session.SaveChanges();
                 }
@@ -89,13 +89,13 @@ namespace Raven.Tests.Issues
                     {
                         Id = parentId,
                         Children = new List<ParentWithoutSharedMetadata>
-						{
-							new ParentWithoutSharedMetadata
-							{
-								Id = Guid.NewGuid(),
-								ChildrenWithoutSharedMetadata = new List<SomeChildType>(){new SomeChildType()}
-							}
-						}
+                        {
+                            new ParentWithoutSharedMetadata
+                            {
+                                Id = Guid.NewGuid(),
+                                ChildrenWithoutSharedMetadata = new List<SomeChildType>(){new SomeChildType()}
+                            }
+                        }
                     });
                     session.SaveChanges();
                 }
@@ -123,13 +123,13 @@ namespace Raven.Tests.Issues
                     {
                         Id = parentId,
                         Children = new List<Parent>
-						{
-							new Parent
-							{
-								Id = Guid.NewGuid(),
-								Children = new List<SomeChildType>(){new SomeChildType()}
-							}
-						}
+                        {
+                            new Parent
+                            {
+                                Id = Guid.NewGuid(),
+                                Children = new List<SomeChildType>(){new SomeChildType()}
+                            }
+                        }
                     });
                     session.SaveChanges();
                 }

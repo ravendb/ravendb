@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
@@ -6,7 +6,7 @@ namespace Raven.Abstractions.Data
     {
         public const string RavenRestoreInProgressDocumentKey = "Raven/Restore/InProgress";
 
-		public string Resource { get; set; }
+        public string Resource { get; set; }
 
     }
 }

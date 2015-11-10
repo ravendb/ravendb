@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // <copyright file="AssemblyInfo.cs" company="Microsoft Corporation">
 //   Copyright (c) Microsoft Corporation.
 // </copyright>
@@ -19,7 +19,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("EsentCollections")]
-[assembly: AssemblyCopyright("Copyright © Microsoft")]
+[assembly: AssemblyCopyright("Copyright � Microsoft")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

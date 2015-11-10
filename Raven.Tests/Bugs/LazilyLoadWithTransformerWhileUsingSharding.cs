@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Abstractions.Replication;
@@ -18,16 +18,16 @@ namespace Raven.Tests.Bugs
         private new readonly Dictionary<string, RavenDbServer> servers;
         private readonly ShardedDocumentStore store;
 
-	    public LazilyLoadWithTransformerWhileUsingSharding()
+        public LazilyLoadWithTransformerWhileUsingSharding()
         {
-	        servers = new Dictionary<string, RavenDbServer>
-			{
-				{"shard", GetNewServer(8078)}
-			};
+            servers = new Dictionary<string, RavenDbServer>
+            {
+                {"shard", GetNewServer(8078)}
+            };
 
             var documentStores = new Dictionary<string, IDocumentStore>
                                         {
-	                                        {"shard", new DocumentStore{Url = "http://localhost:8078"}}
+                                            {"shard", new DocumentStore{Url = "http://localhost:8078"}}
                                         };
 
             foreach (var documentStore in documentStores)
@@ -59,20 +59,20 @@ namespace Raven.Tests.Bugs
             }
         }
 
-		[Fact]
-		public void LoadWithTransformerInShardedSetup()
-		{
-			using (var session = store.OpenSession())
-			{
-				var testDoc = new TestDocument();
-				session.Store(testDoc);
+        [Fact]
+        public void LoadWithTransformerInShardedSetup()
+        {
+            using (var session = store.OpenSession())
+            {
+                var testDoc = new TestDocument();
+                session.Store(testDoc);
 
-				session.SaveChanges();
+                session.SaveChanges();
 
-				var result = session.Load<TestTransformer, TestDto>(testDoc.Id);
-				Assert.NotNull(result);
-			}
-		}
+                var result = session.Load<TestTransformer, TestDto>(testDoc.Id);
+                Assert.NotNull(result);
+            }
+        }
 
         public class TestDocument
         {

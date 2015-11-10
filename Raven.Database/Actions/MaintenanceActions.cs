@@ -1,9 +1,10 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="MaintenanceActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -13,12 +14,12 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-
-using Voron.Impl.Backup;
+using Raven.Abstractions.Exceptions;
+using Raven.Storage.Voron;
 
 namespace Raven.Database.Actions
 {
@@ -41,7 +42,7 @@ namespace Raven.Database.Actions
             return backupPath ?? Path.Combine(rootBackupPath, Constants.DatabaseDocumentFilename);
         }
 
-        public static void Restore(RavenConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
+        public static void Restore(AppSettingsBasedConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
         {
             var databaseDocumentPath = FindDatabaseDocument(restoreRequest.BackupLocation);
             if (File.Exists(databaseDocumentPath) == false)
@@ -49,26 +50,15 @@ namespace Raven.Database.Actions
                 throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + restoreRequest.BackupLocation);
             }
 
-            var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
-            var databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
-
-            string storage;
-            if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
-            {
-	            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename))) 
-					storage = InMemoryRavenConfiguration.VoronTypeName;
-	            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-					storage = InMemoryRavenConfiguration.EsentTypeName;
-				else
-					storage = InMemoryRavenConfiguration.EsentTypeName;
-            }
+            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+                throw new StorageNotSupportedException("Esent is no longer supported. Use Voron instead.");
 
             if (!string.IsNullOrWhiteSpace(restoreRequest.DatabaseLocation))
             {
-                configuration.DataDirectory = restoreRequest.DatabaseLocation;
+                configuration.Core.DataDirectory = restoreRequest.DatabaseLocation;
             }
 
-            using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }, () => { }))
+            using (var transactionalStorage = new TransactionalStorage(configuration, () => { }, () => { }, () => { }, () => { }))
             {
                 transactionalStorage.Restore(restoreRequest, output);
             }
@@ -77,7 +67,7 @@ namespace Raven.Database.Actions
         public void StartBackup(string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument databaseDocument)
         {
             if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
-            var document = Database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+            var document = Database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
             if (document != null)
             {
                 var backupStatus = document.DataAsJson.JsonDeserialization<BackupStatus>();
@@ -87,17 +77,9 @@ namespace Raven.Database.Actions
                 }
             }
 
-            bool enableIncrementalBackup;
-            if (incrementalBackup &&
-                TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
-                (bool.TryParse(Database.Configuration.Settings[Constants.Esent.CircularLog], out enableIncrementalBackup) == false || enableIncrementalBackup))
-            {
-                throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
-            }
-
             if (incrementalBackup &&
                 TransactionalStorage is Raven.Storage.Voron.TransactionalStorage &&
-                Database.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+                Database.Configuration.Storage.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }
@@ -107,32 +89,80 @@ namespace Raven.Database.Actions
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
             }), new RavenJObject(), null);
+
             Database.IndexStorage.FlushMapIndexes();
             Database.IndexStorage.FlushReduceIndexes();
-
-            if (databaseDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
-                databaseDocument.Settings["Raven/StorageTypeName"] = TransactionalStorage.FriendlyName ?? TransactionalStorage.GetType().AssemblyQualifiedName;
 
             TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument);
         }
 
-	    public void PurgeOutdatedTombstones()
-	    {
-		    var tomstoneLists = new[]
-		    {
-			    Constants.RavenPeriodicExportsAttachmentsTombstones,
-			    Constants.RavenPeriodicExportsDocsTombstones,
-			    Constants.RavenReplicationAttachmentsTombstones,
-			    Constants.RavenReplicationDocsTombstones
-		    };
+        public void PurgeOutdatedTombstones()
+        {
+            var tomstoneLists = new[]
+            {
+                Constants.RavenPeriodicExportsDocsTombstones,
+                Constants.RavenReplicationDocsTombstones
+            };
 
-			var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.TombstoneRetentionTime);
+            var olderThan = SystemTime.UtcNow.Subtract(Database.Configuration.Core.TombstoneRetentionTime.AsTimeSpan);
 
-		    foreach (var listName in tomstoneLists)
-		    {
-			    string name = listName;
-			    TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(name, olderThan));
-		    }
-	    }
+            foreach (var listName in tomstoneLists)
+            {
+                string name = listName;
+                TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(name, olderThan));
+            }
+        }
+        public void DeleteRemovedIndexes(Dictionary<int, DocumentDatabase.IndexFailDetails> reason)
+        {
+            TransactionalStorage.Batch(actions =>
+            {
+                foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
+                {
+                    Database.Indexes.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"), result.Data.Value<string>("IndexName"));
+                }
+
+                List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
+                foreach (int id in indexIds)
+                {
+                    var index = IndexDefinitionStorage.GetIndexDefinition(id);
+                    if (index != null)
+                        continue;
+
+                    // index is not found on disk, better kill for good
+                    // Even though technically we are running into a situation that is considered to be corrupt data
+                    // we can safely recover from it by removing the other parts of the index.
+                    Database.IndexStorage.DeleteIndex(id);
+                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
+
+                    string indexName;
+                    string msg;
+                    string ex;
+
+                    DocumentDatabase.IndexFailDetails failDetails;
+                    if (reason == null || reason.TryGetValue(id, out failDetails) == false)
+                    {
+                        indexName = "Unknown Name";
+                        msg = string.Format("Index '{0}-({1})' couldn't be found or invalid", id, indexName);
+                        ex = "";
+                    }
+                    else
+                    {
+                        indexName = failDetails.IndexName;
+                        msg = failDetails.Reason;
+                        ex = failDetails.Ex.ToString();
+                    }
+
+                    Database.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = SystemTime.UtcNow,
+                        Message = msg,
+                        Title = string.Format("Index '{0}-({1})' removed because it is not found or invalid", id, indexName),
+                        Exception = ex,
+                        UniqueKey = msg
+                    });
+                }
+            });
+        }
     }
 }

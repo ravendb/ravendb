@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -45,10 +45,20 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>Sparrow.Tryout.Performance</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BenchmarkDotNet, Version=0.7.6.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\BenchmarkDotNet.0.7.6\lib\net40\BenchmarkDotNet.dll</HintPath>
+    <Reference Include="BenchmarkDotNet, Version=0.7.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\BenchmarkDotNet.0.7.7\lib\net40\BenchmarkDotNet.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -60,14 +70,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Performance.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Sparrow.Tests\Sparrow.Tests.csproj">
+      <Project>{794cc625-31a4-4da2-968e-5d33cf1cada1}</Project>
+      <Name>Sparrow.Tests</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj">
       <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
       <Name>Sparrow</Name>

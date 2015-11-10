@@ -24,46 +24,46 @@ namespace Raven.Abstractions.Data
             Messages = new List<BackupMessage>();
         }
 
-		/// <summary>
-		/// Backup start time.
-		/// </summary>
+        /// <summary>
+        /// Backup start time.
+        /// </summary>
         public DateTime Started { get; set; }
 
-		/// <summary>
-		/// Backup completed time.
-		/// </summary>
+        /// <summary>
+        /// Backup completed time.
+        /// </summary>
         public DateTime? Completed { get; set; }
 
-		/// <summary>
-		/// Indicates if backup is currently running.
-		/// </summary>
+        /// <summary>
+        /// Indicates if backup is currently running.
+        /// </summary>
         public bool IsRunning { get; set; }
 
-		/// <summary>
-		/// List of backup messages.
-		/// </summary>
+        /// <summary>
+        /// List of backup messages.
+        /// </summary>
         public List<BackupMessage> Messages { get; set; }
 
         public class BackupMessage
         {
-			/// <summary>
-			/// Message text.
-			/// </summary>
+            /// <summary>
+            /// Message text.
+            /// </summary>
             public string Message { get; set; }
 
-			/// <summary>
-			/// Message details.
-			/// </summary>
+            /// <summary>
+            /// Message details.
+            /// </summary>
             public string Details { get; set; }
 
-			/// <summary>
-			/// Created timestamp.
-			/// </summary>
+            /// <summary>
+            /// Created timestamp.
+            /// </summary>
             public DateTime Timestamp { get; set; }
 
-			/// <summary>
-			/// Message severity.
-			/// </summary>
+            /// <summary>
+            /// Message severity.
+            /// </summary>
             public BackupMessageSeverity Severity { get; set; }
 
             public override bool Equals(object obj)

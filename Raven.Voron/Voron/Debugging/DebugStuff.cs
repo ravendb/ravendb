@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Voron.Impl;
+using Voron.Impl.FileHeaders;
 using Voron.Trees;
+using Voron.Trees.Fixed;
 
 namespace Voron.Debugging
 {
@@ -14,7 +16,7 @@ namespace Voron.Debugging
         [Conditional("DEBUG")]
         public static void RenderFreeSpace(Transaction tx)
         {
-            RenderAndShow(tx, tx.FreeSpaceRoot.State.RootPageNumber);
+            RenderAndShow(tx.FreeSpaceRoot);
         }
 
         [Conditional("DEBUG")]
@@ -26,9 +28,9 @@ namespace Voron.Debugging
             TreeDumper.DumpHumanReadable(tx, path, tx.GetReadOnlyPage(startPageNumber));
         }
 
-        public unsafe static bool HasDuplicateBranchReferences(Transaction tx, Page start, out long pageNumberWithDuplicates)
+        public unsafe static bool HasDuplicateBranchReferences(Transaction tx, TreePage start, out long pageNumberWithDuplicates)
         {
-            var stack = new Stack<Page>();
+            var stack = new Stack<TreePage>();
             var existingTreeReferences = new ConcurrentDictionary<long, List<long>>();
             stack.Push(start);
             while (stack.Count > 0)
@@ -199,6 +201,44 @@ namespace Voron.Debugging
     }
 }";
 
+        [Conditional("DEBUG")]
+        public unsafe static void RenderAndShow_FixedSizeTree(Transaction tx, Tree tree, Slice name)
+        {
+            RenderHtmlTreeView(writer =>
+            {
+                var ptr = tree.DirectRead(name);
+                if (ptr == null)
+                {
+                    writer.WriteLine("<p>empty fixed size tree</p>");
+                }
+                else if (((FixedSizeTreeHeader.Embedded*)ptr)->Flags == FixedSizeTreeHeader.OptionFlags.Embedded)
+                {
+                    var header = ((FixedSizeTreeHeader.Embedded*)ptr);
+                    writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
+                    writer.WriteLine("<ul>");
+                    var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
+                    for (int i = 0; i < header->NumberOfEntries; i++)
+                    {
+                        var key = *(long*)(dataStart + ((sizeof(long) + header->ValueSize) * i));
+                        writer.WriteLine("<li>{0:#,#;;0}</li>", key);
+                    }
+                    writer.WriteLine("</ul>");
+                }
+                else
+                {
+                    var header = (FixedSizeTreeHeader.Large*)ptr;
+                    writer.WriteLine("<p>Number of entries: {0:#,#;;0}, val size: {1:#,#;;0}.</p>", header->NumberOfEntries, header->ValueSize);
+                    writer.WriteLine("<div class='css-treeview'><ul>");
+
+                    var page = tx.GetReadOnlyPage(header->RootPageNumber);
+
+                    RenderFixedSizeTreePage(tx, page, writer, header, "Root", true);
+
+                    writer.WriteLine("</ul></div>");
+                }
+            });
+        }
+
         private static void RenderHtmlTreeView(Action<TextWriter> action)
         {
             if (Debugger.IsAttached == false)
@@ -207,33 +247,41 @@ namespace Voron.Debugging
             var output = Path.GetTempFileName() + ".html";
             using (var sw = new StreamWriter(output))
             {
-                WriteHtml(sw, action);
+                sw.WriteLine("<html><head><style>{0}</style></head><body>", css);
+                action(sw);
+                sw.WriteLine("</body></html>");
+                sw.Flush();
             }
             Process.Start(output);
         }
 
-        private static void WriteHtml(TextWriter sw, Action<TextWriter> action)
+        private unsafe static void RenderFixedSizeTreePage(Transaction tx, TreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)
         {
-            sw.WriteLine("<html><head><style>{0}</style></head><body>", css);
-            action(sw);
-            sw.WriteLine("</body></html>");
-            sw.Flush();
-        }
+            sw.WriteLine(
+                "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries from {5}</label><ul>",
+                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.FixedSize_NumberOfEntries, open ? "checked" : "", text, page.Source);
 
-        public static void DumpTreeToStream(Tree tree, Stream stream)
-        {
-            var headerData = string.Format("<p>{0}</p>", tree.State);
-
-            WriteHtml(new StreamWriter(stream), writer =>
+            for (int i = 0; i < page.FixedSize_NumberOfEntries; i++)
             {
-                writer.WriteLine(headerData);
-                writer.WriteLine("<div class='css-treeview'><ul>");
+                if (page.IsLeaf)
+                {
+                    var key =
+                        *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + header->ValueSize)) * i));
+                    sw.Write("{0:#,#;;0}, ", key);
+                }
+                else
+                {
+                    var key =
+                     *(long*)(page.Base + page.FixedSize_StartPosition + (sizeof(long) + sizeof(long)) * i);
+                    var pageNum = *(long*)(page.Base + page.FixedSize_StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
 
-                var page = tree.Tx.GetReadOnlyPage(tree.State.RootPageNumber);
-                RenderPage(tree.Tx, page, writer, "Root", true);
+                    var s = key == long.MinValue ? "[smallest]" : key.ToString("#,#");
 
-                writer.WriteLine("</ul></div>");
-            });
+                    RenderFixedSizeTreePage(tx, tx.GetReadOnlyPage(pageNum), sw, header, s, false);
+                }
+            }
+
+            sw.WriteLine("</ul></li></ul>");
         }
 
         [Conditional("DEBUG")]
@@ -260,7 +308,31 @@ namespace Voron.Debugging
 
         }
 
-        private unsafe static void RenderPage(Transaction tx, Page page, TextWriter sw, string text, bool open)
+        public static void DumpTreeToStream(Tree tree, Stream stream)
+        {
+            var headerData = string.Format("<p>{0}</p>", tree.State);
+
+            WriteHtml(new StreamWriter(stream), writer =>
+            {
+                writer.WriteLine(headerData);
+                writer.WriteLine("<div class='css-treeview'><ul>");
+
+                var page = tree.Tx.GetReadOnlyPage(tree.State.RootPageNumber);
+                RenderPage(tree.Tx, page, writer, "Root", true);
+
+                writer.WriteLine("</ul></div>");
+            });
+        }
+
+        private static void WriteHtml(TextWriter sw, Action<TextWriter> action)
+        {
+            sw.WriteLine("<html><head><style>{0}</style></head><body>", css);
+            action(sw);
+            sw.WriteLine("</body></html>");
+            sw.Flush();
+        }
+
+        private unsafe static void RenderPage(Transaction tx, TreePage page, TextWriter sw, string text, bool open)
         {
             sw.WriteLine(
                "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
@@ -272,7 +344,7 @@ namespace Voron.Debugging
                 if (page.IsLeaf)
                 {
                     var key = new Slice(nodeHeader).ToString();
-                    sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, NodeHeader.GetDataSize(tx, nodeHeader));
+                    sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, TreeNodeHeader.GetDataSize(tx, nodeHeader));
                 }
                 else
                 {
@@ -286,7 +358,6 @@ namespace Voron.Debugging
                     RenderPage(tx, tx.GetReadOnlyPage(pageNum), sw, key, false);
                 }
             }
-
             sw.WriteLine("</ul></li></ul>");
         }
     }

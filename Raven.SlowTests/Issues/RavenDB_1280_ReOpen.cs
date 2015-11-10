@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1280_ReOpen.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,19 +19,19 @@ namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1280_ReOpen : RavenTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.MaxNumberOfItemsToProcessInSingleBatch = 50;
-            configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
+            configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 50;
+            configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 50;
         }
 
         [Theory]
         [PropertyData("Storages")]
-		public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
+        public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
         {
             const int iterations = 8000;
-	        var sp = Stopwatch.StartNew();
-			using (var store = NewRemoteDocumentStore(requestedStorage: storageTypeName))
+            var sp = Stopwatch.StartNew();
+            using (var store = NewRemoteDocumentStore(requestedStorage: storageTypeName))
             {
                 new EmailIndex().Execute(store);
 
@@ -46,7 +46,7 @@ namespace Raven.SlowTests.Issues
                 
 
                 // Test that the indexing can complete, without being in an infinite indexing run due to touches to documents increasing the etag.
-				WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(sp.Elapsed.TotalSeconds / 2));
+                WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(sp.Elapsed.TotalSeconds / 2));
             }
         }
 

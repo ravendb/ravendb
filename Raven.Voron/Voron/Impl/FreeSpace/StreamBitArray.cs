@@ -1,4 +1,4 @@
-﻿//
+//
 // Bit Array.cs
 //
 // Authors:

@@ -1,4 +1,4 @@
-﻿// Want Intellisense comments for your extensions? Use JSDoc format:
+// Want Intellisense comments for your extensions? Use JSDoc format:
 /**
  * Summary goes here.
  * @someArg Description of someArg here.
@@ -40,16 +40,16 @@ interface Date {
 }
 
 interface Spinner {
-	stop();
-	spin(): Spinner;
-	spin(p1: HTMLElement);
-	el: Node;
+    stop();
+    spin(): Spinner;
+    spin(p1: HTMLElement);
+    el: Node;
 }
 
 declare var Spinner: {
-	 new (spinnerOptions: { lines: number; length: number; width: number; radius: number; scale: number; corners: number;
-		color: any; opacity: number; rotate: number; direction: number; speed: number; trail: number; fps: number; zIndex: number;
-		className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string }): Spinner;
+     new (spinnerOptions: { lines: number; length: number; width: number; radius: number; scale: number; corners: number;
+        color: any; opacity: number; rotate: number; direction: number; speed: number; trail: number; fps: number; zIndex: number;
+        className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string }): Spinner;
 }
 
 declare class EventSource {
@@ -70,6 +70,7 @@ interface Array<T> {
     contains(item: T): boolean;
     count(filter?: (item: T) => boolean): number;
     distinct(): T[];
+    concatUnique(items: T[]): T[];
 }
 
 // String extensions

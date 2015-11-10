@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenFsTestBase.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -23,6 +23,7 @@ using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem;
 using Raven.Database.Server;
@@ -35,17 +36,16 @@ namespace Raven.Tests.Helpers
 {
     public class RavenFilesTestBase : IDisposable
     {
-	    private static int pathCount;
+        private static int pathCount;
 
         public static IEnumerable<object[]> Storages
         {
             get
             {
                 return new[]
-				{
-					new object[] {"voron"},
-					new object[] {"esent"}
-				};
+                {
+                    new object[] {"voron"},
+                };
             }
         }
 
@@ -53,18 +53,18 @@ namespace Raven.Tests.Helpers
         private readonly List<IFilesStore> filesStores = new List<IFilesStore>();
         private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
-		protected static readonly int[] Ports = { 8079, 8078, 8077 };
+        protected static readonly int[] Ports = { 8079, 8078, 8077, 8076, 8075 };
 
-	    protected TimeSpan SynchronizationInterval { get; set; }
-		
-	    private static bool checkedAsyncVoid;
+        protected TimeSpan SynchronizationInterval { get; set; }
+        
+        private static bool checkedAsyncVoid;
         protected RavenFilesTestBase()
         {
-			if (checkedAsyncVoid == false)
-			{
-				checkedAsyncVoid = true;
-				RavenTestBase.AssertNoAsyncVoidMethods(GetType().Assembly);
-			}
+            if (checkedAsyncVoid == false)
+            {
+                checkedAsyncVoid = true;
+                RavenTestBase.AssertNoAsyncVoidMethods(GetType().Assembly);
+            }
             this.SynchronizationInterval = TimeSpan.FromMinutes(10);
         }
 
@@ -74,39 +74,35 @@ namespace Raven.Tests.Helpers
                                                     string requestedStorage = null,
                                                     bool enableAuthentication = false,
                                                     string fileSystemName = null,
-													string activeBundles = null,
-                                                    Action<RavenConfiguration> customConfig = null)
+                                                    string activeBundles = null,
+                                                    Action<AppSettingsBasedConfiguration> customConfig = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-            var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
-                Port = port,
-                DataDirectory = directory,
-                RunInMemory = runInMemory,
+                Core =
+                {
+                    RunInMemory = runInMemory,
+                    DataDirectory = directory,
+                    Port = port,
+                    AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+                    ActiveBundlesStringValue = activeBundles ?? string.Empty
+                },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
-#endif                
-                DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+#endif          
                 Encryption = 
                 { 
                     UseFips = SettingsHelper.UseFipsEncryptionAlgorithms 
                 },
                 FileSystem = 
                 {
-                    MaximumSynchronizationInterval = this.SynchronizationInterval, 
+                    MaximumSynchronizationInterval = new TimeSetting((long) this.SynchronizationInterval.TotalSeconds, TimeUnit.Seconds), 
                     DataDirectory = Path.Combine(directory, "FileSystems"),
-                    DefaultStorageTypeName = storageType
                 },
             };
-
-			if (activeBundles != null)
-			{
-				ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
-			}
 
             if (customConfig != null)
             {
@@ -120,10 +116,10 @@ namespace Raven.Tests.Helpers
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-	            UseEmbeddedHttpServer = true,          
-            };			
+                UseEmbeddedHttpServer = true,                
+            };
 
-	        ravenDbServer.Initialize();
+            ravenDbServer.Initialize();
 
             servers.Add(ravenDbServer);
 
@@ -139,7 +135,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
-                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
+                                                bool runInMemory = true, Action<AppSettingsBasedConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -149,7 +145,7 @@ namespace Raven.Tests.Helpers
                 customConfig: customConfig,
                 requestedStorage: requestedStorage, 
                 runInMemory:runInMemory,
-				activeBundles:activeBundles);
+                activeBundles:activeBundles);
 
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
@@ -158,11 +154,11 @@ namespace Raven.Tests.Helpers
                 Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
-                ApiKey = apiKey,
-				ConnectionStringName = connectionStringName
+                ApiKey = apiKey,                 
+                ConnectionStringName = connectionStringName
             };
 
-			ModifyStore(store);
+            ModifyStore(store);
 
             store.Initialize(ensureFileSystemExists: true);
 
@@ -172,21 +168,21 @@ namespace Raven.Tests.Helpers
         }
 
         protected virtual IAsyncFilesCommands NewAsyncClient(int index = 0, 
-			bool fiddler = false, 
-			bool enableAuthentication = false, 
-			string apiKey = null, 
-			ICredentials credentials = null, 
+            bool fiddler = false, 
+            bool enableAuthentication = false, 
+            string apiKey = null, 
+            ICredentials credentials = null, 
             string requestedStorage = null, 
-			[CallerMemberName] string fileSystemName = null, 
-			Action<RavenConfiguration> customConfig = null,
-			string activeBundles = null,
-			string dataDirectory = null,
-			bool runInMemory = true)
+            [CallerMemberName] string fileSystemName = null, 
+            Action<AppSettingsBasedConfiguration> customConfig = null,
+            string activeBundles = null,
+            string dataDirectory = null,
+            bool runInMemory = true)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-			var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
-				dataDirectory: dataDirectory, runInMemory: runInMemory);
+            var server = CreateServer(Ports[index], fileSystemName: fileSystemName, enableAuthentication: enableAuthentication, requestedStorage: requestedStorage, activeBundles: activeBundles, customConfig: customConfig,
+                dataDirectory: dataDirectory, runInMemory: runInMemory);
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
             var store = new FilesStore
@@ -197,7 +193,7 @@ namespace Raven.Tests.Helpers
                 ApiKey = apiKey,
             };
 
-			ModifyStore(store);
+            ModifyStore(store);
             store.Initialize(true);
 
             filesStores.Add(store);
@@ -212,12 +208,12 @@ namespace Raven.Tests.Helpers
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            return servers.First(x => x.SystemDatabase.Configuration.Port == Ports[index]).Server.GetRavenFileSystemInternal(fileSystemName).Result;
+            return servers.First(x => x.SystemDatabase.Configuration.Core.Port == Ports[index]).Server.GetRavenFileSystemInternal(fileSystemName).Result;
         }
 
         protected RavenDbServer GetServer(int index = 0)
         {
-            return servers.First(x => x.SystemDatabase.Configuration.Port == Ports[index]);
+            return servers.First(x => x.SystemDatabase.Configuration.Core.Port == Ports[index]);
         }
 
         protected static string GetServerUrl(bool fiddler, string serverUrl)
@@ -235,17 +231,17 @@ namespace Raven.Tests.Helpers
         {
         }
 
-		protected string NewDataPath(string prefix = null, bool deleteOnDispose = true)
+        protected string NewDataPath(string prefix = null, bool deleteOnDispose = true)
         {
             // Federico: With a filesystem name too large, we can easily pass the filesystem path limit. 
             // The truncation of the Guid to 8 still provides enough entropy to avoid collisions.
             string suffix = Guid.NewGuid().ToString("N").Substring(0, 8);
 
-			var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}-{3}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix, Interlocked.Increment(ref pathCount)));
+            var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}-{3}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix, Interlocked.Increment(ref pathCount)));
             Directory.CreateDirectory(newDataDir);
 
-			if(deleteOnDispose)
-				pathsToDelete.Add(newDataDir);
+            if(deleteOnDispose)
+                pathsToDelete.Add(newDataDir);
             return newDataDir;
         }
 
@@ -265,20 +261,7 @@ namespace Raven.Tests.Helpers
             return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
         }
 
-        public static string GetDefaultStorageType(string requestedStorage = null)
-        {
-            string defaultStorageType;
-            var envVar = Environment.GetEnvironmentVariable("raventest_storage_engine");
-            if (string.IsNullOrEmpty(envVar) == false)
-                defaultStorageType = envVar;
-            else if (requestedStorage != null)
-                defaultStorageType = requestedStorage;
-            else
-                defaultStorageType = "voron";
-            return defaultStorageType;
-        }
-
-	    protected static string StreamToString(Stream stream)
+        protected static string StreamToString(Stream stream)
         {
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
@@ -286,11 +269,11 @@ namespace Raven.Tests.Helpers
             }
         }
 
-	    protected static Stream StringToStream(string src)
-		{
-			byte[] byteArray = Encoding.UTF8.GetBytes(src);
-			return new MemoryStream(byteArray);
-		}
+        protected static Stream StringToStream(string src)
+        {
+            byte[] byteArray = Encoding.UTF8.GetBytes(src);
+            return new MemoryStream(byteArray);
+        }
 
         public static void EnableAuthentication(DocumentDatabase database)
         {
@@ -302,16 +285,16 @@ namespace Raven.Tests.Helpers
             database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
         }
 
-	    private static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
+        private static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
         {
-			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
-			var initializer = field.GetValue(database);
-			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-			var validateLicense = validateLicenseField.GetValue(initializer);
+            var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
+            var initializer = field.GetValue(database);
+            var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+            var validateLicense = validateLicenseField.GetValue(initializer);
 
-			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
+            var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 
-			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
+            return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
         }
 
         public virtual void Dispose()
@@ -331,17 +314,17 @@ namespace Raven.Tests.Helpers
             }
             asyncCommandClients.Clear();
 
-			foreach (var fileStore in filesStores)
-			{
-				try
-				{
-					fileStore.Dispose();
-				}
-				catch (Exception e)
-				{
-					errors.Add(e);
-				}
-			}
+            foreach (var fileStore in filesStores)
+            {
+                try
+                {
+                    fileStore.Dispose();
+                }
+                catch (Exception e)
+                {
+                    errors.Add(e);
+                }
+            }
             filesStores.Clear();
 
             foreach (var server in servers)
@@ -456,22 +439,33 @@ namespace Raven.Tests.Helpers
             return ms;
         }
 
-		protected async Task WaitForRestoreAsync(string url, long operationId)
-		{
-			using (var sysDbStore = new DocumentStore
-			{
-				Url = url
-			}.Initialize())
-			{
-				await new Operation((AsyncServerClient) sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
-			}
-		}
+        protected void WaitForFile(IAsyncFilesCommands filesCommands, string fileName)
+        {
+            var done = SpinWait.SpinUntil(() =>
+            {
+                var file = filesCommands.GetMetadataForAsync(fileName).Result;
+                return file != null;
+            }, TimeSpan.FromSeconds(15));
+
+            if (!done) throw new Exception("WaitForDocument failed");
+        }
+
+        protected async Task WaitForRestoreAsync(string url, long operationId)
+        {
+            using (var sysDbStore = new DocumentStore
+            {
+                Url = url
+            }.Initialize())
+            {
+                await new Operation((AsyncServerClient) sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
+            }
+        }
 
         protected void WaitForBackup(IAsyncFilesCommands filesCommands, bool checkError)
         {
             var done = SpinWait.SpinUntil(() =>
             {
-	            var backupStatus = AsyncHelpers.RunSync(() => filesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey));
+                var backupStatus = AsyncHelpers.RunSync(() => filesCommands.Configuration.GetKeyAsync<BackupStatus>(BackupStatus.RavenBackupStatusDocumentKey));
                 if (backupStatus == null)
                     return true;
 
@@ -492,22 +486,21 @@ namespace Raven.Tests.Helpers
             Assert.True(done);
         }
 
-		public async static Task<T> ThrowsAsync<T>(Func<Task> testCode) where T : Exception
-		{
-			try
-			{
-				await testCode();
-				Assert.Throws<T>(() => { }); // Use xUnit's default behavior.
-			}
-			catch (T exception)
-			{
-				return exception;
-			}
-			return null;
-		}
+        public async static Task<T> ThrowsAsync<T>(Func<Task> testCode) where T : Exception
+        {
+            try
+            {
+                await testCode();
+                Assert.Throws<T>(() => { }); // Use xUnit's default behavior.
+            }
+            catch (T exception)
+            {
+                return exception;
+            }
+            return null;
+        }
 
-		protected virtual void ModifyStore(FilesStore store)
-		{
-		}
+        protected virtual void ModifyStore(FilesStore store)
+        {
     }
-}
+}}

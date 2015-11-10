@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AncestryPutTrigger.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,12 +10,12 @@ using Raven.Database.Plugins;
 
 namespace Raven.Database.Bundles.PeriodicExports.Triggers
 {
-	[ExportMetadata("Bundle", "PeriodicExport")]
+    [ExportMetadata("Bundle", "PeriodicExport")]
     [ExportMetadata("Order", 10001)]
     [InheritedExport(typeof(AbstractPutTrigger))]
     public class AncestryPutTrigger : AbstractPutTrigger
     {
-        public override void OnPut(string key, Raven.Json.Linq.RavenJObject document, Raven.Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
+        public override void OnPut(string key, Raven.Json.Linq.RavenJObject jsonReplicationDocument, Raven.Json.Linq.RavenJObject metadata)
         {
             using (Database.DisableAllTriggersForCurrentThread())
             {

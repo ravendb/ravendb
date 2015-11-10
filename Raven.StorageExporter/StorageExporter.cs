@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -15,6 +15,7 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database.Util;
+using Raven.Storage.Voron;
 
 namespace Raven.StorageExporter
 {
@@ -24,8 +25,8 @@ namespace Raven.StorageExporter
         {
             baseDirectory = databaseBaseDirectory;
             outputDirectory = databaseOutputFile;
-            var ravenConfiguration = new RavenConfiguration();
-            ravenConfiguration.DataDirectory = databaseBaseDirectory;
+            var ravenConfiguration = new AppSettingsBasedConfiguration();
+            ravenConfiguration.Core.DataDirectory = databaseBaseDirectory;
             ravenConfiguration.Storage.PreventSchemaUpdate = true;
             CreateTransactionalStorage(ravenConfiguration);
             BatchSize = batchSize;
@@ -157,10 +158,10 @@ namespace Raven.StorageExporter
                     foreach (var identityInfo in filteredIdentities)
                         {
                             new RavenJObject
-						        {
-							        { "Key", identityInfo.Key }, 
-							        { "Value", identityInfo.Value }
-						        }.WriteTo(jsonWriter);
+                                {
+                                    { "Key", identityInfo.Key }, 
+                                    { "Value", identityInfo.Value }
+                                }.WriteTo(jsonWriter);
                         }
                 currentIdentitiesCount += identities.Count();
                 ReportProgress("identities", currentIdentitiesCount, totalIdentities);
@@ -168,19 +169,23 @@ namespace Raven.StorageExporter
             } while (totalIdentities > currentIdentitiesCount);
         }
 
-        public bool FilterIdentity(string indentityName)
+        public bool FilterIdentity(string identityName)
         {
-            if ("Raven/Etag".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
+            if ("Raven/Etag".Equals(identityName, StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            if ("IndexId".Equals(indentityName, StringComparison.InvariantCultureIgnoreCase))
+            if ("IndexId".Equals(identityName, StringComparison.OrdinalIgnoreCase))
                 return false;
-            return true;
+
+            if (Constants.RavenSubscriptionsPrefix.Equals(identityName, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return false;
         }
 
-        private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
+        private void CreateTransactionalStorage(RavenConfiguration ravenConfiguration)
         {
-            if (String.IsNullOrEmpty(ravenConfiguration.DataDirectory) == false && Directory.Exists(ravenConfiguration.DataDirectory))
+            if (String.IsNullOrEmpty(ravenConfiguration.Core.DataDirectory) == false && Directory.Exists(ravenConfiguration.Core.DataDirectory))
             {
 
                 try
@@ -202,16 +207,15 @@ namespace Raven.StorageExporter
                 }
                 return;
             }
-            ConsoleUtils.PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.DataDirectory));
+            ConsoleUtils.PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.Core.DataDirectory));
         }
 
-        public static bool TryToCreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration, out ITransactionalStorage storage)
+        public static bool TryToCreateTransactionalStorage(RavenConfiguration ravenConfiguration, out ITransactionalStorage storage)
         {
             storage = null;
-            if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
-            else if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data")))
-                storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.EsentTypeName, () => { }, () => { });
+            if (File.Exists(Path.Combine(ravenConfiguration.Core.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
+                storage = new TransactionalStorage(ravenConfiguration, () => { }, () => { }, () => { }, () => { });
+
             if (storage != null)
             {
                 storage.Initialize(new SequentialUuidGenerator {EtagBase = 0}, new OrderedPartCollection<AbstractDocumentCodec>());
@@ -220,10 +224,9 @@ namespace Raven.StorageExporter
             return false;
         }
 
-        public static bool ValidateStorageExsist(string dataDir)
+        public static bool ValidateStorageExist(string dataDir)
         {
-            return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename))
-                   || File.Exists(Path.Combine(dataDir, "Data"));
+            return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename));
         }
 
 

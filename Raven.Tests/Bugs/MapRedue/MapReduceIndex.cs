@@ -19,18 +19,18 @@ namespace Raven.Tests.Bugs.MapRedue
         public MapReduceIndex()
         {
             m_documentIds = new String[5]
-			{
-				"One",
-				"Two",
-				"Three",
-				"Four ",
-				"Five"
-			};
+            {
+                "One",
+                "Two",
+                "Three",
+                "Four ",
+                "Five"
+            };
         }
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.MaxNumberOfParallelProcessingTasks = 1;
+            configuration.Core.MaxNumberOfParallelProcessingTasks = 1;
         }
 
         [Fact]
@@ -117,7 +117,7 @@ namespace Raven.Tests.Bugs.MapRedue
                 IRavenQueryable<DocumentView> query =
                     session.Query<Document, VersionedDocuments>()
                         .Customize(aCustomization => aCustomization.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMinutes(10)))
-						.ProjectFromIndexFieldsInto<DocumentView>();
+                        .ProjectFromIndexFieldsInto<DocumentView>();
 
                 foreach (DocumentView document in query)
                 {

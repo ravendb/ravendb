@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Expiration.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,78 +12,81 @@ using Raven.Tests.Common.Util;
 
 namespace Raven.Tests.Bundles.CompressionAndEncryption
 {
-	public class CompressionAndEncryption : IDisposable
-	{
-		protected readonly string path;
-		protected readonly DocumentStore documentStore;
-		private RavenDbServer ravenDbServer;
-		private bool closed = false;
-		private Raven.Database.Config.RavenConfiguration settings;
+    public class CompressionAndEncryption : IDisposable
+    {
+        protected readonly string path;
+        protected readonly DocumentStore documentStore;
+        private RavenDbServer ravenDbServer;
+        private bool closed = false;
+        private Raven.Database.Config.AppSettingsBasedConfiguration settings;
 
-		public CompressionAndEncryption()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			settings = new Raven.Database.Config.RavenConfiguration
-			{
-				Port = 8079,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				DataDirectory = path,
-				Settings =
-					{
-						{"Raven/Encryption/Key", "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="},
-						{"Raven/ActiveBundles", "Compression;Encryption"}
-					}
-			};
-			ConfigureServer(settings);
-			settings.PostInit();
-			ravenDbServer = new RavenDbServer(settings)
-			{
-				UseEmbeddedHttpServer = true
-			};
-			ravenDbServer.Initialize();
-			documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
-		}
+        public CompressionAndEncryption()
+        {
+            path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
+            path = Path.Combine(path, "TestDb").Substring(6);
+            Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+            settings = new Raven.Database.Config.AppSettingsBasedConfiguration
+            {
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+                Core =
+                {
+                    DataDirectory = path,
+                    Port = 8079,
+                    ActiveBundlesStringValue = "Compression;Encryption"
+                },
+                Encryption =
+                {
+                    EncryptionKey = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="
+                }
+            };
+            ConfigureServer(settings);
+            settings.PostInit();
+            ravenDbServer = new RavenDbServer(settings)
+            {
+                UseEmbeddedHttpServer = true
+            };
+            ravenDbServer.Initialize();
+            documentStore = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            };
+            documentStore.Initialize();
+        }
 
-		protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration ravenConfiguration)
-		{
-		}
+        protected virtual void ConfigureServer(Raven.Database.Config.AppSettingsBasedConfiguration appSettingsBasedConfiguration)
+        {
+        }
 
-		protected void AssertPlainTextIsNotSavedInDatabase(params string[] plaintext)
-		{
-			Close();
-			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
-		}
+        protected void AssertPlainTextIsNotSavedInDatabase(params string[] plaintext)
+        {
+            Close();
+            EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
+        }
 
-		protected void RecycleServer()
-		{
-			ravenDbServer.Dispose();
-			ravenDbServer =  new RavenDbServer(settings)
-			{
-			    UseEmbeddedHttpServer = true
-			};
-		    ravenDbServer.Initialize();
-		}
+        protected void RecycleServer()
+        {
+            ravenDbServer.Dispose();
+            ravenDbServer =  new RavenDbServer(settings)
+            {
+                UseEmbeddedHttpServer = true
+            };
+            ravenDbServer.Initialize();
+        }
 
-		protected void Close()
-		{
-			if (closed)
-				return;
+        protected void Close()
+        {
+            if (closed)
+                return;
 
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			closed = true;
-		}
+            documentStore.Dispose();
+            ravenDbServer.Dispose();
+            closed = true;
+        }
 
-		public void Dispose()
-		{
-			Close();
-			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-		}
-	}
+        public void Dispose()
+        {
+            Close();
+            Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+        }
+    }
 }

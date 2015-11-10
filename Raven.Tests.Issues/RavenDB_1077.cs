@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1077.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,156 +19,156 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1077 : RavenTest
-	{
-		[Fact]
-		public void ShouldNotStoreInfoAbouValidCommercialLicense_WhenLicenseWasNotProvided()
-		{
-			using (var documentStore = NewDocumentStore())
-			{
-				var database = documentStore.SystemDatabase;
+    public class RavenDB_1077 : RavenTest
+    {
+        [Fact]
+        public void ShouldNotStoreInfoAbouValidCommercialLicense_WhenLicenseWasNotProvided()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var database = documentStore.SystemDatabase;
 
-				var status = GetLicenseByReflection(database);
+                var status = GetLicenseByReflection(database);
 
-				Assert.False(status.ValidCommercialLicenseSeen);
+                Assert.False(status.ValidCommercialLicenseSeen);
 
-				ListItem validCommercialLicense = null;
-				database.TransactionalStorage.Batch(
-					accessor => validCommercialLicense = accessor.Lists.Read("Raven/License/Commercial", "ValidLicense"));
+                ListItem validCommercialLicense = null;
+                database.TransactionalStorage.Batch(
+                    accessor => validCommercialLicense = accessor.Lists.Read("Raven/License/Commercial", "ValidLicense"));
 
-				Assert.Null(validCommercialLicense);
-			}
-		}
+                Assert.Null(validCommercialLicense);
+            }
+        }
 
-		[Fact]
-		public void ShouldStoreInfoAbouValidCommercialLicense_WhenLicenseWasProvided()
-		{
-			using (var documentStore = NewDocumentStore())
-			{
-				var database = documentStore.SystemDatabase;
+        [Fact]
+        public void ShouldStoreInfoAboutValidCommercialLicense_WhenLicenseWasProvided()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var database = documentStore.SystemDatabase;
 
-				var status = GetLicenseByReflection(database);
+                var status = GetLicenseByReflection(database);
 
-				status.Error = false;
-				status.Status = "Commercial";
+                status.Error = false;
+                status.Status = "Commercial";
 
-				var task = database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First();
+                var task = database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First();
 
-				task.Execute(database);
+                task.Execute(database);
 
-				ListItem validCommercialLicense = null;
-				database.TransactionalStorage.Batch(
-					accessor => validCommercialLicense = accessor.Lists.Read("Raven/License/Commercial", "ValidLicense"));
+                ListItem validCommercialLicense = null;
+                database.TransactionalStorage.Batch(
+                    accessor => validCommercialLicense = accessor.Lists.Read("Raven/License/Commercial", "ValidLicense"));
 
-				Assert.NotNull(validCommercialLicense);
-			}
-		}
+                Assert.NotNull(validCommercialLicense);
+            }
+        }
 
-		[Fact]
-		public void ShouldDetectThatValidLicenseWasProvidedInThePast()
-		{
-			using (var documentStore = NewDocumentStore(enableAuthentication: true)) // / this will store info in database
-			{
-				var database = documentStore.SystemDatabase;
-				var status = GetLicenseByReflection(database);
+        [Fact]
+        public void ShouldDetectThatValidLicenseWasProvidedInThePast()
+        {
+            using (var documentStore = NewDocumentStore(enableAuthentication: true)) // / this will store info in database
+            {
+                var database = documentStore.SystemDatabase;
+                var status = GetLicenseByReflection(database);
 
-				// reset license info - mark it as invalid
-				status.Error = true;
-				status.Status = "";
-				status.ValidCommercialLicenseSeen = false;
+                // reset license info - mark it as invalid
+                status.Error = true;
+                status.Status = "";
+                status.ValidCommercialLicenseSeen = false;
 
-				var task = database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First();
+                var task = database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First();
 
-				task.Execute(database); // this should notice that in the database there is a valid license marker under "Raven/License/Commercial"
+                task.Execute(database); // this should notice that in the database there is a valid license marker under "Raven/License/Commercial"
 
-				Assert.True(status.ValidCommercialLicenseSeen);
-			}
-		}
+                Assert.True(status.ValidCommercialLicenseSeen);
+            }
+        }
 
-		[Fact]
-		public void ShouldRefuseToSetupWindowsAuth_WithoutValidCommercialLicense()
-		{
-			using (var documentStore = NewDocumentStore())
-			{
-				var exception = Assert.Throws<ErrorResponseException>(() =>
-				{
-					SetupWindowsAuth(documentStore);
-				});
-
-				Assert.Contains("Cannot setup Windows Authentication without a valid commercial license.", exception.Message);
-			}
-		}
-
-		[Fact]
-		public void ShouldSetupOAuthSuccessfully_WithoutValidCommercialLicense()
-		{
-			using (var documentStore = NewDocumentStore())
-			{
+        [Fact]
+        public void ShouldRefuseToSetupWindowsAuth_WithoutValidCommercialLicense()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
                 var exception = Assert.Throws<ErrorResponseException>(() =>
-				{
-					SetupOAuth(documentStore);
-				});
+                {
+                    SetupWindowsAuth(documentStore);
+                });
 
-				Assert.Contains("Cannot setup OAuth Authentication without a valid commercial license.", exception.Message);
-			}
-		}
+                Assert.Contains("Cannot setup Windows Authentication without a valid commercial license.", exception.Message);
+            }
+        }
 
-		[Fact]
-		public void ShouldAllowToSetupWindowsAuth_WhenValidCommercialLicenseProvided()
-		{
-			using (var documentStore = NewDocumentStore(enableAuthentication: true))
-			{
-				Assert.DoesNotThrow(() =>
-				{
-					SetupWindowsAuth(documentStore);
-				});
-			}
-		}
+        [Fact]
+        public void ShouldSetupOAuthSuccessfully_WithoutValidCommercialLicense()
+        {
+            using (var documentStore = NewDocumentStore())
+            {
+                var exception = Assert.Throws<ErrorResponseException>(() =>
+                {
+                    SetupOAuth(documentStore);
+                });
 
-		[Fact]
-		public void ShouldAllowToSetupOAuth_WhenValidCommercialLicensePrivided()
-		{
-			using (var documentStore = NewDocumentStore(enableAuthentication: true))
-			{
-				Assert.DoesNotThrow(() =>
-				{
-					SetupOAuth(documentStore);
-				});
-			}
-		}
+                Assert.Contains("Cannot setup OAuth Authentication without a valid commercial license.", exception.Message);
+            }
+        }
 
-		private static void SetupWindowsAuth(EmbeddableDocumentStore documentStore)
-		{
-			documentStore.DatabaseCommands.Put("Raven/Authorization/WindowsSettings", null,
-											   RavenJObject.FromObject(new WindowsAuthDocument()
-											   {
-												   RequiredUsers = new List<WindowsAuthData>()
-				                                   {
-					                                   new WindowsAuthData()
-					                                   {
-						                                   Name = "test",
-						                                   Enabled = true,
-						                                   Databases = new List<ResourceAccess>
-						                                   {
-							                                   new ResourceAccess {TenantId = "<system>"},
-						                                   }
-					                                   }
-				                                   }
-											   }), new RavenJObject());
-		}
+        [Fact]
+        public void ShouldAllowToSetupWindowsAuth_WhenValidCommercialLicenseProvided()
+        {
+            using (var documentStore = NewDocumentStore(enableAuthentication: true))
+            {
+                Assert.DoesNotThrow(() =>
+                {
+                    SetupWindowsAuth(documentStore);
+                });
+            }
+        }
 
-		private static void SetupOAuth(EmbeddableDocumentStore documentStore)
-		{
-			documentStore.DatabaseCommands.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
-			{
-				Name = "test",
-				Secret = "test",
-				Enabled = true,
-				Databases = new List<ResourceAccess>
-				{
-					new ResourceAccess {TenantId = "<system>"},
-				}
-			}), new RavenJObject());
-		}
-	}
+        [Fact]
+        public void ShouldAllowToSetupOAuth_WhenValidCommercialLicensePrivided()
+        {
+            using (var documentStore = NewDocumentStore(enableAuthentication: true))
+            {
+                Assert.DoesNotThrow(() =>
+                {
+                    SetupOAuth(documentStore);
+                });
+            }
+        }
+
+        private static void SetupWindowsAuth(EmbeddableDocumentStore documentStore)
+        {
+            documentStore.DatabaseCommands.Put("Raven/Authorization/WindowsSettings", null,
+                                               RavenJObject.FromObject(new WindowsAuthDocument()
+                                               {
+                                                   RequiredUsers = new List<WindowsAuthData>()
+                                                   {
+                                                       new WindowsAuthData()
+                                                       {
+                                                           Name = "test",
+                                                           Enabled = true,
+                                                           Databases = new List<ResourceAccess>
+                                                           {
+                                                               new ResourceAccess {TenantId = "<system>"},
+                                                           }
+                                                       }
+                                                   }
+                                               }), new RavenJObject());
+        }
+
+        private static void SetupOAuth(EmbeddableDocumentStore documentStore)
+        {
+            documentStore.DatabaseCommands.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+            {
+                Name = "test",
+                Secret = "test",
+                Enabled = true,
+                Databases = new List<ResourceAccess>
+                {
+                    new ResourceAccess {TenantId = "<system>"},
+                }
+            }), new RavenJObject());
+        }
+    }
 }

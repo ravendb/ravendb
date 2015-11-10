@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB1369.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -75,7 +75,7 @@ namespace Raven.Tests.Issues
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -86,10 +86,9 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore(runInMemory: false, configureStore: documentStore =>
             {
-                documentStore.Configuration.DataDirectory = dataDir;
-                documentStore.Configuration.IndexStoragePath = indexesDir;
-                documentStore.Configuration.Storage.Esent.JournalsStoragePath = jouranlDir;
-				documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
+                documentStore.Configuration.Core.DataDirectory = dataDir;
+                documentStore.Configuration.Core.IndexStoragePath = indexesDir;
+                documentStore.Configuration.Storage.JournalsStoragePath = jouranlDir;
             }))
             {
                 using (var sesion = store.OpenSession())
@@ -105,8 +104,6 @@ namespace Raven.Tests.Issues
             string storage;
             using (var store = NewDocumentStore(runInMemory: false))
             {
-                storage = store.Configuration.DefaultStorageTypeName;
-
                 new User_ByName().Execute(store);
 
                 using (var sesion = store.OpenSession())
@@ -121,7 +118,7 @@ namespace Raven.Tests.Issues
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -130,17 +127,18 @@ namespace Raven.Tests.Issues
                 JournalsLocation = jouranlDir
             }, Console.WriteLine);
 
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
-                DefaultStorageTypeName = storage,
-                DataDirectory = dataDir,
-                IndexStoragePath = indexesDir
+                Core =
+                {
+                    DataDirectory = dataDir,
+                    IndexStoragePath = indexesDir
+                }
             };
 
-			ravenConfiguration.Storage.Esent.JournalsStoragePath = jouranlDir;
-			ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
+            ravenConfiguration.Storage.JournalsStoragePath = jouranlDir;
 
-            using (var db = new DocumentDatabase(ravenConfiguration))
+            using (var db = new DocumentDatabase(ravenConfiguration, null))
             {
                 //db.SpinBackgroundWorkers(); -- indexing disabled here
 
@@ -210,8 +208,7 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {Constants.Esent.CircularLog, "false"},
-                        {Constants.Voron.AllowIncrementalBackups, "true"}
+                        {RavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
                     }
                 });
 
@@ -225,8 +222,8 @@ namespace Raven.Tests.Issues
 
                     store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), true, "DB1");
                     WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
-					
-					Thread.Sleep(1000); // incremental tag has seconds precision
+                    
+                    Thread.Sleep(1000); // incremental tag has seconds precision
                 }
 
                 store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest

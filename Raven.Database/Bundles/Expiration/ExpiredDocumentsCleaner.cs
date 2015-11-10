@@ -42,19 +42,19 @@ namespace Raven.Bundles.Expiration
                                   {
                                       Map =
                                           @"
-	from doc in docs
-	let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
-	where expiry != null
-	select new { Expiry = expiry }
+    from doc in docs
+    let expiry = doc[""@metadata""][""Raven-Expiration-Date""]
+    where expiry != null
+    select new { Expiry = expiry }
 "
                                   });
             }
 
-            var deleteFrequencyInSeconds = database.Configuration.GetConfigurationValue<int>("Raven/Expiration/DeleteFrequencySeconds") ?? 300;
-            logger.Info("Initialized expired document cleaner, will check for expired documents every {0} seconds",
-                        deleteFrequencyInSeconds);
+            var deleteFrequency = database.Configuration.Expiration.DeleteFrequency.AsTimeSpan;
+            logger.Info("Initialized expired document cleaner, will check for expired documents every {0}",
+                        deleteFrequency);
 
-            timer = database.TimerManager.NewTimer(state => TimerCallback(), TimeSpan.FromSeconds(deleteFrequencyInSeconds), TimeSpan.FromSeconds(deleteFrequencyInSeconds));
+            timer = database.TimerManager.NewTimer(state => TimerCallback(), deleteFrequency, deleteFrequency);
         }
 
         private object locker = new object();
@@ -75,7 +75,8 @@ namespace Raven.Bundles.Expiration
 
                 DateTime currentTime = SystemTime.UtcNow;
                 string nowAsStr = currentTime.GetDefaultRavenFormat();
-                logger.Debug("Trying to find expired documents to delete");
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Trying to find expired documents to delete");
                 var query = "Expiry:[* TO " + nowAsStr + "]";
 
                 var list = new List<string>();
@@ -112,8 +113,8 @@ namespace Raven.Bundles.Expiration
 
                 if (list.Count == 0)
                     return true;
-
-                logger.Debug(
+                if (logger.IsDebugEnabled)
+                    logger.Debug(
                     () => string.Format("Deleting {0} expired documents: [{1}]", list.Count, string.Join(", ", list)));
 
                 foreach (var id in list)

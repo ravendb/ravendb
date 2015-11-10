@@ -1,10 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{DBB6561C-6264-430D-8F3C-E11C6268981E}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -45,10 +43,31 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\Debug\</OutputPath>
+    <Prefer32Bit>false</Prefer32Bit>
+    <WarningLevel>4</WarningLevel>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\Release\</OutputPath>
+    <Optimize>true</Optimize>
+    <Prefer32Bit>false</Prefer32Bit>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Profiling|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>bin\Profiling\</OutputPath>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE</DefineConstants>
     <Prefer32Bit>false</Prefer32Bit>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -80,10 +99,6 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
-      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
-      <Name>Raven.Abstractions</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
@@ -91,6 +106,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -121,7 +140,7 @@
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="AfterBuild">
   </Target>
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />

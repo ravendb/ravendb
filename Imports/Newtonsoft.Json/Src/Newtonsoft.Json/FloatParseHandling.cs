@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -38,12 +38,12 @@ namespace Raven.Imports.Newtonsoft.Json
         /// <summary>
         /// Floating point numbers are parsed to <see cref="Decimal"/>.
         /// </summary>
-		Decimal = 1,
+        Decimal = 1,
 
-		/// <summary>
-		/// Floating point numbers are parsed to <see cref="Decimal"/>, unless 
-		/// we encounter a NaN
-		/// </summary>
-		PreferDecimalFallbackToDouble
+        /// <summary>
+        /// Floating point numbers are parsed to <see cref="Decimal"/>, unless 
+        /// we encounter a NaN
+        /// </summary>
+        PreferDecimalFallbackToDouble
     }
 }

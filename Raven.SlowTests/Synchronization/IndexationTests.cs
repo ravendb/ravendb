@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,152 +11,156 @@ using Raven.Json.Linq;
 using Raven.Tests.Common;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.SlowTests.Synchronization
 {
-	public class IndexationTests : RavenTest
-	{
-		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-		{
-			configuration.EnableResponseLoggingForEmbeddedDatabases = true;
-		}
+    public class IndexationTests : RavenTest
+    {
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        {
+            configuration.EnableResponseLoggingForEmbeddedDatabases = true;
+        }
 
-		private class Person
-		{
-			public string FirstName { get; set; }
+        private class Person
+        {
+            public string FirstName { get; set; }
 
-			public string LastName { get; set; }
-		}
+            public string LastName { get; set; }
+        }
 
-		private class PersonCount : AbstractIndexCreationTask<Person, PersonCount.ReduceResult>
-		{
-			public class ReduceResult
-			{
-				public string FirstName { get; set; }
-				public string LastName { get; set; }
-				public int Count { get; set; }
-			}
+        private class PersonCount : AbstractIndexCreationTask<Person, PersonCount.ReduceResult>
+        {
+            public class ReduceResult
+            {
+                public string FirstName { get; set; }
+                public string LastName { get; set; }
+                public int Count { get; set; }
+            }
 
-			public PersonCount()
-			{
-				Map = people => from person in people
-								select new
-								{
-									person.FirstName,
-									person.LastName,
-									Count = 1
-								};
+            public PersonCount()
+            {
+                Map = people => from person in people
+                                select new
+                                {
+                                    person.FirstName,
+                                    person.LastName,
+                                    Count = 1
+                                };
 
-				Reduce = results => from result in results
-									group result by new { result.FirstName, result.LastName }
-										into g
-										select new
-										{
-											FirstName = g.Key.FirstName,
-											LastName = g.Key.LastName,
-											Count = g.Sum(x => x.Count)
-										};
+                Reduce = results => from result in results
+                                    group result by new { result.FirstName, result.LastName }
+                                        into g
+                                        select new
+                                        {
+                                            FirstName = g.Key.FirstName,
+                                            LastName = g.Key.LastName,
+                                            Count = g.Sum(x => x.Count)
+                                        };
 
-			}
-		}
-		[Fact]
-		public void IndexerTest()
-		{
-			using (var store = NewDocumentStore(requestedStorage: "esent", configureStore: s => s.Conventions.AcceptGzipContent = false))
-			{
-				var index = new RavenDocumentsByEntityName();
-				index.Execute(store);
+            }
+        }
 
-				var tasks = new List<Task>();
-				for (var i = 1; i <= 20; i++)
-				{
-					var taskNumber = i;
-					tasks.Add(Save(store, taskNumber));
-				}
+        [Theory]
+        [PropertyData("Storages")]
+        public void IndexerTest(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage, configureStore: s => s.Conventions.AcceptGzipContent = false))
+            {
+                var index = new RavenDocumentsByEntityName();
+                index.Execute(store);
 
-				Task.WaitAll(tasks.ToArray());
+                var tasks = new List<Task>();
+                for (var i = 1; i <= 20; i++)
+                {
+                    var taskNumber = i;
+                    tasks.Add(Save(store, taskNumber));
+                }
 
-				WaitForIndexing(store);
+                Task.WaitAll(tasks.ToArray());
 
-				Assert.Equal(20000, store.DatabaseCommands.GetStatistics().CountOfDocuments); 
+                WaitForIndexing(store);
 
-				using (var session = store.OpenSession())
-				{
-					var count = session.Query<Person>(index.IndexName)
-									   .Customize(x => x.WaitForNonStaleResults())
-									   .Count();
+                Assert.Equal(20000, store.DatabaseCommands.GetStatistics().CountOfDocuments); 
 
-					Assert.Equal(20000, count);
-				}
-			}
-		}
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Person>(index.IndexName)
+                                       .Customize(x => x.WaitForNonStaleResults())
+                                       .Count();
 
-		[Fact]
-		public void ReducerTest()
-		{
-			using (var store = NewDocumentStore(requestedStorage:"esent", configureStore: documentStore => documentStore.Conventions.AcceptGzipContent = false))
-			{
-				var index1 = new RavenDocumentsByEntityName();
-				index1.Execute(store);
-				var index2 = new PersonCount();
-				index2.Execute(store);
+                    Assert.Equal(20000, count);
+                }
+            }
+        }
 
-				var tasks = new List<Task>();
-				for (var i = 1; i <= 20; i++)
-				{
-					var taskNumber = i;
-					tasks.Add(Save(store, taskNumber));
-				}
+        [Theory]
+        [PropertyData("Storages")]
+        public void ReducerTest(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage: storage, configureStore: documentStore => documentStore.Conventions.AcceptGzipContent = false))
+            {
+                var index1 = new RavenDocumentsByEntityName();
+                index1.Execute(store);
+                var index2 = new PersonCount();
+                index2.Execute(store);
 
-				Task.WaitAll(tasks.ToArray());
+                var tasks = new List<Task>();
+                for (var i = 1; i <= 20; i++)
+                {
+                    var taskNumber = i;
+                    tasks.Add(Save(store, taskNumber));
+                }
 
-				WaitForIndexing(store, timeout: TimeSpan.FromMinutes(1));
+                Task.WaitAll(tasks.ToArray());
 
-				Assert.Equal(20000, store.DatabaseCommands.GetStatistics().CountOfDocuments);
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(1));
 
-				using (var session = store.OpenSession())
-				{
-					var count = session.Query<Person>(index1.IndexName)
-									   .Customize(x => x.WaitForNonStaleResults())
-									   .Count();
+                Assert.Equal(20000, store.DatabaseCommands.GetStatistics().CountOfDocuments);
 
-					Assert.Equal(20000, count);
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Query<Person>(index1.IndexName)
+                                       .Customize(x => x.WaitForNonStaleResults())
+                                       .Count();
 
-					var results = session.Query<PersonCount.ReduceResult, PersonCount>()
-										 .Customize(customization => customization.WaitForNonStaleResults())
-										 .Take(1001)
-										 .ToList();
+                    Assert.Equal(20000, count);
+
+                    var results = session.Query<PersonCount.ReduceResult, PersonCount>()
+                                         .Customize(customization => customization.WaitForNonStaleResults())
+                                         .Take(1001)
+                                         .ToList();
 
 
-					WaitForUserToContinueTheTest(store);
+                    WaitForUserToContinueTheTest(store);
 
-					Assert.Equal(1000, results.Count);
+                    Assert.Equal(1000, results.Count);
 
-					foreach (var result in results)
-					{
-						Assert.Equal(20, result.Count);
-					}
-				}
-			}
-		}
+                    foreach (var result in results)
+                    {
+                        Assert.Equal(20, result.Count);
+                    }
+                }
+            }
+        }
 
-		private async Task Save(IDocumentStore store, int taskNumber)
-		{
-			for (var i = 1; i <= 1000; i++)
-			{
-				var response =
-					await
-					store.AsyncDatabaseCommands.PutAsync(
-						string.Format("people/{0}", Guid.NewGuid()), null,
-						RavenJObject.FromObject(new Person
-						{
-							FirstName = "FirstName" + i,
-							LastName = "LastName" + i
-						}), new RavenJObject
-						{
-							{Constants.RavenEntityName, "People"}
-						});
-			}
-		}
-	}
+        private async Task Save(IDocumentStore store, int taskNumber)
+        {
+            for (var i = 1; i <= 1000; i++)
+            {
+                var response =
+                    await
+                    store.AsyncDatabaseCommands.PutAsync(
+                        string.Format("people/{0}", Guid.NewGuid()), null,
+                        RavenJObject.FromObject(new Person
+                        {
+                            FirstName = "FirstName" + i,
+                            LastName = "LastName" + i
+                        }), new RavenJObject
+                        {
+                            {Constants.RavenEntityName, "People"}
+                        });
+            }
+        }
+    }
 }

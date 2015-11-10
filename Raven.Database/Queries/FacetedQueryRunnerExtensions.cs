@@ -10,8 +10,8 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Queries
 {
-	public static class FacetedQueryRunnerExtensions
-	{
+    public static class FacetedQueryRunnerExtensions
+    {
         public static FacetResults ExecuteGetTermsQuery(this DocumentDatabase self,
           string index, IndexQuery query, string facetSetupDoc)
         {
@@ -20,7 +20,7 @@ namespace Raven.Database.Queries
 
         public static FacetResults ExecuteGetTermsQuery(this DocumentDatabase self, string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
         {
-            var facetSetup = self.Documents.Get(facetSetupDoc, null);
+            var facetSetup = self.Documents.Get(facetSetupDoc);
             if (facetSetup == null)
                 throw new InvalidOperationException("Could not find facets document: " + facetSetupDoc);
 
@@ -38,5 +38,5 @@ namespace Raven.Database.Queries
         {
             return new FacetedQueryRunner(self).GetFacets(index, query, facets, start, pageSize);
         }
-	}
+    }
 }

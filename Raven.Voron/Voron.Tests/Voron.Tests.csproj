@@ -1,5 +1,6 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+ 
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -14,6 +15,7 @@
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <NuGetPackageImportStamp>b09e543f</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -42,6 +44,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -117,7 +120,10 @@
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="DebugJournalTest.cs" />
-    <Compile Include="PrefixesFact.cs" />
+    <Compile Include="FixedSize\InlineDataWithRandomSeed.cs" />
+    <Compile Include="FixedSize\LargeFixedSizeTreeBugs.cs" />
+    <Compile Include="FixedSize\LargeFixedSizeTrees.cs" />
+    <Compile Include="FixedSize\SimpleFixedSizeTrees.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\LogShipping.cs" />
@@ -125,7 +131,6 @@
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiTreeSize.cs" />
     <Compile Include="MultiValueTree.cs" />
-    <Compile Include="PrefixesTheory.cs" />
     <Compile Include="ScratchBuffer\MutipleScratchBuffersUsage.cs" />
     <Compile Include="ScratchBuffer\ScratchCanForceToFlushOldPages.cs" />
     <Compile Include="Optimizations\Writes.cs" />
@@ -208,4 +213,9 @@
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+  </Target>
 </Project>

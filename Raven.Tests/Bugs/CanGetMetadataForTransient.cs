@@ -9,29 +9,29 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanGetMetadataForTransient : RavenTest
-	{
-		[Fact]
-		public void GetMetadataForTransient()
-		{
-			using(var store = NewDocumentStore())
-			{
-				using(var s = store.OpenSession())
-				{
-					var entity = new User{Name = "Ayende"};
-					s.Store(entity);
-					s.Advanced.GetMetadataFor(entity)["admin"] = true;
+    public class CanGetMetadataForTransient : RavenTest
+    {
+        [Fact]
+        public void GetMetadataForTransient()
+        {
+            using(var store = NewDocumentStore())
+            {
+                using(var s = store.OpenSession())
+                {
+                    var entity = new User{Name = "Ayende"};
+                    s.Store(entity);
+                    s.Advanced.GetMetadataFor(entity)["admin"] = true;
 
-					s.SaveChanges();
-				}
+                    s.SaveChanges();
+                }
 
-				using (var s = store.OpenSession())
-				{
-					var entity = new User{Id = "users/1"};
-					var metadata = s.Advanced.GetMetadataFor(entity);
-					Assert.True(metadata.Value<bool>("Admin")); // metadata values are uppercased
-				}
-			}
-		}
-	}
+                using (var s = store.OpenSession())
+                {
+                    var entity = new User{Id = "users/1"};
+                    var metadata = s.Advanced.GetMetadataFor(entity);
+                    Assert.True(metadata.Value<bool>("Admin")); // metadata values are uppercased
+                }
+            }
+        }
+    }
 }

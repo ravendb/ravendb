@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Microsoft.Owin.Builder;
 using Owin;
 using Raven.Database.Config;
@@ -10,25 +10,24 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Tests
 {
-	public class AppBuilderExtensionsTests : RavenTest
-	{
-		[Fact]
-		public void When_HostOnAppDisposing_key_not_exist_then_should_not_throw()
-		{
-			string path = NewDataPath();
-			var configuration = new InMemoryRavenConfiguration { Settings =
-			{
-				{ "Raven/DataDir", path },
-				{ Constants.FileSystem.DataDirectory, Path.Combine(path, "FileSystem")}
-			} };
+    public class AppBuilderExtensionsTests : RavenTest
+    {
+        [Fact]
+        public void When_HostOnAppDisposing_key_not_exist_then_should_not_throw()
+        {
+            string path = NewDataPath();
+            var configuration = new RavenConfiguration();
 
-			configuration.Initialize();
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), path);
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine(path, "FileSystem"));
 
-			using (var options = new RavenDBOptions(configuration))
-			{
-				Assert.DoesNotThrow(() => new AppBuilder().UseRavenDB(options));
-			}
-			
-		}
-	}
+            configuration.Initialize();
+
+            using (var options = new RavenDBOptions(configuration))
+            {
+                Assert.DoesNotThrow(() => new AppBuilder().UseRavenDB(options));
+            }
+            
+        }
+    }
 }

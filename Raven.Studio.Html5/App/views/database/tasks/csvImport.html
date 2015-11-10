@@ -1,0 +1,32 @@
+<div id="csvImportContainer" class="panel panel-default">
+
+    <div class="panel-heading">
+        <h3 class="panel-title">Csv Import</h3>
+    </div>
+    <div class="panel-body">
+        <p>
+            <i class="fa fa-info-circle text-info"></i>
+            Import a csv file into a collection. Each column will be treated as a property.
+        </p>
+        <div id="addfileContainer">
+            <!--<input id="csvFilePicker" type="file" data-bind="event: { change: fileSelected }" />-->
+            <span class="btn btn-primary btn-file">
+                Choose file <input id="csvFilePicker" type="file" data-bind="event: { change: fileSelected }" />
+            </span>
+            <br />
+            <div class="btn-toolbar" data-bind="visible: hasFileSelected">
+                <div class="btn-group">
+                    <button class="btn btn-primary" data-bind="click: importCsv">
+                        <i class="fa fa-save"></i>
+                        CSV Import
+                    </button>
+                </div>
+            </div>
+            <br />
+            <div class="progress progress-striped active" data-bind="visible: isImporting">
+                <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+            </div>
+        </div>
+
+    </div>
+</div>

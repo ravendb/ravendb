@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -19,7 +19,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;DETAILED_DEBUG_</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -62,10 +62,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Binary\Bits.cs" />
+    <Compile Include="Binary\BitVector.cs" />
     <Compile Include="Collections\ConcurrentLruSet.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
+    <Compile Include="Collections\ZFastNodesTable.cs" />
+    <Compile Include="Collections\ZFastTrieSortedSet.cs" />
     <Compile Include="Comparers.cs" />
     <Compile Include="Hashing.cs" />
+    <Compile Include="Hashing.Iterative.cs" />
+    <Compile Include="Hashing.Streamed.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="ObjectPool.cs" />
     <Compile Include="Platform\Posix\PosixUnmanagedMemory.cs" />
@@ -77,12 +83,6 @@
     <None Include="readme.md" />
   </ItemGroup>
   <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+    <Import Project="..\..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

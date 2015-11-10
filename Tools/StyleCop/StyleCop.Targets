@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Specify where tasks are implemented. -->
   
   <UsingTask AssemblyFile="$(MSBuildThisFileDirectory)\StyleCop.dll" TaskName="StyleCopTask"/>

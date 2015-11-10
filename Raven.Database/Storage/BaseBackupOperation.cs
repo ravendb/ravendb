@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="BaseBackupOperation.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -60,34 +60,34 @@ namespace Raven.Database.Storage
                     string.Format("Started backup process. Backing up data to directory = '{0}'",
                                   backupDestinationDirectory), null, BackupStatus.BackupMessageSeverity.Informational);
 
-	            EnsureBackupDestinationExists();
+                EnsureBackupDestinationExists();
 
-	            if (incrementalBackup)
+                if (incrementalBackup)
                 {
-	                var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
+                    var incrementalBackupState = Path.Combine(backupDestinationDirectory, Constants.IncrementalBackupState);
 
-	                if (File.Exists(incrementalBackupState))
-	                {
-		                var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
+                    if (File.Exists(incrementalBackupState))
+                    {
+                        var state = RavenJObject.Parse(File.ReadAllText(incrementalBackupState)).JsonDeserialization<IncrementalBackupState>();
 
-						if(state.ResourceId != database.TransactionalStorage.Id)
-							throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different database. Existing incremental data origins from '{0}' database.", state.ResourceName));
-	                }
-	                else
-	                {
-		                var state = new IncrementalBackupState()
-		                {
-			                ResourceId = database.TransactionalStorage.Id,
-							ResourceName = database.Name ?? Constants.SystemDatabase
-		                };
+                        if(state.ResourceId != database.TransactionalStorage.Id)
+                            throw new InvalidOperationException(string.Format("Can't perform an incremental backup to a given folder because it already contains incremental backup data of different database. Existing incremental data origins from '{0}' database.", state.ResourceName));
+                    }
+                    else
+                    {
+                        var state = new IncrementalBackupState()
+                        {
+                            ResourceId = database.TransactionalStorage.Id,
+                            ResourceName = database.Name ?? Constants.SystemDatabase
+                        };
 
-						File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
-	                }
+                        File.WriteAllText(incrementalBackupState, RavenJObject.FromObject(state).ToString());
+                    }
 
-	                if (CanPerformIncrementalBackup())
+                    if (CanPerformIncrementalBackup())
                     {
                         backupDestinationDirectory = DirectoryForIncrementalBackup();
-						EnsureBackupDestinationExists();
+                        EnsureBackupDestinationExists();
                     }
                     else
                     {
@@ -106,11 +106,11 @@ namespace Raven.Database.Storage
                     Directory.CreateDirectory(Path.Combine(backupDestinationDirectory, "Indexes"));
 
                 var directoryBackups = new List<DirectoryBackup>
-				{
-					new DirectoryBackup(Path.Combine(backupSourceDirectory, "IndexDefinitions"),
+                {
+                    new DirectoryBackup(Path.Combine(backupSourceDirectory, "IndexDefinitions"),
                                         Path.Combine(backupDestinationDirectory, "IndexDefinitions"), 
                                         Path.Combine(backupSourceDirectory, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
-				};
+                };
 
                 database.IndexStorage.Backup(backupDestinationDirectory,null, UpdateBackupStatus);
 
@@ -153,26 +153,26 @@ namespace Raven.Database.Storage
             }
         }
 
-	    private void EnsureBackupDestinationExists()
-	    {
-		    if (Directory.Exists(backupDestinationDirectory))
-		    {
-			    var writeTestFile = Path.Combine(backupDestinationDirectory, "write-permission-test");
-			    try
-			    {
-				    File.Create(writeTestFile).Dispose();
-			    }
-			    catch (UnauthorizedAccessException)
-			    {
-				    throw new UnauthorizedAccessException(string.Format("You don't have write access to the path {0}", backupDestinationDirectory));
-			    }
-			    IOExtensions.DeleteFile(writeTestFile);
-		    }
-		    else
-			    Directory.CreateDirectory(backupDestinationDirectory); // will throw UnauthorizedAccessException if a user doesn't have write permission
-	    }
+        private void EnsureBackupDestinationExists()
+        {
+            if (Directory.Exists(backupDestinationDirectory))
+            {
+                var writeTestFile = Path.Combine(backupDestinationDirectory, "write-permission-test");
+                try
+                {
+                    File.Create(writeTestFile).Dispose();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    throw new UnauthorizedAccessException(string.Format("You don't have write access to the path {0}", backupDestinationDirectory));
+                }
+                IOExtensions.DeleteFile(writeTestFile);
+            }
+            else
+                Directory.CreateDirectory(backupDestinationDirectory); // will throw UnauthorizedAccessException if a user doesn't have write permission
+        }
 
-	    /// <summary>
+        /// <summary>
         /// The key of this check is to determinate if incremental backup can be executed 
         /// 
         /// For voron: first and subsequent backups are incremental 
@@ -201,7 +201,7 @@ namespace Raven.Database.Storage
             try
             {
                 log.Info("Backup completed");
-                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
                 if (jsonDocument == null)
                     return;
 
@@ -232,7 +232,7 @@ namespace Raven.Database.Storage
             try
             {
                 log.Info(newMsg);
-                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+                var jsonDocument = database.Documents.Get(BackupStatus.RavenBackupStatusDocumentKey);
                 if (jsonDocument == null)
                     return;
                 var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();

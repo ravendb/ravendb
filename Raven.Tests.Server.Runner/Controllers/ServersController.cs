@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ServersController.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -28,142 +28,140 @@ using System.Web.Http;
 
 namespace Raven.Tests.Server.Runner.Controllers
 {
-	public class ServersController : ApiController
-	{
-		[HttpPut]
-		public async Task<IHttpActionResult> PutServer([FromUri]bool deleteData = false)
-		{
-			var json = await ReadJsonAsync();
-			var serverConfiguration = json.JsonDeserialization<ServerConfiguration>();
+    public class ServersController : ApiController
+    {
+        [HttpPut]
+        public async Task<IHttpActionResult> PutServer([FromUri]bool deleteData = false)
+        {
+            var json = await ReadJsonAsync();
+            var serverConfiguration = json.JsonDeserialization<ServerConfiguration>();
 
-			if (serverConfiguration == null)
-				return BadRequest();
+            if (serverConfiguration == null)
+                return BadRequest();
 
-			var configuration = serverConfiguration.ConvertToRavenConfiguration();
+            var configuration = serverConfiguration.ConvertToRavenConfiguration();
 
-			if (serverConfiguration.HasApiKey)
-			{
-				configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-				Authentication.EnableOnce();
-			}
+            if (serverConfiguration.HasApiKey)
+            {
+                configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+                Authentication.EnableOnce();
+            }
 
-			configuration.PostInit();
+            MaybeRemoveServer(configuration.Core.Port);
+            var server = CreateNewServer(configuration, deleteData);
 
-			MaybeRemoveServer(configuration.Port);
-			var server = CreateNewServer(configuration, deleteData);
+            if (serverConfiguration.UseCommercialLicense)
+                EnableAuthentication(server.SystemDatabase);
 
-			if (serverConfiguration.UseCommercialLicense)
-				EnableAuthentication(server.SystemDatabase);
+            if (serverConfiguration.HasApiKey)
+            {
+                server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
+                {
+                    Name = serverConfiguration.ApiKeyName,
+                    Secret = serverConfiguration.ApiKeySecret,
+                    Enabled = true,
+                    Databases = new List<ResourceAccess>
+                {
+                    new ResourceAccess {TenantId = "*", Admin = true},
+                    new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
+                }
+                }), new RavenJObject());
+            }
 
-			if (serverConfiguration.HasApiKey)
-			{
-				server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
-				{
-					Name = serverConfiguration.ApiKeyName,
-					Secret = serverConfiguration.ApiKeySecret,
-					Enabled = true,
-					Databases = new List<ResourceAccess>
-				{
-					new ResourceAccess {TenantId = "*", Admin = true},
-					new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
-				}
-				}), new RavenJObject(), null);
-			}
+            return Ok();
+        }
 
-			return Ok();
-		}
+        [HttpGet]
+        public IHttpActionResult GetServer([FromUri]int port, [FromUri]string action)
+        {
+            if (!Context.Servers.ContainsKey(port))
+                return Ok();
 
-		[HttpGet]
-		public IHttpActionResult GetServer([FromUri]int port, [FromUri]string action)
-		{
-			if (!Context.Servers.ContainsKey(port))
-				return Ok();
+            var server = Context.Servers[port];
 
-			var server = Context.Servers[port];
+            switch (action.ToLowerInvariant())
+            {
+                case "waitforallrequeststocomplete":
+                    SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15));
+                    break;
+            }
 
-			switch (action.ToLowerInvariant())
-			{
-				case "waitforallrequeststocomplete":
-					SpinWait.SpinUntil(() => server.Server.HasPendingRequests == false, TimeSpan.FromMinutes(15));
-					break;
-			}
+            return Ok();
+        }
 
-			return Ok();
-		}
-
-		[HttpDelete]
-		public void DeleteServer([FromUri]int port)
-		{
-			MaybeRemoveServer(port);
+        [HttpDelete]
+        public void DeleteServer([FromUri]int port)
+        {
+            MaybeRemoveServer(port);
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
-		}
+        }
 
-		private static RavenDbServer CreateNewServer(InMemoryRavenConfiguration configuration, bool deleteData)
-		{
-			var port = configuration.Port.ToString(CultureInfo.InvariantCulture);
+        private static RavenDbServer CreateNewServer(RavenConfiguration configuration, bool deleteData)
+        {
+            var port = configuration.Core.Port.ToString(CultureInfo.InvariantCulture);
 
-			configuration.DataDirectory = Path.Combine(Context.DataDir, port, "System");
-			configuration.FileSystem.DataDirectory = Path.Combine(Context.DataDir, port, "FileSystem");
-			configuration.AccessControlAllowOrigin = new HashSet<string> { "*" };
+            configuration.Core.DataDirectory = Path.Combine(Context.DataDir, port, "System");
+            configuration.FileSystem.DataDirectory = Path.Combine(Context.DataDir, port, "FileSystem");
+            configuration.Server.AccessControlAllowOrigin = new HashSet<string> { "*" };
 
-			if (configuration.RunInMemory == false && deleteData)
-			{
+            if (configuration.Core.RunInMemory == false && deleteData)
+            {
                 var pathToDelete = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Context.DataDir, port);
-				Context.DeleteDirectory(pathToDelete);
-			}
+                Context.DeleteDirectory(pathToDelete);
+            }
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port);
-			var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Core.Port);
+            var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
 
-			server.Initialize();
-			Context.Servers.Add(configuration.Port, server);
+            server.Initialize();
+            Context.Servers.Add(configuration.Core.Port, server);
 
-			Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Port, configuration.RunInMemory);
+            Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Core.Port, configuration.Core.RunInMemory);
 
-			return server;
-		}
+            return server;
+        }
 
-		private static void MaybeRemoveServer(int port)
-		{
-			if (!Context.Servers.ContainsKey(port))
-				return;
+        private static void MaybeRemoveServer(int port)
+        {
+            if (!Context.Servers.ContainsKey(port))
+                return;
 
-			Context.Servers[port].Dispose();
-			Context.Servers.Remove(port);
+            Context.Servers[port].Dispose();
+            Context.Servers.Remove(port);
 
-			Console.WriteLine("Deleted a server at: " + port);
-		}
+            Console.WriteLine("Deleted a server at: " + port);
+        }
 
-		private static void EnableAuthentication(DocumentDatabase database)
-		{
-			var license = GetLicenseByReflection(database);
-			license.Error = false;
-			license.Status = "Commercial";
+        private static void EnableAuthentication(DocumentDatabase database)
+        {
+            var license = GetLicenseByReflection(database);
+            license.Error = false;
+            license.Status = "Commercial";
 
-			// rerun this startup task
-			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
-		}
+            // rerun this startup task
+            database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+        }
 
-		private static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
-		{
-			var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
-			var initializer = field.GetValue(database);
-			var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
-			var validateLicense = validateLicenseField.GetValue(initializer);
+        private static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
+        {
+            var field = database.GetType().GetField("initializer", BindingFlags.Instance | BindingFlags.NonPublic);
+            var initializer = field.GetValue(database);
+            var validateLicenseField = initializer.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+            var validateLicense = validateLicenseField.GetValue(initializer);
 
-			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
+            var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
 
-			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
-		}
+            return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
+        }
 
-		private async Task<RavenJObject> ReadJsonAsync()
-		{
-			using (var stream = await Request.Content.ReadAsStreamAsync())
-			using (var streamReader = new StreamReader(stream))
-			using (var jsonReader = new RavenJsonTextReader(streamReader))
-				return RavenJObject.Load(jsonReader);
-		}
-	}
+        private async Task<RavenJObject> ReadJsonAsync()
+        {
+            using (var stream = await Request.Content.ReadAsStreamAsync())
+            using (var streamReader = new StreamReader(stream))
+            using (var jsonReader = new RavenJsonTextReader(streamReader))
+                return RavenJObject.Load(jsonReader);
+        }
+    }
 }

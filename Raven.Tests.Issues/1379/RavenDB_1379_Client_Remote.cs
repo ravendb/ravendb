@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,15 +11,15 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_1379_Client_Remote : RavenTest
-	{
-	    [Theory]
+    public class RavenDB_1379_Client_Remote : RavenTest
+    {
+        [Theory]
         [PropertyData("Storages")]
-	    public void PagingWithoutFilters(string requestedStorage)
-	    {
-	        using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
-	        {
-	            documentStore.DatabaseCommands.Put("FooBar1", null, new RavenJObject(), new RavenJObject());
+        public void PagingWithoutFilters(string requestedStorage)
+        {
+            using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
+            {
+                documentStore.DatabaseCommands.Put("FooBar1", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("BarFoo2", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar3", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar11", null, new RavenJObject(), new RavenJObject());
@@ -32,9 +32,9 @@ namespace Raven.Tests.Issues
                 documentStore.DatabaseCommands.Put("FooBar6", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar8", null, new RavenJObject(), new RavenJObject());
 
-		        var fetchedDocuments = documentStore
-					.DatabaseCommands
-					.StartsWith("FooBar", string.Empty, 0, 4, exclude: string.Empty)
+                var fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 0, 4, exclude: string.Empty)
                     .ToList();
 
                 var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
@@ -46,13 +46,13 @@ namespace Raven.Tests.Issues
                 Assert.Contains("FooBar111", foundDocKeys);
                 Assert.Contains("FooBar12", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.DatabaseCommands
-					.StartsWith("FooBar", string.Empty, 4, 4, exclude: string.Empty)
-					.ToList();
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 4, 4, exclude: string.Empty)
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
                 Assert.Equal(4, foundDocKeys.Count);
                 Assert.Contains("FooBar21", foundDocKeys);
@@ -60,25 +60,25 @@ namespace Raven.Tests.Issues
                 Assert.Contains("FooBar5", foundDocKeys);
                 Assert.Contains("FooBar6", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.DatabaseCommands
-					.StartsWith("FooBar", string.Empty, 8, 4, exclude: string.Empty)
-					.ToList();
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 8, 4, exclude: string.Empty)
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
                 Assert.Equal(1, foundDocKeys.Count);
                 Assert.Contains("FooBar8", foundDocKeys);
-	        }
-	    }
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public void PagingWithoutFiltersWithPagingInformation(string requestedStorage)
-		{
+        public void PagingWithoutFiltersWithPagingInformation(string requestedStorage)
+        {
             using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
-			{
+            {
                 documentStore.DatabaseCommands.Put("FooBar1", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("BarFoo2", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar3", null, new RavenJObject(), new RavenJObject());
@@ -92,54 +92,54 @@ namespace Raven.Tests.Issues
                 documentStore.DatabaseCommands.Put("FooBar6", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar8", null, new RavenJObject(), new RavenJObject());
 
-				var pagingInformation = new RavenPagingInformation();
-				var fetchedDocuments = documentStore
-					.DatabaseCommands
-					.StartsWith("FooBar", string.Empty, 0, 4, pagingInformation: pagingInformation, exclude: string.Empty)
-					.ToList();
+                var pagingInformation = new RavenPagingInformation();
+                var fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 0, 4, pagingInformation: pagingInformation, exclude: string.Empty)
+                    .ToList();
 
-				var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(4, foundDocKeys.Count);
-				Assert.Contains("FooBar1", foundDocKeys);
-				Assert.Contains("FooBar11", foundDocKeys);
-				Assert.Contains("FooBar111", foundDocKeys);
-				Assert.Contains("FooBar12", foundDocKeys);
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar1", foundDocKeys);
+                Assert.Contains("FooBar11", foundDocKeys);
+                Assert.Contains("FooBar111", foundDocKeys);
+                Assert.Contains("FooBar12", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.DatabaseCommands
-					.StartsWith("FooBar", string.Empty, 4, 4, pagingInformation: pagingInformation, exclude: string.Empty)
-					.ToList();
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 4, 4, pagingInformation: pagingInformation, exclude: string.Empty)
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(4, foundDocKeys.Count);
-				Assert.Contains("FooBar21", foundDocKeys);
-				Assert.Contains("FooBar3", foundDocKeys);
-				Assert.Contains("FooBar5", foundDocKeys);
-				Assert.Contains("FooBar6", foundDocKeys);
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar21", foundDocKeys);
+                Assert.Contains("FooBar3", foundDocKeys);
+                Assert.Contains("FooBar5", foundDocKeys);
+                Assert.Contains("FooBar6", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.DatabaseCommands
-					.StartsWith("FooBar", string.Empty, 8, 4, pagingInformation: pagingInformation, exclude: string.Empty)
-					.ToList();
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 8, 4, pagingInformation: pagingInformation, exclude: string.Empty)
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(1, foundDocKeys.Count);
-				Assert.Contains("FooBar8", foundDocKeys);
-			}
-		}
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar8", foundDocKeys);
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public void PagingWithoutFiltersAsync(string requestedStorage)
-		{
+        public void PagingWithoutFiltersAsync(string requestedStorage)
+        {
             using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
-			{
+            {
                 documentStore.DatabaseCommands.Put("FooBar1", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("BarFoo2", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar3", null, new RavenJObject(), new RavenJObject());
@@ -153,56 +153,56 @@ namespace Raven.Tests.Issues
                 documentStore.DatabaseCommands.Put("FooBar6", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar8", null, new RavenJObject(), new RavenJObject());
 
-				var fetchedDocuments = documentStore
-					.AsyncDatabaseCommands
-					.StartsWithAsync("FooBar", string.Empty, 0, 4, exclude: string.Empty)
-					.Result
-					.ToList();
+                var fetchedDocuments = documentStore
+                    .AsyncDatabaseCommands
+                    .StartsWithAsync("FooBar", string.Empty, 0, 4, exclude: string.Empty)
+                    .Result
+                    .ToList();
 
-				var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(4, foundDocKeys.Count);
-				Assert.Contains("FooBar1", foundDocKeys);
-				Assert.Contains("FooBar11", foundDocKeys);
-				Assert.Contains("FooBar111", foundDocKeys);
-				Assert.Contains("FooBar12", foundDocKeys);
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar1", foundDocKeys);
+                Assert.Contains("FooBar11", foundDocKeys);
+                Assert.Contains("FooBar111", foundDocKeys);
+                Assert.Contains("FooBar12", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.AsyncDatabaseCommands
-					.StartsWithAsync("FooBar", string.Empty, 4, 4, exclude: string.Empty)
-					.Result
-					.ToList();
+                fetchedDocuments = documentStore
+                    .AsyncDatabaseCommands
+                    .StartsWithAsync("FooBar", string.Empty, 4, 4, exclude: string.Empty)
+                    .Result
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(4, foundDocKeys.Count);
-				Assert.Contains("FooBar21", foundDocKeys);
-				Assert.Contains("FooBar3", foundDocKeys);
-				Assert.Contains("FooBar5", foundDocKeys);
-				Assert.Contains("FooBar6", foundDocKeys);
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar21", foundDocKeys);
+                Assert.Contains("FooBar3", foundDocKeys);
+                Assert.Contains("FooBar5", foundDocKeys);
+                Assert.Contains("FooBar6", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.AsyncDatabaseCommands
-					.StartsWithAsync("FooBar", string.Empty, 8, 4, exclude: string.Empty)
-					.Result
-					.ToList();
+                fetchedDocuments = documentStore
+                    .AsyncDatabaseCommands
+                    .StartsWithAsync("FooBar", string.Empty, 8, 4, exclude: string.Empty)
+                    .Result
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(1, foundDocKeys.Count);
-				Assert.Contains("FooBar8", foundDocKeys);
-			}
-		}
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar8", foundDocKeys);
+            }
+        }
 
-		[Theory]
+        [Theory]
         [PropertyData("Storages")]
-		public void PagingWithoutFiltersWithPagingInformationAsync(string requestedStorage)
-		{
+        public void PagingWithoutFiltersWithPagingInformationAsync(string requestedStorage)
+        {
             using (var documentStore = NewRemoteDocumentStore(requestedStorage: requestedStorage))
-			{
+            {
                 documentStore.DatabaseCommands.Put("FooBar1", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("BarFoo2", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar3", null, new RavenJObject(), new RavenJObject());
@@ -216,50 +216,50 @@ namespace Raven.Tests.Issues
                 documentStore.DatabaseCommands.Put("FooBar6", null, new RavenJObject(), new RavenJObject());
                 documentStore.DatabaseCommands.Put("FooBar8", null, new RavenJObject(), new RavenJObject());
 
-				var pagingInformation = new RavenPagingInformation();
-				var fetchedDocuments = documentStore
-					.AsyncDatabaseCommands
-					.StartsWithAsync("FooBar", string.Empty, 0, 4, pagingInformation: pagingInformation, exclude: string.Empty)
-					.Result
-					.ToList();
+                var pagingInformation = new RavenPagingInformation();
+                var fetchedDocuments = documentStore
+                    .AsyncDatabaseCommands
+                    .StartsWithAsync("FooBar", string.Empty, 0, 4, pagingInformation: pagingInformation, exclude: string.Empty)
+                    .Result
+                    .ToList();
 
-				var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(4, foundDocKeys.Count);
-				Assert.Contains("FooBar1", foundDocKeys);
-				Assert.Contains("FooBar11", foundDocKeys);
-				Assert.Contains("FooBar111", foundDocKeys);
-				Assert.Contains("FooBar12", foundDocKeys);
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar1", foundDocKeys);
+                Assert.Contains("FooBar11", foundDocKeys);
+                Assert.Contains("FooBar111", foundDocKeys);
+                Assert.Contains("FooBar12", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.AsyncDatabaseCommands
-					.StartsWithAsync("FooBar", string.Empty, 4, 4, pagingInformation: pagingInformation, exclude: string.Empty)
-					.Result
-					.ToList();
+                fetchedDocuments = documentStore
+                    .AsyncDatabaseCommands
+                    .StartsWithAsync("FooBar", string.Empty, 4, 4, pagingInformation: pagingInformation, exclude: string.Empty)
+                    .Result
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(4, foundDocKeys.Count);
-				Assert.Contains("FooBar21", foundDocKeys);
-				Assert.Contains("FooBar3", foundDocKeys);
-				Assert.Contains("FooBar5", foundDocKeys);
-				Assert.Contains("FooBar6", foundDocKeys);
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar21", foundDocKeys);
+                Assert.Contains("FooBar3", foundDocKeys);
+                Assert.Contains("FooBar5", foundDocKeys);
+                Assert.Contains("FooBar6", foundDocKeys);
 
-				fetchedDocuments = documentStore
-					.AsyncDatabaseCommands
-					.StartsWithAsync("FooBar", string.Empty, 8, 4, pagingInformation: pagingInformation, exclude: string.Empty)
-					.Result
-					.ToList();
+                fetchedDocuments = documentStore
+                    .AsyncDatabaseCommands
+                    .StartsWithAsync("FooBar", string.Empty, 8, 4, pagingInformation: pagingInformation, exclude: string.Empty)
+                    .Result
+                    .ToList();
 
-				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
-												   .ToList();
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
 
-				Assert.Equal(1, foundDocKeys.Count);
-				Assert.Contains("FooBar8", foundDocKeys);
-			}
-		}
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar8", foundDocKeys);
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
@@ -651,5 +651,5 @@ namespace Raven.Tests.Issues
                 Assert.Contains("FooBar8", foundDocKeys);
             }
         }
-	}
+    }
 }

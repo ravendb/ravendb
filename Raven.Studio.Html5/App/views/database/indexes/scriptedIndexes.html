@@ -1,0 +1,68 @@
+<div id="scriptedIndexes" class="innerWindowsStyle">
+    <form id="scriptedIndexesForm" data-bind="submit: saveChanges" class=" form-horizontal" role="form">
+        <nav class="navbar navbar-default" role="navigation">
+            <div class="collapse navbar-collapse">
+                <div class="navbar-form navbar-right">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="visible: inactiveIndexNames().length > 0" title=" Create Script">
+                            <i class="fa fa-plus"></i> Create Script for Index: <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <!-- ko foreach: inactiveIndexNames -->
+                            <li data-bind="click: $root.createScriptedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
+                            <!-- /ko -->
+                        </ul>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" accesskey="S" data-bind="enable: isSaveEnabled"><i class="fa fa-save"></i></button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <div class="alert alert-warning" data-bind="visible: activeScriptedIndexes().length === 0">
+            You've got no scripted indexes set up.
+        </div>
+        <div class="panel-group" id="accordion" data-bind="foreach: activeScriptedIndexes">
+            <div class="panel panel-default panel-info">
+                <div class="panel-heading">
+                    <a data-toggle="collapse" data-parent="#accordion" data-bind="attr: { 'href': '#scriptedIndex' + $index() }">
+                        <h3 class="panel-title">
+                            <span data-bind="text: indexName"></span>
+                            <span class="close" aria-hidden="true" data-bind="click: $root.removeScriptedIndex.bind($root, $data)" title="Remove this Scripted Index"><i class="fa fa-times"></i></span>
+                        </h3>
+                    </a>
+                </div>
+                <div data-bind="attr: { 'id': 'scriptedIndex' + $index() }, css: { 'collapse': ($index() !== $parent.firstIndex()), 'in': ($index() === $parent.firstIndex()) }" class="panel-collapse collapse">
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label style="cursor: help;" class="col-md-2 control-label index-script-label" data-placement="auto right" data-original-title="Index Script" data-trigger="hover">
+                                Index Script
+                                <i class="fa fa-info-circle text-info"></i>
+                            </label>
+                            <div class="col-md-10">
+                                <div class="row">
+                                    <div class="col-md-11">
+                                        <pre class="form-control map" data-bind="aceEditor: { code: indexScript, lang: 'ace/mode/javascript' }"></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label style="cursor: help;" class="col-md-2 control-label delete-script-label" data-placement="auto right" data-original-title="Delete Script" data-trigger="hover">
+                                Delete Script
+                                <i class="fa fa-info-circle text-info"></i>
+                            </label>
+                            <div class="col-md-10">
+                                <div class="row">
+                                    <div class="col-md-11">
+                                        <pre class="form-control map" data-bind="aceEditor: { code: deleteScript, lang: 'ace/mode/javascript' }"></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

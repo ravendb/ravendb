@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="IConnectionManager.cs" company="Microsoft Corporation">
 //     Copyright (c) Microsoft Corporation.
 // </copyright>

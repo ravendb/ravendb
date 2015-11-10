@@ -1,11 +1,9 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 
@@ -42,7 +40,7 @@ namespace Raven.Client.FileSystem
         void RegisterFileDeletion(string path, Etag etag = null);
         void RegisterFileDeletion(FileHeader path, Etag etag = null);
 
-		void RegisterDeletionQuery(string query);
+        void RegisterDeletionQuery(string query);
 
         void RegisterRename(string sourceFile, string destinationFile, Etag etag = null);
         void RegisterRename(FileHeader sourceFile, string destinationFile, Etag etag = null);

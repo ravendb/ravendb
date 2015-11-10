@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1598_MappingComplexProperties.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -99,9 +99,9 @@ namespace Raven.Tests.Issues
             }
         }
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
+            configuration.Core.ActiveBundlesStringValue = "ScriptedIndexResults";
         }
 
         [Fact]

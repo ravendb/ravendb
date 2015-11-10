@@ -1,4 +1,4 @@
-﻿using Raven.Bundles.Versioning.Data;
+using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Bundles.Versioning;
 using Raven.Tests.Common;
@@ -13,9 +13,9 @@ namespace Raven.Tests.Bundles.Versioning.Bugs
 
         private readonly IDocumentStore store;
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "Versioning";
+            configuration.Core.ActiveBundlesStringValue = "Versioning";
         }
 
         public MultiTenant()

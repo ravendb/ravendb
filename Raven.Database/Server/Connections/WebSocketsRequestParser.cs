@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Web;
 
 using Raven.Abstractions.Data;
+using Raven.Database.Common;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -14,219 +15,223 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Connections
 {
-	public class WebSocketsRequestParser
-	{
-		private const string CountersUrlPrefix = Constants.Counter.UrlPrefix;
-		private const string DatabasesUrlPrefix = Constants.Database.UrlPrefix;
-		private const string FileSystemsUrlPrefix = Constants.FileSystem.UrlPrefix;
+    public class WebSocketsRequestParser
+    {
+        private const string CountersUrlPrefix = Constants.Counter.UrlPrefix;
+        private const string TimeSeriesUrlPrefix = Constants.TimeSeries.UrlPrefix;
+        private const string DatabasesUrlPrefix = Constants.Database.UrlPrefix;
+        private const string FileSystemsUrlPrefix = Constants.FileSystem.UrlPrefix;
 
-		protected DatabasesLandlord DatabasesLandlord { get; private set; }
+        protected DatabasesLandlord DatabasesLandlord { get; private set; }
 
-		private readonly CountersLandlord countersLandlord;
+        private readonly TimeSeriesLandlord timeSeriesLandlord;
+        private readonly CountersLandlord countersLandlord;
+        private readonly FileSystemsLandlord fileSystemsLandlord;
+        private readonly MixedModeRequestAuthorizer authorizer;
 
-		private readonly FileSystemsLandlord fileSystemsLandlord;
+        private readonly string expectedRequestSuffix;
 
-		private readonly MixedModeRequestAuthorizer authorizer;
+        public WebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+        {
+            DatabasesLandlord = databasesLandlord;
+            this.timeSeriesLandlord = timeSeriesLandlord;
+            this.countersLandlord = countersLandlord;
+            this.fileSystemsLandlord = fileSystemsLandlord;
+            this.authorizer = authorizer;
+            this.expectedRequestSuffix = expectedRequestSuffix;
+        }
 
-		private readonly string expectedRequestSuffix;
+        public async Task<WebSocketRequest> ParseWebSocketRequestAsync(Uri uri, string token)
+        {
+            var parameters = HttpUtility.ParseQueryString(uri.Query);
+            var request = new WebSocketRequest
+            {
+                Id = parameters["id"],
+                Uri = uri,
+                Token = token
+            };
 
-		public WebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
-		{
-			DatabasesLandlord = databasesLandlord;
-			this.countersLandlord = countersLandlord;
-			this.fileSystemsLandlord = fileSystemsLandlord;
-			this.authorizer = authorizer;
-			this.expectedRequestSuffix = expectedRequestSuffix;
-		}
+            await ValidateRequest(request).ConfigureAwait(false);
+            AuthenticateRequest(request);
 
-		public async Task<WebSocketRequest> ParseWebSocketRequestAsync(Uri uri, string token)
-		{
-			var parameters = HttpUtility.ParseQueryString(uri.Query);
-			var request = new WebSocketRequest
-			{
-				Id = parameters["id"],
-				Uri = uri,
-				Token = token
-			};
+            return request;
+        }
 
-			await ValidateRequest(request);
-			AuthenticateRequest(request);
+        protected virtual async Task ValidateRequest(WebSocketRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Id))
+            {
+                throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Id is mandatory.");
+            }
 
-			return request;
-		}
+            request.ActiveResource = await GetActiveResource(request).ConfigureAwait(false);
+            request.ResourceName = request.ActiveResource.ResourceName ?? Constants.SystemDatabase;
+        }
 
-		protected virtual async Task ValidateRequest(WebSocketRequest request)
-		{
-			if (string.IsNullOrEmpty(request.Id))
-			{
-				throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Id is mandatory.");
-			}
+        protected virtual void AuthenticateRequest(WebSocketRequest request)
+        {
+            var singleUseToken = request.Token;
+            if (string.IsNullOrEmpty(singleUseToken) == false)
+            {
+                object msg;
+                HttpStatusCode code;
 
-			request.ActiveResource = await GetActiveResource(request);
-			request.ResourceName = request.ActiveResource.ResourceName ?? Constants.SystemDatabase;
-		}
+                IPrincipal user;
+                if (authorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, request.ResourceName, out msg, out code, out user) == false)
+                {
+                    throw new WebSocketRequestValidationException(code, RavenJToken.FromObject(msg).ToString(Formatting.Indented));
+                }
 
-		protected virtual void AuthenticateRequest(WebSocketRequest request)
-		{
-			var singleUseToken = request.Token;
-			if (string.IsNullOrEmpty(singleUseToken) == false)
-			{
-				object msg;
-				HttpStatusCode code;
+                request.User = user;
+                return;
+            }
 
-				IPrincipal user;
-				if (authorizer.TryAuthorizeSingleUseAuthToken(singleUseToken, request.ResourceName, out msg, out code, out user) == false)
-				{
-					throw new WebSocketRequestValidationException(code, RavenJToken.FromObject(msg).ToString(Formatting.Indented));
-				}
+            switch (DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode)
+            {
+                case AnonymousUserAccessMode.Admin:
+                case AnonymousUserAccessMode.All:
+                case AnonymousUserAccessMode.Get:
+                    // this is effectively a GET request, so we'll allow it
+                    // under this circumstances
+                    request.User = CurrentOperationContext.User.Value;
+                    return;
+                case AnonymousUserAccessMode.None:
+                    throw new WebSocketRequestValidationException(HttpStatusCode.Forbidden, "Single use token is required for authenticated web sockets connections.");
+                default:
+                    throw new ArgumentOutOfRangeException(DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode.ToString());
+            }
+        }
 
-				request.User = user;
-				return;
-			}
+        private async Task<IResourceStore> GetActiveResource(WebSocketRequest request)
+        {
+            try
+            {
+                var localPath = NormalizeLocalPath(request.Uri.LocalPath);
+                var resourcePath = localPath.Substring(0, localPath.Length - expectedRequestSuffix.Length);
 
-			switch (DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode)
-			{
-				case AnonymousUserAccessMode.Admin:
-				case AnonymousUserAccessMode.All:
-				case AnonymousUserAccessMode.Get:
-					// this is effectively a GET request, so we'll allow it
-					// under this circumstances
-					request.User = CurrentOperationContext.User.Value;
-					return;
-				case AnonymousUserAccessMode.None:
-					throw new WebSocketRequestValidationException(HttpStatusCode.Forbidden, "Single use token is required for authenticated web sockets connections.");
-				default:
-					throw new ArgumentOutOfRangeException(DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode.ToString());
-			}
-		}
+                var resourcePartsPathParts = resourcePath.Split('/');
 
-		private async Task<IResourceStore> GetActiveResource(WebSocketRequest request)
-		{
-			try
-			{
-				var localPath = NormalizeLocalPath(request.Uri.LocalPath);
-				var resourcePath = localPath.Substring(0, localPath.Length - expectedRequestSuffix.Length);
+                if (expectedRequestSuffix.Equals(localPath))
+                {
+                    return DatabasesLandlord.SystemDatabase;
+                }
+                IResourceStore activeResource;
+                switch (resourcePartsPathParts[1])
+                {
+                    case DatabasesUrlPrefix:
+                        activeResource = await DatabasesLandlord.GetResourceInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2)).ConfigureAwait(false);
+                        break;
+                    case FileSystemsUrlPrefix:
+                        activeResource = await fileSystemsLandlord.GetResourceInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2)).ConfigureAwait(false);
+                        break;
+                    case CountersUrlPrefix:
+                        activeResource = await countersLandlord.GetResourceInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2)).ConfigureAwait(false);
+                        break;
+                    case TimeSeriesUrlPrefix:
+                        activeResource = await timeSeriesLandlord.GetResourceInternal(resourcePath.Substring(TimeSeriesUrlPrefix.Length + 2)).ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");
+                }
 
-				var resourcePartsPathParts = resourcePath.Split('/');
+                return activeResource;
+            }
+            catch (Exception e)
+            {
+                throw new WebSocketRequestValidationException(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
 
-				if (expectedRequestSuffix.Equals(localPath))
-				{
-					return DatabasesLandlord.SystemDatabase;
-				}
-				IResourceStore activeResource;
-				switch (resourcePartsPathParts[1])
-				{
-					case CountersUrlPrefix:
-						activeResource = await countersLandlord.GetCounterInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2));
-						break;
-					case DatabasesUrlPrefix:
-						activeResource = await DatabasesLandlord.GetDatabaseInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
-						break;
-					case FileSystemsUrlPrefix:
-						activeResource = await fileSystemsLandlord.GetFileSystemInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
-						break;
-					default:
-						throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");
-				}
+        private string NormalizeLocalPath(string localPath)
+        {
+            if (string.IsNullOrEmpty(localPath))
+                return null;
 
-				return activeResource;
-			}
-			catch (Exception e)
-			{
-				throw new WebSocketRequestValidationException(HttpStatusCode.InternalServerError, e.Message);
-			}
-		}
+            if (localPath.StartsWith(DatabasesLandlord.SystemDatabase.Configuration.Core.VirtualDirectory))
+                localPath = localPath.Substring(DatabasesLandlord.SystemDatabase.Configuration.Core.VirtualDirectory.Length);
 
-		private string NormalizeLocalPath(string localPath)
-		{
-			if (string.IsNullOrEmpty(localPath))
-				return null;
+            if (localPath.StartsWith("/") == false)
+                localPath = "/" + localPath;
 
-			if (localPath.StartsWith(DatabasesLandlord.SystemDatabase.Configuration.VirtualDirectory))
-				localPath = localPath.Substring(DatabasesLandlord.SystemDatabase.Configuration.VirtualDirectory.Length);
+            return localPath;
+        }
 
-			if (localPath.StartsWith("/") == false)
-				localPath = "/" + localPath;
+        [Serializable]
+        public class  WebSocketRequestValidationException : Exception
+        {
+            public HttpStatusCode StatusCode { get; set; }
 
-			return localPath;
-		}
+            public  WebSocketRequestValidationException()
+            {
+            }
 
-		[Serializable]
-		public class  WebSocketRequestValidationException : Exception
-		{
-			public HttpStatusCode StatusCode { get; set; }
+            public  WebSocketRequestValidationException(HttpStatusCode statusCode, string message) : base(message)
+            {
+                StatusCode = statusCode;
+            }
 
-			public  WebSocketRequestValidationException()
-			{
-			}
+            public  WebSocketRequestValidationException(string message, Exception inner) : base(message, inner)
+            {
+            }
 
-			public  WebSocketRequestValidationException(HttpStatusCode statusCode, string message) : base(message)
-			{
-				StatusCode = statusCode;
-			}
+            protected  WebSocketRequestValidationException(
+                SerializationInfo info,
+                StreamingContext context) : base(info, context)
+            {
+            }
+        }
+    }
 
-			public  WebSocketRequestValidationException(string message, Exception inner) : base(message, inner)
-			{
-			}
+    public class WatchTrafficWebSocketsRequestParser : WebSocketsRequestParser
+    {
+        public WatchTrafficWebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+            : base(databasesLandlord, timeSeriesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
+        {
+        }
 
-			protected  WebSocketRequestValidationException(
-				SerializationInfo info,
-				StreamingContext context) : base(info, context)
-			{
-			}
-		}
-	}
+        protected override void AuthenticateRequest(WebSocketRequest request)
+        {
+            base.AuthenticateRequest(request);
 
-	public class WatchTrafficWebSocketsRequestParser : WebSocketsRequestParser
-	{
-		public WatchTrafficWebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
-			: base(databasesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
-		{
-		}
+            if (request.ResourceName == Constants.SystemDatabase)
+            {
+                var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
 
-		protected override void AuthenticateRequest(WebSocketRequest request)
-		{
-			base.AuthenticateRequest(request);
+                if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
+                    DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                {
+                    throw new WebSocketRequestValidationException(HttpStatusCode.Forbidden, "Administrator user is required in order to trace the whole server.");
+                }
+            }
+        }
+    }
 
-			if (request.ResourceName == Constants.SystemDatabase)
-			{
-				var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+    public class AdminLogsWebSocketsRequestParser : WebSocketsRequestParser
+    {
+        public AdminLogsWebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+            : base(databasesLandlord, timeSeriesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
+        {
+        }
 
-				if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-					DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
-				{
-					throw new WebSocketRequestValidationException(HttpStatusCode.Forbidden, "Administrator user is required in order to trace the whole server.");
-				}
-			}
-		}
-	}
-
-	public class AdminLogsWebSocketsRequestParser : WebSocketsRequestParser
-	{
-		public AdminLogsWebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
-			: base(databasesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
-		{
-		}
-
-		protected override async Task ValidateRequest(WebSocketRequest request)
-		{
-			await base.ValidateRequest(request);
+        protected override async Task ValidateRequest(WebSocketRequest request)
+        {
+            await base.ValidateRequest(request).ConfigureAwait(false);
 
             if (request.ResourceName != Constants.SystemDatabase)
-				throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Request should be without resource context, or with system database.");
-		}
+                throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Request should be without resource context, or with system database.");
+        }
 
-		protected override void AuthenticateRequest(WebSocketRequest request)
-		{
-			base.AuthenticateRequest(request);
+        protected override void AuthenticateRequest(WebSocketRequest request)
+        {
+            base.AuthenticateRequest(request);
 
-			var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
+            var oneTimetokenPrincipal = request.User as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
 
-			if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
-				DatabasesLandlord.SystemDatabase.Configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
-			{
-				throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Administrator user is required in order to trace the whole server.");
-			}
-		}
-	}
+            if ((oneTimetokenPrincipal == null || !oneTimetokenPrincipal.IsAdministratorInAnonymouseMode) &&
+                DatabasesLandlord.SystemDatabase.Configuration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+            {
+                throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Administrator user is required in order to trace the whole server.");
+            }
+        }
+    }
 }

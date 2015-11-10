@@ -4,15 +4,15 @@ using Raven.Client.Shard;
 
 namespace Raven.Client.Document.Batches
 {
-	public interface ILazyOperation
-	{
-		GetRequest CreateRequest();
-		object Result { get; }
-		QueryResult QueryResult { get; }
-		bool RequiresRetry { get; }
-		void HandleResponse(GetResponse response);
-		void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy);
+    public interface ILazyOperation
+    {
+        GetRequest CreateRequest();
+        object Result { get; }
+        QueryResult QueryResult { get; }
+        bool RequiresRetry { get; }
+        void HandleResponse(GetResponse response);
+        void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy);
 
-		IDisposable EnterContext();
-	}
+        IDisposable EnterContext();
+    }
 }

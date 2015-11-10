@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,58 +16,58 @@ using System.IO;
 
 namespace Raven.Tests.Issues
 {
-	public class IndexResestWithReplication : RavenTestBase
-	{
-		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-		{
-			configuration.Settings["Raven/ActiveBundles"] = "Replication; Compression";
-		}
+    public class IndexResestWithReplication : RavenTestBase
+    {
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        {
+            configuration.Core.ActiveBundlesStringValue = "Replication; Compression";
+        }
 
-		[Fact]
-		public void Reset_index_in_database_with_replication_should_not_corrupt_etag_indice()
-		{
-			var sb = new StringBuilder();
-			for (int i = 0; i < 1000; i++)
-				sb.Append(Guid.NewGuid());
-			var aLongString = sb.ToString();
+        [Fact]
+        public void Reset_index_in_database_with_replication_should_not_corrupt_etag_indice()
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < 1000; i++)
+                sb.Append(Guid.NewGuid());
+            var aLongString = sb.ToString();
 
-			using (var store = NewDocumentStore())
-			{
-				var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
-				ravenDocumentsByEntityName.Execute(store);
+            using (var store = NewDocumentStore())
+            {
+                var ravenDocumentsByEntityName = new RavenDocumentsByEntityName();
+                ravenDocumentsByEntityName.Execute(store);
 
-				using (var operation = store.BulkInsert(options: new BulkInsertOptions
-				{
-					BatchSize = 1
-				}))
-				{
+                using (var operation = store.BulkInsert(options: new BulkInsertOptions
+                {
+                    BatchSize = 1
+                }))
+                {
 
-					for (int i = 0; i < 10; i++)
-						operation.Store(new {Foo = aLongString}, "Foo/" + i);
-				}
-				WaitForIndexing(store);
+                    for (int i = 0; i < 10; i++)
+                        operation.Store(new {Foo = aLongString}, "Foo/" + i);
+                }
+                WaitForIndexing(store);
 
-					using (var session = store.OpenSession())
-					{
-						var count = session.Query<dynamic>().Count();
-						Assert.Equal(10, count);
-					}
+                    using (var session = store.OpenSession())
+                    {
+                        var count = session.Query<dynamic>().Count();
+                        Assert.Equal(10, count);
+                    }
 
-					store.SystemDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
+                    store.SystemDatabase.Indexes.ResetIndex(ravenDocumentsByEntityName.IndexName);
 
-					WaitForIndexing(store);
+                    WaitForIndexing(store);
 
-					using (var session = store.OpenSession())
-					{
-						var count = session.Query<dynamic>().Count();
-						var errors = store.DatabaseCommands.GetStatistics().Errors;
-						Assert.Empty(errors);
-						Assert.Equal(10, count);
-					}
-				
+                    using (var session = store.OpenSession())
+                    {
+                        var count = session.Query<dynamic>().Count();
+                        var errors = store.DatabaseCommands.GetStatistics().Errors;
+                        Assert.Empty(errors);
+                        Assert.Equal(10, count);
+                    }
+                
 
-			}
-		}
+            }
+        }
 
 //		[Fact]
 //		public void Reset_index_from_debug_journal_should_not_corrupt_database()
@@ -88,5 +88,5 @@ namespace Raven.Tests.Issues
 //				}
 //			}
 //		}
-	}
+    }
 }

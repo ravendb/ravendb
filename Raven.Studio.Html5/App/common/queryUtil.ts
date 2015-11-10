@@ -1,6 +1,6 @@
-﻿import getIndexTermsCommand = require("commands/getIndexTermsCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/getDocumentsMetadataByIDPrefixCommand");
-import database = require("models/database");
+import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import database = require("models/resources/database");
 
 class queryUtil {
 

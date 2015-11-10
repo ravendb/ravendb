@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Bundles.Authorization.Model;
 using Raven.Client;
@@ -16,10 +16,10 @@ namespace Raven.Tests.Issues
     public class SanityCheck : AuthorizationTest
 {
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             Authentication.EnableOnce();
-            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
         }
 
         [Fact]

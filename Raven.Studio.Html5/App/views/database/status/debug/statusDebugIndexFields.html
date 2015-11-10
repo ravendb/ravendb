@@ -1,0 +1,31 @@
+<section>
+    <form class="form-horizontal" role="form" data-bind="submit: fetchIndexFields">
+        <div class="col-md-12">
+            <div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label id="indexDefLabelContainer" class="control-label" data-placement="auto right" data-original-title="Index definition" data-trigger="hover">
+                                <span id="indexDefLabel" class="help-cursor">
+                                    Index definition
+                                    <i class="fa fa-info-circle text-info"></i>
+                                </span>
+                            </label>
+                            <pre id="statusDebugIndexFieldsEditor" class="form-control" data-bind="aceEditor: { code: indexStr }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 35 }"></pre>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-default"><i class="fa fa-table"></i> Show index fields</button>
+
+                        <hr />
+                        <!-- ko with: result -->
+                        <ol data-bind="foreach: FieldNames">
+                            <li data-bind="text: $data"></li>
+                        </ol>
+                        <!-- /ko -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>

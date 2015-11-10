@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Security.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,43 +15,43 @@ using Xunit;
 
 namespace Raven.Tests.Notifications
 {
-	public class Security_Windows : RavenTest
-	{
-		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-		{
-			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+    public class Security_Windows : RavenTest
+    {
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        {
+            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
-		}
+        }
 
-		[Fact]
-		public void WithWindowsAuth()
-		{
-			using (GetNewServer())
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079",
-			}.Initialize())
-			{
-				var list = new BlockingCollection<DocumentChangeNotification>();
-				var taskObservable = store.Changes();
-				taskObservable.Task.Wait();
-				var documentSubscription = taskObservable.ForDocument("items/1");
-				documentSubscription.Task.Wait();
-				documentSubscription
-					.Subscribe(list.Add);
+        [Fact]
+        public void WithWindowsAuth()
+        {
+            using (GetNewServer())
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079",
+            }.Initialize())
+            {
+                var list = new BlockingCollection<DocumentChangeNotification>();
+                var taskObservable = store.Changes();
+                taskObservable.Task.Wait();
+                var documentSubscription = taskObservable.ForDocument("items/1");
+                documentSubscription.Task.Wait();
+                documentSubscription
+                    .Subscribe(list.Add);
 
-				using (var session = store.OpenSession())
-				{
-					session.Store(new ClientServer.Item(), "items/1");
-					session.SaveChanges();
-				}
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new ClientServer.Item(), "items/1");
+                    session.SaveChanges();
+                }
 
-				DocumentChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+                DocumentChangeNotification changeNotification;
+                Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
-				Assert.Equal("items/1", changeNotification.Id);
-				Assert.Equal(changeNotification.Type, DocumentChangeTypes.Put);
-			}
-		}
-	}
+                Assert.Equal("items/1", changeNotification.Id);
+                Assert.Equal(changeNotification.Type, DocumentChangeTypes.Put);
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;

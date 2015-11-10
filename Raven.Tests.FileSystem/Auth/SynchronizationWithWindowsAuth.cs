@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SynchronizationWithWindowsAuth.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -29,7 +29,7 @@ namespace Raven.Tests.FileSystem.Auth
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
-            if (server.SystemDatabase.Configuration.Port == Ports[1]) // setup only for destination
+            if (server.SystemDatabase.Configuration.Core.Port == Ports[1]) // setup only for destination
             {
                 server.SystemDatabase.Documents.Put("Raven/Authorization/WindowsSettings", null,
                                           RavenJObject.FromObject(new WindowsAuthDocument
@@ -43,11 +43,11 @@ namespace Raven.Tests.FileSystem.Auth
                                                       Databases = new List<ResourceAccess>
                                                       {
                                                           new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system,
-														  new ResourceAccess {TenantId = fileSystemName}
+                                                          new ResourceAccess {TenantId = fileSystemName}
                                                       }
                                                   }
                                               }
-                                          }), new RavenJObject(), null);
+                                          }), new RavenJObject());
             }
         }
 

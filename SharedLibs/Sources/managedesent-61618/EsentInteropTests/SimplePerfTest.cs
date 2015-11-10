@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="SimplePerfTest.cs" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation.
 // </copyright>

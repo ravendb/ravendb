@@ -1,0 +1,16 @@
+<section>
+    <div class="status-debug-docrefs-page" data-bind="if: currentIdentities">
+        <div class="row">
+            <div class="col-md-12">
+                <div id="identitiesGrid" data-bind="widget: {
+    kind: 'virtualTable', itemsSource: currentIdentities,
+    gridSelector: '#identitiesGrid',
+    showCheckboxes: false, useContextMenu: false,
+    customColumns: columns, showIds: false
+}">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</section>

@@ -1,0 +1,62 @@
+<section>
+    <button id="refresh-btn" class="btn" data-bind="css: { active: autoRefresh }, click: toggleAutoRefresh"><i class="fa fa-refresh"></i> Autorefresh</button>
+
+    <form class="form-horizontal" role="form" data-bind="with: data">
+        <div class="form-group">
+            <label class="col-md-4 control-label">Number of currently working indexes</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: NumberOfCurrentlyWorkingIndexes"></p>
+            </div>
+        </div>
+        <!-- ko foreach:Indexes -->
+        <div class="form-group">
+            <label class="col-md-4 control-label">Index name</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: IndexName"></p>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-md-4 control-label">Is map/reduce?</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: IsMapReduce"></p>
+            </div>
+        </div>
+        <!-- ko foreach:CurrentOperations-->
+        <div class="form-group">
+            <!-- ko if: $index() == 0 -->
+            <label class="col-md-2 control-label">Current operations</label>
+            <label class="col-md-2 control-label" data-bind="text: Operation"></label>
+            <!-- /ko -->
+            <!-- ko if: $index() != 0 -->
+            <label class="col-md-2 col-md-offset-2 control-label" data-bind="text: Operation"></label>
+            <!-- /ko -->
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: NumberOfProcessingItems"></p>
+            </div>
+        </div>
+        <!-- /ko -->
+        <div class="form-group">
+            <label class="col-md-4 control-label">Priority</label>
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: Priority"></p>
+            </div>
+        </div>
+        <!-- ko foreach:OverallIndexingRate-->
+        <div class="form-group">
+            
+            <!-- ko if: $index() == 0 -->
+            <label class="col-md-2 control-label">Overall indexing rate</label>
+            <label class="col-md-2 control-label" data-bind="text: Operation"></label>
+            <!-- /ko -->
+            <!-- ko if: $index() != 0 -->
+            <label class="col-md-2 col-md-offset-2 control-label" data-bind="text: Operation"></label>
+            <!-- /ko -->
+            <div class="col-md-8">
+                <p class="form-control-static" data-bind="text: Rate"></p>
+            </div>
+        </div>
+        <!-- /ko -->
+        <hr />
+        <!-- /ko -->
+    </form>
+</section>

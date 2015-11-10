@@ -15,192 +15,196 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Versioning.Triggers
 {
-	[InheritedExport(typeof(AbstractPutTrigger))]
-	[ExportMetadata("Bundle", "Versioning")]
-	public class VersioningPutTrigger : AbstractPutTrigger
-	{
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
-		{
-			var jsonDocument = Database.Documents.Get(key, transactionInformation);
-			if (jsonDocument == null)
-				return VetoResult.Allowed;
+    [InheritedExport(typeof(AbstractPutTrigger))]
+    [ExportMetadata("Bundle", "Versioning")]
+    public class VersioningPutTrigger : AbstractPutTrigger
+    {
+        public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
+        {
+            var jsonDocument = Database.Documents.Get(key);
+            if (jsonDocument == null)
+                return VetoResult.Allowed;
 
-			if (Database.ChangesToRevisionsAllowed() == false && 
-				jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
-				Database.IsVersioningActive(metadata))
-			{
-				return VetoResult.Deny("Modifying a historical revision is not allowed");
-			}
+            if (Database.IsVersioningActive(metadata))
+            {
+                if (Database.IsVersioningDisabledForImport(metadata))
+                    return VetoResult.Allowed;
 
-			return VetoResult.Allowed;
-		}
+                if (Database.Configuration.Versioning.ChangesToRevisionsAllowed == false &&
+                    jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
+                {
+                    return VetoResult.Deny("Modifying a historical revision is not allowed");
+                }
+            }
 
-		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
-		{
-			VersioningConfiguration versioningConfiguration;
+            return VetoResult.Allowed;
+        }
 
-			if (metadata.ContainsKey(Constants.RavenCreateVersion))
-			{
-				metadata.__ExternalState[Constants.RavenCreateVersion] = metadata[Constants.RavenCreateVersion];
-				metadata.Remove(Constants.RavenCreateVersion);
-			}
+        public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata)
+        {
+            VersioningConfiguration versioningConfiguration;
 
-			if (metadata.ContainsKey(Constants.RavenIgnoreVersioning))
-			{
-				metadata.__ExternalState[Constants.RavenIgnoreVersioning] = metadata[Constants.RavenIgnoreVersioning];
-				metadata.Remove(Constants.RavenIgnoreVersioning);
-				return;
-			}
+            if (metadata.ContainsKey(Constants.RavenCreateVersion))
+            {
+                metadata.__ExternalState[Constants.RavenCreateVersion] = metadata[Constants.RavenCreateVersion];
+                metadata.Remove(Constants.RavenCreateVersion);
+            }
 
-			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
-				return;
+            if (metadata.ContainsKey(Constants.RavenIgnoreVersioning))
+            {
+                metadata.__ExternalState[Constants.RavenIgnoreVersioning] = metadata[Constants.RavenIgnoreVersioning];
+                metadata.Remove(Constants.RavenIgnoreVersioning);
+                return;
+            }
 
-			var revision = GetNextRevisionNumber(key);
+            if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
+                return;
 
-			using (Database.DisableAllTriggersForCurrentThread())
-			{
-				RemoveOldRevisions(key, revision, versioningConfiguration, transactionInformation);
-			}
-			metadata.__ExternalState["Next-Revision"] = revision;
+            var revision = GetNextRevisionNumber(key);
 
-			metadata.__ExternalState["Parent-Revision"] = metadata.Value<string>(VersioningUtil.RavenDocumentRevision);
+            using (Database.DisableAllTriggersForCurrentThread())
+            {
+                RemoveOldRevisions(key, revision, versioningConfiguration);
+            }
+            metadata.__ExternalState["Next-Revision"] = revision;
 
-			metadata[VersioningUtil.RavenDocumentRevisionStatus] = RavenJToken.FromObject("Current");
-			metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
-		}
+            metadata.__ExternalState["Parent-Revision"] = metadata.Value<string>(VersioningUtil.RavenDocumentRevision);
 
-		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
-		{
-			VersioningConfiguration versioningConfiguration;
-			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
-				return;
+            metadata[VersioningUtil.RavenDocumentRevisionStatus] = RavenJToken.FromObject("Current");
+            metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
+        }
 
-			using (Database.DisableAllTriggersForCurrentThread())
-			{
-				var copyMetadata = new RavenJObject(metadata);
-				copyMetadata[VersioningUtil.RavenDocumentRevisionStatus] = RavenJToken.FromObject("Historical");
-				copyMetadata[Constants.RavenReadOnly] = true;
-				copyMetadata.Remove(VersioningUtil.RavenDocumentRevision);
-				object parentRevision;
-				metadata.__ExternalState.TryGetValue("Parent-Revision", out parentRevision);
-				if (parentRevision != null)
-				{
-					copyMetadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
-				}
+        public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag)
+        {
+            VersioningConfiguration versioningConfiguration;
+            if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
+                return;
 
-				object value;
-				metadata.__ExternalState.TryGetValue("Next-Revision", out value);
-				Database.Documents.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata,
-							 transactionInformation);
-			}
-		}
+            using (Database.DisableAllTriggersForCurrentThread())
+            {
+                var copyMetadata = new RavenJObject(metadata);
+                copyMetadata[VersioningUtil.RavenDocumentRevisionStatus] = RavenJToken.FromObject("Historical");
+                copyMetadata[Constants.RavenReadOnly] = true;
+                copyMetadata.Remove(VersioningUtil.RavenDocumentRevision);
+                object parentRevision;
+                metadata.__ExternalState.TryGetValue("Parent-Revision", out parentRevision);
+                if (parentRevision != null)
+                {
+                    copyMetadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
+                }
 
-		private long GetNextRevisionNumber(string key)
-		{
-			long revision = 0;
+                object value;
+                metadata.__ExternalState.TryGetValue("Next-Revision", out value);
+                Database.Documents.Put(key + "/revisions/" + value, null, (RavenJObject)document.CreateSnapshot(), copyMetadata);
+            }
+        }
 
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				revision = Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key + "/revisions/", accessor);
+        private long GetNextRevisionNumber(string key)
+        {
+            long revision = 0;
 
-				if (revision == 1)
-				{
-					var existingDoc = Database.Documents.Get(key, null);
-					if (existingDoc != null)
-					{
-						RavenJToken existingRevisionToken;
-						if (existingDoc.Metadata.TryGetValue(VersioningUtil.RavenDocumentRevision, out existingRevisionToken))
-							revision = existingRevisionToken.Value<int>() + 1;
-					}
-					else
-					{
-						var latestRevisionsDoc = GetLatestRevisionsDoc(key);
-						if (latestRevisionsDoc != null)
-						{
-							var id = latestRevisionsDoc["@metadata"].Value<string>("@id");
-							if(id.StartsWith(key, StringComparison.CurrentCultureIgnoreCase))
-							{
-								var revisionNum = id.Substring((key + "/revisions/").Length);
-								int result;
-								if (int.TryParse(revisionNum, out result))
-									revision = result + 1;
-							}
-							
-						}
-					}
+            Database.TransactionalStorage.Batch(accessor =>
+            {
+                revision = Database.Documents.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key + "/revisions/", accessor);
 
-					if (revision > 1)
-						accessor.General.SetIdentityValue(key + "/revisions/", revision);
-				}
-			});
+                if (revision == 1)
+                {
+                    var existingDoc = Database.Documents.Get(key);
+                    if (existingDoc != null)
+                    {
+                        RavenJToken existingRevisionToken;
+                        if (existingDoc.Metadata.TryGetValue(VersioningUtil.RavenDocumentRevision, out existingRevisionToken))
+                            revision = existingRevisionToken.Value<int>() + 1;
+                    }
+                    else
+                    {
+                        var latestRevisionsDoc = GetLatestRevisionsDoc(key);
+                        if (latestRevisionsDoc != null)
+                        {
+                            var id = latestRevisionsDoc["@metadata"].Value<string>("@id");
+                            if(id.StartsWith(key, StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                var revisionNum = id.Substring((key + "/revisions/").Length);
+                                int result;
+                                if (int.TryParse(revisionNum, out result))
+                                    revision = result + 1;
+                            }
+                            
+                        }
+                    }
 
-			return revision;
-		}
+                    if (revision > 1)
+                        accessor.General.SetIdentityValue(key + "/revisions/", revision);
+                }
+            });
 
-		private RavenJObject GetLatestRevisionsDoc(string key)
-		{
-			const int pageSize = 100;
-			int start = 0;
+            return revision;
+        }
 
-			RavenJObject lastRevisionDoc = null;
+        private RavenJObject GetLatestRevisionsDoc(string key)
+        {
+            const int pageSize = 100;
+            int start = 0;
 
-			while (true)
-			{
-				int nextPageStart = start; // will trigger rapid pagination
-				var docs = Database.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None, ref nextPageStart);
-				if (!docs.Any())
-					break;
+            RavenJObject lastRevisionDoc = null;
 
-				lastRevisionDoc = (RavenJObject)docs.Last();
+            while (true)
+            {
+                int nextPageStart = start; // will trigger rapid pagination
+                var docs = Database.Documents.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None, ref nextPageStart);
+                if (!docs.Any())
+                    break;
 
-				if (docs.Length < pageSize)
-					break;
+                lastRevisionDoc = (RavenJObject)docs.Last();
 
-				start += pageSize;
-			}
+                if (docs.Length < pageSize)
+                    break;
 
-			return lastRevisionDoc;
-		}
+                start += pageSize;
+            }
 
-		private bool TryGetVersioningConfiguration(string key, RavenJObject metadata,
-												   out VersioningConfiguration versioningConfiguration)
-		{
-			versioningConfiguration = null;
-			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
-				return false;
+            return lastRevisionDoc;
+        }
 
-			if (metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
-				return false;
+        private bool TryGetVersioningConfiguration(string key, RavenJObject metadata,
+                                                   out VersioningConfiguration versioningConfiguration)
+        {
+            versioningConfiguration = null;
+            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+                return false;
 
-			versioningConfiguration = Database.GetDocumentVersioningConfiguration(metadata);
-			if (versioningConfiguration == null || versioningConfiguration.Exclude
-				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion))
-				|| metadata.__ExternalState.ContainsKey(Constants.RavenIgnoreVersioning))
-				return false;
-			return true;
-		}
+            if (metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
+                return false;
 
-		private void RemoveOldRevisions(string key, long revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
-		{
-			long latestValidRevision = revision - versioningConfiguration.MaxRevisions;
-			if (latestValidRevision <= 0)
-				return;
+            versioningConfiguration = Database.GetDocumentVersioningConfiguration(metadata);
+            if (versioningConfiguration == null || versioningConfiguration.Exclude
+                || (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion))
+                || metadata.__ExternalState.ContainsKey(Constants.RavenIgnoreVersioning))
+                return false;
+            return true;
+        }
 
-			Database.Documents.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null, transactionInformation);
-		}
+        private void RemoveOldRevisions(string key, long revision, VersioningConfiguration versioningConfiguration)
+        {
+            long latestValidRevision = revision - versioningConfiguration.MaxRevisions;
+            if (latestValidRevision <= 0)
+                return;
 
-		public override IEnumerable<string> GeneratedMetadataNames
-		{
-			get
-			{
-				return new[]
-				{
-					VersioningUtil.RavenDocumentRevisionStatus,
-					VersioningUtil.RavenDocumentRevision,
-					VersioningUtil.RavenDocumentParentRevision,
-					Constants.RavenCreateVersion
-				};
-			}
-		}
-	}
+            Database.Documents.Delete(string.Format("{0}/revisions/{1}", key, latestValidRevision), null);
+        }
+
+        public override IEnumerable<string> GeneratedMetadataNames
+        {
+            get
+            {
+                return new[]
+                {
+                    VersioningUtil.RavenDocumentRevisionStatus,
+                    VersioningUtil.RavenDocumentRevision,
+                    VersioningUtil.RavenDocumentParentRevision,
+                    Constants.RavenCreateVersion
+                };
+            }
+        }
+    }
 }

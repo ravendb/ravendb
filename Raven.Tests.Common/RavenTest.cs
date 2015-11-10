@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="RavenTest.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -10,6 +10,8 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Request;
 using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Util;
@@ -22,19 +24,19 @@ namespace Raven.Tests.Common
 {
     public class RavenTest : RavenTestBase
     {
-	    public class TestMemoryTarget : DatabaseMemoryTarget
-	    {
-		    public override bool ShouldLog(ILog logger, LogLevel level)
-		    {
-			    return true;
-		    }
-	    }
+        public class TestMemoryTarget : DatabaseMemoryTarget
+        {
+            public override bool ShouldLog(ILog logger, LogLevel level)
+            {
+                return true;
+            }
+        }
 
-		protected bool ShowLogs { get; set; }
+        protected bool ShowLogs { get; set; }
 
         static RavenTest()
         {
-			LogManager.RegisterTarget<TestMemoryTarget>();
+            LogManager.RegisterTarget<TestMemoryTarget>();
         }
 
         public RavenTest()
@@ -43,65 +45,49 @@ namespace Raven.Tests.Common
             SystemTime.WaitCalled = null;
         }
 
-	    public override void Dispose()
-	    {
-		    ShowLogsIfNecessary();
+        public override void Dispose()
+        {
+            ShowLogsIfNecessary();
 
-		    base.Dispose();
-	    }
+            base.Dispose();
+        }
 
-	    private void ShowLogsIfNecessary()
-	    {
-		    if (!ShowLogs)
-			    return;
+        private void ShowLogsIfNecessary()
+        {
+            if (!ShowLogs)
+                return;
             
-		    foreach (var databaseName in DatabaseNames)
-		    {
-				var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
-			    if (target == null)
-				    continue;
+            foreach (var databaseName in DatabaseNames)
+            {
+                var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
+                if (target == null)
+                    continue;
 
-			    using (var file = File.Open("debug_output.txt", FileMode.Append))
-			    using (var writer = new StreamWriter(file))
-			    {
-					WriteLine(writer);
-				    WriteLine(writer, "Logs for: " + databaseName);
+                using (var file = File.Open("debug_output.txt", FileMode.Append))
+                using (var writer = new StreamWriter(file))
+                {
+                    WriteLine(writer);
+                    WriteLine(writer, "Logs for: " + databaseName);
 
-				    foreach (var info in target.GeneralLog.Concat(target.WarnLog).OrderBy(x => x.TimeStamp))
-				    {
-						WriteLine(writer, string.Format("{0}|{1}|{2}|{3}|{4}", info.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff"), info.Level, info.LoggerName, info.FormattedMessage, info.Exception));
-				    }
+                    foreach (var info in target.GeneralLog.Concat(target.WarnLog).OrderBy(x => x.TimeStamp))
+                    {
+                        WriteLine(writer, string.Format("{0}|{1}|{2}|{3}|{4}", info.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff"), info.Level, info.LoggerName, info.FormattedMessage, info.Exception));
+                    }
 
-				    WriteLine(writer);
-			    }
-		    }
-	    }
-
-	    private static void WriteLine(TextWriter writer, string message = "")
-	    {
-		    Console.WriteLine(message);
-			writer.WriteLine(message);
-	    }
-
-	    protected void Consume(object o)
-        {
-
+                    WriteLine(writer);
+                }
+            }
         }
 
-        protected static void EnsureDtcIsSupported(EmbeddableDocumentStore documentStore)
+        private static void WriteLine(TextWriter writer, string message = "")
         {
-            EnsureDtcIsSupported(documentStore.SystemDatabase);
+            Console.WriteLine(message);
+            writer.WriteLine(message);
         }
 
-        protected static void EnsureDtcIsSupported(DocumentDatabase documentDatabase)
+        protected void Consume(object o)
         {
-            if (documentDatabase.TransactionalStorage.SupportsDtc == false)
-                throw new SkipException("This test requires DTC but the storage engine " + documentDatabase.TransactionalStorage.FriendlyName + " does not support it");
-        }
 
-        protected static void EnsureDtcIsSupported(RavenDbServer server)
-        {
-            EnsureDtcIsSupported(server.SystemDatabase);
         }
 
         public double Timer(Action action)
@@ -118,11 +104,16 @@ namespace Raven.Tests.Common
             get
             {
                 return new[]
-				{
-					new object[] {"voron"},
-					new object[] {"esent"}
-				};
+                {
+                    new object[] {"voron"}
+                };
             }
+        }
+
+        protected IDocumentStoreReplicationInformer GetReplicationInformer(ServerClient client)
+        {
+            var replicationExecutor = client.RequestExecuter as ReplicationAwareRequestExecuter;
+            return replicationExecutor == null ? null : replicationExecutor.ReplicationInformer;
         }
     }
 }

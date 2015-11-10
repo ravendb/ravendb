@@ -1,7 +1,7 @@
-﻿namespace Raven.Abstractions.MEF
+namespace Raven.Abstractions.MEF
 {
-	public class PartMetadata : IPartMetadata
-	{
-		public int Order { get; set; }
-	}
+    public class PartMetadata : IPartMetadata
+    {
+        public int Order { get; set; }
+    }
 }

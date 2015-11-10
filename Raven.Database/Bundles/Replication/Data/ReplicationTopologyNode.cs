@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 using Raven.Abstractions.Data;
@@ -6,15 +6,15 @@ using Raven.Abstractions.Replication;
 
 namespace Raven.Database.Bundles.Replication.Data
 {
-	public class ReplicationTopologyRootNode : ReplicationTopologyNodeBase
-	{
-		public Guid ServerId { get; set; }
+    public class ReplicationTopologyRootNode : ReplicationTopologyNodeBase
+    {
+        public Guid ServerId { get; set; }
 
-		public ReplicationTopologyRootNode(string serverUrl, Guid serverId)
-		{
-			ServerUrl = serverUrl;
-			ServerId = serverId;
-		}
+        public ReplicationTopologyRootNode(string serverUrl, Guid serverId)
+        {
+            ServerUrl = serverUrl;
+            ServerId = serverId;
+        }
 
         private static void HandleLink(ReplicationTopology topology, ReplicationTopologyNodeBase source, ReplicationTopologyNodeBase target)
         {
@@ -45,16 +45,15 @@ namespace Raven.Database.Bundles.Replication.Data
                 connection.DestinationToSourceState = sourceNode.State;
                 connection.StoredServerId = sourceNode.StoredServerId;
                 connection.LastDocumentEtag = sourceNode.LastDocumentEtag;
-                connection.LastAttachmentEtag = sourceNode.LastAttachmentEtag;
             }
 
             topology.Connections.Add(connection);
         }
 
-		public ReplicationTopology Flatten()
-		{
-		    var topology = new ReplicationTopology();
-		    topology.Servers.Add(ServerUrl);
+        public ReplicationTopology Flatten()
+        {
+            var topology = new ReplicationTopology();
+            topology.Servers.Add(ServerUrl);
 
             var queue = new Queue<ReplicationTopologyNodeBase>();
             queue.Enqueue(this);
@@ -76,104 +75,99 @@ namespace Raven.Database.Bundles.Replication.Data
                 }
             }
 
-		    return topology;
-		}
-	}
+            return topology;
+        }
+    }
 
-	public class ReplicationTopologyDestinationNode : ReplicationTopologyNode
-	{
-		public Guid SendServerId { get; set; }
+    public class ReplicationTopologyDestinationNode : ReplicationTopologyNode
+    {
+        public Guid SendServerId { get; set; }
 
-		public TransitiveReplicationOptions ReplicationBehavior { get; protected set; }
+        public TransitiveReplicationOptions ReplicationBehavior { get; protected set; }
 
-		public static ReplicationTopologyDestinationNode Online(string serverUrl, Guid serverId, TransitiveReplicationOptions replicationBehavior)
-		{
-			return new ReplicationTopologyDestinationNode
-			{
-				ServerUrl = serverUrl,
-				ReplicationBehavior = replicationBehavior,
-				State = ReplicatonNodeState.Online,
-				SendServerId = serverId
-			};
-		}
+        public static ReplicationTopologyDestinationNode Online(string serverUrl, Guid serverId, TransitiveReplicationOptions replicationBehavior)
+        {
+            return new ReplicationTopologyDestinationNode
+            {
+                ServerUrl = serverUrl,
+                ReplicationBehavior = replicationBehavior,
+                State = ReplicatonNodeState.Online,
+                SendServerId = serverId
+            };
+        }
 
-		public static ReplicationTopologyDestinationNode Offline(string serverUrl, Guid serverId, TransitiveReplicationOptions replicationBehavior)
-		{
-			return new ReplicationTopologyDestinationNode
-			{
-				ServerUrl = serverUrl,
-				ReplicationBehavior = replicationBehavior,
-				State = ReplicatonNodeState.Offline,
-				SendServerId = serverId
-			};
-		}
+        public static ReplicationTopologyDestinationNode Offline(string serverUrl, Guid serverId, TransitiveReplicationOptions replicationBehavior)
+        {
+            return new ReplicationTopologyDestinationNode
+            {
+                ServerUrl = serverUrl,
+                ReplicationBehavior = replicationBehavior,
+                State = ReplicatonNodeState.Offline,
+                SendServerId = serverId
+            };
+        }
 
-		public static ReplicationTopologyDestinationNode Disabled(string serverUrl, Guid serverId, TransitiveReplicationOptions replicationBehavior)
-		{
-			return new ReplicationTopologyDestinationNode
-			{
-				ServerUrl = serverUrl,
-				ReplicationBehavior = replicationBehavior,
-				State = ReplicatonNodeState.Disabled,
-				SendServerId = serverId
-			};
-		}
-	}
+        public static ReplicationTopologyDestinationNode Disabled(string serverUrl, Guid serverId, TransitiveReplicationOptions replicationBehavior)
+        {
+            return new ReplicationTopologyDestinationNode
+            {
+                ServerUrl = serverUrl,
+                ReplicationBehavior = replicationBehavior,
+                State = ReplicatonNodeState.Disabled,
+                SendServerId = serverId
+            };
+        }
+    }
 
-	public class ReplicationTopologySourceNode : ReplicationTopologyNode
-	{
-		public Guid StoredServerId { get; set; }
+    public class ReplicationTopologySourceNode : ReplicationTopologyNode
+    {
+        public Guid StoredServerId { get; set; }
 
-        [Obsolete("Use RavenFS instead.")]
-		public Etag LastAttachmentEtag { get; set; }
+        public Etag LastDocumentEtag { get; set; }
 
-		public Etag LastDocumentEtag { get; set; }
+        public static ReplicationTopologySourceNode Online(string serverUrl, Guid serverId, Etag lastDocumentEtag)
+        {
+            return new ReplicationTopologySourceNode
+                   {
+                       ServerUrl = serverUrl,
+                       State = ReplicatonNodeState.Online,
+                       LastDocumentEtag = lastDocumentEtag,
+                       StoredServerId = serverId
+                   };
+        }
 
-		public static ReplicationTopologySourceNode Online(string serverUrl, Guid serverId, Etag lastDocumentEtag, Etag lastAttachmentEtag)
-		{
-			return new ReplicationTopologySourceNode
-				   {
-					   ServerUrl = serverUrl,
-					   State = ReplicatonNodeState.Online,
-					   LastDocumentEtag = lastDocumentEtag,
-					   LastAttachmentEtag = lastAttachmentEtag,
-					   StoredServerId = serverId
-				   };
-		}
+        public static ReplicationTopologySourceNode Offline(string serverUrl, Guid serverId, Etag lastDocumentEtag)
+        {
+            return new ReplicationTopologySourceNode
+            {
+                ServerUrl = serverUrl,
+                State = ReplicatonNodeState.Offline,
+                LastDocumentEtag = lastDocumentEtag,
+                StoredServerId = serverId
+            };
+        }
+    }
 
-		public static ReplicationTopologySourceNode Offline(string serverUrl, Guid serverId, Etag lastDocumentEtag, Etag lastAttachmentEtag)
-		{
-			return new ReplicationTopologySourceNode
-			{
-				ServerUrl = serverUrl,
-				State = ReplicatonNodeState.Offline,
-				LastDocumentEtag = lastDocumentEtag,
-				LastAttachmentEtag = lastAttachmentEtag,
-				StoredServerId = serverId
-			};
-		}
-	}
+    public abstract class ReplicationTopologyNode : ReplicationTopologyNodeBase
+    {
+        public ReplicatonNodeState State { get; protected set; }
+    }
 
-	public abstract class ReplicationTopologyNode : ReplicationTopologyNodeBase
-	{
-		public ReplicatonNodeState State { get; protected set; }
-	}
+    public abstract class ReplicationTopologyNodeBase
+    {
+        protected ReplicationTopologyNodeBase()
+        {
+            Sources = new List<ReplicationTopologySourceNode>();
+            Destinations = new List<ReplicationTopologyDestinationNode>();
+            Errors = new List<string>();
+        }
 
-	public abstract class ReplicationTopologyNodeBase
-	{
-		protected ReplicationTopologyNodeBase()
-		{
-			Sources = new List<ReplicationTopologySourceNode>();
-			Destinations = new List<ReplicationTopologyDestinationNode>();
-			Errors = new List<string>();
-		}
+        public string ServerUrl { get; protected set; }
 
-		public string ServerUrl { get; protected set; }
+        public List<ReplicationTopologySourceNode> Sources { get; set; }
 
-		public List<ReplicationTopologySourceNode> Sources { get; set; }
+        public List<ReplicationTopologyDestinationNode> Destinations { get; set; }
 
-		public List<ReplicationTopologyDestinationNode> Destinations { get; set; }
-
-		public List<string> Errors { get; set; }
-	}
+        public List<string> Errors { get; set; }
+    }
 }

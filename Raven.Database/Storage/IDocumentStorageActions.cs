@@ -13,37 +13,47 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using metrics.Core;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage
 {
-	using System.Threading;
+    using System.Threading;
 
-	public interface IDocumentStorageActions 
-	{
-		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
-        IEnumerable<JsonDocument> GetDocumentsAfter(Etag etag, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null);
-        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null);
+    public interface IDocumentStorageActions 
+    {
+        IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
+        IEnumerable<JsonDocument> GetDocumentsAfter(
+            Etag etag, int take, 
+            CancellationToken cancellationToken, 
+            long? maxSize = null, 
+            Etag untilEtag = null, 
+            TimeSpan? timeout = null, 
+            Action<Etag> lastProcessedDocument = null,
+            Reference<bool> earlyExit = null);
+        IEnumerable<JsonDocument> GetDocumentsAfterWithIdStartingWith(Etag etag, string idPrefix, int take, CancellationToken cancellationToken, long? maxSize = null, Etag untilEtag = null, TimeSpan? timeout = null, Action<Etag> lastProcessedDocument = null,
+            Reference<bool> earlyExit = null);
         IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take, string skipAfter);
+        Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken);
 
-		long GetDocumentsCount();
+        long GetDocumentsCount();
 
-		JsonDocument DocumentByKey(string key);
+        JsonDocument DocumentByKey(string key);
 
-		Stream RawDocumentByKey(string key);
+        Stream RawDocumentByKey(string key);
 
-		JsonDocumentMetadata DocumentMetadataByKey(string key);
+        JsonDocumentMetadata DocumentMetadataByKey(string key);
 
-		bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag);
-		AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata);
+        bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag);
+        AddDocumentResult AddDocument(string key, Etag etag, RavenJObject data, RavenJObject metadata);
 
-		void IncrementDocumentCount(int value);
-		AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting);
+        void IncrementDocumentCount(int value);
+        AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool overwriteExisting);
 
-		void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
-		Etag GetBestNextDocumentEtag(Etag etag);
-	    DebugDocumentStats GetDocumentStatsVerySlowly();
-	}
+        void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
+        Etag GetBestNextDocumentEtag(Etag etag);
+        DebugDocumentStats GetDocumentStatsVerySlowly();
+    }
 
     public class CollectionDetails
     {
@@ -138,11 +148,11 @@ namespace Raven.Database.Storage
         }
     }
 
-	public class AddDocumentResult
-	{
-		public Etag Etag;
-		public Etag PrevEtag;
-		public DateTime SavedAt;
-		public bool Updated;
-	}
+    public class AddDocumentResult
+    {
+        public Etag Etag;
+        public Etag PrevEtag;
+        public DateTime SavedAt;
+        public bool Updated;
+    }
 }

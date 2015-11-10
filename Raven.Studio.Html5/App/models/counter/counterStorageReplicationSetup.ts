@@ -1,4 +1,4 @@
-﻿import counterStorageReplicationDestination = require("models/counter/counterStorageReplicationDestination");
+import counterStorageReplicationDestination = require("models/counter/counterStorageReplicationDestination");
 
 class counterStorageReplicationSetup {
 

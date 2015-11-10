@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="jet_coltyp.cs" company="Microsoft Corporation">
 //     Copyright (c) Microsoft Corporation.
 // </copyright>

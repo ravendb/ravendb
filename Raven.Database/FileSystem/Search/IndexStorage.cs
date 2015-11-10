@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -35,43 +35,43 @@ namespace Raven.Database.FileSystem.Search
     /// 	Thread safe, single instance for the entire application
     /// </summary>
     public class IndexStorage : CriticalFinalizerObject, IDisposable
-	{
+    {
         private const string IndexVersion = "1.0.0.2";
 
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
         private static readonly ILog StartupLog = LogManager.GetLogger(typeof(IndexStorage).FullName + ".Startup");
 
-		private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
+        private const string DateIndexFormat = "yyyy-MM-dd_HH-mm-ss";
 
-		public static Regex IsNumeric = new Regex(@"^-?(\d*\.?\d*)$", RegexOptions.Compiled & RegexOptions.CultureInvariant);
+        public static Regex IsNumeric = new Regex(@"^-?(\d*\.?\d*)$", RegexOptions.Compiled & RegexOptions.CultureInvariant);
 
-		private static readonly string[] ExcludeNumericFields =
-	    {
-		    Constants.FileSystem.RavenFsSize,
-			"Content-Length",
-		    SynchronizationConstants.RavenSynchronizationVersion,
-		    VersioningUtil.RavenFileRevision,
-		    VersioningUtil.RavenFileParentRevision,
-	    };
+        private static readonly string[] ExcludeNumericFields =
+        {
+            Constants.FileSystem.RavenFsSize,
+            "Content-Length",
+            SynchronizationConstants.RavenSynchronizationVersion,
+            VersioningUtil.RavenFileRevision,
+            VersioningUtil.RavenFileParentRevision,
+        };
 
         private readonly string name;
-        private readonly InMemoryRavenConfiguration configuration; 
+        private readonly RavenConfiguration configuration; 
         private readonly object writerLock = new object();
         private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
-		private string indexDirectory;
+        private string indexDirectory;
         private LuceneDirectory directory;
         private RavenFileSystem filesystem;
         
-		private LowerCaseKeywordAnalyzer analyzer;		
+        private LowerCaseKeywordAnalyzer analyzer;		
         private SnapshotDeletionPolicy snapshotter;
         private IndexWriter writer;
-		
+        
         private FileStream crashMarker;
         private bool resetIndexOnUncleanShutdown = false;
 
-        public IndexStorage(string name, InMemoryRavenConfiguration configuration)
-		{
+        public IndexStorage(string name, RavenConfiguration configuration)
+        {
             if (configuration == null)
                 throw new ArgumentNullException("configuration");
             if (string.IsNullOrWhiteSpace(name))
@@ -79,7 +79,7 @@ namespace Raven.Database.FileSystem.Search
 
             this.name = name;
             this.configuration = configuration;   
-		}
+        }
 
         public void Initialize(RavenFileSystem filesystem)
         {
@@ -89,7 +89,7 @@ namespace Raven.Database.FileSystem.Search
                 indexDirectory = configuration.FileSystem.IndexStoragePath;         
        
                 // Skip crash markers setup when running in memory.
-                if ( configuration.RunInMemory == false )
+                if ( configuration.Core.RunInMemory == false )
                 {
                     var filesystemDirectory = configuration.FileSystem.DataDirectory;
                     if (!Directory.Exists(filesystemDirectory))
@@ -134,10 +134,10 @@ namespace Raven.Database.FileSystem.Search
                 LuceneDirectory luceneDirectory = null;
                 try
                 {
-					luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
+                    luceneDirectory = OpenOrCreateLuceneDirectory(indexDirectory);
 
                     // Skip sanity test if we are running in memory. Index will not exist anyways.
-                    if (!configuration.RunInMemory && !IsIndexStateValid(luceneDirectory))
+                    if (!configuration.Core.RunInMemory && !IsIndexStateValid(luceneDirectory))
                         throw new InvalidOperationException("Sanity check on the index failed.");
 
                     directory = luceneDirectory;
@@ -247,20 +247,20 @@ namespace Raven.Database.FileSystem.Search
                         indexWriter.Flush(true, true, true);
                     }
                 }
-			}
-			catch (Exception exception)
-			{
-				throw new InvalidOperationException("Could not reset index for file system: " + name, exception);
-			}
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException("Could not reset index for file system: " + name, exception);
+            }
         }
 
         private LuceneDirectory OpenOrCreateLuceneDirectory(string path)
         {
-            if (configuration.RunInMemory)
-			{
-				return new RAMDirectory();
-			}
-			else
+            if (configuration.Core.RunInMemory)
+            {
+                return new RAMDirectory();
+            }
+            else
             {
                 var luceneDirectory = FSDirectory.Open(new DirectoryInfo(path));
 
@@ -362,63 +362,65 @@ namespace Raven.Database.FileSystem.Search
             StartupLog.Warn("Fixed index of file system '{0}' in {1}", name, sp.Elapsed);
         }
 
-		public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
-		{
-			IndexSearcher searcher;
-			using (GetSearcher(out searcher))
-			{
-				Query fileQuery;
-				if (string.IsNullOrEmpty(query))
-				{
-                    Log.Debug("Issuing query on index for all files");
-					fileQuery = new MatchAllDocsQuery();
-				}
-				else
-				{
-                    Log.Debug("Issuing query on index for: {0}", query);
-					var queryParser = new SimpleFilesQueryParser(analyzer);
+        public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
+        {
+            IndexSearcher searcher;
+            using (GetSearcher(out searcher))
+            {
+                Query fileQuery;
+                if (string.IsNullOrEmpty(query))
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Issuing query on index for all files");
+                    fileQuery = new MatchAllDocsQuery();
+                }
+                else
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Issuing query on index for: {0}", query);
+                    var queryParser = new SimpleFilesQueryParser(analyzer);
                     fileQuery = queryParser.Parse(query);
-				}
+                }
 
-				var topDocs = ExecuteQuery(searcher, sortFields, fileQuery, pageSize + start);
+                var topDocs = ExecuteQuery(searcher, sortFields, fileQuery, pageSize + start);
 
-				var results = new List<string>();
+                var results = new List<string>();
 
-				for (var i = start; i < pageSize + start && i < topDocs.TotalHits; i++)
-				{
-					var document = searcher.Doc(topDocs.ScoreDocs[i].Doc);
-					results.Add(document.Get("__key"));
-				}
-				totalResults = topDocs.TotalHits;
-				return results.ToArray();
-			}
-		}
+                for (var i = start; i < pageSize + start && i < topDocs.TotalHits; i++)
+                {
+                    var document = searcher.Doc(topDocs.ScoreDocs[i].Doc);
+                    results.Add(document.Get("__key"));
+                }
+                totalResults = topDocs.TotalHits;
+                return results.ToArray();
+            }
+        }
 
-		private TopDocs ExecuteQuery(IndexSearcher searcher, string[] sortFields, Query q, int size)
-		{
-			TopDocs topDocs;
-			if (sortFields != null && sortFields.Length > 0)
-			{
-				var sort = new Sort(sortFields.Select(field =>
-				{
-					var desc = field.StartsWith("-");
-					if (desc)
-						field = field.Substring(1);
-					return new SortField(field, SortField.STRING, desc);
-				}).ToArray());
-				topDocs = searcher.Search(q, null, size, sort);
-			}
-			else
-			{
-				topDocs = searcher.Search(q, null, size);
-			}
-			return topDocs;
-		}
+        private TopDocs ExecuteQuery(IndexSearcher searcher, string[] sortFields, Query q, int size)
+        {
+            TopDocs topDocs;
+            if (sortFields != null && sortFields.Length > 0)
+            {
+                var sort = new Sort(sortFields.Select(field =>
+                {
+                    var desc = field.StartsWith("-");
+                    if (desc)
+                        field = field.Substring(1);
+                    return new SortField(field, SortField.STRING, desc);
+                }).ToArray());
+                topDocs = searcher.Search(q, null, size, sort);
+            }
+            else
+            {
+                topDocs = searcher.Search(q, null, size);
+            }
+            return topDocs;
+        }
 
         private void Index(IndexWriter writer, string key, RavenJObject metadata, Etag etag)
         {
-	        if (filesystem.ReadTriggers.CanReadFile(key, metadata, ReadOperation.Index) == false)
-				return;
+            if (filesystem.ReadTriggers.CanReadFile(key, metadata, ReadOperation.Index) == false)
+                return;
 
             lock (writerLock)
             {
@@ -437,7 +439,7 @@ namespace Raven.Database.FileSystem.Search
                         {
                             // Object is an array. Therefore, we index each token. 
                             foreach (var item in array)
-								AddField(doc, metadataHolder.Key, item.ToString());
+                                AddField(doc, metadataHolder.Key, item.ToString());
                         }
                         else
                         {
@@ -446,8 +448,8 @@ namespace Raven.Database.FileSystem.Search
                     }
                 }
 
-	            if (doc.GetField(Constants.MetadataEtagField) == null)
-		            doc.Add(new Field(Constants.MetadataEtagField, etag.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+                if (doc.GetField(Constants.MetadataEtagField) == null)
+                    doc.Add(new Field(Constants.MetadataEtagField, etag.ToString(), Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
 
                 writer.DeleteDocuments(new Term("__key", lowerKey));
                 writer.AddDocument(doc);
@@ -458,28 +460,28 @@ namespace Raven.Database.FileSystem.Search
             }
         }
 
-	    private static void AddField(Document doc, string key, string value)
-	    {
-			doc.Add(new Field(key, value, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
+        private static void AddField(Document doc, string key, string value)
+        {
+            doc.Add(new Field(key, value, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
 
-		    if (ExcludeNumericFields.Contains(key, StringComparer.InvariantCultureIgnoreCase) == false && 
-				IsNumeric.IsMatch(value))
-		    {
-			    long longValue;
-			    double doubleValue;
+            if (ExcludeNumericFields.Contains(key, StringComparer.InvariantCultureIgnoreCase) == false && 
+                IsNumeric.IsMatch(value))
+            {
+                long longValue;
+                double doubleValue;
 
-			    if (long.TryParse(value, out longValue))
-				{
-					doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetLongValue(longValue));
-				}
-				else if (double.TryParse(value, out doubleValue))
-				{
-					doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetDoubleValue(doubleValue));
-				}				
-		    }
-	    }
+                if (long.TryParse(value, out longValue))
+                {
+                    doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetLongValue(longValue));
+                }
+                else if (double.TryParse(value, out doubleValue))
+                {
+                    doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetDoubleValue(doubleValue));
+                }				
+            }
+        }
 
-	    public virtual void Index(string key, RavenJObject metadata, Etag etag)
+        public virtual void Index(string key, RavenJObject metadata, Etag etag)
         {
             Index(writer, key, metadata, etag);
         }
@@ -490,7 +492,7 @@ namespace Raven.Database.FileSystem.Search
         {
             var doc = new Document();
             doc.Add(new Field("__key", lowerKey, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
-			
+            
             var fileName = Path.GetFileName(lowerKey);            
             Debug.Assert(fileName != null);
             doc.Add(new Field("__fileName", fileName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -500,7 +502,7 @@ namespace Raven.Database.FileSystem.Search
             doc.Add(new Field("__rfileName", new string(revFileName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));                        
 
             int level = 0;
-			var directoryName = RavenFileNameHelper.RavenDirectory(FileSystemPathExtentions.GetDirectoryName(lowerKey));
+            var directoryName = RavenFileNameHelper.RavenDirectory(FileSystemPathExtentions.GetDirectoryName(lowerKey));
 
 
             doc.Add(new Field("__directory", directoryName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
@@ -521,9 +523,9 @@ namespace Raven.Database.FileSystem.Search
                 Array.Reverse(revDirectoryName);
                 doc.Add(new Field("__rdirectoryName", new string(revDirectoryName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 
-				directoryName = FileSystemPathExtentions.GetDirectoryName(directoryName);
+                directoryName = FileSystemPathExtentions.GetDirectoryName(directoryName);
             }
-			while (directoryName != null );
+            while (directoryName != null );
 
             doc.Add(new Field("__modified", DateTime.UtcNow.ToString(DateIndexFormat, CultureInfo.InvariantCulture), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
             var value = metadata.Value<string>(Constants.CreationDate);
@@ -546,9 +548,9 @@ namespace Raven.Database.FileSystem.Search
         }
 
         internal IDisposable GetSearcher(out IndexSearcher searcher)
-		{
-			return currentIndexSearcherHolder.GetSearcher(out searcher);
-		}
+        {
+            return currentIndexSearcherHolder.GetSearcher(out searcher);
+        }
 
 
         private void SafeDispose ( IDisposable disposable )
@@ -557,8 +559,8 @@ namespace Raven.Database.FileSystem.Search
                 disposable.Dispose();
         }
 
-		public void Dispose()
-		{
+        public void Dispose()
+        {
             var exceptionAggregator = new ExceptionAggregator(Log, string.Format("Could not properly close index storage for file system '{0}'", name));
 
             exceptionAggregator.Execute(() => { if (analyzer != null) analyzer.Close(); });
@@ -568,64 +570,64 @@ namespace Raven.Database.FileSystem.Search
             exceptionAggregator.Execute(() => SafeDispose(directory) );
 
             exceptionAggregator.ThrowIfNeeded();
-		}
+        }
 
-		public void Delete(string key)
-		{
-			var lowerKey = key.ToLowerInvariant();
+        public void Delete(string key)
+        {
+            var lowerKey = key.ToLowerInvariant();
 
-			lock (writerLock)
-			{
-				writer.DeleteDocuments(new Term("__key", lowerKey));
-				writer.Optimize();
-				writer.Commit();
+            lock (writerLock)
+            {
+                writer.DeleteDocuments(new Term("__key", lowerKey));
+                writer.Optimize();
+                writer.Commit();
                 ReplaceSearcher(writer);
-			}
-		}
+            }
+        }
 
         private void ReplaceSearcher(IndexWriter writer)
-		{
-			currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(writer.GetReader()));
-		}
+        {
+            currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(writer.GetReader()));
+        }
 
-		public IEnumerable<string> GetTermsFor(string field, string fromValue)
-		{
-			IndexSearcher searcher;
-			using (GetSearcher(out searcher))
-			{
-				var termEnum = searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty));
-				try
-				{
-					if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
-					{
-						while (termEnum.Term == null || fromValue.Equals(termEnum.Term.Text))
-						{
-							if (termEnum.Next() == false)
-								yield break;
-						}
-					}
-					while (termEnum.Term == null ||
-						field.Equals(termEnum.Term.Field))
-					{
-						if (termEnum.Term != null)
-						{
-							var item = termEnum.Term.Text;
-							yield return item;
-						}
+        public IEnumerable<string> GetTermsFor(string field, string fromValue)
+        {
+            IndexSearcher searcher;
+            using (GetSearcher(out searcher))
+            {
+                var termEnum = searcher.IndexReader.Terms(new Term(field, fromValue ?? string.Empty));
+                try
+                {
+                    if (string.IsNullOrEmpty(fromValue) == false) // need to skip this value
+                    {
+                        while (termEnum.Term == null || fromValue.Equals(termEnum.Term.Text))
+                        {
+                            if (termEnum.Next() == false)
+                                yield break;
+                        }
+                    }
+                    while (termEnum.Term == null ||
+                        field.Equals(termEnum.Term.Field))
+                    {
+                        if (termEnum.Term != null)
+                        {
+                            var item = termEnum.Term.Text;
+                            yield return item;
+                        }
 
-						if (termEnum.Next() == false)
-							break;
-					}
-				}
-				finally
-				{
-					termEnum.Dispose();
-				}
-			}
-		}
+                        if (termEnum.Next() == false)
+                            break;
+                    }
+                }
+                finally
+                {
+                    termEnum.Dispose();
+                }
+            }
+        }
 
         public void Backup(string backupDirectory)
-	    {
+        {
             bool hasSnapshot = false;
             bool throwOnFinallyException = true;
             try
@@ -717,7 +719,7 @@ namespace Raven.Database.FileSystem.Search
                     }
                 }
             }
-	    }
+        }
 
         private static void TryDelete(string neededFilePath)
         {

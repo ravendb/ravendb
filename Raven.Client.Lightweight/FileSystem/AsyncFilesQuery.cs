@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -429,27 +429,27 @@ If you really want to do in memory filtering on the data returned from the query
 
         #endregion 
 
-		/// <summary>
-		///   Takes the specified count.
-		/// </summary>
-		/// <param name = "count">The count.</param>
-		IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Take(int count)
-		{
-			Take(count);
-			return this;
-		}
+        /// <summary>
+        ///   Takes the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Take(int count)
+        {
+            Take(count);
+            return this;
+        }
 
-		/// <summary>
-		///   Skips the specified count.
-		/// </summary>
-		/// <param name = "count">The count.</param>
-		IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Skip(int count)
-		{
-			Skip(count);
-			return this;
-		}
+        /// <summary>
+        ///   Skips the specified count.
+        /// </summary>
+        /// <param name = "count">The count.</param>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Skip(int count)
+        {
+            Skip(count);
+            return this;
+        }
 
-	    public IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false)
+        public IAsyncFilesQuery<T> OnDirectory(string path = null, bool recursive = false)
         {
             if (string.IsNullOrWhiteSpace(path))
                 path = string.Empty;
@@ -495,13 +495,13 @@ If you really want to do in memory filtering on the data returned from the query
             return this;
         }
 
-		void IAsyncFilesQuery<T>.RegisterResultsForDeletion()
-		{
-			var query = ToString();
-			if (string.IsNullOrWhiteSpace(query))
-				throw new ArgumentException("Query is empty! Did you forget OnDirectory before RegisterDeletion?");
+        void IAsyncFilesQuery<T>.RegisterResultsForDeletion()
+        {
+            var query = ToString();
+            if (string.IsNullOrWhiteSpace(query))
+                throw new ArgumentException("Query is empty! Did you forget OnDirectory before RegisterDeletion?");
 
-			Session.RegisterDeletionQuery(query);
-		}
+            Session.RegisterDeletionQuery(query);
+        }
     }
 }

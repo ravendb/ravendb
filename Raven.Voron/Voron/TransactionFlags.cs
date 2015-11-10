@@ -1,4 +1,4 @@
-﻿namespace Voron
+namespace Voron
 {
     public enum TransactionFlags
     {

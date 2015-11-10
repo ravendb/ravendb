@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Posts_ByContent.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,16 +13,16 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Tests.Core.Utils.Indexes
 {
-	public class Posts_ByContent : AbstractIndexCreationTask<Post>
-	{
-		public Posts_ByContent()
-		{
-			Map = posts => from post in posts
-						   let body = LoadDocument<PostContent>(post.Id + "/content")
-						   select new
-						   {
-							   Text = body == null ? null : body.Text
-						   };
-		}
-	}
+    public class Posts_ByContent : AbstractIndexCreationTask<Post>
+    {
+        public Posts_ByContent()
+        {
+            Map = posts => from post in posts
+                           let body = LoadDocument<PostContent>(post.Id + "/content")
+                           select new
+                           {
+                               Text = body == null ? null : body.Text
+                           };
+        }
+    }
 }

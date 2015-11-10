@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ActionsBase.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,10 +19,10 @@ namespace Raven.Database.Actions
     public abstract class ActionsBase
     {
         protected static readonly HashSet<string> HeadersToIgnoreServer = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-		{
+        {
             "Etag",
-			Constants.RavenLastModified
-		};
+            Constants.RavenLastModified
+        };
 
         protected SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> RecentTouches { get; private set; }
 
@@ -30,23 +30,23 @@ namespace Raven.Database.Actions
 
         protected ILog Log { get; private set; }
 
-	    [CLSCompliant(false)]
-	    protected ITransactionalStorage TransactionalStorage
-	    {
-		    get { return Database.TransactionalStorage; }
-	    }
+        [CLSCompliant(false)]
+        protected ITransactionalStorage TransactionalStorage
+        {
+            get { return Database.TransactionalStorage; }
+        }
 
-	    protected WorkContext WorkContext
-	    {
-		    get { return Database.WorkContext; }
-	    }
+        protected WorkContext WorkContext
+        {
+            get { return Database.WorkContext; }
+        }
 
-	    protected IndexDefinitionStorage IndexDefinitionStorage
-	    {
-		    get { return Database.IndexDefinitionStorage; }
-	    }
+        protected IndexDefinitionStorage IndexDefinitionStorage
+        {
+            get { return Database.IndexDefinitionStorage; }
+        }
 
-	    protected IUuidGenerator UuidGenerator { get; private set; }
+        protected IUuidGenerator UuidGenerator { get; private set; }
 
         protected ActionsBase(DocumentDatabase database, SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches, IUuidGenerator uuidGenerator, ILog log)
         {

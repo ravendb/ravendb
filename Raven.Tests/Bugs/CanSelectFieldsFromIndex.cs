@@ -15,61 +15,61 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanSelectFieldsFromIndex : RavenTest
-	{
-		[Fact]
-		public void SelectFieldsFromIndex()
-		{
-			using(var store = NewDocumentStore())
-			{
-				store.SystemDatabase.Documents.Put("ayende", null,
-										   RavenJObject.Parse(
-											   @"{
-	'name': 'ayende',
-	'email': 'ayende@ayende.com',
-	'projects': [
-		'rhino mocks',
-		'nhibernate',
-		'rhino service bus',
-		'rhino divan db',
-		'rhino persistent hash table',
-		'rhino distributed hash table',
-		'rhino etl',
-		'rhino security',
-		'rampaging rhinos'
-	]
+    public class CanSelectFieldsFromIndex : RavenTest
+    {
+        [Fact]
+        public void SelectFieldsFromIndex()
+        {
+            using(var store = NewDocumentStore())
+            {
+                store.SystemDatabase.Documents.Put("ayende", null,
+                                           RavenJObject.Parse(
+                                               @"{
+    'name': 'ayende',
+    'email': 'ayende@ayende.com',
+    'projects': [
+        'rhino mocks',
+        'nhibernate',
+        'rhino service bus',
+        'rhino divan db',
+        'rhino persistent hash table',
+        'rhino distributed hash table',
+        'rhino etl',
+        'rhino security',
+        'rampaging rhinos'
+    ]
 }"),
-										   new RavenJObject(), null);
+                                           new RavenJObject(), null);
 
-				store.DatabaseCommands.PutIndex("EmailAndProject",
-												new IndexDefinition
-												{
-													Map =
-													"from doc in docs from project in doc.projects select new {doc.email, doc.name, project };",
-													Stores =
-													{
-														{"email", FieldStorage.Yes},
-														{"name", FieldStorage.Yes},
-														{"project", FieldStorage.Yes}
-													}
-												});
+                store.DatabaseCommands.PutIndex("EmailAndProject",
+                                                new IndexDefinition
+                                                {
+                                                    Map =
+                                                    "from doc in docs from project in doc.projects select new {doc.email, doc.name, project };",
+                                                    Stores =
+                                                    {
+                                                        {"email", FieldStorage.Yes},
+                                                        {"name", FieldStorage.Yes},
+                                                        {"project", FieldStorage.Yes}
+                                                    }
+                                                });
 
 
-				while (store.DatabaseCommands.Query("EmailAndProject", new IndexQuery(), null).IsStale)
-					Thread.Sleep(100);
+                while (store.DatabaseCommands.Query("EmailAndProject", new IndexQuery(), null).IsStale)
+                    Thread.Sleep(100);
 
-				var queryResult = store.DatabaseCommands.Query("EmailAndProject", new IndexQuery
-				{
-					FieldsToFetch = new string[] {"email"}
-				}, null);
+                var queryResult = store.DatabaseCommands.Query("EmailAndProject", new IndexQuery
+                {
+                    FieldsToFetch = new string[] {"email"}
+                }, null);
 
-				Assert.Equal(9, queryResult.Results.Count);
+                Assert.Equal(9, queryResult.Results.Count);
 
-				foreach (var result in queryResult.Results)
-				{
-					Assert.Equal("ayende@ayende.com", result.Value<string>("email"));
-				}
-			}
-		}
-	}
+                foreach (var result in queryResult.Results)
+                {
+                    Assert.Equal("ayende@ayende.com", result.Value<string>("email"));
+                }
+            }
+        }
+    }
 }

@@ -1,10 +1,9 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.30729</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{267AC60C-751E-42E9-AA18-66035DEFF63A}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -34,6 +33,7 @@
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <NuGetPackageImportStamp>8a4e05d2</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -59,6 +59,7 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>618</NoWarn>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -74,151 +75,155 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b93b4ad6c4b80595, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
-    </Reference>
-    <Reference Include="FizzWare.NBuilder">
+    <Reference Include="FizzWare.NBuilder, Version=3.0.1.0, Culture=neutral, PublicKeyToken=5651b03e12e42c12, processorArchitecture=MSIL">
       <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="FluentAssertions">
-      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.dll</HintPath>
+    <Reference Include="FluentAssertions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="FluentAssertions.Core">
-      <HintPath>..\packages\FluentAssertions.3.3.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="GeoAPI, Version=1.7.4693.18483, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+    <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
+      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory.CSharp, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.CSharp.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory.Xml, Version=5.0.0.0, Culture=neutral, PublicKeyToken=d4bfe873e7598c49, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ICSharpCode.NRefactory.5.3.0\lib\Net40\ICSharpCode.NRefactory.Xml.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Jint">
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
-    </Reference>
-    <Reference Include="Lucene.Net, Version=2.9.1.2, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Owin, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.3.0.0\lib\net45\Microsoft.Owin.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Owin.Host.HttpListener, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.0\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Owin.Hosting, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.VisualStudio.DebuggerVisualizers, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
-    </Reference>
-    <Reference Include="NetTopologySuite, Version=1.13.4693.18484, Culture=neutral, PublicKeyToken=f580a05016ebada1, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.6\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="NLog, Version=3.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NLog.3.1.0.0\lib\net45\NLog.dll</HintPath>
-    </Reference>
-    <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
-    </Reference>
-    <Reference Include="Rhino.Mocks">
-      <HintPath>..\packages\RhinoMocks.3.6.1\lib\net\Rhino.Mocks.dll</HintPath>
+    <Reference Include="Microsoft.Owin, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Spatial4n.Core.NTS, Version=0.3.0.0, Culture=neutral, PublicKeyToken=9f9456e1ca16d45e, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
+    <Reference Include="Microsoft.Owin.Host.HttpListener, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.1\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Hosting, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.1\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Mdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Mdb.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Pdb, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Pdb.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks, Version=0.9.6.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\packages\Mono.Cecil.0.9.6.1\lib\net45\Mono.Cecil.Rocks.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NLog, Version=4.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
+      <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Rhino.Mocks, Version=3.6.0.0, Culture=neutral, PublicKeyToken=0b3305902db7183f, processorArchitecture=MSIL">
+      <HintPath>..\packages\RhinoMocks.3.6.1\lib\net\Rhino.Mocks.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System.configuration" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
+    <Reference Include="System.Core" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
-    <Reference Include="System.Net.Http.Formatting, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.Reactive.Core, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Rx-Core.2.2.5\lib\net45\System.Reactive.Core.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Reactive.Interfaces, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Rx-Interfaces.2.2.5\lib\net45\System.Reactive.Interfaces.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Reactive.Linq, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Rx-Linq.2.2.5\lib\net45\System.Reactive.Linq.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="System.Reactive.PlatformServices">
+    <Reference Include="System.Reactive.PlatformServices, Version=2.2.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Rx-PlatformServices.2.2.5\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Abstractions" />
     <Reference Include="System.Web.Extensions" />
-    <Reference Include="System.Web.Http, Version=5.2.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.2\lib\net45\System.Web.Http.dll</HintPath>
+    <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="GeoAPI">
+      <HintPath>..\SharedLibs\GeoAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="Lucene.Net">
+      <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTopologySuite">
+      <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
+    </Reference>
+    <Reference Include="Spatial4n.Core.NTS">
+      <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Configuration" />
+    <Reference Include="xunit">
       <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
     </Reference>
-    <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="xunit.extensions">
       <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
@@ -245,9 +250,9 @@
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
     <Compile Include="Bugs\Async\WebApi.cs" />
     <Compile Include="Bugs\Async\DynamicGeneratedIds.cs" />
-    <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\AvoidRaceConditionWhenWeLoadTheDataNotPatched.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
+    <Compile Include="Bugs\BulkInsert.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\Caching\CachingOfPostQueries.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
@@ -276,7 +281,6 @@
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\CompilingIndexesCreatesCacheDirectory.cs" />
     <Compile Include="Bugs\DefaultOperatorTest.cs" />
-    <Compile Include="Bugs\DTC\NSB\DbShutDownMidTransaction.cs" />
     <Compile Include="Bugs\DyanmicId.cs" />
     <Compile Include="Bugs\DynamicId.cs" />
     <Compile Include="Bugs\LazilyLoadWithTransformerWhileUsingSharding.cs" />
@@ -295,6 +299,8 @@
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Issues\RavenDB-3691.cs" />
+    <Compile Include="Issues\RavenDB_3435.cs" />
     <Compile Include="Json\JsonCodeGeneratorTests.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
@@ -306,7 +312,6 @@
     <Compile Include="Bugs\MultiMap\MultiMapWithNullableEnumAndCoalescingOperator.cs" />
     <Compile Include="Bugs\Nullable.cs" />
     <Compile Include="Bugs\ProjectionPersistenceTest.cs" />
-    <Compile Include="Bugs\WhenUsingDtcWeMustMakeSureToUpdateTheIndexingAboutNewWorkSoWeWontHaveInfiniteStaleIndexes.cs" />
     <Compile Include="Bugs\ComplexIndexes.cs" />
     <Compile Include="Bugs\ConflictsWithIIS.cs" />
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
@@ -318,7 +323,6 @@
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
     <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
-    <Compile Include="Bugs\EmptyAttachments.cs" />
     <Compile Include="Bugs\EqualityWithArrayOfGuids.cs" />
     <Compile Include="Bugs\Everett.cs" />
     <Compile Include="Bugs\FullTextSearchOnTags.cs" />
@@ -434,8 +438,6 @@
     <Compile Include="Bugs\RavenDbAnyOfPropertyCollection.cs" />
     <Compile Include="Bugs\Arrays.cs" />
     <Compile Include="Bugs\Async\Querying.cs" />
-    <Compile Include="Bugs\AttachmentEncoding.cs" />
-    <Compile Include="Bugs\AttachmentsWithCredentials.cs" />
     <Compile Include="Bugs\AutoCreateIndexes.cs" />
     <Compile Include="Bugs\AutoDetectAnalyzersForQuery.cs" />
     <Compile Include="Bugs\Caching\CachingOfDocumentInclude.cs" />
@@ -578,7 +580,6 @@
     <Compile Include="Bugs\RavenDBQuery.cs" />
     <Compile Include="Bugs\ReadDataFromServer.cs" />
     <Compile Include="Bugs\ReadOnly.cs" />
-    <Compile Include="Bugs\RemoteTx.cs" />
     <Compile Include="Bugs\ReportQueryCount.cs" />
     <Compile Include="Bugs\ResettingIndex.cs" />
     <Compile Include="Bugs\ReuseQuery.cs" />
@@ -649,12 +650,14 @@
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Smuggler\SmugglerBetweenFromEmbeddedTests_RavenDB_3318.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
     <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
     <Compile Include="Smuggler\SmugglerIdentitiesTests.cs" />
     <Compile Include="Smuggler\SmugglerTransformScriptsTests.cs" />
     <Compile Include="Smuggler\SmugglerWithDisabledVersioning_RavenDB_3219.cs" />
+    <Compile Include="Sorting\AlphaNumericSorting.cs" />
     <Compile Include="Sorting\SortByDynamicFields.cs" />
     <Compile Include="Sorting\CustomSorting.cs" />
     <Compile Include="Sorting\SortByNumberOfCharactersFromEnd.cs" />
@@ -817,7 +820,6 @@
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
     <Compile Include="Storage\DocRefsDump.cs" />
     <Compile Include="Storage\Lists.cs" />
-    <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
     <Compile Include="Storage\Voron\GeneralStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
@@ -828,15 +830,13 @@
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
+    <Compile Include="Suggestions\LegacySuggestionsHandling.cs" />
     <Compile Include="Subscriptions\SubscriptionsBasic.cs" />
     <Compile Include="Subscriptions\SubscriptionsPaths.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="T1.cs" />
     <Compile Include="Spatial\BrainV.cs" />
-    <Compile Include="Storage\Attachments.cs">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="Storage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -937,11 +937,6 @@
     <Compile Include="TestBase\RavenTestBaseTests.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
-    <Compile Include="Track\RavenDB17.cs" />
-    <Compile Include="Triggers\AttachmentDeleteTrigger.cs" />
-    <Compile Include="Triggers\AttachmentReadTrigger.cs" />
-    <Compile Include="Triggers\AttachmentPutTriggers.cs" />
-    <Compile Include="Triggers\AuditAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\AuditPutTrigger.cs" />
     <Compile Include="Triggers\Bugs\AuditContext.cs" />
     <Compile Include="Triggers\Bugs\AuditTrigger.cs" />
@@ -953,7 +948,6 @@
     <Compile Include="Triggers\IndexTriggers.cs" />
     <Compile Include="Triggers\PutTriggers.cs" />
     <Compile Include="Triggers\ReadTriggers.cs" />
-    <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
     <Compile Include="Utils\DictionaryComparer.cs" />
     <Compile Include="Utils\DynamicListTests.cs" />
@@ -986,12 +980,16 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
+      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
+      <Name>Raven.Abstractions.Database</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
-      <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Backup\Raven.Backup.csproj">
-      <Project>{dbb6561c-6264-430d-8f3c-e11c6268981e}</Project>
+      <Project>{DBB6561C-6264-430D-8F3C-E11C6268981E}</Project>
       <Name>Raven.Backup</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
@@ -999,11 +997,11 @@
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
-      <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
-      <Project>{3b90eb20-aea3-4972-8219-936f1a62768c}</Project>
+      <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
       <Name>Raven.Server</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
@@ -1015,15 +1013,19 @@
       <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
-      <Project>{381234cc-8aa7-41ff-8cad-22330e15f993}</Project>
+      <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
       <Name>Raven.Tests.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
-      <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
+      <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Smuggler\Raven.Tests.Smuggler.csproj">
+      <Project>{44A7D299-5AE6-4E2E-9E32-18CB9FD82264}</Project>
+      <Name>Raven.Tests.Smuggler</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
-      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
     </ProjectReference>
   </ItemGroup>
@@ -1036,17 +1038,11 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
-    <None Include="packages.config">
-      <SubType>Designer</SubType>
-    </None>
     <EmbeddedResource Include="Patching\failingdump11.ravendump" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Issues\" />
     <Folder Include="MailingList\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
@@ -1055,8 +1051,8 @@
     <EmbeddedResource Include="Patching\x2js.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <!--<Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />-->
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
@@ -1073,4 +1069,10 @@
   </Target>
   -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props'))" />
+  </Target>
 </Project>

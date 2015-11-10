@@ -1,10 +1,10 @@
-import database = require("models/database");
+import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
-import resource = require("models/resource");
-import pagedList = require("common/pagedList");
+import timeSeries = require("models/timeSeries/timeSeries");
+import resource = require("models/resources/resource");
 import router = require("plugins/router");
-import collection = require("models/collection");
+import collection = require("models/database/documents/collection");
 import messagePublisher = require("common/messagePublisher");
 
 // Helper class with static methods for generating app URLs.
@@ -24,10 +24,12 @@ class appUrl {
     private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
     private static currentFilesystem = ko.observable<filesystem>().subscribeTo("ActivateFilesystem", true);
     private static currentCounterStorage = ko.observable<counterStorage>().subscribeTo("ActivateCounterStorage", true);
+    private static currentTimeSeries = ko.observable<timeSeries>().subscribeTo("ActivateTimeSeries", true);
     
-	// Stores some computed values that update whenever the current database updates.
+    // Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
         adminSettings: ko.computed(() => appUrl.forAdminSettings()),
+        adminSettingsCluster: ko.computed(() => appUrl.forCluster()),
 
         hasApiKey: ko.computed(() => appUrl.forHasApiKey()),
 
@@ -45,6 +47,7 @@ class appUrl {
         editTransformer: (transformerName?: string) => ko.computed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.computed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         reporting: ko.computed(() => appUrl.forReporting(appUrl.currentDatabase())),
+        exploration: ko.computed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.computed(() => appUrl.forTasks(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         replicationPerfStats: ko.computed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
@@ -69,6 +72,7 @@ class appUrl {
         quotas: ko.computed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         periodicExport: ko.computed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.computed(() => appUrl.forReplications(appUrl.currentDatabase())),
+        hotSpare: ko.computed(() => appUrl.forHotSpare()),
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.computed((sqlReplicationName: string) => appUrl.forEditSqlReplication(sqlReplicationName, appUrl.currentDatabase())),
@@ -115,11 +119,18 @@ class appUrl {
 
         filesystemVersioning: ko.computed(() => appUrl.forFilesystemVersioning(appUrl.currentFilesystem())),
 
-        couterStorages: ko.computed(() => appUrl.forCounterStorages()),
-        counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(appUrl.currentCounterStorage())),
+        counterStorages: ko.computed(() => appUrl.forCounterStorages()),
+        counterStorageCounters: ko.computed(() => appUrl.forCounterStorageCounters(null, appUrl.currentCounterStorage())),
         counterStorageReplication: ko.computed(() => appUrl.forCounterStorageReplication(appUrl.currentCounterStorage())),
+        counterStorageTasks: ko.computed(() => appUrl.forCounterStorageTasks(appUrl.currentCounterStorage())),
         counterStorageStats: ko.computed(() => appUrl.forCounterStorageStats(appUrl.currentCounterStorage())),
         counterStorageConfiguration: ko.computed(() => appUrl.forCounterStorageConfiguration(appUrl.currentCounterStorage())),
+
+        timeSeriesType: ko.computed(() => appUrl.forTimeSeriesType(null, appUrl.currentTimeSeries())),
+        timeSeriesPoints: ko.computed(() => appUrl.forTimeSeriesKey(null, null, appUrl.currentTimeSeries())),
+        timeSeriesStats: ko.computed(() => appUrl.forTimeSeriesStats(appUrl.currentTimeSeries())),
+        timeSeriesConfiguration: ko.computed(() => appUrl.forTimeSeriesConfiguration(appUrl.currentTimeSeries())),
+        timeSeriesConfigurationTypes: ko.computed(() => appUrl.forTimeSeriesConfigurationTypes(appUrl.currentTimeSeries()))
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -128,18 +139,34 @@ class appUrl {
         return isThereAny;
     }
 
-    static getEncodedCounterStoragePart(counterStorage: counterStorage): string {
-        return counterStorage ? "&counterstorage=" + encodeURIComponent(counterStorage.name) : "";
+    static getEncodedCounterStoragePart(cs: counterStorage): string {
+        return cs ? "&counterstorage=" + encodeURIComponent(cs.name) : "";
     }
 
-    static forCounterStorageCounters(counterStorage: counterStorage) {
-        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
-        return "#counterstorages/counters?" + counterStroragePart;
+    static forCounterStorageCounters(gruopName: string, cs: counterStorage) {
+        var groupPart = gruopName ? "group=" + encodeURIComponent(gruopName) : "";
+        var counterStoragePart = appUrl.getEncodedCounterStoragePart(cs);
+        return "#counterstorages/counters?" + groupPart + counterStoragePart;
     }
 
-    static forCounterStorageReplication(counterStorage: counterStorage) {
-        var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
+    static forCounterStorageReplication(cs: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
         return "#counterstorages/replication?" + counterStroragePart;
+    }
+
+    static forCounterStorageTasks(cs: counterStorage) {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
+        return "#counterstorages/tasks?" + counterStroragePart;
+    }
+
+    static forImportCounterStorage(cs: counterStorage): string {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
+        return "#databases/tasks/importCounterStorage?" + counterStroragePart;
+    }
+
+    static forExportCounterStorage(cs: counterStorage): string {
+        var counterStroragePart = appUrl.getEncodedCounterStoragePart(cs);
+        return "#databases/tasks/exportCounterStorage?" + counterStroragePart;
     }
 
     static forCounterStorageStats(counterStorage: counterStorage) {
@@ -150,6 +177,43 @@ class appUrl {
     static forCounterStorageConfiguration(counterStorage: counterStorage) {
         var counterStroragePart = appUrl.getEncodedCounterStoragePart(counterStorage);
         return "#counterstorages/configuration?" + counterStroragePart;
+    }
+
+    static forTimeSeriesType(type: string, ts: timeSeries) {
+        var url = "";
+        if (type) {
+            url = "type=" + encodeURIComponent(type);
+        }
+        var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/types?" + url + timeSeriesPart;
+    }
+
+    static forTimeSeriesKey(type: string, key: string, ts: timeSeries) {
+        var url = "";
+        if (type && key) {
+            url = "type=" + encodeURIComponent(type) + "&key=" + encodeURIComponent(key);
+        }
+        var timeSeriesPart = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/points?" + url + timeSeriesPart;
+    }
+
+    static forTimeSeriesStats(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/stats?" + part;
+    }
+
+    static forTimeSeriesConfiguration(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/configuration?" + part;
+    }
+
+    static forTimeSeriesConfigurationTypes(ts: timeSeries) {
+        var part = appUrl.getEncodedTimeSeriesPart(ts);
+        return "#timeseries/configuration/types?" + part;
+    }
+
+    static getEncodedTimeSeriesPart(ts: timeSeries): string {
+        return ts ? "&timeseries=" + encodeURIComponent(ts.name) : "";
     }
 
     static forUpgrade(db: database) {
@@ -163,12 +227,52 @@ class appUrl {
         return "#admin/settings/apiKeys";
     }
 
+    static forCluster(): string {
+        return "#admin/settings/cluster";
+    }
+
     static forWindowsAuth(): string {
         return "#admin/settings/windowsAuth";
     }
 
+    static forGlobalConfig(): string {
+        return '#admin/settings/globalConfig';
+    }
+
+    static forServerSmugging(): string {
+        return "#admin/settings/serverSmuggling";
+    }
+
+    static forGlobalConfigPeriodicExport(): string {
+        return '#admin/settings/globalConfig';
+    }
+
+    static forGlobalConfigReplication(): string {
+        return '#admin/settings/globalConfigReplication';
+    }
+
+    static forGlobalConfigSqlReplication(): string {
+        return "#admin/settings/globalConfigSqlReplication";
+    }
+
+    static forGlobalConfigQuotas(): string {
+        return '#admin/settings/globalConfigQuotas';
+    }
+
+    static forGlobalConfigCustomFunctions(): string {
+        return '#admin/settings/globalConfigCustomFunctions';
+    }
+
+    static forGlobalConfigVersioning(): string {
+        return "#admin/settings/globalConfigVersioning";
+    }
+
     static forBackup(): string {
         return "#admin/settings/backup";
+    }
+
+    static forHotSpare(): string {
+        return "#admin/settings/hotSpare";
     }
 
     static forCompact(): string {
@@ -183,13 +287,17 @@ class appUrl {
         return "#admin/settings/adminLogs";
     }
 
+    static forServerTopology(): string { 
+        return "#admin/settings/topology";
+    }
+
     static forTrafficWatch(): string {
         return "#admin/settings/trafficWatch";
     }
 
-	static forLicenseInformation(): string {
-		return "#admin/settings/licenseInformation";
-	}
+    static forLicenseInformation(): string {
+        return "#admin/settings/licenseInformation";
+    }
 
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
@@ -197,6 +305,14 @@ class appUrl {
 
     static forIoTest(): string {
         return "#admin/settings/ioTest";
+    }
+
+    static forDiskIoViewer(): string {
+        return "#admin/settings/diskIoViewer";
+    }
+
+    static forAdminJsConsole(): string {
+        return "#admin/settings/console";
     }
 
     static forStudioConfig(): string {
@@ -215,28 +331,38 @@ class appUrl {
         return "#counterstorages";
     }
 
+    static forTimeSeries(): string {
+        return "#timeseries";
+    }
+
     /**
-	* Gets the URL for edit document.
-	* @param id The ID of the document to edit, or null to edit a new document.
-	* @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
-	* @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
-	* @param database The database to use in the URL. If null, the current database will be used.
-	*/
+    * Gets the URL for edit document.
+    * @param id The ID of the document to edit, or null to edit a new document.
+    * @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
+    * @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
+    * @param database The database to use in the URL. If null, the current database will be used.
+    */
     static forEditDoc(id: string, collectionName: string, docIndexInCollection: number, db: database): string {
-		var databaseUrlPart = appUrl.getEncodedDbPart(db);
-		var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
-		var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
+        var databaseUrlPart = appUrl.getEncodedDbPart(db);
+        var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
+        var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
     }
 
-    static forEditItem(itemId: string, res: resource, itemIndex: number, collectionName?: string): string {
-        var databaseUrlPart = appUrl.getEncodedResourcePart(res);
+    static forEditItem(itemId: string, rs: resource, itemIndex: number, collectionName?: string): string {
+        var urlPart = appUrl.getEncodedResourcePart(rs);
         var itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
         var pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
-        var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";       
-        return resourceTag+"/edit?" + itemIdUrlPart + databaseUrlPart + pagedListInfo;
-    } 
+        var resourceTag = rs instanceof filesystem ? "#filesystems" : rs instanceof counterStorage ? "#counterstorages" : "#databases";       
+        return resourceTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
+    }
+
+    static forEditCounter(rs: resource, groupName: string, counterName: string) {
+        var urlPart = appUrl.getEncodedResourcePart(rs);
+        var itemIdUrlPart = "&groupName=" + encodeURIComponent(groupName) + "&counterName=" + encodeURIComponent(counterName);    
+        return "#counterstorages/edit?" + itemIdUrlPart + urlPart;
+    }
 
     static forEditQueryItem(itemNumber: number, res: resource, index: string, query?: string, sort?:string): string {
         var databaseUrlPart = appUrl.getEncodedResourcePart(res);
@@ -246,7 +372,7 @@ class appUrl {
         var sortInfoUrlPart = sort?"&sorts=" + sort:"";
         var resourceTag = res instanceof filesystem ? "#filesystems" : "#databases";
         return resourceTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
-    } 
+    }
 
     static forNewDoc(db: database): string {
         var databaseUrlPart = appUrl.getEncodedDbPart(db);
@@ -429,7 +555,6 @@ class appUrl {
     static forReplications(db: database): string {
         return "#databases/settings/replication?" + appUrl.getEncodedDbPart(db);
     }
-
     static forVersioning(db: database): string {
         return "#databases/settings/versioning?" + appUrl.getEncodedDbPart(db);
     }
@@ -527,6 +652,11 @@ class appUrl {
         return "#databases/query/reporting" + indexPart + "?" + databasePart;
     }
 
+    static forExploration(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/query/exploration?" + databasePart;
+    }
+
     static forTasks(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks?" + databasePart;
@@ -535,11 +665,12 @@ class appUrl {
     static forResourceQuery(res: resource): string {
         if (res && res instanceof database && !res.isSystem) {
             return appUrl.baseUrl + "/databases/" + res.name;
-        }
-        else if (res && res instanceof filesystem) {
+        } else if (res && res instanceof filesystem) {
             return appUrl.baseUrl + "/fs/" + res.name;
         } else if (res && res instanceof counterStorage) {
-            return appUrl.baseUrl + "/counters/" + res.name;
+            return appUrl.baseUrl + "/cs/" + res.name;
+        } else if (res && res instanceof timeSeries) {
+            return appUrl.baseUrl + "/ts/" + res.name;
         }
 
         return this.baseUrl;
@@ -602,12 +733,20 @@ class appUrl {
         return "#counterstorages?" + counterStoragePart;
     }
 
+    static serverUrl(): string {
+        return window.location.protocol + "//" + window.location.host;
+    }
+
     static forIndexesRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
 
     static forIndexQueryRawData(db:database, indexName:string){
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
+    }
+
+    static forReportingRawData(db: database, indexName: string) {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/facets/" + indexName;
     }
 
     static forTransformersRawData(db: database): string {
@@ -689,6 +828,7 @@ class appUrl {
     static getResource(): resource {
         var appFileSystem = appUrl.getFileSystem();
         var appCounterStorage = appUrl.getCounterStorage();
+        var appTimeSeries = appUrl.getTimeSeries();
 
         if (!!appFileSystem) {
             return appFileSystem;
@@ -696,14 +836,17 @@ class appUrl {
         else if (!!appCounterStorage) {
             return appCounterStorage;
         }
+        else if (!!appTimeSeries) {
+            return appTimeSeries;
+        }
         else {
             return appUrl.getDatabase();
         }
     }
 
-	/**
-	* Gets the database from the current web browser address. Returns the system database if no database name was found.
-	*/
+    /**
+    * Gets the database from the current web browser address. Returns the system database if no database name was found.
+    */
     static getDatabase(): database {
 
         // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
@@ -789,6 +932,33 @@ class appUrl {
             return null;
         }
     }
+ 
+    /**
+    * Gets the time series from the current web browser address. Returns null if no time series name was found.
+    */
+    static getTimeSeries(): timeSeries {
+
+        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+
+        var timeSeriesIndicator = "timeseries=";
+        var hash = window.location.hash;
+        var tsIndex = hash.indexOf(timeSeriesIndicator);
+        if (tsIndex >= 0) {
+            // A database is specified in the address.
+            var tsSegmentEnd = hash.indexOf("&", tsIndex);
+            if (tsSegmentEnd === -1) {
+                tsSegmentEnd = hash.length;
+            }
+
+            var timeSeriesName = hash.substring(tsIndex + timeSeriesIndicator.length, tsSegmentEnd);
+            var unescapedTimeSeriesName = decodeURIComponent(timeSeriesName);
+            var ts = new timeSeries(unescapedTimeSeriesName);
+            return ts;
+        } else {
+            // No time series is specified in the URL.
+            return null;
+        }
+    }
 
     /**
     * Gets the server URL.
@@ -825,10 +995,16 @@ class appUrl {
                     currentResourceName = fsInUrl;
                     currentResourceType = filesystem.type;
                 } else {
-                    var cntInUrl = routerInstruction.queryParams[counterStorage.type];
-                    if (cntInUrl) {
-                        currentResourceName = cntInUrl;
+                    var csInUrl = routerInstruction.queryParams[counterStorage.type];
+                    if (csInUrl) {
+                        currentResourceName = csInUrl;
                         currentResourceType = counterStorage.type;
+                    } else {
+                        var tsInUrl = routerInstruction.queryParams[timeSeries.type];
+                        if (tsInUrl) {
+                            currentResourceName = tsInUrl;
+                            currentResourceType = timeSeries.type;
+                        }
                     }
                 }
             }
@@ -851,30 +1027,45 @@ class appUrl {
         }
     }
 
-	/**
-	* Gets an object containing computed URLs that update when the current database updates.
-	*/
-	static forCurrentDatabase(): computedAppUrls {
-		return appUrl.currentDbComputeds;
+    /**
+    * Gets an object containing computed URLs that update when the current database updates.
+    */
+    static forCurrentDatabase(): computedAppUrls {
+        return appUrl.currentDbComputeds;
     }
 
     static forCurrentFilesystem(): computedAppUrls {
-        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs.
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
+    }
+
+    static forCurrentCounterStorage(): computedAppUrls {
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
+    }
+
+    static forCurrentTimeSeries(): computedAppUrls {
+        return appUrl.currentDbComputeds; //This is all mixed. maybe there should be separate structures for Db and Fs and Cs.
     }
 
     private static getEncodedResourcePart(res?: resource) {
         if (!res)
             return "";
+
         if (res instanceof filesystem) {
-            return appUrl.getEncodedFsPart(<filesystem>res);
+            return appUrl.getEncodedFsPart(res);
+        }
+        if (res instanceof counterStorage) {
+            return appUrl.getEncodedCounterStoragePart(res);
+        }
+        if (res instanceof timeSeries) {
+            return appUrl.getEncodedTimeSeriesPart(res);
         }
         else {
             return appUrl.getEncodedDbPart(<database>res);
         }
     }
 
-	private static getEncodedDbPart(db?: database) {
-		return db ? "&database=" + encodeURIComponent(db.name) : "";
+    private static getEncodedDbPart(db?: database) {
+        return db ? "&database=" + encodeURIComponent(db.name) : "";
     }
     
     private static getEncodedFsPart(fs?: filesystem) {

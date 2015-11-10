@@ -21,240 +21,243 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
-	public class Basic : RavenTest
-	{
-		protected RavenDbServer GetNewServer(int port)
-		{
-			var dataDirectory = Path.Combine(NewDataPath(), "System");
-			var configuration = new RavenConfiguration
-								{
-									Port = port,
-									DataDirectory = dataDirectory,
-									AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
-								};
-			configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+    public class Basic : RavenTest
+    {
+        protected RavenDbServer GetNewServer(int port)
+        {
+            var dataDirectory = Path.Combine(NewDataPath(), "System");
+            var configuration = new AppSettingsBasedConfiguration
+            {
+                Core =
+                {
+                    DataDirectory = dataDirectory,
+                    Port = port,
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                }
+            };
+            configuration.Core.RunInMemory = true;
 
-			var ravenDbServer = new RavenDbServer(configuration)
-			{
-				UseEmbeddedHttpServer = true
-			};
+            var ravenDbServer = new RavenDbServer(configuration)
+            {
+                UseEmbeddedHttpServer = true
+            };
 
-			ravenDbServer.Initialize();
-			return ravenDbServer;
-		}
+            ravenDbServer.Initialize();
+            return ravenDbServer;
+        }
 
-		[Fact]
-		public void CanCreateDatabaseUsingExtensionMethod()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
+        [Fact]
+        public void CanCreateDatabaseUsingExtensionMethod()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
-				string userId;
+                string userId;
 
-				using (var s = store.OpenSession("Northwind"))
-				{
-					var entity = new User
-					{
-						Name = "First Multitenant Bank",
-					};
-					s.Store(entity);
-					userId = entity.Id;
-					s.SaveChanges();
-				}
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "First Multitenant Bank",
+                    };
+                    s.Store(entity);
+                    userId = entity.Id;
+                    s.SaveChanges();
+                }
 
-				using (var s = store.OpenSession())
-				{
-					Assert.Null(s.Load<User>(userId));
-				}
+                using (var s = store.OpenSession())
+                {
+                    Assert.Null(s.Load<User>(userId));
+                }
 
-				using (var s = store.OpenSession("Northwind"))
-				{
-					Assert.NotNull(s.Load<User>(userId));
-				}
-			}
-		}
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    Assert.NotNull(s.Load<User>(userId));
+                }
+            }
+        }
 
-		[Fact]
-		public void CanQueryTenantDatabase()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
+        [Fact]
+        public void CanQueryTenantDatabase()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
-				using (var s = store.OpenSession("Northwind"))
-				{
-					var entity = new User
-					{
-						Name = "Hello",
-					};
-					s.Store(entity);
-					s.SaveChanges();
-				}
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "Hello",
+                    };
+                    s.Store(entity);
+                    s.SaveChanges();
+                }
 
-				using (var s = store.OpenSession("Northwind"))
-				{
-					Assert.NotEmpty(s.Query<User>().Where(x => x.Name == "Hello"));
-				}
-			}
-		}
-
-
-		[Fact]
-		public void CanQueryDefaultDatabaseQuickly()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
-
-				using (var s = store.OpenSession("Northwind"))
-				{
-					var entity = new User
-					{
-						Name = "Hello",
-					};
-					s.Store(entity);
-					s.SaveChanges();
-				}
-
-				var sp = Stopwatch.StartNew();
-				using (var s = store.OpenSession())
-				{
-					Assert.Empty(s.Query<User>().Where(x => x.Name == "Hello"));
-				}
-				Assert.True(TimeSpan.FromSeconds(5) > sp.Elapsed);
-			}
-		}
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    Assert.NotEmpty(s.Query<User>().Where(x => x.Name == "Hello"));
+                }
+            }
+        }
 
 
-		[Fact]
-		public void OpenSessionUsesSpecifiedDefaultDatabase()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079",
-				DefaultDatabase = "Northwind"
-			}.Initialize())
-			{
-				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
+        [Fact]
+        public void CanQueryDefaultDatabaseQuickly()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
-				string userId;
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "Hello",
+                    };
+                    s.Store(entity);
+                    s.SaveChanges();
+                }
 
-				using (var s = store.OpenSession("Northwind"))
-				{
-					var entity = new User
-					{
-						Name = "First Multitenant Bank",
-					};
-					s.Store(entity);
-					userId = entity.Id;
-					s.SaveChanges();
-				}
+                var sp = Stopwatch.StartNew();
+                using (var s = store.OpenSession())
+                {
+                    Assert.Empty(s.Query<User>().Where(x => x.Name == "Hello"));
+                }
+                Assert.True(TimeSpan.FromSeconds(5) > sp.Elapsed);
+            }
+        }
 
-				using (var s = store.OpenSession())
-				{
-					Assert.NotNull(s.Load<User>(userId));
-				}
-			}
-		}
 
-		[Fact]
-		public void CanUseMultipleDatabases()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new DatabaseDocument
-					{
-						Id = "Raven/Databases/Northwind",
-						Settings =
-							{
-								{ Constants.RunInMemory, "true"},
-								{"Raven/DataDir", "Northwind"}
-							}
-					});
+        [Fact]
+        public void OpenSessionUsesSpecifiedDefaultDatabase()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079",
+                DefaultDatabase = "Northwind"
+            }.Initialize())
+            {
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
-					session.SaveChanges();
-				}
+                string userId;
 
-				string userId;
+                using (var s = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "First Multitenant Bank",
+                    };
+                    s.Store(entity);
+                    userId = entity.Id;
+                    s.SaveChanges();
+                }
 
-				using (var session = store.OpenSession("Northwind"))
-				{
-					var entity = new User
-					{
-						Name = "First Multitenant Bank",
-					};
-					session.Store(entity);
-					userId = entity.Id;
-					session.SaveChanges();
-				}
+                using (var s = store.OpenSession())
+                {
+                    Assert.NotNull(s.Load<User>(userId));
+                }
+            }
+        }
 
-				using (var session = store.OpenSession())
-				{
-					Assert.Null(session.Load<User>(userId));
-				}
+        [Fact]
+        public void CanUseMultipleDatabases()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new DatabaseDocument
+                    {
+                        Id = "Raven/Databases/Northwind",
+                        Settings =
+                            {
+                                { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
+                                {"Raven/DataDir", "Northwind"}
+                            }
+                    });
 
-				using (var session = store.OpenSession("Northwind"))
-				{
-					Assert.NotNull(session.Load<User>(userId));
-				}
-			}
-		}
+                    session.SaveChanges();
+                }
 
-		[Fact]
-		public void RavenDocumentsByEntityNameIndexCreated()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
-				var index = store.DatabaseCommands.ForDatabase("Northwind").GetIndex("Raven/DocumentsByEntityName");
-				Assert.NotNull(index);
-			}
-		}
+                string userId;
 
-		[Fact]
-		public async Task RavenDocumentsByEntityNameIndexCreatedAsync()
-		{
-			using (GetNewServer(8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync("Northwind");
-				var index = await store.AsyncDatabaseCommands.ForDatabase("Northwind").GetIndexAsync("Raven/DocumentsByEntityName");
-				Assert.NotNull(index);
-			}
-		}
+                using (var session = store.OpenSession("Northwind"))
+                {
+                    var entity = new User
+                    {
+                        Name = "First Multitenant Bank",
+                    };
+                    session.Store(entity);
+                    userId = entity.Id;
+                    session.SaveChanges();
+                }
 
-		public override void Dispose()
-		{
-			IOExtensions.DeleteDirectory("Data");
-			IOExtensions.DeleteDirectory("NHibernate");
-			base.Dispose();
-		}
-	}
+                using (var session = store.OpenSession())
+                {
+                    Assert.Null(session.Load<User>(userId));
+                }
+
+                using (var session = store.OpenSession("Northwind"))
+                {
+                    Assert.NotNull(session.Load<User>(userId));
+                }
+            }
+        }
+
+        [Fact]
+        public void RavenDocumentsByEntityNameIndexCreated()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
+                var index = store.DatabaseCommands.ForDatabase("Northwind").GetIndex("Raven/DocumentsByEntityName");
+                Assert.NotNull(index);
+            }
+        }
+
+        [Fact]
+        public async Task RavenDocumentsByEntityNameIndexCreatedAsync()
+        {
+            using (GetNewServer(8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync("Northwind");
+                var index = await store.AsyncDatabaseCommands.ForDatabase("Northwind").GetIndexAsync("Raven/DocumentsByEntityName");
+                Assert.NotNull(index);
+            }
+        }
+
+        public override void Dispose()
+        {
+            IOExtensions.DeleteDirectory("Data");
+            IOExtensions.DeleteDirectory("NHibernate");
+            base.Dispose();
+        }
+    }
 }

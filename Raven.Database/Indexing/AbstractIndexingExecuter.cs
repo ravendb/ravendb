@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -20,10 +19,10 @@ namespace Raven.Database.Indexing
     {
         protected WorkContext context;
 
-	    protected readonly IndexReplacer indexReplacer;
+        protected readonly IndexReplacer indexReplacer;
 
-	    protected TaskScheduler scheduler;
-        protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
+        protected TaskScheduler scheduler;
+        protected readonly ILog Log;
         protected ITransactionalStorage transactionalStorage;
         protected int workCounter;
         protected int lastFlushedWorkCounter;
@@ -32,10 +31,11 @@ namespace Raven.Database.Indexing
 
         protected AbstractIndexingExecuter(WorkContext context, IndexReplacer indexReplacer)
         {
+            Log = LogManager.GetLogger(GetType());
             this.transactionalStorage = context.TransactionalStorage;
             this.context = context;
-	        this.indexReplacer = indexReplacer;
-	        this.scheduler = context.TaskScheduler;
+            this.indexReplacer = indexReplacer;
+            this.scheduler = context.TaskScheduler;
         }
 
         public void Execute()
@@ -109,7 +109,7 @@ namespace Raven.Database.Indexing
                     }
                     if (foundWork == false && context.RunIndexing)
                     {
-                        isIdle = context.WaitForWork(context.Configuration.TimeToWaitBeforeRunningIdleIndexes, ref workCounter, () =>
+                        isIdle = context.WaitForWork(context.Configuration.Indexing.TimeToWaitBeforeRunningIdleIndexes.AsTimeSpan, ref workCounter, () =>
                         {
                             try
                             {
@@ -120,15 +120,15 @@ namespace Raven.Database.Indexing
                                 Log.WarnException("Could not flush indexes properly", e);
                             }
 
-							try
-							{
-								CleanupPrefetchers();
-							}
+                            try
+                            {
+                                CleanupPrefetchers();
+                            }
                             catch (Exception e)
                             {
                                 Log.WarnException("Could not cleanup prefetchers properly", e);
                             }
-							
+                            
                         }, name);
                     }
                     else // notify the tasks executer that it has work to do
@@ -144,9 +144,9 @@ namespace Raven.Database.Indexing
         public abstract bool ShouldRun { get; }
 
         protected virtual void CleanupPrefetchers()
-	    {
-		    
-	    }
+        {
+            
+        }
 
         protected virtual void Dispose() { }
 
@@ -222,13 +222,13 @@ namespace Raven.Database.Indexing
                     var failureRate = actions.Indexing.GetFailureRate(indexesStat.Id);
                     if (failureRate.IsInvalidIndex)
                     {
-	                    if (Log.IsDebugEnabled)
-	                    {
-		                    Log.Debug("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-			                    indexesStat.Id,
-			                    failureRate.FailureRate);
-	                    }
-	                    continue;
+                        if (Log.IsDebugEnabled)
+                        {
+                            Log.Debug("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+                                indexesStat.Id,
+                                failureRate.FailureRate);
+                        }
+                        continue;
                     }
                     if (IsIndexStale(indexesStat, actions, isIdle, localFoundOnlyIdleWork) == false)
                         continue;
@@ -236,13 +236,13 @@ namespace Raven.Database.Indexing
                     if (index == null) // not there
                         continue;
 
-					if (ShouldSkipIndex(index))
-						continue;
+                    if (ShouldSkipIndex(index))
+                        continue;
 
-					if(context.IndexDefinitionStorage.GetViewGenerator(indexesStat.Id) == null)
-						continue; // an index that is in the process of being added, ignoring it, we'll check again on the next run
+                    if(context.IndexDefinitionStorage.GetViewGenerator(indexesStat.Id) == null)
+                        continue; // an index that is in the process of being added, ignoring it, we'll check again on the next run
 
-					var indexToWorkOn = GetIndexToWorkOn(indexesStat);
+                    var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     indexToWorkOn.Index = index;
 
                     indexesToWorkOn.Add(indexToWorkOn);
@@ -252,11 +252,11 @@ namespace Raven.Database.Indexing
             UpdateStalenessMetrics(indexesToWorkOn.Count);
 
             onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
-	        if (indexesToWorkOn.Count == 0)
-				return false;
-	        
+            if (indexesToWorkOn.Count == 0)
+                return false;
+            
 
-	        context.UpdateFoundWork();
+            context.UpdateFoundWork();
             context.CancellationToken.ThrowIfCancellationRequested();
 
             using (context.IndexDefinitionStorage.CurrentlyIndexing())
@@ -264,14 +264,14 @@ namespace Raven.Database.Indexing
                ExecuteIndexingWork(indexesToWorkOn);
             }
 
-			indexReplacer.ReplaceIndexes(indexesToWorkOn.Select(x => x.IndexId).ToList());
+            indexReplacer.ReplaceIndexes(indexesToWorkOn.Select(x => x.IndexId).ToList());
 
             return true;
         }
 
-	    protected abstract bool ShouldSkipIndex(Index index);
+        protected abstract bool ShouldSkipIndex(Index index);
 
-	    public Index[] GetCurrentlyProcessingIndexes()
+        public Index[] GetCurrentlyProcessingIndexes()
         {
             return currentlyProcessedIndexes.Values.ToArray();
         }

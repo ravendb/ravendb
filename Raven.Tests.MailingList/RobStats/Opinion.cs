@@ -1,8 +1,8 @@
-﻿namespace Raven.Tests.MailingList.RobStats
+namespace Raven.Tests.MailingList.RobStats
 {
-	public class Opinion
-	{
-		public string EntityId { get; set; }
-		public bool IsFavorite { get; set; }
-	}
+    public class Opinion
+    {
+        public string EntityId { get; set; }
+        public bool IsFavorite { get; set; }
+    }
 }

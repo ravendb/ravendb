@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import counterStorage = require("models/counter/counterStorage");
 
 class getCounterStorageReplicationCommand extends commandBase {
@@ -16,7 +16,7 @@ class getCounterStorageReplicationCommand extends commandBase {
 
         if (this.reportRefreshProgress) {
             getTask.done(() => this.reportSuccess("Replication Destionations of '" + this.counterStorage.name + "' were successfully refreshed!"));
-            getTask.fail((response: JQueryXHR) => this.reportWarning("There are no saved replication destionations on the server!", response.responseText, response.statusText));
+            getTask.fail((response: JQueryXHR) => this.reportWarning("There are no saved replication destinations on the server!", response.responseText, response.statusText));
         }
         return getTask;
     }

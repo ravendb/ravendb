@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -7,28 +7,28 @@ using Xunit;
 namespace Voron.Tests.Storage
 {
     public class Pagers
-	{
+    {
 #if DEBUG_PAGER_STATE
-//        [PrefixesFact]
+//        [Fact]
 //        public void PureMemoryPagerReleasesPagerState()
 //        {
 //            PagerReleasesPagerState(() => new Win32PureMemoryPager());
 //        }
 
-        [PrefixesFact]
+        [Fact]
         public void MemoryMapPagerReleasesPagerState()
         {
             PagerReleasesPagerState(() => new Win32MemoryMapPager("db.voron"));
             File.Delete("db.voron");
         }
 
-		[PrefixesFact]	
-	    public void MemoryMapWithoutBackingReleasePagerState()
-	    {
-		    PagerReleasesPagerState(() => new Win32PageFileBackedMemoryMappedPager("test"));
-	    }
+        [Fact]	
+        public void MemoryMapWithoutBackingReleasePagerState()
+        {
+            PagerReleasesPagerState(() => new Win32PageFileBackedMemoryMappedPager("test"));
+        }
 
-        [PrefixesFact]
+        [Fact]
         public void FilePagerReleasesPagerState()
         {
             PagerReleasesPagerState(() => new FilePager("db.voron"));
@@ -44,5 +44,5 @@ namespace Voron.Tests.Storage
             Assert.Equal(instanceCount, PagerState.Instances.Count);
         }
 #endif
-	}
+    }
 }

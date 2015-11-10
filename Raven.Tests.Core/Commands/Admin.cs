@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -9,19 +9,20 @@ using Raven.Tests.Core.Utils.Entities;
 using System;
 using System.IO;
 using System.Linq;
+using Raven.Database.Config;
 using Xunit;
 
 namespace Raven.Tests.Core.Commands
 {
-	public class Admin : RavenCoreTestBase
+    public class Admin : RavenCoreTestBase
     {
         private string RestoreDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Restore.Data");
         private string BackupDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backup");
 
         public Admin()
         {
-			IOExtensions.DeleteFile(BackupDir);
-			IOExtensions.DeleteFile(RestoreDir);
+            IOExtensions.DeleteFile(BackupDir);
+            IOExtensions.DeleteFile(RestoreDir);
 
             IOExtensions.DeleteDirectory(BackupDir);
             IOExtensions.DeleteDirectory(RestoreDir);
@@ -34,30 +35,30 @@ namespace Raven.Tests.Core.Commands
             IOExtensions.DeleteDirectory(RestoreDir);
         }
 
-		[Fact]
-		public void CanManageIndexingProcess()
-		{
-			using (var store = GetDocumentStore())
-			{
-				var adminCommands = store.DatabaseCommands.Admin;
+        [Fact]
+        public void CanManageIndexingProcess()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var adminCommands = store.DatabaseCommands.Admin;
 
-				var indexingStatus = adminCommands.GetIndexingStatus();
+                var indexingStatus = adminCommands.GetIndexingStatus();
 
-				Assert.Equal("Indexing", indexingStatus);
+                Assert.Equal("Indexing", indexingStatus);
 
-				adminCommands.StopIndexing();
+                adminCommands.StopIndexing();
 
-				indexingStatus = adminCommands.GetIndexingStatus();
+                indexingStatus = adminCommands.GetIndexingStatus();
 
-				Assert.Equal("Paused", indexingStatus);
+                Assert.Equal("Paused", indexingStatus);
 
-				adminCommands.StartIndexing();
+                adminCommands.StartIndexing();
 
-				indexingStatus = adminCommands.GetIndexingStatus();
+                indexingStatus = adminCommands.GetIndexingStatus();
 
-				Assert.Equal("Indexing", indexingStatus);
-			}
-		}
+                Assert.Equal("Indexing", indexingStatus);
+            }
+        }
 
         [Fact]
         public void CanCreateAndDeleteDatabase()
@@ -103,46 +104,46 @@ namespace Raven.Tests.Core.Commands
                 Assert.True(adminStatistics.LoadedDatabases.Any());
                 Assert.True(adminStatistics.TotalNumberOfRequests > 0);
                 Assert.NotNull(adminStatistics.Memory);
-				Assert.NotNull(adminStatistics.LoadedDatabases.First().StorageStats);
+                Assert.NotNull(adminStatistics.LoadedDatabases.First().StorageStats);
             }
         }
 
         [Fact]
         public void CanDoBackupAndRestore()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(Constants.RunInMemory, "false")))
-			{
-				store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
+            using (var store = GetDocumentStore(modifyDatabaseDocument: doc => doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false")))
+            {
+                store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
 
-				store.DatabaseCommands.GlobalAdmin.StartBackup(BackupDir, new DatabaseDocument()
-				{
-					Settings = new Dictionary<string, string>()
-					{
-						{ Constants.RunInMemory, "false" }
-					}
-				}, false, store.DefaultDatabase);
-				WaitForBackup(store.DatabaseCommands, true);
-			}
+                store.DatabaseCommands.GlobalAdmin.StartBackup(BackupDir, new DatabaseDocument()
+                {
+                    Settings = new Dictionary<string, string>()
+                    {
+                        { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" }
+                    }
+                }, false, store.DefaultDatabase);
+                WaitForBackup(store.DatabaseCommands, true);
+            }
 
-			Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
-			{
-				BackupLocation = BackupDir,
-				DatabaseLocation = RestoreDir,
-				DatabaseName = "CanDoBackupAndRestore_Database"
-			});
+          Server.DocumentStore.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest()
+            {
+                BackupLocation = BackupDir,
+                DatabaseLocation = RestoreDir,
+                DatabaseName = "CanDoBackupAndRestore_Database"
+            });
 
-			WaitForRestore(Server.DocumentStore.DatabaseCommands);
+            WaitForRestore(Server.DocumentStore.DatabaseCommands);
 
-			using (var store = new DocumentStore
-			{
-				Url = Server.SystemDatabase.ServerUrl,
-				DefaultDatabase = "CanDoBackupAndRestore_Database",
-			}.Initialize())
-			{
-				WaitForDocument(store.DatabaseCommands, "companies/1");
-			}
+            using (var store = new DocumentStore
+            {
+                Url = Server.SystemDatabase.ServerUrl,
+                DefaultDatabase = "CanDoBackupAndRestore_Database",
+            }.Initialize())
+            {
+                WaitForDocument(store.DatabaseCommands, "companies/1");
+            }
 
-			Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase("CanDoBackupAndRestore_Database", hardDelete: true);
+            Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase("CanDoBackupAndRestore_Database", hardDelete: true);
         }
-	}
+    }
 }

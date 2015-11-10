@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="LoDash.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -21,14 +21,14 @@ namespace Raven.Tests.Bugs
             {
                 Tags = new string[0],
             });
-	        using (var scope = new DefaultScriptedJsonPatcherOperationScope())
-	        {
-				var resultJson = new ScriptedJsonPatcher().Apply(scope, doc, new ScriptedPatchRequest
-				{
-					Script = "this.Tags2 = this.Tags.Map(function(value) { return value; });",
-				});
-				Assert.Equal(0, resultJson.Value<RavenJArray>("Tags2").Length);
-	        }
+            using (var scope = new DefaultScriptedJsonPatcherOperationScope())
+            {
+                var resultJson = new ScriptedJsonPatcher().Apply(scope, doc, new ScriptedPatchRequest
+                {
+                    Script = "this.Tags2 = this.Tags.Map(function(value) { return value; });",
+                });
+                Assert.Equal(0, resultJson.Value<RavenJArray>("Tags2").Length);
+            }
         }
 
         [Fact]

@@ -1,15 +1,15 @@
-﻿namespace Voron.Debugging
+namespace Voron.Debugging
 {
-	public enum DebugActionType
-	{
-		Add,
-		Delete,
-		MultiAdd,
-		MultiDelete,
-		CreateTree,
-		RenameTree,
-		Increment,
-		AddStruct,
+    public enum DebugActionType
+    {
+        Add,
+        Delete,
+        MultiAdd,
+        MultiDelete,
+        CreateTree,
+        RenameTree,
+        Increment,
+        AddStruct,
 
         TransactionStart,
         TransactionCommit,
@@ -18,5 +18,5 @@
 
         FlushStart,
         FlushEnd
-	}
+    }
 }

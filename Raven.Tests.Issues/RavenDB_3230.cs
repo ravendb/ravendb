@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
@@ -24,20 +24,20 @@ namespace Raven.Tests.Issues
         private readonly DocumentStore store;
 
         public RavenDB_3230()
-		{
+        {
             store = NewRemoteDocumentStore(enableAuthentication:true);
-		}
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        }
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             Authentication.EnableOnce();
-            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(AdminOnlyPutTrigger)));  
         }
-		public override void Dispose()
-		{
-			store.Dispose();
-			base.Dispose();
-		}
+        public override void Dispose()
+        {
+            store.Dispose();
+            base.Dispose();
+        }
 
         [Fact]
         public void CanPutDocumentUsingBulkInsertWithAdminAuthentication()
@@ -61,10 +61,10 @@ namespace Raven.Tests.Issues
         }
         public class AdminOnlyPutTrigger : AbstractPutTrigger
         {
-            public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+            public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
             {
                 var principal = CurrentOperationContext.User.Value;
-                var isAdmin = principal.IsAdministrator(Database.Configuration.AnonymousUserAccessMode) || principal.IsAdministrator(Database);
+                var isAdmin = principal.IsAdministrator(Database.Configuration.Core.AnonymousUserAccessMode) || principal.IsAdministrator(Database);
                 return isAdmin ? VetoResult.Allowed : VetoResult.Deny("Only admin may put document into the database");
             }
         }

@@ -1,11 +1,11 @@
-﻿using Raven.Database.Config;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server.WebApi
 {
-	public interface IRavenServer
-	{
-		DocumentDatabase SystemDatabase { get; }
+    public interface IRavenServer
+    {
+        DocumentDatabase SystemDatabase { get; }
 
-		InMemoryRavenConfiguration SystemConfiguration { get; }
-	}
+        RavenConfiguration SystemConfiguration { get; }
+    }
 }

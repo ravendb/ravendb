@@ -1,7 +1,8 @@
-﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+
+using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server.Security;
@@ -9,7 +10,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class DbSingleAuthTokenController : RavenDbApiController
+    public class DbSingleAuthTokenController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("singleAuthToken")]
@@ -19,11 +20,11 @@ namespace Raven.Database.Server.Controllers
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
             var shouldCheckIfMachineAdmin = false;
 
-            if ((DatabaseName == "<system>" || string.IsNullOrEmpty(DatabaseName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
+            if ((DatabaseName == Constants.SystemDatabase || string.IsNullOrEmpty(DatabaseName)) && bool.TryParse(GetQueryStringValue("CheckIfMachineAdmin"), out shouldCheckIfMachineAdmin) && shouldCheckIfMachineAdmin)
             {
 
                 if (!User.IsAdministrator(AnonymousUserAccessMode.None) &&
-                    DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                    DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
                 {
                     return GetMessageWithObject(new
                     {
@@ -45,7 +46,7 @@ namespace Raven.Database.Server.Controllers
 namespace Raven.Database.FileSystem.Controllers
 {
 
-    public class FsSingleAuthTokenController : RavenFsApiController
+    public class FsSingleAuthTokenController : BaseFileSystemApiController
     {
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/singleAuthToken")]
@@ -53,32 +54,52 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken("fs/" + FileSystemName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(ResourcePrefix + FileSystemName, User);
 
             return GetMessageWithObject(new
             {
                 Token = token
             }).WithNoCache();
-		}
+        }
     }
 }
 
 namespace Raven.Database.Counters.Controllers
 {
-    public class CounterSingleAuthTokenController : RavenCountersApiController
+    public class CounterSingleAuthTokenController : BaseCountersApiController
     {
         [HttpGet]
-        [RavenRoute("counters/{counterName}/singleAuthToken")]
+        [RavenRoute("cs/{counterStorageName}/singleAuthToken")]
         public HttpResponseMessage SingleAuthGet()
         {
             var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
-            var token = authorizer.GenerateSingleUseAuthToken("counters/" + CountersName, User);
+            var token = authorizer.GenerateSingleUseAuthToken(ResourcePrefix + CountersName, User);
+
+            return GetMessageWithObject(new
+            {
+                Token = token
+            });
+        }
+    }
+}
+
+namespace Raven.Database.TimeSeries.Controllers
+{
+    public class TimeSeriesSingleAuthTokenController : BaseTimeSeriesApiController
+    {
+        [HttpGet]
+        [RavenRoute("ts/{timeSeriesName}/singleAuthToken")]
+        public HttpResponseMessage SingleAuthGet()
+        {
+            var authorizer = (MixedModeRequestAuthorizer) ControllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
+
+            var token = authorizer.GenerateSingleUseAuthToken(ResourcePrefix + TimeSeriesName, User);
 
             return GetMessageWithObject(new
             {
                 Token = token
             }).WithNoCache();
-		}
+        }
     }
 }

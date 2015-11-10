@@ -1,19 +1,26 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -22,11 +29,12 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using System.Linq;
+
+using Sparrow;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class StreamsController : RavenDbApiController
+    public class StreamsController : ClusterAwareRavenDbApiController
     {
         [HttpHead]
         [RavenRoute("streams/docs")]
@@ -52,10 +60,13 @@ namespace Raven.Database.Server.Controllers
 
             var skipAfter = GetQueryStringValue("skipAfter");
 
+            
+            var headers = CurrentOperationContext.Headers.Value;
+            var user = CurrentOperationContext.User.Value;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new PushStreamContent((stream, content, transportContext) =>
-                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter))
+                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter, headers, user))
                 {
                     Headers =
                     {
@@ -65,11 +76,20 @@ namespace Raven.Database.Server.Controllers
             };
         }
 
-        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter)
+        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, 
+            Lazy<NameValueCollection> headers, IPrincipal user)
         {
+            var old = CurrentOperationContext.Headers.Value;
+            var oldUser = CurrentOperationContext.User.Value;
+            try
+            {
+                CurrentOperationContext.Headers.Value = headers;
+                CurrentOperationContext.User.Value = user;
+
+
             var bufferStream = new BufferedStream(stream, 1024 * 64);
             using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan))
             using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
             {
                 writer.WriteStartObject();
@@ -79,6 +99,14 @@ namespace Raven.Database.Server.Controllers
                 Action<JsonDocument> addDocument = doc =>
                 {
                     timeout.Delay();
+                    if (doc == null)
+                    {
+                        // we only have this heartbit when the streaming has gone on for a long time
+                        // and we haven't send anything to the user in a while (because of filtering, skipping, etc).
+                        writer.WriteRaw(Environment.NewLine);
+                        writer.Flush();
+                        return;
+                    }
                     doc.ToJson().WriteTo(writer);
                     writer.WriteRaw(Environment.NewLine);
                 };
@@ -113,6 +141,12 @@ namespace Raven.Database.Server.Controllers
                 bufferStream.Flush();
             }
         }
+            finally
+            {
+                CurrentOperationContext.Headers.Value = old;
+                CurrentOperationContext.User.Value = oldUser;
+            }
+        }
 
         [HttpHead]
         [RavenRoute("streams/query/{*id}")]
@@ -128,13 +162,13 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage SteamQueryGet(string id)
         {
             var cts = new CancellationTokenSource();
-            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
+            var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan);
             var msg = GetEmptyMessage();
 
             var index = id;
             var query = GetIndexQuery(int.MaxValue);
             if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
-            var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+            var isHeadRequest = InnerRequest.Method == HttpMethods.Head;
             if (isHeadRequest) query.PageSize = 0;
 
             var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
@@ -160,7 +194,7 @@ namespace Raven.Database.Server.Controllers
             catch (OperationCanceledException e)
             {
                 accessor.Dispose();
-                throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
+                throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan), e);
             }
             catch (Exception)
             {
@@ -171,12 +205,100 @@ namespace Raven.Database.Server.Controllers
             return msg;
         }
 
+        [HttpGet]
+        [RavenRoute("streams/exploration")]
+        [RavenRoute("databases/{databaseName}/streams/exploration")]
+        public Task<HttpResponseMessage> Exploration()
+        {
+            var linq = GetQueryStringValue("linq");
+            var collection = GetQueryStringValue("collection");
+            int timeoutSeconds;
+            if (int.TryParse(GetQueryStringValue("timeoutSeconds"), out timeoutSeconds) == false)
+                timeoutSeconds = 60;
+            int pageSize;
+            if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
+                pageSize = 100000;
+
+
+            var hash = Hashing.XXHash64.CalculateRaw(linq);
+            var sourceHashed = hash.ToString("X");
+            var transformerName = Constants.TemporaryTransformerPrefix + sourceHashed;
+
+            var transformerDefinition = Database.IndexDefinitionStorage.GetTransformerDefinition(transformerName);
+            if (transformerDefinition == null)
+            {
+                transformerDefinition = new TransformerDefinition
+                {
+                    Name = transformerName,
+                    Temporary = true,
+                    TransformResults = linq
+                };
+                Database.Transformers.PutTransform(transformerName, transformerDefinition);
+            }
+
+            var msg = GetEmptyMessage();
+
+            using (var cts = new CancellationTokenSource())
+            {
+                var timeout = cts.TimeoutAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                var indexQuery = new IndexQuery
+                {
+                    PageSize = pageSize,
+                    Start = 0,
+                    Query = "Tag:" + collection,
+                    ResultsTransformer = transformerName
+                };
+
+                var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
+
+                try
+                {
+                    var queryOp = new QueryActions.DatabaseQueryOperation(Database, "Raven/DocumentsByEntityName", indexQuery, accessor, cts);
+                    queryOp.Init();
+
+                    msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
+                        o =>
+                        {
+                            if (o.Count == 2 &&
+                                o.ContainsKey(Constants.DocumentIdFieldName) &&
+                                    o.ContainsKey(Constants.Metadata))
+                            {
+                                // this is the raw value out of the server, we don't want to get that
+                                var doc = queryOp.DocRetriever.Load(o.Value<string>(Constants.DocumentIdFieldName));
+                                var djo = doc as IDynamicJsonObject;
+                                if (djo != null)
+                                    return djo.Inner;
+                            }
+                            return o;
+                        });
+                    msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+                    msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+                    msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
+                    msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+                    msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+                    msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
+
+                    if (IsCsvDownloadRequest(InnerRequest))
+                    {
+                        msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+                    }
+                }
+                catch (Exception)
+                {
+                    accessor.Dispose();
+                    throw;
+                }
+
+                return new CompletedTask<HttpResponseMessage>(msg);
+            }
+        }
+
         [HttpPost]
         [RavenRoute("streams/query/{*id}")]
         [RavenRoute("databases/{databaseName}/streams/query/{*id}")]
         public async Task<HttpResponseMessage> SteamQueryPost(string id)
         {
-            var postedQuery = await ReadStringAsync();
+            var postedQuery = await ReadStringAsync().ConfigureAwait(false);
 
             SetPostRequestQuery(postedQuery);
 
@@ -190,19 +312,34 @@ namespace Raven.Database.Server.Controllers
             private readonly IStorageActionsAccessor accessor;
             private readonly CancellationTimeout _timeout;
             private readonly Action<string> outputContentTypeSetter;
+            private Lazy<NameValueCollection> headers;
+            private IPrincipal user;
+            private readonly Func<RavenJObject, RavenJObject> modifyDocument;
 
             [CLSCompliant(false)]
-            public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
+            public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,
+                CancellationTimeout timeout,
+                Action<string> contentTypeSetter,
+                Func<RavenJObject,RavenJObject> modifyDocument = null)
             {
+                headers = CurrentOperationContext.Headers.Value;
+                user = CurrentOperationContext.User.Value;
                 this.req = req;
                 this.queryOp = queryOp;
                 this.accessor = accessor;
                 _timeout = timeout;
                 outputContentTypeSetter = contentTypeSetter;
+                this.modifyDocument = modifyDocument;
             }
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
+                var old = CurrentOperationContext.Headers.Value;
+                var oldUser = CurrentOperationContext.User.Value;
+                try
+                {
+                    CurrentOperationContext.User.Value = user;
+                    CurrentOperationContext.Headers.Value = headers;
                 var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
                 using (var bufferedStream = new BufferedStream(stream, bufferSize))
                 using (queryOp)
@@ -222,6 +359,8 @@ namespace Raven.Database.Server.Controllers
                         queryOp.Execute(o =>
                         {
                             _timeout.Delay();
+                            if (modifyDocument != null)
+                                o = modifyDocument(o);
                             writer.Write(o);
                         });
                     }
@@ -231,6 +370,12 @@ namespace Raven.Database.Server.Controllers
                     }
                 }
                 return Task.FromResult(true);
+            }
+                finally
+                {
+                    CurrentOperationContext.Headers.Value = old;
+                    CurrentOperationContext.User.Value = oldUser;
+                }
             }
 
             protected override bool TryComputeLength(out long length)
