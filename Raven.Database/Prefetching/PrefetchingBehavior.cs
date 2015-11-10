@@ -62,7 +62,7 @@ namespace Raven.Database.Prefetching
         private readonly string userDescription;
         private readonly bool isDefault;
 
-        public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription, bool isDefault)
+        public PrefetchingBehavior(PrefetchingUser prefetchingUser, WorkContext context, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription, bool isDefault = false)
         {
             this.context = context;
             this.autoTuner = autoTuner;
