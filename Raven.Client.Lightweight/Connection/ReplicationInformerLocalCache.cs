@@ -11,11 +11,15 @@ namespace Raven.Client.Connection
 {
     public static class ReplicationInformerLocalCache
     {
+#if !DNXCORE50
         private readonly static ILog Log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog Log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
+#endif
 
         public static IsolatedStorageFile GetIsolatedStorageFile()
         {
-#if MONO
+#if MONO || DNXCORE50
             return IsolatedStorageFile.GetUserStoreForApplication();
 #else
             return IsolatedStorageFile.GetMachineStoreForDomain();
@@ -101,14 +105,14 @@ namespace Raven.Client.Connection
                         return RavenJToken
                             .TryLoad(stream)
                             .JsonDeserialization<List<OperationMetadata>>();
-                    }
-                }
             }
+        }
+    }
             catch (Exception e)
             {
                 Log.ErrorException("Could not understand the persisted cluster nodes", e);
                 return null;
-            }
+}
         }
 
         public static void TrySavingClusterNodesToLocalCache(string serverHash, List<OperationMetadata> nodes)

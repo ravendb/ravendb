@@ -3,8 +3,11 @@ using System;
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Runtime.Remoting.Messaging;
 using System.Threading;
+
+#if !DNXCORE50
+using System.Runtime.Remoting.Messaging;
+#endif
 
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
@@ -148,7 +151,14 @@ namespace Raven.Client.Connection
         /// </summary>
         public int NumberOfCacheResets
         {
-            get { return Thread.VolatileRead(ref numberOfCacheResets); }
+            get
+            {
+#if !DNXCORE50
+                return Thread.VolatileRead(ref numberOfCacheResets);
+#else
+                return Volatile.Read(ref numberOfCacheResets);
+#endif
+        }
         }
 
         /// <summary>
@@ -186,28 +196,76 @@ namespace Raven.Client.Connection
             this.httpMessageHandler = httpMessageHandler;
             this.acceptGzipContent = acceptGzipContent;
             this.authenticationScheme = authenticationScheme;
-            httpClientCache = new HttpClientCache(ServicePointManager.MaxServicePointIdleTime);
+
+#if !DNXCORE50
+            var maxIdleTime = ServicePointManager.MaxServicePointIdleTime;
+#else
+            // TODO [ppekrol] this matches ServicePointManager.MaxServicePointIdleTime
+            var maxIdleTime = 100 * 1000;
+#endif
+
+            httpClientCache = new HttpClientCache(maxIdleTime);
 
             ResetCache();
         }
+
+#if DNXCORE50
+        private readonly AsyncLocal<TimeSpan?> aggressiveCacheDuration = new AsyncLocal<TimeSpan?>();
+#endif
 
         ///<summary>
         /// The aggressive cache duration
         ///</summary>
         public TimeSpan? AggressiveCacheDuration
         {
-            get { return CallContext.LogicalGetData("Raven/Client/AggressiveCacheDuration") as TimeSpan?; }
-            set { CallContext.LogicalSetData("Raven/Client/AggressiveCacheDuration", value); }
+            get
+            {
+#if !DNXCORE50
+                return CallContext.LogicalGetData("Raven/Client/AggressiveCacheDuration") as TimeSpan?;
+#else
+                return aggressiveCacheDuration.Value;
+#endif
+            }
+            set
+            {
+#if !DNXCORE50
+                CallContext.LogicalSetData("Raven/Client/AggressiveCacheDuration", value);
+#else
+                aggressiveCacheDuration.Value = value;
+#endif
         }
+        }
+
+#if DNXCORE50
+        private readonly AsyncLocal<TimeSpan?> requestTimeout = new AsyncLocal<TimeSpan?>();
+#endif
 
         ///<summary>
         /// Session timeout - Thread Local
         ///</summary>
         public TimeSpan? RequestTimeout
         {
-            get { return CallContext.LogicalGetData("Raven/Client/RequestTimeout") as TimeSpan?; }
-            set { CallContext.LogicalSetData("Raven/Client/RequestTimeout", value); }
+            get
+            {
+#if !DNXCORE50
+                return CallContext.LogicalGetData("Raven/Client/RequestTimeout") as TimeSpan?;
+#else
+                return requestTimeout.Value;
+#endif
         }
+            set
+            {
+#if !DNXCORE50
+                CallContext.LogicalSetData("Raven/Client/RequestTimeout", value);
+#else
+                requestTimeout.Value = value;
+#endif
+            }
+        }
+
+#if DNXCORE50
+        private readonly AsyncLocal<bool> disableHttpCaching = new AsyncLocal<bool>();
+#endif
 
         /// <summary>
         /// Disable the HTTP caching
@@ -216,13 +274,24 @@ namespace Raven.Client.Connection
         {
             get
             {
+#if !DNXCORE50
                 var value = CallContext.LogicalGetData("Raven/Client/DisableHttpCaching");
                 if (value == null) 
                     return false;
 
                 return (bool)value;
+#else
+                return disableHttpCaching.Value;
+#endif
             }
-            set { CallContext.LogicalSetData("Raven/Client/DisableHttpCaching", value); }
+            set
+            {
+#if !DNXCORE50
+                CallContext.LogicalSetData("Raven/Client/DisableHttpCaching", value);
+#else
+                disableHttpCaching.Value = value;
+#endif
+        }
         }
 
         /// <summary>

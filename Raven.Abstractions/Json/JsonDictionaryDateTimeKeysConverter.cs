@@ -5,7 +5,6 @@ using System.Reflection;
 
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Abstractions.Json
 {

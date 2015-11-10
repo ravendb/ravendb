@@ -1,10 +1,8 @@
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Util;
@@ -86,7 +84,7 @@ namespace Raven.Client
         public abstract IDocumentSession OpenSession(string database);
         public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
         public abstract IDatabaseCommands DatabaseCommands { get; }
-        
+
         /// <summary>
         /// Executes index creation.
         /// </summary>
@@ -261,7 +259,7 @@ namespace Raven.Client
         /// </summary>
         public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
         {
-            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] {conversionListener,}).ToArray();
+            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
             return this;
         }
 
@@ -271,7 +269,7 @@ namespace Raven.Client
         /// <param name="queryListener">The query listener.</param>
         public DocumentStoreBase RegisterListener(IDocumentQueryListener queryListener)
         {
-            listeners.QueryListeners = listeners.QueryListeners.Concat(new[] {queryListener}).ToArray();
+            listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
             return this;
         }
 
@@ -281,7 +279,7 @@ namespace Raven.Client
         /// <param name="documentStoreListener">The document store listener.</param>
         public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
         {
-            listeners.StoreListeners = listeners.StoreListeners.Concat(new[] {documentStoreListener}).ToArray();
+            listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
             return this;
         }
 
@@ -291,7 +289,7 @@ namespace Raven.Client
         /// <param name="deleteListener">The delete listener.</param>
         public DocumentStoreBase RegisterListener(IDocumentDeleteListener deleteListener)
         {
-            listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] {deleteListener}).ToArray();
+            listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
             return this;
         }
 
@@ -301,7 +299,7 @@ namespace Raven.Client
         /// <param name="conflictListener">The conflict listener.</param>
         public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
         {
-            listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] {conflictListener}).ToArray();
+            listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
             return this;
         }
 
@@ -371,7 +369,7 @@ namespace Raven.Client
 
         protected void InitializeEncryptor()
         {
-            var setting = ConfigurationManager.AppSettings["Raven/Encryption/FIPS"];
+            var setting = ConfigurationManager.GetAppSetting("Raven/Encryption/FIPS");
 
             bool fips;
             if (string.IsNullOrEmpty(setting) || !bool.TryParse(setting, out fips))

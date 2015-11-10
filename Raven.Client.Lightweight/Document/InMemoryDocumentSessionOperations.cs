@@ -3,24 +3,26 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using Raven.Client.Document.Batches;
-using System.Transactions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+#if !DNXCORE50
+using System.Transactions;
+#endif
+
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Logging;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -56,7 +58,11 @@ namespace Raven.Client.Document
             internal set { _databaseName = value; }
         }
 
+#if !DNXCORE50
         protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+#else
+        protected static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
+#endif
 
         /// <summary>
         /// The entities waiting to be deleted
@@ -72,9 +78,9 @@ namespace Raven.Client.Document
 
         public IDictionary<string, object> ExternalState
         {
-            get { return externalState ?? (externalState = new Dictionary<string, object>()); }
+        private bool hasEnlisted;
+            get { return (_registeredStoresInTransaction ?? (_registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
         }
-
 
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -143,13 +149,13 @@ namespace Raven.Client.Document
             Id = id;
             this.dbName = dbName;
             this.documentStore = documentStore;
-            this.theListeners = listeners;
-            ResourceManagerId = documentStore.ResourceManagerId;
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
+            AllowNonAuthoritativeInformation = true;
+            NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
             EntityToJson = new EntityToJson(documentStore, listeners);
-        }
+        public TimeSpan NonAuthoritativeInformationTimeout { get; set; }
 
         /// <summary>
         /// Gets the store identifier for this session.
@@ -383,9 +389,9 @@ more responsive application.
         /// </summary>
         /// <param name="entityType"></param>
         /// <param name="documentFound">The document found.</param>
-        /// <returns></returns>
-        public object TrackEntity(Type entityType, JsonDocument documentFound)
-        {
+                throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
+                " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+            }
             if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
             {
                 return GetDefaultValue(entityType); // document is not really there.
@@ -427,9 +433,9 @@ more responsive application.
             {
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
-                return entity;
+                throw new NonAuthoritativeInformationException("Document " + key +
+                    " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
             }
-            var etag = metadata.Value<string>("@etag");
 
             if (noTracking == false)
             {
@@ -556,8 +562,8 @@ more responsive application.
         /// <returns></returns>
         static object GetDefaultValue(Type type)
         {
-            return type.IsValueType ? Activator.CreateInstance(type) : null;
-        }
+            return type.IsValueType() ? Activator.CreateInstance(type) : null;
+        public bool AllowNonAuthoritativeInformation { get; set; }
 
         /// <summary>
         /// Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.
@@ -709,7 +715,7 @@ more responsive application.
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
         }
 
-        public Task StoreAsync(object entity, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
         {
             string id;
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
@@ -717,22 +723,22 @@ more responsive application.
             return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false, token: token);
         }
 
-        public Task StoreAsync(object entity, Etag etag, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, Etag etag, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true, token: token);
         }
 
-        public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true, token: token);
         }
 
-        public Task StoreAsync(object entity, string id, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, string id, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false, token: token);
         }
 
-        private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default (CancellationToken))
+        private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
         {
             if (null == entity)
                 throw new ArgumentNullException("entity");
@@ -777,7 +783,7 @@ more responsive application.
         protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
         {
             deletedEntities.Remove(entity);
-            if(id !=null)
+            if (id != null)
                 knownMissingIds.Remove(id);
 
             entitiesAndMetadata.Add(entity, new DocumentMetadata
@@ -910,8 +916,8 @@ more responsive application.
                 Entities = new List<object>(),
                 Commands = new List<ICommandData>(deferedCommands),
                 DeferredCommandsCount = deferedCommands.Count
-            };
-            deferedCommands.Clear();
+            if (documentStore.EnlistInDistributedTransactions)
+                TryEnlistInAmbientTransaction();
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
@@ -996,9 +1002,9 @@ more responsive application.
 
                     docChanges.Add(change);
                     changes[key] = docChanges.ToArray();
-                }
-                else
                 {
+
+
                     Etag etag = null;
                     object existingEntity;
                     DocumentMetadata metadata = null;
@@ -1077,9 +1083,9 @@ more responsive application.
                 documentMetadata.Metadata.ContainsKey(Constants.RavenReadOnly) &&
                 documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
                 return false;
-
-            var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
             var changedData = changes != null ? new List<DocumentsChanges>() : null;
+            var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
+                || (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
 
             var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
             var isMetadataEquals = RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData);
@@ -1224,20 +1230,20 @@ more responsive application.
 
         }
 
-        protected void LogBatch(SaveChangesData data)
         {
             if (log.IsDebugEnabled)
-            log.Debug(() =>
             {
-                var sb = new StringBuilder()
-                    .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
-                    .AppendLine();
-                foreach (var commandData in data.Commands)
+                log.Debug(() =>
                 {
-                    sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
-                }
-                return sb.ToString();
-            });
+                    var sb = new StringBuilder()
+                        .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+                        .AppendLine();
+                    foreach (var commandData in data.Commands)
+                    {
+                        sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+                    }
+                });
+            }
         }
 
         public void RegisterMissing(string id)

@@ -16,7 +16,11 @@ namespace Raven.Client.Changes
 {
     public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
     {
-        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog Logger = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog Logger = LogManager.GetLogger(typeof(RemoteDatabaseChanges));
+#endif
 
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -35,9 +39,9 @@ namespace Raven.Client.Changes
         public RemoteDatabaseChanges(string url, string apiKey,
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
-                                       Action onDispose,
+                                       Action onDispose,                                
                                        Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }
@@ -394,5 +398,5 @@ namespace Raven.Client.Changes
 
             return taskedObservable;
         }
-    }
-}
+        }
+        }

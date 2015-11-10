@@ -1,3 +1,4 @@
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
@@ -45,7 +46,7 @@ namespace Raven.Client.Indexes
             var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
             foreach (var child in children)
             {
-                if (child.IsGenericTypeDefinition)
+                if (child.IsGenericTypeDefinition())
                     continue;
                 var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
                 var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
@@ -85,11 +86,10 @@ namespace Raven.Client.Indexes
             foreach (var map in maps.Select(generateMap => generateMap()))
             {
                 string formattedMap = map;
+#if !DNXCORE50
                 if (Conventions.PrettifyGeneratedLinqExpressions)
-                {
-                        formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
-                   
-                }
+                    formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
+#endif
                 indexDefinition.Maps.Add(formattedMap);
             }
             return indexDefinition;

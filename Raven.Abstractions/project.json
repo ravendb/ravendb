@@ -34,6 +34,7 @@
       },
       "dependencies": {
         "Microsoft.CSharp": "4.0.1-beta-23509",
+        "Microsoft.Framework.ConfigurationModel": "1.0.0-beta4",
         "System.Collections.Specialized": "4.0.1-beta-23509",
         "System.IO.Compression": "4.1.0-beta-23509",
         "System.Net.Http.WinHttpHandler": "4.0.0-beta-23509",
