@@ -38,7 +38,7 @@ namespace Raven.Database.Indexing
         {
             autoTuner = new IndexBatchSizeAutoTuner(context);
             this.prefetcher = prefetcher;
-            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior");
+            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior", true);
             defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
             prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
         }
@@ -246,8 +246,7 @@ namespace Raven.Database.Indexing
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag, prefetchingBehavior == defaultPrefetchingBehavior)
-                        && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
