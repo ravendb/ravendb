@@ -84,13 +84,13 @@ namespace Raven.Database.Counters.Controllers
                     {
                         counterChangeNotifications.ForEach(change =>
                         {
-	                        long? total;
-	                        if (reader.TryGetCounterTotal(change.GroupName, change.CounterName, out total))
-	                        {
-								Debug.Assert(total.HasValue);
-		                        change.Total = total.Value;
+                            long? total;
+                            if (reader.TryGetCounterTotal(change.GroupName, change.CounterName, out total))
+                            {
+                                Debug.Assert(total.HasValue);
+                                change.Total = total.Value;
                                 CounterStorage.Publisher.RaiseNotification(change);
-	                        }
+                            }
                         });
                     }
                 }

@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Counters
 {
-	public class CounterTotal
-	{
-		public bool IsExists { get; set; }
-		public long Total { get; set; }
-	}
+    public class CounterTotal
+    {
+        public bool IsExists { get; set; }
+        public long Total { get; set; }
+    }
 }
