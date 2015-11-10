@@ -163,7 +163,7 @@ namespace Raven.Database.Prefetching
                     )
                 {
                     DisableCollectingDocumentsAfterCommit = true;
-                    //If we disable in memory collection of data, we need to also remove all the
+                    // If we disable in memory collection of data, we need to also remove all the
                     // items in the prefetching queue that are after the last in memory docs
                     // immediately, not wait for them to be indexed. They have already been in 
                     // memory for ten minutes
@@ -197,7 +197,7 @@ namespace Raven.Database.Prefetching
             return true;
         }
 
-        public bool CanUsePrefetcherToLoadFrom(Etag fromEtag)
+        public bool CanUsePrefetcherToLoadFrom(Etag fromEtag, bool isDefaultPrefetcher = false)
         {
             var nextEtagToIndex = GetNextDocEtag(fromEtag);
 
@@ -209,6 +209,13 @@ namespace Raven.Database.Prefetching
                 return true;
 
             if (CanLoadDocumentsFromFutureBatches(nextEtagToIndex) != null)
+                return true;
+
+            // we assume that the default prefetcher should be ahead of all other prefetchers.
+            // if we find the next etag bigger than the first one in the queue - 
+            // than we use the default prefetcher. the documents with the smaller etags will be removed
+            // when trying to remove the documents from the queue.
+            if (isDefaultPrefetcher && nextEtagToIndex.CompareTo(firstEtagInQueue) >= 0)
                 return true;
 
             return false;
@@ -696,7 +703,7 @@ namespace Raven.Database.Prefetching
             }
         }
 
-        private void AddFutureBatch(Etag nextEtag, Etag untilEtag)
+        private void AddFutureBatch(Etag nextEtag, Etag untilEtag, bool isEarlyExitBatch = false)
         {
             var futureBatchStat = new FutureBatchStats
             {
@@ -725,24 +732,33 @@ namespace Raven.Database.Prefetching
                         context.WaitForWork(TimeSpan.FromMinutes(10), ref localWork, "PreFetching");
                     }
 
-                    if (log.IsDebugEnabled && jsonDocuments != null)
-                    {
-                        var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk) / 1024;
-                        log.Debug("Got {0} documents ({3:#,#;;0} kb) in a future batch, starting from etag {1}, took {2:#,#;;0}ms", jsonDocuments.Count, nextEtag, sp.ElapsedMilliseconds,
-                            size);
-                        if (size > jsonDocuments.Count * 8 ||
-                            sp.ElapsedMilliseconds > 3000)
-                        {
-                            var topSizes = jsonDocuments.OrderByDescending(x => x.SerializedSizeOnDisk).Take(10).Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
-                            log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
-                        }
-                    }
-
                     futureBatchStat.Duration = sp.Elapsed;
                     futureBatchStat.Size = jsonDocuments == null ? 0 : jsonDocuments.Count;
 
                     if (jsonDocuments == null)
                         return null;
+
+                    var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk) / 1024;
+                    if (isEarlyExitBatch)
+                    {
+                        log.Warn("After early exit: Got {0} documents ({1:#,#;;0} kb) in a future batch, starting from etag {2} to etag {4}, took {3:#,#;;0}ms",
+                                jsonDocuments.Count, size, nextEtag, sp.ElapsedMilliseconds, untilEtag);
+                    }
+
+                    if (log.IsDebugEnabled)
+                    {
+                        if (isEarlyExitBatch == false)
+                        {
+                            log.Debug("Got {0} documents ({1:#,#;;0} kb) in a future batch, starting from etag {2}, took {3:#,#;;0}ms",
+                                jsonDocuments.Count, size, nextEtag, sp.ElapsedMilliseconds);
+                        }
+
+                        if (size > jsonDocuments.Count * 8 || sp.ElapsedMilliseconds > 3000)
+                        {
+                            var topSizes = jsonDocuments.OrderByDescending(x => x.SerializedSizeOnDisk).Take(10).Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
+                            log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
+                        }
+                    }
 
                     if (untilEtag != null && earlyExit.Value)
                     {
@@ -757,7 +773,7 @@ namespace Raven.Database.Prefetching
                             log.Debug("Early exit from last future splitted batch, need to fetch documents from etag: {0} to etag: {1}",
                                 lastEtag, untilEtag);
                         }
-                        AddFutureBatch(lastEtag, untilEtag);
+                        AddFutureBatch(lastEtag, untilEtag, true);
                     }
                     else
                     {
@@ -901,14 +917,14 @@ namespace Raven.Database.Prefetching
                     JsonDocument.EnsureIdInMetadata(jsonDocument);
                     prefetchingQueue.Add(jsonDocument);
 
-                    if (ShouldHandleUnusedDocumentsAddedAfterCommit && (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0))
+                    if (lowestEtag == null || jsonDocument.Etag.CompareTo(lowestEtag) < 0)
                     {
                         lowestEtag = jsonDocument.Etag;
                     }
                 }
             }
 
-            if (ShouldHandleUnusedDocumentsAddedAfterCommit && lowestEtag != null)
+            if (lowestEtag != null)
             {
                 if (lowestInMemoryDocumentAddedAfterCommit == null || lowestEtag.CompareTo(lowestInMemoryDocumentAddedAfterCommit.Etag) < 0)
                 {
