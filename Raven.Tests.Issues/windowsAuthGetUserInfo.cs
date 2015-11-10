@@ -9,20 +9,14 @@ using System.DirectoryServices.ActiveDirectory;
 using System.Net;
 using System.Security.Policy;
 using Raven.Client.Extensions;
+using Raven.Tests.Common.Attributes;
 using Xunit;
 
 namespace Raven.Tests.Core.Auth
 {
     public class WindowsAuthenticationUserInfo : RavenCoreTestBase
     {
-        private string username = "local_user_test";
-
-        private string password = "local_user_test";
-
-        private string domain = "local_machine_name_test";
-
-
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public void	GetUserInfoAndPermissionsWindowsAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
@@ -36,7 +30,7 @@ namespace Raven.Tests.Core.Auth
                     {
                         new WindowsAuthData()
                         {
-                            Name = string.Format("{0}\\{1}", domain, username),
+                            Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Domain, FactIfWindowsAuthenticationIsAvailable.Username),
                             Enabled = true,
                             Databases = new List<ResourceAccess>
                             {
@@ -51,7 +45,7 @@ namespace Raven.Tests.Core.Auth
             using (var store = new DocumentStore
             {
 
-                Credentials = new NetworkCredential(username,password,domain),
+                Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username,FactIfWindowsAuthenticationIsAvailable.Password,FactIfWindowsAuthenticationIsAvailable.Domain),
                 Url = this.Server.SystemDatabase.ServerUrl
             }.Initialize())
             {
