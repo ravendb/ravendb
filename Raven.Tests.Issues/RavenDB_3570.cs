@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Common.Attributes;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -15,11 +16,6 @@ namespace Raven.Tests.Issues
 
     public class RavenDB_3570 : RavenFilesTestBase
     {
-        private const string username = "local_user_test";
-
-        private const string password = "local_user_test";
-
-
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
                         server.SystemDatabase.Documents.Put("Raven/Authorization/WindowsSettings", null,
@@ -29,7 +25,7 @@ namespace Raven.Tests.Issues
                                                       {
                                                           new WindowsAuthData
                                                           {
-                                                              Name = string.Format("{0}\\{1}", null, username),
+                                                              Name = string.Format("{0}\\{1}", null, FactIfWindowsAuthenticationIsAvailable.Username),
                                                               Enabled = true,
                                                               Databases = new List<ResourceAccess>
                                                               {
@@ -42,12 +38,12 @@ namespace Raven.Tests.Issues
         }
 
         //requires admin context
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public void RavenFSWithWindowsCredentialsInConnectionStringShouldWork()
         {
             try
             {
-                AddWindowsUser(username, password);
+                AddWindowsUser(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password);
 
                 var ex = Assert.Throws<ErrorResponseException>(() =>
                 {
@@ -67,7 +63,7 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                DeleteUser(username);
+                DeleteUser(FactIfWindowsAuthenticationIsAvailable.Username);
             }
         }
 
