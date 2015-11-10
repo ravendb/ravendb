@@ -13,9 +13,13 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
+
+#if !DNXCORE50
+using System.Runtime.Remoting.Messaging;
+#endif
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -23,7 +27,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Extensions;
+using Raven.Client.Helpers;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -63,7 +67,7 @@ namespace Raven.Client.Connection.Implementation
         internal bool ShouldCacheRequest;
         private Stream postedStream;
         private bool writeCalled;
-        public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
+        public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly().GetName().Version.ToString();
         
         private string primaryUrl;
 
@@ -124,9 +128,9 @@ namespace Raven.Client.Connection.Implementation
                             credentialsToUse = credentialCache;
                         }
                         else
-                        {
+                {
                             credentialsToUse = _credentials.Credentials;
-                        }
+                }
                     }      
 
                     var handler = new WebRequestHandler
@@ -179,7 +183,7 @@ namespace Raven.Client.Connection.Implementation
                 {
                     DurationMilliseconds = CalculateDuration(),
                     Method = Method,
-                    HttpResult = (int) ResponseStatusCode,
+                    HttpResult = (int)ResponseStatusCode,
                     Status = RequestStatus.AggressivelyCached,
                     Result = cachedResult.ToString(),
                     Url = Url,
@@ -226,8 +230,10 @@ namespace Raven.Client.Connection.Implementation
 
         private void AssertServerVersionSupported()
         {
+#if !DNXCORE50
             if ((CallContext.GetData(Constants.Smuggler.CallContext) as bool?) == true) // allow Raven.Smuggler to work against old servers
                 return;
+#endif
 
             var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
             int serverBuild;
@@ -551,7 +557,7 @@ namespace Raven.Client.Connection.Implementation
         {
             var uriBuilder = new UriBuilder(primaryUrl);
             if (uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
-                uriBuilder.Host = Environment.MachineName;
+                uriBuilder.Host = EnvironmentHelper.MachineName;
             return uriBuilder.Uri.ToString();
         }
 
@@ -610,7 +616,12 @@ namespace Raven.Client.Connection.Implementation
                 bool isRestricted;
                 try
                 {
+#if !DNXCORE50
                     isRestricted = WebHeaderCollection.IsRestricted(headerName);
+#else
+                    // TODO [ppekrol] Check if this is OK
+                    isRestricted = false;
+#endif
                 }
                 catch (Exception e)
                 {
@@ -854,7 +865,7 @@ namespace Raven.Client.Connection.Implementation
         {
             foreach (var item in headersToAdd)
             {
-                switch( item.Value.Type )
+                switch (item.Value.Type)
                 {
                     case JTokenType.Object:
                     case JTokenType.Array:

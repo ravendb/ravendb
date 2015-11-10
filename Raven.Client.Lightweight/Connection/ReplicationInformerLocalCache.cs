@@ -9,11 +9,15 @@ namespace Raven.Client.Connection
 {
     public static class ReplicationInformerLocalCache
     {
+#if !DNXCORE50
         private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
+#endif
 
         public static IsolatedStorageFile GetIsolatedStorageFileForReplicationInformation()
         {
-#if MONO
+#if MONO || DNXCORE50
             return IsolatedStorageFile.GetUserStoreForApplication();
 #else
             return IsolatedStorageFile.GetMachineStoreForDomain();

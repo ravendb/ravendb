@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -41,3 +42,4 @@ namespace Raven.Client.Document.DTC
         }
     }
 }
+#endif

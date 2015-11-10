@@ -11,12 +11,18 @@ using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document.SessionOperations
 {
     public class QueryOperation
     {
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(QueryOperation));
+#endif
+
         private readonly InMemoryDocumentSessionOperations sessionOperations;
         private readonly string indexName;
         private readonly IndexQuery indexQuery;
@@ -65,7 +71,7 @@ namespace Raven.Client.Document.SessionOperations
         }
 
         private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
-            RegexOptions.Compiled|
+            RegexOptions.Compiled |
  RegexOptions.IgnorePatternWhitespace);
 
         private void AssertNotQueryById()
@@ -134,7 +140,7 @@ namespace Raven.Client.Document.SessionOperations
                 .Select(x => x != null ? Deserialize<T>(x) : default(T))
                 .ToList();
 
-            if(disableEntitiesTracking == false)
+            if (disableEntitiesTracking == false)
                 sessionOperations.RegisterMissingIncludes(queryResult.Results.Where(x => x != null), includes);
 
             if (transformResults == null)
@@ -152,8 +158,8 @@ namespace Raven.Client.Document.SessionOperations
         public T Deserialize<T>(RavenJObject result)
         {
             var metadata = result.Value<RavenJObject>("@metadata");
-            if ((projectionFields == null || projectionFields.Length <= 0)  &&
-                (metadata != null && string.IsNullOrEmpty(metadata.Value<string>("@id")) == false) )
+            if ((projectionFields == null || projectionFields.Length <= 0) &&
+                (metadata != null && string.IsNullOrEmpty(metadata.Value<string>("@id")) == false))
             {
                 return sessionOperations.TrackEntity<T>(metadata.Value<string>("@id"),
                                                         result,
@@ -171,9 +177,9 @@ namespace Raven.Client.Document.SessionOperations
             var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
 
             if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
-                // We are projecting one field only (although that could be derived from the
-                // previous check, one could never be too careful
-                projectionFields != null && projectionFields.Length == 1 && 
+                                                                                    // We are projecting one field only (although that could be derived from the
+                                                                                    // previous check, one could never be too careful
+                projectionFields != null && projectionFields.Length == 1 &&
                 HasSingleValidProperty(result, metadata) // there are no more props in the result object
                 )
             {
@@ -219,7 +225,7 @@ namespace Raven.Client.Document.SessionOperations
                     // when we try to project the id by name
                     var token = result.Value<RavenJToken>(idPropName);
 
-                    if(token == null || token.Type == JTokenType.Null)
+                    if (token == null || token.Type == JTokenType.Null)
                         return true; // { @metadata: {}, Foo: val, Id: null }
                 }
             }
@@ -233,7 +239,7 @@ namespace Raven.Client.Document.SessionOperations
             if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
             {
                 var type = typeof(T);
-                if (type == typeof(string) || typeof(T).IsValueType || typeof(T).IsEnum)
+                if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
                 {
                     return result.Value<T>(projectionFields[0]);
                 }
@@ -243,18 +249,18 @@ namespace Raven.Client.Document.SessionOperations
             var ravenJTokenReader = new RavenJTokenReader(result);
 
             var resultTypeString = result.Value<string>("$type");
-            if(string.IsNullOrEmpty(resultTypeString) )
+            if (string.IsNullOrEmpty(resultTypeString))
             {
                 return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
             }
 
             var resultType = Type.GetType(resultTypeString, false);
-            if(resultType == null) // couldn't find the type, let us give it our best shot
+            if (resultType == null) // couldn't find the type, let us give it our best shot
             {
                 return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
             }
 
-            return (T) jsonSerializer.Deserialize(ravenJTokenReader, resultType);
+            return (T)jsonSerializer.Deserialize(ravenJTokenReader, resultType);
         }
 
         public void ForceResult(QueryResult result)
@@ -274,7 +280,7 @@ namespace Raven.Client.Document.SessionOperations
                     throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.", sp.ElapsedMilliseconds));
                 }
 
-                if ( log.IsDebugEnabled )
+                if (log.IsDebugEnabled)
                 {
                     log.Debug("Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
                             indexQuery.Query,
@@ -293,7 +299,7 @@ namespace Raven.Client.Document.SessionOperations
                     throw new TimeoutException(string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", sp.ElapsedMilliseconds));
                 }
 
-                if ( log.IsDebugEnabled )
+                if (log.IsDebugEnabled)
                 {
                     log.Debug("Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
                             indexQuery.Query,
@@ -306,7 +312,7 @@ namespace Raven.Client.Document.SessionOperations
             currentQueryResults = result;
             currentQueryResults.EnsureSnapshot();
 
-            if ( log.IsDebugEnabled )
+            if (log.IsDebugEnabled)
             {
                 log.Debug("Query returned {0}/{1} {2}results", result.Results.Count, result.TotalResults, result.IsStale ? "stale " : "");
             }

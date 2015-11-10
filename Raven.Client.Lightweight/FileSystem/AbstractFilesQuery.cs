@@ -23,7 +23,11 @@ namespace Raven.Client.FileSystem
         where TSelf : AbstractFilesQuery<T, TSelf>
         where T : class
     {
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(AbstractFilesQuery<T, TSelf>));
+#endif
 
         private readonly LinqPathProvider linqPathProvider;
         private readonly FilesConvention conventions;
@@ -739,7 +743,7 @@ namespace Raven.Client.FileSystem
             
             var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize);
 
-            return result.Files.ConvertAll<T>(x => x as T);
+            return result.Files.Select(x => x as T);
         }
 
         /// <summary>

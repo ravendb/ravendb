@@ -26,7 +26,9 @@ using System.Threading.Tasks;
 using Raven.Client.Document.Async;
 using Raven.Client.Util;
 
+#if !DNXCORE50
 using Raven.Client.Document.DTC;
+#endif
 
 namespace Raven.Client.Document
 {
@@ -261,7 +263,7 @@ namespace Raven.Client.Document
             // try to wait until all the async disposables are completed
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
 
-            if(Subscriptions != null)
+            if (Subscriptions != null)
                 Subscriptions.Dispose();
 
             // if this is still going, we continue with disposal, it is for grace only, anyway
@@ -274,10 +276,17 @@ namespace Raven.Client.Document
             if (afterDispose != null)
                 afterDispose(this, EventArgs.Empty);
         }
+
+#if !DNXCORE50
         private ServicePoint rootServicePoint;
+#endif
 
 #if DEBUG
+#if !DNXCORE50
         private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
+#else
+        private readonly string e = Environment.StackTrace;
+#endif
 
 
         ~DocumentStore()
@@ -440,11 +449,13 @@ namespace Raven.Client.Document
 
         private void RecoverPendingTransactions()
         {
+#if !DNXCORE50
             if (EnlistInDistributedTransactions == false)
                 return;
 
             var pendingTransactionRecovery = new PendingTransactionRecovery(this);
             pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
+#endif
         }
 
         /// <summary>
@@ -463,11 +474,14 @@ namespace Raven.Client.Document
         {
             var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 
+#if !DNXCORE50
+            // TODO [ppekrol] how to set this?
             rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
             rootServicePoint.UseNagleAlgorithm = false;
             rootServicePoint.Expect100Continue = false;
             rootServicePoint.ConnectionLimit = 256;
             rootServicePoint.MaxIdleTime = Timeout.Infinite;
+#endif
 
             databaseCommandsGenerator = () =>
             {
@@ -569,7 +583,7 @@ namespace Raven.Client.Document
                     Conventions,
                     GetReplicationInformerForDatabase(database),
                     () => databaseChanges.Remove(database),
-                    (key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
+                    (key, etag, conflictIds, metadata) => ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
             }
         }
 
@@ -702,7 +716,7 @@ namespace Raven.Client.Document
             if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
             {
                 var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
-                observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ,
+                observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName,
                     _ => new EvictItemsFromCacheBasedOnChanges(databaseName,
                         Changes(databaseName),
                         jsonRequestFactory.ExpireItemsFromCache));

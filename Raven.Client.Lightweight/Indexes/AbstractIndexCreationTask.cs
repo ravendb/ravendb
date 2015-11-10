@@ -16,6 +16,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,7 +29,7 @@ namespace Raven.Client.Indexes
     /// The naming convention is that underscores in the inherited class names are replaced by slashed
     /// For example: Posts_ByName will be saved to Posts/ByName
     /// </remarks>
-#if !MONO
+#if !(MONO || DNXCORE50)
     [System.ComponentModel.Composition.InheritedExport]
 #endif
     public abstract class AbstractIndexCreationTask : AbstractCommonApiForIndexesAndTransformers
@@ -277,6 +278,7 @@ namespace Raven.Client.Indexes
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
 
+#if !DNXCORE50
             if (documentConvention.PrettifyGeneratedLinqExpressions)
             {
                 var serverDef = databaseCommands.GetIndex(IndexName);
@@ -286,6 +288,7 @@ namespace Raven.Client.Indexes
                     return;
                 }
             }
+#endif
 
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches
@@ -312,7 +315,7 @@ namespace Raven.Client.Indexes
 
         private bool CurrentOrLegacyIndexDefinitionEquals(DocumentConvention documentConvention, IndexDefinition serverDef, IndexDefinition indexDefinition)
         {
-           
+
             var oldIndexId = serverDef.IndexId;
 
             try
@@ -377,15 +380,19 @@ namespace Raven.Client.Indexes
         public IndexDefinition GetLegacyIndexDefinition(DocumentConvention documentConvention)
         {
             IndexDefinition legacyIndexDefinition;
+#if !DNXCORE50
             var oldPrettifyGeneratedLinqExpressions = documentConvention.PrettifyGeneratedLinqExpressions;
             documentConvention.PrettifyGeneratedLinqExpressions = false;
+#endif
             try
             {
                 legacyIndexDefinition = CreateIndexDefinition();
             }
             finally
             {
+#if !DNXCORE50
                 documentConvention.PrettifyGeneratedLinqExpressions = oldPrettifyGeneratedLinqExpressions;
+#endif
             }
             return legacyIndexDefinition;
         }
@@ -406,7 +413,7 @@ namespace Raven.Client.Indexes
             return store.ExecuteIndexAsync(this);
         }
 
-        public virtual async Task SideBySideExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default (CancellationToken))
+        public virtual async Task SideBySideExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken))
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
@@ -446,7 +453,7 @@ namespace Raven.Client.Indexes
             await asyncDatabaseCommands
                 .PutAsync(Constants.IndexReplacePrefix + replaceIndexName,
                     null,
-                    RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = IndexName, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc}),
+                    RavenJObject.FromObject(new IndexReplaceDocument { IndexToReplace = IndexName, MinimumEtagBeforeReplace = minimumEtagBeforeReplace, ReplaceTimeUtc = replaceTimeUtc }),
                     new RavenJObject(),
                     token).ConfigureAwait(false);
 
@@ -456,10 +463,11 @@ namespace Raven.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default (CancellationToken))
+        public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
         {
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+#if !DNXCORE50
             if (documentConvention.PrettifyGeneratedLinqExpressions)
             {
                 var serverDef = await asyncDatabaseCommands.GetIndexAsync(IndexName, token).ConfigureAwait(false);
@@ -469,6 +477,7 @@ namespace Raven.Client.Indexes
                     return;
                 }
             }
+#endif
 
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches

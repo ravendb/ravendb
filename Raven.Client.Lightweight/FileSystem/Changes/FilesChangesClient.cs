@@ -21,7 +21,11 @@ namespace Raven.Client.FileSystem.Changes
                                         IFilesChanges,
                                         IHoldProfilingInformation
     {
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog logger = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog logger = LogManager.GetLogger(typeof(FilesChangesClient));
+#endif
 
         private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>();
 
@@ -133,7 +137,7 @@ namespace Raven.Client.FileSystem.Changes
 
             var taskedObservable = new TaskedObservable<FileChangeNotification, FilesConnectionState>(
                 counter,
-                notification => notification.File.StartsWith(folder, StringComparison.InvariantCultureIgnoreCase));
+                notification => notification.File.StartsWith(folder, StringComparison.OrdinalIgnoreCase));
 
             counter.OnFileChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;

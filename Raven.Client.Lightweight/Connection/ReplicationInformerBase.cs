@@ -28,7 +28,11 @@ namespace Raven.Client.Connection
     /// </summary>
     public abstract class ReplicationInformerBase<TClient> : IReplicationInformerBase<TClient>
     {
+#if !DNXCORE50
         protected readonly ILog log = LogManager.GetCurrentClassLogger();
+#else
+        protected readonly ILog log = LogManager.GetLogger(typeof(ReplicationInformerBase<TClient>));
+#endif
 
         protected bool FirstTime = true;
         protected readonly Convention Conventions;
@@ -165,7 +169,7 @@ namespace Raven.Client.Connection
                                     tcs.TrySetCanceled();
                                     break;
                                 case TaskStatus.Faulted:
-                                    if(task.Exception != null)
+                                    if (task.Exception != null)
                                         tcs.TrySetException(task.Exception);
                                     else
                                         goto default;
@@ -467,6 +471,8 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             {
                 return httpStatusCode.Contains(ere.StatusCode);
             }
+
+#if !DNXCORE50
             var webException = (e as WebException) ?? (e.InnerException as WebException);
             if (webException != null)
             {
@@ -474,6 +480,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                 if (httpWebResponse != null && httpStatusCode.Contains(httpWebResponse.StatusCode))
                     return true;
             }
+#endif
 
             return false;
         }
@@ -495,6 +502,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     return true;
             }
 
+#if !DNXCORE50
             var webException = (e as WebException) ?? (e.InnerException as WebException);
             if (webException != null)
             {
@@ -519,9 +527,9 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                         return true;
                 }
             }
-            return
- e.InnerException is SocketException ||
- e.InnerException is IOException;
+#endif
+
+            return e.InnerException is SocketException || e.InnerException is IOException;
         }
 
         private static bool IsServerDown(HttpStatusCode httpStatusCode, out bool timeout)
