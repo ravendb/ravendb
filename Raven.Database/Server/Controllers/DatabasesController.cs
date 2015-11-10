@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Controllers
                     var settings = database.Value<RavenJObject>("Settings");
                     if (settings != null)
                     {
-                        var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue));
                         if (activeBundles != null)
                         {
                             bundles = activeBundles.Split(';');
