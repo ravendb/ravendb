@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -12,7 +11,6 @@ using Raven.Abstractions.Data;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Tests.Helpers;
 using Raven.Tests.FileSystem.Synchronization;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
@@ -23,6 +21,11 @@ namespace Raven.Tests.FileSystem.Auth
 {
     public class SynchronizationWithWindowsAuth : RavenFilesTestWithLogs
     {
+        public SynchronizationWithWindowsAuth()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
+
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
             if (server.SystemDatabase.Configuration.Core.Port == Ports[1]) // setup only for destination

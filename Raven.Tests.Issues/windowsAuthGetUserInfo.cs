@@ -3,11 +3,8 @@ using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
 using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
 using System.Net;
-using System.Security.Policy;
 using Raven.Client.Extensions;
 using Raven.Tests.Common.Attributes;
 using Xunit;
@@ -16,6 +13,11 @@ namespace Raven.Tests.Core.Auth
 {
     public class WindowsAuthenticationUserInfo : RavenCoreTestBase
     {
+        public WindowsAuthenticationUserInfo()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
+
         [Fact]
         public void	GetUserInfoAndPermissionsWindowsAuthentication()
         {

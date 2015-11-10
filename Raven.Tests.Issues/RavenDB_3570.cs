@@ -13,9 +13,13 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-
     public class RavenDB_3570 : RavenFilesTestBase
     {
+        public RavenDB_3570()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
+
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
                         server.SystemDatabase.Documents.Put("Raven/Authorization/WindowsSettings", null,

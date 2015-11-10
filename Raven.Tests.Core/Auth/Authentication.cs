@@ -13,6 +13,11 @@ namespace Raven.Tests.Core.Auth
 {
     public class Authentication : RavenCoreTestBase
     {
+        public Authentication()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
+
         [Fact]
         public void CanUseApiKeyAuthentication()
         {

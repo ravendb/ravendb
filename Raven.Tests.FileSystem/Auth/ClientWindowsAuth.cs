@@ -30,6 +30,11 @@ namespace Raven.Tests.FileSystem.Auth
 {
     public class ClientWindowsAuth : RavenFilesTestWithLogs
     {
+        public ClientWindowsAuth()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
+
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
             server.SystemDatabase.Documents.Put("Raven/Authorization/WindowsSettings", null,

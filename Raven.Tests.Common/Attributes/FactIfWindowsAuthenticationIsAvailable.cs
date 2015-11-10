@@ -15,11 +15,6 @@ namespace Raven.Tests.Common.Attributes
 
         public static string Password { get; private set; }
 
-        static FactIfWindowsAuthenticationIsAvailable()
-        {
-            LoadCredentials();
-        }
-
         public static void LoadCredentials()
         {
             if (Username != null)
