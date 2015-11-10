@@ -232,7 +232,6 @@ public class OAuthPrincipal : IPrincipal, IIdentity
             .Where(x => string.Equals(x.TenantId, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase));
 
         return databaseAccess.Any(access => access.Admin);
-        
     }
     public HashSet<string> AdminDatabases { get; private set; }
     public HashSet<string> ReadOnlyDatabases { get; private set; }

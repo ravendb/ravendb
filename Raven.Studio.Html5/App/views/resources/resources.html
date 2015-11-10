@@ -7,8 +7,13 @@
                     <br />
                     <br />
                     No databases, file systems, counter storages or time series are available. <br />
-                    <small>
-                        <span data-bind="visible: isGlobalAdmin">Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
+                    <small data-bind="visible: isGlobalAdmin() || canNavigateToAdminSettings()">
+                        <span data-bind="visible: isGlobalAdmin">
+                            Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or 
+                        </span>
+                        <span data-bind="visible: canNavigateToAdminSettings">
+                            <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a>
+                        </span>
                     </small>
                 </h2>
             </div>
@@ -39,14 +44,14 @@
             </h3>
         </li>
     </ul>
-    
+
     <!-- ko if: alerts().length > 0 -->
-        <!-- ko foreach: alerts -->
-        <div class="alert alert-dismissable" role="alert" data-bind="css: { 'alert-warning': alertLevel === 'Warning', 'alert-danger': alertLevel === 'Error' }">
-            <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-            <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
-        </div>
-        <!-- /ko -->
+    <!-- ko foreach: alerts -->
+    <div class="alert alert-dismissable" role="alert" data-bind="css: { 'alert-warning': alertLevel === 'Warning', 'alert-danger': alertLevel === 'Error' }">
+        <button data-bind="click: $root.dismissAlert.bind($root, uniqueKey)" type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <a data-bind="attr: { href: $root.urlForAlert($data) }"><span data-bind="text: title"></span></a>
+    </div>
+    <!-- /ko -->
     <!-- /ko -->
 
     <div class="btn-toolbar" data-bind="visible: resources().length > 1">
@@ -75,7 +80,7 @@
             <select data-bind="options: visibleOptions, optionsText: 'name', optionsValue: 'value', value: visibleResource" class="form-control"></select>
         </div>
         <div class="btn-group pull-right">
-            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: isGlobalAdmin">Manage Your Server</button>
+            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: canNavigateToAdminSettings">Manage Your Server</button>
         </div>
     </div>
 
@@ -91,10 +96,10 @@
                     <a class="resource-name" data-bind="attr: { href: $root.getDocumentsUrl($data) }"><i data-bind="attr: { class: iconName }" class="fa"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                     <!-- ko if: $data.disabled() || !$data.isLicensed() -->
-                    <a class="resource-name"><i  data-bind="attr: { class: iconName }"></i> db/<span data-bind="text: name"></span></a>
+                    <a class="resource-name"><i data-bind="attr: { class: iconName }"></i> db/<span data-bind="text: name"></span></a>
                     <!-- /ko -->
                 </h4>
-                <br/>
+                <br />
                 <!-- ko if: !$data.disabled() && $data.isLicensed() -->
                 <span class="stats" data-bind="style: { visibility: !!statistics() ? 'visible' : 'hidden' }, text: itemCountText"></span>
                 <!-- /ko -->
@@ -110,7 +115,7 @@
             <span class="indexing-disabled"><i class="fa fa-warning text-warning" title="Indexing Disabled"></i></span>
             <!-- /ko -->
             <!-- ko if: $data.rejectClientsMode -->
-            <span class="clients-rejected"><i class="fa fa-warning text-warning" title="Clients rejected mode" ></i></span>
+            <span class="clients-rejected"><i class="fa fa-warning text-warning" title="Clients rejected mode"></i></span>
             <!-- /ko -->
             <div class="btn-group" data-bind="click: function(){ $root.optionsClicked(true); }, visible: $root.isGlobalAdmin()">
                 <a class="dropdown-toggle" data-toggle="dropdown">
@@ -154,7 +159,6 @@
             </div>
         </div>
         <!-- /ko -->
-
         <!-- ko if: $data.isFileSystem() -->
         <div class="resource fs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled, isLoaded: isLoaded() }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
@@ -203,7 +207,6 @@
             </div>
         </div>
         <!-- /ko -->
-
         <!-- ko if: $data.isCounterStorage() -->
         <div class="resource cs" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">
@@ -253,7 +256,6 @@
             </div>
         </div>
         <!-- /ko -->
-
         <!-- ko if: $data.isTimeSeries() -->
         <div class="resource ts" data-bind="visible: isVisible, click: function () { $root.selectResource($data); return true; }, css: { selected: isSelected, disabled: disabled }">
             <div class="checkbox" data-bind="click: function () { checkboxToggle(); $root.optionsClicked(true); return true; }, style: { display: isChecked() ? 'block' : '' }">

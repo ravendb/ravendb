@@ -32,7 +32,7 @@ namespace Raven.Tests.Counters
                         batchOperation.ScheduleDecrement("FooGroup", "FooCounter");
                     }
                     var total = await otherStore.GetOverallTotalAsync("FooGroup", "FooCounter");
-                    Assert.Equal(1, total);
+                    Assert.Equal(1, total.Total);
                 }
             }
         }
@@ -55,10 +55,10 @@ namespace Raven.Tests.Counters
 
                 {
                     var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter2");
-                    Assert.Equal(-1, total);
+                    Assert.Equal(-1, total.Total);
 
                     total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
-                    Assert.Equal(1, total);
+                    Assert.Equal(1, total.Total);
                 }
             }
         }
@@ -81,7 +81,7 @@ namespace Raven.Tests.Counters
                     }
                 }
                 var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
-                Assert.Equal(countOfOperationsInBatch, total);
+                Assert.Equal(countOfOperationsInBatch, total.Total);
             }
         }
 
@@ -96,7 +96,7 @@ namespace Raven.Tests.Counters
                 //with counter storage name null - client is opened for default counter
 
                 var total = await store.GetOverallTotalAsync("FooGroup", "FooCounter");
-                Assert.Equal(1, total);
+                Assert.Equal(1, total.Total);
             }
         }
 
@@ -134,7 +134,7 @@ namespace Raven.Tests.Counters
                 await Task.WhenAll(t1, t2);
                 
                 var total = await store.GetOverallTotalAsync("G", "C");
-                Assert.Equal(totalForT1 + totalForT2, total);
+                Assert.Equal(totalForT1 + totalForT2, total.Total);
             }
         }
 
@@ -165,10 +165,10 @@ namespace Raven.Tests.Counters
 
                     var total = await otherStore.GetOverallTotalAsync("G", "C");
                     
-                    Assert.Equal(499, total);
+                    Assert.Equal(499, total.Total);
 
                     total = await store.GetOverallTotalAsync("G", "C");
-                    Assert.Equal(500, total);
+                    Assert.Equal(500, total.Total);
 
                 }
             }
@@ -200,7 +200,7 @@ namespace Raven.Tests.Counters
 
                     var total = await otherStore.GetOverallTotalAsync("G", "C");
                     
-                    Assert.Equal(1000, total);
+                    Assert.Equal(1000, total.Total);
 
                 }
             }
@@ -233,7 +233,7 @@ namespace Raven.Tests.Counters
 
                     await store.Batch[OtherCounterStorageName].FlushAsync();
                     var total = await otherStore.GetOverallTotalAsync("FooGroup", "FooCounter");
-                    Assert.Equal(countOfOperationsInBatch, total);
+                    Assert.Equal(countOfOperationsInBatch, total.Total);
 
                 }
             }

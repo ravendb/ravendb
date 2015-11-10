@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 using Jint;
 using Jint.Native;
-using Jint.Native.Object;
 using Jint.Runtime;
 
 using Raven.Abstractions.Data;
@@ -19,7 +18,7 @@ namespace Raven.Database.Json
         public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
         {
             var rjo = new RavenJObject();
-            foreach (var property in jsObject.AsObject().Properties)
+            foreach (var property in jsObject.AsObject().GetOwnProperties())
             {
                 if (property.Key == Constants.ReduceKeyFieldName || property.Key == Constants.DocumentIdFieldName)
                     continue;
@@ -47,7 +46,8 @@ namespace Raven.Database.Json
             if (v.IsString())
             {
                 const string RavenDataByteArrayToBase64 = "raven-data:byte[];base64,";
-                var value = v.AsString();
+                var valueAsObject = v.ToObject();
+                var value = valueAsObject != null ? valueAsObject.ToString() : null;
                 if (value != null && value.StartsWith(RavenDataByteArrayToBase64))
                 {
                     value = value.Remove(0, RavenDataByteArrayToBase64.Length);
@@ -94,7 +94,7 @@ namespace Raven.Database.Json
                 var jsArray = v.AsArray();
                 var rja = new RavenJArray();
 
-                foreach (var property in jsArray.Properties)
+                foreach (var property in jsArray.GetOwnProperties())
                 {
                     if (property.Key == "length")
                         continue;

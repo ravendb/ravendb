@@ -110,7 +110,9 @@ namespace Raven.Client.Document
                 disableEntitiesTracking = disableEntitiesTracking,
                 disableCaching = disableCaching,
                 showQueryTimings = showQueryTimings,
-                shouldExplainScores = shouldExplainScores
+                shouldExplainScores = shouldExplainScores,
+                resultsTransformer = resultsTransformer,
+                transformerParameters = transformerParameters,
             };
             documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
             return documentQuery;

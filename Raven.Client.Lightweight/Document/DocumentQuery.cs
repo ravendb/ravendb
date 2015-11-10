@@ -1,3 +1,4 @@
+﻿using Raven.Client.Indexes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -40,7 +41,7 @@ namespace Raven.Client.Document
         public DocumentQuery(DocumentQuery<T> other)
             : base(other)
         {
-            
+
         }
 
         /// <summary>
@@ -51,8 +52,8 @@ namespace Raven.Client.Document
         {
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
-            var identityProperty = DocumentConvention.GetIdentityProperty(typeof (TProjection));
-            var fields = propertyInfos.Select(p =>(p == identityProperty) ? Constants.DocumentIdFieldName : p.Name).ToArray();
+            var identityProperty = DocumentConvention.GetIdentityProperty(typeof(TProjection));
+            var fields = propertyInfos.Select(p => (p == identityProperty) ? Constants.DocumentIdFieldName : p.Name).ToArray();
             return SelectFields<TProjection>(fields, projections);
         }
 
@@ -68,6 +69,57 @@ namespace Raven.Client.Document
             return this;
         }
 
+        public IDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+            where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var documentQuery = new DocumentQuery<TTransformerResult>(theSession,
+                                                                     theDatabaseCommands,
+                                                                     theAsyncDatabaseCommands,
+                                                                     indexName,
+                                                                     fieldsToFetch,
+                                                                     projectionFields,
+                                                                     queryListeners,
+                                                                     isMapReduce)
+            {
+                pageSize = pageSize,
+                queryText = new StringBuilder(queryText.ToString()),
+                start = start,
+                timeout = timeout,
+                cutoff = cutoff,
+                cutoffEtag = cutoffEtag,
+                queryStats = queryStats,
+                theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
+                sortByHints = sortByHints,
+                orderByFields = orderByFields,
+                isDistinct = isDistinct,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                negate = negate,
+                transformResultsFunc = transformResultsFunc,
+                includes = new HashSet<string>(includes),
+                isSpatialQuery = isSpatialQuery,
+                spatialFieldName = spatialFieldName,
+                queryShape = queryShape,
+                spatialRelation = spatialRelation,
+                spatialUnits = spatialUnits,
+                distanceErrorPct = distanceErrorPct,
+                rootTypes = { typeof(T) },
+                defaultField = defaultField,
+                beforeQueryExecutionAction = beforeQueryExecutionAction,
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags,
+                resultsTransformer = new TTransformer().TransformerName,
+                transformerParameters = transformerParameters,
+                disableEntitiesTracking = disableEntitiesTracking,
+                disableCaching = disableCaching,
+                showQueryTimings = showQueryTimings,
+                lastEquality = lastEquality,
+                defaultOperator = defaultOperator,
+                shouldExplainScores = shouldExplainScores
+            };
+            return documentQuery;
+        }
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
@@ -124,10 +176,10 @@ namespace Raven.Client.Document
             var documentQuery = new DocumentQuery<TProjection>(theSession,
                                                                theDatabaseCommands,
                                                                theAsyncDatabaseCommands,
-                                                               indexName, 
+                                                               indexName,
                                                                fields,
                                                                projections,
-                                                               queryListeners, 
+                                                               queryListeners,
                                                                isMapReduce)
             {
                 pageSize = pageSize,
@@ -152,7 +204,7 @@ namespace Raven.Client.Document
                 spatialRelation = spatialRelation,
                 spatialUnits = spatialUnits,
                 distanceErrorPct = distanceErrorPct,
-                rootTypes = {typeof(T)},
+                rootTypes = { typeof(T) },
                 defaultField = defaultField,
                 beforeQueryExecutionAction = beforeQueryExecutionAction,
                 highlightedFields = new List<HighlightedField>(highlightedFields),
@@ -810,7 +862,7 @@ namespace Raven.Client.Document
             OrderBy(string.Format("{0};{1};{2};{3}", Constants.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
             return this;
         }
-        
+
         /// <summary>
         /// Order the results by the specified fields
         /// The fields are the names of the fields to sort, defaulting to sorting by ascending.
@@ -874,9 +926,9 @@ namespace Raven.Client.Document
         }
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
-            string fieldName, 
-            int fragmentLength, 
-            int fragmentCount, 
+            string fieldName,
+            int fragmentLength,
+            int fragmentCount,
             string fragmentsField)
         {
             Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
@@ -884,9 +936,9 @@ namespace Raven.Client.Document
         }
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
-            string fieldName, 
-            int fragmentLength, 
-            int fragmentCount, 
+            string fieldName,
+            int fragmentLength,
+            int fragmentCount,
             out FieldHighlightings highlightings)
         {
             this.Highlight(fieldName, fragmentLength, fragmentCount, out highlightings);
@@ -895,9 +947,9 @@ namespace Raven.Client.Document
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
             string fieldName,
-            string fieldKeyName, 
-            int fragmentLength, 
-            int fragmentCount, 
+            string fieldKeyName,
+            int fragmentLength,
+            int fragmentCount,
             out FieldHighlightings highlightings)
         {
             this.Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out highlightings);
@@ -905,8 +957,8 @@ namespace Raven.Client.Document
         }
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
-            Expression<Func<T, TValue>> propertySelector, 
-            int fragmentLength, 
+            Expression<Func<T, TValue>> propertySelector,
+            int fragmentLength,
             int fragmentCount,
             Expression<Func<T, IEnumerable>> fragmentsPropertySelector)
         {
@@ -917,8 +969,8 @@ namespace Raven.Client.Document
         }
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
-            Expression<Func<T, TValue>> propertySelector, 
-            int fragmentLength, 
+            Expression<Func<T, TValue>> propertySelector,
+            int fragmentLength,
             int fragmentCount,
             out FieldHighlightings fieldHighlightings)
         {
@@ -928,8 +980,8 @@ namespace Raven.Client.Document
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight<TValue>(
             Expression<Func<T, TValue>> propertySelector,
-            Expression<Func<T, TValue>> keyPropertySelector, 
-            int fragmentLength, 
+            Expression<Func<T, TValue>> keyPropertySelector,
+            int fragmentLength,
             int fragmentCount,
             out FieldHighlightings fieldHighlightings)
         {
@@ -939,7 +991,7 @@ namespace Raven.Client.Document
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
         {
-            this.SetHighlighterTags(new[]{preTag},new[]{postTag});
+            this.SetHighlighterTags(new[] { preTag }, new[] { postTag });
             return this;
         }
 

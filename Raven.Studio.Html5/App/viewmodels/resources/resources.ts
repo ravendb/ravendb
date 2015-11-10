@@ -52,6 +52,7 @@ class resources extends viewModelBase {
     isGlobalAdmin = shell.isGlobalAdmin;
     clusterMode = ko.computed(() => shell.clusterMode());
     showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
+    canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     databaseType = database.type;
     fileSystemType = fileSystem.type;
@@ -68,6 +69,8 @@ class resources extends viewModelBase {
 
     constructor() {
         super();
+
+        this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
 
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;

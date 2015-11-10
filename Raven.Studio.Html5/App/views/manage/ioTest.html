@@ -1,4 +1,8 @@
-<form class="form-horizontal" role="form" data-bind="submit: startPerformanceTest">
+<div data-bind="visible: isForbidden" class="text-center">
+    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+</div>
+
+<form class="form-horizontal" role="form" data-bind="submit: startPerformanceTest, visible: isForbidden() == false">
     <div class="panel panel-default">
         <div class="panel-heading panel-info">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>

@@ -200,9 +200,32 @@ namespace Raven.Client.Linq
             if (subClauseDepth > 0) documentQuery.OpenSubclause();
             subClauseDepth++;
 
+            // negate optimization : (RavenDB-3973).  in order to disable you may just set isNotEqualCheckBoundsToAndAlsoLeft & Right to "false" 
+            bool isNotEqualCheckBoundsToAndAlsoLeft = (andAlso.Left.NodeType == ExpressionType.NotEqual);
+            bool isNotEqualCheckBoundsToAndAlsoRight = (andAlso.Right.NodeType == ExpressionType.NotEqual);
+
+            if (isNotEqualCheckBoundsToAndAlsoRight && isNotEqualCheckBoundsToAndAlsoLeft)
+                // avoid empty group (i.e. : "a != 1 && a != 2"  should generate "((-a:1 AND a:*) AND -a:2)"
+                isNotEqualCheckBoundsToAndAlsoLeft = false;
+
+            if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
+            {
+                subClauseDepth++;
+                documentQuery.OpenSubclause();
+            }
+            isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoLeft;
             VisitExpression(andAlso.Left);
             documentQuery.AndAlso();
+            isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoRight;
             VisitExpression(andAlso.Right);
+            isNotEqualCheckBoundsToAndAlso = false;
+
+            if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
+            {
+                subClauseDepth--;
+                documentQuery.CloseSubclause();
+            }
+            
 
             subClauseDepth--;
             if (subClauseDepth > 0) documentQuery.CloseSubclause();
@@ -404,7 +427,8 @@ namespace Raven.Client.Linq
             }
 
             var memberInfo = GetMember(expression.Left);
-            documentQuery.OpenSubclause();
+            if (isNotEqualCheckBoundsToAndAlso == false)
+                documentQuery.OpenSubclause();
             documentQuery.NegateNext();
             documentQuery.WhereEquals(new WhereParams
             {
@@ -413,15 +437,18 @@ namespace Raven.Client.Linq
                 IsAnalyzed = true,
                 AllowWildcards = false
             });
-            documentQuery.AndAlso();
-            documentQuery.WhereEquals(new WhereParams
+            if (isNotEqualCheckBoundsToAndAlso == false)
             {
-                FieldName = memberInfo.Path,
-                Value = "*",
-                IsAnalyzed = true,
-                AllowWildcards = true
-            });
-            documentQuery.CloseSubclause();
+                documentQuery.AndAlso();
+                documentQuery.WhereEquals(new WhereParams
+                {
+                    FieldName = memberInfo.Path,
+                    Value = "*",
+                    IsAnalyzed = true,
+                    AllowWildcards = true
+                });
+                documentQuery.CloseSubclause();
+            }
         }
 
         private static Type GetMemberType(ExpressionInfo info)
@@ -1267,6 +1294,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private bool insideSelect;
         private readonly bool isMapReduce;
+        private bool isNotEqualCheckBoundsToAndAlso;
 
         private void VisitSelect(Expression operand)
         {

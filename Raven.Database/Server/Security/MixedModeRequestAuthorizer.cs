@@ -2,11 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Principal;
-using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers;
@@ -42,7 +40,7 @@ namespace Raven.Database.Server.Security
                         return;
                     }
                     
-                    user = new OneTimetokenPrincipal
+                    user = new OneTimeTokenPrincipal
                     {
                         Name = value.Identity.Name,
                         IsAdministratorInAnonymouseMode = value.IsAdministrator(AnonymousUserAccessMode.None)
@@ -52,25 +50,7 @@ namespace Raven.Database.Server.Security
             public TimeSpan Age
             {
                 get { return age.Elapsed; }
-        }
-        }
-
-        public class OneTimetokenPrincipal : IPrincipal, IIdentity
-        {
-            public bool IsInRole(string role)
-            {
-                if (role == "Administrators")
-                {
-                    return IsAdministratorInAnonymouseMode;
-                }
-                return false;
             }
-
-            public bool IsAdministratorInAnonymouseMode { get; set; }
-            public IIdentity Identity { get { return this; } }
-            public string Name { get; set; }
-            public string AuthenticationType { get { return "one-time-token"; } }
-            public bool IsAuthenticated { get { return true; } }
         }
 
         protected override void Initialize()
@@ -256,5 +236,23 @@ namespace Raven.Database.Server.Security
 
             return tokenString;
         }
+    }
+
+    public class OneTimeTokenPrincipal : IPrincipal, IIdentity
+    {
+        public bool IsInRole(string role)
+        {
+            if (role == "Administrators")
+            {
+                return IsAdministratorInAnonymouseMode;
+            }
+            return false;
+        }
+
+        public bool IsAdministratorInAnonymouseMode { get; set; }
+        public IIdentity Identity { get { return this; } }
+        public string Name { get; set; }
+        public string AuthenticationType { get { return "one-time-token"; } }
+        public bool IsAuthenticated { get { return true; } }
     }
 }

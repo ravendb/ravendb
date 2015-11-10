@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-
+using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Tests.Common;
@@ -60,8 +60,7 @@ namespace Raven.Tests.Issues
                 {
                     var alerts = session.Load<AlertsDocument>(Constants.RavenAlerts);
 
-                    Assert.Equal(5, alerts.Alerts.Count);
-                    Assert.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId", alerts.Alerts[4].Title);
+                    Assert.True(alerts.Alerts.Any(alert=> alert.Title.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId")));
                 }
 
                 SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(11);

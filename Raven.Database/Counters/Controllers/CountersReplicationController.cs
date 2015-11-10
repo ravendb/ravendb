@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -83,8 +84,13 @@ namespace Raven.Database.Counters.Controllers
                     {
                         counterChangeNotifications.ForEach(change =>
                         {
-                            change.Total = reader.GetCounterTotal(change.GroupName, change.CounterName);
-                            CounterStorage.Publisher.RaiseNotification(change);
+	                        long? total;
+	                        if (reader.TryGetCounterTotal(change.GroupName, change.CounterName, out total))
+	                        {
+								Debug.Assert(total.HasValue);
+		                        change.Total = total.Value;
+                                CounterStorage.Publisher.RaiseNotification(change);
+	                        }
                         });
                     }
                 }
