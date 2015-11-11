@@ -5,33 +5,30 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Replication;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
 using Raven.Tests.Common.Dto;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Database.Server;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Security.Windows;
+using Raven.Json.Linq;
+using Xunit;
 
 namespace Raven.Tests.Security
 {
-    using System.Collections.Generic;
-    using System.Net;
-    using System.Threading.Tasks;
-
-    using Raven.Abstractions.Data;
-    using Raven.Client.Connection;
-    using Raven.Client.Document;
-    using Raven.Database.Server;
-    using Raven.Database.Server.Security;
-    using Raven.Database.Server.Security.Windows;
-    using Raven.Json.Linq;
-
-    using Xunit;
-
     public class ReplicationWithMixedSecurity : ReplicationBase
     {
+        public ReplicationWithMixedSecurity()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
+
         private string apiKey = "test1/ThisIsMySecret";
-
-        private string username = "test";
-
-        private string password = "test";
-
-        private string domain = "";
 
         private int _storeCounter, _databaseCounter;
 
@@ -48,7 +45,7 @@ namespace Raven.Tests.Security
             }
             else
             {
-                store.Credentials = new NetworkCredential(username, password, domain);
+                store.Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain);
                 store.ApiKey = null;
             }
 
@@ -90,7 +87,7 @@ namespace Raven.Tests.Security
                                                    {
                                                        new WindowsAuthData()
                                                        {
-                                                           Name = username,
+                                                           Name = FactIfWindowsAuthenticationIsAvailable.Username,
                                                            Enabled = true,
                                                            Databases = new List<ResourceAccess>
                                                            {
@@ -106,14 +103,14 @@ namespace Raven.Tests.Security
             _databaseCounter++;
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public void DocumentStoreShouldSwitchFromApiKeyToCredentials()
         {
             var store1 = CreateStore(enableAuthorization: true);
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: username, password: password, domain: domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Username, password: FactIfWindowsAuthenticationIsAvailable.Password, domain: FactIfWindowsAuthenticationIsAvailable.Domain);
 
             using (var session = store1.OpenSession())
             {
@@ -135,14 +132,14 @@ namespace Raven.Tests.Security
             }
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task DocumentStoreShouldSwitchFromApiKeyToCredentialsAsync()
         {
             var store1 = CreateStore(enableAuthorization: true);
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: username, password: password, domain: domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Username, password: FactIfWindowsAuthenticationIsAvailable.Password, domain: FactIfWindowsAuthenticationIsAvailable.Domain);
 
             using (var session = store1.OpenAsyncSession())
             {
@@ -164,7 +161,7 @@ namespace Raven.Tests.Security
             }
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public void DocumentStoreShouldSwitchFromCredentialsToApiKey()
         {
             var store1 = CreateStore(enableAuthorization: true);
@@ -193,7 +190,7 @@ namespace Raven.Tests.Security
             }
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task DocumentStoreShouldSwitchFromCredentialsToApiKeyAsync()
         {
             var store1 = CreateStore(enableAuthorization: true);
