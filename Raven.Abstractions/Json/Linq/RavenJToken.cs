@@ -20,6 +20,7 @@ namespace Raven.Json.Linq
     /// </summary>
     public abstract class RavenJToken
     {
+        private static readonly JsonSerializer defaultJsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
         /// <summary>
         ///     Gets the node type for this <see cref="RavenJToken" />.
         /// </summary>
@@ -99,7 +100,7 @@ namespace Raven.Json.Linq
         public T ToObject<T>()
             where T : class
         {
-            return ToObject<T>(JsonExtensions.CreateDefaultJsonSerializer());
+            return ToObject<T>(defaultJsonSerializer);
         }
 
         /// <summary>
@@ -121,7 +122,7 @@ namespace Raven.Json.Linq
         /// <returns>A <see cref="RavenJToken" /> with the value of the specified object</returns>
         public static RavenJToken FromObject(object o)
         {
-            return FromObjectInternal(o, JsonExtensions.CreateDefaultJsonSerializer());
+            return FromObjectInternal(o, defaultJsonSerializer);
         }
 
         /// <summary>

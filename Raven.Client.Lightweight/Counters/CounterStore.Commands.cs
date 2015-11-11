@@ -72,7 +72,7 @@ namespace Raven.Client.Counters
                     try
                     {
                         var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        return response.Value<CounterTotal>();
+                        return response.ToObject<CounterTotal>();
                     }
                     catch (ErrorResponseException e)
                     {

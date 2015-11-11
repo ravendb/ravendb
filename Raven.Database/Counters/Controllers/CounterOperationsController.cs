@@ -59,13 +59,13 @@ namespace Raven.Database.Counters.Controllers
                     return GetEmptyMessage();
 
                 writer.Commit();
-	            if (!writer.TryGetCounterTotal(groupName, counterName,out total))
-	            {
-		            return GetMessageWithObject(new
-		            {
-			            Message = $"Could not find a counter with groupName = {groupName}, counterName = {counterName}"
-		            },HttpStatusCode.NotFound);
-	            }
+                if (!writer.TryGetCounterTotal(groupName, counterName,out total))
+                {
+                    return GetMessageWithObject(new
+                    {
+                        Message = $"Could not find a counter with groupName = {groupName}, counterName = {counterName}"
+                    },HttpStatusCode.NotFound);
+                }
             }
 
             CounterStorage.MetricsCounters.ClientRequests.Mark();
@@ -426,14 +426,14 @@ namespace Raven.Database.Counters.Controllers
             {
                 try
                 {
-	                long? total;
-	                if (!reader.TryGetCounterTotal(groupName, counterName, out total))
-		                return GetMessageWithObject(new CounterTotal {IsExists = false},HttpStatusCode.NotFound);
+                    long? total;
+                    if (!reader.TryGetCounterTotal(groupName, counterName, out total))
+                        return GetMessageWithObject(new CounterTotal {IsExists = false},HttpStatusCode.NotFound);
 
-					Debug.Assert(total.HasValue);
-					return GetMessageWithObject(new CounterTotal { IsExists = true, Total = total.Value});
-				}
-				catch (Exception e)
+                    Debug.Assert(total.HasValue);
+                    return GetMessageWithObject(new CounterTotal { IsExists = true, Total = total.Value});
+                }
+                catch (Exception e)
                 {
                     return Request.CreateErrorResponse(HttpStatusCode.BadRequest, e);
                 }

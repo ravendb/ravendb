@@ -1381,5 +1381,49 @@ namespace Raven.Database.Server.Controllers.Admin
 
             return mergedTopology;
         }
+
+        [HttpGet]
+        [RavenRoute("admin/dump")]
+        public HttpResponseMessage Dump()
+        {
+            var stop = GetQueryStringValue("stop");
+            if (!string.IsNullOrEmpty(stop))
+            {
+                MiniDumper.Instance.StopTimer();
+                return GetMessageWithString("Dump Timer Canceled", HttpStatusCode.Accepted);
+            }
+
+            var usage = GetQueryStringValue("usage");
+            if (!string.IsNullOrEmpty(usage))
+                return GetMessageWithString(MiniDumper.PrintUsage(), HttpStatusCode.Accepted);
+
+            MiniDumper.Instance.StopTimer();
+
+            int timerCount;
+            int period = 0;
+            bool useTimer = 
+                int.TryParse(GetQueryStringValue("timer"), out timerCount) && 
+                int.TryParse(GetQueryStringValue("period"), out period);
+
+            var options = 
+                MiniDumper.Option.WithThreadInfo | 
+                MiniDumper.Option.WithProcessThreadData;
+            var ids = GetQueryStringValues("option");
+            foreach (var id in ids)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    options |= MiniDumper.StringToOption(id);
+                }
+            }
+
+            bool useStats = !string.IsNullOrEmpty(GetQueryStringValue("stats"));
+
+            if (useTimer == false)
+                return GetMessageWithString(MiniDumper.Instance.Write(options), HttpStatusCode.Accepted);
+
+            var url = $"http://{Request.RequestUri.Host}:{Request.RequestUri.Port}";
+            return GetMessageWithString(MiniDumper.Instance.StartTimer(timerCount, period, options, useStats, url), HttpStatusCode.Accepted);
+        }
     }
 }

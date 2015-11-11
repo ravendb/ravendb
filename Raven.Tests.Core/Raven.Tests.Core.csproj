@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -227,6 +227,10 @@
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
       <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
+      <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
+      <Name>Raven.Tests.Common</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>

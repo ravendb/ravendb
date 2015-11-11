@@ -6,6 +6,7 @@ using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using System.Collections.Generic;
 using System.Net;
+using Raven.Tests.Common.Attributes;
 using Xunit;
 
 namespace Raven.Tests.Core.Auth
@@ -55,9 +56,10 @@ namespace Raven.Tests.Core.Auth
             }
         }
 
-        [Fact(Skip = "Need to replace credentials to make this test pass")]
+        [Fact]
         public void CanUseWindowsAuthentication()
         {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
             Raven.Database.Server.Security.Authentication.EnableOnce();
             this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
@@ -82,7 +84,7 @@ namespace Raven.Tests.Core.Auth
 
             using (var store = new DocumentStore
                 {
-                    Credentials = new NetworkCredential("test2", "testPass", "domain"),
+                    Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain),
                     Url = this.Server.SystemDatabase.ServerUrl
                 }.Initialize())
             {
@@ -91,7 +93,7 @@ namespace Raven.Tests.Core.Auth
 
             using (var store = new DocumentStore
             {
-                Credentials = new NetworkCredential("test-user", "test-password", "test-domain"),
+                Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain),
                 Url = this.Server.SystemDatabase.ServerUrl
             }.Initialize())
             {

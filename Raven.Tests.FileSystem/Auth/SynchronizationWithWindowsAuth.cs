@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -12,20 +11,20 @@ using Raven.Abstractions.Data;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Tests.Helpers;
 using Raven.Tests.FileSystem.Synchronization;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.FileSystem;
+using Raven.Tests.Common.Attributes;
+
 namespace Raven.Tests.FileSystem.Auth
 {
     public class SynchronizationWithWindowsAuth : RavenFilesTestWithLogs
     {
-        private string username = "local_user_test";
-
-        private string password = "local_user_test";
-
-        private string domain = "local_machine_name_test";
+        public SynchronizationWithWindowsAuth()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
@@ -38,7 +37,7 @@ namespace Raven.Tests.FileSystem.Auth
                                               {
                                                   new WindowsAuthData()
                                                   {
-                                                      Name = string.Format("{0}\\{1}", domain, username),
+                                                      Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Domain, FactIfWindowsAuthenticationIsAvailable.Username),
                                                       Enabled = true,
                                                       Databases = new List<ResourceAccess>
                                                       {
@@ -51,11 +50,11 @@ namespace Raven.Tests.FileSystem.Auth
             }
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task CanSynchronizeFileContent()
         {
             var source = NewAsyncClient(0);
-            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
 
             var ms = new MemoryStream(new byte[] { 3, 2, 1 });
 
@@ -67,13 +66,13 @@ namespace Raven.Tests.FileSystem.Auth
             Assert.Equal(SynchronizationType.ContentUpdate, result.Type);
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task CanSynchronizeMetadata()
         {
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
             var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
 
             await sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } });
             content.Position = 0;
@@ -89,13 +88,13 @@ namespace Raven.Tests.FileSystem.Auth
             Assert.Equal("metadata", destinationMetadata["difference"]);
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task CanSynchronizeFileRename()
         {
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
             var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
 
             await sourceClient.UploadAsync("test.bin", content);
             content.Position = 0;
@@ -116,11 +115,11 @@ namespace Raven.Tests.FileSystem.Auth
             Assert.NotNull(renamedMetadata);
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task CanSynchronizeFileDelete()
         {
             var source = NewAsyncClient(0);
-            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
 
             await source.UploadAsync("test.bin", new RandomStream(1));
 
