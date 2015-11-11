@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
@@ -15,6 +17,7 @@ using Raven.Client.Counters.Replication;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Counters
 {
@@ -26,8 +29,9 @@ namespace Raven.Client.Counters
         private readonly AtomicDictionary<ICountersChanges> counterStorageChanges = new AtomicDictionary<ICountersChanges>(StringComparer.OrdinalIgnoreCase);
         private CounterReplicationInformer replicationInformer;
         private bool isInitialized;
+		public NameValueCollection OperationsHeaders { get; set; } = new NameValueCollection();
 
-        public CounterStore()
+		public CounterStore()
         {
             JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
             JsonRequestFactory = new HttpJsonRequestFactory(Constants.NumberOfCachedRequests);
@@ -77,9 +81,9 @@ namespace Raven.Client.Counters
                 counterStorage = Name;
 
             return counterStorageChanges.GetOrAdd(counterStorage, CreateCounterStorageChanges);
-        }
+        }		
 
-        private ICountersChanges CreateCounterStorageChanges(string counterStorage)
+		private ICountersChanges CreateCounterStorageChanges(string counterStorage)
         {
             if (string.IsNullOrEmpty(Url))
                 throw new InvalidOperationException("Changes API requires usage of server/client");

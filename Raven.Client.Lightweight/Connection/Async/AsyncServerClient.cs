@@ -1930,7 +1930,7 @@ namespace Raven.Client.Connection.Async
             private bool complete;
 
             private bool wasInitialized;
-            private Func<JsonTextReaderAsync, bool> customizedEndResult;
+            private readonly Func<JsonTextReaderAsync, bool> customizedEndResult;
 
             public YieldStreamResults(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReaderAsync, bool> customizedEndResult = null)
             {

@@ -270,14 +270,11 @@ namespace Raven.Database.Actions
                     var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
-                    if (timeout != null)
-                        timeout.Pause();
-                    using (Database.DocumentLock.Lock())
+	                timeout?.Pause();
+	                using (Database.DocumentLock.Lock())
                     {
-                        if (timeout != null)
-                            timeout.Resume();
-
-                        TransactionalStorage.Batch(accessor =>
+	                    timeout?.Resume();	                    
+	                    TransactionalStorage.Batch(accessor =>
                         {
                             var inserts = 0;
                             

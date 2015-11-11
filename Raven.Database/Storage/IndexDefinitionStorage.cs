@@ -6,18 +6,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Lucene.Net.Analysis.Standard;
-using Lucene.Net.Documents;
-using Microsoft.Isam.Esent.Interop;
-using Mono.CSharp;
-using Mono.CSharp.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Indexing.IndexMerging;
@@ -27,10 +20,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Database.Indexing;
 
 namespace Raven.Database.Storage
 {
@@ -644,12 +635,13 @@ public bool Contains(string indexName)
 
             var sb = new StringBuilder();
 
-            foreach (var index in indexNameToId)
+	        var indexNamesToId = indexNameToId.ToArray();
+            foreach (var index in indexNamesToId)
             {
-                sb.Append(string.Format("{0} - {1}{2}", index.Value, index.Key, Environment.NewLine));
+                sb.Append($"{index.Value} - {index.Key}{Environment.NewLine}");
             }
 
-            File.WriteAllText(System.IO.Path.Combine(path, "indexes.txt"), sb.ToString());
+            File.WriteAllText(Path.Combine(path, "indexes.txt"), sb.ToString());
         }
 
         private void UpdateTransformerMappingFile()
@@ -661,10 +653,10 @@ public bool Contains(string indexName)
 
             foreach (var transform in transformNameToId)
             {
-                sb.Append(string.Format("{0} - {1}{2}", transform.Value, transform.Key, Environment.NewLine));
+                sb.Append($"{transform.Value} - {transform.Key}{Environment.NewLine}");
             }
 
-            File.WriteAllText(System.IO.Path.Combine(path, "transformers.txt"), sb.ToString());
+            File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
         }
 
         public void UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(TransformerDefinition definition)

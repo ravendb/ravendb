@@ -274,7 +274,9 @@
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
     <Compile Include="Counters\Controllers\BaseAdminCountersApiController.cs" />
+    <Compile Include="Counters\Controllers\ClusterAwareCountersApiController.cs" />
     <Compile Include="Counters\Controllers\CountersReplicationTopologyController.cs" />
+    <Compile Include="Counters\Controllers\CounterStreamsController.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopologyNode.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopology.cs" />
     <Compile Include="Counters\Replication\CountersReplicationTopologyDiscoverer.cs" />

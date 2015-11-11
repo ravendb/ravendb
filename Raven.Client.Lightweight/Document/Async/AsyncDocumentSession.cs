@@ -475,7 +475,7 @@ namespace Raven.Client.Document.Async
         public class QueryYieldStream<T> : YieldStream<T>
         {
             private readonly QueryOperation queryOperation;
-            private IAsyncDocumentQuery<T> query;
+            private readonly IAsyncDocumentQuery<T> query;
 
             public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
                 : base(parent, enumerator, token)

@@ -234,7 +234,7 @@ namespace Raven.Database.Actions
         private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
         {
             if (name == null)
-                throw new ArgumentNullException("name");
+                throw new ArgumentNullException(nameof(name));
 
             name = name.Trim();
             IsIndexNameValid(name);
