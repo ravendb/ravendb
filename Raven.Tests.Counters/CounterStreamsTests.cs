@@ -21,7 +21,7 @@ namespace Raven.Tests.Counters
 				await store.IncrementAsync("g1", "c2");
 				await store.IncrementAsync("g2", "c1");
 
-				using (var enumerator = await store.Advanced.Stream.CounterSummaries("g1"))
+				using (var enumerator = await store.Stream.CounterSummaries("g1"))
 				{
 					var summaries = new List<CounterSummary>();
 					while (await enumerator.MoveNextAsync())
@@ -32,7 +32,7 @@ namespace Raven.Tests.Counters
 					Assert.True(summaries.Any(x => x.CounterName == "c2" && x.GroupName == "g1" && x.Total == 2));
 				}
 
-				using (var enumerator = await store.Advanced.Stream.CounterSummaries("g2"))
+				using (var enumerator = await store.Stream.CounterSummaries("g2"))
 				{
 					var summaries = new List<CounterSummary>();
 					while (await enumerator.MoveNextAsync())

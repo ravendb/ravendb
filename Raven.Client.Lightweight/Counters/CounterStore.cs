@@ -39,6 +39,7 @@ namespace Raven.Client.Counters
             Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
             Advanced = new CounterStoreAdvancedOperations(this);
             Admin = new CounterStoreAdminOperations(this);
+			Stream = new CounterStreams(this);
             batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
             isInitialized = false;
         }
@@ -135,8 +136,10 @@ namespace Raven.Client.Counters
         public CounterStoreAdvancedOperations Advanced { get; private set; }
 
         public CounterStoreAdminOperations Admin { get; private set; }
-        
-        private HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
+
+		public CounterStreams Stream { get; private set; }
+
+		private HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
         {
             return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, 
                 requestUriString, 
