@@ -1647,7 +1647,11 @@ namespace Raven.Client.Connection.Async
                             {
                                 throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
                             },
+#if !DNXCORE50
                             Size = int.Parse(request.ResponseHeaders["Content-Length"]),
+#else
+                            Size = int.Parse(request.ResponseHeaders["Raven-Content-Length"]),
+#endif
                             Etag = request.ResponseHeaders.GetEtagHeader(),
                             Metadata = request.ResponseHeaders.FilterHeadersAttachment()
                         };

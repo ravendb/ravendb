@@ -141,6 +141,7 @@
     <Compile Include="Indexing\MultiMap.cs" />
     <Compile Include="Querying\Intersection.cs" />
     <Compile Include="Querying\Searching.cs" />
+    <Compile Include="Querying\StaticIndexes.cs" />
     <Compile Include="RavenGCTests.cs" />
     <Compile Include="Replication\ManualConflictResolution.cs" />
     <Compile Include="ScriptedPatching\ScriptedPatchTests.cs" />

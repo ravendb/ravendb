@@ -57,7 +57,7 @@ namespace Raven.Client.Connection.Implementation
         // avoid the potential for clearing the cache from a cached item
         internal CachedRequest CachedRequestDetails;
         private readonly HttpJsonRequestFactory factory;
-        private readonly Func<HttpMessageHandler> recreateHandler; 
+        private readonly Func<HttpMessageHandler> recreateHandler;
         private readonly IHoldProfilingInformation owner;
         private readonly Convention conventions;
         private readonly bool disabledAuthRetries;
@@ -68,13 +68,13 @@ namespace Raven.Client.Connection.Implementation
         private Stream postedStream;
         private bool writeCalled;
         public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly().GetName().Version.ToString();
-        
+
         private string primaryUrl;
 
         private string operationUrl;
 
         public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-        
+
         /// <summary>
         /// Gets or sets the response headers.
         /// </summary>
@@ -90,7 +90,7 @@ namespace Raven.Client.Connection.Implementation
 
             Url = requestParams.Url;
             Method = requestParams.Method;
-            
+
 
             if (requestParams.Timeout.HasValue)
             {
@@ -127,19 +127,19 @@ namespace Raven.Client.Connection.Implementation
 
                             credentialsToUse = credentialCache;
                         }
-                        else
-                {
+            else
+            {
                             credentialsToUse = _credentials.Credentials;
                 }
                     }      
 
                     var handler = new WebRequestHandler
-                    {
+                {
                         UseDefaultCredentials = useDefaultCredentials,
                         Credentials = credentialsToUse
-                    };
+                };
                     return handler;
-                }
+            }
             );
 
             httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
@@ -191,14 +191,14 @@ namespace Raven.Client.Connection.Implementation
                 });
                 return cachedResult;
             }
-            
+
             if (writeCalled)
                 return await ReadJsonInternalAsync().ConfigureAwait(false);
 
             var result = await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)).ConfigureAwait(false);
             if (result != null)
                 return result;
-            return await ReadJsonInternalAsync().ConfigureAwait(false); 
+            return await ReadJsonInternalAsync().ConfigureAwait(false);
         }
 
         private Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
@@ -245,8 +245,8 @@ namespace Raven.Client.Connection.Implementation
                 {
                     throw new ServerVersionNotSuppportedException(string.Format("Server version {0} is not supported. Use server with build >= {1}", serverBuildString, MinimumServerVersion));
                 }
-            } 
-           
+            }
+
         }
 
         private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
@@ -315,7 +315,7 @@ namespace Raven.Client.Connection.Implementation
 
         private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
         {
-            if (Response.IsSuccessStatusCode) 
+            if (Response.IsSuccessStatusCode)
                 return null;
             if (Response.StatusCode == HttpStatusCode.Unauthorized ||
                 Response.StatusCode == HttpStatusCode.NotFound ||
@@ -689,7 +689,7 @@ namespace Raven.Client.Connection.Implementation
             }).ConfigureAwait(false);
         }
 
-        public Task WriteWithObjectAsync<T>(IEnumerable<T> data) 
+        public Task WriteWithObjectAsync<T>(IEnumerable<T> data)
         {
             return WriteAsync(JsonExtensions.ToJArray(data));
         }
@@ -699,15 +699,15 @@ namespace Raven.Client.Connection.Implementation
             if (data is IEnumerable)
                 throw new ArgumentException("The object implements IEnumerable. This method cannot handle it. Give the type system some hint with the 'as IEnumerable' statement to help the compiler to select the correct overload.");
 
-            return WriteAsync(JsonExtensions.ToJObject(data));           
+            return WriteAsync(JsonExtensions.ToJObject(data));
         }
 
         public Task WriteAsync(RavenJToken tokenToWrite)
         {
             writeCalled = true;
 
-            return SendRequestInternal(() => 
-            {                    
+            return SendRequestInternal(() =>
+            {
                 HttpContent content = new JsonContent(tokenToWrite);
                 if (!factory.DisableRequestCompression)
                     content = new CompressedContent(content, "gzip");
@@ -763,7 +763,7 @@ namespace Raven.Client.Connection.Implementation
                 return request;
             });
         }
-        
+
         public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
         {
             return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
@@ -825,7 +825,7 @@ namespace Raven.Client.Connection.Implementation
                 }
 
                 return Response;
-            }).ConfigureAwait(false);		
+            }).ConfigureAwait(false);
         }
 
         private class PushContent : HttpContent
@@ -872,16 +872,16 @@ namespace Raven.Client.Connection.Implementation
                         AddHeader(item.Key, item.Value.ToString(Formatting.None));
                         break;
                     case JTokenType.Date:
-                            var rfc1123 = GetDateString(item.Value, "r");
-                            var iso8601 = GetDateString(item.Value, "o");
-                            AddHeader(item.Key, rfc1123);
-                            if (item.Key.StartsWith("Raven-") == false)
-                                AddHeader("Raven-" + item.Key, iso8601);
+                        var rfc1123 = GetDateString(item.Value, "r");
+                        var iso8601 = GetDateString(item.Value, "o");
+                        AddHeader(item.Key, rfc1123);
+                        if (item.Key.StartsWith("Raven-") == false)
+                            AddHeader("Raven-" + item.Key, iso8601);
                         break;
                     default:
                         AddHeader(item.Key, item.Value.Value<string>());
                         break;
-                }                
+                }
             }
         }
 
