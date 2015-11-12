@@ -26,14 +26,15 @@ namespace Voron.Data.Tables
 
         public class SchemaIndexDef
         {
-            public T[] IndexedFields;
+            public Type[] IndexedFieldsTypes;
+
             public int Size;
             public bool IsFixedSize;
             public bool MultiValue;
             public Slice Name;
 
             public bool CanUseFixedSizeTree =>
-                IndexedFields.Length == 1 &&
+                IndexedFieldsTypes.Length == 1 &&
                 IsFixedSize &&
                 Size == sizeof(long) &&
                 MultiValue == false;
@@ -41,35 +42,13 @@ namespace Voron.Data.Tables
 
         public string Name { get; }
 
-        //public StructureSchema<T> StructureSchema => _schema;
-
-
-        //private readonly StructureSchema<T> _schema = new StructureSchema<T>();
         private SchemaIndexDef _pk;
         private readonly Dictionary<string, SchemaIndexDef> _indexes = new Dictionary<string, SchemaIndexDef>();
-
 
         public TableSchema(string name)
         {
             Name = name;
         }
-
-        //public TableSchema<T> DefineField<TValue>(T field)
-        //{
-        //    _schema.Add<TValue>(field);
-        //    return this;
-        //}
-
-        //public TableSchema<T> DefineIndex(string name, params T[] fieldsToIndex)
-        //{
-        //    return DefineIndex(name, false, fieldsToIndex);
-        //}
-
-        //public TableSchema<T> DefineIndex(string name, bool multipleValue, params T[] fieldsToIndex)
-        //{
-        //    _indexes.Add(name, CreateSchemaIndexDef(name, multipleValue, fieldsToIndex));
-        //    return this;
-        //}
 
         private bool IsFixedSizeType<X>()
         {
@@ -96,29 +75,76 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        private int GetTypeSize<W1>()
+        private int GetExpectedTypeSize<X>()
         {
-            throw new NotImplementedException();
+            switch (typeof(X).GetBondDataType())
+            {
+                case BondDataType.BT_LIST:
+                case BondDataType.BT_MAP:
+                case BondDataType.BT_SET:
+                case BondDataType.BT_STOP:
+                case BondDataType.BT_STOP_BASE:
+                case BondDataType.BT_STRING:
+                case BondDataType.BT_WSTRING:
+                case BondDataType.BT_STRUCT:
+                case BondDataType.BT_UNAVAILABLE:
+                    return -1;
+                case BondDataType.BT_BOOL:
+                case BondDataType.BT_INT8:
+                case BondDataType.BT_UINT8:
+                    return 1;
+                case BondDataType.BT_INT16:
+                case BondDataType.BT_UINT16:
+                    return 2;
+                case BondDataType.BT_FLOAT:
+                case BondDataType.BT_INT32:
+                case BondDataType.BT_UINT32:
+                    return 4;                    
+                case BondDataType.BT_DOUBLE:
+                case BondDataType.BT_INT64:
+                case BondDataType.BT_UINT64:
+                    return 8;
+            }
+
+            return -1;
         }
 
         public TableSchema<T> DefineIndex<W1>(string name, Expression<Func<T, W1>> first, bool multipleValue = false)
         {
-            throw new NotImplementedException();
+            var schemaIndexDef = new SchemaIndexDef
+            {
+                IndexedFieldsTypes = new[] { typeof(W1) },
+                IsFixedSize = IsFixedSizeType<W1>(),
+                Size = GetExpectedTypeSize<W1>(),
+                MultiValue = multipleValue,
+                Name = name
+            };
 
-            //var schemaIndexDef = new SchemaIndexDef
-            //{
-            //    IndexedFields = fieldsToIndex,
-            //    IsFixedSize = IsFixedSizeType<W1>(),
-            //    Size = GetTypeSize<W1>(),
-            //    MultiValue = multipleValue,
-            //    Name = name
-            //};
-            //return schemaIndexDef;
+            this._indexes[name] = schemaIndexDef;
+
+            return this;
         }
 
         public TableSchema<T> DefineIndex<W1, W2>(string name, Func<T, W1> first, Func<T, W2> second, bool multipleValue = false)
         {
-            throw new NotImplementedException();
+            int size = -1;
+            int sizeW1 = GetExpectedTypeSize<W1>();
+            int sizeW2 = GetExpectedTypeSize<W1>();
+            if (sizeW1 != -1 && sizeW2 != -1)
+                size = sizeW1 + sizeW2;
+
+            var schemaIndexDef = new SchemaIndexDef
+            {
+                IndexedFieldsTypes = new[] { typeof(W1) },
+                IsFixedSize = false,
+                Size = size,
+                MultiValue = multipleValue,
+                Name = name
+            };
+
+            this._indexes[name] = schemaIndexDef;
+
+            return this;
         }
 
 
@@ -156,8 +182,15 @@ namespace Voron.Data.Tables
 
         public TableSchema<T> DefineKey<W1>(Func<T, W1> first)
         {
-            //_pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
-            throw new NotImplementedException();
+            _pk = new SchemaIndexDef
+            {
+                IndexedFieldsTypes = new[] { typeof(W1) },
+                IsFixedSize = IsFixedSizeType<W1>(),
+                Size = GetExpectedTypeSize<W1>(),
+                MultiValue = false,
+                Name = "PK"
+            };
+
             return this;
         }
 

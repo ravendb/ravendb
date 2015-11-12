@@ -25,6 +25,7 @@ namespace Voron.Tests.Tables
             //    .DefineKey(DocumentsFields.Key);
 
             _docsSchema = new TableSchema<Documents>("docs")                
+            
                 .DefineIndex("By/Etag", x => x.Etag)
                 .DefineIndex("By/Etag&Collection", x => x.Collection, x => x.Etag)
                 .DefineKey(x => x.Key);

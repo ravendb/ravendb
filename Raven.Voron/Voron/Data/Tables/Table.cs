@@ -301,22 +301,22 @@ namespace Voron.Data.Tables
         //    InsertIndexValuesFor(id, new StructureReader<T>(value, _schema.StructureSchema));
         //}
 
-        private void InsertIndexValuesFor(long id, StructureReader<T> reader)
-        {
-            var isAsBytes = EndianBitConverter.Little.GetBytes(id);
+        //private void InsertIndexValuesFor(long id, StructureReader<T> reader)
+        //{
+        //    var isAsBytes = EndianBitConverter.Little.GetBytes(id);
 
-            var pkval = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
-            var pkIndex = GetTree(_schema.Key.Name);
-            pkIndex.Add(pkval, isAsBytes, 0);
+        //    var pkval = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
+        //    var pkIndex = GetTree(_schema.Key.Name);
+        //    pkIndex.Add(pkval, isAsBytes, 0);
 
-            foreach (var indexDef in _schema.Indexes.Values)
-            {
-                var indexTree = GetTree(indexDef.Name);
-                var val = GetSliceFromStructure(reader, indexDef.IndexedFields);
-                var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
-                index.Add(id);
-            }
-        }
+        //    foreach (var indexDef in _schema.Indexes.Values)
+        //    {
+        //        var indexTree = GetTree(indexDef.Name);
+        //        var val = GetSliceFromStructure(reader, indexDef.IndexedFields);
+        //        var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
+        //        index.Add(id);
+        //    }
+        //}
 
         private long AllocateFromSmallActiveSection(int size)
         {
@@ -353,24 +353,13 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        private Slice GetSliceFromStructure(StructureReader<T> reader, T[] fieldsToIndex)
+        private Slice GetSliceFromStructure(T reader, Func<T, byte[]> keyFactory)
         {
-            var pkSize = 0;
-            foreach (var indexedField in fieldsToIndex)
-            {
-                pkSize += reader.GetSize(indexedField);
-            }
-            var key = new byte[pkSize];
-            var slice = new Slice(key);
-            fixed (byte* pKey = key)
-            {
-                var written = 0;
-                foreach (var indexedField in fieldsToIndex)
-                {
-                    written += reader.CopyToIndex(indexedField, pKey + written);
-                }
-            }
-            return slice;
+            // Construct an array of size sum of sizeof(Fields) to index.
+
+            // Copy to the array the value of the concatenated fields of T[]
+
+            throw new NotImplementedException();
         }
 
         public long NumberOfEntries { get; private set; }
