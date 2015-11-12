@@ -125,7 +125,9 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			return commands.GetFacets( index, query, facetSetupDoc, start, pageSize );
+			if (facetSetupDoc != null)
+				return commands.GetFacets( index, query, facetSetupDoc, start, pageSize );
+			return commands.GetFacets(index, query, facets.ToList(), start, pageSize);
 		}
 
 		public void HandleEmbeddedResponse(object result)

@@ -1793,12 +1793,11 @@ If you really want to do in memory filtering on the data returned from the query
 				if (indexName == "dynamic" || indexName.StartsWith("dynamic/"))
 					throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
 
-				return new SpatialIndexQuery
+				var spatial = new SpatialIndexQuery
 				{
 					GroupBy = groupByFields,
 					AggregationOperation = aggregationOp,
 					Query = query,
-					PageSize = pageSize ?? 128,
 					Start = start,
 					Cutoff = cutoff,
 					CutoffEtag = cutoffEtag,
@@ -1814,11 +1813,15 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlightedFields = highlightedFields.Select(x => x.Clone()).ToArray(),
 					HighlighterPreTags = highlighterPreTags.ToArray(),
 					HighlighterPostTags = highlighterPostTags.ToArray(),
-                    ResultsTransformer = resultsTransformer,
-                    AllowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                    QueryInputs  = queryInputs,
+					ResultsTransformer = resultsTransformer,
+					AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
+						allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+					QueryInputs = queryInputs,
 					DisableCaching = disableCaching
 				};
+				if (pageSize != null)
+					spatial.PageSize = pageSize.Value;
+				return spatial;
 			}
 
 			var indexQuery = new IndexQuery
