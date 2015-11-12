@@ -246,11 +246,8 @@ namespace Raven.Database.Indexing
                                       TryGetDefaultPrefetcher(groupIndex.LastIndexedEtag, usedPrefetchers) ??
                                       GetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers);
 
-            groupIndex.PrefetchingBehavior.AdditionalInfo = 
-                string.Format("Default prefetcher: {0}. For indexing groupIndex: [Indexes: {1}, LastIndexedEtag: {2}]",
-                    groupIndex.PrefetchingBehavior == defaultPrefetchingBehavior, 
-                    string.Join(", ", groupIndex.Indexes.Select(y => y.Index.PublicName)), 
-                    groupIndex.LastIndexedEtag);
+            groupIndex.PrefetchingBehavior.Indexes = groupIndex.Indexes;
+            groupIndex.PrefetchingBehavior.LastIndexedEtag = groupIndex.LastIndexedEtag;
         }
 
         private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
