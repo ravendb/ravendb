@@ -1,5 +1,5 @@
 ﻿$version = "1.0.0-rc1-16048"
-$architecture = "x86"
+$architecture = "x64"
 $toolsDir = "Tools\DNX"
 $dnvm = "$toolsDir\dnvm.cmd"
 $runtimeDir = "$env:USERPROFILE\.dnx\runtimes\dnx-coreclr-win-$architecture.$version\bin";
@@ -10,6 +10,10 @@ $dnx = "$runtimeDir\dnx.exe"
 
 &"$dnvm" use $version
 
-&"$dnu" restore
+&"$dnu" restore --quiet --parallel Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight Raven.Tests.Core
 
-&"$dnx" Raven.Tests.Core test
+Push-Location "Raven.Tests.Core"
+
+&"$dnx" test
+
+Pop-Location
