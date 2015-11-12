@@ -225,6 +225,7 @@ namespace Raven.Client
         /// </summary>
         public bool UseFipsEncryptionAlgorithms { get; set; }
 
+#if !DNXCORE50
         ///<summary>
         /// Whatever or not we will automatically enlist in distributed transactions
         ///</summary>
@@ -233,6 +234,8 @@ namespace Raven.Client
             get { return Conventions.EnlistInDistributedTransactions; }
             set { Conventions.EnlistInDistributedTransactions = value; }
         }
+#endif
+
         /// <summary>
         /// The resource manager id for the document store.
         /// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set

@@ -208,7 +208,9 @@ namespace Raven.Client.Document
             if (options.FailoverServers != null)
                 FailoverServers = options.FailoverServers;
 
+#if !DNXCORE50
             EnlistInDistributedTransactions = options.EnlistInDistributedTransactions;
+#endif
         }
 
         /// <summary>
@@ -399,7 +401,7 @@ namespace Raven.Client.Document
 
                 initialized = true;
 
-#if !MONO
+#if !(MONO || DNXCORE50)
                 RecoverPendingTransactions();
 #endif
 
@@ -447,16 +449,16 @@ namespace Raven.Client.Document
             return _dtcSupport.GetOrAdd(dbName, db => DatabaseCommands.ForDatabase(db).GetStatistics().SupportsDtc);
         }
 
+#if !DNXCORE50
         private void RecoverPendingTransactions()
         {
-#if !DNXCORE50
             if (EnlistInDistributedTransactions == false)
                 return;
 
             var pendingTransactionRecovery = new PendingTransactionRecovery(this);
             pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
-#endif
         }
+#endif
 
         /// <summary>
         /// validate the configuration for the document store

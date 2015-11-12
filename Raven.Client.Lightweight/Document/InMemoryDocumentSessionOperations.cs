@@ -85,7 +85,10 @@ namespace Raven.Client.Document
             get { return externalState ?? (externalState = new Dictionary<string, object>()); }
         }
 
+#if !DNXCORE50
         private bool hasEnlisted;
+#endif
+
         [ThreadStatic]
         private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
 
@@ -965,8 +968,10 @@ more responsive application.
             };
             deferedCommands.Clear();
 
+#if !DNXCORE50
             if (documentStore.EnlistInDistributedTransactions)
                 TryEnlistInAmbientTransaction();
+#endif
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
@@ -1087,9 +1092,10 @@ more responsive application.
                 deletedEntities.Clear();
         }
 
+#if !DNXCORE50
         protected virtual void TryEnlistInAmbientTransaction()
         {
-#if !DNXCORE50
+
             if (hasEnlisted || Transaction.Current == null)
                 return;
 
@@ -1122,8 +1128,8 @@ more responsive application.
                     Transaction.Current.EnlistDurable(ResourceManagerId, ravenClientEnlistment, EnlistmentOptions.None);
             }
             hasEnlisted = true;
-#endif
         }
+#endif
 
         /// <summary>
         /// Mark the entity as read only, change tracking won't apply 
@@ -1245,6 +1251,7 @@ more responsive application.
         {
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Commits the specified tx id.
         /// </summary>
@@ -1263,6 +1270,7 @@ more responsive application.
         {
             hasEnlisted = false;
         }
+#endif
 
         /// <summary>
         /// Metadata held about an entity by the session

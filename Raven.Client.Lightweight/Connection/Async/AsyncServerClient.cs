@@ -2273,6 +2273,7 @@ namespace Raven.Client.Connection.Async
             }
         }
 
+#if !DNXCORE50
         public Task CommitAsync(string txId, CancellationToken token = default (CancellationToken))
         {
             return ExecuteWithReplication("POST", operationMetadata => DirectCommit(txId, operationMetadata, token), token);
@@ -2323,6 +2324,7 @@ namespace Raven.Client.Connection.Async
                 await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
             }
         }
+#endif
 
         private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
         {

@@ -43,25 +43,30 @@ namespace Raven.Abstractions.Data
     {
         public RavenConnectionStringOptions()
         {
-#if (MONO || DNXCORE50)
-            EnlistInDistributedTransactions = false;
-#else
+#if !(MONO || DNXCORE50)
             EnlistInDistributedTransactions = true;
 #endif
         }
 
         public Guid ResourceManagerId { get; set; }
 
+#if !(MONO || DNXCORE50)
         public bool EnlistInDistributedTransactions { get; set; }
+#endif
 
         public string DefaultDatabase { get; set; }
-        
+
         public FailoverServers FailoverServers { get; set; }
 
         public override string ToString()
         {
             var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
-            return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
+#if !DNXCORE50
+            var enlistInDistributedTransactions = string.Format("EnlistInDistributedTransactions: {0}, ", EnlistInDistributedTransactions);
+#else
+            var enlistInDistributedTransactions = string.Empty;
+#endif
+            return string.Format("Url: {4}, User: {0}, {1}DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, enlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
         }
     }
 
@@ -175,16 +180,17 @@ namespace Raven.Abstractions.Data
             if (options == null)
                 return false;
 
-            switch( key )
+            switch (key)
             {
                 case "database":
                 case "defaultdatabase":
                     options.DefaultDatabase = value;
                     break;
-
+#if !DNXCORE50
                case "enlist":
                     options.EnlistInDistributedTransactions = bool.Parse(value);
                     break;
+#endif
 
                 case "resourcemanagerid":
                     options.ResourceManagerId = new Guid(value);
@@ -225,7 +231,7 @@ namespace Raven.Abstractions.Data
             if (options == null)
                 return false;
 
-            switch( key )
+            switch (key)
             {
                 case "memory":
                     bool result;
@@ -293,12 +299,12 @@ namespace Raven.Abstractions.Data
 
                 // I am sure there are more elegant solutions than this one. But it makes the job done. 
                 // Clear separation and same parsing logic as long as inheritance tree is well constructed and the calls are topologically ordered.
-                bool processed = ProcessConnectionStringOption( ConnectionStringOptions, networkCredential, key, value );
-                processed |= ProcessConnectionStringOption( ConnectionStringOptions as RavenConnectionStringOptions, key, value );
-                processed |= ProcessConnectionStringOption( ConnectionStringOptions as EmbeddedRavenConnectionStringOptions, key, value );
-                processed |= ProcessConnectionStringOption( ConnectionStringOptions as FilesConnectionStringOptions, key, value );
+                bool processed = ProcessConnectionStringOption(ConnectionStringOptions, networkCredential, key, value);
+                processed |= ProcessConnectionStringOption(ConnectionStringOptions as RavenConnectionStringOptions, key, value);
+                processed |= ProcessConnectionStringOption(ConnectionStringOptions as EmbeddedRavenConnectionStringOptions, key, value);
+                processed |= ProcessConnectionStringOption(ConnectionStringOptions as FilesConnectionStringOptions, key, value);
 
-                if ( ! processed )
+                if (!processed)
                     throw new ArgumentException(string.Format("Connection string name: '{0}' could not be parsed, unknown option: '{1}'", connectionStringName, key));
             }
 
