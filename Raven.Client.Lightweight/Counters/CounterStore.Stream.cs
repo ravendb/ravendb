@@ -37,7 +37,7 @@ namespace Raven.Client.Counters
 				{
 					return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, counterStoreName) =>
 					{
-						var requestUriString = $"{url}/cs/{counterStoreName}/streams/summaries?group={@group}&start={skip}&pageSize={take}&format=json";
+						var requestUriString = $"{url}/cs/{counterStoreName}/streams/summaries?group={@group}&skip={skip}&take={take}&format=json";
 						var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get);
 
 						var response = await request.ExecuteRawResponseAsync().WithCancellation(token).ConfigureAwait(false);

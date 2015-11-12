@@ -23,20 +23,31 @@ namespace Raven.Database.Counters.Controllers
 {
 	public class CounterStreamsController : ClusterAwareCountersApiController
 	{
+		[RavenRoute("cs/{counterStorageName}/streams/groups")]
+		[HttpGet]
+		public HttpResponseMessage StreamCounterGroups()
+		{
+			var start = GetStart();
+			var pageSize = GetPageSize(int.MaxValue);
+			throw new NotImplementedException();
+		}
+
 		[RavenRoute("cs/{counterStorageName}/streams/summaries")]
 		[HttpGet]
 		public HttpResponseMessage StreamCounterSummaries(string group)
 		{
-			var start = GetStart();
-			var pageSize = GetPageSize(int.MaxValue);
+			int skip;
+			int take;
+			HttpResponseMessage httpResponseMessage;
+			if (!GetAndValidateSkipAndTake(out skip, out take, out httpResponseMessage)) 
+				return httpResponseMessage;
+
 			var writer = GetQueryStringValue("format");			
 
 			HttpResponseMessage errorResponse;
 			if (!ValidateStreamFormat(writer, out errorResponse))
 				return errorResponse;
 
-			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
-				pageSize = int.MaxValue;
 
 			Func<Stream,IOutputWriter> getWriter = stream =>
 				writer.Equals("json", StringComparison.InvariantCultureIgnoreCase) ?
@@ -46,18 +57,51 @@ namespace Raven.Database.Counters.Controllers
 			var msg = GetEmptyMessage();
 						
 			return !string.IsNullOrWhiteSpace(@group) ? 
-				GetSummariesPerGroupStreamResponse(@group, start, pageSize, msg, getWriter) : 
-				GetSummariesForAllGroupsStreamResponse(start, pageSize, msg, getWriter);
+				GetSummariesPerGroupStreamResponse(@group, skip, take, msg, getWriter) : 
+				GetSummariesForAllGroupsStreamResponse(skip, take, msg, getWriter);
 		}
 
-		private HttpResponseMessage GetSummariesForAllGroupsStreamResponse(int start, int pageSize, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
+		private bool GetAndValidateSkipAndTake(out int skip,out int take, out HttpResponseMessage httpResponseMessage)
+		{
+			httpResponseMessage = null;
+			take = 0;
+			var skipString = GetQueryStringValue("skip");
+			skip = 0;
+			if (string.IsNullOrEmpty(skipString) || !int.TryParse(skipString, out skip))
+			{
+				httpResponseMessage = GetMessageWithObject(new
+				{
+					Message = "Failed to parse skip parameter - it should be of type 'int'."
+				}, HttpStatusCode.BadRequest);
+				return false;
+			}
+			skip = Math.Max(0, skip);
+
+			var takeString = GetQueryStringValue("take");
+
+			if (string.IsNullOrEmpty(takeString))
+				take = int.MaxValue;
+			else if (!int.TryParse(takeString, out take))
+			{
+				httpResponseMessage = GetMessageWithObject(new
+				{
+					Message = "Failed to parse take parameter - it should be of type 'int'."
+				}, HttpStatusCode.BadRequest);
+				return false;
+			}
+
+			take = Math.Max(0, take);
+			return true;
+		}
+
+		private HttpResponseMessage GetSummariesForAllGroupsStreamResponse(int skip, int take, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
 		{
 			CounterStorage.MetricsCounters.ClientRequests.Mark();
 			try
 			{
 				var reader = CounterStorage.CreateReader();
 				var groups = reader.GetCounterGroups(0, int.MaxValue); //since its enumerable, this is ok				
-				var counters = groups.SelectMany(@group => reader.GetCounterSummariesByGroup(@group.Name, start, pageSize));
+				var counters = groups.SelectMany(@group => reader.GetCounterSummariesByGroup(@group.Name, skip, take));
 				msg.Content =
 					new StreamContent(CountersLandlord,
 						getWriter, counters.Select(RavenJObject.FromObject),
@@ -75,14 +119,14 @@ namespace Raven.Database.Counters.Controllers
 			}
 		}
 
-		private HttpResponseMessage GetSummariesPerGroupStreamResponse(string @group, int start, int pageSize, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
+		private HttpResponseMessage GetSummariesPerGroupStreamResponse(string @group, int skip, int take, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
 		{
 			CounterStorage.MetricsCounters.ClientRequests.Mark();
 			try
 			{
 				var reader = CounterStorage.CreateReader();
 				@group = @group ?? string.Empty;
-				var counters = reader.GetCounterSummariesByGroup(@group, start, pageSize);
+				var counters = reader.GetCounterSummariesByGroup(@group, skip, take);
 				msg.Content =
 					new StreamContent(CountersLandlord,
 						getWriter, counters.Select(RavenJObject.FromObject),
