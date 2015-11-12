@@ -1823,7 +1823,7 @@ namespace Raven.Client.Connection.Async
                 }
                 catch (Exception)
                 {
-                    
+
 
                 try
                 {

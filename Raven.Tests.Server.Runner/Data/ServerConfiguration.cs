@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
 
 using Raven.Database.Config;
 
@@ -29,16 +31,14 @@ namespace Raven.Tests.Server.Runner.Data
 
         public bool HasApiKey { get { return !string.IsNullOrEmpty(ApiKeyName) && !string.IsNullOrEmpty(ApiKeySecret); } }
 
-        public RavenConfiguration ConvertToRavenConfiguration()
+        public InMemoryRavenConfiguration ConvertToRavenConfiguration()
         {
-            var configuration = new RavenConfiguration()
+            var configuration = new InMemoryRavenConfiguration();
+
+            foreach (var p in ConfigurationManager.AppSettings.AllKeys.Select(k => Tuple.Create(k, ConfigurationManager.AppSettings[k])))
                                 {
-                                    Core =
-                                    {
-                                        RunInMemory = RunInMemory,
-                                        Port = Port,
-                                    },
-                                };
+                configuration.Settings.Add(p.Item1, p.Item2);
+            }
 
             foreach (var key in Settings.Keys)
             {
@@ -46,6 +46,10 @@ namespace Raven.Tests.Server.Runner.Data
             }
 
             configuration.Initialize();
+
+            configuration.Port = Port;
+            configuration.RunInMemory = RunInMemory;
+            configuration.DefaultStorageTypeName = DefaultStorageTypeName;
 
             return configuration;
         }

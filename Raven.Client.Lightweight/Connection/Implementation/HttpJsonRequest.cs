@@ -140,9 +140,9 @@ namespace Raven.Client.Connection.Implementation
                             credentialsToUse = credentialCache;
                         }
                         else
-                        {
+                {
                             credentialsToUse = _credentials.Credentials;
-                        }
+                }
                     }      
 
                     var handler = new WebRequestHandler
