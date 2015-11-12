@@ -564,10 +564,13 @@ namespace Raven.Database.Counters
                 {
                     if (!it.Seek(Slice.BeforeAllKeys))
                         yield break;
-                    if(!string.IsNullOrEmpty(counterNamePrefix))
-                        it.RequiredPrefix = counterNamePrefix;
+	                if (!string.IsNullOrEmpty(counterNamePrefix))
+	                {
+		                it.RequiredPrefix = counterNamePrefix;
+		                it.Seek(it.RequiredPrefix);
+	                }
 
-                    var taken = 0;
+	                var taken = 0;
                     var skipped = 0;
                     do
                     {

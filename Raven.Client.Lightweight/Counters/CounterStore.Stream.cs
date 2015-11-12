@@ -52,12 +52,33 @@ namespace Raven.Client.Counters
 				}
 			}
 
-			public async Task<IReadOnlyList<CounterSummary>> CounterSummariesByPrefix(string groupName, string counterNamePrefix = null, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
+			public async Task<IAsyncEnumerator<CounterSummary>> CounterSummariesByPrefix(string @group, string counterNamePrefix, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
 			{
+				if (string.IsNullOrWhiteSpace(@group))
+					throw new ArgumentNullException(nameof(@group));
+
 				parent.AssertInitialized();
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync().WithCancellation(token).ConfigureAwait(false);
 
-				throw new NotImplementedException();
+				try
+				{
+					return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, counterStoreName) =>
+					{
+						var requestUriString = $"{url}/cs/{counterStoreName}/streams/summaries?group={@group}&skip={skip}" +
+						                       $"&take={take}&format=json&counterNamePrefix={counterNamePrefix}";
+						var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get);
+
+						var response = await request.ExecuteRawResponseAsync().WithCancellation(token).ConfigureAwait(false);
+						response.EnsureSuccessStatusCode();
+						var stream = await response.GetResponseStreamWithHttpDecompression().WithCancellation(token).ConfigureAwait(false);
+
+						return new CounterSummaryEnumerator(request, stream);
+					}, token).ConfigureAwait(false);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Failed to stream counter summaries. See inner exception for details", e);
+				}
 			}
 
 			public async Task<IAsyncEnumerator<CounterSummary>> CounterSummaries(string @group = null, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))

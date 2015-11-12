@@ -55,7 +55,7 @@ namespace Raven.Database.Counters.Controllers
 
 		[RavenRoute("cs/{counterStorageName}/streams/summaries")]
 		[HttpGet]
-		public HttpResponseMessage StreamCounterSummaries(string group)
+		public HttpResponseMessage StreamCounterSummaries(string group, string counterNamePrefix = null)
 		{
 			int skip;
 			int take;
@@ -68,10 +68,15 @@ namespace Raven.Database.Counters.Controllers
 				return errorResponse;
 
 			var response = GetEmptyMessage();
-						
-			return !string.IsNullOrWhiteSpace(@group) ? 
-				GetSummariesPerGroupStreamResponse(@group, skip, take, response, getWriter) : 
-				GetSummariesForAllGroupsStreamResponse(skip, take, response, getWriter);
+
+			if (!string.IsNullOrWhiteSpace(@group))
+			{
+				return string.IsNullOrWhiteSpace(counterNamePrefix) ? 
+					GetSummariesPerGroupStreamResponse(@group, skip, take, response, getWriter) : 
+					GetSummariesPerGroupByPrefixStreamResponse(@group,counterNamePrefix, skip, take, response, getWriter);
+			}
+
+			return GetSummariesForAllGroupsStreamResponse(skip, take, response, getWriter);
 		}
 
 		private bool GetRelevantWriterFactory(out Func<Stream, IOutputWriter> getWriter, out HttpResponseMessage errorResponse)
@@ -127,7 +132,7 @@ namespace Raven.Database.Counters.Controllers
 			CounterStorage.MetricsCounters.ClientRequests.Mark();
 			var reader = CounterStorage.CreateReader();
 			var groups = reader.GetCounterGroups(0, int.MaxValue); //since it is enumerable, this is not taking up alot of memory			
-			var counters = groups.SelectMany(@group => reader.GetCounterSummariesByGroup(@group.Name, skip, take));
+			var counters = groups.SelectMany(@group => reader.GetCounterSummariesByPrefix(@group.Name,null, skip, take));
 			response.Content =
 				new StreamContent(CountersLandlord,
 					getWriter, counters.Select(RavenJObject.FromObject),
@@ -145,11 +150,29 @@ namespace Raven.Database.Counters.Controllers
 			CounterStorage.MetricsCounters.ClientRequests.Mark();
 			var reader = CounterStorage.CreateReader();
 			@group = @group ?? string.Empty;
-			var counters = reader.GetCounterSummariesByGroup(@group, skip, take);
+			var counters = reader.GetCounterSummariesByPrefix(@group,null, skip, take);
 			response.Content =
 				new StreamContent(CountersLandlord,
 					getWriter, counters.Select(RavenJObject.FromObject),
 					mediaType => response.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"},
+					reader);
+
+			if (IsCsvDownloadRequest(InnerRequest))
+				response.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+
+			return response;
+		}
+
+		private HttpResponseMessage GetSummariesPerGroupByPrefixStreamResponse(string @group, string counterNamePrefix, int skip, int take, HttpResponseMessage response, Func<Stream, IOutputWriter> getWriter)
+		{
+			CounterStorage.MetricsCounters.ClientRequests.Mark();
+			var reader = CounterStorage.CreateReader();
+			@group = @group ?? string.Empty;
+			var counters = reader.GetCounterSummariesByPrefix(@group,counterNamePrefix, skip, take);
+			response.Content =
+				new StreamContent(CountersLandlord,
+					getWriter, counters.Select(RavenJObject.FromObject),
+					mediaType => response.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
 					reader);
 
 			if (IsCsvDownloadRequest(InnerRequest))
