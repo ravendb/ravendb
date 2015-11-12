@@ -11,8 +11,7 @@ namespace Raven.Client.Extensions
 {
     internal static class SecurityExtensions
     {
-        //TODO: this can be used in document store/counter stores/time series store
-        internal static void InitializeSecurity(Convention conventions, HttpJsonRequestFactory requestFactory, string serverUrl, ICredentials primaryCredentials)
+        internal static void InitializeSecurity(Convention conventions, HttpJsonRequestFactory requestFactory, string serverUrl)
         {
             if (conventions.HandleUnauthorizedResponseAsync != null)
                 return; // already setup by the user
@@ -27,7 +26,7 @@ namespace Raven.Client.Extensions
             {
                 if (credentials.ApiKey == null)
                 {
-                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, primaryCredentials);
+                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, credentials.Credentials);
                     return null;
                 }
 
