@@ -613,7 +613,7 @@ more responsive application.
             }
             includedDocumentsByKey.Remove(id);
             knownMissingIds.Add(id);
-            
+
             Defer(new DeleteCommandData { Key = id });
         }
 
@@ -916,6 +916,7 @@ more responsive application.
                 Entities = new List<object>(),
                 Commands = new List<ICommandData>(deferedCommands),
                 DeferredCommandsCount = deferedCommands.Count
+
             if (documentStore.EnlistInDistributedTransactions)
                 TryEnlistInAmbientTransaction();
 
@@ -1084,7 +1085,7 @@ more responsive application.
                 documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
                 return false;
             var changedData = changes != null ? new List<DocumentsChanges>() : null;
-            var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
+            var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false)
                 || (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
 
             var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
@@ -1369,7 +1370,7 @@ more responsive application.
                 conversionListener.BeforeConversionToEntity(null, y, null);
             }
             var instance = y.Deserialize(type, Conventions);
-            
+
             foreach (var conversionListener in theListeners.ConversionListeners)
             {
                 conversionListener.AfterConversionToEntity(null, y, null, instance);
