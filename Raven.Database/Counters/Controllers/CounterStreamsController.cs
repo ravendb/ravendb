@@ -27,9 +27,30 @@ namespace Raven.Database.Counters.Controllers
 		[HttpGet]
 		public HttpResponseMessage StreamCounterGroups()
 		{
-			var start = GetStart();
-			var pageSize = GetPageSize(int.MaxValue);
-			throw new NotImplementedException();
+			int skip;
+			int take;
+			HttpResponseMessage errorResponse;
+			if (!GetAndValidateSkipAndTake(out skip, out take, out errorResponse))
+				return errorResponse;
+
+			Func<Stream, IOutputWriter> getWriter;
+			if (!GetRelevantWriterFactory(out getWriter, out errorResponse))
+				return errorResponse;
+
+			var response = GetEmptyMessage();
+			CounterStorage.MetricsCounters.ClientRequests.Mark();
+			var reader = CounterStorage.CreateReader();
+			var groups = reader.GetCounterGroups(skip, take); //since its enumerable, this is ok				
+			response.Content =
+				new StreamContent(CountersLandlord,
+					getWriter, groups.Select(RavenJObject.FromObject),
+					mediaType => response.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"},
+					reader);
+
+			if (IsCsvDownloadRequest(InnerRequest))
+				response.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+
+			return response;
 		}
 
 		[RavenRoute("cs/{counterStorageName}/streams/summaries")]
@@ -38,27 +59,34 @@ namespace Raven.Database.Counters.Controllers
 		{
 			int skip;
 			int take;
-			HttpResponseMessage httpResponseMessage;
-			if (!GetAndValidateSkipAndTake(out skip, out take, out httpResponseMessage)) 
-				return httpResponseMessage;
-
-			var writer = GetQueryStringValue("format");			
-
 			HttpResponseMessage errorResponse;
-			if (!ValidateStreamFormat(writer, out errorResponse))
+			if (!GetAndValidateSkipAndTake(out skip, out take, out errorResponse)) 
 				return errorResponse;
 
+			Func<Stream, IOutputWriter> getWriter;
+			if (!GetRelevantWriterFactory(out getWriter, out errorResponse)) 
+				return errorResponse;
 
-			Func<Stream,IOutputWriter> getWriter = stream =>
-				writer.Equals("json", StringComparison.InvariantCultureIgnoreCase) ?
-					(IOutputWriter)new JsonOutputWriter(stream) :
-					new ExcelOutputWriter(stream);
-
-			var msg = GetEmptyMessage();
+			var response = GetEmptyMessage();
 						
 			return !string.IsNullOrWhiteSpace(@group) ? 
-				GetSummariesPerGroupStreamResponse(@group, skip, take, msg, getWriter) : 
-				GetSummariesForAllGroupsStreamResponse(skip, take, msg, getWriter);
+				GetSummariesPerGroupStreamResponse(@group, skip, take, response, getWriter) : 
+				GetSummariesForAllGroupsStreamResponse(skip, take, response, getWriter);
+		}
+
+		private bool GetRelevantWriterFactory(out Func<Stream, IOutputWriter> getWriter, out HttpResponseMessage errorResponse)
+		{
+			var streamFormat = GetQueryStringValue("format");
+			getWriter = null;
+			if (!ValidateStreamFormat(streamFormat, out errorResponse))
+				return false;
+
+			getWriter = stream =>
+				streamFormat.Equals("json", StringComparison.InvariantCultureIgnoreCase) ?
+					(IOutputWriter) new JsonOutputWriter(stream) :
+					new ExcelOutputWriter(stream);
+
+			return true;
 		}
 
 		private bool GetAndValidateSkipAndTake(out int skip,out int take, out HttpResponseMessage httpResponseMessage)
@@ -94,54 +122,40 @@ namespace Raven.Database.Counters.Controllers
 			return true;
 		}
 
-		private HttpResponseMessage GetSummariesForAllGroupsStreamResponse(int skip, int take, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
+		private HttpResponseMessage GetSummariesForAllGroupsStreamResponse(int skip, int take, HttpResponseMessage response, Func<Stream, IOutputWriter> getWriter)
 		{
 			CounterStorage.MetricsCounters.ClientRequests.Mark();
-			try
-			{
-				var reader = CounterStorage.CreateReader();
-				var groups = reader.GetCounterGroups(0, int.MaxValue); //since its enumerable, this is ok				
-				var counters = groups.SelectMany(@group => reader.GetCounterSummariesByGroup(@group.Name, skip, take));
-				msg.Content =
-					new StreamContent(CountersLandlord,
-						getWriter, counters.Select(RavenJObject.FromObject),
-						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
-						reader);
+			var reader = CounterStorage.CreateReader();
+			var groups = reader.GetCounterGroups(0, int.MaxValue); //since it is enumerable, this is not taking up alot of memory			
+			var counters = groups.SelectMany(@group => reader.GetCounterSummariesByGroup(@group.Name, skip, take));
+			response.Content =
+				new StreamContent(CountersLandlord,
+					getWriter, counters.Select(RavenJObject.FromObject),
+					mediaType => response.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"},
+					reader);
 
-				if (IsCsvDownloadRequest(InnerRequest))
-					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+			if (IsCsvDownloadRequest(InnerRequest))
+				response.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 
-				return msg;
-			}
-			catch (OperationCanceledException e)
-			{
-				throw new TimeoutException($"The query did not produce results in {DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout}", e);
-			}
+			return response;
 		}
 
-		private HttpResponseMessage GetSummariesPerGroupStreamResponse(string @group, int skip, int take, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
+		private HttpResponseMessage GetSummariesPerGroupStreamResponse(string @group, int skip, int take, HttpResponseMessage response, Func<Stream, IOutputWriter> getWriter)
 		{
 			CounterStorage.MetricsCounters.ClientRequests.Mark();
-			try
-			{
-				var reader = CounterStorage.CreateReader();
-				@group = @group ?? string.Empty;
-				var counters = reader.GetCounterSummariesByGroup(@group, skip, take);
-				msg.Content =
-					new StreamContent(CountersLandlord,
-						getWriter, counters.Select(RavenJObject.FromObject),
-						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"},
-						reader);
+			var reader = CounterStorage.CreateReader();
+			@group = @group ?? string.Empty;
+			var counters = reader.GetCounterSummariesByGroup(@group, skip, take);
+			response.Content =
+				new StreamContent(CountersLandlord,
+					getWriter, counters.Select(RavenJObject.FromObject),
+					mediaType => response.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"},
+					reader);
 
-				if (IsCsvDownloadRequest(InnerRequest))
-					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+			if (IsCsvDownloadRequest(InnerRequest))
+				response.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 
-				return msg;
-			}
-			catch (OperationCanceledException e)
-			{
-				throw new TimeoutException($"The query did not produce results in {DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout}", e);
-			}
+			return response;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -168,6 +182,7 @@ namespace Raven.Database.Counters.Controllers
 
 		public class StreamContent : HttpContent
 		{
+			private const int StreamBufferSize = 1024 * 8;
 			private readonly CountersLandlord landlord;
 			private readonly Func<Stream,IOutputWriter> getWriter;
 			private readonly IEnumerable<RavenJObject> content;
@@ -202,22 +217,21 @@ namespace Raven.Database.Counters.Controllers
 					CurrentOperationContext.Headers.Value = headers;
 					CurrentOperationContext.RequestDisposables.Value.Add(reader);
 
-                    using (var bufferedStream = new BufferedStream(stream, 1024 * 8))
+                    using (var bufferedStream = new BufferedStream(stream, StreamBufferSize))
 					using (var cts = new CancellationTokenSource())
 					using (var timeout = cts.TimeoutAfter(landlord.SystemConfiguration.DatabaseOperationTimeout))
 					using (var writer = getWriter(bufferedStream))
 					{
 						outputContentTypeSetter(writer.ContentType);
-
-						writer.WriteHeader();
+                        writer.WriteHeader();
 						try
 						{
-							content.ForEach(item =>
+							foreach (var item in content)
 							{
-								timeout.Delay();
+								timeout.ThrowIfCancellationRequested();
 								writer.Write(item);
-							});
-
+								timeout.Delay();
+							}
 							writer.Flush();
 						}
 						catch (Exception e)
@@ -230,6 +244,10 @@ namespace Raven.Database.Counters.Controllers
                         }
 					}
 					return Task.FromResult(true);
+				}
+				catch (OperationCanceledException e)
+				{
+					throw new TimeoutException($"Counters streaming operation timed-out in {landlord.SystemConfiguration.DatabaseOperationTimeout}", e);
 				}
 				finally
 				{

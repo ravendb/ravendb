@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Counters;
 using Xunit;
 
@@ -73,5 +75,31 @@ namespace Raven.Tests.Counters
 			}
 		}
 
+		[Fact]
+		public async Task Streaming_counter_groups_should_work()
+		{
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
+			{
+				await store.IncrementAsync("g1", "c1");
+				await store.IncrementAsync("g1", "c2");
+				await store.IncrementAsync("g1", "c2");
+				await store.IncrementAsync("g2", "c1");
+				await store.IncrementAsync("g3", "c1");
+				await store.IncrementAsync("g3", "c1");
+				await store.IncrementAsync("g3", "c1");
+
+				using (var enumerator = await store.Stream.CounterGroups())
+				{
+					var groups = new List<CounterGroup>();
+					while (await enumerator.MoveNextAsync())
+						groups.Add(enumerator.Current);
+
+					Assert.Equal(3, groups.Count);
+					Assert.True(groups.Any(x => x.Name == "g1" && x.Count == 2));
+					Assert.True(groups.Any(x => x.Name == "g2" && x.Count == 1));
+					Assert.True(groups.Any(x => x.Name == "g3" && x.Count == 1));
+				}
+			}
+		}			
 	}
 }

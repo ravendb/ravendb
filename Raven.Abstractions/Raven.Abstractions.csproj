@@ -155,6 +155,7 @@
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Counters\Counter.cs" />
+    <Compile Include="Counters\CounterGroup.cs" />
     <Compile Include="Counters\CounterNameGroupPair.cs" />
     <Compile Include="Counters\CounterState.cs" />
     <Compile Include="Counters\CounterBackupRequest.cs" />

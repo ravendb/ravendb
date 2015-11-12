@@ -37,7 +37,7 @@ namespace Raven.Client.Counters
                 return await parent.Admin.GetCountersByStorage(null,token,skip,take).ConfigureAwait(false);
             }
 
-            public async Task<IReadOnlyList<CounterSummary>> GetCountersByPrefix(string groupName, int skip = 0, int take = 1024, string counterNamePrefix = null, CancellationToken token = default(CancellationToken))
+            public async Task<IReadOnlyList<CounterSummary>> GetCountersByPrefix(string groupName, string counterNamePrefix = null, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
             {
                 if(string.IsNullOrWhiteSpace(groupName))
                     throw new ArgumentNullException(nameof(groupName));

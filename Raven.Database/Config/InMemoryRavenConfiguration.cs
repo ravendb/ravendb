@@ -424,7 +424,7 @@ namespace Raven.Database.Config
         /// <summary>
         /// The time to wait before canceling a database operation such as load (many) or query
         /// </summary>
-        public TimeSpan DatabaseOperationTimeout { get; private set; }
+        public TimeSpan DatabaseOperationTimeout { get; set; }
 
         public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
 
