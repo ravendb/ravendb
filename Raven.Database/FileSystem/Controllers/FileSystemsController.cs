@@ -6,6 +6,7 @@ using System.Web.Http;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
@@ -37,7 +38,7 @@ namespace Raven.Database.FileSystem.Controllers
                     var settings = fileSystem.Value<RavenJObject>("Settings");
                     if (settings != null)
                     {
-                        var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue));
                         if (activeBundles != null)
                         {
                             bundles = activeBundles.Split(';');

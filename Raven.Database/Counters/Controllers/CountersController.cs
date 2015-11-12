@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
@@ -31,7 +32,7 @@ namespace Raven.Database.Counters.Controllers
                     var settings = counterStorage.Value<RavenJObject>("Settings");
                     if (settings != null)
                     {
-                        var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue));
                         if (activeBundles != null)
                         {
                             bundles = activeBundles.Split(';');
