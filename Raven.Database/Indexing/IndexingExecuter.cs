@@ -22,7 +22,6 @@ using Raven.Database.Plugins;
 using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Database.Util;
 using Sparrow.Collections;
 
 namespace Raven.Database.Indexing
@@ -143,14 +142,13 @@ namespace Raven.Database.Indexing
                     LastIndexedEtag = x.Key,
                     Indexes = x.Value,
                     LastQueryTime = x.Value.Max(y => y.Index.LastQueryTime),
-                    PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
                 };
 
-                result.PrefetchingBehavior.AdditionalInfo = string.Format("Default prefetcher: {0}. For indexing group: [Indexes: {1}, LastIndexedEtag: {2}]",
-                    result.PrefetchingBehavior == defaultPrefetchingBehavior, string.Join(", ", result.Indexes.Select(y => y.Index.PublicName)), result.LastIndexedEtag);
+                SetPrefetcherForIndexingGroup(result, usedPrefetchers);
 
                 return result;
             }).OrderByDescending(x => x.LastQueryTime).ToList();
+            
 
             var maxIndexOutputsPerDoc = groupedIndexes.Max(x => x.Indexes.Max(y => y.Index.MaxIndexOutputsPerDocument));
             var containsMapReduceIndexes = groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce));
@@ -242,11 +240,49 @@ namespace Raven.Database.Indexing
             RemoveUnusedPrefetchers(usedPrefetchers);
         }
 
+        private void SetPrefetcherForIndexingGroup(IndexingGroup groupIndex, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            groupIndex.PrefetchingBehavior = TryGetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers) ??
+                                      TryGetDefaultPrefetcher(groupIndex.LastIndexedEtag, usedPrefetchers) ??
+                                      GetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers);
+
+            groupIndex.PrefetchingBehavior.AdditionalInfo = 
+                string.Format("Default prefetcher: {0}. For indexing groupIndex: [Indexes: {1}, LastIndexedEtag: {2}]",
+                    groupIndex.PrefetchingBehavior == defaultPrefetchingBehavior, 
+                    string.Join(", ", groupIndex.Indexes.Select(y => y.Index.PublicName)), 
+                    groupIndex.LastIndexedEtag);
+        }
+
+        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            foreach (var prefetchingBehavior in prefetchingBehaviors)
+            {
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag) &&
+                    usedPrefetchers.TryAdd(prefetchingBehavior))
+                {
+                    return prefetchingBehavior;
+                }
+            }
+
+            return null;
+        }
+
+        private PrefetchingBehavior TryGetDefaultPrefetcher(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            if (defaultPrefetchingBehavior.CanUseDefaultPrefetcher(fromEtag) &&
+                usedPrefetchers.TryAdd(defaultPrefetchingBehavior))
+            {
+                return defaultPrefetchingBehavior;
+            }
+
+            return null;
+        }
+
         private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
