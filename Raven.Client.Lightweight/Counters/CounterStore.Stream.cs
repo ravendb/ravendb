@@ -26,21 +26,30 @@ namespace Raven.Client.Counters
 				this.parent = parent;
 			}
 
-			public async Task<IAsyncEnumerator<CounterSummary>> CounterSummaries(string @group, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
+			//public async Task<IAsyncEnumerator<CounterGroup>>
+
+			public async Task<IAsyncEnumerator<CounterSummary>> CounterSummaries(string @group = null, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
 			{
 				parent.AssertInitialized();
 				await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 
-				return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, counterStoreName) =>
+				try
 				{
-					var requestUriString = $"{url}/cs/{counterStoreName}/streams/summaries?group={@group}&start={skip}&pageSize={take}&format=json";
-					var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get);
+					return await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get, async (url, counterStoreName) =>
+					{
+						var requestUriString = $"{url}/cs/{counterStoreName}/streams/summaries?group={@group}&start={skip}&pageSize={take}&format=json";
+						var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get);
 
-					var response = await request.ExecuteRawResponseAsync().WithCancellation(token).ConfigureAwait(false);
-					var stream = await response.GetResponseStreamWithHttpDecompression().WithCancellation(token).ConfigureAwait(false);
+						var response = await request.ExecuteRawResponseAsync().WithCancellation(token).ConfigureAwait(false);
+						var stream = await response.GetResponseStreamWithHttpDecompression().WithCancellation(token).ConfigureAwait(false);
 
-					return new CounterSummaryEnumerator(request, stream);
-				}, token).ConfigureAwait(false);
+						return new CounterSummaryEnumerator(request, stream);
+					}, token).ConfigureAwait(false);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Failed to stream counter summaries. See inner exception for details",e);
+				}
 			}
 
 			public class CounterSummaryEnumerator : StreamEnumerator<CounterSummary>
@@ -105,17 +114,17 @@ namespace Raven.Client.Counters
 				{
 					if (await reader.ReadAsync().ConfigureAwait(false) == false ||
 							reader.TokenType != JsonToken.StartObject)
-						throw new InvalidOperationException("Unexpected data at start of stream");
+						throw new InvalidOperationException("Unexpected data at start of stream. This exception should not happen and is probably a bug.");
 
 					if (await reader.ReadAsync().ConfigureAwait(false) == false ||
 							reader.TokenType != JsonToken.PropertyName ||
 							Equals("Results", reader.Value) == false)
-						throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
+						throw new InvalidOperationException("Unexpected data at stream 'Results' property name. This exception should not happen and is probably a bug.");
 
 					var readResult = await reader.ReadAsync().ConfigureAwait(false);
 					if (readResult == false ||
 							reader.TokenType != JsonToken.StartArray)
-						throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
+						throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array. This exception should not happen and is probably a bug.");
 				}
 
 				public void Dispose()
@@ -169,7 +178,7 @@ namespace Raven.Client.Counters
 					}
 
 					if (await reader.ReadAsync().ConfigureAwait(false) == false)
-						throw new InvalidOperationException("Unexpected end of data");
+						throw new InvalidOperationException("Unexpected end of data. This exception should not happen and is probably a bug.");
 
 					if (reader.TokenType == JsonToken.EndArray)
 					{
@@ -187,10 +196,10 @@ namespace Raven.Client.Counters
 				private async Task EnsureValidEndOfResponse()
 				{
 					if (reader.TokenType != JsonToken.EndObject && await reader.ReadAsync().ConfigureAwait(false) == false)
-						throw new InvalidOperationException("Unexpected end of response - missing EndObject token");
+						throw new InvalidOperationException("Unexpected end of response - missing EndObject token. This exception should not happen and is probably a bug.");
 
 					if (reader.TokenType != JsonToken.EndObject)
-						throw new InvalidOperationException($"Unexpected token type at the end of the response: {reader.TokenType}. Error: {streamReader.ReadToEnd()}");
+						throw new InvalidOperationException($"Unexpected token type at the end of the response: {reader.TokenType}. Error: {streamReader.ReadToEnd()}. This exception should not happen and is probably a bug.");
 
 					var remainingContent = await streamReader.ReadToEndAsync().ConfigureAwait(false);
 

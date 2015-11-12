@@ -45,19 +45,51 @@ namespace Raven.Database.Counters.Controllers
 
 			var msg = GetEmptyMessage();
 						
+			return !string.IsNullOrWhiteSpace(@group) ? 
+				GetSummariesPerGroupStreamResponse(@group, start, pageSize, msg, getWriter) : 
+				GetSummariesForAllGroupsStreamResponse(start, pageSize, msg, getWriter);
+		}
+
+		private HttpResponseMessage GetSummariesForAllGroupsStreamResponse(int start, int pageSize, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
+		{
 			CounterStorage.MetricsCounters.ClientRequests.Mark();
 			try
 			{
 				var reader = CounterStorage.CreateReader();
-				group = group ?? string.Empty;
-				var counters = reader.GetCounterSummariesByGroup(group, start, pageSize);
+				var groups = reader.GetCounterGroups(0, int.MaxValue); //since its enumerable, this is ok				
+				var counters = groups.SelectMany(@group => reader.GetCounterSummariesByGroup(@group.Name, start, pageSize));
 				msg.Content =
 					new StreamContent(CountersLandlord,
 						getWriter, counters.Select(RavenJObject.FromObject),
 						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
 						reader);
-				
-                if (IsCsvDownloadRequest(InnerRequest))
+
+				if (IsCsvDownloadRequest(InnerRequest))
+					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+
+				return msg;
+			}
+			catch (OperationCanceledException e)
+			{
+				throw new TimeoutException($"The query did not produce results in {DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout}", e);
+			}
+		}
+
+		private HttpResponseMessage GetSummariesPerGroupStreamResponse(string @group, int start, int pageSize, HttpResponseMessage msg, Func<Stream, IOutputWriter> getWriter)
+		{
+			CounterStorage.MetricsCounters.ClientRequests.Mark();
+			try
+			{
+				var reader = CounterStorage.CreateReader();
+				@group = @group ?? string.Empty;
+				var counters = reader.GetCounterSummariesByGroup(@group, start, pageSize);
+				msg.Content =
+					new StreamContent(CountersLandlord,
+						getWriter, counters.Select(RavenJObject.FromObject),
+						mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) {CharSet = "utf-8"},
+						reader);
+
+				if (IsCsvDownloadRequest(InnerRequest))
 					msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
 
 				return msg;

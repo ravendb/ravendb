@@ -456,7 +456,7 @@ namespace Raven.Database.Counters.Controllers
 
             using (var reader = CounterStorage.CreateReader())
             {
-                var counterSummaries = reader.GetCountersByPrefix(groupName, counterNamePrefix, skip, take).ToList();
+                var counterSummaries = reader.GetCounterSummariesByPrefix(groupName, counterNamePrefix, skip, take).ToList();
                 return GetMessageWithObject(counterSummaries);
             }
         }

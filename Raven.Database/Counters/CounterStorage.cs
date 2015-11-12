@@ -437,7 +437,8 @@ namespace Raven.Database.Counters
                 }
             }
 
-            public IEnumerable<CounterSummary> GetCounterSummariesByGroup(string groupName, int skip, int take)
+			//TODO : discuss whether this is redundant with GetCounterSummariesByPrefix()
+			public IEnumerable<CounterSummary> GetCounterSummariesByGroup(string groupName, int skip, int take)
             {
                 ThrowIfDisposed();
                 var countersDetails = (take != -1) ? GetCountersDetails(groupName, skip).Take(take) : GetCountersDetails(groupName, skip);
@@ -556,7 +557,7 @@ namespace Raven.Database.Counters
                 return count;
             }
 
-            public IEnumerable<CounterSummary> GetCountersByPrefix(string groupName, string counterNamePrefix, int skip, int take)
+            public IEnumerable<CounterSummary> GetCounterSummariesByPrefix(string groupName, string counterNamePrefix, int skip, int take)
             {
                 ThrowIfDisposed();
                 using (var it = groupToCounters.MultiRead(groupName))
