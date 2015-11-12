@@ -83,8 +83,14 @@ namespace Raven.Tests.Core
                 {
                 }
             }
-
+#if DEBUG
             var path = Path.GetFullPath("../Raven.Tests.Server.Runner/bin/Debug/Raven.Tests.Server.Runner.exe");
+#else
+            var path = Path.GetFullPath("../Raven.Tests.Server.Runner/bin/Release/Raven.Tests.Server.Runner.exe");
+#endif
+            if (File.Exists(path) == false)
+                throw new InvalidOperationException(string.Format("Could not locate 'Raven.Tests.Server.Runner' in '{0}'.", path));
+
             process = Process.Start(path);
         }
 
