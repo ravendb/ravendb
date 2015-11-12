@@ -46,6 +46,11 @@ namespace Raven.Database.Server.WebApi.Handlers
                 }
                 return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
             }
+            catch (TaskCanceledException e)
+            {
+                Logger.Info("Got task canceled exception: " + e);
+                return await HandleTooBusyError(request);
+            }
             finally
             {
                 if (waiting)
