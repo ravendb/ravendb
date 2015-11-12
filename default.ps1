@@ -20,6 +20,14 @@ properties {
     $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
+    
+    $dnxVersion = "1.0.0-rc1-16048"
+    $dnxArchitecture = "x64"
+    $dnxToolsDir = "$base_dir\Tools\DNX"
+    $dnvm = "$dnxToolsDir\dnvm.cmd"
+    $dnxRuntimeDir = "$env:USERPROFILE\.dnx\runtimes\dnx-coreclr-win-$dnxArchitecture.$dnxVersion\bin";
+    $dnu = "$dnxRuntimeDir\dnu.cmd"
+    $dnx = "$dnxRuntimeDir\dnx.exe"
 }
 
 task default -depends Test, DoReleasePart1
@@ -91,6 +99,27 @@ task CompileHtml5 {
     Set-Location $build_dir\Html5
     exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
     Set-Location $base_dir
+}
+
+task CompileDnx -depends Compile  {
+
+    &"$dnvm" install $dnxVersion -u -r coreclr -arch $dnxArchitecture
+
+    &"$dnvm" use $dnxVersion
+
+    &"$dnu" restore --quiet Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight Raven.Tests.Core
+    
+    &"$dnu" build --quiet --configuration "$global:configuration" --out "$build_dir\DNX\" Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight
+}
+
+task TestDnx -depends CompileDnx {
+    Clear-Host
+
+    Push-Location "$base_dir\Raven.Tests.Core"
+    
+    &"$dnx" --configuration "$global:configuration" test
+
+    Pop-Location
 }
 
 task FullStorageTest {
