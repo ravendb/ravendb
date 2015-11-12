@@ -28,7 +28,7 @@ namespace Raven.Database.Prefetching
         {
             lock (this)
             {
-                var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), prefetchingUserDescription, isDefault);
+                var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), prefetchingUserDescription, isDefault, GetPrefetchingBehaviourSummary);
 
                 prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
                 {
@@ -71,6 +71,22 @@ namespace Raven.Database.Prefetching
             {
                 prefetcher.AfterStorageCommitBeforeWorkNotifications(documents);
             }
+        }
+
+        public PrefetchingSummary GetPrefetchingBehaviourSummary()
+        {
+            var summary = new PrefetchingSummary();
+
+            foreach (var prefetcher in prefetchingBehaviors)
+            {
+                var prefetchingBehaviorSummary = prefetcher.GetSummary();
+                summary.PrefetchingQueueLoadedSize += prefetchingBehaviorSummary.PrefetchingQueueLoadedSize;
+                summary.PrefetchingQueueDocsCount += prefetchingBehaviorSummary.PrefetchingQueueDocsCount;
+                summary.FutureIndexBatchesLoadedSize += prefetchingBehaviorSummary.FutureIndexBatchesLoadedSize;
+                summary.FutureIndexBatchesDocsCount += prefetchingBehaviorSummary.FutureIndexBatchesDocsCount;
+            }
+
+            return summary;
         }
 
         public void Dispose()
