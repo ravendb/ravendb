@@ -48,56 +48,19 @@ namespace Raven.Tests.Issues
         [Fact]
         public void RavenFSWithWindowsCredentialsInConnectionStringShouldWork()
         {
-            try
+            this.Invoking(x =>
             {
-                AddWindowsUser(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password);
-
-                this.Invoking(x =>
+                using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
                 {
-                    using (NewStore(enableAuthentication: true, connectionStringName: "RavenFS"))
-                    {
-                    }
-                }).ShouldThrow<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Forbidden);
+                }
+            }).ShouldThrow<ErrorResponseException>().Where(x => x.StatusCode == HttpStatusCode.Unauthorized);
 
-                this.Invoking(x =>
+            this.Invoking(x =>
+            {
+                using (NewStore(enableAuthentication: true))
                 {
-                    using (NewStore(enableAuthentication: true))
-                    {
-                    }
-                }).ShouldNotThrow<Exception>();
-            }
-            finally
-            {
-                DeleteUser(FactIfWindowsAuthenticationIsAvailable.Username);
-            }
+                }
+            }).ShouldNotThrow<Exception>();
         }
-
-        private void DeleteUser(string username)
-        {
-            using (var context = new PrincipalContext(ContextType.Machine))
-            using (var up = UserPrincipal.FindByIdentity(context, username))
-            {
-                if (up != null)
-                    up.Delete();
-            }
-        }
-
-        private void AddWindowsUser(string username, string password, string displayName = null, string description = null, bool canChangePassword = true, bool passwordExpires = false)
-        {
-            using (var context = new PrincipalContext(ContextType.Machine))
-            using (var user = new UserPrincipal(context, username, password, true))
-            using (var up = UserPrincipal.FindByIdentity(context, username))
-            {
-                if (up != null)
-                    up.Delete();
-
-                user.UserCannotChangePassword = !canChangePassword;
-                user.PasswordNeverExpires = !passwordExpires;
-                user.Description = description ?? String.Empty;
-                user.DisplayName = displayName ?? username;
-                user.Save();
-            }
-        }
-
     }
 }
