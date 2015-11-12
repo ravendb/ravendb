@@ -219,6 +219,8 @@ namespace Raven.Client.FileSystem
 
             try
             {
+                SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url, Credentials);
+
                 InitializeInternal();
 
                 initialized = true;

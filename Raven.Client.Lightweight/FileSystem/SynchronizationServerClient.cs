@@ -63,7 +63,8 @@ namespace Raven.Client.FileSystem
             this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
             OperationsHeaders = operationsHeaders ?? new NameValueCollection();
 
-            SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl, credentials);
+            if (requestFactory == null)
+                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl, credentials);
         }
 
         public Task<RavenJObject> GetMetadataForAsync(string fileName)
