@@ -131,7 +131,7 @@ namespace Raven.Client.Counters
 
         public CounterConvention Convention
         {
-            get { return Convention; }
+            get { return convention; }
         }
 
         public class StatsClient : IHoldProfilingInformation
