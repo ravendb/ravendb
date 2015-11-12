@@ -144,7 +144,7 @@ namespace Raven.Tests.Counters
 
                 var summaries = await store.Advanced
                     .GetCountersByPrefix(counterGroupName,
-                            counterNamePrefix: CounterName + "A",skip:1,take:1);
+                            counterNamePrefix: CounterName + "A",skip: 1,take: 1);
 
                 Assert.Equal(1, summaries.Count);
                 Assert.DoesNotContain(CounterName + "AA", summaries.Select(x => x.CounterName));

@@ -279,6 +279,7 @@ namespace Raven.Database.Server.Controllers
             req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
+
         protected static bool ClientIsV3OrHigher(HttpRequestMessage req)
         {
             IEnumerable<string> values;

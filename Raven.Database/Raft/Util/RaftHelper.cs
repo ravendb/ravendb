@@ -9,8 +9,10 @@ using System.Linq;
 using Rachis;
 using Rachis.Commands;
 using Rachis.Transport;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Counters;
 using Raven.Database.Util;
 
 namespace Raven.Database.Raft.Util
@@ -34,7 +36,7 @@ namespace Raven.Database.Raft.Util
             if (leader == null)
             {
                 if (waitTimeoutInSeconds > 0)
-                    throw new InvalidOperationException(string.Format("No leader. Waited {0} seconds.", waitTimeoutInSeconds));
+                    throw new InvalidOperationException($"No leader. Waited {waitTimeoutInSeconds} seconds.");
 
                 return null;
             }
@@ -67,7 +69,24 @@ namespace Raven.Database.Raft.Util
             return true;
         }
 
-        public static bool IsClusterDatabase(this DatabaseDocument document)
+		public static bool IsClusterDatabase(this CounterStorage counter)
+		{
+
+			var value = counter.Configuration.Settings.Get(Constants.Cluster.NonClusterDatabaseMarker);
+			if (string.IsNullOrEmpty(value))
+				return true;
+
+			bool result;
+			if (bool.TryParse(value, out result) == false)
+				return true;
+
+			if (result)
+				return false;
+
+			return true;
+		}
+
+		public static bool IsClusterDatabase(this DatabaseDocument document)
         {
             string value;
             if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
@@ -77,13 +96,24 @@ namespace Raven.Database.Raft.Util
             if (bool.TryParse(value, out result) == false) 
                 return true;
 
-            if (result) 
-                return false;
-
-            return true;
+            return !result;
         }
 
-        public static void AssertClusterDatabase(this DatabaseDocument document)
+
+		public static bool IsClusterDatabase(this CounterStorageDocument document)
+		{
+			string value;
+			if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
+				return true;
+
+			bool result;
+			if (bool.TryParse(value, out result) == false)
+				return true;
+
+			return !result;
+		}
+
+		public static void AssertClusterDatabase(this DatabaseDocument document)
         {
             if (document.IsClusterDatabase() == false)
                 throw new InvalidOperationException("Not a cluster database. Database: " + document.Id);

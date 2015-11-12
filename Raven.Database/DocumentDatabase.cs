@@ -263,12 +263,9 @@ namespace Raven.Database
 
         public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
-        public static string BuildVersion
-        {
-            get { return buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture)); }
-        }
+        public static string BuildVersion => buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture));
 
-        public static string ProductVersion
+	    public static string ProductVersion
         {
             get
             {
@@ -309,12 +306,9 @@ namespace Raven.Database
         [Obsolete("Use RavenFS instead.")]
         public AttachmentActions Attachments { get; private set; }
 
-        public TaskScheduler BackgroundTaskScheduler
-        {
-            get { return backgroundTaskScheduler; }
-        }
+        public TaskScheduler BackgroundTaskScheduler => backgroundTaskScheduler;
 
-        public InMemoryRavenConfiguration Configuration { get; private set; }
+	    public InMemoryRavenConfiguration Configuration { get; private set; }
 
         public ConfigurationRetriever ConfigurationRetriever { get; private set; }
 
@@ -324,12 +318,9 @@ namespace Raven.Database
         /// <summary>
         ///     Whatever this database has been disposed
         /// </summary>
-        public bool Disposed
-        {
-            get { return disposed; }
-        }
+        public bool Disposed => disposed;
 
-        [ImportMany]
+	    [ImportMany]
         public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
         public DocumentActions Documents { get; private set; }
@@ -353,12 +344,9 @@ namespace Raven.Database
         }
 
         [CLSCompliant(false)]
-        public InFlightTransactionalState InFlightTransactionalState
-        {
-            get { return inFlightTransactionalState; }
-        }
+        public InFlightTransactionalState InFlightTransactionalState => inFlightTransactionalState;
 
-        [ImportMany]
+	    [ImportMany]
         public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
 
         public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
@@ -377,17 +365,11 @@ namespace Raven.Database
         public IndexActions Indexes { get; private set; }
 
         [CLSCompliant(false)]
-        public IndexingExecuter IndexingExecuter
-        {
-            get { return indexingExecuter; }
-        }
+        public IndexingExecuter IndexingExecuter => indexingExecuter;
 
-        public LastCollectionEtags LastCollectionEtags
-        {
-            get { return lastCollectionEtags; }
-        }
+	    public LastCollectionEtags LastCollectionEtags => lastCollectionEtags;
 
-        public MaintenanceActions Maintenance { get; private set; }
+	    public MaintenanceActions Maintenance { get; private set; }
 
         /// <summary>
         ///     The name of the database.
@@ -404,12 +386,9 @@ namespace Raven.Database
 
         public PatchActions Patches { get; private set; }
 
-        public Prefetcher Prefetcher
-        {
-            get { return prefetcher; }
-        }
+        public Prefetcher Prefetcher => prefetcher;
 
-        [ImportMany]
+	    [ImportMany]
         public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
 
         public QueryActions Queries { get; private set; }
@@ -526,22 +505,16 @@ namespace Raven.Database
                 .ToList();
         }
 
-        public IndexingPerformanceStatistics[] IndexingPerformanceStatistics
-        {
-            get
-            {
-                return (from pair in IndexDefinitionStorage.IndexDefinitions
-                       let performance = IndexStorage.GetIndexingPerformance(pair.Key)
-                       select new IndexingPerformanceStatistics
-                       {
-                           IndexId = pair.Key,
-                           IndexName = pair.Value.Name,
-                           Performance = performance
-                       }).ToArray();
-            }
-        }
+        public IndexingPerformanceStatistics[] IndexingPerformanceStatistics => (from pair in IndexDefinitionStorage.IndexDefinitions
+	        let performance = IndexStorage.GetIndexingPerformance(pair.Key)
+	        select new IndexingPerformanceStatistics
+	        {
+		        IndexId = pair.Key,
+		        IndexName = pair.Value.Name,
+		        Performance = performance
+	        }).ToArray();
 
-        public DatabaseStatistics Statistics
+	    public DatabaseStatistics Statistics
         {
             get
             {
@@ -650,16 +623,10 @@ namespace Raven.Database
         [CLSCompliant(false)]
         public TransformerActions Transformers { get; private set; }
 
-        public TransportState TransportState
-        {
-            get { return transportState; }
-        }
+        public TransportState TransportState => transportState;
 
-        public WorkContext WorkContext
-        {
-            get { return workContext; }
-        }
-        public RequestManager RequestManager { get; set; }
+	    public WorkContext WorkContext => workContext;
+	    public RequestManager RequestManager { get; set; }
 
         public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
         {

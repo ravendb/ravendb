@@ -20,15 +20,9 @@ namespace Raven.Database.Server.Controllers
 {
     public class ClusterAwareRavenDbApiController : BaseDatabaseApiController
     {
-        protected virtual bool ForceClusterAwareness
-        {
-            get
-            {
-                return false;
-            }
-        }
+        protected virtual bool ForceClusterAwareness => false;
 
-        public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+	    public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
         {
             if (ForceClusterAwareness == false)
             {

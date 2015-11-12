@@ -23,6 +23,7 @@ using Raven.Database.Impl;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -429,17 +430,18 @@ namespace Raven.Database.Counters
                                 var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
                                 counterDetails.IdSlice = new Slice(counterIdBuffer, sizeof(long));
 
-                                yield return counterDetails;
+								yield return counterDetails;
                             } while (iterator.MoveNext());
                         }
                     } while (isEmptyGroup && it.MoveNext());
                 }
             }
 
-            public List<CounterSummary> GetCounterSummariesByGroup(string groupName, int skip, int take)
+			//TODO : discuss whether this is redundant with GetCounterSummariesByPrefix()
+			public IEnumerable<CounterSummary> GetCounterSummariesByGroup(string groupName, int skip, int take)
             {
                 ThrowIfDisposed();
-                var countersDetails = GetCountersDetails(groupName, skip).Take(take);
+                var countersDetails = (take != -1) ? GetCountersDetails(groupName, skip).Take(take) : GetCountersDetails(groupName, skip);
                 var serverIdBuffer = new byte[parent.sizeOfGuid];
                 return countersDetails.Select(counterDetails => new CounterSummary
                 {
@@ -447,7 +449,7 @@ namespace Raven.Database.Counters
                     CounterName = counterDetails.Name,
                     Increments = CalculateCounterTotalChangeBySign(counterDetails.IdSlice, serverIdBuffer, ValueSign.Positive),
                     Decrements = CalculateCounterTotalChangeBySign(counterDetails.IdSlice, serverIdBuffer, ValueSign.Negative)
-                }).ToList();
+                });
             }
 
             private long CalculateCounterTotalChangeBySign(Slice counterIdSlice, byte[] serverIdBuffer, char signToCalculate)
@@ -555,17 +557,20 @@ namespace Raven.Database.Counters
                 return count;
             }
 
-            public IEnumerable<CounterSummary> GetCountersByPrefix(string groupName, string counterNamePrefix, int skip, int take)
+            public IEnumerable<CounterSummary> GetCounterSummariesByPrefix(string groupName, string counterNamePrefix, int skip, int take)
             {
                 ThrowIfDisposed();
                 using (var it = groupToCounters.MultiRead(groupName))
                 {
                     if (!it.Seek(Slice.BeforeAllKeys))
                         yield break;
-                    if(!string.IsNullOrEmpty(counterNamePrefix))
-                        it.RequiredPrefix = counterNamePrefix;
+	                if (!string.IsNullOrEmpty(counterNamePrefix))
+	                {
+		                it.RequiredPrefix = counterNamePrefix;
+		                it.Seek(it.RequiredPrefix);
+	                }
 
-                    var taken = 0;
+	                var taken = 0;
                     var skipped = 0;
                     do
                     {

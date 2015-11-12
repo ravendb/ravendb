@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -158,11 +159,11 @@ namespace Raven.Client.Counters
                 }
             }
 
-            public async Task<IReadOnlyList<string>> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken))
+            public async Task<IReadOnlyList<string>> GetCounterStoragesNamesAsync(CancellationToken token = default(CancellationToken), int skip = 0, int take = 1024)
             {
                 parent.AssertInitialized();
 
-                var requestUriString = $"{parent.Url}/cs";
+                var requestUriString = $"{parent.Url}/cs?skip={skip}&take={take}";
 
                 using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
                 {
@@ -170,7 +171,25 @@ namespace Raven.Client.Counters
                     return response.ToObject<IReadOnlyList<string>>(parent.JsonSerializer);
                 }
             }
-             
+
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	        public async Task<bool> CounterStorageExists(CancellationToken token = default(CancellationToken))
+	        {
+		        return await CounterStorageExists(parent.Name, token).ConfigureAwait(false);
+	        }
+
+			public async Task<bool> CounterStorageExists(string storageName, CancellationToken token = default(CancellationToken))
+	        {
+				parent.AssertInitialized();
+
+				var requestUriString = $"{parent.Url}/cs/exists?storageName={storageName}";
+
+				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+				{
+					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+					return response.Value<bool>("Exists");
+				}
+			}
         }
     }
 }

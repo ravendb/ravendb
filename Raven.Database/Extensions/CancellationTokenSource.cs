@@ -24,7 +24,7 @@ namespace Raven.Database.Extensions
         private readonly long dueTime;
         private readonly object locker = new object();
         private volatile bool isTimerDisposed;
-        private Stopwatch sp  = Stopwatch.StartNew();
+        private readonly Stopwatch sp  = Stopwatch.StartNew();
 
         public void ThrowIfCancellationRequested()
         {
@@ -34,9 +34,9 @@ namespace Raven.Database.Extensions
         public CancellationTimeout(CancellationTokenSource cancellationTokenSource, TimeSpan dueTime)
         {
             if (cancellationTokenSource == null)
-                throw new ArgumentNullException("cancellationTokenSource");
+                throw new ArgumentNullException(nameof(cancellationTokenSource));
             if (dueTime < TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException("dueTime");
+                throw new ArgumentOutOfRangeException(nameof(dueTime));
 
             isTimerDisposed = false;
             CancellationTokenSource = cancellationTokenSource;
@@ -120,8 +120,7 @@ namespace Raven.Database.Extensions
                 isTimerDisposed = true;
             }
 
-            if (timer != null)
-                timer.Dispose();
+	        timer?.Dispose();
         }
     }
 }

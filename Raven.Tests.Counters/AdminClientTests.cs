@@ -25,7 +25,31 @@ namespace Raven.Tests.Counters
             }
         }
 
-        [Fact]
+		[Fact]
+		public async Task CounterStorageExists_should_work1()
+		{
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName, createDefaultCounter: false))
+			{
+				await store.Admin.CreateCounterStorageAsync(new CounterStorageDocument(), CounterStorageName);
+				Assert.True(await store.Admin.CounterStorageExists(CounterStorageName));
+			}
+		}
+
+		[Fact]
+		public async Task CounterStorageExists_should_work2()
+		{
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName))
+				Assert.True(await store.Admin.CounterStorageExists());
+		}
+
+		[Fact]
+		public async Task CounterStorageExists_should_work3()
+		{
+			using (var store = NewRemoteCountersStore(DefaultCounterStorageName, createDefaultCounter: false))
+				Assert.False(await store.Admin.CounterStorageExists(CounterStorageName));
+		}
+
+		[Fact]
         public async Task Should_be_able_to_create_multiple_counter_storages()
         {
             var expectedClientNames = new ReadOnlyCollection<string>(new List<string>()

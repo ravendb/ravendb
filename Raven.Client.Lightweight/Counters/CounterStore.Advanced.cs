@@ -1,14 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Implementation;
 using Raven.Client.Counters.Operations;
 using Raven.Database.Counters;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Counters
 {
@@ -23,13 +30,14 @@ namespace Raven.Client.Counters
                 this.parent = parent;
             }
 
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public async Task<IReadOnlyList<CounterSummary>> GetCounters(int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
             {
                 return await parent.Admin.GetCountersByStorage(null,token,skip,take).ConfigureAwait(false);
             }
 
-            public async Task<IReadOnlyList<CounterSummary>> GetCountersByPrefix(string groupName, int skip = 0, int take = 1024, string counterNamePrefix = null, CancellationToken token = default(CancellationToken))
+            public async Task<IReadOnlyList<CounterSummary>> GetCountersByPrefix(string groupName, string counterNamePrefix = null, int skip = 0, int take = 1024, CancellationToken token = default(CancellationToken))
             {
                 if(string.IsNullOrWhiteSpace(groupName))
                     throw new ArgumentNullException(nameof(groupName));
@@ -68,7 +76,6 @@ namespace Raven.Client.Counters
                 parent.AssertInitialized();
                 await parent.ReplicationInformer.UpdateReplicationInformationIfNeededAsync().ConfigureAwait(false);
 
-                //TODO : perhaps this call should not be with failover? discuss with Oren
                 var states = await parent.ReplicationInformer.ExecuteWithReplicationAsync(parent.Url, HttpMethods.Get,async (url, counterStoreName) =>
                 {
                     var requestUriString = $"{url}/cs/{counterStoreName}/sinceEtag?etag={etag}&skip={skip}&take={take}";
@@ -82,6 +89,8 @@ namespace Raven.Client.Counters
                 
                 return states;
             }
+
+	        
         }
     }
 }

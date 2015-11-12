@@ -69,7 +69,7 @@ namespace Raven.Tests.Counters
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        var summaries = reader.GetCounterSummariesByGroup("ga", i, 1);
+                        var summaries = reader.GetCounterSummariesByGroup("ga", i, 1).ToList();
                         Assert.NotNull(summaries);
                         Assert.Equal(1, summaries.Count);
                         Assert.Equal(i, summaries[0].Total);

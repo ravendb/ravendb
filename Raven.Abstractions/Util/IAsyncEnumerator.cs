@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Util
 {
-    public interface IAsyncEnumerator<T> : IDisposable
+    public interface IAsyncEnumerator<out T> : IDisposable
     {
         Task<bool> MoveNextAsync();
         T Current { get; }

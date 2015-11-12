@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
@@ -15,6 +17,7 @@ using Raven.Client.Counters.Replication;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Counters
 {
@@ -26,8 +29,9 @@ namespace Raven.Client.Counters
         private readonly AtomicDictionary<ICountersChanges> counterStorageChanges = new AtomicDictionary<ICountersChanges>(StringComparer.OrdinalIgnoreCase);
         private CounterReplicationInformer replicationInformer;
         private bool isInitialized;
+		public NameValueCollection OperationsHeaders { get; set; } = new NameValueCollection();
 
-        public CounterStore()
+		public CounterStore()
         {
             JsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
             JsonRequestFactory = new HttpJsonRequestFactory(Constants.NumberOfCachedRequests);
@@ -35,6 +39,7 @@ namespace Raven.Client.Counters
             Credentials = new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials);
             Advanced = new CounterStoreAdvancedOperations(this);
             Admin = new CounterStoreAdminOperations(this);
+			Stream = new CounterStreams(this);
             batch = new Lazy<BatchOperationsStore>(() => new BatchOperationsStore(this));
             isInitialized = false;
         }
@@ -51,9 +56,8 @@ namespace Raven.Client.Counters
             {
                 if (string.IsNullOrWhiteSpace(Name))
                     throw new InvalidOperationException("Name is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
-
-                var existingCounterStorageNames = AsyncHelpers.RunSync(() => Admin.GetCounterStoragesNamesAsync());
-                if (!existingCounterStorageNames.Contains(Name, StringComparer.InvariantCultureIgnoreCase)) 
+			                
+                if (!AsyncHelpers.RunSync(() => Admin.CounterStorageExists())) 
                 {
                     //this statement will essentially overwrite the counter storage, therefore it should not be called if the storage is already there
                     Admin.CreateCounterStorageAsync(new CounterStorageDocument
@@ -78,9 +82,9 @@ namespace Raven.Client.Counters
                 counterStorage = Name;
 
             return counterStorageChanges.GetOrAdd(counterStorage, CreateCounterStorageChanges);
-        }
+        }		
 
-        private ICountersChanges CreateCounterStorageChanges(string counterStorage)
+		private ICountersChanges CreateCounterStorageChanges(string counterStorage)
         {
             if (string.IsNullOrEmpty(Url))
                 throw new InvalidOperationException("Changes API requires usage of server/client");
@@ -132,8 +136,10 @@ namespace Raven.Client.Counters
         public CounterStoreAdvancedOperations Advanced { get; private set; }
 
         public CounterStoreAdminOperations Admin { get; private set; }
-        
-        private HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
+
+		public CounterStreams Stream { get; private set; }
+
+		private HttpJsonRequest CreateHttpJsonRequest(string requestUriString, HttpMethod httpMethod, bool disableRequestCompression = false, bool disableAuthentication = false)
         {
             return JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, 
                 requestUriString, 
