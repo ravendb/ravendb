@@ -746,11 +746,11 @@ interface documentBase {
 }
 
 interface smugglerOptionsDto {
-    IncludeDocuments: boolean;
-    IncludeIndexes: boolean;
-    IncludeTransformers: boolean;
-    IncludeAttachments: boolean;
-    RemoveAnalyzers: boolean;
+    OperateOnTypes: number;
+    BatchSize: number;
+    ShouldExcludeExpired: boolean;
+    Filters: filterSettingDto[];
+    TransformScript: string;
     NoneDefualtFileName: string;
 }
 

@@ -552,6 +552,13 @@ namespace Raven.Abstractions.Smuggler
                                 if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
                                     continue;
 
+                                if (string.IsNullOrEmpty(Options.TransformScript) == false)
+                                    document = await Operations.TransformDocument(document, Options.TransformScript);
+
+                                // If document is null after a transform we skip it. 
+                                if (document == null)
+                                    continue;
+
                                 try
                                 {
                                     document.WriteTo(jsonWriter);
