@@ -20,6 +20,6 @@ namespace Raven.Abstractions.Database.Smuggler
         /// <summary>
         /// When set ovverides the default document name.
         /// </summary>
-        public string NoneDefualtFileName { get; set; }
+        public string NoneDefaultFileName { get; set; }
     }
 }
