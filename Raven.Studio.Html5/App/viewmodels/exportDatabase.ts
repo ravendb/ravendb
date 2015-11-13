@@ -1,5 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import exportDatabaseCommand = require("commands/exportDatabaseCommand");
+import validateExportDatabaseOptionsCommand = require("commands/validateExportDatabaseOptionsCommand");
 import aceEditorBindingHandler = require("common/aceEditorBindingHandler");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import collection = require("models/collection");
@@ -56,7 +56,7 @@ class exportDatabase extends viewModelBase {
         $("#transformScriptHelp").popover({
             html: true,
             trigger: 'hover',
-            content: 'Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br /><span class="code-keyword">if</span> (company) {<br />&nbsp;&nbsp;&nbsp;company.Orders = { <br /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Count: <span class="code-keyword">this</span>.Count,<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Total: <span class="code-keyword">this</span>.Total<br />&nbsp;&nbsp;&nbsp;}<br /><br />&nbsp;&nbsp;&nbsp;PutDocument(<span class="code-keyword">this</span>.Company, company);<br />}</pre>',
+            content: "Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class=\"code-keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return</span> doc;<br />}</pre>"
         });
     }
 
@@ -90,7 +90,7 @@ class exportDatabase extends viewModelBase {
             });
         }
 
-        var smugglerOptions = {
+        var smugglerOptions : smugglerOptionsDto = {
             OperateOnTypes: operateOnTypes,
             BatchSize: this.batchSize(),
             ShouldExcludeExpired: !this.includeExpiredDocuments(),
@@ -101,10 +101,17 @@ class exportDatabase extends viewModelBase {
         
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
 
-        new getSingleAuthTokenCommand(this.activeDatabase()).execute().done((token: singleAuthToken) => {
-            this.authToken(token.Token);
-            $("#dbExportDownloadForm").submit();
-        }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for export.", errorThrown));
+        new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase()).execute()
+            .done(() => {
+                new getSingleAuthTokenCommand(this.activeDatabase()).execute().done((token: singleAuthToken) => {
+                    this.authToken(token.Token);
+                    $("#dbExportDownloadForm").submit();
+                }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for export.", errorThrown));
+            })
+            .fail((response: JQueryXHR) => {
+                messagePublisher.reportError("Invalid export options", response.responseText, response.statusText);
+            });
+
     }
 
     selectOptions(){
