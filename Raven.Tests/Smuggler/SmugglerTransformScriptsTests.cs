@@ -6,8 +6,8 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Client.Document;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
@@ -43,60 +43,57 @@ namespace Raven.Tests.Smuggler
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task TransformScriptFiltering()
+        public async Task TransformScriptFiltering_Export()
         {
             using (var store = NewRemoteDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Foo {Name = "N1"});
-                    session.Store(new Foo {Name = "N2"});
+                StoreTwoFooItems(store);
 
-                    session.SaveChanges();
-                }
-
-                var options = new DatabaseSmugglerOptions();
-                options.TransformScript =
-                    @"function(doc) { 
+                await Export(store, @"function(doc) { 
                         var id = doc['@metadata']['@id']; 
                         if(id === 'foos/1')
                             return null;
                         return doc;
-                    }";
-
-                var smuggler = new DatabaseSmuggler(
-                    options,
-                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
-                    {
-                        Url = store.Url,
-                        Database = store.DefaultDatabase
-                    }),
-                    new DatabaseSmugglerFileDestination(file));
-
-                await smuggler.ExecuteAsync();
+                    }");
             }
 
             using (var documentStore = NewRemoteDocumentStore())
             {
-                var options = new DatabaseSmugglerOptions();
-                options.TransformScript =
-                    @"function(doc) { 
+                await Import(documentStore, string.Empty);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var foos = session.Query<Foo>()
+                                      .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                                      .ToList();
+
+                    Assert.Equal(1, foos.Count);
+                    Assert.Equal("foos/2", foos[0].Id);
+                    Assert.Equal("N2", foos[0].Name);
+
+                    Assert.Null(session.Load<Foo>(1));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task TransformScriptFiltering_Import()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                StoreTwoFooItems(store);
+
+                await Export(store, string.Empty);
+            }
+
+            using (var documentStore = NewRemoteDocumentStore())
+            {
+                await Import(documentStore, @"function(doc) { 
                         var id = doc['@metadata']['@id']; 
                         if(id === 'foos/1')
                             return null;
                         return doc;
-                    }";
-
-                var smuggler = new DatabaseSmuggler(
-                    options,
-                    new DatabaseSmugglerFileSource(file), 
-                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                    {
-                        Url = documentStore.Url,
-                        Database = documentStore.DefaultDatabase
-                    }));
-
-                await smuggler.ExecuteAsync();
+                    }");
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -114,56 +111,21 @@ namespace Raven.Tests.Smuggler
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task TransformScriptModifying()
+        public async Task TransformScriptModifying_Import()
         {
             using (var store = NewRemoteDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Foo { Name = "N1" });
-                    session.Store(new Foo { Name = "N2" });
+                StoreTwoFooItems(store);
 
-                    session.SaveChanges();
-                }
-
-                var options = new DatabaseSmugglerOptions();
-                options.TransformScript =
-                    @"function(doc) { 
-                        doc['Name'] = 'Changed';
-                        return doc;
-                    }";
-
-                var smuggler = new DatabaseSmuggler(
-                    options,
-                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
-                    {
-                        Url = store.Url,
-                        Database = store.DefaultDatabase
-                    }),
-                    new DatabaseSmugglerFileDestination(file));
-
-                await smuggler.ExecuteAsync();
+                await Export(store, string.Empty);
             }
 
             using (var store = NewRemoteDocumentStore())
             {
-                var options = new DatabaseSmugglerOptions();
-                options.TransformScript =
-                    @"function(doc) { 
+                await Import(store, @"function(doc) { 
                         doc['Name'] = 'Changed';
                         return doc;
-                    }";
-
-                var smuggler = new DatabaseSmuggler(
-                    options,
-                    new DatabaseSmugglerFileSource(file),
-                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                    {
-                        Database = store.DefaultDatabase,
-                        Url = store.Url
-                    }));
-
-                await smuggler.ExecuteAsync();
+                    }");
 
                 using (var session = store.OpenSession())
                 {
@@ -179,6 +141,84 @@ namespace Raven.Tests.Smuggler
                     }
                 }
             }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task TransformScriptModifying_Export()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                StoreTwoFooItems(store);
+
+                await Export(store, @"function(doc) { 
+                        doc['Name'] = 'Changed';
+                        return doc;
+                    }");
+            }
+
+            using (var store = NewRemoteDocumentStore())
+            {
+                await Import(store, string.Empty);
+
+                using (var session = store.OpenSession())
+                {
+                    var foos = session.Query<Foo>()
+                                      .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                                      .ToList();
+
+                    Assert.Equal(2, foos.Count);
+
+                    foreach (var foo in foos)
+                    {
+                        Assert.Equal("Changed", foo.Name);
+                    }
+                }
+            }
+        }
+
+        private static void StoreTwoFooItems(DocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Foo { Name = "N1" });
+                session.Store(new Foo { Name = "N2" });
+
+                session.SaveChanges();
+            }
+        }
+
+        private async Task Export(DocumentStore store, string transformScript)
+        {
+            var options = new DatabaseSmugglerOptions();
+            options.TransformScript = transformScript;
+
+            var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Url = store.Url,
+                        Database = store.DefaultDatabase
+                    }),
+                    new DatabaseSmugglerFileDestination(file));
+
+            await smuggler.ExecuteAsync();
+        }
+
+        private async Task Import(DocumentStore store, string transformScript)
+        {
+            var options = new DatabaseSmugglerOptions();
+            options.TransformScript = transformScript;
+
+            var smuggler = new DatabaseSmuggler(
+                    options,
+                    new DatabaseSmugglerFileSource(file),
+                    new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    {
+                        Database = store.DefaultDatabase,
+                        Url = store.Url
+                    }));
+
+            await smuggler.ExecuteAsync();
         }
     }
 }

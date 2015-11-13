@@ -795,10 +795,11 @@ interface ICollectionBase {
 }
 
 interface smugglerOptionsDto {
-    IncludeDocuments: boolean;
-    IncludeIndexes: boolean;
-    IncludeTransformers: boolean;
-    RemoveAnalyzers: boolean;
+    OperateOnTypes: number;
+    BatchSize: number;
+    ShouldExcludeExpired: boolean;
+    Filters: filterSettingDto[];
+    TransformScript: string;
     NoneDefualtFileName: string;
 }
 
