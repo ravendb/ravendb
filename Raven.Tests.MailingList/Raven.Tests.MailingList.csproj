@@ -471,6 +471,7 @@
     <Compile Include="UpdatingData.cs" />
     <Compile Include="UriProperty.cs" />
     <Compile Include="UrlInIdsRepro.cs" />
+    <Compile Include="UsingLoadStartsWithAndDashSepartor.cs" />
     <Compile Include="VacancyCampaignsTests.cs" />
     <Compile Include="ValerioBorioni.cs" />
     <Compile Include="Vicente.cs" />
