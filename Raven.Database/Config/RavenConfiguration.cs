@@ -372,6 +372,7 @@ namespace Raven.Database.Config
         public void CopyParentSettings(RavenConfiguration parentConfiguration)
         {
             Core.Port = parentConfiguration.Core.Port;
+            Core.VirtualDirectory = parentConfiguration.Core.VirtualDirectory;
             OAuth.TokenKey = parentConfiguration.OAuth.TokenKey;
             OAuth.TokenServer = parentConfiguration.OAuth.TokenServer;
 
