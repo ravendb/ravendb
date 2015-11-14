@@ -105,7 +105,7 @@ task CompileDnx -depends Compile  {
 
     &"$dnvm" install $dnxVersion -u -r coreclr -arch $dnxArchitecture
 
-    &"$dnvm" use $dnxVersion
+    &"$dnvm" use -r coreclr -arch $dnxArchitecture $dnxVersion
 
     &"$dnu" restore --quiet Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight Raven.Tests.Core
     
