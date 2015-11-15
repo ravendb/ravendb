@@ -34,40 +34,41 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.FileSystem.Extensions;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Controllers
 {
     public abstract class RavenFsApiController : RavenBaseApiController
-    {
-        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+	{
+	    private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
-        private PagingInfo paging;
-        private NameValueCollection queryString;
+		private PagingInfo paging;
+		private NameValueCollection queryString;
 
         public override InMemoryRavenConfiguration SystemConfiguration
         {
             get { return this.FileSystemsLandlord.SystemConfiguration; }
         }
 
-        public RavenFileSystem FileSystem
-        {
-            get
-            {
-                var fs = FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
+	    public RavenFileSystem FileSystem
+		{
+			get
+			{
+			    var fs = FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
                 if (fs == null)
                 {
                     throw new InvalidOperationException("Could not find a file system named: " + FileSystemName);
                 }
 
                 return fs.Result;
-            }
-        }
+			}
+		}
 
-        public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
-        {
-            InnerInitialization(controllerContext);
+		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+		{
+			InnerInitialization(controllerContext);
             var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
             var result = new HttpResponseMessage();
             if (InnerRequest.Method.Method != "OPTIONS")
@@ -83,7 +84,7 @@ namespace Raven.Database.FileSystem.Controllers
             RequestManager.ResetThreadLocalState();
 
             return result;
-        }
+		}
 
 
         private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
@@ -96,14 +97,14 @@ namespace Raven.Database.FileSystem.Controllers
             if (IsInternalRequest == false) 
                 RequestManager.IncrementRequestCount();
 
-            var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
-            if (fileSystemInternal == null)
-            {
-                var msg = "Could not find a file system named: " + FileSystemName;
-                return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
-            }
+			var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
+			if (fileSystemInternal == null)
+			{
+				var msg = "Could not find a file system named: " + FileSystemName;
+				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
+			}
 
-            var sp = Stopwatch.StartNew();
+			var sp = Stopwatch.StartNew();
 
             var result = await base.ExecuteAsync(controllerContext, cancellationToken);
             sp.Stop();
@@ -113,8 +114,8 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
 
-        protected override void InnerInitialization(HttpControllerContext controllerContext)
-        {
+		protected override void InnerInitialization(HttpControllerContext controllerContext)
+		{
             base.InnerInitialization(controllerContext);
 
             var values = controllerContext.Request.GetRouteData().Values;
@@ -131,187 +132,187 @@ namespace Raven.Database.FileSystem.Controllers
                 if (values.ContainsKey("fil"))
                     FileSystemName = values["fileSystemName"] as string;
             }
-            if (FileSystemName == null)
-                throw new InvalidOperationException("Could not find file system name for this request");
-        }
+		    if (FileSystemName == null)
+		        throw new InvalidOperationException("Could not find file system name for this request");
+		}
 
-        public string FileSystemName { get; private set; }
+	    public string FileSystemName { get; private set; }
 
-        public NotificationPublisher Publisher
-        {
-            get { return FileSystem.Publisher; }
-        }
+		public NotificationPublisher Publisher
+		{
+			get { return FileSystem.Publisher; }
+		}
 
-        public BufferPool BufferPool
-        {
-            get { return FileSystem.BufferPool; }
-        }
+		public BufferPool BufferPool
+		{
+			get { return FileSystem.BufferPool; }
+		}
 
-        public SigGenerator SigGenerator
-        {
-            get { return FileSystem.SigGenerator; }
-        }
+		public SigGenerator SigGenerator
+		{
+			get { return FileSystem.SigGenerator; }
+		}
 
-        public Historian Historian
-        {
-            get { return FileSystem.Historian; }
-        }
+		public Historian Historian
+		{
+			get { return FileSystem.Historian; }
+		}
 
-        private NameValueCollection QueryString
-        {
-            get { return queryString ?? (queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query)); }
-        }
+	    private NameValueCollection QueryString
+		{
+			get { return queryString ?? (queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query)); }
+		}
 
-        protected ITransactionalStorage Storage
-        {
-            get { return FileSystem.Storage; }
-        }
+		protected ITransactionalStorage Storage
+		{
+			get { return FileSystem.Storage; }
+		}
 
-        protected IndexStorage Search
-        {
-            get { return FileSystem.Search; }
-        }
+		protected IndexStorage Search
+		{
+			get { return FileSystem.Search; }
+		}
 
-        protected FileActions Files
-        {
-            get { return FileSystem.Files; }
-        }
+	    protected FileActions Files
+	    {
+			get { return FileSystem.Files; }
+	    }
 
-        protected SynchronizationActions Synchronizations
-        {
-            get { return FileSystem.Synchronizations; }
-        }
+	    protected SynchronizationActions Synchronizations
+	    {
+			get { return FileSystem.Synchronizations; }
+	    }
 
-        protected FileLockManager FileLockManager
-        {
-            get { return FileSystem.FileLockManager; }
-        }
+		protected FileLockManager FileLockManager
+		{
+			get { return FileSystem.FileLockManager; }
+		}
 
-        protected ConflictArtifactManager ConflictArtifactManager
-        {
-            get { return FileSystem.ConflictArtifactManager; }
-        }
+		protected ConflictArtifactManager ConflictArtifactManager
+		{
+			get { return FileSystem.ConflictArtifactManager; }
+		}
 
-        protected ConflictDetector ConflictDetector
-        {
-            get { return FileSystem.ConflictDetector; }
-        }
+		protected ConflictDetector ConflictDetector
+		{
+			get { return FileSystem.ConflictDetector; }
+		}
 
-        protected ConflictResolver ConflictResolver
-        {
-            get { return FileSystem.ConflictResolver; }
-        }
+		protected ConflictResolver ConflictResolver
+		{
+			get { return FileSystem.ConflictResolver; }
+		}
 
-        protected SynchronizationTask SynchronizationTask
-        {
-            get { return FileSystem.SynchronizationTask; }
-        }
+		protected SynchronizationTask SynchronizationTask
+		{
+			get { return FileSystem.SynchronizationTask; }
+		}
 
-        protected PagingInfo Paging
-        {
-            get
-            {
-                if (paging != null)
-                    return paging;
+		protected PagingInfo Paging
+		{
+			get
+			{
+				if (paging != null)
+					return paging;
 
-                int start;
-                int.TryParse(QueryString["start"], out start);
+				int start;
+				int.TryParse(QueryString["start"], out start);
 
-                int pageSize;
-                if (int.TryParse(QueryString["pageSize"], out pageSize) == false)
-                    pageSize = 25;
+				int pageSize;
+				if (int.TryParse(QueryString["pageSize"], out pageSize) == false)
+					pageSize = 25;
 
-                paging = new PagingInfo
-                             {
-                                 PageSize = Math.Min(1024, Math.Max(1, pageSize)),
-                                 Start = Math.Max(start, 0)
-                             };
+				paging = new PagingInfo
+					         {
+						         PageSize = Math.Min(1024, Math.Max(1, pageSize)),
+						         Start = Math.Max(start, 0)
+					         };
 
-                return paging;
-            }
-        }
+				return paging;
+			}
+		}
 
-        protected Task<T> Result<T>(T result)
-        {
-            var tcs = new TaskCompletionSource<T>();
-            tcs.SetResult(result);
-            return tcs.Task;
-        }
+		protected Task<T> Result<T>(T result)
+		{
+			var tcs = new TaskCompletionSource<T>();
+			tcs.SetResult(result);
+			return tcs.Task;
+		}
 
-        protected HttpResponseMessage StreamResult(string filename, Stream resultContent)
-        {
-            var response = new HttpResponseMessage
-                               {
-                                   Headers =
-                                       {
-                                           TransferEncodingChunked = false
-                                       }
-                               };
-            long length;
-            ContentRangeHeaderValue contentRange = null;
-            if (Request.Headers.Range != null)
-            {
-                if (Request.Headers.Range.Ranges.Count != 1)
-                {
-                    throw new InvalidOperationException("Can't handle multiple range values");
-                }
-                var range = Request.Headers.Range.Ranges.First();
-                var from = range.From ?? 0;
-                var to = range.To ?? resultContent.Length;
+		protected HttpResponseMessage StreamResult(string filename, Stream resultContent)
+		{
+			var response = new HttpResponseMessage
+				               {
+					               Headers =
+						               {
+							               TransferEncodingChunked = false
+						               }
+				               };
+			long length;
+			ContentRangeHeaderValue contentRange = null;
+			if (Request.Headers.Range != null)
+			{
+				if (Request.Headers.Range.Ranges.Count != 1)
+				{
+					throw new InvalidOperationException("Can't handle multiple range values");
+				}
+				var range = Request.Headers.Range.Ranges.First();
+				var from = range.From ?? 0;
+				var to = range.To ?? resultContent.Length;
 
-                length = (to - from);
+				length = (to - from);
 
-                // "to" in Content-Range points on the last byte. In other words the set is: <from..to>  not <from..to)
-                if (from < to)
-                {
-                    contentRange = new ContentRangeHeaderValue(from, to - 1, resultContent.Length);
-                    resultContent = new LimitedStream(resultContent, from, to);
-                }
-                else
-                {
-                    contentRange = new ContentRangeHeaderValue(0);
-                    resultContent = Stream.Null;
-                }
-            }
-            else
-            {
-                length = resultContent.Length;
-            }
+				// "to" in Content-Range points on the last byte. In other words the set is: <from..to>  not <from..to)
+				if (from < to)
+				{
+					contentRange = new ContentRangeHeaderValue(from, to - 1, resultContent.Length);
+					resultContent = new LimitedStream(resultContent, from, to);
+				}
+				else
+				{
+					contentRange = new ContentRangeHeaderValue(0);
+					resultContent = Stream.Null;
+				}
+			}
+			else
+			{
+				length = resultContent.Length;
+			}
 
-            response.Content = new StreamContent(resultContent)
-                                   {
-                                       Headers =
-                                           {
-                                               ContentDisposition = new ContentDispositionHeaderValue("attachment")
-                                                                        {
-                                                                            FileName = filename
-                                                                        },
-                                              // ContentLength = length,
-                                               ContentRange = contentRange,
-                                           }
-                                   };
+			response.Content = new StreamContent(resultContent)
+				                   {
+					                   Headers =
+						                   {
+							                   ContentDisposition = new ContentDispositionHeaderValue("attachment")
+								                                        {
+									                                        FileName = filename
+								                                        },
+							                  // ContentLength = length,
+							                   ContentRange = contentRange,
+						                   }
+				                   };
 
-            return response;
-        }
+			return response;
+		}
 
-        protected HttpResponseException BadRequestException(string message)
-        {
-            return
+		protected HttpResponseException BadRequestException(string message)
+		{
+			return
                 new HttpResponseException(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new MultiGetSafeStringContent(message) });
-        }
+		}
 
-        protected class PagingInfo
-        {
-            public int PageSize;
-            public int Start;
-        }
+		protected class PagingInfo
+		{
+			public int PageSize;
+			public int Start;
+		}
 
-        public override InMemoryRavenConfiguration ResourceConfiguration
-        {
-            get { return FileSystem.Configuration; }
-        }
+	    public override InMemoryRavenConfiguration ResourceConfiguration
+	    {
+	        get { return FileSystem.Configuration; }
+	    }
 
-        public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
+	    public override bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args)
         {
             if (!RavenFileSystem.IsRemoteDifferentialCompressionInstalled)
                 throw new HttpException(503, "File Systems functionality is not supported. Remote Differential Compression is not installed.");
@@ -327,15 +328,25 @@ namespace Raven.Database.FileSystem.Controllers
 
             Task<RavenFileSystem> resourceStoreTask;
             bool hasDb;
-            try
-            {
-                hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
-            }
+		    try
+		    {
+			    hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+		    }
             catch (Exception e)
             {
-                var se = e.SimplifyException();
-                var msg = "Could not open file system named: " + tenantId + ", " + se.Message;
-                Logger.WarnException(msg, e);
+	            var cle = e as ConcurrentLoadTimeoutException;
+	            string msg;
+	            if (cle != null)
+	            {
+		            msg = string.Format("The filesystem {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.",tenantId);
+	            }
+	            else
+	            {
+		            var se = e.SimplifyException();
+		            msg = "Could not open file system named: " + tenantId + ", " + se.Message;
+	            }
+
+	            Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
             if (hasDb)
@@ -350,7 +361,7 @@ namespace Raven.Database.FileSystem.Controllers
                         throw new HttpException(503, msg);
                     }
                     
-                    args = new RequestWebApiEventArgs()
+					args = new RequestWebApiEventArgs()
                     {
                         Controller = this,
                         IgnoreRequest = false,
@@ -380,32 +391,32 @@ namespace Raven.Database.FileSystem.Controllers
             return true;
         }
 
-        public override string TenantName
-        {
-            get { return "fs/" + FileSystemName; }
-        }
+	    public override string TenantName
+	    {
+	        get { return "fs/" + FileSystemName; }
+	    }
 
-        public override void MarkRequestDuration(long duration)
-        {
-            FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
-        }
+	    public override void MarkRequestDuration(long duration)
+	    {
+	        FileSystem.MetricsCounters.RequestDuationMetric.Update(duration);
+	    }
 
-        protected FileSystemInfo GetSourceFileSystemInfo()
-        {
-            var json = GetHeader(SyncingMultipartConstants.SourceFileSystemInfo);
+		protected FileSystemInfo GetSourceFileSystemInfo()
+		{
+			var json = GetHeader(SyncingMultipartConstants.SourceFileSystemInfo);
 
-            return RavenJObject.Parse(json).JsonDeserialization<FileSystemInfo>();
-        }
+			return RavenJObject.Parse(json).JsonDeserialization<FileSystemInfo>();
+		}
 
         #region Metadata Headers Handling
 
 
         private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            // Raven internal headers
+		{
+			// Raven internal headers
             Constants.RavenServerBuild,
-            "Non-Authoritative-Information",
-            "Raven-Timer-Request",
+			"Non-Authoritative-Information",
+			"Raven-Timer-Request",
 
             //proxy
             "Reverse-Via",
@@ -419,66 +430,66 @@ namespace Raven.Database.FileSystem.Controllers
             "Content-Range",
             "Content-Type",
             "Expires",
-            // ignoring this header, we handle this internally
-            Constants.LastModified,
-            // Ignoring this header, since it may
-            // very well change due to things like encoding,
-            // adding metadata, etc
-            "Content-Length",
-            // Special things to ignore
-            "Keep-Alive",
-            "X-Powered-By",
-            "X-AspNet-Version",
-            "X-Requested-With",
-            "X-SourceFiles",
-            // Request headers
-            "Accept-Charset",
-            "Accept-Encoding",
-            "Accept",
-            "Accept-Language",
-            "Authorization",
-            "Cookie",
-            "Expect",
-            "From",
-            "Host",
-            "If-Match",
-            "If-Modified-Since",
-            "If-None-Match",
-            "If-Range",
-            "If-Unmodified-Since",
-            "Max-Forwards",
-            "Referer",
-            "TE",
-            "User-Agent",
-            //Response headers
-            "Accept-Ranges",
-            "Age",
-            "Allow",
-            Constants.MetadataEtagField,
-            "Location",
-            "Origin",
-            "Retry-After",
-            "Server",
-            "Set-Cookie2",
-            "Set-Cookie",
-            "Vary",
-            "Www-Authenticate",
-            // General
-            "Cache-Control",
-            "Connection",
-            "Date",
-            "Pragma",
-            "Trailer",
-            "Transfer-Encoding",
-            "Upgrade",
-            "Via",
-            "Warning",
+			// ignoring this header, we handle this internally
+			Constants.LastModified,
+			// Ignoring this header, since it may
+			// very well change due to things like encoding,
+			// adding metadata, etc
+			"Content-Length",
+			// Special things to ignore
+			"Keep-Alive",
+			"X-Powered-By",
+			"X-AspNet-Version",
+			"X-Requested-With",
+			"X-SourceFiles",
+			// Request headers
+			"Accept-Charset",
+			"Accept-Encoding",
+			"Accept",
+			"Accept-Language",
+			"Authorization",
+			"Cookie",
+			"Expect",
+			"From",
+			"Host",
+			"If-Match",
+			"If-Modified-Since",
+			"If-None-Match",
+			"If-Range",
+			"If-Unmodified-Since",
+			"Max-Forwards",
+			"Referer",
+			"TE",
+			"User-Agent",
+			//Response headers
+			"Accept-Ranges",
+			"Age",
+			"Allow",
+			Constants.MetadataEtagField,
+			"Location",
+			"Origin",
+			"Retry-After",
+			"Server",
+			"Set-Cookie2",
+			"Set-Cookie",
+			"Vary",
+			"Www-Authenticate",
+			// General
+			"Cache-Control",
+			"Connection",
+			"Date",
+			"Pragma",
+			"Trailer",
+			"Transfer-Encoding",
+			"Upgrade",
+			"Via",
+			"Warning",
             
             // Azure specific
             "X-LiveUpgrade",
             "DISGUISED-HOST",
             "X-SITE-DEPLOYMENT-ID",
-        };
+		};
 
         protected static readonly IList<string> ReadOnlyHeaders = new List<string> { Constants.LastModified, Constants.MetadataEtagField }.AsReadOnly();
 
@@ -488,5 +499,5 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         #endregion Metadata Headers Handling
-    }
+	}
 }

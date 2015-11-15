@@ -162,6 +162,8 @@ namespace Raven.Tests.Helpers
                 ConnectionStringName = connectionStringName
             };
 
+            store.AfterDispose += (sender, args) => server.Dispose();
+
             ModifyStore(store);
 
             store.Initialize(ensureFileSystemExists: true);
@@ -196,6 +198,8 @@ namespace Raven.Tests.Helpers
                 Credentials = credentials,
                 ApiKey = apiKey,
             };
+
+            store.AfterDispose += (sender, args) => server.Dispose();
 
             ModifyStore(store);
             store.Initialize(true);

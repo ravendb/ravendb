@@ -15,6 +15,7 @@ using Raven.Abstractions.OAuth;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Counters.Connections;
+using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -77,7 +78,7 @@ namespace Raven.Client.Counters
                 //todo: implement remote counter changes
                 //notifications = new RemoteFileSystemChanges(serverUrl, apiKey, credentials, jsonRequestFactory, convention, replicationInformer, () => { });
                                
-                InitializeSecurity();
+                SecurityExtensions.InitializeSecurity(convention, JsonRequestFactory, ServerUrl);
             }
             catch (Exception)
             {
@@ -98,101 +99,6 @@ namespace Raven.Client.Counters
         public ICredentials Credentials { get; private set; }
 
         public string ApiKey { get; private set; }
-
-        private void InitializeSecurity()
-        {
-            if (convention.HandleUnauthorizedResponseAsync != null)
-                return; // already setup by the user
-
-            if (string.IsNullOrEmpty(ApiKey) == false)
-            {
-                Credentials = null;
-            }
-
-            credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = new OperationCredentials(ApiKey, Credentials);
-
-            var basicAuthenticator = new BasicAuthenticator(JsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
-            var securedAuthenticator = new SecuredAuthenticator();
-
-            JsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
-            JsonRequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
-
-            convention.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
-            {
-                if (credentials.ApiKey == null)
-                {
-                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
-                    return null;
-                }
-
-                return null;
-            };
-
-            convention.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
-            {
-                var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
-
-#if DEBUG && FIDDLER
-                // Make sure to avoid a cross DNS security issue, when running with Fiddler
-                if (string.IsNullOrEmpty(oauthSource) == false)
-                    oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
-#endif
-
-                // Legacy support
-                if (string.IsNullOrEmpty(oauthSource) == false &&
-                    oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
-                {
-                    return basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey);
-                }
-
-                if (credentials.ApiKey == null)
-                {
-                    AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, credentials.Credentials);
-                    return null;
-                }
-
-                if (string.IsNullOrEmpty(oauthSource))
-                    oauthSource = ServerUrl + "/OAuth/API-Key";
-
-                return securedAuthenticator.DoOAuthRequestAsync(ServerUrl, oauthSource, credentials.ApiKey);
-            };
-
-        }
-
-        private void AssertForbiddenCredentialSupportWindowsAuth(HttpResponseMessage response)
-        {
-            if (Credentials == null)
-                return;
-
-            var requiredAuth = response.Headers.GetFirstValue("Raven-Required-Auth");
-            if (requiredAuth == "Windows")
-            {
-                // we are trying to do windows auth, but we didn't get the windows auth headers
-                throw new SecurityException(
-                    "Attempted to connect to a RavenDB Server that requires authentication using Windows credentials, but the specified server does not support Windows authentication." +
-                    Environment.NewLine +
-                    "If you are running inside IIS, make sure to enable Windows authentication.");
-            }
-        }
-
-        private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
-        {
-            if (credentials == null)
-                return;
-
-            var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
-            if (authHeaders == null ||
-                (authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false)
-                )
-            {
-                // we are trying to do windows auth, but we didn't get the windows auth headers
-                throw new SecurityException(
-                    "Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
-                    + " but either wrong credentials were entered or the specified server does not support Windows authentication." +
-                    Environment.NewLine +
-                    "If you are running inside IIS, make sure to enable Windows authentication.");
-            }
-        }
 
         public StatsClient Stats
         {
@@ -225,7 +131,7 @@ namespace Raven.Client.Counters
 
         public CounterConvention Convention
         {
-            get { return Convention; }
+            get { return convention; }
         }
 
         public class StatsClient : IHoldProfilingInformation

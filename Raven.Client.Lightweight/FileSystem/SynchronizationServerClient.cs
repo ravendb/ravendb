@@ -57,10 +57,13 @@ namespace Raven.Client.FileSystem
             credentials = credentials ?? CredentialCache.DefaultNetworkCredentials;
             this.filesConvention = convention ?? new FilesConvention();
             this.operationCredentials = operationCredentials ?? new OperationCredentials(apiKey, credentials);
-            this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-            this.OperationsHeaders = operationsHeaders ?? new NameValueCollection();
 
-            SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl, credentials);
+            this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+
+            if(requestFactory == null)
+                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl);
+
+            this.OperationsHeaders = operationsHeaders ?? new NameValueCollection();
         }
 
         public Task<RavenJObject> GetMetadataForAsync(string fileName)

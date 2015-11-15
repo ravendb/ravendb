@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Client.Extensions
 {
@@ -22,6 +23,20 @@ namespace Raven.Client.Extensions
                 Settings =
                 {
                     {"Raven/DataDir", Path.Combine("~", name)},
+                }
+            };
+        }
+
+        public static FileSystemDocument CreateFileSystemDocument(string name)
+        {
+            AssertValidName(name);
+
+            return new FileSystemDocument
+            {
+                Id = Constants.FileSystem.Prefix + name,
+                Settings =
+                {
+                    {Constants.FileSystem.DataDirectory, Path.Combine("~", "FileSystems", name) },
                 }
             };
         }

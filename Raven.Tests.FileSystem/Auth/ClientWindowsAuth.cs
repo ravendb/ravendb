@@ -22,17 +22,18 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
+using Raven.Tests.Common.Attributes;
 using Xunit;
 
 namespace Raven.Tests.FileSystem.Auth
 {
     public class ClientWindowsAuth : RavenFilesTestWithLogs
     {
-        private string username = "local_user_test";
-
-        private string password = "local_user_test";
-
-        private string domain = "local_machine_name_test";
+        public ClientWindowsAuth()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
         {
@@ -43,7 +44,7 @@ namespace Raven.Tests.FileSystem.Auth
                                           {
                                               new WindowsAuthData()
                                               {
-                                                  Name = string.Format("{0}\\{1}", domain, username),
+                                                  Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Domain, FactIfWindowsAuthenticationIsAvailable.Username),
                                                   Enabled = true,
                                                   Databases = new List<ResourceAccess>
                                                   {
@@ -55,10 +56,10 @@ namespace Raven.Tests.FileSystem.Auth
                                       }), new RavenJObject(), null);
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task CanWorkWithWinAuthEnabled()
         {
-            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
 
             var ms = new MemoryStream(new byte[1024 * 1024 * 10]);
 
@@ -106,22 +107,15 @@ namespace Raven.Tests.FileSystem.Auth
             Assert.Equal(1, stats.FileCount);
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task AdminClientWorkWithWinAuthEnabled()
         {
-            var client = (IAsyncFilesCommandsImpl)NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = (IAsyncFilesCommandsImpl)NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
             var adminClient = client.Admin;
 
-            await adminClient.CreateFileSystemAsync(new FileSystemDocument
-            {
-                Id = "Raven/FileSystem/" + "testName",
-                Settings =
-                 {
-                     {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", "testName"))}
-                 }
-            }, "testName");
+            await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"), "testName");
 
-            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", new NetworkCredential(username, password, domain)))
+            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain)))
             {
                 await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
             }
@@ -141,10 +135,10 @@ namespace Raven.Tests.FileSystem.Auth
             Assert.DoesNotContain("testName", names);
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task ConfigClientCanWorkWithWinAuthEnabled()
         {
-            var configClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Configuration;
+            var configClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain)).Configuration;
 
             await configClient.SetKeyAsync("test-conf", new RavenJObject() { { "key", "value" } });
 
@@ -161,29 +155,29 @@ namespace Raven.Tests.FileSystem.Auth
             Assert.Equal(1, configSearch.TotalCount);            
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task StorageClientCanWorkWithWinAuthEnabled()
         {
-            var storageClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain)).Storage;
+            var storageClient = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain)).Storage;
 
             await storageClient.RetryRenamingAsync();
 
             await storageClient.CleanUpAsync();
         }
 
-        [Fact(Skip = "This test rely on actual Windows Account name/password.")]
+        [Fact]
         public async Task ShouldThrowWhenWindowsDocumentDoesNotContainFileSystem()
         {
             // in this test be careful if the specified credentials belong to admin user or not
-            // to make this test to you need to specify the credentials of a user who isn't an admin on this machine
+            // to make this test pass you need to specify the credentials of a user who isn't an admin on this machine
 
-            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(username, password, domain));
+            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
             var server = GetServer();
 
             await client.UploadAsync("abc.bin", new RandomStream(3));
 
             using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_WindowsDocumentDoesNotContainsThisFS", 
-                credentials: new NetworkCredential(username, password, domain)))
+                credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain)))
             {
                 await anotherClient.EnsureFileSystemExistsAsync(); // will pass because by using this api key we have access to <system> database
 

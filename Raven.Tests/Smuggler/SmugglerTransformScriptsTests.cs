@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
+using Raven.Client.Document;
 using Raven.Smuggler;
 using Raven.Tests.Common;
 
@@ -43,57 +44,57 @@ namespace Raven.Tests.Smuggler
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task TransformScriptFiltering()
+        public async Task TransformScriptFiltering_Export()
         {
             using (var store = NewRemoteDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Foo {Name = "N1"});
-                    session.Store(new Foo {Name = "N2"});
+                StoreTwoFooItems(store);
 
-                    session.SaveChanges();
-                }
-                var smugglerApi = new SmugglerDatabaseApi();
-                smugglerApi.Options.TransformScript =
-                    @"function(doc) { 
+                await Export(store, @"function(doc) { 
                         var id = doc['@metadata']['@id']; 
                         if(id === 'foos/1')
                             return null;
                         return doc;
-                    }";
-                await smugglerApi.ExportData(
-                    new SmugglerExportOptions<RavenConnectionStringOptions>
-                    {
-                        ToFile = file,
-                        From = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = store.DefaultDatabase
-                        }
-                    });
+                    }");
             }
 
             using (var documentStore = NewRemoteDocumentStore())
             {
-                var smugglerApi = new SmugglerDatabaseApi();
-                smugglerApi.Options.TransformScript =
-                    @"function(doc) { 
+                await Import(documentStore, string.Empty);
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var foos = session.Query<Foo>()
+                                      .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                                      .ToList();
+
+                    Assert.Equal(1, foos.Count);
+                    Assert.Equal("foos/2", foos[0].Id);
+                    Assert.Equal("N2", foos[0].Name);
+
+                    Assert.Null(session.Load<Foo>(1));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task TransformScriptFiltering_Import()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                StoreTwoFooItems(store);
+
+                await Export(store, string.Empty);
+            }
+
+            using (var documentStore = NewRemoteDocumentStore())
+            {
+                await Import(documentStore, @"function(doc) { 
                         var id = doc['@metadata']['@id']; 
                         if(id === 'foos/1')
                             return null;
                         return doc;
-                    }";
-                await smugglerApi.ImportData(
-                    new SmugglerImportOptions<RavenConnectionStringOptions>
-                    {
-                        FromFile = file,
-                        To = new RavenConnectionStringOptions
-                        {
-                            Url = documentStore.Url,
-                            DefaultDatabase = documentStore.DefaultDatabase
-                        }
-                    });
+                    }");
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -111,53 +112,21 @@ namespace Raven.Tests.Smuggler
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task TransformScriptModifying()
+        public async Task TransformScriptModifying_Import()
         {
             using (var store = NewRemoteDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Foo { Name = "N1" });
-                    session.Store(new Foo { Name = "N2" });
+                StoreTwoFooItems(store);
 
-                    session.SaveChanges();
-                }
-                var smugglerApi = new SmugglerDatabaseApi();
-                smugglerApi.Options.TransformScript =
-                    @"function(doc) { 
-                        doc['Name'] = 'Changed';
-                        return doc;
-                    }";
-                await smugglerApi.ExportData(
-                    new SmugglerExportOptions<RavenConnectionStringOptions>
-                    {
-                        From = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = store.DefaultDatabase
-                        },
-                        ToFile = file,
-                    });
+                await Export(store, string.Empty);
             }
 
             using (var store = NewRemoteDocumentStore())
             {
-                var smugglerApi = new SmugglerDatabaseApi();
-                smugglerApi.Options.TransformScript =
-                    @"function(doc) { 
+                await Import(store, @"function(doc) { 
                         doc['Name'] = 'Changed';
                         return doc;
-                    }";
-                await smugglerApi.ImportData(
-                    new SmugglerImportOptions<RavenConnectionStringOptions>
-                    {
-                        To = new RavenConnectionStringOptions
-                        {
-                            Url = store.Url,
-                            DefaultDatabase = store.DefaultDatabase
-                        },
-                        FromFile = file,
-                    });
+                    }");
 
                 using (var session = store.OpenSession())
                 {
@@ -173,6 +142,84 @@ namespace Raven.Tests.Smuggler
                     }
                 }
             }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task TransformScriptModifying_Export()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                StoreTwoFooItems(store);
+
+                await Export(store, @"function(doc) { 
+                        doc['Name'] = 'Changed';
+                        return doc;
+                    }");
+            }
+
+            using (var store = NewRemoteDocumentStore())
+            {
+                await Import(store, string.Empty);
+
+                using (var session = store.OpenSession())
+                {
+                    var foos = session.Query<Foo>()
+                                      .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
+                                      .ToList();
+
+                    Assert.Equal(2, foos.Count);
+
+                    foreach (var foo in foos)
+                    {
+                        Assert.Equal("Changed", foo.Name);
+                    }
+                }
+            }
+        }
+
+        private static void StoreTwoFooItems(DocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Foo { Name = "N1" });
+                session.Store(new Foo { Name = "N2" });
+
+                session.SaveChanges();
+            }
+        }
+
+        private async Task Export(DocumentStore store, string transformScript)
+        {
+            var smugglerApi = new SmugglerDatabaseApi();
+            smugglerApi.Options.TransformScript = transformScript;
+
+            await smugglerApi.ExportData(
+                new SmugglerExportOptions<RavenConnectionStringOptions>
+                {
+                    ToFile = file,
+                    From = new RavenConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultDatabase = store.DefaultDatabase
+                    }
+                });
+        }
+
+        private async Task Import(DocumentStore documentStore, string transformScript)
+        {
+            var smugglerApi = new SmugglerDatabaseApi();
+            smugglerApi.Options.TransformScript = transformScript;
+            ;
+            await smugglerApi.ImportData(
+                new SmugglerImportOptions<RavenConnectionStringOptions>
+                {
+                    FromFile = file,
+                    To = new RavenConnectionStringOptions
+                    {
+                        Url = documentStore.Url,
+                        DefaultDatabase = documentStore.DefaultDatabase
+                    }
+                });
         }
     }
 }
