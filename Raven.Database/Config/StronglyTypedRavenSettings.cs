@@ -165,9 +165,10 @@ namespace Raven.Database.Config
 
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
 
-			//TODO: discuss what is reasonable default, so far 16 shoul
-			MaxConcurrentDatabaseLoads = new IntegerSetting(settings[Constants.RavenMaxConcurrentDatabaseLoads], 16);
-			ConcurrentDatabaseLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentDatabaseLoadTimeout],TimeSpan.FromSeconds(30),TimeSpanArgumentType.FromParse);
+			MaxConcurrentDatabaseLoads = new IntegerSetting(settings[Constants.RavenMaxConcurrentDatabaseLoads], 8);
+			ConcurrentDatabaseLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentDatabaseLoadTimeout],
+				TimeSpan.FromSeconds(15),
+				TimeSpanArgumentType.FromParse);
         }
 
 		private string GetDefaultWebDir()

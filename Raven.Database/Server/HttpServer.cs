@@ -294,9 +294,9 @@ namespace Raven.Database.Server
 			}
 			try
 			{
-				resourceCreationSemaphore.Dispose();
                 TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+				exceptionAggregator.Execute(resourceCreationSemaphore.Dispose);
 				exceptionAggregator.Execute(() =>
 				{
 					foreach (var databaseTransportState in databaseTransportStates)
@@ -968,11 +968,28 @@ namespace Raven.Database.Server
 			}
 			var tenantId = match.Groups[1].Value;
 			Task<DocumentDatabase> resourceStoreTask = null;
+			bool hasSemaphore = false;
 			bool hasDb;
 			try
 			{
-				hasDb = resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout) &&
-				        TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+				hasSemaphore = resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout);
+				if (hasSemaphore == false)
+				{
+					ctx.SetStatusToNotAvailable();
+					var msg = string.Format(
+						"The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
+						tenantId,
+						resourceCreationSemaphore.CurrentCount,
+						concurrentDatabaseLoadTimeout);
+					logger.Warn(msg);
+					ctx.WriteJson(new
+					{
+						Error =
+							msg,
+					});
+					return false;
+				}
+				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
 			}
 			catch (Exception e)
 			{
@@ -981,7 +998,8 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				resourceCreationSemaphore.Release();
+				if (hasSemaphore)
+					resourceCreationSemaphore.Release();
 			}
 
 			if (hasDb)
