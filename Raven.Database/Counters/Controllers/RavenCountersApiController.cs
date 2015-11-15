@@ -15,6 +15,7 @@ using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -134,7 +135,7 @@ namespace Raven.Database.Counters.Controllers
 
 		public string CountersName { get; private set; }
 
-		public CountersLandlord CountersLandlord
+		public new CountersLandlord CountersLandlord
 		{
 			get
 			{
@@ -205,10 +206,21 @@ namespace Raven.Database.Counters.Controllers
 			}
 			catch (Exception e)
 			{
-				var msg = "Could open counter named: " + tenantId;
+				var cle = e as ConcurrentLoadTimeoutException;
+				string msg;
+				if (cle != null)
+				{
+					msg = string.Format("The counter {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
+				}
+				else
+				{
+					msg = "Could not open database named: " + tenantId + " " + e.Message;
+				}
+
 				Logger.WarnException(msg, e);
 				throw new HttpException(503, msg, e);
 			}
+			
 			if (hasDb)
 			{
 				try

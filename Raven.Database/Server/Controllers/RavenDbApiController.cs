@@ -582,9 +582,19 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-                var msg = "Could not open database named: " + tenantId + " "  + e.Message;
-                Logger.WarnException(msg, e);
-                throw new HttpException(503, msg, e);
+				var cle = e as ConcurrentLoadTimeoutException;
+				string msg;
+				if (cle != null)
+				{
+					msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
+				}
+				else
+				{
+					msg = "Could not open database named: " + tenantId + " " + e.Message;
+				}
+
+				Logger.WarnException(msg, e);
+				throw new HttpException(503, msg, e);
             }
             if (hasDb)
             {

@@ -27,6 +27,8 @@ namespace Raven.Database.Server.Tenancy
     {
 	    protected static string DisposingLock = Guid.NewGuid().ToString();
 
+	    protected readonly SemaphoreSlim ResourceSemaphore;
+
         protected static readonly ILog Logger = LogManager.GetCurrentClassLogger();
         
         protected readonly ConcurrentSet<string> Locks = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -46,10 +48,14 @@ namespace Raven.Database.Server.Tenancy
 		protected readonly InMemoryRavenConfiguration systemConfiguration;
 		protected readonly DocumentDatabase systemDatabase;
 
+	    protected readonly TimeSpan ConcurrentDatabaseLoadTimeout;
+
 	    protected AbstractLandlord(DocumentDatabase systemDatabase)
 	    {
 			systemConfiguration = systemDatabase.Configuration;
 			this.systemDatabase = systemDatabase;
+			ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.MaxConcurrentDatabaseLoads);
+		    ConcurrentDatabaseLoadTimeout = systemDatabase.Configuration.ConcurrentDatabaseLoadTimeout;
 	    }
 
 		public int MaxSecondsForTaskToWaitForDatabaseToLoad
@@ -266,6 +272,15 @@ namespace Raven.Database.Server.Tenancy
                 // there is no else, the db is probably faulted
             });
             ResourcesStoresCache.Clear();
+
+	        try
+	        {
+		        ResourceSemaphore.Dispose();
+	        }
+	        catch (Exception e)
+	        {
+		        Logger.WarnException("Failed to dispose resource semaphore",e);
+	        }
         }
     }
 }

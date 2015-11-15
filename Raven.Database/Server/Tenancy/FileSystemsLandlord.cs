@@ -23,6 +23,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -218,26 +219,39 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
-            {
-				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+	        var hasAcquired = false;
+	        try
+	        {
+		        if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+			        throw new ConcurrentLoadTimeoutException("Too much filesystems loading concurrently, timed out waiting for them to load.");
 
-				AssertLicenseParameters(config);
-				var fs = new RavenFileSystem(config, tenantId, transportState);
-                fs.Initialize();
+		        hasAcquired = true;
+		        fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+		        {
+			        var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return fs;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
-                {
-                    Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
-            return true;
+			        AssertLicenseParameters(config);
+			        var fs = new RavenFileSystem(config, tenantId, transportState);
+			        fs.Initialize();
+
+			        // if we have a very long init process, make sure that we reset the last idle time for this db.
+			        LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+			        return fs;
+		        }).ContinueWith(task =>
+		        {
+			        if (task.Status == TaskStatus.Faulted) // this observes the task exception
+			        {
+				        Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
+			        }
+			        return task;
+		        }).Unwrap());
+		        return true;
+	        }
+	        finally
+	        {
+		        if (hasAcquired)
+			        ResourceSemaphore.Release();
+	        }
         }
 
         private void AssertLicenseParameters(InMemoryRavenConfiguration config)
@@ -286,7 +300,8 @@ namespace Raven.Database.Server.Tenancy
         public async Task<RavenFileSystem> GetFileSystemInternal(string name)
         {
             Task<RavenFileSystem> db;
-            if (TryGetOrCreateResourceStore(name, out db))
+
+				if (TryGetOrCreateResourceStore(name, out db))
                 return await db;
             return null;
         }

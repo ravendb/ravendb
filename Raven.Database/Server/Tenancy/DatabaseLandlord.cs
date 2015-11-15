@@ -16,6 +16,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Tenancy
@@ -121,16 +122,15 @@ namespace Raven.Database.Server.Tenancy
 
         public async Task<DocumentDatabase> GetDatabaseInternal(string name)
         {
-            if (string.Equals("<system>", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
-                return systemDatabase;
-
-            Task<DocumentDatabase> db;
-            if (TryGetOrCreateResourceStore(name, out db))
-                return await db;
-            return null;
+	        if (string.Equals("<system>", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
+		        return systemDatabase;
+	        Task<DocumentDatabase> db;
+	        if (TryGetOrCreateResourceStore(name, out db))
+		        return await db;
+	        return null;
         }
 
-        public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
+	    public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
 			if (Locks.Contains(DisposingLock))
 				throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
@@ -161,33 +161,46 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
-            {
-				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+		    var hasAcquired = false;
+		    try
+		    {
+			    if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+					throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
 
-                AssertLicenseParameters(config);
-                var documentDatabase = new DocumentDatabase(config, transportState);
+				hasAcquired = true;
+			    database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+			    {
+				    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-				documentDatabase.SpinBackgroundWorkers(false);
-				documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-				documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-	            documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
-                // register only DB that has incremental backup set.
-                documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
+				    AssertLicenseParameters(config);
+				    var documentDatabase = new DocumentDatabase(config, transportState);
 
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return documentDatabase;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
-                {
-                    Logger.WarnException("Failed to create database " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
+				    documentDatabase.SpinBackgroundWorkers(false);
+				    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+				    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+				    documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+				    // register only DB that has incremental backup set.
+				    documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
-			if (database.IsFaulted && database.Exception != null)
+				    // if we have a very long init process, make sure that we reset the last idle time for this db.
+				    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+				    return documentDatabase;
+			    }).ContinueWith(task =>
+			    {
+				    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+				    {
+					    Logger.WarnException("Failed to create database " + tenantId, task.Exception);
+				    }
+				    return task;
+			    }).Unwrap());
+		    }
+		    finally
+		    {
+			    if (hasAcquired)
+				    ResourceSemaphore.Release();
+		    }
+
+		    if (database.IsFaulted && database.Exception != null)
 			{
 				// if we are here, there is an error, and if there is an error, we need to clear it from the 
 				// resource store cache so we can try to reload it.

@@ -21,6 +21,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -176,24 +177,37 @@ namespace Raven.Database.Server.Tenancy
 			if (config == null)
 				return false;
 
-			counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+			var hasAcquired = false;
+			try
 			{
-				var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-				var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
-				AssertLicenseParameters();
+				if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+					throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
 
-				// if we have a very long init process, make sure that we reset the last idle time for this db.
-				LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-				return cs;
-			}).ContinueWith(task =>
-			{
-				if (task.Status == TaskStatus.Faulted) // this observes the task exception
+				hasAcquired = true;
+				counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 				{
-					Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
-				}
-				return task;
-			}).Unwrap());
-			return true;
+					var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+					var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
+					AssertLicenseParameters();
+
+					// if we have a very long init process, make sure that we reset the last idle time for this db.
+					LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+					return cs;
+				}).ContinueWith(task =>
+				{
+					if (task.Status == TaskStatus.Faulted) // this observes the task exception
+					{
+						Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
+					}
+					return task;
+				}).Unwrap());
+				return true;
+			}
+			finally
+			{
+				if (hasAcquired)
+					ResourceSemaphore.Release();
+			}
 		}
 
         public void Unprotect(CountersDocument configDocument)

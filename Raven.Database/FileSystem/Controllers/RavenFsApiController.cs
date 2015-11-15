@@ -34,6 +34,7 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.FileSystem.Extensions;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
@@ -96,14 +97,14 @@ namespace Raven.Database.FileSystem.Controllers
             if (IsInternalRequest == false) 
                 RequestManager.IncrementRequestCount();
 
-            var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
-            if (fileSystemInternal == null)
-            {
-                var msg = "Could not find a file system named: " + FileSystemName;
-                return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
-            }
+			var fileSystemInternal = await FileSystemsLandlord.GetFileSystemInternal(FileSystemName);
+			if (fileSystemInternal == null)
+			{
+				var msg = "Could not find a file system named: " + FileSystemName;
+				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
+			}
 
-            var sp = Stopwatch.StartNew();
+			var sp = Stopwatch.StartNew();
 
             var result = await base.ExecuteAsync(controllerContext, cancellationToken);
             sp.Stop();
@@ -327,15 +328,25 @@ namespace Raven.Database.FileSystem.Controllers
 
             Task<RavenFileSystem> resourceStoreTask;
             bool hasDb;
-            try
-            {
-                hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
-            }
+		    try
+		    {
+			    hasDb = landlord.TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
+		    }
             catch (Exception e)
             {
-	            var se = e.SimplifyException();
-	            var msg = "Could not open file system named: " + tenantId + ", " + se.Message;
-                Logger.WarnException(msg, e);
+	            var cle = e as ConcurrentLoadTimeoutException;
+	            string msg;
+	            if (cle != null)
+	            {
+		            msg = string.Format("The filesystem {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.",tenantId);
+	            }
+	            else
+	            {
+		            var se = e.SimplifyException();
+		            msg = "Could not open file system named: " + tenantId + ", " + se.Message;
+	            }
+
+	            Logger.WarnException(msg, e);
                 throw new HttpException(503, msg, e);
             }
             if (hasDb)
