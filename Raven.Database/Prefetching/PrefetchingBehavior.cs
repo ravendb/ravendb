@@ -95,7 +95,7 @@ namespace Raven.Database.Prefetching
 
         public PrefetchingUser PrefetchingUser { get; private set; }
 
-        public bool IsDefault { get; }
+        public bool IsDefault { get; private set; }
         private readonly Func<int> getPrefetchintBehavioursCount;
         private readonly Func<PrefetchingSummary> getPrefetcherSummary;
         public List<IndexToWorkOn> Indexes { get; set; }
