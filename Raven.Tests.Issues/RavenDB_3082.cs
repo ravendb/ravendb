@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3082.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,73 +15,73 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_3082 : RavenTest
-	{
+    public class RavenDB_3082 : RavenTest
+    {
         [Theory]
         [PropertyData("Storages")]
-		public async Task StronglyTypedDataSubscriptions(string storage)
-		{
-			using (var store = NewDocumentStore(requestedStorage:storage))
-			{
-				using (var session = store.OpenSession())
-				{
-					for (int i = 0; i < 10; i++)
-					{
-						session.Store(new PersonWithAddress()
-						{
-							Name = "James",
-							Address = new Address()
-							{
-								ZipCode = 12345
-							}
-						});
+        public async Task StronglyTypedDataSubscriptions(string storage)
+        {
+            using (var store = NewDocumentStore(requestedStorage:storage))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new PersonWithAddress()
+                        {
+                            Name = "James",
+                            Address = new Address()
+                            {
+                                ZipCode = 12345
+                            }
+                        });
 
-						session.Store(new PersonWithAddress()
-						{
-							Name = "James",
-							Address = new Address()
-							{
-								ZipCode = 54321
-							}
-						});
+                        session.Store(new PersonWithAddress()
+                        {
+                            Name = "James",
+                            Address = new Address()
+                            {
+                                ZipCode = 54321
+                            }
+                        });
 
-						session.Store(new PersonWithAddress()
-						{
-							Name = "David",
-							Address = new Address()
-							{
-								ZipCode = 12345
-							}
-						});
+                        session.Store(new PersonWithAddress()
+                        {
+                            Name = "David",
+                            Address = new Address()
+                            {
+                                ZipCode = 12345
+                            }
+                        });
 
-						session.Store(new Person());
-					}
+                        session.Store(new Person());
+                    }
 
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				var criteria = new SubscriptionCriteria<PersonWithAddress>();
-				criteria.PropertyMatch(x => x.Name, "James");
-				criteria.PropertyNotMatch(x => x.Address.ZipCode, 54321);
+                var criteria = new SubscriptionCriteria<PersonWithAddress>();
+                criteria.PropertyMatch(x => x.Name, "James");
+                criteria.PropertyNotMatch(x => x.Address.ZipCode, 54321);
 
-				var id = await store.AsyncSubscriptions.CreateAsync(criteria);
+                var id = await store.AsyncSubscriptions.CreateAsync(criteria);
 
-				var subscription = await store.AsyncSubscriptions.OpenAsync<PersonWithAddress>(id, new SubscriptionConnectionOptions());
+                var subscription = await store.AsyncSubscriptions.OpenAsync<PersonWithAddress>(id, new SubscriptionConnectionOptions());
 
-				var users = new List<PersonWithAddress>();
+                var users = new List<PersonWithAddress>();
 
-				subscription.Subscribe(users.Add);
+                subscription.Subscribe(users.Add);
 
-				Assert.True(SpinWait.SpinUntil(() => users.Count >= 10, TimeSpan.FromSeconds(60)));
+                Assert.True(SpinWait.SpinUntil(() => users.Count >= 10, TimeSpan.FromSeconds(60)));
 
-				Assert.Equal(10, users.Count);
+                Assert.Equal(10, users.Count);
 
-				foreach (var user in users)
-				{
-					Assert.Equal("James", user.Name);
-					Assert.Equal(12345, user.Address.ZipCode);
-				}
-			}
-		}
-	}
+                foreach (var user in users)
+                {
+                    Assert.Equal("James", user.Name);
+                    Assert.Equal(12345, user.Address.ZipCode);
+                }
+            }
+        }
+    }
 }

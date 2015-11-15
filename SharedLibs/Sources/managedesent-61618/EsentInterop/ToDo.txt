@@ -1,4 +1,4 @@
-﻿ Pri 0: Tests & Bugs
+ Pri 0: Tests & Bugs
  -------------------
   * JetConfigureProcessForCrashDump
   * Perf tests for JetSetColumns vs JetSetColumn
@@ -7,7 +7,7 @@
   * JetEnumerateColumns on temp table
   * ColumnValue.ToString should print columnid
   * Test ToString method for ColumnValue
-  	
+    
 APIs to implement
 -----------------------------
   - JetComputeStats  

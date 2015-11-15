@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="HelpersTempTableFixtureTests.cs" company="Microsoft Corporation">
 //     Copyright (c) Microsoft Corporation.
 // </copyright>
@@ -900,7 +900,7 @@ namespace InteropApiTests
 
             // These characters include surrogate pairs. String.Length counts the
             // surrogate pairs.
-            const string Expected = "☺ś𐐂𐐉𐐯𐑉𝓐𐒀";   
+            const string Expected = "?s????????????";   
             byte[] data = Encoding.Unicode.GetBytes(Expected);
             this.InsertRecord(columnid, data);
             string actual = Api.RetrieveColumnAsString(this.sesid, this.tableid, columnid, Encoding.Unicode);
@@ -962,7 +962,7 @@ namespace InteropApiTests
         public void RetrieveExtremelyLargeString()
         {
             JET_COLUMNID columnid = this.columnidDict["Unicode"];
-            string value = "Ẁ𐐂𐐉𐐯𐑉𝓐€" + new string('ᵫ', 1024 * 1024);
+            string value = "???????????�" + new string('?', 1024 * 1024);
             this.InsertRecord(columnid, Encoding.Unicode.GetBytes(value));
             Assert.AreEqual(value, Api.RetrieveColumnAsString(this.sesid, this.tableid, columnid, Encoding.Unicode));
         }

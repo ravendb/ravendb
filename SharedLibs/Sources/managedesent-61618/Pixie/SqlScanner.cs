@@ -124,7 +124,7 @@ namespace Microsoft.Isam.Esent.Sql.Parsing
 #region user code
 public override void yyerror(string format, params object[] args)
      {
-		throw new EsentSqlParseException(String.Format(format, args));
+        throw new EsentSqlParseException(String.Format(format, args));
      }
 #endregion user code
 
@@ -1043,14 +1043,14 @@ int TestNextState(int qStat, int chr) {
         // ==== Nested struct to support input switching in scanners ====
         // ==============================================================
 
-		struct BufferContext {
-			internal ScanBuff buffSv;
-			internal int chrSv;
-			internal int cNumSv;
-			internal int lNumSv;
-			internal int startSv;
-		}
-		
+        struct BufferContext {
+            internal ScanBuff buffSv;
+            internal int chrSv;
+            internal int cNumSv;
+            internal int lNumSv;
+            internal int startSv;
+        }
+        
 #region Buffer classes
 
         // ==============================================================
@@ -1062,28 +1062,28 @@ int TestNextState(int qStat, int chr) {
         /// the current buffer object, together with some
         /// scanner state values. 
         /// </summary>
-		BufferContext MkBuffCtx()
-		{
-			BufferContext rslt;
-			rslt.buffSv = this.buffer;
-			rslt.chrSv = this.chr;
-			rslt.cNumSv = this.cNum;
-			rslt.lNumSv = this.lNum;
-			rslt.startSv = this.lineStartNum;
-			return rslt;
-		}
+        BufferContext MkBuffCtx()
+        {
+            BufferContext rslt;
+            rslt.buffSv = this.buffer;
+            rslt.chrSv = this.chr;
+            rslt.cNumSv = this.cNum;
+            rslt.lNumSv = this.lNum;
+            rslt.startSv = this.lineStartNum;
+            return rslt;
+        }
 
         /// <summary>
         /// This method restores the buffer value and allied
         /// scanner state from the given context record value.
         /// </summary>
-		void RestoreBuffCtx(BufferContext value)
-		{
-			this.buffer = value.buffSv;
-			this.chr = value.chrSv;
-			this.cNum = value.cNumSv;
-			this.lNum = value.lNumSv;
-			this.lineStartNum = value.startSv;
+        void RestoreBuffCtx(BufferContext value)
+        {
+            this.buffer = value.buffSv;
+            this.chr = value.chrSv;
+            this.cNum = value.cNumSv;
+            this.lNum = value.lNumSv;
+            this.lineStartNum = value.startSv;
         } 
         
         // ==============================================================
@@ -2328,8 +2328,8 @@ yylval.stringValue = yytext.Substring(1,yytext.Length-2); return (int)Tokens.STR
         {
             // Protect against input errors that pop too far ...
             if (scStack.Count > 0) {
-				int newSc = scStack.Pop();
-				BEGIN(newSc);
+                int newSc = scStack.Pop();
+                BEGIN(newSc);
             } // Otherwise leave stack unchanged.
         }
  #endif // STACK

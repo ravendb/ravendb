@@ -1,4 +1,4 @@
-﻿import database = require("models/database");
+import database = require("models/database");
 import customFunctions = require("models/customFunctions");
 import commandBase = require("commands/commandBase");
 

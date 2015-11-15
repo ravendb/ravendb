@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/database");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
@@ -11,8 +11,8 @@ class resourceRestore {
     defrag = ko.observable<boolean>(false);
     backupLocation = ko.observable<string>('');
     resourceLocation = ko.observable<string>();
-	indexesLocation = ko.observable<string>();
-	journalsLocation = ko.observable<string>();
+    indexesLocation = ko.observable<string>();
+    journalsLocation = ko.observable<string>();
     resourceName = ko.observable<string>();
     nameCustomValidityError: KnockoutComputed<string>;
 
@@ -58,38 +58,44 @@ class restore extends viewModelBase {
 
     disableReplicationDestinations = ko.observable<boolean>(false);
     generateNewDatabaseId = ko.observable<boolean>(false);
-
+    isForbidden = ko.observable<boolean>();
     isBusy = ko.observable<boolean>();
     anotherRestoreInProgres = ko.observable<boolean>(false);
 
     canActivate(args): any {
-        this.isBusy(true);
         var deferred = $.Deferred();
-        var db = appUrl.getSystemDatabase();
-        var self = this;
 
-        new getDocumentWithMetadataCommand("Raven/Restore/InProgress", db, true).execute()
-            .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }))
-            .done((result) => {
-                if (result) {
-                    // looks like another restore is in progress
-                    this.anotherRestoreInProgres(true);
-                    new monitorRestoreCommand($.Deferred(), s => {
-                        self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions)(s);
-                        self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions)(s);
-                    })
-                        .execute()
-                        .always(() => {
-                            $("#databaseRawLogsContainer").resize();
-                            $("#filesystemRawLogsContainer").resize();
-                            this.anotherRestoreInProgres(false);
-                        });
+        this.isForbidden(shell.isGlobalAdmin() === false);
+        if (this.isForbidden() === false) {
+            this.isBusy(true);
+            var db = appUrl.getSystemDatabase();
+            var self = this;
 
-                } else {
-                    this.isBusy(false);
-                }
-                deferred.resolve({ can: true })
-            });
+            new getDocumentWithMetadataCommand("Raven/Restore/InProgress", db, true).execute()
+                .fail(() => deferred.resolve({ redirect: appUrl.forSettings(db) }))
+                .done((result) => {
+                    if (result) {
+                        // looks like another restore is in progress
+                        this.anotherRestoreInProgres(true);
+                        new monitorRestoreCommand($.Deferred(), s => {
+                            self.dbRestoreOptions.updateRestoreStatus.bind(self.dbRestoreOptions)(s);
+                            self.fsRestoreOptions.updateRestoreStatus.bind(self.fsRestoreOptions)(s);
+                        })
+                            .execute()
+                            .always(() => {
+                                $("#databaseRawLogsContainer").resize();
+                                $("#filesystemRawLogsContainer").resize();
+                                this.anotherRestoreInProgres(false);
+                            });
+
+                    } else {
+                        this.isBusy(false);
+                    }
+                    deferred.resolve({ can: true });
+                });
+        } else {
+            deferred.resolve({ can: true });
+        }
 
         return deferred;
     }
@@ -109,8 +115,8 @@ class restore extends viewModelBase {
             DatabaseName: this.dbRestoreOptions.resourceName(),
             DisableReplicationDestinations: this.disableReplicationDestinations(),
             GenerateNewDatabaseId: this.generateNewDatabaseId(),
-			IndexesLocation: this.dbRestoreOptions.indexesLocation(),
-			JournalsLocation: this.dbRestoreOptions.journalsLocation()
+            IndexesLocation: this.dbRestoreOptions.indexesLocation(),
+            JournalsLocation: this.dbRestoreOptions.journalsLocation()
         };
 
         require(["commands/startRestoreCommand"], startRestoreCommand => {
@@ -128,8 +134,8 @@ class restore extends viewModelBase {
             BackupLocation: this.fsRestoreOptions.backupLocation(),
             FilesystemLocation: this.fsRestoreOptions.resourceLocation(),
             FilesystemName: this.fsRestoreOptions.resourceName(),
-			IndexesLocation: this.fsRestoreOptions.indexesLocation(),
-			JournalsLocation: this.fsRestoreOptions.journalsLocation()
+            IndexesLocation: this.fsRestoreOptions.indexesLocation(),
+            JournalsLocation: this.fsRestoreOptions.journalsLocation()
         };
 
         require(["commands/filesystem/startRestoreCommand"], startRestoreCommand => {

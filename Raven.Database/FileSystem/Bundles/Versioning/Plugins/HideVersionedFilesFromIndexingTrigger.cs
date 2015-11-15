@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="HideVersionedFilesFromIndexingTrigger.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,19 +11,19 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 {
-	[InheritedExport(typeof(AbstractFileReadTrigger))]
-	[ExportMetadata("Bundle", "Versioning")]
-	public class HideVersionedFilesFromIndexingTrigger : AbstractFileReadTrigger
-	{
-		public override ReadVetoResult AllowRead(string name, RavenJObject metadata, ReadOperation operation)
-		{
-			if (operation != ReadOperation.Index)
-				return ReadVetoResult.Allowed;
+    [InheritedExport(typeof(AbstractFileReadTrigger))]
+    [ExportMetadata("Bundle", "Versioning")]
+    public class HideVersionedFilesFromIndexingTrigger : AbstractFileReadTrigger
+    {
+        public override ReadVetoResult AllowRead(string name, RavenJObject metadata, ReadOperation operation)
+        {
+            if (operation != ReadOperation.Index)
+                return ReadVetoResult.Allowed;
 
-			if (metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" && FileSystem.IsVersioningActive(name))
-				return ReadVetoResult.Ignore;
+            if (metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" && FileSystem.IsVersioningActive(name))
+                return ReadVetoResult.Ignore;
 
-			return ReadVetoResult.Allowed;
-		}
-	}
+            return ReadVetoResult.Allowed;
+        }
+    }
 }

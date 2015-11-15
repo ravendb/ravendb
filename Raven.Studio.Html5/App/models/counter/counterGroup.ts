@@ -1,4 +1,4 @@
-﻿import counter = require("models/counter/counter");
+import counter = require("models/counter/counter");
 
 class counterGroup {
     name = ko.observable('');

@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/database");
 import filesystem = require("models/filesystem/filesystem");
@@ -39,8 +39,10 @@ class backupDatabase extends viewModelBase {
 
     private dbBackupOptions = new resourceBackup(database.type, shell.databases);
     private fsBackupOptions = new resourceBackup(filesystem.type, shell.fileSystems);
-    
+    isForbidden = ko.observable<boolean>();
+
     canActivate(args): any {
+        this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
 

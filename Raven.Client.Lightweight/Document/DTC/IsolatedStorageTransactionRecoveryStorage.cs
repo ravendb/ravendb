@@ -1,10 +1,10 @@
-﻿namespace Raven.Client.Document.DTC
+namespace Raven.Client.Document.DTC
 {
-	public class IsolatedStorageTransactionRecoveryStorage : ITransactionRecoveryStorage
-	{
-		public ITransactionRecoveryStorageContext Create()
-		{
-			return new IsolatedStorageTransactionRecoveryContext();
-		}
-	}
+    public class IsolatedStorageTransactionRecoveryStorage : ITransactionRecoveryStorage
+    {
+        public ITransactionRecoveryStorageContext Create()
+        {
+            return new IsolatedStorageTransactionRecoveryContext();
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿properties { 
+properties { 
   $zipFileName = "Json70r1.zip"
   $majorVersion = "7.0"
   $majorWithReleaseVersion = "7.0.1"

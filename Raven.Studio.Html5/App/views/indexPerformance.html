@@ -1,4 +1,4 @@
-﻿<style>
+<style>
     .batchRange rect {
         opacity: 0.4;
     }
@@ -49,30 +49,30 @@
 
     .LoadDocument { fill: #17becf; background-color: #17becf }
 
-	.Linq_MapExecution { fill: #1f77b4; background-color: #1f77b4 }
-	.Linq_ReduceLinqExecution { fill: #ff7f0e; background-color: #ff7f0e }
-	.Lucene_DeleteExistingDocument { fill: #2ca02c; background-color: #2ca02c }
-	.Lucene_ConvertToLuceneDocument { fill: #d62728; background-color: #d62728 }
-	.Lucene_AddDocument { fill: #9467bd; background-color: #9467bd }
-	.Lucene_FlushToDisk { fill: #8c564b; background-color: #8c564b }
-	.Lucene_RecreateSearcher { fill: #e377c2; background-color: #e377c2 }
+    .Linq_MapExecution { fill: #1f77b4; background-color: #1f77b4 }
+    .Linq_ReduceLinqExecution { fill: #ff7f0e; background-color: #ff7f0e }
+    .Lucene_DeleteExistingDocument { fill: #2ca02c; background-color: #2ca02c }
+    .Lucene_ConvertToLuceneDocument { fill: #d62728; background-color: #d62728 }
+    .Lucene_AddDocument { fill: #9467bd; background-color: #9467bd }
+    .Lucene_FlushToDisk { fill: #8c564b; background-color: #8c564b }
+    .Lucene_RecreateSearcher { fill: #e377c2; background-color: #e377c2 }
 
-	.Map_DeleteMappedResults { fill: #aec7e8; background-color: #aec7e8 }
-	.Map_ConvertToRavenJObject { fill: #e0e5a3; background-color: #e0e5a3 }
-	.Map_PutMappedResults { fill: #98df8a; background-color: #98df8a }
-	.Map_ScheduleReductions { fill: #ffbb78; background-color: #ffbb78 }
-	
-	.Reduce_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d5 }
-	.Reduce_DeleteScheduledReductions { fill: #c49c94; background-color: #c49c94 }
-	.Reduce_ScheduleReductions { fill: #f7b6d2; background-color: #f7b6d2 }
-	.Reduce_GetMappedResults { fill: #bcbd22; background-color: #bcbd22 }
-	.Reduce_RemoveReduceResults { fill: #dbdb8d; background-color: #dbdb8d }
+    .Map_DeleteMappedResults { fill: #aec7e8; background-color: #aec7e8 }
+    .Map_ConvertToRavenJObject { fill: #e0e5a3; background-color: #e0e5a3 }
+    .Map_PutMappedResults { fill: #98df8a; background-color: #98df8a }
+    .Map_ScheduleReductions { fill: #ffbb78; background-color: #ffbb78 }
+    
+    .Reduce_GetItemsToReduce { fill: #c5b0d5; background-color: #c5b0d5 }
+    .Reduce_DeleteScheduledReductions { fill: #c49c94; background-color: #c49c94 }
+    .Reduce_ScheduleReductions { fill: #f7b6d2; background-color: #f7b6d2 }
+    .Reduce_GetMappedResults { fill: #bcbd22; background-color: #bcbd22 }
+    .Reduce_RemoveReduceResults { fill: #dbdb8d; background-color: #dbdb8d }
 
-	.StorageCommit { fill: #9edae5; background-color: #9edae5 }
+    .StorageCommit { fill: #9edae5; background-color: #9edae5 }
 
-	.UpdateDocumentReferences { fill: #ff9896; background-color: #ff9896 }
+    .UpdateDocumentReferences { fill: #ff9896; background-color: #ff9896 }
 
-	.Extension_Suggestions { fill: #55fa9a; background-color: #55fa9a; }
+    .Extension_Suggestions { fill: #55fa9a; background-color: #55fa9a; }
 
     .ParallelBlock {
        background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAI0lEQVQIW2NkwAT/GdHE/gP5jMiCYAGQIpggXAAmiCIAEgQAAE4FBbECyZcAAAAASUVORK5CYII=') repeat;
@@ -116,11 +116,11 @@
                 </tr>
                 <tr>
                     <td>Total document count</td>
-					<td data-bind="text: TotalDocumentCount.toLocaleString(2)"></td>
+                    <td data-bind="text: TotalDocumentCount.toLocaleString(2)"></td>
                 </tr>
                 <tr>
                     <td>Total document size</td>
-					<td data-bind="text: TotalDocumentSize.toLocaleString(2)"></td>
+                    <td data-bind="text: TotalDocumentSize.toLocaleString(2)"></td>
                 </tr>
                 <tr>
                     <td>Started at</td>
@@ -128,7 +128,7 @@
                 </tr>
                 <tr>
                     <td>Total duration [ms]</td>
-					<td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
+                    <td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
                 </tr>
             </tbody>
         </table>
@@ -161,11 +161,11 @@
                 </tr>
                 <tr>
                     <td>Total duration [ms]</td>
-					<td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
+                    <td data-bind="text: TotalDurationMs.toLocaleString(2)"></td>
                 </tr>
                 <tr>
                     <td>Time since first reduce<br />in batch completed [ms]</td>
-					<td data-bind="text: TimeSinceFirstReduceInBatchCompletedMs.toLocaleString(2)"></td>
+                    <td data-bind="text: TimeSinceFirstReduceInBatchCompletedMs.toLocaleString(2)"></td>
                 </tr>
             </tbody>
         </table>

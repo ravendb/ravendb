@@ -1,4 +1,4 @@
-﻿import commandBase = require("commands/commandBase");
+import commandBase = require("commands/commandBase");
 import file = require("models/filesystem/file");
 import fileMetadata = require("models/filesystem/fileMetadata");
 import filesystem = require("models/filesystem/filesystem");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
@@ -13,40 +13,40 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Database.Server.Connections
 {
     public class HttpTracePushContent : HttpContent, IEventsTransport
-	{
-	    private const int QueueCapacity = 10000;
+    {
+        private const int QueueCapacity = 10000;
 
-		private readonly ILog log = LogManager.GetCurrentClassLogger();
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
-	    private bool hitCapacity = false;
+        private bool hitCapacity = false;
 
-		private readonly DateTime _started = SystemTime.UtcNow;
-		public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
+        private readonly DateTime _started = SystemTime.UtcNow;
+        public TimeSpan Age { get { return SystemTime.UtcNow - _started; } }
 
-		public string Id { get; private set; }
+        public string Id { get; private set; }
 
-		public bool Connected { get; set; }
+        public bool Connected { get; set; }
 
-		public event Action Disconnected = delegate { };
+        public event Action Disconnected = delegate { };
 
         private readonly BlockingCollection<object> msgs = new BlockingCollection<object>(QueueCapacity);
 
         public HttpTracePushContent(RavenBaseApiController controller)
-		{
-			Connected = true;
-		}
+        {
+            Connected = true;
+        }
 
-		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
-		{
-			using (var writer = new StreamWriter(stream))
-			{
+        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+        {
+            using (var writer = new StreamWriter(stream))
+            {
                 await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
-				await writer.FlushAsync();
-							
-				while (Connected)
-				{
-					try
-					{
+                await writer.FlushAsync();
+                            
+                while (Connected)
+                {
+                    try
+                    {
                         object message;
                         while (msgs.TryTake(out message, millisecondsTimeout: 1000))
                         {
@@ -58,58 +58,58 @@ namespace Raven.Database.Server.Connections
 
                         await writer.WriteAsync("data: { \"Type\": \"Heartbeat\" }\r\n\r\n");
                         await writer.FlushAsync();
-					}
-					catch (Exception e)
-					{
-						Connected = false;
-						log.DebugException("Error when using events transport", e);
-						Disconnected();
-						try
-						{
-							writer.WriteLine(e.ToString());
-						}
-						catch (Exception)
-						{
-							// try to send the information to the client, okay if they don't get it
-							// because they might have already disconnected
-						}
-					}
-				}
-			}
-		}
+                    }
+                    catch (Exception e)
+                    {
+                        Connected = false;
+                        log.DebugException("Error when using events transport", e);
+                        Disconnected();
+                        try
+                        {
+                            writer.WriteLine(e.ToString());
+                        }
+                        catch (Exception)
+                        {
+                            // try to send the information to the client, okay if they don't get it
+                            // because they might have already disconnected
+                        }
+                    }
+                }
+            }
+        }
 
-		private async Task SendMessage(object message, StreamWriter writer)
-		{
+        private async Task SendMessage(object message, StreamWriter writer)
+        {
             var o = JsonExtensions.ToJObject(message);        
             await writer.WriteAsync("data: ");
             await writer.WriteAsync(o.ToString(Formatting.None));
             await writer.WriteAsync("\r\n\r\n");
             await writer.FlushAsync();
-		}
+        }
 
-		protected override bool TryComputeLength(out long length)
-		{
-			length = 0;
-			return false;
-		}
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
 
-		protected override void Dispose(bool disposing)
-		{
-			base.Dispose(disposing);
-			Connected = false;
-		}
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            Connected = false;
+        }
 
-		public void SendAsync(object msg)
-		{
+        public void SendAsync(object msg)
+        {
             if (msgs.TryAdd(msg) == false)
-			{
+            {
                 if (hitCapacity == false)
                 {
                     hitCapacity = true;
                     log.Warn("Reached max capacity of HttpTrace queue, id = " + Id);
                 }
-			}
-		}
+            }
+        }
 
         public string ResourceName {get; set; }
 

@@ -61,7 +61,6 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
 
         getTokenTask
             .done((tokenObject: singleAuthToken) => {
-
                 this.logConfig.singleAuthToken(tokenObject);
                 this.configurationTask.resolve(this.logConfig);
                 dialog.close(this);

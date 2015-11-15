@@ -80,8 +80,8 @@ interface databaseStatisticsDto {
     CountOfDocuments: number;
     CountOfIndexes: number;
     CurrentNumberOfItemsToIndexInSingleBatch: number;
-	CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
-	CountOfIndexesExcludingDisabledAndAbandoned: number;
+    CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
+    CountOfIndexesExcludingDisabledAndAbandoned: number;
     CurrentNumberOfItemsToReduceInSingleBatch: number;
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
@@ -93,7 +93,7 @@ interface databaseStatisticsDto {
     Prefetches: any[];
     StaleIndexes: string[];
     SupportsDtc: boolean;
-	Is64Bit: boolean;
+    Is64Bit: boolean;
 }
 
 interface indexStatisticsDto {
@@ -278,6 +278,8 @@ interface userInfoDto {
 
 interface serverConfigsDto {
     IsGlobalAdmin: boolean;
+    CanReadWriteSettings: boolean;
+    CanReadSettings: boolean;
     CanExposeConfigOverTheWire: boolean;
 }
 
@@ -501,7 +503,7 @@ interface transformerDto {
     definition: {
         TransformResults: string;
         Name: string;
-		LockMode: string;
+        LockMode: string;
     }
 }
 
@@ -526,7 +528,7 @@ interface savedTransformerDto {
     {
         "TransformResults": string;
         "Name": string;
-		"LockMode": string;
+        "LockMode": string;
     }
 }
 
@@ -605,8 +607,8 @@ interface databaseDocumentDto {
 
 interface restoreRequestDto {
     BackupLocation: string;
-	IndexesLocation: string;
-	JournalsLocation: string;
+    IndexesLocation: string;
+    JournalsLocation: string;
 }
 
 interface databaseRestoreRequestDto extends restoreRequestDto {
@@ -651,7 +653,7 @@ interface sqlReplicationDto extends documentDto {
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     QuoteTables?: boolean;
-	PerformTableQuatation?: boolean; //obsolate
+    PerformTableQuatation?: boolean; //obsolate
 }
 
 interface commandData {
@@ -744,11 +746,11 @@ interface documentBase {
 }
 
 interface smugglerOptionsDto {
-    IncludeDocuments: boolean;
-    IncludeIndexes: boolean;
-    IncludeTransformers: boolean;
-    IncludeAttachments: boolean;
-    RemoveAnalyzers: boolean;
+    OperateOnTypes: number;
+    BatchSize: number;
+    ShouldExcludeExpired: boolean;
+    Filters: filterSettingDto[];
+    TransformScript: string;
     NoneDefualtFileName: string;
 }
 
@@ -884,7 +886,7 @@ interface statusDebugCurrentlyIndexingDto {
 interface statusDebugIndexDto {
     IndexName: string;
     IsMapReduce: boolean;
-	RemainingReductions: number;
+    RemainingReductions: number;
     CurrentOperations: Array<statusDebugIndexOperationDto>;
     Priority: string;
     OverallIndexingRate: Array<statusDebugIndexRateDto>;
@@ -1272,22 +1274,22 @@ interface synchronizationConfigDto {
 }
 
 interface pluginsInfoDto {
-	Extensions: Array<extensionsLogDto>;
-	Triggers: Array<triggerInfoDto>;
-	CustomBundles: Array<string>;
+    Extensions: Array<extensionsLogDto>;
+    Triggers: Array<triggerInfoDto>;
+    CustomBundles: Array<string>;
 }
 
 interface extensionsLogDto {
-	Name: string;
-	Installed: Array<extensionsLogDetailDto>;
+    Name: string;
+    Installed: Array<extensionsLogDetailDto>;
 }
 
 interface extensionsLogDetailDto {
-	Name: string;
-	Assembly: string;
+    Name: string;
+    Assembly: string;
 }
 
 interface triggerInfoDto {
-	Type: string;
-	Name: string;
+    Type: string;
+    Name: string;
 }

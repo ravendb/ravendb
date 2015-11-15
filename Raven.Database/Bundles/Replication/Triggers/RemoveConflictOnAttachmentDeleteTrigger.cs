@@ -13,32 +13,32 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10001)]
-	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10001)]
+    [InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
     [Obsolete("Use RavenFS instead.")]
-	public class RemoveConflictOnAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
-	{
-		public override void OnDelete(string key)
-		{
-			using (Database.DisableAllTriggersForCurrentThread())
-			{
-				var oldVersion = Database.Attachments.GetStatic(key);
-				if(oldVersion == null)
-					return;
+    public class RemoveConflictOnAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
+    {
+        public override void OnDelete(string key)
+        {
+            using (Database.DisableAllTriggersForCurrentThread())
+            {
+                var oldVersion = Database.Attachments.GetStatic(key);
+                if(oldVersion == null)
+                    return;
 
-				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
-					return;
+                if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
+                    return;
 
-				var conflictData = oldVersion.Data().ToJObject();
-				var conflicts = conflictData.Value<RavenJArray>("Conflicts");
-				if(conflicts == null)
-					return;
-				foreach (var prop in conflicts)
-				{
-					Database.Attachments.DeleteStatic(prop.Value<string>(), null);
-				}
-			}
-		}
-	}
+                var conflictData = oldVersion.Data().ToJObject();
+                var conflicts = conflictData.Value<RavenJArray>("Conflicts");
+                if(conflicts == null)
+                    return;
+                foreach (var prop in conflicts)
+                {
+                    Database.Attachments.DeleteStatic(prop.Value<string>(), null);
+                }
+            }
+        }
+    }
 }

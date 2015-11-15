@@ -12,62 +12,62 @@ using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Connection
 {
-	/// <summary>
-	/// Provide access to the underlying <see cref="IDocumentQuery{T}"/>
-	/// </summary>
-	internal interface IRavenQueryInspector
-	{
-		/// <summary>
-		/// Get the name of the index being queried
-		/// </summary>
-		string IndexQueried { get; }
+    /// <summary>
+    /// Provide access to the underlying <see cref="IDocumentQuery{T}"/>
+    /// </summary>
+    internal interface IRavenQueryInspector
+    {
+        /// <summary>
+        /// Get the name of the index being queried
+        /// </summary>
+        string IndexQueried { get; }
 
-		/// <summary>
-		/// Get the name of the index being queried in async queries
-		/// </summary>
-		string AsyncIndexQueried { get; }
+        /// <summary>
+        /// Get the name of the index being queried in async queries
+        /// </summary>
+        string AsyncIndexQueried { get; }
 
-		/// <summary>
-		/// Grant access to the database commands
-		/// </summary>
-		IDatabaseCommands DatabaseCommands { get; }
+        /// <summary>
+        /// Grant access to the database commands
+        /// </summary>
+        IDatabaseCommands DatabaseCommands { get; }
 
-		/// <summary>
-		/// Grant access to the async database commands
-		/// </summary>
-		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+        /// <summary>
+        /// Grant access to the async database commands
+        /// </summary>
+        IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 
-		/// <summary>
-		/// The query session
-		/// </summary>
-		InMemoryDocumentSessionOperations Session { get; }
+        /// <summary>
+        /// The query session
+        /// </summary>
+        InMemoryDocumentSessionOperations Session { get; }
 
-		/// <summary>
-		/// The last term that we asked the query to use equals on
-		/// </summary>
-		KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
+        /// <summary>
+        /// The last term that we asked the query to use equals on
+        /// </summary>
+        KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
 
-		/// <summary>
-		/// Get the index query for this query
-		/// </summary>
-		IndexQuery GetIndexQuery(bool isAsync);
-		/// <summary>
-		/// Get the facets as per the specified facet document with the given start and pageSize
-		/// </summary>
-		FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize);
+        /// <summary>
+        /// Get the index query for this query
+        /// </summary>
+        IndexQuery GetIndexQuery(bool isAsync);
+        /// <summary>
+        /// Get the facets as per the specified facet document with the given start and pageSize
+        /// </summary>
+        FacetResults GetFacets(string facetSetupDoc, int start, int? pageSize);
 
-		/// <summary>
-		/// Get the facet results as per the specified facets with the given start and pageSize
-		/// </summary>
-		FacetResults GetFacets(List<Facet> facets, int start, int? pageSize);
-		/// <summary>
-		/// Get the facets as per the specified facet document with the given start and pageSize
-		/// </summary>
-		Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken));
+        /// <summary>
+        /// Get the facet results as per the specified facets with the given start and pageSize
+        /// </summary>
+        FacetResults GetFacets(List<Facet> facets, int start, int? pageSize);
+        /// <summary>
+        /// Get the facets as per the specified facet document with the given start and pageSize
+        /// </summary>
+        Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken));
 
-		/// <summary>
-		/// Get the facet results as per the specified facets with the given start and pageSize
-		/// </summary>
-		Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken));
-	}
+        /// <summary>
+        /// Get the facet results as per the specified facets with the given start and pageSize
+        /// </summary>
+        Task<FacetResults> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken));
+    }
 }

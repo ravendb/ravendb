@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DistinctBug.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -31,6 +31,10 @@ namespace Raven.Tests.MailingList
                 RunInMemory = true,
                 Conventions = { IdentityPartsSeparator = "-" },
                 UseEmbeddedHttpServer = true,
+                Configuration =
+                {
+                    Port = 8079
+                }
 
             };
             str.Configuration.Storage.Voron.AllowOn32Bits = true;

@@ -555,9 +555,9 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
     }
 
     /// <summary>
-	/// The event arguments for when the failover status changed
-	/// </summary>
-	public class FailoverStatusChangedEventArgs : EventArgs
+    /// The event arguments for when the failover status changed
+    /// </summary>
+    public class FailoverStatusChangedEventArgs : EventArgs
     {
         /// <summary>
         /// Whatever that url is now failing

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +16,6 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Sparrow.Collections;
 
@@ -93,11 +92,7 @@ namespace Raven.Database.Server.Tenancy
                 if (user == null)
                     return null;
 
-	            var oneTimePrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-				bool isAdministrator = oneTimePrincipal != null ?
-					oneTimePrincipal.IsAdministratorInAnonymouseMode :
-					user.IsAdministrator(annonymouseUserAccessMode);
-
+                bool isAdministrator = user.IsAdministrator(annonymouseUserAccessMode);
                 if (isAdministrator == false)
                 {
                     var authorizer = mixedModeRequestAuthorizer;

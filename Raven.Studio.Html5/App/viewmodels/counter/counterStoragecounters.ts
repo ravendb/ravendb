@@ -1,4 +1,4 @@
-﻿import counterGroup = require("models/counter/counterGroup");
+import counterGroup = require("models/counter/counterGroup");
 import counter = require("models/counter/counter");
 import getCountersCommand = require("commands/counter/getCountersCommand");
 import getCounterGroupsCommand = require("commands/counter/getCounterGroupsCommand");

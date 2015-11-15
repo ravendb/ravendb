@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/watchTrafficConfigDialog");
 import trafficWatchClient = require("common/trafficWatchClient");
@@ -6,6 +6,7 @@ import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand")
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
 import resource = require("models/resource");
+import shell = require("viewmodels/shell");
 
 class trafficWatch extends viewModelBase {
     logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
@@ -25,7 +26,8 @@ class trafficWatch extends viewModelBase {
     startTraceTime = ko.observable<Moment>();
     startTraceTimeHumanized :KnockoutComputed<string>;
     showLogDetails = ko.observable<boolean>(false);
-    logRecordsElement:Element;
+    logRecordsElement: Element;
+    isForbidden = ko.observable<boolean>();
 
     constructor() {
         super();
@@ -35,8 +37,10 @@ class trafficWatch extends viewModelBase {
             if (!!this.startTraceTime()) {
                 return this.parseHumanReadableTimeString(this.startTraceTime().toString(), true, false);
             }
-			return "";
-		});
+            return "";
+        });
+
+        this.isForbidden(shell.isGlobalAdmin() === false);
     }
 
     canActivate(args): any {
@@ -58,7 +62,7 @@ class trafficWatch extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.showLogDetails.subscribe(x => {
                 $(".logRecords").toggleClass("logRecords-small");
         });

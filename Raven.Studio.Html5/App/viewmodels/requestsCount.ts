@@ -31,23 +31,23 @@ class requestsCount extends viewModelBase {
         }
     ];
 
-	activate(args) {
-		super.activate(args);
-		return this.modelPolling();
-	}
+    activate(args) {
+        super.activate(args);
+        return this.modelPolling();
+    }
 
     modelPolling() {
-	    var deferred = $.Deferred();
+        var deferred = $.Deferred();
         this.fetchMetrics().then(() => {
             this.appendData();
             this.updateGraph();
-	        deferred.resolve();
+            deferred.resolve();
         });
-	    return deferred;
+        return deferred;
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.modelPolling();
     }
 

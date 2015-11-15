@@ -170,16 +170,16 @@ namespace Raven.Database.Server.Tenancy
 				hasAcquired = true;
 			    database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			    {
-				    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
 				    AssertLicenseParameters(config);
 				    var documentDatabase = new DocumentDatabase(config, transportState);
 
-				    documentDatabase.SpinBackgroundWorkers(false);
-				    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-				    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-				    documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
-				    // register only DB that has incremental backup set.
+                documentDatabase.SpinBackgroundWorkers(false);
+                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+                documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+                // register only DB that has incremental backup set.
 				    documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
 				    // if we have a very long init process, make sure that we reset the last idle time for this db.
@@ -200,7 +200,7 @@ namespace Raven.Database.Server.Tenancy
 				    ResourceSemaphore.Release();
 		    }
 
-		    if (database.IsFaulted && database.Exception != null)
+            if (database.IsFaulted && database.Exception != null)
 			{
 				// if we are here, there is an error, and if there is an error, we need to clear it from the 
 				// resource store cache so we can try to reload it.

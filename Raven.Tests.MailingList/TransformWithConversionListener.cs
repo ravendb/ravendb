@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TransformWithConversionListener.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -20,7 +20,7 @@ namespace Raven.Tests.MailingList
     {
          public class Item
          {
-			 public string Id { get; set; }
+             public string Id { get; set; }
 
              public string Name { get; set; }
          }
@@ -32,7 +32,7 @@ namespace Raven.Tests.MailingList
             public bool Converted { get; set; }
         }
 
-		public class EtagTransformer : AbstractTransformerCreationTask<Item>
+        public class EtagTransformer : AbstractTransformerCreationTask<Item>
         {
             public EtagTransformer()
             {
@@ -49,23 +49,23 @@ namespace Raven.Tests.MailingList
         public class DocumentConversionListener  : IDocumentConversionListener
         {
             
-	        public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
-	        {
+            public void BeforeConversionToDocument(string key, object entity, RavenJObject metadata)
+            {
 
-	        }
+            }
 
-	        public void AfterConversionToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
-	        {
-	        }
+            public void AfterConversionToDocument(string key, object entity, RavenJObject document, RavenJObject metadata)
+            {
+            }
 
-	        public void BeforeConversionToEntity(string key, RavenJObject document, RavenJObject metadata)
-	        {
-	        }
+            public void BeforeConversionToEntity(string key, RavenJObject document, RavenJObject metadata)
+            {
+            }
 
-	        public void AfterConversionToEntity(string key, RavenJObject document, RavenJObject metadata, object entity)
-	        {
-				((TransformedItem)entity).Converted = true;
-	        }
+            public void AfterConversionToEntity(string key, RavenJObject document, RavenJObject metadata, object entity)
+            {
+                ((TransformedItem)entity).Converted = true;
+            }
         }
 
         [Fact]
@@ -73,7 +73,7 @@ namespace Raven.Tests.MailingList
         {
             using (var store = (DocumentStore)NewRemoteDocumentStore())
             {
-				new EtagTransformer().Execute(store);
+                new EtagTransformer().Execute(store);
 
                 store.RegisterListener(new DocumentConversionListener());
 
@@ -85,7 +85,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-					var transformedItem = session.Load<EtagTransformer, TransformedItem>("items/1");
+                    var transformedItem = session.Load<EtagTransformer, TransformedItem>("items/1");
                     Assert.True(transformedItem.Transformed);
                     Assert.True(transformedItem.Converted);
                 }
@@ -98,7 +98,7 @@ namespace Raven.Tests.MailingList
         {
             using (var store = (DocumentStore)NewRemoteDocumentStore())
             {
-				new EtagTransformer().ExecuteAsync(store.AsyncDatabaseCommands, store.Conventions).Wait();
+                new EtagTransformer().ExecuteAsync(store.AsyncDatabaseCommands, store.Conventions).Wait();
 
                 store.RegisterListener(new DocumentConversionListener());
 
@@ -110,7 +110,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenAsyncSession())
                 {
-					var transformedItem = session.LoadAsync<EtagTransformer, TransformedItem>("items/1").Result;
+                    var transformedItem = session.LoadAsync<EtagTransformer, TransformedItem>("items/1").Result;
                     Assert.True(transformedItem.Transformed);
                     Assert.True(transformedItem.Converted);
                 }

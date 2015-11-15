@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -203,8 +203,8 @@ namespace Raven.Client.Changes
                             .ObserveException()
                             .ContinueWith(task =>
                             {
-	                            lastSendTask = null;
-	                            request.Dispose();
+                                lastSendTask = null;
+                                request.Dispose();
                             });
                 }
                 catch (Exception e)
@@ -299,15 +299,13 @@ namespace Raven.Client.Changes
                 case "Heartbeat":
                     break;
                 default:
-                    NotifySubscribers(type, value, Counters);
+                    NotifySubscribers(type, value, Counters.Snapshot);
                     break;
             }
         }
 
-
         protected abstract Task SubscribeOnServer();
         protected abstract void NotifySubscribers(string type, RavenJObject value, IEnumerable<KeyValuePair<string, TConnectionState>> connections);
-
 
         public virtual void OnCompleted()
         { }

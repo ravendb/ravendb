@@ -1,4 +1,4 @@
-﻿import documentMetadata = require("models/documentMetadata");
+import documentMetadata = require("models/documentMetadata");
 
 class customFunctions {
     functions: string;

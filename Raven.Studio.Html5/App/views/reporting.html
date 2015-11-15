@@ -1,4 +1,4 @@
-﻿<div id="reportingContainer">
+<div id="reportingContainer">
     <ul class="breadcrumb">
         <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
         <li>
@@ -34,14 +34,14 @@
             <i class="fa fa-play"></i>
         </button>
     </div>
-	<div class="btn-group">
-		<a class="btn btn-default" title="Edit the index (F2)" data-bind="attr: { href: editSelectedIndexUrl }">
-			<i class=" fa fa-pencil"></i>
-		</a>
-	</div>
-	<button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
-		<span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
-	</button>
+    <div class="btn-group">
+        <a class="btn btn-default" title="Edit the index (F2)" data-bind="attr: { href: editSelectedIndexUrl }">
+            <i class=" fa fa-pencil"></i>
+        </a>
+    </div>
+    <button class="btn btn-default" title="Toggle cache enabled" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable">
+        <span data-bind="text: isCacheDisable()?'Enable cache':'Disable cache'"></span>
+    </button>
 </div>
 <br />
 
@@ -123,9 +123,9 @@
                         <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre>
                     </div>
                     <div class="col-md-1">
-	                    <button type="button" class="close pull-left" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)">
-							<i class="fa fa-times"></i>
-	                    </button>
+                        <button type="button" class="close pull-left" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)">
+                            <i class="fa fa-times"></i>
+                        </button>
                     </div>
                 </div>
             </div>

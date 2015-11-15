@@ -1,4 +1,4 @@
-﻿import dialog = require("plugins/dialog");
+import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
@@ -9,7 +9,7 @@ class recentErrors extends dialogViewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         // Expand the first error.
         if (this.errors().length > 0) {
             $("#errorDetailsCollapse0").collapse("show");

@@ -1,4 +1,4 @@
-﻿class environmentColor {
+class environmentColor {
     public name: string;
     public backgroundColor: string;
     public textColor: string;

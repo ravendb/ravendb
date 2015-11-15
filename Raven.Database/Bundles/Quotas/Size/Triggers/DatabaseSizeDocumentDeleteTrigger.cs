@@ -3,16 +3,16 @@ using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Quotas.Size.Triggers
 {
-	[InheritedExport(typeof(AbstractDeleteTrigger))]
-	[ExportMetadata("Bundle", "Quotas")]
-	public class DatabaseSizeDocumentDeleteTrigger : AbstractDeleteTrigger
-	{
-		public override void AfterDelete(string key, Abstractions.Data.TransactionInformation transactionInformation)
-		{
-			using (Database.DisableAllTriggersForCurrentThread())
-			{
-				SizeQuotaConfiguration.GetConfiguration(Database).AfterDelete();
-			}
-		}
-	}
+    [InheritedExport(typeof(AbstractDeleteTrigger))]
+    [ExportMetadata("Bundle", "Quotas")]
+    public class DatabaseSizeDocumentDeleteTrigger : AbstractDeleteTrigger
+    {
+        public override void AfterDelete(string key, Abstractions.Data.TransactionInformation transactionInformation)
+        {
+            using (Database.DisableAllTriggersForCurrentThread())
+            {
+                SizeQuotaConfiguration.GetConfiguration(Database).AfterDelete();
+            }
+        }
+    }
 }

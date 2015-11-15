@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -107,10 +107,10 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             _currentErrorContext = null;
         }
 
-		protected void TryClearErrorContext()
-		{
-			_currentErrorContext = null;
-		}
+        protected void TryClearErrorContext()
+        {
+            _currentErrorContext = null;
+        }
 
         protected bool IsErrorHandled(object currentObject, JsonContract contract, object keyValue, IJsonLineInfo lineInfo, string path, Exception ex)
         {

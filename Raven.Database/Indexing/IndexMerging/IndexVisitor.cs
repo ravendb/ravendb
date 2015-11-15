@@ -4,7 +4,7 @@ using Raven.Database.Linq.Ast;
 
 namespace Raven.Database.Indexing.IndexMerging
 {
-	internal class IndexVisitor : DepthFirstAstVisitor
+    internal class IndexVisitor : DepthFirstAstVisitor
     {
         private readonly IndexData indexData;
 
@@ -23,18 +23,18 @@ namespace Raven.Database.Indexing.IndexMerging
             indexData.NumberOfFromClauses++;
         }
 
-		public override void VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
-		{
-			base.VisitMemberReferenceExpression(memberReferenceExpression);
-			indexData.Collection = memberReferenceExpression.MemberName;
-		}
+        public override void VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression)
+        {
+            base.VisitMemberReferenceExpression(memberReferenceExpression);
+            indexData.Collection = memberReferenceExpression.MemberName;
+        }
 
         public override void VisitInvocationExpression(InvocationExpression invocationExpression)
         {
             base.VisitInvocationExpression(invocationExpression);
 
-	        var selectExpressions = new Dictionary<string, Expression>();
-	        var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
+            var selectExpressions = new Dictionary<string, Expression>();
+            var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
             invocationExpression.AcceptVisitor(visitor, null);
 
             var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
@@ -49,12 +49,12 @@ namespace Raven.Database.Indexing.IndexMerging
             if (memberReferenceExpression.MemberName == "Where")
                 indexData.HasWhere = true;
 
-			indexData.SelectExpressions = selectExpressions;
+            indexData.SelectExpressions = selectExpressions;
         }
         public override void VisitQuerySelectClause(QuerySelectClause querySelectClause)
         {
-	        var selectExpressions = new Dictionary<string, Expression>();
-	        var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
+            var selectExpressions = new Dictionary<string, Expression>();
+            var visitor = new CaptureSelectNewFieldNamesVisitor(false, new HashSet<string>(), selectExpressions);
             querySelectClause.AcceptVisitor(visitor, null);
 
             indexData.SelectExpressions = selectExpressions;

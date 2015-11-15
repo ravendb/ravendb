@@ -1,225 +1,222 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationWithMixedSecurity.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Replication;
 using Raven.Tests.Common;
+using Raven.Tests.Common.Attributes;
 using Raven.Tests.Common.Dto;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Database.Server;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Security.Windows;
+using Raven.Json.Linq;
+using Xunit;
 
 namespace Raven.Tests.Security
 {
-	using System.Collections.Generic;
-	using System.Net;
-	using System.Threading.Tasks;
+    public class ReplicationWithMixedSecurity : ReplicationBase
+    {
+        public ReplicationWithMixedSecurity()
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+        }
 
-	using Raven.Abstractions.Data;
-	using Raven.Client.Connection;
-	using Raven.Client.Document;
-	using Raven.Database.Server;
-	using Raven.Database.Server.Security;
-	using Raven.Database.Server.Security.Windows;
-	using Raven.Json.Linq;
+        private string apiKey = "test1/ThisIsMySecret";
 
-	using Xunit;
+        private int _storeCounter, _databaseCounter;
 
-	public class ReplicationWithMixedSecurity : ReplicationBase
-	{
-		private string apiKey = "test1/ThisIsMySecret";
+        protected override void ModifyStore(DocumentStore store)
+        {
+            var isApiStore = _storeCounter % 2 == 0;
 
-		private string username = "test";
+            store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 
-		private string password = "test";
+            if (isApiStore)
+            {
+                store.Credentials = null;
+                store.ApiKey = apiKey;
+            }
+            else
+            {
+                store.Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain);
+                store.ApiKey = null;
+            }
 
-		private string domain = "";
-
-		private int _storeCounter, _databaseCounter;
-
-		protected override void ModifyStore(DocumentStore store)
-		{
-			var isApiStore = _storeCounter % 2 == 0;
-
-			store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
-
-			if (isApiStore)
-			{
-				store.Credentials = null;
-				store.ApiKey = apiKey;
-			}
-			else
-			{
-				store.Credentials = new NetworkCredential(username, password, domain);
-				store.ApiKey = null;
-			}
-
-			_storeCounter++;
-		}
+            _storeCounter++;
+        }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
-		{
-			var isApiDatabase = _databaseCounter % 2 == 0;
+        {
+            var isApiDatabase = _databaseCounter % 2 == 0;
 
-			if (isApiDatabase)
-			{
-				database.Documents.Put(
-					"Raven/ApiKeys/" + apiKey.Split('/')[0],
-					null,
-					RavenJObject.FromObject(
-						new ApiKeyDefinition
-						{
-							Name = apiKey.Split('/')[0],
-							Secret = apiKey.Split('/')[1],
-							Enabled = true,
-							Databases =
-								new List<ResourceAccess>
-								{
-									new ResourceAccess { TenantId = "*" },
-									new ResourceAccess { TenantId = Constants.SystemDatabase },
+            if (isApiDatabase)
+            {
+                database.Documents.Put(
+                    "Raven/ApiKeys/" + apiKey.Split('/')[0],
+                    null,
+                    RavenJObject.FromObject(
+                        new ApiKeyDefinition
+                        {
+                            Name = apiKey.Split('/')[0],
+                            Secret = apiKey.Split('/')[1],
+                            Enabled = true,
+                            Databases =
+                                new List<ResourceAccess>
+                                {
+                                    new ResourceAccess { TenantId = "*" },
+                                    new ResourceAccess { TenantId = Constants.SystemDatabase },
                                     new ResourceAccess {TenantId = databaseName}
-								}
-						}),
-					new RavenJObject(),
-					null);
-			}
-			else
-			{
-				database.Documents.Put("Raven/Authorization/WindowsSettings", null,
-												   RavenJObject.FromObject(new WindowsAuthDocument
-												   {
-													   RequiredUsers = new List<WindowsAuthData>
-				                                   {
-					                                   new WindowsAuthData()
-					                                   {
-						                                   Name = username,
-						                                   Enabled = true,
-						                                   Databases = new List<ResourceAccess>
-						                                   {
-							                                   new ResourceAccess {TenantId = "*"},
-															   new ResourceAccess {TenantId = Constants.SystemDatabase},
+                                }
+                        }),
+                    new RavenJObject(),
+                    null);
+            }
+            else
+            {
+                database.Documents.Put("Raven/Authorization/WindowsSettings", null,
+                                                   RavenJObject.FromObject(new WindowsAuthDocument
+                                                   {
+                                                       RequiredUsers = new List<WindowsAuthData>
+                                                   {
+                                                       new WindowsAuthData()
+                                                       {
+                                                           Name = FactIfWindowsAuthenticationIsAvailable.Username,
+                                                           Enabled = true,
+                                                           Databases = new List<ResourceAccess>
+                                                           {
+                                                               new ResourceAccess {TenantId = "*"},
+                                                               new ResourceAccess {TenantId = Constants.SystemDatabase},
                                                                new ResourceAccess {TenantId = databaseName}
-						                                   }
-					                                   }
-				                                   }
-												   }), new RavenJObject(), null);
-			}
+                                                           }
+                                                       }
+                                                   }
+                                                   }), new RavenJObject(), null);
+            }
 
-			_databaseCounter++;
-		}
+            _databaseCounter++;
+        }
 
-		[Fact(Skip = "This test rely on actual Windows Account name/password.")]
-		public void DocumentStoreShouldSwitchFromApiKeyToCredentials()
-		{
-			var store1 = CreateStore(enableAuthorization: true);
-			Authentication.EnableOnce();
-			var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
+        [Fact]
+        public void DocumentStoreShouldSwitchFromApiKeyToCredentials()
+        {
+            var store1 = CreateStore(enableAuthorization: true);
+            Authentication.EnableOnce();
+            var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-			TellFirstInstanceToReplicateToSecondInstance(username: username, password: password, domain: domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Username, password: FactIfWindowsAuthenticationIsAvailable.Password, domain: FactIfWindowsAuthenticationIsAvailable.Domain);
 
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChanges();
-			}
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new Company { Name = "Hibernating Rhinos" });
+                session.SaveChanges();
+            }
 
-			var company = WaitForDocument<Company>(store2, "companies/1");
-			Assert.Equal("Hibernating Rhinos", company.Name);
+            var company = WaitForDocument<Company>(store2, "companies/1");
+            Assert.Equal("Hibernating Rhinos", company.Name);
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
-			servers[0].Dispose();
+            servers[0].Dispose();
 
-			using (var session = store1.OpenSession())
-			{
-				Assert.NotNull(session.Load<Company>(1));
-			}
-		}
+            using (var session = store1.OpenSession())
+            {
+                Assert.NotNull(session.Load<Company>(1));
+            }
+        }
 
-		[Fact(Skip = "This test rely on actual Windows Account name/password.")]
-		public async Task DocumentStoreShouldSwitchFromApiKeyToCredentialsAsync()
-		{
-			var store1 = CreateStore(enableAuthorization: true);
-			Authentication.EnableOnce();
-			var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
+        [Fact]
+        public async Task DocumentStoreShouldSwitchFromApiKeyToCredentialsAsync()
+        {
+            var store1 = CreateStore(enableAuthorization: true);
+            Authentication.EnableOnce();
+            var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-			TellFirstInstanceToReplicateToSecondInstance(username: username, password: password, domain: domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Username, password: FactIfWindowsAuthenticationIsAvailable.Password, domain: FactIfWindowsAuthenticationIsAvailable.Domain);
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
-				await session.SaveChangesAsync();
-			}
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+                await session.SaveChangesAsync();
+            }
 
-			var company = WaitForDocument<Company>(store2, "companies/1");
-			Assert.Equal("Hibernating Rhinos", company.Name);
+            var company = WaitForDocument<Company>(store2, "companies/1");
+            Assert.Equal("Hibernating Rhinos", company.Name);
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store1.DatabaseCommands);
+            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
-			servers[0].Dispose();
+            servers[0].Dispose();
 
-			using (var session = store1.OpenAsyncSession())
-			{
-				Assert.NotNull(await session.LoadAsync<Company>(1));
-			}
-		}
+            using (var session = store1.OpenAsyncSession())
+            {
+                Assert.NotNull(await session.LoadAsync<Company>(1));
+            }
+        }
 
-		[Fact(Skip = "This test rely on actual Windows Account name/password.")]
-		public void DocumentStoreShouldSwitchFromCredentialsToApiKey()
-		{
-			var store1 = CreateStore(enableAuthorization: true);
-			Authentication.EnableOnce();
-			var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
+        [Fact]
+        public void DocumentStoreShouldSwitchFromCredentialsToApiKey()
+        {
+            var store1 = CreateStore(enableAuthorization: true);
+            Authentication.EnableOnce();
+            var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-			TellSecondInstanceToReplicateToFirstInstance(apiKey);
+            TellSecondInstanceToReplicateToFirstInstance(apiKey);
 
-			using (var session = store2.OpenSession())
-			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChanges();
-			}
+            using (var session = store2.OpenSession())
+            {
+                session.Store(new Company { Name = "Hibernating Rhinos" });
+                session.SaveChanges();
+            }
 
-			var company = WaitForDocument<Company>(store1, "companies/1");
-			Assert.Equal("Hibernating Rhinos", company.Name);
+            var company = WaitForDocument<Company>(store1, "companies/1");
+            Assert.Equal("Hibernating Rhinos", company.Name);
 
-			var serverClient = ((ServerClient)store2.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store2.DatabaseCommands);
+            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
-			servers[1].Dispose();
+            servers[1].Dispose();
 
-			using (var session = store2.OpenSession())
-			{
-				Assert.NotNull(session.Load<Company>(1));
-			}
-		}
+            using (var session = store2.OpenSession())
+            {
+                Assert.NotNull(session.Load<Company>(1));
+            }
+        }
 
-		[Fact(Skip = "This test rely on actual Windows Account name/password.")]
-		public async Task DocumentStoreShouldSwitchFromCredentialsToApiKeyAsync()
-		{
-			var store1 = CreateStore(enableAuthorization: true);
-			Authentication.EnableOnce();
-			var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
+        [Fact]
+        public async Task DocumentStoreShouldSwitchFromCredentialsToApiKeyAsync()
+        {
+            var store1 = CreateStore(enableAuthorization: true);
+            Authentication.EnableOnce();
+            var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-			TellSecondInstanceToReplicateToFirstInstance(apiKey);
+            TellSecondInstanceToReplicateToFirstInstance(apiKey);
 
-			using (var session = store2.OpenAsyncSession())
-			{
-				await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
-				await session.SaveChangesAsync();
-			}
+            using (var session = store2.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "Hibernating Rhinos" });
+                await session.SaveChangesAsync();
+            }
 
-			var company = WaitForDocument<Company>(store1, "companies/1");
-			Assert.Equal("Hibernating Rhinos", company.Name);
+            var company = WaitForDocument<Company>(store1, "companies/1");
+            Assert.Equal("Hibernating Rhinos", company.Name);
 
-			var serverClient = ((ServerClient)store2.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            var serverClient = ((ServerClient)store2.DatabaseCommands);
+            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
-			servers[1].Dispose();
+            servers[1].Dispose();
 
-			using (var session = store2.OpenAsyncSession())
-			{
-				Assert.NotNull(await session.LoadAsync<Company>(1));
-			}
-		}
-	}
+            using (var session = store2.OpenAsyncSession())
+            {
+                Assert.NotNull(await session.LoadAsync<Company>(1));
+            }
+        }
+    }
 }

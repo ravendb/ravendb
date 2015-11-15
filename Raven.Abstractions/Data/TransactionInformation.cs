@@ -7,19 +7,19 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	/// <summary>
-	/// Transaction information that identify the transaction id and timeout
-	/// </summary>
-	public class TransactionInformation
-	{
-		/// <summary>
-		/// Transaction identifier.
-		/// </summary>
+    /// <summary>
+    /// Transaction information that identify the transaction id and timeout
+    /// </summary>
+    public class TransactionInformation
+    {
+        /// <summary>
+        /// Transaction identifier.
+        /// </summary>
         public string Id { get; set; }
 
-		/// <summary>
-		/// Transaction timeout.
-		/// </summary>
-		public TimeSpan Timeout { get; set; }
-	}
+        /// <summary>
+        /// Transaction timeout.
+        /// </summary>
+        public TimeSpan Timeout { get; set; }
+    }
 }

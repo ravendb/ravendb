@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +10,7 @@ using Raven.Bundles.Replication.Tasks;
 
 namespace Raven.Database.Counters
 {
-	[CLSCompliant(false)]
+    [CLSCompliant(false)]
     public class CountersMetricsManager
     {
         readonly Metrics counterMetrics = new Metrics();
@@ -31,7 +31,7 @@ namespace Raven.Database.Counters
         public ConcurrentDictionary<string, HistogramMetric> ReplicationBatchSizeHistogram { get; private set; }
         public ConcurrentDictionary<string, HistogramMetric> ReplicationDurationHistogram { get; private set; }
 
-		public long ConcurrentRequestsCount;
+        public long ConcurrentRequestsCount;
 
         public CountersMetricsManager()
         {
@@ -40,8 +40,8 @@ namespace Raven.Database.Counters
             Decrements = counterMetrics.Meter("counterMetrics", "dec/min", "decrements", TimeUnit.Minutes);
             ClientRequests = counterMetrics.Meter("counterMetrics", "client/min", "client requests", TimeUnit.Minutes);
 
-			IncomingReplications = counterMetrics.Meter("counterMetrics", "RepIn/min", "replications", TimeUnit.Minutes);
-			OutgoingReplications = counterMetrics.Meter("counterMetrics", "RepOut/min", "replications", TimeUnit.Minutes);
+            IncomingReplications = counterMetrics.Meter("counterMetrics", "RepIn/min", "replications", TimeUnit.Minutes);
+            OutgoingReplications = counterMetrics.Meter("counterMetrics", "RepOut/min", "replications", TimeUnit.Minutes);
 
 
 

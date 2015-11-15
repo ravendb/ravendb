@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DbShutDownMidTransaction.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -47,7 +47,7 @@ namespace Raven.Tests.Bugs.DTC.NSB
                 store.SystemDatabase.Commit("tx");
 
 
-				Assert.NotNull(store.SystemDatabase.Documents.Get("test", null));
+                Assert.NotNull(store.SystemDatabase.Documents.Get("test", null));
             }
         }
     }

@@ -39,7 +39,7 @@ class ioTestCommand extends commandBase {
                         parentPromise.resolve();
                     }
                 } else {
-	                this.onStatus(result.State);
+                    this.onStatus(result.State);
                     setTimeout(() => this.monitorIoTest(parentPromise, operationId), 500);
                 }
             });

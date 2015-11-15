@@ -1,4 +1,4 @@
-﻿import database = require("models/database");
+import database = require("models/database");
 import dialog = require("plugins/dialog");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");

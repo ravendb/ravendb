@@ -1,4 +1,4 @@
-﻿import fileMetadata = require("models/filesystem/fileMetadata");
+import fileMetadata = require("models/filesystem/fileMetadata");
 
 class file implements documentBase {
     id = ko.observable<string>();

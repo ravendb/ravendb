@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
@@ -28,11 +28,11 @@ namespace Raven.Database.Client
             server = new RavenDbServer();
         }
 
-	    public RavenDbServer Server
-	    {
-		    get { return server; }
-	    }
-	    /// <summary>
+        public RavenDbServer Server
+        {
+            get { return server; }
+        }
+        /// <summary>
         ///     Whatever we should also host an HTTP endpoint for the document database
         /// </summary>
         public bool UseEmbeddedHttpServer
@@ -55,14 +55,14 @@ namespace Raven.Database.Client
             }
         }
 
-		public DocumentDatabase DocumentDatabase
-		{
-			get
-			{
-				return AsyncHelpers.RunSync(() => 
-					server.Server.GetDatabaseInternal(DefaultDatabase ?? Constants.SystemDatabase));
-			}
-		}
+        public DocumentDatabase DocumentDatabase
+        {
+            get
+            {
+                return AsyncHelpers.RunSync(() => 
+                    server.Server.GetDatabaseInternal(DefaultDatabase ?? Constants.SystemDatabase));
+            }
+        }
 
         public IFilesStore FilesStore
         {
@@ -198,15 +198,15 @@ namespace Raven.Database.Client
             get { return server.DocumentStore.JsonRequestFactory; }
         }
 
-		public bool HasJsonRequestFactory
-		{
-			get
-			{
-				return server.DocumentStore.HasJsonRequestFactory;
-			}
-		}
+        public bool HasJsonRequestFactory
+        {
+            get
+            {
+                return server.DocumentStore.HasJsonRequestFactory;
+            }
+        }
 
-	    /// <summary>
+        /// <summary>
         ///     Gets or sets the identifier for this store.
         /// </summary>
         /// <value>The identifier.</value>
@@ -223,7 +223,7 @@ namespace Raven.Database.Client
         public IDocumentStore Initialize()
         {
             server.Initialize();
-	        JsonRequestFactory.DisableRequestCompression = true;
+            JsonRequestFactory.DisableRequestCompression = true;
             return this;
         }
 
@@ -254,15 +254,15 @@ namespace Raven.Database.Client
             return server.DocumentStore.OpenAsyncSession(database);
         }
 
-		/// <summary>
-		///		Opens the async session with the specified options.
-		/// </summary>
-	    public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
-	    {
-			return server.DocumentStore.OpenAsyncSession(sessionOptions);
-	    }
+        /// <summary>
+        ///		Opens the async session with the specified options.
+        /// </summary>
+        public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions sessionOptions)
+        {
+            return server.DocumentStore.OpenAsyncSession(sessionOptions);
+        }
 
-	    /// <summary>
+        /// <summary>
         ///     Opens the session.
         /// </summary>
         /// <returns></returns>
@@ -296,7 +296,7 @@ namespace Raven.Database.Client
             get { return server.DocumentStore.DatabaseCommands; }
         }
 
-	    /// <summary>
+        /// <summary>
         ///     Executes the index creation.
         /// </summary>
         public void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
@@ -304,22 +304,22 @@ namespace Raven.Database.Client
             server.DocumentStore.ExecuteIndex(indexCreationTask);
         }
 
-	    public void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
-	    {
-		    server.DocumentStore.ExecuteIndexes(indexCreationTasks);
-	    }
+        public void ExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks)
+        {
+            server.DocumentStore.ExecuteIndexes(indexCreationTasks);
+        }
 
-	    public void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-	    {
-			server.DocumentStore.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
-	    }
+        public void SideBySideExecuteIndexes(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            server.DocumentStore.SideBySideExecuteIndexes(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-		public Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-		{
-			return server.DocumentStore.SideBySideExecuteIndexesAsync(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
-		}
+        public Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            return server.DocumentStore.SideBySideExecuteIndexesAsync(indexCreationTasks, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-	    /// <summary>
+        /// <summary>
         ///     Executes the index creation.
         /// </summary>
         /// <param name="indexCreationTask"></param>
@@ -328,35 +328,35 @@ namespace Raven.Database.Client
             return server.DocumentStore.ExecuteIndexAsync(indexCreationTask);
         }
 
-	    public Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
-	    {
-			return server.DocumentStore.ExecuteIndexesAsync(indexCreationTasks);
-	    }
+        public Task ExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks)
+        {
+            return server.DocumentStore.ExecuteIndexesAsync(indexCreationTasks);
+        }
 
-	    /// <summary>
-		/// Executes the index creation using side-by-side mode.
-		/// </summary>
-		/// <param name="indexCreationTask"></param>
-		/// <param name="minimumEtagBeforeReplace"></param>
-		/// <param name="replaceTimeUtc"></param>
-	    public void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-	    {
-		    server.DocumentStore.SideBySideExecuteIndex(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
-	    }
+        /// <summary>
+        /// Executes the index creation using side-by-side mode.
+        /// </summary>
+        /// <param name="indexCreationTask"></param>
+        /// <param name="minimumEtagBeforeReplace"></param>
+        /// <param name="replaceTimeUtc"></param>
+        public void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            server.DocumentStore.SideBySideExecuteIndex(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-		/// <summary>
-		/// Executes the index creation using side-by-side mode.
-		/// </summary>
-		/// <param name="indexCreationTask"></param>
-		/// <param name="minimumEtagBeforeReplace"></param>
-		/// <param name="replaceTimeUtc"></param>
-		/// <returns></returns>
-	    public Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
-	    {
-		    return server.DocumentStore.SideBySideExecuteIndexAsync(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
-	    }
+        /// <summary>
+        /// Executes the index creation using side-by-side mode.
+        /// </summary>
+        /// <param name="indexCreationTask"></param>
+        /// <param name="minimumEtagBeforeReplace"></param>
+        /// <param name="replaceTimeUtc"></param>
+        /// <returns></returns>
+        public Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        {
+            return server.DocumentStore.SideBySideExecuteIndexAsync(indexCreationTask, minimumEtagBeforeReplace, replaceTimeUtc);
+        }
 
-	    /// <summary>
+        /// <summary>
         ///     Executes the transformer creation
         /// </summary>
         public void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
@@ -402,17 +402,17 @@ namespace Raven.Database.Client
             return server.DocumentStore.BulkInsert(database, options);
         }
 
-	    public IReliableSubscriptions Subscriptions
-	    {
-		    get { return server.DocumentStore.Subscriptions; }
-	    }
+        public IReliableSubscriptions Subscriptions
+        {
+            get { return server.DocumentStore.Subscriptions; }
+        }
 
-	    public IAsyncReliableSubscriptions AsyncSubscriptions
-	    {
-			get { return server.DocumentStore.AsyncSubscriptions; }
-	    }
+        public IAsyncReliableSubscriptions AsyncSubscriptions
+        {
+            get { return server.DocumentStore.AsyncSubscriptions; }
+        }
 
-	    public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
+        public DocumentSessionListeners Listeners { get { return server.DocumentStore.Listeners; } }
         public void SetListeners(DocumentSessionListeners listeners)
         {
             server.DocumentStore.SetListeners(listeners);
@@ -478,15 +478,15 @@ namespace Raven.Database.Client
             return server.DocumentStore.RegisterListener(conflictListener);
         }
 
-	    public void InitializeProfiling()
-	    {
-		    server.DocumentStore.InitializeProfiling();
-	    }
+        public void InitializeProfiling()
+        {
+            server.DocumentStore.InitializeProfiling();
+        }
 
-	    public ProfilingInformation GetProfilingInformationFor(Guid id)
-	    {
-		    return server.DocumentStore.GetProfilingInformationFor(id);
-	    }
+        public ProfilingInformation GetProfilingInformationFor(Guid id)
+        {
+            return server.DocumentStore.GetProfilingInformationFor(id);
+        }
 
         public DocumentStore DocumentStore { get { return server.DocumentStore; } }
 

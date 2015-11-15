@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ReplicationBehavior.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -80,11 +80,11 @@ namespace Raven.Tests.Issues
             }, new HttpJsonRequestFactory(MaxNumber))
             {
                 ReplicationDestinations =
-					{
-						new OperationMetadata("http://localhost:2"),
-						new OperationMetadata("http://localhost:3"),
-						new OperationMetadata("http://localhost:4"),
-					}
+                    {
+                        new OperationMetadata("http://localhost:2"),
+                        new OperationMetadata("http://localhost:3"),
+                        new OperationMetadata("http://localhost:4"),
+                    }
             };
 
             var urlsTried = new List<Tuple<int, string>>();
@@ -93,8 +93,8 @@ namespace Raven.Tests.Issues
                 var req = i + 1;
                 replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, req, url =>
                 {
-	                urlsTried.Add(Tuple.Create(req, url.Url));
-	                return new CompletedTask<int>(1);
+                    urlsTried.Add(Tuple.Create(req, url.Url));
+                    return new CompletedTask<int>(1);
                 }).Wait();
             }
             var expectedUrls = GetExpectedUrlForReadStriping().Take(urlsTried.Count).ToList();
@@ -106,12 +106,12 @@ namespace Raven.Tests.Issues
         {
             int reqCount = 0;
             var urls = new[]
-			{
-				"http://localhost:2",
-				"http://localhost:3",
-				"http://localhost:4",
+            {
+                "http://localhost:2",
+                "http://localhost:3",
+                "http://localhost:4",
 
-			};
+            };
             while (true)
             {
                 reqCount++;

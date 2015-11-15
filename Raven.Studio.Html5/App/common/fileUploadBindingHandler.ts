@@ -1,4 +1,4 @@
-﻿import composition = require("durandal/composition");
+import composition = require("durandal/composition");
 import filesystem = require("models/filesystem/filesystem");
 import system = require("durandal/system");
 import uploadItem = require("models/uploadItem");

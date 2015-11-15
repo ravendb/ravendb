@@ -1,4 +1,4 @@
-﻿/// <reference path="../models/dto.ts" />
+/// <reference path="../models/dto.ts" />
 
 import commandBase = require("commands/commandBase");
 import database = require("models/database");

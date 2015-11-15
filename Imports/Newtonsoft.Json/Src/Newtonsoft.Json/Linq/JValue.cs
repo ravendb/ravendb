@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -650,16 +650,16 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
         /// </summary>
         /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
         /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
-		public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
-		{
-			WriteTo(writer, new JsonConverterCollection(converters));
-		}
-		
-		public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+        public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
         {
-			if (converters != null && converters.Count > 0 && _value != null)
+            WriteTo(writer, new JsonConverterCollection(converters));
+        }
+        
+        public override void WriteTo(JsonWriter writer, JsonConverterCollection converters)
+        {
+            if (converters != null && converters.Count > 0 && _value != null)
             {
-				JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, _value.GetType());
+                JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, _value.GetType());
                 if (matchingConverter != null && matchingConverter.CanWrite)
                 {
                     matchingConverter.WriteJson(writer, _value, JsonSerializer.CreateDefault());

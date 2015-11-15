@@ -43,10 +43,10 @@ class createDatabase extends viewModelBase {
     alertTimeout = ko.observable("");
     alertRecurringTimeout = ko.observable("");
 
-	customBundles = ko.observableArray<string>();
-	selectedCustomBundles = ko.observableArray<string>([]);
-	allowVoron = ko.observable<boolean>(true);
-	voronWarningVisible = ko.computed(() => !this.allowVoron() && "voron" === this.storageEngine());
+    customBundles = ko.observableArray<string>();
+    selectedCustomBundles = ko.observableArray<string>([]);
+    allowVoron = ko.observable<boolean>(true);
+    voronWarningVisible = ko.computed(() => !this.allowVoron() && "voron" === this.storageEngine());
 
     constructor(private databases: KnockoutObservableArray<database>, private licenseStatus: KnockoutObservable<licenseStatusDto>, private parent: dialogViewModelBase) {
         super();
@@ -92,8 +92,8 @@ class createDatabase extends viewModelBase {
             return errorMessage;
         });
 
-		this.fetchCustomBundles();
-	    this.fetchAllowVoron();
+        this.fetchCustomBundles();
+        this.fetchAllowVoron();
     }
 
     deactivate() {
@@ -104,21 +104,21 @@ class createDatabase extends viewModelBase {
         }
     }
 
-	fetchCustomBundles() {
-		new getPluginsInfoCommand(appUrl.getSystemDatabase())
-			.execute()
-			.done((result: pluginsInfoDto) => {
-			this.customBundles(result.CustomBundles);
-		});
-	}
+    fetchCustomBundles() {
+        new getPluginsInfoCommand(appUrl.getSystemDatabase())
+            .execute()
+            .done((result: pluginsInfoDto) => {
+            this.customBundles(result.CustomBundles);
+        });
+    }
 
-	fetchAllowVoron() {
-		$.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
-			new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
-		).done((stats: Array<databaseStatisticsDto>, config: any) => {
-			this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
-		});
-	}
+    fetchAllowVoron() {
+        $.when(new getDatabaseStatsCommand(appUrl.getSystemDatabase()).execute(),
+            new getStatusDebugConfigCommand(appUrl.getSystemDatabase()).execute()
+        ).done((stats: Array<databaseStatisticsDto>, config: any) => {
+            this.allowVoron(stats[0].Is64Bit || config[0].Storage.Voron.AllowOn32Bits);
+        });
+    }
 
     isBundleActive(name: string): boolean {
         var licenseStatus: licenseStatusDto = this.licenseStatus();
@@ -236,17 +236,17 @@ class createDatabase extends viewModelBase {
         this.isScriptedIndexBundleEnabled.toggle();
     }
 
-	toggleCustomBundle(name: string) {
-		if (this.selectedCustomBundles.contains(name)) {
-			this.selectedCustomBundles.remove(name);
-		} else {
-			this.selectedCustomBundles.push(name);
-		}
-	}
+    toggleCustomBundle(name: string) {
+        if (this.selectedCustomBundles.contains(name)) {
+            this.selectedCustomBundles.remove(name);
+        } else {
+            this.selectedCustomBundles.push(name);
+        }
+    }
 
-	isCustomBundleEnabled(name: string) {
-		return this.selectedCustomBundles().contains(name);
-	}
+    isCustomBundleEnabled(name: string) {
+        return this.selectedCustomBundles().contains(name);
+    }
 
     private getActiveBundles(): string[] {
         var activeBundles: string[] = [];
@@ -286,7 +286,7 @@ class createDatabase extends viewModelBase {
             activeBundles.push("ScriptedIndexResults");
         }
 
-	    activeBundles.pushAll(this.selectedCustomBundles());
+        activeBundles.pushAll(this.selectedCustomBundles());
 
         return activeBundles;
     }

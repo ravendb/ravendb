@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1603.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -764,8 +764,8 @@ namespace Raven.SlowTests.Issues
 
             var alreadyReset = false;
 
-	        var port = 8070;
-	        var forwarder = new ProxyServer(ref port, 8079)
+            var port = 8070;
+            var forwarder = new ProxyServer(ref port, 8079)
             {
                 VetoTransfer = (totalRead, buffer) =>
                 {
@@ -792,7 +792,7 @@ namespace Raven.SlowTests.Issues
                 }
 
                 var dumper = new SmugglerDatabaseApi { Options = { Limit = 1900, Incremental = true } };
-				
+                
                 var allDocs = new List<RavenJObject>();
 
                 OperationState exportResult = null;
@@ -802,11 +802,11 @@ namespace Raven.SlowTests.Issues
                     exportResult = await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                     {
                         ToFile = backupPath,
-						From = new RavenConnectionStringOptions
-						{
-							Url = "http://localhost:" + port,
-							DefaultDatabase = databaseName,
-						}
+                        From = new RavenConnectionStringOptions
+                        {
+                            Url = "http://localhost:" + port,
+                            DefaultDatabase = databaseName,
+                        }
                     });
                     Assert.False(true, "Previous op should throw.");
                 }
@@ -828,12 +828,12 @@ namespace Raven.SlowTests.Issues
 
                 exportResult = await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
-					ToFile = backupPath,
-					From = new RavenConnectionStringOptions
-					{
-						Url = "http://localhost:8070",
-						DefaultDatabase = databaseName,
-					}
+                    ToFile = backupPath,
+                    From = new RavenConnectionStringOptions
+                    {
+                        Url = "http://localhost:8070",
+                        DefaultDatabase = databaseName,
+                    }
                 });
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
                 using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
@@ -860,15 +860,15 @@ namespace Raven.SlowTests.Issues
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
-	        int allowDownload = 0;
+            int allowDownload = 0;
 
-	        var port = 8070;
-	        var forwarder = new ProxyServer(ref port, 8079)
+            var port = 8070;
+            var forwarder = new ProxyServer(ref port, 8079)
             {
                 VetoTransfer = (totalRead, buffer) =>
                 {
                     var payload = System.Text.Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-	                return payload.Contains("GET /static/users/678 ") && Thread.VolatileRead(ref allowDownload) == 0;
+                    return payload.Contains("GET /static/users/678 ") && Thread.VolatileRead(ref allowDownload) == 0;
                 }
             };
             try
@@ -886,7 +886,7 @@ namespace Raven.SlowTests.Issues
 
                 var dumper = new SmugglerDatabaseApi { Options = { Limit = 1500, Incremental = true } };
 
-	            var allAttachments = new List<RavenJObject>();
+                var allAttachments = new List<RavenJObject>();
 
                 OperationState exportResult = null;
                 try
@@ -894,26 +894,26 @@ namespace Raven.SlowTests.Issues
                     exportResult = dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                     {
                         ToFile = backupPath,
-						From = new RavenConnectionStringOptions
-						{
-							Url = "http://localhost:" + port,
-							DefaultDatabase = databaseName,
-						}
+                        From = new RavenConnectionStringOptions
+                        {
+                            Url = "http://localhost:" + port,
+                            DefaultDatabase = databaseName,
+                        }
                     }).Result;
                     Assert.False(true, "Previous op should throw.");
                 }
                 catch (AggregateException e)
                 {
-	                var extractSingleInnerException = e.ExtractSingleInnerException() as SmugglerExportException;
-	                if (extractSingleInnerException == null)
-		                throw;
-	                var inner = extractSingleInnerException;
+                    var extractSingleInnerException = e.ExtractSingleInnerException() as SmugglerExportException;
+                    if (extractSingleInnerException == null)
+                        throw;
+                    var inner = extractSingleInnerException;
                     exportResult = new OperationState
                     {
                         FilePath = inner.File
                     };
                 }
-	            Interlocked.Increment(ref allowDownload);
+                Interlocked.Increment(ref allowDownload);
 
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
                 using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
@@ -925,12 +925,12 @@ namespace Raven.SlowTests.Issues
 
                 exportResult = await dumper.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
                 {
-					ToFile = backupPath,
-					From = new RavenConnectionStringOptions
-					{
-						Url = "http://localhost:8070",
-						DefaultDatabase = databaseName,
-					}
+                    ToFile = backupPath,
+                    From = new RavenConnectionStringOptions
+                    {
+                        Url = "http://localhost:8070",
+                        DefaultDatabase = databaseName,
+                    }
                 });
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
                 using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))

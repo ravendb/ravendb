@@ -15,46 +15,46 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RavenTest
-	{
-		[Fact]
-		public void CanStartWithoutServer()
-		{
-			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
-			{
-				using (var session = store.OpenSession())
-				{
-					Assert.Throws<HttpRequestException>(() => session.Load<User>("user/1"));
-				}
+    public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RavenTest
+    {
+        [Fact]
+        public void CanStartWithoutServer()
+        {
+            using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<HttpRequestException>(() => session.Load<User>("user/1"));
+                }
 
-				using (GetNewServer())
-				{
-					using (var session = store.OpenSession())
-					{
-						Assert.Null(session.Load<Item>("items/1"));
-					}
-				}
-			}
-		}
+                using (GetNewServer())
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Assert.Null(session.Load<Item>("items/1"));
+                    }
+                }
+            }
+        }
 
-		[Fact]
-		public async Task CanStartWithoutServerAsync()
-		{
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
-			{
-				using (var session = store.OpenAsyncSession())
-				{
+        [Fact]
+        public async Task CanStartWithoutServerAsync()
+        {
+            using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
                     await AssertAsync.Throws<HttpRequestException>(async () => await session.LoadAsync<User>("user/1"));
-				}
+                }
 
-				using (GetNewServer())
-				{
-					using (var session = store.OpenAsyncSession())
-					{
-						Assert.Null(await session.LoadAsync<Item>("items/1"));
-					}
-				}
-			}
-		}
-	}
+                using (GetNewServer())
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        Assert.Null(await session.LoadAsync<Item>("items/1"));
+                    }
+                }
+            }
+        }
+    }
 }

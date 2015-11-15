@@ -1,9 +1,7 @@
-﻿import app = require("durandal/app");
-import router = require("plugins/router");
+import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import changesApi = require('common/changesApi');
 import shell = require('viewmodels/shell');
 import license = require("models/license");
 import alert = require("models/alert");
@@ -22,8 +20,8 @@ class resources extends viewModelBase {
     visibleResources = ko.observable('');
     selectedResource = ko.observable<resource>();
     fileSystemsStatus = ko.observable<string>("loading");
-	isAnyResourceSelected: KnockoutComputed<boolean>;
-	hasAllResourcesSelected: KnockoutComputed<boolean>;
+    isAnyResourceSelected: KnockoutComputed<boolean>;
+    hasAllResourcesSelected: KnockoutComputed<boolean>;
     allCheckedResourcesDisabled: KnockoutComputed<boolean>;
     isCheckboxVisible: KnockoutComputed<boolean>;
     systemDb: database;
@@ -31,9 +29,12 @@ class resources extends viewModelBase {
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
+    canNavigateToAdminSettings: KnockoutComputed<boolean>;
 
     constructor() {
         super();
+
+        this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
 
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;
@@ -132,7 +133,7 @@ class resources extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.updateHelpLink('Z8DC3Q');
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
         this.resourcesLoaded();
@@ -207,7 +208,7 @@ class resources extends viewModelBase {
 
             if (!!databaseInArray) {
                 this.databases.remove(databaseInArray);
-	            recentQueriesStorage.removeRecentQueries(databaseInArray);
+                recentQueriesStorage.removeRecentQueries(databaseInArray);
             }
         } else if (rs.type == filesystem.type) {
             var fileSystemInArray = this.fileSystems.first((fs: filesystem) => fs.name == rs.name);
@@ -325,7 +326,7 @@ class resources extends viewModelBase {
     urlForAlert(alert: alert) {
         var index = this.alerts().indexOf(alert);
         return appUrl.forAlerts(appUrl.getSystemDatabase()) + "&item=" + index;
-	}
+    }
 
     newResource() {
         require(["viewmodels/createResource"], createResource => {

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CustomSorting.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -17,46 +17,46 @@ using Xunit;
 
 namespace Raven.Tests.Sorting
 {
-	public class CustomSorting : RavenTest
-	{
-		public class User
-		{
-			public string Name;
-		}
+    public class CustomSorting : RavenTest
+    {
+        public class User
+        {
+            public string Name;
+        }
 
-		public class User_Search : AbstractIndexCreationTask<User>
-		{
-			public User_Search()
-			{
-				Map = users =>
-					from user in users
-					select new { user.Name };
+        public class User_Search : AbstractIndexCreationTask<User>
+        {
+            public User_Search()
+            {
+                Map = users =>
+                    from user in users
+                    select new { user.Name };
 
-				Store(x => x.Name, FieldStorage.Yes);
-			}
-		}
+                Store(x => x.Name, FieldStorage.Yes);
+            }
+        }
 
-	    public class Customer
-	    {
-	        public class Tag
-	        {
+        public class Customer
+        {
+            public class Tag
+            {
                 public int Id { get; set; }
                 public string Descrtiption { get; set; }
-	        }
+            }
             public string Name { get; set; }
             public List<Tag> PayingTags { get; set; }
-	        public int TagId { get; set; }
-	        public int Points { get; set; }
-	    }
+            public int TagId { get; set; }
+            public int Points { get; set; }
+        }
 
-	    public class Customer_Search : AbstractIndexCreationTask<Customer>
-	    {
-	        public Customer_Search()
-	        {
-	            Map = customers =>
-	                from customer in customers
-	                select new
-	                {
+        public class Customer_Search : AbstractIndexCreationTask<Customer>
+        {
+            public Customer_Search()
+            {
+                Map = customers =>
+                    from customer in customers
+                    select new
+                    {
                         customer.TagId,
                         customer.Points,                       
                         _ = from pTag in customer.PayingTags
@@ -64,27 +64,27 @@ namespace Raven.Tests.Sorting
                             {
                                 CreateField("PayingTag_" + pTag.Id , true)
                             }
-	                };
+                    };
                 Store(Constants.AllFields, FieldStorage.Yes);
-	        }
-	    }
+            }
+        }
 
-		[Fact]
-		public void AscendingPrefix()
-		{
-			using (var store = NewDocumentStore())
-			{
-				using (var session = store.OpenSession())
-				{
-					session.Store(new User { Name = "Maxim" });
-					session.Store(new User { Name = "Oren" });
+        [Fact]
+        public void AscendingPrefix()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Maxim" });
+                    session.Store(new User { Name = "Oren" });
                     session.Store(new User { Name = "Grisha" });
                     session.Store(new User { Name = "Michael" });
-					session.SaveChanges();
-				}
+                    session.SaveChanges();
+                }
 
-				new User_Search().Execute(store);
-				WaitForIndexing(store);
+                new User_Search().Execute(store);
+                WaitForIndexing(store);
                 
                 using (var session = store.OpenSession())
                 {
@@ -99,8 +99,8 @@ namespace Raven.Tests.Sorting
                     Assert.Equal(users[3].Name, "Oren");
                     
                 }
-			}
-		}
+            }
+        }
 
         [Fact]
         public void DescendingPrefix()
@@ -268,5 +268,5 @@ namespace Raven.Tests.Sorting
             }
         }
         
-	}
+    }
 }

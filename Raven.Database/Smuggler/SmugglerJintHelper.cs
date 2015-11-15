@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SmugglerJintHelper.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,46 +15,46 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Smuggler
 {
-	public class SmugglerJintHelper
-	{
-		private Engine jint;
+    public class SmugglerJintHelper
+    {
+        private Engine jint;
 
-		public void Initialize(SmugglerDatabaseOptions databaseOptions)
-		{
-			if (databaseOptions == null || string.IsNullOrEmpty(databaseOptions.TransformScript))
-				return;
+        public void Initialize(SmugglerDatabaseOptions databaseOptions)
+        {
+            if (databaseOptions == null || string.IsNullOrEmpty(databaseOptions.TransformScript))
+                return;
 
-			jint = new Engine(cfg =>
-			{
-				cfg.AllowDebuggerStatement(false);
-				cfg.MaxStatements(databaseOptions.MaxStepsForTransformScript);
-				cfg.NullPropagation();
-			});
+            jint = new Engine(cfg =>
+            {
+                cfg.AllowDebuggerStatement(false);
+                cfg.MaxStatements(databaseOptions.MaxStepsForTransformScript);
+                cfg.NullPropagation();
+            });
 
-			jint.Execute(string.Format(@"
-					function Transform(docInner){{
-						return ({0}).apply(this, [docInner]);
-					}};", databaseOptions.TransformScript));
-		}
+            jint.Execute(string.Format(@"
+                    function Transform(docInner){{
+                        return ({0}).apply(this, [docInner]);
+                    }};", databaseOptions.TransformScript));
+        }
 
-		public RavenJObject Transform(string transformScript, RavenJObject input)
-		{
-			if (jint == null)
-				throw new InvalidOperationException("Jint must be initialized.");
+        public RavenJObject Transform(string transformScript, RavenJObject input)
+        {
+            if (jint == null)
+                throw new InvalidOperationException("Jint must be initialized.");
 
-			jint.ResetStatementsCount();
+            jint.ResetStatementsCount();
 
-			using (var scope = new OperationScope())
-			{
-				var jsObject = scope.ToJsObject(jint, input);
-				var jsObjectTransformed = jint.Invoke("Transform", jsObject);
+            using (var scope = new OperationScope())
+            {
+                var jsObject = scope.ToJsObject(jint, input);
+                var jsObjectTransformed = jint.Invoke("Transform", jsObject);
 
-				return jsObjectTransformed != JsValue.Null ? scope.ConvertReturnValue(jsObjectTransformed) : null;
-			}
-		}
+                return jsObjectTransformed != JsValue.Null ? scope.ConvertReturnValue(jsObjectTransformed) : null;
+            }
+        }
 
-		private class OperationScope : JintOperationScope
-		{
-		}
-	}
+        private class OperationScope : JintOperationScope
+        {
+        }
+    }
 }

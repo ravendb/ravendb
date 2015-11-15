@@ -1,4 +1,4 @@
-﻿import documentMetadata = require("models/documentMetadata");
+import documentMetadata = require("models/documentMetadata");
 
 class versioningEntry {
     collection = ko.observable<string>();

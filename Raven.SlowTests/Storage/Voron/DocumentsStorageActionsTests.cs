@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 
 using Raven.Abstractions.Data;
@@ -10,10 +10,10 @@ using Xunit.Extensions;
 
 namespace Raven.SlowTests.Storage.Voron
 {
-	[Trait("VoronTest", "StorageActionsTests")]
-	[Trait("VoronTest", "DocumentStorage")]
-	public class DocumentsStorageActionsTests : TransactionalStorageTestBase
-	{
+    [Trait("VoronTest", "StorageActionsTests")]
+    [Trait("VoronTest", "DocumentStorage")]
+    public class DocumentsStorageActionsTests : TransactionalStorageTestBase
+    {
         [Theory]
         [PropertyData("Storages")]
         public void DocumentStorage_Massive_AddDocuments_DeleteDocuments_No_Errors(string storageName)
@@ -47,5 +47,5 @@ namespace Raven.SlowTests.Storage.Voron
             }
         }
 
-	}
+    }
 }

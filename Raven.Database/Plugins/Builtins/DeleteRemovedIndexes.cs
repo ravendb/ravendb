@@ -12,35 +12,35 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Plugins.Builtins
 {
-	public class DeleteRemovedIndexes : IStartupTask
-	{
-		#region IStartupTask Members
+    public class DeleteRemovedIndexes : IStartupTask
+    {
+        #region IStartupTask Members
 
-		public void Execute(DocumentDatabase database)
-		{
-			database.TransactionalStorage.Batch(actions =>
-			{
-			    foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
-			    {
-			        database.Indexes.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"), result.Data.Value<string>("IndexName"));
-			    }
-			           
+        public void Execute(DocumentDatabase database)
+        {
+            database.TransactionalStorage.Batch(actions =>
+            {
+                foreach (var result in actions.Lists.Read("Raven/Indexes/PendingDeletion", Etag.Empty, null, 100))
+                {
+                    database.Indexes.StartDeletingIndexDataAsync(result.Data.Value<int>("IndexId"), result.Data.Value<string>("IndexName"));
+                }
+                       
                 List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
                 foreach (int id in indexIds)
-				{
+                {
                     var index = database.IndexDefinitionStorage.GetIndexDefinition(id);
                     if (index != null)
-						continue;
+                        continue;
 
-					// index is not found on disk, better kill for good
-					// Even though technically we are running into a situation that is considered to be corrupt data
-					// we can safely recover from it by removing the other parts of the index.
+                    // index is not found on disk, better kill for good
+                    // Even though technically we are running into a situation that is considered to be corrupt data
+                    // we can safely recover from it by removing the other parts of the index.
                     database.IndexStorage.DeleteIndex(id);
                     actions.Indexing.DeleteIndex(id, database.WorkContext.CancellationToken);
-				}
-			});
-		}
+                }
+            });
+        }
 
-		#endregion
-	}
+        #endregion
+    }
 }

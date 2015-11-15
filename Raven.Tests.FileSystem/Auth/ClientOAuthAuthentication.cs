@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ClientOAuthAuthentication.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -35,7 +35,7 @@ namespace Raven.Tests.FileSystem.Auth
                 Databases = new List<ResourceAccess>
                 {
                     new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system
-					new ResourceAccess {TenantId = fileSystemName}
+                    new ResourceAccess {TenantId = fileSystemName}
                 },
             }), new RavenJObject(), null);
         }
@@ -99,7 +99,7 @@ namespace Raven.Tests.FileSystem.Auth
         public async Task AdminClientWorkWithOAuthEnabled()
         {
             var client = (IAsyncFilesCommandsImpl) NewAsyncClient(enableAuthentication: true, apiKey: apiKey);
-	        var adminClient = client.Admin;
+            var adminClient = client.Admin;
 
             await adminClient.CreateFileSystemAsync(new FileSystemDocument
             {
@@ -110,20 +110,20 @@ namespace Raven.Tests.FileSystem.Auth
                  }
             }, "testName");
 
-	        var names = await adminClient.GetNamesAsync();
+            var names = await adminClient.GetNamesAsync();
 
             Assert.Equal(2, names.Length);
             Assert.Contains("AdminClientWorkWithOAuthEnabled", names);
 
-			var stats = await adminClient.GetStatisticsAsync();            
-			Assert.Equal(0, stats.Length); // 0 because our fs aren't active
+            var stats = await adminClient.GetStatisticsAsync();            
+            Assert.Equal(0, stats.Length); // 0 because our fs aren't active
 
             using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName"))
-			{
-				await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
-			}
+            {
+                await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] { 1 }));
+            }
 
-			await adminClient.DeleteFileSystemAsync("testName", true);
+            await adminClient.DeleteFileSystemAsync("testName", true);
         }
 
         [Fact]
@@ -176,7 +176,7 @@ namespace Raven.Tests.FileSystem.Auth
                 }
                 catch (ErrorResponseException ex)
                 {
-	                errorResponse = ex;
+                    errorResponse = ex;
                 }
                 
                 Assert.NotNull(errorResponse);

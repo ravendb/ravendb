@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 
@@ -16,41 +16,41 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class RavenDB_2974 : RavenTest
-	{
-		private class Company
-		{
-			public string Id { get; set; }
+    public class RavenDB_2974 : RavenTest
+    {
+        private class Company
+        {
+            public string Id { get; set; }
 
-			public string Name { get; set; }
+            public string Name { get; set; }
 
-			public CompanyType Type { get; set; }
+            public CompanyType Type { get; set; }
 
-			public enum CompanyType
-			{
-				Public,
-				Private
-			}
-		}
+            public enum CompanyType
+            {
+                Public,
+                Private
+            }
+        }
 
-		[Fact]
-		public void WhenUpdatingByIndex_QueryInputsAreMaintained()
-		{
-			using (var session = store.OpenSession())
-			{
-				session.Store(new Company { Name = "Public Company", Type = Company.CompanyType.Public });
-				session.Store(new Company { Name = "Private Company", Type = Company.CompanyType.Private });
+        [Fact]
+        public void WhenUpdatingByIndex_QueryInputsAreMaintained()
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Company { Name = "Public Company", Type = Company.CompanyType.Public });
+                session.Store(new Company { Name = "Private Company", Type = Company.CompanyType.Private });
 
-				session.SaveChanges();
-			}
+                session.SaveChanges();
+            }
 
-			WaitForIndexing(store);
+            WaitForIndexing(store);
 
-			var operation = store.DatabaseCommands.UpdateByIndex(new CompanyIndex().IndexName, new IndexQuery()
-			{
-				Query = "Type:" + Company.CompanyType.Private.ToString("g"),
-				TransformerParameters = new Dictionary<string, RavenJToken> { { "QueryInputKey", "value" } }
-			}, new[]
+            var operation = store.DatabaseCommands.UpdateByIndex(new CompanyIndex().IndexName, new IndexQuery()
+            {
+                Query = "Type:" + Company.CompanyType.Private.ToString("g"),
+                TransformerParameters = new Dictionary<string, RavenJToken> { { "QueryInputKey", "value" } }
+            }, new[]
             {
                 new PatchRequest
                 {
@@ -60,62 +60,62 @@ namespace Raven.Tests.Issues
                 },
             });
 
-			operation.WaitForCompletion();
+            operation.WaitForCompletion();
 
-			Assert.True(SecureIndexesQueryListener.WasFired);
+            Assert.True(SecureIndexesQueryListener.WasFired);
 
-			WaitForIndexing(store);
+            WaitForIndexing(store);
 
-			using (var session = store.OpenSession())
-			{
-				var result = session.Query<Company>().ToList();
+            using (var session = store.OpenSession())
+            {
+                var result = session.Query<Company>().ToList();
 
-				Assert.Equal(2, result.Count);
-				Assert.True(result.All(x => x.Type == Company.CompanyType.Public));
-			}
-		}
+                Assert.Equal(2, result.Count);
+                Assert.True(result.All(x => x.Type == Company.CompanyType.Public));
+            }
+        }
 
-		public class SecureIndexesQueryListener : AbstractIndexQueryTrigger
-		{
-			public static bool WasFired;
+        public class SecureIndexesQueryListener : AbstractIndexQueryTrigger
+        {
+            public static bool WasFired;
 
-			public SecureIndexesQueryListener()
-			{
-				WasFired = false;
-			}
+            public SecureIndexesQueryListener()
+            {
+                WasFired = false;
+            }
 
-			public override Query ProcessQuery(string indexName, Query query, IndexQuery originalQuery)
-			{
-				if (indexName == new CompanyIndex().IndexName)
-				{
-					WasFired = true;
+            public override Query ProcessQuery(string indexName, Query query, IndexQuery originalQuery)
+            {
+                if (indexName == new CompanyIndex().IndexName)
+                {
+                    WasFired = true;
 
-					Assert.NotNull(originalQuery.TransformerParameters);
-					Assert.Contains("QueryInputKey", originalQuery.TransformerParameters.Keys);
-				}
-				
-				return query;
-			}
-		}
+                    Assert.NotNull(originalQuery.TransformerParameters);
+                    Assert.Contains("QueryInputKey", originalQuery.TransformerParameters.Keys);
+                }
+                
+                return query;
+            }
+        }
 
-		private class CompanyIndex : AbstractIndexCreationTask<Company>
-		{
-			public CompanyIndex()
-			{
-				Map = companies => from company in companies
-								   select new
-								   {
-									   company.Type
-								   };
-			}
-		}
+        private class CompanyIndex : AbstractIndexCreationTask<Company>
+        {
+            public CompanyIndex()
+            {
+                Map = companies => from company in companies
+                                   select new
+                                   {
+                                       company.Type
+                                   };
+            }
+        }
 
-		private readonly EmbeddableDocumentStore store;
+        private readonly EmbeddableDocumentStore store;
 
-		public RavenDB_2974()
-		{
-			store = NewDocumentStore(catalog: (new TypeCatalog(typeof(SecureIndexesQueryListener))));
-			new CompanyIndex().Execute(store);
-		}
-	}
+        public RavenDB_2974()
+        {
+            store = NewDocumentStore(catalog: (new TypeCatalog(typeof(SecureIndexesQueryListener))));
+            new CompanyIndex().Execute(store);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="TaskActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -51,15 +51,15 @@ namespace Raven.Database.Actions
             return pendingTasks.Select(x =>
             {
                 var ex = (x.Value.Task.IsFaulted || x.Value.Task.IsCanceled) ? x.Value.Task.Exception.ExtractSingleInnerException() : null;
-	            var taskStatus = x.Value.Task.Status;
-	            if (taskStatus == TaskStatus.WaitingForActivation)
-					taskStatus = TaskStatus.Running; //aysnc task status is always WaitingForActivation
+                var taskStatus = x.Value.Task.Status;
+                if (taskStatus == TaskStatus.WaitingForActivation)
+                    taskStatus = TaskStatus.Running; //aysnc task status is always WaitingForActivation
                 return new PendingTaskDescriptionAndStatus
                        {
                            Id = x.Key,
                            Payload = x.Value.Description.Payload,
                            StartTime = x.Value.Description.StartTime,
-						   TaskStatus = taskStatus,
+                           TaskStatus = taskStatus,
                            TaskType = x.Value.Description.TaskType,
                            Exception = ex
                        };
@@ -126,7 +126,7 @@ namespace Raven.Database.Actions
 #if DEBUG
                         pendingTaskAndState.Task.Wait(3000);
 #else
-						pendingTaskAndState.Task.Wait();
+                        pendingTaskAndState.Task.Wait();
 #endif
                     }
                     catch (Exception)
@@ -173,9 +173,9 @@ namespace Raven.Database.Actions
 
             IndexDeleteOperation,
 
-			ImportDatabase,
+            ImportDatabase,
 
-			RestoreDatabase,
+            RestoreDatabase,
 
             RestoreFilesystem,
 
@@ -185,7 +185,7 @@ namespace Raven.Database.Actions
 
             IoTest,
 
-	        NewIndexPrecomputedBatch
+            NewIndexPrecomputedBatch
         }
     }
 }

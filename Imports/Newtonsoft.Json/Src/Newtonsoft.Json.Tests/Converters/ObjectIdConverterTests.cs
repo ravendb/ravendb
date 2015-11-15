@@ -1,4 +1,4 @@
-ï»¿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -58,7 +58,7 @@ namespace Newtonsoft.Json.Tests.Converters
             ObjectIdTestClass c = new ObjectIdTestClass
             {
                 Id = new BsonObjectId(HexToBytes("4ABBED9D1D8B0F0218000001")),
-                Test = "1234Â£56"
+                Test = "1234£56"
             };
 
             MemoryStream ms = new MemoryStream();
@@ -84,7 +84,7 @@ namespace Newtonsoft.Json.Tests.Converters
             ObjectIdTestClass c = serializer.Deserialize<ObjectIdTestClass>(reader);
 
             CollectionAssert.AreEquivalent(c.Id.Value, HexToBytes("4ABBED9D1D8B0F0218000001"));
-            Assert.AreEqual(c.Test, "1234Â£56");
+            Assert.AreEqual(c.Test, "1234£56");
         }
     }
 }

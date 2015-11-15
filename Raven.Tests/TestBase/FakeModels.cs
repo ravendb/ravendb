@@ -1,4 +1,4 @@
-﻿namespace Raven.Tests.TestBase
+namespace Raven.Tests.TestBase
 {
     public abstract class AggregateRoot
     {

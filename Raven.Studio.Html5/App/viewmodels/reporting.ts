@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
@@ -24,23 +24,23 @@ class reporting extends viewModelBase {
     reportResults = ko.observable<pagedList>();
     totalQueryResults = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() : null);
     queryDuration = ko.observable<string>();
-	appUrls: computedAppUrls;
-	isCacheDisable = ko.observable<boolean>(false);
+    appUrls: computedAppUrls;
+    isCacheDisable = ko.observable<boolean>(false);
     
     constructor() {
         super();
         this.appUrls = appUrl.forCurrentDatabase();
-	}
+    }
 
-	attached() {
-		super.attached();
-		$("#filterQueryLabel").popover({
-			html: true,
-			trigger: "hover",
-			container: ".form-horizontal",
-			content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
-		});
-	}
+    attached() {
+        super.attached();
+        $("#filterQueryLabel").popover({
+            html: true,
+            trigger: "hover",
+            container: ".form-horizontal",
+            content: 'Queries use Lucene syntax. Examples:<pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+        });
+    }
 
     activate(indexToActivateOrNull: string) {
         super.activate(indexToActivateOrNull);
@@ -147,11 +147,11 @@ class reporting extends viewModelBase {
                 .done((resultSet: pagedResultSet) => this.queryDuration(resultSet.additionalResultInfo));
         };
         this.reportResults(new pagedList(resultsFetcher));
-	}
+    }
 
-	toggleCacheEnable() {
-		this.isCacheDisable(!this.isCacheDisable());
-	}
+    toggleCacheEnable() {
+        this.isCacheDisable(!this.isCacheDisable());
+    }
 }
 
 export = reporting;

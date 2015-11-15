@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Tests.Common.Attributes;
@@ -29,10 +29,10 @@ namespace Raven.Tests.Bugs.Facets
 
 
             var facetsNewWay = new List<Facet>
-			    {
-				    new Facet<Camera>
-				    {
-					    Name = x => x.DateOfListing,
+                {
+                    new Facet<Camera>
+                    {
+                        Name = x => x.DateOfListing,
                         Ranges =
                            {
                                x => x.DateOfListing < now.AddDays(-10),
@@ -41,7 +41,7 @@ namespace Raven.Tests.Bugs.Facets
                                x => x.DateOfListing > now.AddDays(0) && x.DateOfListing < now.AddDays(7),
                                x => x.DateOfListing > now.AddDays(7)
                            }
-				    }
+                    }
                 };
             var facetOldSchool = new List<Facet>{
                     new Facet
@@ -106,10 +106,10 @@ namespace Raven.Tests.Bugs.Facets
                 InsertCameraDataAndWaitForNonStaleResults(store, cameras);
 
                 var facetsNewWay = new List<Facet>
-			    {
-				    new Facet<Camera>
-				    {
-					    Name = x => x.DateOfListing,
+                {
+                    new Facet<Camera>
+                    {
+                        Name = x => x.DateOfListing,
                         Ranges =
                            {
                                x => x.DateOfListing < now.AddDays(-10),
@@ -118,7 +118,7 @@ namespace Raven.Tests.Bugs.Facets
                                x => x.DateOfListing > now.AddDays(0) && x.DateOfListing < now.AddDays(7),
                                x => x.DateOfListing > now.AddDays(7)
                            }
-				    }
+                    }
                 };
                 var facetOldSchool = new List<Facet>{
                     new Facet

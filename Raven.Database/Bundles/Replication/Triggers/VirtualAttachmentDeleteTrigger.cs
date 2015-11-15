@@ -16,105 +16,105 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
-	using Raven.Abstractions.Extensions;
+    using Raven.Abstractions.Extensions;
 
-	/// <summary>
-	/// We can't allow real deletes when using replication, because
-	/// then we won't have any way to replicate the delete. Instead
-	/// we allow the delete but don't do actual delete, we replace it 
-	/// with a delete marker instead
-	/// </summary>
-	[ExportMetadata("Bundle", "Replication")]
-	[ExportMetadata("Order", 10000)]
-	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
+    /// <summary>
+    /// We can't allow real deletes when using replication, because
+    /// then we won't have any way to replicate the delete. Instead
+    /// we allow the delete but don't do actual delete, we replace it 
+    /// with a delete marker instead
+    /// </summary>
+    [ExportMetadata("Bundle", "Replication")]
+    [ExportMetadata("Order", 10000)]
+    [InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
     [Obsolete("Use RavenFS instead.")]
-	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
-	{
-		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
-	
-		public override void OnDelete(string key)
-		{
-			using(Database.DisableAllTriggersForCurrentThread())
-			{
-				var attachment = Database.Attachments.GetStatic(key);
-				if (attachment == null)
-					return;
+    public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
+    {
+        readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
+    
+        public override void OnDelete(string key)
+        {
+            using(Database.DisableAllTriggersForCurrentThread())
+            {
+                var attachment = Database.Attachments.GetStatic(key);
+                if (attachment == null)
+                    return;
 
-				if (attachment.IsConflictAttachment() == false && HasConflict(attachment))
-				{
-					HandleConflictedAttachment(attachment);
-					return;
-				}
+                if (attachment.IsConflictAttachment() == false && HasConflict(attachment))
+                {
+                    HandleConflictedAttachment(attachment);
+                    return;
+                }
 
-				HandleAttachment(attachment);
-			}
-		}
+                HandleAttachment(attachment);
+            }
+        }
 
-		public override void AfterDelete(string key)
-		{
-			var metadata = new RavenJObject
-			{
-				{Constants.RavenDeleteMarker, true},
-				{Constants.RavenReplicationHistory, deletedHistory.Value},
-				{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-				{Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)}
-			};
-			deletedHistory.Value = null;
-			Database.TransactionalStorage.Batch(accessor =>
-				accessor.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, key, metadata, UuidType.Attachments));
-		
-		}
+        public override void AfterDelete(string key)
+        {
+            var metadata = new RavenJObject
+            {
+                {Constants.RavenDeleteMarker, true},
+                {Constants.RavenReplicationHistory, deletedHistory.Value},
+                {Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
+                {Constants.RavenReplicationVersion, ReplicationHiLo.NextId(Database)}
+            };
+            deletedHistory.Value = null;
+            Database.TransactionalStorage.Batch(accessor =>
+                accessor.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, key, metadata, UuidType.Attachments));
+        
+        }
 
-		private void HandleConflictedAttachment(Attachment attachment)
-		{
-			var attachmentDataStream = attachment.Data();
-			var attachmentData = attachmentDataStream.ToJObject();
+        private void HandleConflictedAttachment(Attachment attachment)
+        {
+            var attachmentDataStream = attachment.Data();
+            var attachmentData = attachmentDataStream.ToJObject();
 
-			var conflicts = attachmentData.Value<RavenJArray>("Conflicts");
+            var conflicts = attachmentData.Value<RavenJArray>("Conflicts");
 
-			if (conflicts == null)
-				return;
+            if (conflicts == null)
+                return;
 
-			var currentSource = Database.TransactionalStorage.Id.ToString();
+            var currentSource = Database.TransactionalStorage.Id.ToString();
 
-			foreach (var c in conflicts)
-			{
-				var conflict = Database.Attachments.GetStatic(c.Value<string>());
-				var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
+            foreach (var c in conflicts)
+            {
+                var conflict = Database.Attachments.GetStatic(c.Value<string>());
+                var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
-				if (conflictSource != currentSource)
-					continue;
+                if (conflictSource != currentSource)
+                    continue;
 
-				this.deletedHistory.Value = new RavenJArray
-				{
-					new RavenJObject
-					{
-						{ Constants.RavenReplicationVersion, conflict.Metadata[Constants.RavenReplicationVersion] },
-						{ Constants.RavenReplicationSource, conflict.Metadata[Constants.RavenReplicationSource] }
-					}
-				};
+                this.deletedHistory.Value = new RavenJArray
+                {
+                    new RavenJObject
+                    {
+                        { Constants.RavenReplicationVersion, conflict.Metadata[Constants.RavenReplicationVersion] },
+                        { Constants.RavenReplicationSource, conflict.Metadata[Constants.RavenReplicationSource] }
+                    }
+                };
 
-				return;
-			}
-		}
+                return;
+            }
+        }
 
-		private void HandleAttachment(Attachment document)
-		{
-			deletedHistory.Value = new RavenJArray(ReplicationData.GetHistory(document.Metadata))
-			{
-				new RavenJObject
-				{
-					{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
-					{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
-				}
-			};
-		}
+        private void HandleAttachment(Attachment document)
+        {
+            deletedHistory.Value = new RavenJArray(ReplicationData.GetHistory(document.Metadata))
+            {
+                new RavenJObject
+                {
+                    {Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
+                    {Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
+                }
+            };
+        }
 
-		private bool HasConflict(Attachment attachment)
-		{
-			var conflict = attachment.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
+        private bool HasConflict(Attachment attachment)
+        {
+            var conflict = attachment.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
 
-			return conflict != null && conflict.Value<bool>();
-		}
-	}
+            return conflict != null && conflict.Value<bool>();
+        }
+    }
 }

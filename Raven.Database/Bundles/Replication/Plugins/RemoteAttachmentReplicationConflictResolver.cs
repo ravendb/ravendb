@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RemoteAttachmentReplicationConflictResolver.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,19 +11,19 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Plugins
 {
-	[PartNotDiscoverable]
+    [PartNotDiscoverable]
     [Obsolete("Use RavenFS instead.")]
-	public class RemoteAttachmentReplicationConflictResolver : AbstractAttachmentReplicationConflictResolver
-	{
-		public static RemoteAttachmentReplicationConflictResolver Instance = new RemoteAttachmentReplicationConflictResolver();
+    public class RemoteAttachmentReplicationConflictResolver : AbstractAttachmentReplicationConflictResolver
+    {
+        public static RemoteAttachmentReplicationConflictResolver Instance = new RemoteAttachmentReplicationConflictResolver();
 
-		protected override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment, Func<string, Attachment> getAttachment,
-		                                out RavenJObject metadataToSave, out byte[] dataToSave)
-		{
-			metadataToSave = metadata;
-			dataToSave = data;
+        protected override bool TryResolve(string id, RavenJObject metadata, byte[] data, Attachment existingAttachment, Func<string, Attachment> getAttachment,
+                                        out RavenJObject metadataToSave, out byte[] dataToSave)
+        {
+            metadataToSave = metadata;
+            dataToSave = data;
 
-			return true;
-		}
-	}
+            return true;
+        }
+    }
 }

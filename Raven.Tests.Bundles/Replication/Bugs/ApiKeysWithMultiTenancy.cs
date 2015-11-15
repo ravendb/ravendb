@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="ApiKeysWithMultiTenancy.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,76 +19,76 @@ using Raven.Client.Extensions;
 
 namespace Raven.Tests.Bundles.Replication.Bugs
 {
-	public class ApiKeysWithMultiTenancy : ReplicationBase
-	{
-		private const string apikey = "test/ThisIsMySecret";
+    public class ApiKeysWithMultiTenancy : ReplicationBase
+    {
+        private const string apikey = "test/ThisIsMySecret";
 
-		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
-		{
-			serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
+        {
+            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
-		}
+        }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
-		{
-			database.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
-			{
-				Name = "test",
-				Secret = "ThisIsMySecret",
-				Enabled = true,
-				Databases = new List<ResourceAccess>
-				{
-					new ResourceAccess {TenantId = "*", Admin = true},
-					new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
+        {
+            database.Documents.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+            {
+                Name = "test",
+                Secret = "ThisIsMySecret",
+                Enabled = true,
+                Databases = new List<ResourceAccess>
+                {
+                    new ResourceAccess {TenantId = "*", Admin = true},
+                    new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
                     new ResourceAccess {TenantId = databaseName, Admin = true}
-				}
-			}), new RavenJObject(), null);
-		}
+                }
+            }), new RavenJObject(), null);
+        }
 
-		[Fact]
-		public void CanReplicationToChildDbsUsingApiKeys()
-		{
-			var store1 = CreateStore(configureStore: store =>
-			{
-				store.ApiKey = apikey;
-				store.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
-			},enableAuthorization: true);
-			var store2 = CreateStore(configureStore: store =>
-			{
-				store.ApiKey = apikey;
-				store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-			}, enableAuthorization: true);
+        [Fact]
+        public void CanReplicationToChildDbsUsingApiKeys()
+        {
+            var store1 = CreateStore(configureStore: store =>
+            {
+                store.ApiKey = apikey;
+                store.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
+            },enableAuthorization: true);
+            var store2 = CreateStore(configureStore: store =>
+            {
+                store.ApiKey = apikey;
+                store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+            }, enableAuthorization: true);
 
-			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-			{
-				Id = "repl",
-				Settings =
-				{
-					{Constants.RunInMemory, "true"},
-					{"Raven/DataDir", "~/db1"},
-					{"Raven/ActiveBundles", "Replication"}
-				}
-			});
-			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-			{
-				Id = "repl",
-				Settings =
-				{
-					{Constants.RunInMemory, "true"},
-					{"Raven/DataDir", "~/db2"},
-					{"Raven/ActiveBundles", "Replication"}
-				}
-			});
+            store1.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+            {
+                Id = "repl",
+                Settings =
+                {
+                    {Constants.RunInMemory, "true"},
+                    {"Raven/DataDir", "~/db1"},
+                    {"Raven/ActiveBundles", "Replication"}
+                }
+            });
+            store2.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+            {
+                Id = "repl",
+                Settings =
+                {
+                    {Constants.RunInMemory, "true"},
+                    {"Raven/DataDir", "~/db2"},
+                    {"Raven/ActiveBundles", "Replication"}
+                }
+            });
 
-			RunReplication(store1, store2, apiKey: apikey, db: "repl");
+            RunReplication(store1, store2, apiKey: apikey, db: "repl");
 
-			using (var s = store1.OpenSession("repl"))
-			{
-				s.Store(new User());
-				s.SaveChanges();
-			}
+            using (var s = store1.OpenSession("repl"))
+            {
+                s.Store(new User());
+                s.SaveChanges();
+            }
 
-			WaitForReplication(store2, "users/1", db: "repl");
-		}
-	}
+            WaitForReplication(store2, "users/1", db: "repl");
+        }
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
@@ -133,7 +133,7 @@ namespace Raven.Tests.Issues
                     var supposedChanges = new DocumentsChanges
                     {
                         Change  = DocumentsChanges.ChangeType.FieldChanged,
-						FieldName = "Salary",
+                        FieldName = "Salary",
                         FieldNewType = "Float",
                         FieldNewValue = "556",
                         FieldOldType = "Float",
@@ -149,7 +149,7 @@ namespace Raven.Tests.Issues
                     DocumentsChanges[] data1 = { };
                     if (changes3.TryGetValue("UserDatas/1", out data1))
                     {
-						Assert.Equal(data1.Length, ExpectedChangesCount); //UserDatas/1 was changed twice
+                        Assert.Equal(data1.Length, ExpectedChangesCount); //UserDatas/1 was changed twice
                     }
 
                     session.SaveChanges();
@@ -189,7 +189,7 @@ namespace Raven.Tests.Issues
                         Date = new DateTime(2014, 2, 2)
                     }, "UserDatas/4");
 
-	                ExpectedChangesCount = 3;
+                    ExpectedChangesCount = 3;
                     IDictionary<string, DocumentsChanges[]> changes7 = session.Advanced.WhatChanged();
                     Assert.Equal(ExpectedChangesCount, changes7.Count);
                     Assert.True(changes7.ContainsKey("UserDatas/1"));
@@ -253,11 +253,11 @@ namespace Raven.Tests.Issues
                     var supposedChanges = new DocumentsChanges
                     {
                         Change = DocumentsChanges.ChangeType.FieldChanged,
-						FieldName = "Salary",
+                        FieldName = "Salary",
                         FieldNewType = "Float",
                         FieldNewValue = "556",
                         FieldOldType = "Float",
-						FieldOldValue = "12.51"
+                        FieldOldValue = "12.51"
                     };
                     DocumentsChanges[] data2;
                     if (changes3.TryGetValue("UserDatas/2", out data2))

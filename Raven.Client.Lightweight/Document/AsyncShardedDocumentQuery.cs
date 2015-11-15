@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ShardedDocumentQuery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -20,186 +20,188 @@ using Raven.Client.Shard;
 
 namespace Raven.Client.Document
 {
-	/// <summary>
-	/// A query that is executed against sharded instances
-	/// </summary>
-	public class AsyncShardedDocumentQuery<T> : AsyncDocumentQuery<T>
-	{
-		private readonly Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn;
-		private readonly ShardStrategy shardStrategy;
+    /// <summary>
+    /// A query that is executed against sharded instances
+    /// </summary>
+    public class AsyncShardedDocumentQuery<T> : AsyncDocumentQuery<T>
+    {
+        private readonly Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn;
+        private readonly ShardStrategy shardStrategy;
 
-		private List<QueryOperation> shardQueryOperations;
+        private List<QueryOperation> shardQueryOperations;
 
-		private IList<IAsyncDatabaseCommands> databaseCommands;
-		private IList<IAsyncDatabaseCommands> ShardDatabaseCommands
-		{
-			get
-			{
-				if (databaseCommands == null)
-				{
-					var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery , IndexName = indexName});
-					databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
-				}
-				return databaseCommands;
-			}
-		}
+        private IList<IAsyncDatabaseCommands> databaseCommands;
+        private IList<IAsyncDatabaseCommands> ShardDatabaseCommands
+        {
+            get
+            {
+                if (databaseCommands == null)
+                {
+                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery , IndexName = indexName});
+                    databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
+                }
+                return databaseCommands;
+            }
+        }
 
-		private IndexQuery indexQuery;
-		private IndexQuery IndexQuery
-		{
-			get { return indexQuery ?? (indexQuery = GenerateIndexQuery(queryText.ToString())); }
-		}
+        private IndexQuery indexQuery;
+        private IndexQuery IndexQuery
+        {
+            get { return indexQuery ?? (indexQuery = GenerateIndexQuery(queryText.ToString())); }
+        }
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
-		/// </summary>
-		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
-			: base(session, null, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
-		{
-			this.getShardsToOperateOn = getShardsToOperateOn;
-			this.shardStrategy = shardStrategy;
-		}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
+        /// </summary>
+        public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
+            : base(session, null, null, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
+        {
+            this.getShardsToOperateOn = getShardsToOperateOn;
+            this.shardStrategy = shardStrategy;
+        }
 
-		protected override Task<QueryOperation> InitAsync()
-		{
-			if (queryOperation != null)
-				return CompletedTask.With(queryOperation);
+        protected override Task<QueryOperation> InitAsync()
+        {
+            if (queryOperation != null)
+                return CompletedTask.With(queryOperation);
 
-			ExecuteBeforeQueryListeners();
+            ExecuteBeforeQueryListeners();
 
-			shardQueryOperations = new List<QueryOperation>();
+            shardQueryOperations = new List<QueryOperation>();
 
-			foreach (var commands in ShardDatabaseCommands)
-			{
-				var dbCommands = commands;
-				ClearSortHints(dbCommands);
-				shardQueryOperations.Add(InitializeQueryOperation());
-			}
+            foreach (var commands in ShardDatabaseCommands)
+            {
+                var dbCommands = commands;
+                ClearSortHints(dbCommands);
+                shardQueryOperations.Add(InitializeQueryOperation());
+            }
 
-			theSession.IncrementRequestCount();
-			return ExecuteActualQueryAsync();
-		}
+            theSession.IncrementRequestCount();
+            return ExecuteActualQueryAsync();
+        }
 
-		public override IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
-		{
-			var documentQuery = new AsyncShardedDocumentQuery<TProjection>(theSession,
-				getShardsToOperateOn,
-				shardStrategy,
-				indexName,
-				fields,
-				projections,
-				queryListeners,
-				isMapReduce)
-			{
-				pageSize = pageSize,
-				queryText = new StringBuilder(queryText.ToString()),
-				start = start,
-				timeout = timeout,
-				cutoff = cutoff,
-				queryStats = queryStats,
-				theWaitForNonStaleResults = theWaitForNonStaleResults,
+        public override IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
+        {
+            var documentQuery = new AsyncShardedDocumentQuery<TProjection>(theSession,
+                getShardsToOperateOn,
+                shardStrategy,
+                indexName,
+                fields,
+                projections,
+                queryListeners,
+                isMapReduce)
+            {
+                pageSize = pageSize,
+                queryText = new StringBuilder(queryText.ToString()),
+                start = start,
+                timeout = timeout,
+                cutoff = cutoff,
+                queryStats = queryStats,
+                theWaitForNonStaleResults = theWaitForNonStaleResults,
                 theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
-				sortByHints = sortByHints,
-				orderByFields = orderByFields,
-				isDistinct = isDistinct,
-				transformResultsFunc = transformResultsFunc,
-				includes = new HashSet<string>(includes),
-				highlightedFields = new List<HighlightedField>(highlightedFields),
-				highlighterPreTags = highlighterPreTags,
-				highlighterPostTags = highlighterPostTags,
-				disableEntitiesTracking = disableEntitiesTracking,
-				disableCaching = disableCaching,
-				showQueryTimings = showQueryTimings,
-				shouldExplainScores = shouldExplainScores
-			};
-			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
-			return documentQuery;
-		}
+                sortByHints = sortByHints,
+                orderByFields = orderByFields,
+                isDistinct = isDistinct,
+                transformResultsFunc = transformResultsFunc,
+                includes = new HashSet<string>(includes),
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags,
+                disableEntitiesTracking = disableEntitiesTracking,
+                disableCaching = disableCaching,
+                showQueryTimings = showQueryTimings,
+                shouldExplainScores = shouldExplainScores,
+                resultsTransformer = resultsTransformer,
+                transformerParameters = transformerParameters,
+            };
+            documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
+            return documentQuery;
+        }
 
-		protected override void ExecuteActualQuery()
-		{
-			throw new NotSupportedException("Async queries don't support synchronous execution");
-		}
+        protected override void ExecuteActualQuery()
+        {
+            throw new NotSupportedException("Async queries don't support synchronous execution");
+        }
 
-		protected override Task<QueryOperation> ExecuteActualQueryAsync()
-		{
-			var results = CompletedTask.With(new bool[ShardDatabaseCommands.Count]).Task;
+        protected override Task<QueryOperation> ExecuteActualQueryAsync()
+        {
+            var results = CompletedTask.With(new bool[ShardDatabaseCommands.Count]).Task;
 
-			Func<Task> loop = null;
-			loop = () =>
-			{
-				var lastResults = results.Result;
+            Func<Task> loop = null;
+            loop = () =>
+            {
+                var lastResults = results.Result;
 
-				results = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
-					new ShardRequestData
-					{
-						EntityType = typeof(T),
-						Query = IndexQuery,
-						IndexName = indexName
-					}, (commands, i) =>
-					{
-						if (lastResults[i]) // if we already got a good result here, do nothing
-							return CompletedTask.With(true);
+                results = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
+                    new ShardRequestData
+                    {
+                        EntityType = typeof(T),
+                        Query = IndexQuery,
+                        IndexName = indexName
+                    }, (commands, i) =>
+                    {
+                        if (lastResults[i]) // if we already got a good result here, do nothing
+                            return CompletedTask.With(true);
 
-						var queryOp = shardQueryOperations[i];
+                        var queryOp = shardQueryOperations[i];
 
-						var queryContext = queryOp.EnterQueryContext();
-						return commands.QueryAsync(indexName, queryOp.IndexQuery, includes.ToArray())
-							.ContinueWith(task =>
-						{
-							if (queryContext != null)
-								queryContext.Dispose();
+                        var queryContext = queryOp.EnterQueryContext();
+                        return commands.QueryAsync(indexName, queryOp.IndexQuery, includes.ToArray())
+                            .ContinueWith(task =>
+                        {
+                            if (queryContext != null)
+                                queryContext.Dispose();
 
-							return queryOp.IsAcceptable(task.Result);
-						});
-					});
+                            return queryOp.IsAcceptable(task.Result);
+                        });
+                    });
 
-				return results.ContinueWith(task =>
-				{
-					task.AssertNotFailed();
+                return results.ContinueWith(task =>
+                {
+                    task.AssertNotFailed();
 
-					if (lastResults.All(acceptable => acceptable))
-						return new CompletedTask().Task;
+                    if (lastResults.All(acceptable => acceptable))
+                        return new CompletedTask().Task;
 
-					Thread.Sleep(100);
+                    Thread.Sleep(100);
 
-					return loop();
-				}).Unwrap();
-			};
+                    return loop();
+                }).Unwrap();
+            };
 
-			return loop().ContinueWith(task =>
-			{
-				task.AssertNotFailed();
+            return loop().ContinueWith(task =>
+            {
+                task.AssertNotFailed();
 
-				ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
+                ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
 
-				var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
+                var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
-				shardQueryOperations[0].ForceResult(mergedQueryResult);
-				queryOperation = shardQueryOperations[0];
+                shardQueryOperations[0].ForceResult(mergedQueryResult);
+                queryOperation = shardQueryOperations[0];
 
-				return queryOperation;
-			});
-		}
+                return queryOperation;
+            });
+        }
 
-		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
-		{
-			throw new NotSupportedException("Lazy in not supported with the async API");
-		}
+        public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+        {
+            throw new NotSupportedException("Lazy in not supported with the async API");
+        }
 
-		public override Lazy<int> CountLazily()
-		{
-			throw new NotSupportedException("Lazy in not supported with the async API");
-		}
+        public override Lazy<int> CountLazily()
+        {
+            throw new NotSupportedException("Lazy in not supported with the async API");
+        }
 
-		public override IDatabaseCommands DatabaseCommands
-		{
-			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
-		}
+        public override IDatabaseCommands DatabaseCommands
+        {
+            get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
+        }
 
-		public override IAsyncDatabaseCommands AsyncDatabaseCommands
-		{
-			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
-		}
-	}
+        public override IAsyncDatabaseCommands AsyncDatabaseCommands
+        {
+            get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
+        }
+    }
 }

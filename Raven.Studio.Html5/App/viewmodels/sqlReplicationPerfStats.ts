@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
 import changesContext = require("common/changesContext");
 import getSqlReplicationPerfStatsCommand = require("commands/getSqlReplicationPerfStatsCommand");
@@ -59,7 +59,7 @@ class sqlReplicationPerfStats extends viewModelBase {
 
 
     attached() {
-		super.attached();
+        super.attached();
         $("#replicationStatsContainer").resize().on('DynamicHeightSet', () => this.onWindowHeightChanged());
         $("#replicationStatsContainer").scroll(() => this.graphScrolled());
         this.refresh();

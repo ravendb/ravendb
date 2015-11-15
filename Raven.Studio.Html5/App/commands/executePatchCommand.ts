@@ -1,4 +1,4 @@
-﻿import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
+import executeBulkDocsCommand = require("commands/executeBulkDocsCommand");
 import database = require("models/database");
 
 class executePatchCommand extends executeBulkDocsCommand {

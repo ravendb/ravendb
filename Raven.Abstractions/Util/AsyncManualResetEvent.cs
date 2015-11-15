@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AsyncManualResetEvent.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,8 +19,8 @@ namespace Raven.Abstractions.Util
         {
             var task = tcs.Task;
             
-			return await Task.WhenAny(task, Task.Delay(timeout)) == task;
-		}
+            return await Task.WhenAny(task, Task.Delay(timeout)) == task;
+        }
 
         public async Task<bool> WaitAsync(int timeout, CancellationToken cancellationToken)
         {

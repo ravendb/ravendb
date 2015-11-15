@@ -1,6 +1,5 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
-import adminLogsConfigureCommand = require("commands/adminLogsConfigureCommand");
 import adminLogsClient = require("common/adminLogsClient");
 import fileDownloader = require("common/fileDownloader");
 import adminLogsConfigureDialog = require("viewmodels/adminLogsConfigureDialog");
@@ -8,6 +7,7 @@ import adminLogsConfig = require("models/adminLogsConfig");
 import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
 import adminLogsConfigEntry = require("models/adminLogsConfigEntry");
 import appUrl = require('common/appUrl');
+import shell = require("viewmodels/shell");
 
 class adminLogs extends viewModelBase {
    
@@ -20,9 +20,10 @@ class adminLogs extends viewModelBase {
     logsContainer: Element;
     entriesCount = ko.computed(() => this.rawLogs().length);
     adminLogsConfig = ko.observable<adminLogsConfig>();
-
+    isForbidden = ko.observable<boolean>();
 
     canActivate(args): any {
+        this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
     
@@ -147,7 +148,7 @@ class adminLogs extends viewModelBase {
     }
 
     attached() {
-	    super.attached();
+        super.attached();
         this.logsContainer = document.getElementById("rawLogsContainer");
     }
 

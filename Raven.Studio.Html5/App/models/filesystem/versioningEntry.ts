@@ -1,9 +1,9 @@
-﻿class versioningEntry {
+class versioningEntry {
     maxRevisions = ko.observable<number>();
     exclude = ko.observable<boolean>();
     excludeUnlessExplicit = ko.observable<boolean>();
     purgeOnDelete = ko.observable<boolean>();
-	resetOnRename = ko.observable<boolean>();
+    resetOnRename = ko.observable<boolean>();
 
     disabled: KnockoutComputed<boolean>;
 
@@ -16,7 +16,7 @@
                 Exclude: false,
                 ExcludeUnlessExplicit: false,
                 PurgeOnDelete: false,
-				ResetOnRename: false
+                ResetOnRename: false
             };
         }
 
@@ -24,7 +24,7 @@
         this.exclude(dto.Exclude);
         this.excludeUnlessExplicit(dto.ExcludeUnlessExplicit);
         this.purgeOnDelete(dto.PurgeOnDelete);
-	    this.resetOnRename(dto.ResetOnRename);
+        this.resetOnRename(dto.ResetOnRename);
         this.disabled = ko.computed(() => this.exclude());
         
     }
@@ -44,7 +44,7 @@
             Exclude: this.exclude(),
             ExcludeUnlessExplicit: this.excludeUnlessExplicit(),
             PurgeOnDelete: this.purgeOnDelete(),
-			ResetOnRename: this.resetOnRename()
+            ResetOnRename: this.resetOnRename()
         };
 
         return dto;

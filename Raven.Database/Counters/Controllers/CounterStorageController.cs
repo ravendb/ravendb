@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -13,7 +13,7 @@ namespace Raven.Database.Counters.Controllers
 {
     public class CounterStorageController : RavenDbApiController
     {
-		[RavenRoute("counterStorage/conterStorages")]
+        [RavenRoute("counterStorage/conterStorages")]
         [HttpGet]
         public HttpResponseMessage GetCounterStoragesNames()
         {
@@ -21,13 +21,13 @@ namespace Raven.Database.Counters.Controllers
             return GetMessageWithObject(names);
         }
 
-		[RavenRoute("counterStorage/stats")]
-		[HttpGet]
-		public HttpResponseMessage GetCounterStoragesStats()
-		{
-			//TODO: implement getting the stats about the counter storages
-			return GetEmptyMessage();
-		}
+        [RavenRoute("counterStorage/stats")]
+        [HttpGet]
+        public HttpResponseMessage GetCounterStoragesStats()
+        {
+            //TODO: implement getting the stats about the counter storages
+            return GetEmptyMessage();
+        }
 
         private string[] GetCounterStorages()
         {

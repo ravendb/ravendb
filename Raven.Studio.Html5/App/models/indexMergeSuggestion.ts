@@ -1,4 +1,4 @@
-﻿import indexDefinition = require("models/indexDefinition");
+import indexDefinition = require("models/indexDefinition");
 import idGenerator = require("common/idGenerator");
 
 class indexMergeSuggestion {

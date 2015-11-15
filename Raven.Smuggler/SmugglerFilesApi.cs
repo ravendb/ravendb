@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -52,11 +52,11 @@ namespace Raven.Smuggler
 
             using (primaryStore = await CreateStore(exportOptions.From))
             using (documentStore = CreateDocumentStore(exportOptions.From))
-			{
+            {
                 Operations = new SmugglerRemoteFilesOperations(() => primaryStore, () => documentStore);
 
-				return await base.ExportData(exportOptions);
-			}
+                return await base.ExportData(exportOptions);
+            }
         }
 
         public override async Task ImportData(SmugglerImportOptions<FilesConnectionStringOptions> importOptions)

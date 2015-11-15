@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Logging;
+using Raven.Abstractions.Logging;
 using Raven.Database.Server.Connections;
 using System;
 using System.Collections.Generic;
@@ -86,7 +86,7 @@ namespace Raven.Database.FileSystem.Controllers
 
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/changes/events")]
-		public HttpResponseMessage GetChangesEvents()
+        public HttpResponseMessage GetChangesEvents()
         {
             var eventsTransport = new ChangesPushContent(this);
             eventsTransport.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");

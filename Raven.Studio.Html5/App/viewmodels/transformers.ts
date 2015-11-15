@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import transformer = require("models/transformer");
 import getTransformersCommand = require("commands/getTransformersCommand");
 import saveTransformerLockModeCommand = require("commands/saveTransformerLockModeCommand");
@@ -39,7 +39,7 @@ class Transformers extends viewModelBase {
     }
 
     attached() {
-		super.attached();
+        super.attached();
         this.updateHelpLink('OWRJLV');
         this.createKeyboardShortcut("Alt+N", () => this.navigate(this.newTransformerUrl()), this.containerSelector);
         ko.postbox.publish("SetRawJSONUrl", appUrl.forTransformersRawData(this.activeDatabase()));
@@ -145,7 +145,7 @@ class Transformers extends viewModelBase {
     updateTransformerLockMode(t: transformer) {
 
         var originalLockMode = t.lockMode();
-		var newLockMode = t.isLocked() ? 'Unlock' : 'LockedIgnore';
+        var newLockMode = t.isLocked() ? 'Unlock' : 'LockedIgnore';
         if (originalLockMode !== newLockMode) {
             t.lockMode(newLockMode);
 

@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Data;
+using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using System;
@@ -15,7 +15,7 @@ namespace Raven.Tests.Core.Replication
         [Fact]
         public void CanManuallyResolveConflict()
         {
-			using (var master = GetDocumentStore())
+            using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
                 SetupReplication(master, destinations: slave);

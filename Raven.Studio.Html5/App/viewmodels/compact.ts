@@ -1,4 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import database = require("models/database");
 import resource = require("models/resource");
@@ -61,8 +61,10 @@ class compact extends viewModelBase {
     private fsCompactOptions = new resourceCompact(this, filesystem.type, shell.fileSystems);
 
     isBusy = ko.observable<boolean>();
+    isForbidden = ko.observable<boolean>();
 
     canActivate(args): any {
+        this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
 

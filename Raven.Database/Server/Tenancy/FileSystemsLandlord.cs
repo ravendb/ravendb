@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FileSystemsLandlord.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -227,12 +227,12 @@ namespace Raven.Database.Server.Tenancy
 
 		        hasAcquired = true;
 		        fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
-		        {
-			        var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+            {
+                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-			        AssertLicenseParameters(config);
-			        var fs = new RavenFileSystem(config, tenantId, transportState);
-			        fs.Initialize();
+                AssertLicenseParameters(config);
+                var fs = new RavenFileSystem(config, tenantId, transportState);
+                fs.Initialize();
 
 			        // if we have a very long init process, make sure that we reset the last idle time for this db.
 			        LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);

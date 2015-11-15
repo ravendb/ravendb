@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 // Copyright (c) 2007 James Newton-King
 //
 // Permission is hereby granted, free of charge, to any person
@@ -496,11 +496,11 @@ namespace Newtonsoft.Json.Tests.Converters
 
             string xml = @"<?xml version=""1.0"" encoding=""utf-8"" ?>
 <xs:schema xs:id=""SomeID"" 
-	xmlns="""" 
-	xmlns:xs=""http://www.w3.org/2001/XMLSchema"" 
-	xmlns:msdata=""urn:schemas-microsoft-com:xml-msdata"">
-	<xs:element name=""MyDataSet"" msdata:IsDataSet=""true"">
-	</xs:element>
+    xmlns="""" 
+    xmlns:xs=""http://www.w3.org/2001/XMLSchema"" 
+    xmlns:msdata=""urn:schemas-microsoft-com:xml-msdata"">
+    <xs:element name=""MyDataSet"" msdata:IsDataSet=""true"">
+    </xs:element>
 </xs:schema>";
 
             XmlDocument document = new XmlDocument();
@@ -722,26 +722,26 @@ namespace Newtonsoft.Json.Tests.Converters
         {
             string xml = @"<?xml version=""1.0"" encoding=""utf-8"" ?>
 <xs:schema xs:id=""SomeID"" 
-	xmlns="""" 
-	xmlns:xs=""http://www.w3.org/2001/XMLSchema"" 
-	xmlns:msdata=""urn:schemas-microsoft-com:xml-msdata"">
-	<xs:element name=""MyDataSet"" msdata:IsDataSet=""true"">
-		<xs:complexType>
-			<xs:choice maxOccurs=""unbounded"">
-				<xs:element name=""customers"" >
-					<xs:complexType >
-						<xs:sequence>
-							<xs:element name=""CustomerID"" type=""xs:integer"" 
-										 minOccurs=""0"" />
-							<xs:element name=""CompanyName"" type=""xs:string"" 
-										 minOccurs=""0"" />
-							<xs:element name=""Phone"" type=""xs:string"" />
-						</xs:sequence>
-					</xs:complexType>
-				</xs:element>
-			</xs:choice>
-		</xs:complexType>
-	</xs:element>
+    xmlns="""" 
+    xmlns:xs=""http://www.w3.org/2001/XMLSchema"" 
+    xmlns:msdata=""urn:schemas-microsoft-com:xml-msdata"">
+    <xs:element name=""MyDataSet"" msdata:IsDataSet=""true"">
+        <xs:complexType>
+            <xs:choice maxOccurs=""unbounded"">
+                <xs:element name=""customers"" >
+                    <xs:complexType >
+                        <xs:sequence>
+                            <xs:element name=""CustomerID"" type=""xs:integer"" 
+                                         minOccurs=""0"" />
+                            <xs:element name=""CompanyName"" type=""xs:string"" 
+                                         minOccurs=""0"" />
+                            <xs:element name=""Phone"" type=""xs:string"" />
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
 </xs:schema>";
 
             XmlDocument doc = new XmlDocument();
@@ -856,16 +856,16 @@ namespace Newtonsoft.Json.Tests.Converters
         public void SingleTextNode()
         {
             string xml = @"<?xml version=""1.0"" standalone=""no""?>
-			<root>
-			  <person id=""1"">
-	  			<name>Alan</name>
-		  		<url>http://www.google.com</url>
-			  </person>
-			  <person id=""2"">
-			  	<name>Louis</name>
-				  <url>http://www.yahoo.com</url>
-			  </person>
-			</root>";
+            <root>
+              <person id=""1"">
+                <name>Alan</name>
+                <url>http://www.google.com</url>
+              </person>
+              <person id=""2"">
+                <name>Louis</name>
+                  <url>http://www.yahoo.com</url>
+              </person>
+            </root>";
 
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
@@ -881,16 +881,16 @@ namespace Newtonsoft.Json.Tests.Converters
         public void EmptyNode()
         {
             string xml = @"<?xml version=""1.0"" standalone=""no""?>
-			<root>
-			  <person id=""1"">
-				<name>Alan</name>
-				<url />
-			  </person>
-			  <person id=""2"">
-				<name>Louis</name>
-				<url>http://www.yahoo.com</url>
-			  </person>
-			</root>";
+            <root>
+              <person id=""1"">
+                <name>Alan</name>
+                <url />
+              </person>
+              <person id=""2"">
+                <name>Louis</name>
+                <url>http://www.yahoo.com</url>
+              </person>
+            </root>";
 
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
@@ -977,12 +977,12 @@ namespace Newtonsoft.Json.Tests.Converters
         public void ForceJsonArray()
         {
             string arrayXml = @"<root xmlns:json=""http://james.newtonking.com/projects/json"">
-			  <person id=""1"">
-				  <name>Alan</name>
-				  <url>http://www.google.com</url>
-				  <role json:Array=""true"">Admin</role>
-			  </person>
-			</root>";
+              <person id=""1"">
+                  <name>Alan</name>
+                  <url>http://www.google.com</url>
+                  <role json:Array=""true"">Admin</role>
+              </person>
+            </root>";
 
             XmlDocument arrayDoc = new XmlDocument();
             arrayDoc.LoadXml(arrayXml);
@@ -1003,13 +1003,13 @@ namespace Newtonsoft.Json.Tests.Converters
             StringAssert.AreEqual(expected, arrayJsonText);
 
             arrayXml = @"<root xmlns:json=""http://james.newtonking.com/projects/json"">
-			  <person id=""1"">
-				  <name>Alan</name>
-				  <url>http://www.google.com</url>
-				  <role json:Array=""true"">Admin1</role>
-				  <role json:Array=""true"">Admin2</role>
-			  </person>
-			</root>";
+              <person id=""1"">
+                  <name>Alan</name>
+                  <url>http://www.google.com</url>
+                  <role json:Array=""true"">Admin1</role>
+                  <role json:Array=""true"">Admin2</role>
+              </person>
+            </root>";
 
             arrayDoc = new XmlDocument();
             arrayDoc.LoadXml(arrayXml);
@@ -1031,12 +1031,12 @@ namespace Newtonsoft.Json.Tests.Converters
             StringAssert.AreEqual(expected, arrayJsonText);
 
             arrayXml = @"<root xmlns:json=""http://james.newtonking.com/projects/json"">
-			  <person id=""1"">
-				  <name>Alan</name>
-				  <url>http://www.google.com</url>
-				  <role json:Array=""false"">Admin1</role>
-			  </person>
-			</root>";
+              <person id=""1"">
+                  <name>Alan</name>
+                  <url>http://www.google.com</url>
+                  <role json:Array=""false"">Admin1</role>
+              </person>
+            </root>";
 
             arrayDoc = new XmlDocument();
             arrayDoc.LoadXml(arrayXml);
@@ -1274,23 +1274,23 @@ namespace Newtonsoft.Json.Tests.Converters
             StringAssert.AreEqual(expected, jsonText);
 
             XmlDocument newDoc = (XmlDocument)DeserializeXmlNode(jsonText);
-			Assert.AreEqual(@"<span class=""vevent""><a class=""url"" href=""http://www.web2con.com/""><!-- Hi --><span>Text</span></a><!-- Hi! --></span>", newDoc.InnerXml);
+            Assert.AreEqual(@"<span class=""vevent""><a class=""url"" href=""http://www.web2con.com/""><!-- Hi --><span>Text</span></a><!-- Hi! --></span>", newDoc.InnerXml);
         }
 
         [Test]
         public void SerializeExample()
         {
             string xml = @"<?xml version=""1.0"" standalone=""no""?>
-			<root>
-			  <person id=""1"">
-				<name>Alan</name>
-				<url>http://www.google.com</url>
-			  </person>
-			  <person id=""2"">
-				<name>Louis</name>
-				<url>http://www.yahoo.com</url>
-			  </person>
-			</root>";
+            <root>
+              <person id=""1"">
+                <name>Alan</name>
+                <url>http://www.google.com</url>
+              </person>
+              <person id=""2"">
+                <name>Louis</name>
+                <url>http://www.yahoo.com</url>
+              </person>
+            </root>";
 
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
@@ -1749,7 +1749,7 @@ namespace Newtonsoft.Json.Tests.Converters
 
             string xmlString = System.Text.Encoding.UTF8.GetString(xml.ToArray());
 
-            Assert.AreEqual(@"﻿<?xml version=""1.0"" encoding=""utf-8""?><root booleanType=""true"" />", xmlString);
+            Assert.AreEqual(@"?<?xml version=""1.0"" encoding=""utf-8""?><root booleanType=""true"" />", xmlString);
         }
 
         private static void JsonBodyToSoapXml(Stream json, Stream xml)

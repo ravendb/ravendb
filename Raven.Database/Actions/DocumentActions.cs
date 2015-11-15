@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DocumentActions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -95,7 +95,7 @@ namespace Raven.Database.Actions
         public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start,
                                                           int pageSize, CancellationToken token, ref int nextStart,
                                                           string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
-														  string skipAfter = null)
+                                                          string skipAfter = null)
         {
             var list = new RavenJArray();
             GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, ref nextStart, doc => list.Add(doc.ToJson()),
@@ -106,7 +106,7 @@ namespace Raven.Database.Actions
         public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize,
                                                    CancellationToken token, ref int nextStart, Action<JsonDocument> addDoc,
                                                    string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null,
-												   string skipAfter = null)
+                                                   string skipAfter = null)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -133,10 +133,10 @@ namespace Raven.Database.Actions
 
                     do
                     {
-						Database.WorkContext.UpdateFoundWork();
+                        Database.WorkContext.UpdateFoundWork();
 
                         docCount = 0;
-						var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
+                        var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
                         var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
 
                         foreach (var doc in docs)
@@ -244,170 +244,170 @@ namespace Raven.Database.Actions
 
         public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId, CancellationToken token, CancellationTimeout timeout = null)
         {
-			var documents = 0;
+            var documents = 0;
 
-			Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
-			{
-				OperationId = operationId,
-				Type = DocumentChangeTypes.BulkInsertStarted
-			});
-	        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, WorkContext.CancellationToken))
-	        {
-		        foreach (var docs in docBatches)
-		        {
-			        cts.Token.ThrowIfCancellationRequested();
+            Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+            {
+                OperationId = operationId,
+                Type = DocumentChangeTypes.BulkInsertStarted
+            });
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, WorkContext.CancellationToken))
+            {
+                foreach (var docs in docBatches)
+                {
+                    cts.Token.ThrowIfCancellationRequested();
 
                     var docsToInsert = docs.ToArray();
                     var batch = 0;
                     var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var collectionsAndEtags = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
 
-					if (timeout != null)
-						timeout.Pause();
-			        using (Database.DocumentLock.Lock())
-			        {
-						if (timeout != null)
-							timeout.Resume();
+                    if (timeout != null)
+                        timeout.Pause();
+                    using (Database.DocumentLock.Lock())
+                    {
+                        if (timeout != null)
+                            timeout.Resume();
 
-				        TransactionalStorage.Batch(accessor =>
-				        {
-					        var inserts = 0;
-					        
-					        foreach (var doc in docsToInsert)
-					        {
-						        try
-						        {
-							        if (string.IsNullOrEmpty(doc.Key))
-								        throw new InvalidOperationException("Cannot try to bulk insert a document without a key");
+                        TransactionalStorage.Batch(accessor =>
+                        {
+                            var inserts = 0;
+                            
+                            foreach (var doc in docsToInsert)
+                            {
+                                try
+                                {
+                                    if (string.IsNullOrEmpty(doc.Key))
+                                        throw new InvalidOperationException("Cannot try to bulk insert a document without a key");
 
-							        RemoveReservedProperties(doc.DataAsJson);
-							        RemoveMetadataReservedProperties(doc.Metadata);
+                                    RemoveReservedProperties(doc.DataAsJson);
+                                    RemoveMetadataReservedProperties(doc.Metadata);
 
-							        if (options.CheckReferencesInIndexes)
-								        keys.Add(doc.Key);
-							        documents++;
-							        batch++;
-							        AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
+                                    if (options.CheckReferencesInIndexes)
+                                        keys.Add(doc.Key);
+                                    documents++;
+                                    batch++;
+                                    AssertPutOperationNotVetoed(doc.Key, doc.Metadata, doc.DataAsJson, null);
 
-							        if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
-							        {
-								        var existingDoc = accessor.Documents.DocumentByKey(doc.Key);
+                                    if (options.OverwriteExisting && options.SkipOverwriteIfUnchanged)
+                                    {
+                                        var existingDoc = accessor.Documents.DocumentByKey(doc.Key);
 
-								        if (IsTheSameDocument(doc, existingDoc))
-									        continue;
-							        }
+                                        if (IsTheSameDocument(doc, existingDoc))
+                                            continue;
+                                    }
 
-							        foreach (var trigger in Database.PutTriggers)
-							        {
-								        trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
-							        }
+                                    foreach (var trigger in Database.PutTriggers)
+                                    {
+                                        trigger.Value.OnPut(doc.Key, doc.DataAsJson, doc.Metadata, null);
+                                    }
 
-							        var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
-							        if (result.Updated == false)
-								        inserts++;
+                                    var result = accessor.Documents.InsertDocument(doc.Key, doc.DataAsJson, doc.Metadata, options.OverwriteExisting);
+                                    if (result.Updated == false)
+                                        inserts++;
 
-							        doc.Etag = result.Etag;
+                                    doc.Etag = result.Etag;
 
-							        doc.Metadata.EnsureSnapshot(
-								        "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-							        doc.DataAsJson.EnsureSnapshot(
-								        "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+                                    doc.Metadata.EnsureSnapshot(
+                                        "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+                                    doc.DataAsJson.EnsureSnapshot(
+                                        "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
-							        var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
+                                    var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
-							        Etag highestEtagInCollection;
-							        if (string.IsNullOrEmpty(entityName) == false && (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false ||
-							                                                          result.Etag.CompareTo(highestEtagInCollection) > 0))
-							        {
-								        collectionsAndEtags[entityName] = result.Etag;
-							        }
+                                    Etag highestEtagInCollection;
+                                    if (string.IsNullOrEmpty(entityName) == false && (collectionsAndEtags.TryGetValue(entityName, out highestEtagInCollection) == false ||
+                                                                                      result.Etag.CompareTo(highestEtagInCollection) > 0))
+                                    {
+                                        collectionsAndEtags[entityName] = result.Etag;
+                                    }
 
-							        foreach (var trigger in Database.PutTriggers)
-							        {
-								        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
-							        }
+                                    foreach (var trigger in Database.PutTriggers)
+                                    {
+                                        trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
+                                    }
 
-									Database.WorkContext.UpdateFoundWork();
-						        }
-						        catch (Exception e)
-						        {
-							        Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
-							        {
-								        OperationId = operationId,
-								        Message = e.Message,
-								        Etag = doc.Etag,
-								        Id = doc.Key,
-								        Type = DocumentChangeTypes.BulkInsertError
-							        });
+                                    Database.WorkContext.UpdateFoundWork();
+                                }
+                                catch (Exception e)
+                                {
+                                    Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+                                    {
+                                        OperationId = operationId,
+                                        Message = e.Message,
+                                        Etag = doc.Etag,
+                                        Id = doc.Key,
+                                        Type = DocumentChangeTypes.BulkInsertError
+                                    });
 
-							        throw;
-						        }
-					        }
+                                    throw;
+                                }
+                            }
 
-					        if (options.CheckReferencesInIndexes)
-					        {
-						        foreach (var key in keys)
-						        {
-							        Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
-						        }
-					        }
+                            if (options.CheckReferencesInIndexes)
+                            {
+                                foreach (var key in keys)
+                                {
+                                    Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
+                                }
+                            }
 
-					        accessor.Documents.IncrementDocumentCount(inserts);
-				        });
+                            accessor.Documents.IncrementDocumentCount(inserts);
+                        });
 
-						foreach (var collectionEtagPair in collectionsAndEtags)
-						{
-							Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
-						}
+                        foreach (var collectionEtagPair in collectionsAndEtags)
+                        {
+                            Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
+                        }
 
-						WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
-						WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
-						WorkContext.UpdateFoundWork();
-			        }
-		        }
-	        }
+                        WorkContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
+                        WorkContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+                        WorkContext.UpdateFoundWork();
+                    }
+                }
+            }
 
-	        Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
-			{
-				OperationId = operationId,
-				Type = DocumentChangeTypes.BulkInsertEnded
-			});
+            Database.Notifications.RaiseNotifications(new BulkInsertChangeNotification
+            {
+                OperationId = operationId,
+                Type = DocumentChangeTypes.BulkInsertEnded
+            });
 
-			if (documents > 0)
-				WorkContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
+            if (documents > 0)
+                WorkContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
 
-			return documents;
+            return documents;
         }
 
-	    private bool IsTheSameDocument(JsonDocument doc, JsonDocument existingDoc)
-	    {
-		    if (existingDoc == null)
-			    return false;
+        private bool IsTheSameDocument(JsonDocument doc, JsonDocument existingDoc)
+        {
+            if (existingDoc == null)
+                return false;
 
-		    if (RavenJToken.DeepEquals(doc.DataAsJson, existingDoc.DataAsJson) == false)
-			    return false;
+            if (RavenJToken.DeepEquals(doc.DataAsJson, existingDoc.DataAsJson) == false)
+                return false;
 
-			var existingMetadata = (RavenJObject) existingDoc.Metadata.CloneToken();
-		    var newMetadata = (RavenJObject) doc.Metadata.CloneToken();
-			// in order to compare metadata we need to remove metadata records created by triggers
-			foreach (var trigger in Database.PutTriggers)
-			{
-				var metadataToIgnore = trigger.Value.GeneratedMetadataNames;
+            var existingMetadata = (RavenJObject) existingDoc.Metadata.CloneToken();
+            var newMetadata = (RavenJObject) doc.Metadata.CloneToken();
+            // in order to compare metadata we need to remove metadata records created by triggers
+            foreach (var trigger in Database.PutTriggers)
+            {
+                var metadataToIgnore = trigger.Value.GeneratedMetadataNames;
 
-				if (metadataToIgnore == null)
-					continue;
+                if (metadataToIgnore == null)
+                    continue;
 
-				foreach (var toIgnore in metadataToIgnore)
-				{
-					existingMetadata.Remove(toIgnore);
-					newMetadata.Remove(toIgnore);
-				}
-			}
+                foreach (var toIgnore in metadataToIgnore)
+                {
+                    existingMetadata.Remove(toIgnore);
+                    newMetadata.Remove(toIgnore);
+                }
+            }
 
-			return RavenJToken.DeepEquals(newMetadata, existingMetadata);
-	    }
+            return RavenJToken.DeepEquals(newMetadata, existingMetadata);
+        }
 
-	    public TouchedDocumentInfo GetRecentTouchesFor(string key)
+        public TouchedDocumentInfo GetRecentTouchesFor(string key)
         {
             TouchedDocumentInfo info;
             RecentTouches.TryGetValue(key, out info);
@@ -616,7 +616,7 @@ namespace Raven.Database.Actions
                     if (document == null)
                         return;
 
-					if (document.Metadata.ContainsKey("Raven-Read-Veto") || document.Metadata.ContainsKey(Constants.RavenReplicationConflict))
+                    if (document.Metadata.ContainsKey("Raven-Read-Veto") || document.Metadata.ContainsKey(Constants.RavenReplicationConflict))
                     {
                         result = document;
                         return;
@@ -693,10 +693,10 @@ namespace Raven.Database.Actions
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
                         }, documents =>
                         {
-							if(Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
-								return;
+                            if(Database.IndexDefinitionStorage.IndexesCount == 0 || Database.WorkContext.RunIndexing == false)
+                                return;
 
-	                        Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
+                            Database.Prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
                         });
 
                         Database.PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
@@ -705,18 +705,18 @@ namespace Raven.Database.Actions
                             .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                             {
                                 Database.PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-	                            
-								var newDocumentChangeNotification =
-		                            new DocumentChangeNotification
-		                            {
-			                            Id = key,
-			                            Type = DocumentChangeTypes.Put,
-			                            TypeName = metadata.Value<string>(Constants.RavenClrType),
-			                            CollectionName = metadata.Value<string>(Constants.RavenEntityName),
-			                            Etag = newEtag
-		                            };
-	                            
-								Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
+                                
+                                var newDocumentChangeNotification =
+                                    new DocumentChangeNotification
+                                    {
+                                        Id = key,
+                                        Type = DocumentChangeTypes.Put,
+                                        TypeName = metadata.Value<string>(Constants.RavenClrType),
+                                        CollectionName = metadata.Value<string>(Constants.RavenEntityName),
+                                        Etag = newEtag
+                                    };
+                                
+                                Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                             });
 
                         WorkContext.ShouldNotifyAboutWork(() => "PUT " + key);
@@ -748,7 +748,7 @@ namespace Raven.Database.Actions
             return Delete(key, etag, transactionInformation, out metadata, participatingIds);
         }
 
-		public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata, string[] participatingIds = null)
+        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata, string[] participatingIds = null)
         {
             if (key == null)
                 throw new ArgumentNullException("key");
@@ -766,7 +766,7 @@ namespace Raven.Database.Actions
                     {
                         Database.DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
-	                    string collection = null;
+                        string collection = null;
                         Etag deletedETag;
                         if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
                         {
@@ -776,9 +776,9 @@ namespace Raven.Database.Actions
 
                             Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, actions, participatingIds);
 
-							collection = metadataVar.Value<string>(Constants.RavenEntityName);
-							
-							DeleteDocumentFromIndexesForCollection(key, collection, actions);
+                            collection = metadataVar.Value<string>(Constants.RavenEntityName);
+                            
+                            DeleteDocumentFromIndexesForCollection(key, collection, actions);
                             if (deletedETag != null)
                                 Database.Prefetcher.AfterDelete(key, deletedETag);
                             Database.DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
@@ -788,8 +788,8 @@ namespace Raven.Database.Actions
                             .ExecuteImmediatelyOrRegisterForSynchronization(() =>
                             {
                                 Database.DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-								if (string.IsNullOrEmpty(collection) == false)
-									Database.LastCollectionEtags.Update(collection);
+                                if (string.IsNullOrEmpty(collection) == false)
+                                    Database.LastCollectionEtags.Update(collection);
 
                                 Database.Notifications.RaiseNotifications(new DocumentChangeNotification
                                 {
@@ -821,31 +821,31 @@ namespace Raven.Database.Actions
             }
         }
 
-	    internal void DeleteDocumentFromIndexesForCollection(string key, string collection, IStorageActionsAccessor actions)
-	    {
-		    foreach (var indexName in IndexDefinitionStorage.IndexNames)
-		    {
-			    AbstractViewGenerator abstractViewGenerator =
-				    IndexDefinitionStorage.GetViewGenerator(indexName);
-			    if (abstractViewGenerator == null)
-				    continue;
+        internal void DeleteDocumentFromIndexesForCollection(string key, string collection, IStorageActionsAccessor actions)
+        {
+            foreach (var indexName in IndexDefinitionStorage.IndexNames)
+            {
+                AbstractViewGenerator abstractViewGenerator =
+                    IndexDefinitionStorage.GetViewGenerator(indexName);
+                if (abstractViewGenerator == null)
+                    continue;
 
 
-			    if (collection != null && // the document has a entity name
-			        abstractViewGenerator.ForEntityNames.Count > 0)
-				    // the index operations on specific entities
-			    {
-				    if (abstractViewGenerator.ForEntityNames.Contains(collection) == false)
-					    continue;
-			    }
+                if (collection != null && // the document has a entity name
+                    abstractViewGenerator.ForEntityNames.Count > 0)
+                    // the index operations on specific entities
+                {
+                    if (abstractViewGenerator.ForEntityNames.Contains(collection) == false)
+                        continue;
+                }
 
-			    var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
-			    var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
-			    {
-				    Index = instance.IndexId
-			    });
-			    task.Keys.Add(key);
-		    }
-	    }
+                var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
+                var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
+                {
+                    Index = instance.IndexId
+                });
+                task.Keys.Add(key);
+            }
+        }
     }
 }

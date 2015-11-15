@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DtcNotSupportedTransactionalState.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,14 +11,14 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Impl.DTC
 {
-	internal class DtcNotSupportedTransactionalState : InFlightTransactionalState
+    internal class DtcNotSupportedTransactionalState : InFlightTransactionalState
     {
         private readonly string storageName;
 
         public DtcNotSupportedTransactionalState(string storageName,
             Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> databasePut,
             Func<string, Etag, TransactionInformation, bool> databaseDelete)
-            : base(databasePut, databaseDelete)
+            : base(databasePut, databaseDelete, false)
         {
             this.storageName = storageName;
         }
@@ -28,24 +28,24 @@ namespace Raven.Database.Impl.DTC
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
 
-	    public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
-	    {
-			throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
-	    }
+        public override void Prepare(string id, Guid? resourceManagerId, byte[] recoveryInformation)
+        {
+            throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
+        }
 
         public override void Rollback(string id)
         {
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
 
-		public new Etag AddDocumentInTransaction(
-			string key,
-			Etag etag,
-			RavenJObject data,
-			RavenJObject metadata,
-			TransactionInformation transactionInformation,
-			Etag committedEtag,
-			IUuidGenerator uuidGenerator)
+        public new Etag AddDocumentInTransaction(
+            string key,
+            Etag etag,
+            RavenJObject data,
+            RavenJObject metadata,
+            TransactionInformation transactionInformation,
+            Etag committedEtag,
+            IUuidGenerator uuidGenerator)
         {
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
@@ -55,7 +55,7 @@ namespace Raven.Database.Impl.DTC
             string key,
             Etag etag,
             Etag committedEtag,
-			IUuidGenerator uuidGenerator)
+            IUuidGenerator uuidGenerator)
         {
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }

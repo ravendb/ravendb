@@ -11,25 +11,25 @@ using Raven.Tests.Common.Util;
 
 namespace Raven.Tests.Bundles.Compression
 {
-	public abstract class Compression : RavenTest
-	{
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
-		protected readonly DocumentStore documentStore;
+    public abstract class Compression : RavenTest
+    {
+        private readonly string path;
+        private readonly RavenDbServer ravenDbServer;
+        protected readonly DocumentStore documentStore;
 
-		protected Compression()
-		{
-			// This will be disposed by the RavenTestBase.Dispose method
-			path = NewDataPath("Compression");
-			ravenDbServer = GetNewServer(activeBundles: "Compression", dataDirectory: path, runInMemory:false);
-			documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
-		}
+        protected Compression()
+        {
+            // This will be disposed by the RavenTestBase.Dispose method
+            path = NewDataPath("Compression");
+            ravenDbServer = GetNewServer(activeBundles: "Compression", dataDirectory: path, runInMemory:false);
+            documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
+        }
 
-		protected void AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(params string[] plaintext)
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, file => Path.GetExtension(file) != ".cfs");
-		}
-	}
+        protected void AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(params string[] plaintext)
+        {
+            documentStore.Dispose();
+            ravenDbServer.Dispose();
+            EncryptionTestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, file => Path.GetExtension(file) != ".cfs");
+        }
+    }
 }

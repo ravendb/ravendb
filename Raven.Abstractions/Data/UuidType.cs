@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Raven.Abstractions.Data
 {
@@ -15,8 +15,8 @@ namespace Raven.Abstractions.Data
         Queue = 7,
         Tasks = 8,
         Indexing = 9,
-		DocumentReferences = 11,
-		Subscriptions = 12,
-	    Transformers = 13
+        DocumentReferences = 11,
+        Subscriptions = 12,
+        Transformers = 13
     }
 }

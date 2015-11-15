@@ -1,0 +1,29 @@
+#!/bin/sh
+
+version=`git --version`
+if [[ "$version" == *" 1."* ]]; then
+    echo "This pre-commit hook only supports git 2.0 or higher. Your git version is: $version"
+    exit -1
+fi
+
+if git-rev-parse --verify HEAD >/dev/null 2>&1 ; then
+   against=HEAD
+else
+   # Initial commit: diff against an empty tree object
+   against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+fi
+
+files=`git diff-index --name-only --cached $against |             # Find all changed files
+                       egrep '\.cs$|\.csproj$|\.vbproj$|\.fsproj$|\.dbproj$|\.ascx$|\.xaml$|\.cmd$|\.ps1$|\.coffee$|\.config$|\.css$|\.nuspec$|\.scss$|\.cshtml$|\.htm$|\.html$|\.js$|\.ts$|\.msbuild$|\.resx$|\.ruleset$|\.Stylecop$|\.targets$|\.tt$|\.txt$|\.vb$|\.vbhtml$|\.xml$|\.xunit$|\.java$|\.less$' |
+                       uniq`                                      # Remove duplicate files
+
+# Find files with trailing whitespace
+for FILE in $files ; do
+if [[ -e "$FILE" ]]; then
+    echo "Fixing whitespace in $FILE"
+    TMP="$FILE.tmp"
+    expand --tabs=4 --initial "$FILE" > TMP
+    mv TMP "$FILE"
+    git add "$FILE"
+fi
+done

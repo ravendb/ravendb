@@ -1,4 +1,4 @@
-﻿using Lucene.Net.Index;
+using Lucene.Net.Index;
 using Raven.Abstractions.MEF;
 using Raven.Database.Plugins;
 

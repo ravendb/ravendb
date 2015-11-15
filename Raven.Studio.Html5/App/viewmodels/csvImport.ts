@@ -1,4 +1,4 @@
-﻿import viewmodelBase = require("viewmodels/viewModelBase");
+import viewmodelBase = require("viewmodels/viewModelBase");
 import saveCsvFileCommand = require("commands/saveCsvFileCommand");
 
 class csvImport extends viewmodelBase {

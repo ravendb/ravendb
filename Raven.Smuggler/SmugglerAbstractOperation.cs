@@ -1,4 +1,4 @@
-﻿using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Smuggler;
 using System;
 using System.Collections.Generic;
 using System.Linq;

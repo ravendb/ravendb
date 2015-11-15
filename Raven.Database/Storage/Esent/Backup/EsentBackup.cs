@@ -10,33 +10,33 @@ using Raven.Database.Backup;
 
 namespace Raven.Storage.Esent.Backup
 {
-	public class EsentBackup
-	{
-		private readonly JET_INSTANCE instance;
-		private readonly string destination;
-		private readonly BackupGrbit backupOptions;
-		public event Action<string, string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
+    public class EsentBackup
+    {
+        private readonly JET_INSTANCE instance;
+        private readonly string destination;
+        private readonly BackupGrbit backupOptions;
+        public event Action<string, string, BackupStatus.BackupMessageSeverity> Notify = delegate { };
 
-		public EsentBackup(JET_INSTANCE instance, string destination, BackupGrbit backupOptions)
-		{
-			this.instance = instance;
-			this.destination = destination;
-			this.backupOptions = backupOptions;
-		}
+        public EsentBackup(JET_INSTANCE instance, string destination, BackupGrbit backupOptions)
+        {
+            this.instance = instance;
+            this.destination = destination;
+            this.backupOptions = backupOptions;
+        }
 
-		public void Execute()
-		{
+        public void Execute()
+        {
             // TODO work out if we can get a % done from this, at the moment in only seems to give "Begin" and "End" messages
-			Api.JetBackupInstance(instance, destination,
-								  backupOptions,
-								  StatusCallback);
+            Api.JetBackupInstance(instance, destination,
+                                  backupOptions,
+                                  StatusCallback);
 
-		}
+        }
 
-		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
-		{
-			Notify(string.Format("Esent {0} {1} {2}", snp, snt, data).Trim(), null, BackupStatus.BackupMessageSeverity.Informational);
-			return JET_err.Success;
-		}
-	}
+        private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
+        {
+            Notify(string.Format("Esent {0} {1} {2}", snp, snt, data).Trim(), null, BackupStatus.BackupMessageSeverity.Informational);
+            return JET_err.Success;
+        }
+    }
 }

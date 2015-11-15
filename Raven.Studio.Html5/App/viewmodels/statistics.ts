@@ -23,7 +23,7 @@ class statistics extends viewModelBase {
     private statsSubscription: KnockoutSubscription;
 
     attached() {
-		super.attached();
+        super.attached();
         this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
         this.fetchStats();
         this.updateHelpLink('H6GYYL');
@@ -49,9 +49,9 @@ class statistics extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-		return [
-			changesContext.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
-			changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))];
+        return [
+            changesContext.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime())),
+            changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))];
     }
 
 

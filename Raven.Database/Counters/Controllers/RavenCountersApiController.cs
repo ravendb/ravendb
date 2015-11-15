@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="a.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -135,15 +135,15 @@ namespace Raven.Database.Counters.Controllers
 
 		public string CountersName { get; private set; }
 
-		public new CountersLandlord CountersLandlord
-		{
-			get
-			{
-				if (Configuration == null)
-					return landlord;
-				return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
-			}
-		}
+        public CountersLandlord CountersLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return landlord;
+                return (CountersLandlord)Configuration.Properties[typeof(CountersLandlord)];
+            }
+        }
 
 
 	

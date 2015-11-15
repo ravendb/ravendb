@@ -1,4 +1,4 @@
-﻿import router = require("plugins/router");
+import router = require("plugins/router");
 import widget = require("plugins/widget");
 import app = require("durandal/app");
 

@@ -1,4 +1,4 @@
-﻿class optional<T> {
+class optional<T> {
     constructor(private instance: T) {
 
     }

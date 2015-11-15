@@ -1,128 +1,128 @@
-﻿using System;
+using System;
 using System.IO;
 using Xunit;
 
 namespace Voron.Tests.Bugs
 {
-	public class PagesFilteredOutByJournalApplicator : StorageTest
-	{
-		protected override void Configure(StorageEnvironmentOptions options)
-		{
-			base.Configure(options);
-			options.ManualFlushing = true;
-		}
+    public class PagesFilteredOutByJournalApplicator : StorageTest
+    {
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            base.Configure(options);
+            options.ManualFlushing = true;
+        }
 
-		[PrefixesFact]
-		public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_1()
-		{
-			var bytes = new byte[1000];
+        [PrefixesFact]
+        public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_1()
+        {
+            var bytes = new byte[1000];
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree = Env.CreateTree(txw, "foo");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = Env.CreateTree(txw, "foo");
 
-				tree.Add("bars/1", new MemoryStream(bytes));
+                tree.Add("bars/1", new MemoryStream(bytes));
 
-				txw.Commit();
+                txw.Commit();
 
-				RenderAndShow(txw, tree);
-			}
+                RenderAndShow(txw, tree);
+            }
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(txw, "bar");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(txw, "bar");
 
-				txw.Commit();
-			}
+                txw.Commit();
+            }
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(txw, "baz");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(txw, "baz");
 
-				txw.Commit();
-			}
+                txw.Commit();
+            }
 
-			using (var txr = Env.NewTransaction(TransactionFlags.Read))
-			{
-				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var tree = Env.CreateTree(txw, "foo");
+            using (var txr = Env.NewTransaction(TransactionFlags.Read))
+            {
+                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var tree = Env.CreateTree(txw, "foo");
 
-					tree.Add("bars/1", new MemoryStream());
+                    tree.Add("bars/1", new MemoryStream());
 
-					txw.Commit();
+                    txw.Commit();
 
-					RenderAndShow(txw, tree);
-				}
+                    RenderAndShow(txw, tree);
+                }
 
-				Env.FlushLogToDataFile();
+                Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.CreateTree(txr, "foo").Read("bars/1"));
-			}
-		} 
+                Assert.NotNull(Env.CreateTree(txr, "foo").Read("bars/1"));
+            }
+        } 
 
-		[PrefixesFact]
-		public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_2()
-		{
-			var bytes = new byte[1000];
+        [PrefixesFact]
+        public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_2()
+        {
+            var bytes = new byte[1000];
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree = Env.CreateTree(txw, "foo");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = Env.CreateTree(txw, "foo");
 
-				tree.Add("bars/1", new MemoryStream(bytes));
-				tree.Add("bars/2", new MemoryStream(bytes));
-				tree.Add("bars/3", new MemoryStream(bytes));
-				tree.Add("bars/4", new MemoryStream(bytes));
+                tree.Add("bars/1", new MemoryStream(bytes));
+                tree.Add("bars/2", new MemoryStream(bytes));
+                tree.Add("bars/3", new MemoryStream(bytes));
+                tree.Add("bars/4", new MemoryStream(bytes));
 
-				txw.Commit();
+                txw.Commit();
 
-				RenderAndShow(txw, tree);
-			}
+                RenderAndShow(txw, tree);
+            }
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree = Env.CreateTree(txw, "foo");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = Env.CreateTree(txw, "foo");
 
-				tree.Add("bars/0", new MemoryStream());
-				tree.Add("bars/5", new MemoryStream());
+                tree.Add("bars/0", new MemoryStream());
+                tree.Add("bars/5", new MemoryStream());
 
-				txw.Commit();
+                txw.Commit();
 
-				RenderAndShow(txw, tree);
-			}
+                RenderAndShow(txw, tree);
+            }
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(txw, "bar");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(txw, "bar");
 
-				txw.Commit();
-			}
+                txw.Commit();
+            }
 
-			using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(txw, "baz");
+            using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(txw, "baz");
 
-				txw.Commit();
-			}
+                txw.Commit();
+            }
 
-			using (var txr = Env.NewTransaction(TransactionFlags.Read))
-			{
-				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var tree = Env.CreateTree(txw, "foo");
+            using (var txr = Env.NewTransaction(TransactionFlags.Read))
+            {
+                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var tree = Env.CreateTree(txw, "foo");
 
-					tree.Add("bars/4", new MemoryStream());
+                    tree.Add("bars/4", new MemoryStream());
 
-					txw.Commit();
+                    txw.Commit();
 
-					RenderAndShow(txw, tree);
-				}
+                    RenderAndShow(txw, tree);
+                }
 
-				Env.FlushLogToDataFile();
+                Env.FlushLogToDataFile();
 
-				Assert.NotNull(Env.CreateTree(txr, "foo").Read("bars/5"));
-			}
-		}
-	}
+                Assert.NotNull(Env.CreateTree(txr, "foo").Read("bars/5"));
+            }
+        }
+    }
 }

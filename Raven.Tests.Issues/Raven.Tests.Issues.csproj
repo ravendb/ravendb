@@ -137,8 +137,12 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-4011.cs" />
+    <Compile Include="RavenDB-3931.cs" />
+    <Compile Include="RavenDB-3974.cs" />
     <Compile Include="BackupRestore.cs" />
     <Compile Include="RavenDB-3472-async.cs" />
+    <Compile Include="RavenDB3936.cs" />
     <Compile Include="RavenDB_3646.cs" />
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />
@@ -450,6 +454,9 @@
     <Compile Include="RavenDB_3917.cs" />
     <Compile Include="RavenDB_3929.cs" />
     <Compile Include="RavenDB_3938.cs" />
+    <Compile Include="RavenDB_3970.cs" />
+    <Compile Include="RavenDB_3985.cs" />
+    <Compile Include="RavenDB_3996.cs" />
     <Compile Include="RavenDB_406.cs" />
     <Compile Include="RavenDB_410.cs" />
     <Compile Include="RavenDB_421.cs" />
@@ -494,6 +501,7 @@
     <Compile Include="RavenDB_2344.cs" />
     <Compile Include="RavenDB_2907.cs" />
     <Compile Include="RavenDB_3555.cs" />
+    <Compile Include="RavenDB_3994.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
