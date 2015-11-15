@@ -11,8 +11,9 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http.Controllers;
-
+using Rachis.Transport;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Raft.Util;
 
@@ -77,7 +78,22 @@ namespace Raven.Database.Server.Controllers
 
         private HttpResponseMessage RedirectToLeader(HttpRequestMessage request)
         {
-            var leaderNode = ClusterManager.Engine.GetLeaderNode();
+
+            const int NUMBER_OF_REDIRECT_FIND_LEADER_RETRIES = 2;
+            
+
+            NodeConnectionInfo leaderNode = null;
+            
+            for (var leaderSeekRetries = 0; leaderSeekRetries <= NUMBER_OF_REDIRECT_FIND_LEADER_RETRIES && leaderNode==null; leaderSeekRetries++)
+            {
+                var waitTimeToLeader = leaderSeekRetries * 75;
+
+                if (leaderSeekRetries > 0 && Log.IsDebugEnabled)
+                    Log.Debug("Redirect To Leader: leader not found, retrying {0} times out of {1}. This time will wait for { 2} miliseconds", leaderSeekRetries, NUMBER_OF_REDIRECT_FIND_LEADER_RETRIES, waitTimeToLeader);
+
+                leaderNode = ClusterManager.Engine.GetLeaderNode(waitTimeToLeader);
+            }
+            
             if (leaderNode == null)
             {
                 return request.CreateResponse(HttpStatusCode.ExpectationFailed, new
