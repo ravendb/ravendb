@@ -28,7 +28,14 @@ namespace Raven.Database.Prefetching
         {
             lock (this)
             {
-                var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), prefetchingUserDescription, isDefault, GetPrefetchingBehaviourSummary);
+                var newPrefetcher = 
+                    new PrefetchingBehavior(user, 
+                                            workContext, 
+                                            autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), 
+                                            prefetchingUserDescription, 
+                                            isDefault,
+                                            GetPrefetchintBehavioursCount,
+                                            GetPrefetchingBehaviourSummary);
 
                 prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
                 {
@@ -71,6 +78,11 @@ namespace Raven.Database.Prefetching
             {
                 prefetcher.AfterStorageCommitBeforeWorkNotifications(documents);
             }
+        }
+
+        private int GetPrefetchintBehavioursCount()
+        {
+            return prefetchingBehaviors.Count;
         }
 
         public PrefetchingSummary GetPrefetchingBehaviourSummary()
