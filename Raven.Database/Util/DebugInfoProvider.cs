@@ -399,7 +399,7 @@ namespace Raven.Database.Util
                 AllIndexes = allindexes.Count > 0 ? string.Join(", ", allindexes) : null,
                 CanceledFutureBatches = totalCanceledFutureBatches,
                 FaultedFutureBatches = totalFaultedFutureBatches,
-                Prefetchers = result,
+                Prefetchers = result.OrderBy(x => ((dynamic)x).Age)
             };
 
             return summary;
