@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Config.Retriever
 {
