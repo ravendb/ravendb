@@ -455,13 +455,17 @@ namespace Raven.Tests.Issues.Prefetcher
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
 
-            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 128;
+            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = prefetcher.Configuration.InitialNumberOfItemsToProcessInSingleBatch;
             var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
-            Assert.Equal(128, documents.Count);
+            Assert.Equal(prefetcher.Configuration.InitialNumberOfItemsToProcessInSingleBatch, documents.Count);
 
-            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 64;
+            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 768;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
-            Assert.Equal(64, documents.Count);
+            Assert.Equal(768, documents.Count);
+
+            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024;
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
+            Assert.Equal(1024, documents.Count);
 
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024 * 64;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
