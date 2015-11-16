@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using Raven.Abstractions.Data;
 using Raven.Database.Config.Attributes;
 using Raven.Database.Config.Settings;
 
@@ -8,6 +9,19 @@ namespace Raven.Database.Config.Categories
 {
     public class ServerConfiguration : ConfigurationCategory
     {
+        /// <summary>
+        /// This much time has to pass before 
+        /// </summary>
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry(Constants.ConcurrentResourceLoadTimeout)]
+        [ConfigurationEntry(Constants.ConcurrentResourceLoadTimeout + "InSec")]
+        public TimeSetting ConcurrentResourceLoadTimeout { get; set; }
+
+        [DefaultValue(8)]
+        [ConfigurationEntry(Constants.MaxConcurrentResourceLoads)]
+        public int MaxConcurrentResourceLoads { get; set; }
+
         [DefaultValue(512)]
         [ConfigurationEntry("Raven/Server/MaxConcurrentRequests")]
         [ConfigurationEntry("Raven/MaxConcurrentServerRequests")]
@@ -87,6 +101,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Server/Name")]
         [ConfigurationEntry("Raven/ServerName")]
         public string Name { get; set; }
+
 
         public override void Initialize(NameValueCollection settings)
         {

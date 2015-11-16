@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CountersLandlord.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -24,6 +24,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 
@@ -146,7 +147,7 @@ namespace Raven.Database.Server.Tenancy
 
             ManualResetEvent cleanupLock;
             if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
-                throw new InvalidOperationException(string.Format("Counters '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
+                throw new InvalidOperationException($"Counters '{tenantId}' are currently being restarted and cannot be accessed. We already waited {MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds} seconds.");
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out counter))
             {
@@ -167,27 +168,41 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+            var hasAcquired = false;
+            try
             {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-                var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
-                AssertLicenseParameters(config);
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
 
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return cs;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                hasAcquired = true;
+                counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                    Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
-            return true;
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                    var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
+                    AssertLicenseParameters(config);
+
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    return cs;
+                }).ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+                return true;
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
-        public void Unprotect(CounterStorageDocument configDocument)
+            public
+            void Unprotect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {

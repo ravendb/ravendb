@@ -21,6 +21,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
@@ -143,7 +144,7 @@ namespace Raven.Database.Server.Tenancy
 
             ManualResetEvent cleanupLock;
             if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
-                throw new InvalidOperationException(string.Format("TimeSeries '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
+                throw new InvalidOperationException($"TimeSeries '{tenantId}' are currently being restarted and cannot be accessed. We already waited {MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds} seconds.");
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out timeSeries))
             {
@@ -164,6 +165,13 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
+            var hasAcquired = false;
+            try
+            {
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
+
+                hasAcquired = true;
             timeSeries = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
                 var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
@@ -182,6 +190,12 @@ namespace Raven.Database.Server.Tenancy
                 return task;
             }).Unwrap());
             return true;
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
         public void Unprotect(TimeSeriesDocument configDocument)

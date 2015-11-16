@@ -16,7 +16,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
@@ -128,14 +128,14 @@ namespace Raven.Database.Server.Tenancy
         public override bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
             if (Locks.Contains(DisposingLock))
-                throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
+                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
 
             if (Locks.Contains(tenantId))
                 throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
 
             ManualResetEvent cleanupLock;
             if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
-                throw new InvalidOperationException(string.Format("Database '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
+                throw new InvalidOperationException($"Database '{tenantId}' is currently being restarted and cannot be accessed. We already waited {MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds} seconds.");
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out database))
             {
@@ -156,49 +156,62 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+            var hasAcquired = false;
+            try
             {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
 
-                AssertLicenseParameters(config);
-                var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
-
-                documentDatabase.SpinBackgroundWorkers(false);
-                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-                documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
-                // register only DB that has incremental backup set.
-                documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
-
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                documentDatabase.RequestManager = SystemDatabase.RequestManager;
-                return documentDatabase;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.RanToCompletion) 
-                    OnDatabaseLoaded(tenantId);
-
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                hasAcquired = true;
+                database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                    Logger.WarnException("Failed to create database " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-            if (database.IsFaulted && database.Exception != null)
-            {
-                // if we are here, there is an error, and if there is an error, we need to clear it from the 
-                // resource store cache so we can try to reload it.
-                // Note that we return the faulted task anyway, because we need the user to look at the error
-                if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
+                    AssertLicenseParameters(config);
+                    var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
+
+                    documentDatabase.SpinBackgroundWorkers(false);
+                    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+                    documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+                    // register only DB that has incremental backup set.
+                    documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
+
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    documentDatabase.RequestManager = SystemDatabase.RequestManager;
+                    return documentDatabase;
+                }).ContinueWith(task =>
                 {
-                    Task<DocumentDatabase> val;
-                    ResourcesStoresCache.TryRemove(tenantId, out val);
+                    if (task.Status == TaskStatus.RanToCompletion)
+                        OnDatabaseLoaded(tenantId);
+
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        Logger.WarnException("Failed to create database " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+
+                if (database.IsFaulted && database.Exception != null)
+                {
+                    // if we are here, there is an error, and if there is an error, we need to clear it from the 
+                    // resource store cache so we can try to reload it.
+                    // Note that we return the faulted task anyway, because we need the user to look at the error
+                    if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
+                    {
+                        Task<DocumentDatabase> val;
+                        ResourcesStoresCache.TryRemove(tenantId, out val);
+                    }
                 }
+
+                return true;
             }
-
-            return true;
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
         protected RavenConfiguration CreateConfiguration(
