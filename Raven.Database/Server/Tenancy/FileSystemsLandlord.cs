@@ -234,17 +234,17 @@ namespace Raven.Database.Server.Tenancy
                 var fs = new RavenFileSystem(config, tenantId, transportState);
                 fs.Initialize();
 
-                    // if we have a very long init process, make sure that we reset the last idle time for this db.
-                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                    return fs;
-                }).ContinueWith(task =>
+                // if we have a very long init process, make sure that we reset the last idle time for this db.
+                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                return fs;
+            }).ContinueWith(task =>
+            {
+                if (task.Status == TaskStatus.Faulted) // this observes the task exception
                 {
-                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
-                    {
-                        Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
-                    }
-                    return task;
-                }).Unwrap());
+                    Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
+                }
+                return task;
+            }).Unwrap());
                 return true;
             }
             finally
@@ -301,7 +301,7 @@ namespace Raven.Database.Server.Tenancy
         {
             Task<RavenFileSystem> db;
 
-                if (TryGetOrCreateResourceStore(name, out db))
+            if (TryGetOrCreateResourceStore(name, out db))
                 return await db;
             return null;
         }

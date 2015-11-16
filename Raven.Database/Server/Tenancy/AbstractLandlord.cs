@@ -29,10 +29,10 @@ namespace Raven.Database.Server.Tenancy
         protected readonly SemaphoreSlim ResourceSemaphore;
 
         protected static readonly ILog Logger = LogManager.GetCurrentClassLogger();
-        
+
         protected readonly ConcurrentSet<string> Locks = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected readonly ConcurrentDictionary<string, ManualResetEvent> Cleanups = new ConcurrentDictionary<string, ManualResetEvent>(StringComparer.OrdinalIgnoreCase); 
+        protected readonly ConcurrentDictionary<string, ManualResetEvent> Cleanups = new ConcurrentDictionary<string, ManualResetEvent>(StringComparer.OrdinalIgnoreCase);
 
         public readonly AtomicDictionary<Task<TResource>> ResourcesStoresCache =
                 new AtomicDictionary<Task<TResource>>(StringComparer.OrdinalIgnoreCase);
@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public string[] GetUserAllowedResourcesByPrefix( IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
+        public string[] GetUserAllowedResourcesByPrefix(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
         {
             List<string> approvedResources = null;
             var nextPageStart = 0;
@@ -135,12 +135,12 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Cleanup(string resource, 
-            TimeSpan? skipIfActiveInDuration, 
-            Func<TResource,bool> shouldSkip = null,
+        public void Cleanup(string resource,
+            TimeSpan? skipIfActiveInDuration,
+            Func<TResource, bool> shouldSkip = null,
             DocumentChangeTypes notificationType = DocumentChangeTypes.None)
         {
-            if(Cleanups.TryAdd(resource, new ManualResetEvent(false)) == false)
+            if (Cleanups.TryAdd(resource, new ManualResetEvent(false)) == false)
                 return;
 
             try
@@ -274,7 +274,7 @@ namespace Raven.Database.Server.Tenancy
             }
             catch (Exception e)
             {
-                Logger.WarnException("Failed to dispose resource semaphore",e);
+                Logger.WarnException("Failed to dispose resource semaphore", e);
             }
         }
     }

@@ -36,7 +36,7 @@ namespace Raven.Database.Server.Tenancy
 
         public CountersLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
-            Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled",null) != null;
+            Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled", null) != null;
             Init();
         }
 
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, "Raven/Counters/DataDir", systemDatabase.Configuration);		
+            return CreateConfiguration(tenantId, document, "Raven/Counters/DataDir", systemDatabase.Configuration);
         }
 
 

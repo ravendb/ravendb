@@ -261,7 +261,7 @@ namespace Raven.Database.Config
             DisableDocumentPreFetching = ravenSettings.DisableDocumentPreFetching.Value;
 
             MaxNumberOfItemsToPreFetch = ravenSettings.MaxNumberOfItemsToPreFetch.Value;
-            
+
             // Misc settings
             WebDir = ravenSettings.WebDir.Value;
 
@@ -292,7 +292,7 @@ namespace Raven.Database.Config
 
             Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
             Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
-            
+
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
             Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
@@ -332,7 +332,7 @@ namespace Raven.Database.Config
 
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
-            if (string.IsNullOrEmpty(workingDirectory)) 
+            if (string.IsNullOrEmpty(workingDirectory))
                 workingDirectory = @"~\";
 
             if (workingDirectory.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
@@ -428,7 +428,7 @@ namespace Raven.Database.Config
                 var headers = Settings["Raven/Headers/Ignore"] ?? string.Empty;
                 return headersToIgnore = new HashSet<string>(headers.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
             }
-        } 
+        }
 
         internal static ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
         {
@@ -479,7 +479,7 @@ namespace Raven.Database.Config
 
         public bool UseDefaultOAuthTokenServer
         {
-            get { return Settings["Raven/OAuthTokenServer"] == null;  }
+            get { return Settings["Raven/OAuthTokenServer"] == null; }
         }
 
         private void SetupOAuth()
@@ -496,11 +496,11 @@ namespace Raven.Database.Config
 
         private static readonly Lazy<byte[]> DefaultOauthKey = new Lazy<byte[]>(() =>
             {
-            using (var rsa = Encryptor.Current.CreateAsymmetrical())
-            {
-                return rsa.ExportCspBlob(true);
-            }
-        });
+                using (var rsa = Encryptor.Current.CreateAsymmetrical())
+                {
+                    return rsa.ExportCspBlob(true);
+                }
+            });
 
         private byte[] GetOAuthKey()
         {
@@ -876,7 +876,7 @@ namespace Raven.Database.Config
         /// Where the internal assemblies will be extracted to.
         /// Default: ~\Assemblies
         /// </summary>
-        public string AssembliesDirectory 
+        public string AssembliesDirectory
         {
             get
             {
@@ -885,7 +885,7 @@ namespace Raven.Database.Config
             set
             {
                 assembliesDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value);
-            } 
+            }
         }
 
         /// <summary>
@@ -940,12 +940,12 @@ namespace Raven.Database.Config
         public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
         private string indexStoragePath;
-        
+
         private string countersDataDirectory;
         private int? maxNumberOfParallelIndexTasks;
 
         //this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
-        private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof (DocumentDatabase).Assembly);
+        private readonly static AssemblyCatalog CurrentAssemblyCatalog = new AssemblyCatalog(typeof(DocumentDatabase).Assembly);
 
         /// <summary>
         /// The expiration value for documents in the internal managed cache
@@ -1019,7 +1019,7 @@ namespace Raven.Database.Config
         public TimeSpan MaxProcessingRunLatency { get; set; }
 
         internal bool IsTenantDatabase { get; set; }
-        
+
         /// <summary>
         /// If True, cluster discovery will be disabled. Default is False
         /// </summary>
@@ -1034,7 +1034,7 @@ namespace Raven.Database.Config
         /// The server name
         /// </summary>
         public string ServerName { get; set; }
-        
+
         /// <summary>
         /// The maximum number of steps (instructions) to give a script before timing out.
         /// Default: 10,000
@@ -1078,7 +1078,7 @@ namespace Raven.Database.Config
         /// </summary>
         [Browsable(false)]
         public TimeSpan PrewarmFacetsOnIndexingMaxAge { get; set; }
-        
+
         /// <summary>
         /// The time we should wait for pre-warming the facet cache from existing query after an indexing batch
         /// in a syncronous manner (after that, the pre warm still runs, but it will do so in a background thread).
@@ -1199,7 +1199,7 @@ namespace Raven.Database.Config
                     throw new ArgumentException("Invalid storage engine type name: " + typeName);
             }
             return typeName;
-        }	  
+        }
 
         public string SelectStorageEngineAndFetchTypeName()
         {
@@ -1208,7 +1208,7 @@ namespace Raven.Database.Config
                 if (!string.IsNullOrWhiteSpace(DefaultStorageTypeName) &&
                     DefaultStorageTypeName.Equals(EsentTypeName, StringComparison.InvariantCultureIgnoreCase))
                     return EsentTypeName;
-                return VoronTypeName;                
+                return VoronTypeName;
             }
 
             if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
@@ -1276,7 +1276,7 @@ namespace Raven.Database.Config
         }
 
         public void CustomizeValuesForFileSystemTenant(string tenantId)
-        {                                             
+        {
             if (string.IsNullOrEmpty(Settings[Constants.FileSystem.DataDirectory]) == false)
                 Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
         }

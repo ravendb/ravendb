@@ -20,8 +20,8 @@ namespace Raven.Abstractions.Data
         public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
         public const string RavenShardId = "Raven-Shard-Id";
-        
-        
+
+
         public const string LastModified = "Last-Modified";
         public const string CreationDate = "Creation-Date";
         public const string RavenCreationDate = "Raven-Creation-Date";
@@ -105,13 +105,13 @@ namespace Raven.Abstractions.Data
         public const string InResourceKeyVerificationDocumentName = "Raven/Encryption/Verification";
         public static readonly RavenJObject InResourceKeyVerificationDocumentContents;
 
-        public const int DefaultGeneratedEncryptionKeyLength = 256/8;
-        public const int MinimumAcceptableEncryptionKeyLength = 64/8;
+        public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
+        public const int MinimumAcceptableEncryptionKeyLength = 64 / 8;
 
         public const int DefaultKeySizeToUseInActualEncryptionInBits = 128;
         public const int Rfc2898Iterations = 1000;
 
-        public const int DefaultIndexFileBlockSize = 12*1024;
+        public const int DefaultIndexFileBlockSize = 12 * 1024;
 
         public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
 
@@ -165,7 +165,7 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public const double EarthMeanRadiusKm = 6371.0087714;
         public const double MilesToKm = 1.60934;
-        
+
         //Versioning
         public const string RavenCreateVersion = "Raven-Create-Version";
         public const string RavenIgnoreVersioning = "Raven-Ignore-Versioning";
@@ -178,9 +178,9 @@ namespace Raven.Abstractions.Data
         /// if no encoding information in headers of incoming request, this encoding is assumed
         /// </summary>
         public const string DefaultRequestEncoding = "UTF-8";
-        
+
         public const string DocumentsByEntityNameIndex = "Raven/DocumentsByEntityName";
-        
+
         //Counters
         public static partial class Counter
         {
@@ -219,7 +219,7 @@ namespace Raven.Abstractions.Data
             public const string DataDirectory = "Raven/Databases/DataDir";
             public const string UrlPrefix = "databases";
         }
-        
+
         public static partial class FileSystem
         {
             public const string Prefix = "Raven/FileSystems/";
