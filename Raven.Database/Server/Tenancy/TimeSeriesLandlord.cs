@@ -22,6 +22,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Database.Server.Security;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -171,23 +172,35 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            timeSeries = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+            var hasAcquired = false;
+            try
             {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-                var cs = new TimeSeriesStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
-                AssertLicenseParameters(config);
+                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much timeseries loading concurrently, timed out waiting for them to load.");
 
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return cs;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                timeSeries = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                    Logger.WarnException("Failed to create time series " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                    var cs = new TimeSeriesStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
+                    AssertLicenseParameters(config);
+
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    return cs;
+                }).ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        Logger.WarnException("Failed to create time series " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
             return true;
         }
 
