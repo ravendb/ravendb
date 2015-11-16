@@ -47,14 +47,14 @@ namespace Raven.Database.Server.Tenancy
         protected readonly InMemoryRavenConfiguration systemConfiguration;
         protected readonly DocumentDatabase systemDatabase;
 
-        protected readonly TimeSpan ConcurrentDatabaseLoadTimeout;
+        protected readonly TimeSpan ConcurrentResourceLoadTimeout;
 
         protected AbstractLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
             this.systemDatabase = systemDatabase;
-            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.MaxConcurrentDatabaseLoads);
-            ConcurrentDatabaseLoadTimeout = systemDatabase.Configuration.ConcurrentDatabaseLoadTimeout;
+            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.MaxConcurrentResourceLoads);
+            ConcurrentResourceLoadTimeout = systemDatabase.Configuration.ConcurrentResourceLoadTimeout;
         }
 
         public int MaxSecondsForTaskToWaitForDatabaseToLoad

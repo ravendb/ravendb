@@ -164,22 +164,22 @@ namespace Raven.Database.Server.Tenancy
             var hasAcquired = false;
             try
             {
-                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
                     throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
 
                 hasAcquired = true;
                 database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
                     AssertLicenseParameters(config);
                     var documentDatabase = new DocumentDatabase(config, transportState);
 
-                    documentDatabase.SpinBackgroundWorkers(false);
-                    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-                    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-                    documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
-                    // register only DB that has incremental backup set.
+                documentDatabase.SpinBackgroundWorkers(false);
+                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+                documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+                // register only DB that has incremental backup set.
                     documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
                     // if we have a very long init process, make sure that we reset the last idle time for this db.

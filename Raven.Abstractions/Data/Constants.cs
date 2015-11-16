@@ -60,8 +60,8 @@ namespace Raven.Abstractions.Data
         public const string ExposeConfigOverTheWire = "Raven/ExposeConfigOverTheWire";
 
         // Server
-        public const string RavenMaxConcurrentDatabaseLoads = "Raven/Tenants/MaxConcurrentDatabaseLoads";
-        public const string ConcurrentDatabaseLoadTimeout = "Raven/Tenants/ConcurrentDatabaseLoadTimeout";
+        public const string RavenMaxConcurrentResourceLoads = "Raven/Tenants/MaxConcurrentResourceLoads";
+        public const string ConcurrentResourceLoadTimeout = "Raven/Tenants/ConcurrentResourceLoadTimeout";
 
         public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
         public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";

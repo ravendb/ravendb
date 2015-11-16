@@ -322,8 +322,8 @@ namespace Raven.Database.Config
 
             WebSockets.InitialBufferPoolSize = ravenSettings.WebSockets.InitialBufferPoolSize.Value;
 
-            MaxConcurrentDatabaseLoads = ravenSettings.MaxConcurrentDatabaseLoads.Value;
-            ConcurrentDatabaseLoadTimeout = ravenSettings.ConcurrentDatabaseLoadTimeout.Value;
+            MaxConcurrentResourceLoads = ravenSettings.MaxConcurrentResourceLoads.Value;
+            ConcurrentResourceLoadTimeout = ravenSettings.ConcurrentResourceLoadTimeout.Value;
 
             PostInit();
 
@@ -346,9 +346,9 @@ namespace Raven.Database.Config
             return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
         }
 
-        public TimeSpan ConcurrentDatabaseLoadTimeout { get; private set; }
+        public TimeSpan ConcurrentResourceLoadTimeout { get; private set; }
 
-        public int MaxConcurrentDatabaseLoads { get; private set; }
+        public int MaxConcurrentResourceLoads { get; private set; }
 
         public int MaxClauseCount { get; set; }
 
