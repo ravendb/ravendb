@@ -149,8 +149,8 @@ namespace Raven.Client.UniqueConstraints
                 var op = ((UnaryExpression)keySelector.Body).Operand;
                 body = ((MemberExpression)op);
             }
-            bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
 
+            var isDef = body.Member.IsDefined(typeof(UniqueConstraintAttribute));
 
             if (isDef == false)
             {
@@ -179,10 +179,10 @@ namespace Raven.Client.UniqueConstraints
                                   where propertyValue != null
                                   from item in propertyValue is IEnumerable && propertyValue.GetType() != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new[] { propertyValue }
                                   select new
-                                         {
-                                             Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
-                                             Key = Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
-                                         }).ToList();
+                                  {
+                                      Id = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive),
+                                      Key = Util.EscapeUniqueValue(item.ToString(), property.Configuration.CaseInsensitive)
+                                  }).ToList();
 
             var constraintDocs = session
                 .Include<ConstraintDocument>(x => x.RelatedId)
@@ -224,7 +224,7 @@ namespace Raven.Client.UniqueConstraints
             var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
             var body = GetMemberExpression(keySelector, uniqueConstraintsStoreListener.UniqueConstraintsTypeDictionary);
             var propertyName = body.Member.Name;
-            var att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(body.Member, typeof(UniqueConstraintAttribute));
+            var att = (UniqueConstraintAttribute)body.Member.GetCustomAttribute(typeof(UniqueConstraintAttribute));
 
             var escapedValue = Util.EscapeUniqueValue(value, att.CaseInsensitive);
             var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + escapedValue;
@@ -325,7 +325,7 @@ namespace Raven.Client.UniqueConstraints
                         var docProperty = propertyInfo.GetValue(x);
                         if (docProperty == null)
                             return false;
-                        return docProperty.ToString().Equals(checkProperty.ToString(), StringComparison.InvariantCultureIgnoreCase);
+                        return docProperty.ToString().Equals(checkProperty.ToString(), StringComparison.OrdinalIgnoreCase);
                     });
                 }
                 propertyDocuments.Add(propertyInfo.Configuration.Name, foundDocument);

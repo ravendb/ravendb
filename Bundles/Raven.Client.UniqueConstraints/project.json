@@ -1,0 +1,20 @@
+﻿{
+  "version": "3.0.0",
+  "compile": [
+    "**/*.cs",
+    "../Raven.Bundles.UniqueConstraints/Constants.cs",
+    "../../CommonAssemblyInfo.cs"
+  ],
+  "frameworks": {
+    "dnxcore50": {
+      "dependencies": {
+        "Microsoft.CSharp": "4.0.1-beta-23509",
+        "System.Reflection.Extensions": "4.0.1-beta-23509"
+      }
+    }
+  },
+  "dependencies": {
+    "Raven.Abstractions": "3.0.0",
+    "Raven.Client.Lightweight": "3.0.0"
+  }
+}
