@@ -708,14 +708,12 @@ namespace Raven.Database.Prefetching
             }
 
             var loadedDocsCount = globalSummary.PrefetchingQueueDocsCount + globalSummary.FutureIndexBatchesDocsCount;
-            var maxTotalDocsToFetch = Math.Max(context.Configuration.MaxNumberOfItemsToPreFetch,
-                                               context.Configuration.MaxNumberOfItemsToProcessInSingleBatch);
-            if (loadedDocsCount > maxTotalDocsToFetch)
+            if (loadedDocsCount > context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
             {
                 log.Info("Skipping {2} prefetching because we already have {0:#,#;;0} documents (in all prefetchers) " +
                          "in the prefetching queue and in the future tasks and our limit is {1:#,#;;0}",
                     loadedDocsCount,
-                    maxTotalDocsToFetch,
+                    context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
                     isFutureBatch ? "background" : "after commit");
                 return false; // already have too much items in all prefetching behaviors
             }
@@ -740,7 +738,7 @@ namespace Raven.Database.Prefetching
             }
 
             loadedDocsCount = localSummary.PrefetchingQueueDocsCount + localSummary.FutureIndexBatchesDocsCount;
-            var maxDocsInASingleBatch = maxTotalDocsToFetch / numberOfPrefetchingBehaviors;
+            var maxDocsInASingleBatch = context.Configuration.MaxNumberOfItemsToProcessInSingleBatch / numberOfPrefetchingBehaviors;
             if (loadedDocsCount > maxDocsInASingleBatch)
             {
                 log.Info("Skipping {2} prefetching because we already have {0:#,#;;0} documents (in a single prefetcher)" +
@@ -1101,7 +1099,10 @@ namespace Raven.Database.Prefetching
             // don't use too much, this is an optimization and we need to be careful about using too much memory
             if (CanPrefetchMoreDocs(isFutureBatch: false) == false)
                 return;
-            
+
+            if (prefetchingQueue.Count >= context.Configuration.MaxNumberOfItemsToPreFetch)
+                return;
+
             ingestMeter.Mark(docs.Length);
 
             var current = lowestInMemoryDocumentAddedAfterCommit;
