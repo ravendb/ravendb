@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Indexing;
 
@@ -35,7 +34,8 @@ namespace Raven.Database.Prefetching
                                             prefetchingUserDescription, 
                                             isDefault,
                                             GetPrefetchintBehavioursCount,
-                                            GetPrefetchingBehaviourSummary);
+                                            GetPrefetchingBehaviourSummary,
+                                            IsDefatultPrefetchingBehaviourBusy);
 
                 prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
                 {
@@ -85,7 +85,7 @@ namespace Raven.Database.Prefetching
             return prefetchingBehaviors.Count;
         }
 
-        public PrefetchingSummary GetPrefetchingBehaviourSummary()
+        private PrefetchingSummary GetPrefetchingBehaviourSummary()
         {
             var summary = new PrefetchingSummary();
 
@@ -99,6 +99,12 @@ namespace Raven.Database.Prefetching
             }
 
             return summary;
+        }
+
+        private bool IsDefatultPrefetchingBehaviourBusy()
+        {
+            var defaultPrefetcher = prefetchingBehaviors.FirstOrDefault(x => x.IsDefault);
+            return defaultPrefetcher != null && defaultPrefetcher.IsEmpty() == false;
         }
 
         public void Dispose()

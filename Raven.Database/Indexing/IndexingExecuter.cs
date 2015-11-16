@@ -279,7 +279,8 @@ namespace Raven.Database.Indexing
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
+                // at this point we've already checked for using the default prefetcher
+                if (prefetchingBehavior.IsDefault == false && prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
