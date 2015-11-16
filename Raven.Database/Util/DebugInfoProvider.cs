@@ -350,7 +350,10 @@ namespace Raven.Database.Util
         internal static object GetPrefetchingQueueStatusForDebug(DocumentDatabase database)
         {
             var result = new List<object>();
-
+            var totalLoadedDocuments = 0;
+            var totalCanceledFutureBatches = 0;
+            var totalFaultedFutureBatches = 0;
+            List<string> allindexes = new List<string>();
             foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
             {
                 var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
@@ -361,15 +364,45 @@ namespace Raven.Database.Util
                 for (int i = 1; i < prefetcherDocs.Length; i++)
                     compareToCollection.Add(prefetcherDocs[i - 1].Etag, prefetcherDocs[i].Etag.CompareTo(prefetcherDocs[i - 1].Etag));
 
+                var totalLoadedInBatch = prefetcherDocs.Count() + futureBatches.Total;
+                totalLoadedDocuments += totalLoadedInBatch;
+                totalCanceledFutureBatches += futureBatches.Canceled;
+                totalFaultedFutureBatches += futureBatches.Faulted;
+
+                DateTime? lastTimeUsed = prefetchingBehavior.LastTimeUsed != DateTime.MinValue ?
+                    prefetchingBehavior.LastTimeUsed :
+                    (DateTime?) null;
+                TimeSpan? age = lastTimeUsed != null ?
+                    TimeSpan.FromTicks((DateTime.UtcNow - prefetchingBehavior.LastTimeUsed).Ticks) :
+                    (TimeSpan?) null;
+
+                string indexesText = null;
+                if (prefetchingBehavior.Indexes != null)
+                {
+                    var indexes = prefetchingBehavior.Indexes.Select(y => y.Index.PublicName).ToList();
+                    indexesText = string.Join(", ", indexes);
+                    allindexes.AddRange(indexes);
+                }
+
                 if (compareToCollection.Any(x => x.Value < 0))
                 {
                     result.Add(new
                     {
-                        AdditionaInfo = prefetchingBehavior.AdditionalInfo,
+                        Default = prefetchingBehavior.IsDefault,
+                        Indexes = indexesText,
+                        LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
+                        LastTimeUsed = lastTimeUsed,
+                        Age = age,
+                        TotalDocs = totalLoadedInBatch,
+                        PrefetchedDocsCount = prefetcherDocs.Count(),
+                        FutureBatchesDocsCount = futureBatches.Total,
                         HasCorrectlyOrderedEtags = false,
                         IncorrectlyOrderedEtags = compareToCollection.Where(x => x.Value < 0),
                         EtagsWithKeys = prefetcherDocs.ToDictionary(x => x.Etag, x => x.Key),
-                        FutureBatches = futureBatches
+                        FutureBatchesCount = futureBatches.Summary.Count,
+                        CanceledFutureBatches = futureBatches.Canceled,
+                        FaultedFutureBatches = futureBatches.Faulted,
+                        FutureBatches = futureBatches.Summary
                     });
                 }
                 else
@@ -380,17 +413,36 @@ namespace Raven.Database.Util
 
                     result.Add(new
                     {
-                        AdditionaInfo = prefetchingBehavior.AdditionalInfo,
+                        Default = prefetchingBehavior.IsDefault,
+                        Indexes = indexesText,
+                        LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
+                        LastTimeUsed = lastTimeUsed,
+                        Age = age,
+                        TotalDocs = totalLoadedInBatch,
+                        PrefetchedDocsCount = prefetcherDocs.Count(),
+                        FutureBatchesDocsCount = futureBatches.Total,
                         HasCorrectlyOrderedEtags = true,
                         EtagsWithKeysHead = prefetcherDocs.Take(5).ToDictionary(x => x.Etag, x => x.Key),
                         EtagsWithKeysTail = etagsWithKeysTail,
-                        EtagsWithKeysCount = prefetcherDocs.Count(),
-                        FutureBatches = futureBatches
+                        FutureBatchesCount = futureBatches.Summary.Count,
+                        CanceledFutureBatches = futureBatches.Canceled,
+                        FaultedFutureBatches = futureBatches.Faulted,
+                        FutureBatches = futureBatches.Summary
                     });
                 }
             }
 
-            return result;
+            var summary = new
+            {
+                TotalDocs = totalLoadedDocuments,
+                TotalPrefetchingBehaviours = database.IndexingExecuter.PrefetchingBehaviors.Count,
+                AllIndexes = allindexes.Count > 0 ? string.Join(", ", allindexes) : null,
+                CanceledFutureBatches = totalCanceledFutureBatches,
+                FaultedFutureBatches = totalFaultedFutureBatches,
+                Prefetchers = result.OrderBy(x => ((dynamic)x).Age)
+            };
+
+            return summary;
         }
     }
 }

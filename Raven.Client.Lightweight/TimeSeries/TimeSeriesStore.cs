@@ -46,7 +46,7 @@ namespace Raven.Client.TimeSeries
             if (string.IsNullOrEmpty(Credentials.ApiKey) == false)
                 Credentials = null;
 
-            SecurityExtensions.InitializeSecurity(TimeSeriesConvention, JsonRequestFactory, Url, Credentials.Credentials);
+            SecurityExtensions.InitializeSecurity(TimeSeriesConvention, JsonRequestFactory, Url);
 
             if (ensureDefaultTimeSeriesExists && !string.IsNullOrWhiteSpace(Name))
             {

@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -421,11 +422,42 @@ namespace Raven.Database.Storage.Esent.StorageActions
             {
                 var keyFromDb = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
                 if (keyFromDb.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    if (StartsWithIgnoreCaseAndSymbols(keyFromDb, idPrefix))
+                        continue;
                     yield break;
+                }
 
                 yield return ReadCurrentDocument();
                 take--;
             } while (Api.TryMoveNext(session, Documents) && take > 0);
+        }
+
+        private bool StartsWithIgnoreCaseAndSymbols(string keyFromDb, string idPrefix)
+        {
+            var keyPos = 0;
+            for (int i = 0; i < idPrefix.Length; i++)
+            {
+                var idChar = idPrefix[i];
+                if(char.IsSymbol(idChar) ||
+                    char.IsPunctuation(idChar))
+                    continue;
+                char keyChar;
+                do
+                {
+                    if (keyPos >= keyFromDb.Length)
+                        return false; // too short
+                    keyChar = keyFromDb[keyPos++];
+                } while (char.IsSymbol(keyChar) || char.IsPunctuation(keyChar));
+                if(idChar == keyChar)
+                    continue;
+                // maybe different casing?
+                if(char.ToUpperInvariant(keyChar) ==
+                    char.ToUpperInvariant(idChar))
+                    continue;
+                return false;
+            }
+            return true;
         }
 
         public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)

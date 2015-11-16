@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
         {
             autoTuner = new IndexBatchSizeAutoTuner(context);
             this.prefetcher = prefetcher;
-            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior");
+            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior", true);
             defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
             prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
         }
@@ -125,7 +125,7 @@ namespace Raven.Database.Indexing
             public Etag LastIndexedEtag;
             public DateTime? LastQueryTime;
 
-            public List<IndexToWorkOn> Indexes; 
+            public List<IndexToWorkOn> Indexes;
             public PrefetchingBehavior PrefetchingBehavior;
             public List<JsonDocument> JsonDocs;
             private IDisposable prefetchDisposable;
@@ -141,11 +141,11 @@ namespace Raven.Database.Indexing
                 if (Interlocked.Increment(ref indexedAmount) == Indexes.Count && IndexingGroupProcessingFinished != null)
                 {
                     IndexingGroupProcessingFinished(this);
-        }
+                }
             }
 
             public void ReleaseIndexingGroupFinished()
-        {
+            {
                 IndexingGroupProcessingFinished = null;
             }
 
@@ -169,11 +169,6 @@ namespace Raven.Database.Indexing
             {
                 if (prefetchDisposable != null)
                 {
-                    /*IDisposable prefetcherDisposableValue;
-                    if (prefetchDisposable.TryGetTarget(out prefetcherDisposableValue))
-                    {
-                        prefetcherDisposableValue.Dispose();
-                    }*/
                     prefetchDisposable.Dispose();
                 }
                 Interlocked.Increment(ref disposed);
@@ -211,7 +206,7 @@ namespace Raven.Database.Indexing
                 groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce)));
             indexes.ForEach(x => x.Index.CurrentNumberOfItemsToIndexInSingleBatch = autoTuner.NumberOfItemsToProcessInSingleBatch);
             using (indexingAutoTunerContext)
-                {
+            {
                 var indexBatchOperations = new ConcurrentDictionary<IndexingBatchOperation, object>();
 
                 var operationWasCancelled = GenerateIndexingBatchesAndPrefetchDocuments(groupedIndexes, indexBatchOperations);
@@ -221,22 +216,46 @@ namespace Raven.Database.Indexing
                 foreach (var indexingGroup in groupedIndexes)
                 {
                     indexingGroup.IndexingGroupProcessingFinished += x =>
-                    {
-                        if (!operationWasCancelled)
                         {
-                            ReleasePrefethersAndUpdateStatistics(x, executionStopwatch.Elapsed);
-                        }
+                            if (!operationWasCancelled)
+                            {
+                                ReleasePrefethersAndUpdateStatistics(x, executionStopwatch.Elapsed);
+                            }
 
-                        if (Interlocked.Increment(ref completedGroups) == groupedIndexes.Count)
-                        {
-                            RemoveUnusedPrefetchers(usedPrefetchers);
-                        }
-                };
+                            if (Interlocked.Increment(ref completedGroups) == groupedIndexes.Count)
+                            {
+                                RemoveUnusedPrefetchers(usedPrefetchers);
+                            }
+                        };
                 }
 
                 if (!operationWasCancelled)
                     operationWasCancelled = PerformIndexingOnIndexBatches(indexBatchOperations);
             }
+        }
+
+        private void SetPrefetcherForIndexingGroup(IndexingGroup groupIndex, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            groupIndex.PrefetchingBehavior = TryGetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers) ??
+                                      TryGetDefaultPrefetcher(groupIndex.LastIndexedEtag, usedPrefetchers) ??
+                                      GetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers);
+
+            groupIndex.PrefetchingBehavior.Indexes = groupIndex.Indexes;
+            groupIndex.PrefetchingBehavior.LastIndexedEtag = groupIndex.LastIndexedEtag;
+        }
+
+        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            foreach (var prefetchingBehavior in prefetchingBehaviors)
+            {
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag) &&
+                    usedPrefetchers.TryAdd(prefetchingBehavior))
+                {
+                    return prefetchingBehavior;
+                }
+            }
+
+            return null;
         }
 
         private void ReleasePrefethersAndUpdateStatistics(IndexingGroup indexingGroup, TimeSpan ellapsedTimeSpan)
@@ -249,6 +268,17 @@ namespace Raven.Database.Indexing
                 context.ReportIndexingBatchCompleted(indexingGroup.BatchInfo);
             }
             indexingGroup.ReleaseIndexingGroupFinished();
+        }
+
+        private PrefetchingBehavior TryGetDefaultPrefetcher(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            if (defaultPrefetchingBehavior.CanUseDefaultPrefetcher(fromEtag) &&
+                usedPrefetchers.TryAdd(defaultPrefetchingBehavior))
+            {
+                return defaultPrefetchingBehavior;
+            }
+
+            return null;
         }
 
         private bool PerformIndexingOnIndexBatches(ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
@@ -266,32 +296,32 @@ namespace Raven.Database.Indexing
                 context.CancellationToken.ThrowIfCancellationRequested();
                 using (LogContext.WithDatabase(context.DatabaseName))
                 {
-                            try
-                            {
-                                var performance = HandleIndexingFor(indexBatchOperation.IndexingBatch, indexBatchOperation.LastEtag, indexBatchOperation.LastModified, CancellationToken.None);
+                    try
+                    {
+                        var performance = HandleIndexingFor(indexBatchOperation.IndexingBatch, indexBatchOperation.LastEtag, indexBatchOperation.LastModified, CancellationToken.None);
 
-                                if (performance != null)
-                                    indexBatchOperation.IndexingBatchInfo.PerformanceStats.TryAdd(indexBatchOperation.IndexingBatch.Index.PublicName, performance);
+                        if (performance != null)
+                            indexBatchOperation.IndexingBatchInfo.PerformanceStats.TryAdd(indexBatchOperation.IndexingBatch.Index.PublicName, performance);
 
-                                if (Thread.VolatileRead(ref executedPartially) == 1)
-                                {
-                                    context.NotifyAboutWork();
-                                }
-                            }
-                            catch (InvalidDataException e)
-                            {
-                                Log.ErrorException("Failed to index because of data corruption. ", e);
-                                context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, e,string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
-                            }
+                        if (Thread.VolatileRead(ref executedPartially) == 1)
+                        {
+                            context.NotifyAboutWork();
                         }
-                    }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
+                    }
+                    catch (InvalidDataException e)
+                    {
+                        Log.ErrorException("Failed to index because of data corruption. ", e);
+                        context.AddError(indexBatchOperation.IndexingBatch.IndexId, indexBatchOperation.IndexingBatch.Index.PublicName, null, e, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message));
+                    }
+                }
+            }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Performing Indexing On Index Batches for a total of {0} indexes", indexBatchOperations.Count));
                 Interlocked.Increment(ref executedPartially);
             }
             catch (InvalidDataException e)
             {
                 Log.ErrorException("Failed to index because of data corruption. ", e);
                 indexBatchOperations.Keys.ForEach(indexBatch =>
-                    context.AddError(indexBatch.IndexingBatch.Index.IndexId, indexBatch.IndexingBatch.Index.PublicName, null, e,string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
+                    context.AddError(indexBatch.IndexingBatch.Index.IndexId, indexBatch.IndexingBatch.Index.PublicName, null, e, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
             }
             catch (OperationCanceledException)
             {
@@ -304,29 +334,29 @@ namespace Raven.Database.Indexing
 
 
         private bool GenerateIndexingBatchesAndPrefetchDocuments(List<IndexingGroup> groupedIndexes, ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
-                    {
+        {
             bool operationWasCancelled = false;
 
             context.Database.MappingThreadPool.ExecuteBatch(groupedIndexes,
                 indexingGroup =>
                 {
                     bool operationAdded = false;
-                        try
-                        {
+                    try
+                    {
                         indexingGroup.PrefetchDocuments();
                         var curGroupJsonDocs = indexingGroup.JsonDocs;
-                            if (Log.IsDebugEnabled)
-                            {
-                                Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
-                                curGroupJsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", curGroupJsonDocs.Select(x => x.Key)));
-                            }
+                        if (Log.IsDebugEnabled)
+                        {
+                            Log.Debug("Found a total of {0} documents that requires indexing since etag: {1}: ({2})",
+                            curGroupJsonDocs.Count, indexingGroup.LastIndexedEtag, string.Join(", ", curGroupJsonDocs.Select(x => x.Key)));
+                        }
 
                         indexingGroup.BatchInfo =
                             context.ReportIndexingBatchStarted(curGroupJsonDocs.Count,
                                 curGroupJsonDocs.Sum(x => x.SerializedSizeOnDisk),
                                 indexingGroup.Indexes.Select(x => x.Index.PublicName).ToList());
 
-                            context.CancellationToken.ThrowIfCancellationRequested();
+                        context.CancellationToken.ThrowIfCancellationRequested();
                         var lastByEtag = PrefetchingBehavior.GetHighestJsonDocumentByEtag(curGroupJsonDocs);
                         var lastModified = lastByEtag.LastModified.Value;
                         var lastEtag = lastByEtag.Etag;
@@ -334,10 +364,10 @@ namespace Raven.Database.Indexing
                         var indexBatches = FilterIndexes(indexingGroup.Indexes, curGroupJsonDocs, lastEtag, out filteredOutIndexes).OrderByDescending(x => x.Index.LastQueryTime).ToList();
 
                         foreach (var filteredOutIndex in filteredOutIndexes)
-                            {
+                        {
                             indexingGroup.SignalIndexingComplete();
                             filteredOutIndex.Index.IsMapIndexingInProgress = false;
-                            }
+                        }
 
                         foreach (var indexBatch in indexBatches)
                         {
@@ -350,36 +380,36 @@ namespace Raven.Database.Indexing
                             };
 
                             if (indexBatchOperations.TryAdd(indexingBatchOperation, new object()))
-                        {
+                            {
                                 indexingBatchOperation.IndexingBatch.OnIndexingComplete += indexingGroup.SignalIndexingComplete;
                                 operationAdded = true;
-                        }
+                            }
                         }
                     }
-                        catch (OperationCanceledException)
-                        {
+                    catch (OperationCanceledException)
+                    {
                         operationWasCancelled = true;
-                        }
+                    }
                     catch (InvalidDataException e)
-                        {
+                    {
                         Log.ErrorException("Failed to index because of data corruption. ", e);
                         indexingGroup.Indexes.ForEach(index =>
                             context.AddError(index.IndexId, index.Index.PublicName, null, e, string.Format("Failed to index because of data corruption. Reason: {0}", e.Message)));
-                        }
-                        finally
-                        {
+                    }
+                    finally
+                    {
                         if (operationAdded == false)
-                            {
+                        {
                             indexingGroup.Indexes.ForEach(x =>
                             {
                                 indexingGroup.SignalIndexingComplete();
                                 x.Index.IsMapIndexingInProgress = false;
                             });
-                            }
                         }
+                    }
                 }, description: string.Format("Prefetching Index Groups for {0} groups", groupedIndexes.Count));
             return operationWasCancelled;
-                    }
+        }
 
         private bool GenerateIndexingGroupsByEtagRanges(IList<IndexToWorkOn> indexes, out ConcurrentSet<PrefetchingBehavior> usedPrefetchers, out List<IndexingGroup> indexingGroups)
         {
@@ -395,17 +425,16 @@ namespace Raven.Database.Indexing
             foreach (var indexingGroup in groupedIndexesByEtagRange)
             {
                 var result = new IndexingGroup
-                            {
-                                Indexes = indexingGroup.Value,
-                                LastIndexedEtag = indexingGroup.Key,
-                                LastQueryTime = indexingGroup.Value.Max(y => y.Index.LastQueryTime),
-                                PrefetchingBehavior = GetPrefetcherFor(indexingGroup.Key, usedPrefetchers)
-                            };
+                {
+                    Indexes = indexingGroup.Value,
+                    LastIndexedEtag = indexingGroup.Key,
+                    LastQueryTime = indexingGroup.Value.Max(y => y.Index.LastQueryTime)
+                };
 
-                result.PrefetchingBehavior.AdditionalInfo = string.Format("Default prefetcher: {0}. For indexing group: [Indexes: {1}, LastIndexedEtag: {2}]",
-                    result.PrefetchingBehavior == defaultPrefetchingBehavior, string.Join(", ", result.Indexes.Select(y => y.Index.PublicName)), result.LastIndexedEtag);
+                SetPrefetcherForIndexingGroup(result, usedPrefetchers);
+
                 indexingGroups.Add(result);
-        }
+            }
             indexingGroups = indexingGroups.OrderByDescending(x => x.LastQueryTime).ToList();
             return false;
         }
@@ -414,22 +443,11 @@ namespace Raven.Database.Indexing
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
-            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner,string.Format("Etags from: {0}", fromEtag));
-
-            var recentEtag = Etag.Empty;
-            context.Database.TransactionalStorage.Batch(accessor => { recentEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
-
-            if (recentEtag.Restarts != fromEtag.Restarts || Math.Abs(recentEtag.Changes - fromEtag.Changes) > context.CurrentNumberOfItemsToIndexInSingleBatch)
-            {
-                // If the distance between etag of a recent document in db and etag to index from is greater than NumberOfItemsToProcessInSingleBatch
-                // then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs to avoid
-                // large memory consumption by in-memory prefetching queue that would hold all the new documents, but it would be a long time before we can reach them.
-                newPrefetcher.DisableCollectingDocumentsAfterCommit = true;
-            }
+            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, string.Format("Etags from: {0}", fromEtag));
 
             prefetchingBehaviors.Add(newPrefetcher);
             usedPrefetchers.Add(newPrefetcher);
@@ -470,9 +488,9 @@ namespace Raven.Database.Indexing
         {
             indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = true);
 
-            
+
             return new DisposableAction(() => indexesToWorkOn.ForEach(x => x.IsMapIndexingInProgress = false));
-                    }
+        }
 
 
         public void IndexPrecomputedBatch(PrecomputedIndexingBatch precomputedBatch, CancellationToken token)
@@ -498,9 +516,9 @@ namespace Raven.Database.Indexing
                 if (precomputedBatch.Documents.Count > 0)
                 {
                     List<IndexToWorkOn> filteredOutIndexes;
-                    indexingBatchForIndex = 
+                    indexingBatchForIndex =
                         FilterIndexes(
-                                new List<IndexToWorkOn> {indexToWorkOn}, 
+                                new List<IndexToWorkOn> { indexToWorkOn },
                                 precomputedBatch.Documents,
                                 precomputedBatch.LastIndexed,
                                 out filteredOutIndexes)
@@ -608,9 +626,9 @@ namespace Raven.Database.Indexing
             finally
             {
                 if (performanceResult != null)
-                {                    
+                {
                     performanceResult.OnCompleted = null;
-                }				
+                }
 
                 Index _;
                 if (Log.IsDebugEnabled)
@@ -623,20 +641,20 @@ namespace Raven.Database.Indexing
 
                 try
                 {
-                if (wasOutOfMemory == false && wasOperationCanceled == false)
-                {
+                    if (wasOutOfMemory == false && wasOperationCanceled == false)
+                    {
                         bool keepTrying = true;
 
                         for (int i = 0; i < 10 && keepTrying; i++)
                         {
                             keepTrying = false;
-                    transactionalStorage.Batch(actions =>
-                    {
+                            transactionalStorage.Batch(actions =>
+                            {
                                 try
                                 {
-                        // whatever we succeeded in indexing or not, we have to update this
-                        // because otherwise we keep trying to re-index failed documents
-                        actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
+                                    // whatever we succeeded in indexing or not, we have to update this
+                                    // because otherwise we keep trying to re-index failed documents
+                                    actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified);
                                 }
                                 catch (Exception e)
                                 {
@@ -647,21 +665,21 @@ namespace Raven.Database.Indexing
                                     }
                                     throw;
                                 }
-                    });
+                            });
 
                             if (keepTrying)
                                 Thread.Sleep(11);
-                }
+                        }
                     }
-                else if (wasOutOfMemory)
-                    HandleOutOfMemory(batchForIndex);
+                    else if (wasOutOfMemory)
+                        HandleOutOfMemory(batchForIndex);
                 }
                 finally
                 {
-                currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
+                    currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
                     batchForIndex.SignalIndexingComplete();
                     batchForIndex.Index.IsMapIndexingInProgress = false;
-            }
+                }
             }
 
             return performanceResult;
@@ -709,7 +727,6 @@ namespace Raven.Database.Indexing
 
             public int IndexId { get; set; }
 
-
             public Index Index { get; set; }
 
             public Etag LastIndexedEtag { get; set; }
@@ -722,7 +739,7 @@ namespace Raven.Database.Indexing
                 if (OnIndexingComplete != null)
                 {
                     OnIndexingComplete();
-        }
+                }
             }
         }
 
@@ -740,27 +757,6 @@ namespace Raven.Database.Indexing
 
             var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);
 
-
-            //var filteredDocs = new ConcurrentQueue<Tuple<JsonDocument, object>>();
-            //context
-
-
-            /*Parallel.ForEach(jsonDocs.Where(x => x != null).AsParallel()
-                new ParallelOptions()
-                {
-                    MaxDegreeOfParallelism = context.CurrentNumberOfParallelTasks
-                }, doc =>
-                {
-                    if (doc != null)
-                    {
-                        var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
-                        filteredDocs.Enqueue(
-                            filteredDoc == null ?
-                                Tuple.Create(doc, (object) new FilteredDocument(doc)) :
-                                Tuple.Create(filteredDoc, JsonToExpando.Convert(doc.ToJson())));
-                    }
-                });*/
-
             var filteredDocs =
                 BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>
                 {
@@ -776,7 +772,7 @@ namespace Raven.Database.Indexing
                     };
                 });
 
-            if ( Log.IsDebugEnabled ) 
+            if (Log.IsDebugEnabled)
                 Log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
 
@@ -828,7 +824,7 @@ namespace Raven.Database.Indexing
 
                 if (batch.Docs.Count == 0)
                 {
-                    if ( Log.IsDebugEnabled )
+                    if (Log.IsDebugEnabled)
                         Log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName, lastEtag, lastModified);
 
                     // we use it this way to batch all the updates together
@@ -841,50 +837,50 @@ namespace Raven.Database.Indexing
                             indexToWorkOn.Index.EnsureIndexWriter();
                             indexToWorkOn.Index.Flush(lastEtag);
                         };
-                        });
+                    });
                     innerFilteredOutIndexes.Push(indexToWorkOn);
                     context.MarkIndexFilteredOut(indexName);
                     return;
                 }
-                
+
                 if (Log.IsDebugEnabled)
                     Log.Debug("Going to index {0} documents in {1}: ({2})", batch.Ids.Count, indexToWorkOn, string.Join(", ", batch.Ids));
-                
+
                 results.Enqueue(new IndexingBatchForIndex
                 {
                     Batch = batch,
                     IndexId = indexToWorkOn.IndexId,
                     Index = indexToWorkOn.Index,
                     LastIndexedEtag = indexToWorkOn.LastIndexedEtag
-            });
+                });
             }, description: string.Format("Filtering documents for {0} indexes", indexesToWorkOn.Count));
 
             filteredOutIndexes = innerFilteredOutIndexes.ToList();
-                foreach (var action in actions)
-                {
+            foreach (var action in actions)
+            {
                 bool keepTrying = true;
                 for (int i = 0; i < 10 && keepTrying; i++)
                 {
                     keepTrying = false;
                     transactionalStorage.Batch(actionsAccessor =>
                     {
-                    if (action != null)
-                    {
-                        try
+                        if (action != null)
                         {
-                            action(actionsAccessor);
-                        }
-                        catch (Exception e)
-                        {
+                            try
+                            {
+                                action(actionsAccessor);
+                            }
+                            catch (Exception e)
+                            {
                                 if (actionsAccessor.IsWriteConflict(e))
                                 {
                                     keepTrying = true;
                                     return;
-                        }
+                                }
                                 throw;
-                    }
-                }
-            });
+                            }
+                        }
+                    });
 
                     if (keepTrying)
                         Thread.Sleep(11);

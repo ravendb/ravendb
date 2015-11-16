@@ -78,7 +78,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         public void Execute(DocumentDatabase database)
         {
-            defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication");
+            defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication", true);
             prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
 
             Database = database;
@@ -221,13 +221,12 @@ namespace Raven.Database.Bundles.SqlReplication
                     .Select(x =>
                     {
                         var result = new SqlConfigGroup
-                                     {
-                                         LastReplicatedEtag = x.Key,
-                                         ConfigsToWorkOn = x.Value,
-                                         PrefetchingBehavior = GetPrefetcherFor(x.Key, usedPrefetchers)
-                                     };
+                        {
+                            LastReplicatedEtag = x.Key,
+                            ConfigsToWorkOn = x.Value
+                        };
 
-                        result.PrefetchingBehavior.AdditionalInfo = string.Format("Default prefetcher: {0}. For sql config group: [Configs: {1}, LastReplicatedEtag: {2}]", result.PrefetchingBehavior == defaultPrefetchingBehavior, string.Join(", ", result.ConfigsToWorkOn.Select(y => y.Name)), result.LastReplicatedEtag);
+                        SetPrefetcherForIndexingGroup(result, usedPrefetchers);
 
                         return result;
                     })
@@ -432,6 +431,60 @@ namespace Raven.Database.Bundles.SqlReplication
             }
         }
 
+        private void SetPrefetcherForIndexingGroup(SqlConfigGroup sqlConfig, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            sqlConfig.PrefetchingBehavior = TryGetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
+                                      TryGetDefaultPrefetcher(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
+                                      GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers);
+
+            sqlConfig.PrefetchingBehavior.AdditionalInfo =
+                string.Format("Default prefetcher: {0}. For sql config group: [Configs: {1}, LastReplicatedEtag: {2}]",
+                sqlConfig.PrefetchingBehavior == defaultPrefetchingBehavior,
+                string.Join(", ", sqlConfig.ConfigsToWorkOn.Select(y => y.Name)),
+                sqlConfig.LastReplicatedEtag);
+        }
+
+        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            foreach (var prefetchingBehavior in prefetchingBehaviors)
+            {
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag) &&
+                    usedPrefetchers.TryAdd(prefetchingBehavior))
+                {
+                    return prefetchingBehavior;
+                }
+            }
+
+            return null;
+        }
+
+        private PrefetchingBehavior TryGetDefaultPrefetcher(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            if (defaultPrefetchingBehavior.CanUseDefaultPrefetcher(fromEtag) &&
+                usedPrefetchers.TryAdd(defaultPrefetchingBehavior))
+            {
+                return defaultPrefetchingBehavior;
+            }
+
+            return null;
+        }
+
+        private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            foreach (var prefetchingBehavior in prefetchingBehaviors)
+            {
+                if (prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
+                    return prefetchingBehavior;
+            }
+
+            var newPrefetcher = Database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, string.Format("SqlReplication, etags from: {0}", fromEtag));
+
+            prefetchingBehaviors.Add(newPrefetcher);
+            usedPrefetchers.Add(newPrefetcher);
+
+            return newPrefetcher;
+        }
+
         private void RemoveUnusedPrefetchers(IEnumerable<PrefetchingBehavior> usedPrefetchingBehaviors)
         {
             var unused = prefetchingBehaviors.Except(usedPrefetchingBehaviors.Union(new[]
@@ -447,22 +500,6 @@ namespace Raven.Database.Bundles.SqlReplication
                 prefetchingBehaviors.TryRemove(unusedPrefetcher);
                 Database.Prefetcher.RemovePrefetchingBehavior(unusedPrefetcher);
             }
-        }
-
-        private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
-        {
-            foreach (var prefetchingBehavior in prefetchingBehaviors)
-            {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
-                    return prefetchingBehavior;
-            }
-
-            var newPrefetcher = Database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication");
-
-            prefetchingBehaviors.Add(newPrefetcher);
-            usedPrefetchers.Add(newPrefetcher);
-
-            return newPrefetcher;
         }
 
         private void UpdateReplicationPerformance(SqlReplicationConfig replicationConfig, DateTime startTime, TimeSpan elapsed, int batchSize)
@@ -780,7 +817,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 {
                     var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
                     var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
-                    if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections)) 
+                    if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections))
                         continue;
                     sqlReplicationConfigs.Add(cfg);
                 }

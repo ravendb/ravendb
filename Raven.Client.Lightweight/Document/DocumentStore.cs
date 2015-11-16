@@ -378,13 +378,7 @@ namespace Raven.Client.Document
 
             try
             {
-
-                if (string.IsNullOrEmpty(ApiKey) == false)
-                {
-                    Credentials = null;
-                }
-                SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url, Credentials);
-
+                SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url);
                 InitializeInternal();
 
                 if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing

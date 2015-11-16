@@ -62,6 +62,19 @@
     <TypeScriptCompile Include="App\commands\timeSeries\updatePointCommand.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\synchronizeNowCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\synchronizeWithDestinationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\updateFileMetadataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getConfigurationByKeyCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getDestinationsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\getFilesCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\studio\validateExportDatabaseOptionsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\saveConfigurationCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchByQueryCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchByTermCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\searchConfigurationByPrefixCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveTransformerLockModeCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\uploadFileToFilesystemCommand.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\changesApiSharedConnection.ts" />
     <TypeScriptCompile Include="App\common\cssGenerator.ts" />
@@ -803,7 +816,6 @@
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\createSampleDataCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\studio\exportDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\getCachedCollectionsCount.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\getClientBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\getLatestServerBuildVersionCommand.ts" />

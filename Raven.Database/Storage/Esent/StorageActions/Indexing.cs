@@ -442,7 +442,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             do
             {
                 var key = Api.RetrieveColumnAsString(Session, IndexedDocumentsReferences,
-                    tableColumnsCache.IndexedDocumentsReferencesColumns["by_ref"]);
+                    tableColumnsCache.IndexedDocumentsReferencesColumns["ref"]);
                 int value;
                 results.TryGetValue(key, out value);
                 results[key] = value + 1;

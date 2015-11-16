@@ -3,8 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Diagnostics;
-using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
@@ -16,16 +14,19 @@ using Raven.Database.Config;
 using Raven.Database.Counters;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
+using Raven.Json.Linq;
+using Raven.Database.Server.Security;
+using Raven.Abstractions.Exceptions;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Database.Server.Security;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -69,7 +70,7 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.Counter.DataDirectory, systemDatabase.Configuration);		
+            return CreateConfiguration(tenantId, document, Constants.Counter.DataDirectory, systemDatabase.Configuration);
         }
 
         protected InMemoryRavenConfiguration CreateConfiguration(
@@ -175,24 +176,37 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+            var hasAcquired = false;
+            try
             {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-                var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
-                AssertLicenseParameters(config);
+                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
 
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return cs;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                hasAcquired = true;
+                counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                    Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
-            return true;
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                    var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
+                    AssertLicenseParameters(config);
+
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    return cs;
+                }).ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+                return true;
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
         public void Unprotect(CounterStorageDocument configDocument)
@@ -265,7 +279,7 @@ namespace Raven.Database.Server.Tenancy
             if (Authentication.IsLicensedForCounters == false)
             {
                 throw new InvalidOperationException("Your license does not allow the use of the Counters");
-        }
+            }
 
             Authentication.AssertLicensedBundles(config.ActiveBundles);
         }
@@ -286,12 +300,12 @@ namespace Raven.Database.Server.Tenancy
             {
                 int nextPageStart = 0;
                 var counterDocs = systemDatabase.Documents.GetDocumentsWithIdStartingWith(ResourcePrefix, null, null,
-                    0,int.MaxValue, CancellationToken.None, ref nextPageStart).ToList();
+                    0, int.MaxValue, CancellationToken.None, ref nextPageStart).ToList();
 
                 foreach (var doc in counterDocs)
                 {
                     var id = GetCounterIdFromDocumentKey(doc);
-                    Debug.Assert(String.IsNullOrWhiteSpace(id) == false,"key of counter should not be empty");
+                    Debug.Assert(String.IsNullOrWhiteSpace(id) == false, "key of counter should not be empty");
                     Task<CounterStorage> counterFetchTask;
                     if (!TryGetOrCreateResourceStore(id, out counterFetchTask))
                         throw new InvalidOperationException(string.Format("Could not get counter specified by counter storage document. The id that wasn't found is {0}", id));

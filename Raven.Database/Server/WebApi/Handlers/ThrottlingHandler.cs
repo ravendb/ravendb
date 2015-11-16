@@ -8,7 +8,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
@@ -31,7 +30,23 @@ namespace Raven.Database.Server.WebApi.Handlers
             bool waiting = false;
             try
             {
-                waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+                TaskCanceledException tce = null;
+
+                try
+                {
+                    waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+                }
+                catch (TaskCanceledException e)
+                {
+                    tce = e;
+                }
+
+                if (tce != null)
+                {
+                    Logger.InfoException("Got task canceled exception.", tce);
+                    return await base.SendAsync(request, cancellationToken).ConfigureAwait(false); ;
+                }
+
                 if (waiting == false)
                 {
                     try

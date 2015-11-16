@@ -47,7 +47,7 @@ namespace Raven.Abstractions.Connection
             using ( var undisposableStream = new UndisposableStream(stream) )
             using ( var bufferedStream = new BufferedStream(undisposableStream))
             {
-                var writer = new StreamWriter(stream, DefaultEncoding);
+                var writer = new StreamWriter(bufferedStream, DefaultEncoding);
                 if (string.IsNullOrEmpty(Jsonp) == false)
                 {
                     writer.Write(Jsonp);

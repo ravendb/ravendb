@@ -372,6 +372,7 @@
     <Compile Include="NullableInIndex.cs" />
     <Compile Include="Nullables.cs" />
     <Compile Include="NullableSorting.cs" />
+    <Compile Include="NullToNonNullSelectFields2.cs" />
     <Compile Include="Oguzhntopcu.cs" />
     <Compile Include="OrderByProjectSameField.cs" />
     <Compile Include="OrderByValueTypeCast.cs" />
@@ -483,6 +484,7 @@
     <Compile Include="UpdatingData.cs" />
     <Compile Include="UriProperty.cs" />
     <Compile Include="UrlInIdsRepro.cs" />
+    <Compile Include="UsingLoadStartsWithAndDashSepartor.cs" />
     <Compile Include="VacancyCampaignsTests.cs" />
     <Compile Include="ValerioBorioni.cs" />
     <Compile Include="Vicente.cs" />

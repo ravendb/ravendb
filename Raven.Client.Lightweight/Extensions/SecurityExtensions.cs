@@ -11,8 +11,7 @@ namespace Raven.Client.Extensions
 {
     internal static class SecurityExtensions
     {
-        //TODO: this can be used in document store/counter stores/time series store
-        internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl, ICredentials primaryCredentials)
+        internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl)
         {
             if (conventions.HandleUnauthorizedResponseAsync != null)
                 return; // already setup by the user
@@ -27,14 +26,14 @@ namespace Raven.Client.Extensions
             {
                 if (credentials.ApiKey == null)
                 {
-                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, primaryCredentials);
+                    AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse, credentials.Credentials);
                     return null;
                 }
 
                 return null;
             };
 
-            conventions.HandleUnauthorizedResponseAsync = async (unauthorizedResponse, credentials) =>
+            conventions.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
             {
                 var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
@@ -48,7 +47,7 @@ namespace Raven.Client.Extensions
                 if (string.IsNullOrEmpty(oauthSource) == false &&
                     oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
                 {
-                    return await basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey).ConfigureAwait(false);
+                    return basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey);
                 }
 
                 if (credentials.ApiKey == null)
@@ -60,7 +59,7 @@ namespace Raven.Client.Extensions
                 if (string.IsNullOrEmpty(oauthSource))
                     oauthSource = serverUrl + "/OAuth/API-Key";
 
-                return await securedAuthenticator.DoOAuthRequestAsync(serverUrl, oauthSource, credentials.ApiKey).ConfigureAwait(false);
+                return securedAuthenticator.DoOAuthRequestAsync(serverUrl, oauthSource, credentials.ApiKey);
             };
 
         }
