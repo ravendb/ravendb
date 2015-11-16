@@ -22,6 +22,7 @@ using Raven.Database.FileSystem.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Common
 {
@@ -237,6 +238,12 @@ namespace Raven.Database.Common
             try
             {
                 hasResource = landlord.TryGetOrCreateResourceStore(resourceName, out resourceStoreTask);
+            }
+            catch (ConcurrentLoadTimeoutException e)
+            {
+                msg = string.Format("The resource '{0}' is currently being loaded, but there are too many requests waiting for resource load. Please try again later, resource loading continues.", resourceName);
+                Log.WarnException(msg, e);
+                throw new HttpException(503, msg, e);
             }
             catch (Exception e)
             {
