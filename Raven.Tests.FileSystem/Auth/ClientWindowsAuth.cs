@@ -113,7 +113,7 @@ namespace Raven.Tests.FileSystem.Auth
             var client = (IAsyncFilesCommandsImpl)NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
             var adminClient = client.Admin;
 
-            await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"));
+            await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"), "testName");
 
             using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain)))
             {
@@ -169,7 +169,7 @@ namespace Raven.Tests.FileSystem.Auth
         public async Task ShouldThrowWhenWindowsDocumentDoesNotContainFileSystem()
         {
             // in this test be careful if the specified credentials belong to admin user or not
-            // to make this test to you need to specify the credentials of a user who isn't an admin on this machine
+            // to make this test pass you need to specify the credentials of a user who isn't an admin on this machine
 
             var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
             var server = GetServer();

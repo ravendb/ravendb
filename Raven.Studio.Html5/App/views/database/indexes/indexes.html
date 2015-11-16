@@ -170,7 +170,7 @@
                                         <small class="badge" data-bind="visible: willReplaceIndex()"><i class="fa fa-arrow-left"></i> Side-by-side index (new)</small>
                                         <small class="badge" data-bind="visible: willBeReplacedByIndex()"><i class="fa fa-arrow-right"></i> Side-by-side index (old)</small>
                                         <small class="text-muted" data-bind="visible: isDisabled">Disabled</small>
-                                        <small class="text-muted" data-bind="text: ' - ' + docsCount + ' entries' " title=" the number of documents affected by this index"></small>
+                                        <small class="text-muted" data-bind="text: ' - ' + docsCount.toLocaleString() + ' entries' " title=" the number of documents affected by this index"></small>
                                         <label>
                                             <i class="fa" data-bind="css: { 'fa-unlock': lockMode() === 'Unlock' || lockMode() === 'LockedError', 'text-danger': lockMode() === 'LockedError', 'fa-lock': lockMode() === 'LockedIgnore' || lockMode() === 'SideBySide' }"></i>
                                         </label>

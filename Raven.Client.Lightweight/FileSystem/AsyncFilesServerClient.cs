@@ -52,8 +52,6 @@ namespace Raven.Client.FileSystem
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
                 if (replicationInformerGetter != null && ReplicationInformer!= null)
                     ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
-
-                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl, credentials.Credentials);
             }
             catch (Exception)
             {

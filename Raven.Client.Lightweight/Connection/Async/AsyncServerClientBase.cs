@@ -6,6 +6,7 @@ using System;
 using System.Collections.Specialized;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection.Async
 {
@@ -24,6 +25,10 @@ namespace Raven.Client.Connection.Async
             Conventions = convention ?? new TConvention();
             CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
             RequestFactory = jsonRequestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+
+            if (jsonRequestFactory == null)
+                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl);
+
             SessionId = sessionId;
             OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
             

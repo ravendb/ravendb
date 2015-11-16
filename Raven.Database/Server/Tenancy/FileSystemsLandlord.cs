@@ -227,6 +227,13 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
+            var hasAcquired = false;
+            try
+            {
+                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much filesystems loading concurrently, timed out waiting for them to load.");
+
+                hasAcquired = true;
             fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
                 var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
@@ -247,6 +254,12 @@ namespace Raven.Database.Server.Tenancy
                 return task;
             }).Unwrap());
             return true;
+        }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
         private void AssertLicenseParameters(InMemoryRavenConfiguration config)
@@ -276,7 +289,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             Authentication.AssertLicensedBundles(config.ActiveBundles);
-        }
+                }
 
         protected override DateTime LastWork(RavenFileSystem resource)
         {

@@ -24,8 +24,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Database.Server.Security;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -175,6 +173,13 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
+            var hasAcquired = false;
+            try
+            {
+                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
+
+                hasAcquired = true;
             counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
                 var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
@@ -193,6 +198,12 @@ namespace Raven.Database.Server.Tenancy
                 return task;
             }).Unwrap());
             return true;
+        }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
         public void Unprotect(CounterStorageDocument configDocument)
@@ -263,7 +274,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             if (Authentication.IsLicensedForCounters == false)
-            {
+        {
                 throw new InvalidOperationException("Your license does not allow the use of the Counters");
         }
 

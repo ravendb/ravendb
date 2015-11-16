@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
         {
             autoTuner = new IndexBatchSizeAutoTuner(context);
             this.prefetcher = prefetcher;
-            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior");
+            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior", true);
             defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
             prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
         }
@@ -211,7 +211,7 @@ namespace Raven.Database.Indexing
                 groupedIndexes.Any(x => x.Indexes.Any(y => y.Index.IsMapReduce)));
             indexes.ForEach(x => x.Index.CurrentNumberOfItemsToIndexInSingleBatch = autoTuner.NumberOfItemsToProcessInSingleBatch);
             using (indexingAutoTunerContext)
-                {
+            {
                 var indexBatchOperations = new ConcurrentDictionary<IndexingBatchOperation, object>();
 
                 var operationWasCancelled = GenerateIndexingBatchesAndPrefetchDocuments(groupedIndexes, indexBatchOperations);
@@ -219,24 +219,48 @@ namespace Raven.Database.Indexing
                 var executionStopwatch = Stopwatch.StartNew();
 
                 foreach (var indexingGroup in groupedIndexes)
-                {
-                    indexingGroup.IndexingGroupProcessingFinished += x =>
                     {
-                        if (!operationWasCancelled)
+                    indexingGroup.IndexingGroupProcessingFinished += x =>
                         {
+                        if (!operationWasCancelled)
+                            {
                             ReleasePrefethersAndUpdateStatistics(x, executionStopwatch.Elapsed);
-                        }
+                            }
 
                         if (Interlocked.Increment(ref completedGroups) == groupedIndexes.Count)
-                        {
+                            {
                             RemoveUnusedPrefetchers(usedPrefetchers);
-                        }
+                            }
                 };
-                }
+                        }
 
                 if (!operationWasCancelled)
                     operationWasCancelled = PerformIndexingOnIndexBatches(indexBatchOperations);
+                        }
+                            }
+
+        private void SetPrefetcherForIndexingGroup(IndexingGroup groupIndex, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            groupIndex.PrefetchingBehavior = TryGetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers) ??
+                                      TryGetDefaultPrefetcher(groupIndex.LastIndexedEtag, usedPrefetchers) ??
+                                      GetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers);
+
+            groupIndex.PrefetchingBehavior.Indexes = groupIndex.Indexes;
+            groupIndex.PrefetchingBehavior.LastIndexedEtag = groupIndex.LastIndexedEtag;
+        }
+
+        private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            foreach (var prefetchingBehavior in prefetchingBehaviors)
+            {
+                if (prefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag) &&
+                    usedPrefetchers.TryAdd(prefetchingBehavior))
+                {
+                    return prefetchingBehavior;
+                }
             }
+
+            return null;
         }
 
         private void ReleasePrefethersAndUpdateStatistics(IndexingGroup indexingGroup, TimeSpan ellapsedTimeSpan)
@@ -249,6 +273,17 @@ namespace Raven.Database.Indexing
                 context.ReportIndexingBatchCompleted(indexingGroup.BatchInfo);
             }
             indexingGroup.ReleaseIndexingGroupFinished();
+        }
+
+        private PrefetchingBehavior TryGetDefaultPrefetcher(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        {
+            if (defaultPrefetchingBehavior.CanUseDefaultPrefetcher(fromEtag) &&
+                usedPrefetchers.TryAdd(defaultPrefetchingBehavior))
+            {
+                return defaultPrefetchingBehavior;
+            }
+
+            return null;
         }
 
         private bool PerformIndexingOnIndexBatches(ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
@@ -414,22 +449,11 @@ namespace Raven.Database.Indexing
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                if (prefetchingBehavior.CanUsePrefetcherToLoadFrom(fromEtag) && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
-            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner,string.Format("Etags from: {0}", fromEtag));
-
-            var recentEtag = Etag.Empty;
-            context.Database.TransactionalStorage.Batch(accessor => { recentEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
-
-            if (recentEtag.Restarts != fromEtag.Restarts || Math.Abs(recentEtag.Changes - fromEtag.Changes) > context.CurrentNumberOfItemsToIndexInSingleBatch)
-            {
-                // If the distance between etag of a recent document in db and etag to index from is greater than NumberOfItemsToProcessInSingleBatch
-                // then prevent the prefetcher from loading newly added documents. For such prefetcher we will relay only on future batches to prefetch docs to avoid
-                // large memory consumption by in-memory prefetching queue that would hold all the new documents, but it would be a long time before we can reach them.
-                newPrefetcher.DisableCollectingDocumentsAfterCommit = true;
-            }
+            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, string.Format("Etags from: {0}", fromEtag));
 
             prefetchingBehaviors.Add(newPrefetcher);
             usedPrefetchers.Add(newPrefetcher);

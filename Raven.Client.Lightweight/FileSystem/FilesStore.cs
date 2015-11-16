@@ -163,9 +163,7 @@ namespace Raven.Client.FileSystem
             set
             {
                 maxNumberOfCachedRequests = value;
-                if (jsonRequestFactory != null)
-                    jsonRequestFactory.Dispose();
-                jsonRequestFactory = new HttpJsonRequestFactory(maxNumberOfCachedRequests, HttpMessageHandlerFactory);
+                jsonRequestFactory.ResetCache(maxNumberOfCachedRequests);
             }
         }
 
@@ -221,6 +219,8 @@ namespace Raven.Client.FileSystem
 
             try
             {
+                SecurityExtensions.InitializeSecurity(Conventions, JsonRequestFactory, Url);
+
                 InitializeInternal();
 
                 initialized = true;

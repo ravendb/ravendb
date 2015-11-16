@@ -52,7 +52,7 @@ namespace Raven.Client.FileSystem
 
         private const int DefaultNumberOfCachedRequests = 2048; //put this in asyncserverclient
 
-        public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, FilesConvention convention = null,
+        public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, FilesConvention convention = null, 
             OperationCredentials operationCredentials = null, HttpJsonRequestFactory requestFactory = null, NameValueCollection operationsHeaders = null)
         {
             serverUrl = serverUrl.TrimEnd('/');
@@ -60,10 +60,13 @@ namespace Raven.Client.FileSystem
             credentials = credentials ?? CredentialCache.DefaultNetworkCredentials;
             filesConvention = convention ?? new FilesConvention();
             this.operationCredentials = operationCredentials ?? new OperationCredentials(apiKey, credentials);
-            this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
-            OperationsHeaders = operationsHeaders ?? new NameValueCollection();
 
-            SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl, credentials);
+            this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+
+            if(requestFactory == null)
+                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl);
+
+            this.OperationsHeaders = operationsHeaders ?? new NameValueCollection();
         }
 
         public Task<RavenJObject> GetMetadataForAsync(string fileName)

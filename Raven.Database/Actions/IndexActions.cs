@@ -780,6 +780,7 @@ namespace Raven.Database.Actions
             return IndexDefinitionStorage.GetIndexDefinition(index);
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void ResetIndex(string index)
         {
             var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
@@ -789,6 +790,7 @@ namespace Raven.Database.Actions
             PutIndex(index, indexDefinition);
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public bool DeleteIndex(string name)
         {
             var instance = IndexDefinitionStorage.GetIndexDefinition(name);

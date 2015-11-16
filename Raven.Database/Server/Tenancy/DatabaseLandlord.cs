@@ -125,7 +125,6 @@ namespace Raven.Database.Server.Tenancy
         {
             if (string.Equals("<system>", resourceName, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(resourceName))
                 return systemDatabase;
-
             Task<DocumentDatabase> db;
             if (TryGetOrCreateResourceStore(resourceName, out db))
                 return await db.ConfigureAwait(false);
@@ -135,7 +134,7 @@ namespace Raven.Database.Server.Tenancy
         public override bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
             if (Locks.Contains(DisposingLock))
-                throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
+                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
 
             if (Locks.Contains(tenantId))
                 throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
@@ -163,6 +162,13 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
+            var hasAcquired = false;
+            try
+            {
+                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
+
+                hasAcquired = true;
             database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
                 var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
@@ -192,6 +198,12 @@ namespace Raven.Database.Server.Tenancy
                 }
                 return task;
             }).Unwrap());
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
 
             if (database.IsFaulted && database.Exception != null)
             {

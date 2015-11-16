@@ -24,11 +24,18 @@ namespace Raven.Database.Prefetching
             MemoryStatistics.RegisterLowMemoryHandler(this);
         }
 
-        public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription)
+        public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription, bool isDefault = false)
         {
             lock (this)
             {
-                var newPrefetcher = new PrefetchingBehavior(user, workContext, autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), prefetchingUserDescription);
+                var newPrefetcher = 
+                    new PrefetchingBehavior(user, 
+                                            workContext, 
+                                            autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user), 
+                                            prefetchingUserDescription, 
+                                            isDefault,
+                                            GetPrefetchintBehavioursCount,
+                                            GetPrefetchingBehaviourSummary);
 
                 prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
                 {
@@ -71,6 +78,27 @@ namespace Raven.Database.Prefetching
             {
                 prefetcher.AfterStorageCommitBeforeWorkNotifications(documents);
             }
+        }
+
+        private int GetPrefetchintBehavioursCount()
+        {
+            return prefetchingBehaviors.Count;
+        }
+
+        public PrefetchingSummary GetPrefetchingBehaviourSummary()
+        {
+            var summary = new PrefetchingSummary();
+
+            foreach (var prefetcher in prefetchingBehaviors)
+            {
+                var prefetchingBehaviorSummary = prefetcher.GetSummary();
+                summary.PrefetchingQueueLoadedSize += prefetchingBehaviorSummary.PrefetchingQueueLoadedSize;
+                summary.PrefetchingQueueDocsCount += prefetchingBehaviorSummary.PrefetchingQueueDocsCount;
+                summary.FutureIndexBatchesLoadedSize += prefetchingBehaviorSummary.FutureIndexBatchesLoadedSize;
+                summary.FutureIndexBatchesDocsCount += prefetchingBehaviorSummary.FutureIndexBatchesDocsCount;
+            }
+
+            return summary;
         }
 
         public void Dispose()
