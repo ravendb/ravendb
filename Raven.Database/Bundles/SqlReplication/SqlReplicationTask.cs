@@ -221,10 +221,10 @@ namespace Raven.Database.Bundles.SqlReplication
                     .Select(x =>
                     {
                         var result = new SqlConfigGroup
-                                     {
-                                         LastReplicatedEtag = x.Key,
-                                         ConfigsToWorkOn = x.Value
-                                     };
+                        {
+                            LastReplicatedEtag = x.Key,
+                            ConfigsToWorkOn = x.Value
+                        };
 
                         SetPrefetcherForIndexingGroup(result, usedPrefetchers);
 
@@ -437,10 +437,10 @@ namespace Raven.Database.Bundles.SqlReplication
                                       TryGetDefaultPrefetcher(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
                                       GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers);
 
-            sqlConfig.PrefetchingBehavior.AdditionalInfo = 
+            sqlConfig.PrefetchingBehavior.AdditionalInfo =
                 string.Format("Default prefetcher: {0}. For sql config group: [Configs: {1}, LastReplicatedEtag: {2}]",
-                sqlConfig.PrefetchingBehavior == defaultPrefetchingBehavior, 
-                string.Join(", ", sqlConfig.ConfigsToWorkOn.Select(y => y.Name)), 
+                sqlConfig.PrefetchingBehavior == defaultPrefetchingBehavior,
+                string.Join(", ", sqlConfig.ConfigsToWorkOn.Select(y => y.Name)),
                 sqlConfig.LastReplicatedEtag);
         }
 
@@ -817,7 +817,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 {
                     var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
                     var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
-                    if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections)) 
+                    if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections))
                         continue;
                     sqlReplicationConfigs.Add(cfg);
                 }
