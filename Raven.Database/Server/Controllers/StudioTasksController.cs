@@ -245,14 +245,16 @@ for(var customFunction in customFunctions) {{
         public class ExportData
         {
             public string SmugglerOptions { get; set; }
+
+            public string FileName { get; set; }
         }
-        
+
         [HttpPost]
         [RavenRoute("studio-tasks/exportDatabase")]
         [RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
-        public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
+        public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData exportData)
         {
-            var requestString = smugglerOptionsJson.SmugglerOptions;
+            var requestString = exportData.SmugglerOptions;
             DatabaseSmugglerOptions smugglerOptions;
 
             using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
@@ -277,9 +279,9 @@ for(var customFunction in customFunctions) {{
                 }
             });
 
-            var fileName = // TODO [ppekrol] String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm"));// :
-              //  smugglerOptions.NoneDefualtFileName;
+            var fileName = string.IsNullOrEmpty(exportData.FileName) || (exportData.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm")) :
+              exportData.FileName;
 
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
@@ -288,7 +290,7 @@ for(var customFunction in customFunctions) {{
 
             return new CompletedTask<HttpResponseMessage>(result);
         }
-        
+
         [HttpPost]
         [RavenRoute("studio-tasks/createSampleData")]
         [RavenRoute("databases/{databaseName}/studio-tasks/createSampleData")]

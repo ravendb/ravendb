@@ -32,6 +32,7 @@ class exportDatabase extends viewModelBase {
         };
         
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
+        $("#FileName").val(this.noneDefualtFileName());
 
         new getSingleAuthTokenCommand(this.activeFilesystem()).execute().done((token: singleAuthToken) => {
             this.authToken(token.Token);
