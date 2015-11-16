@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -234,27 +235,27 @@ namespace Raven.Database.Server.Tenancy
                     throw new ConcurrentLoadTimeoutException("Too much filesystems loading concurrently, timed out waiting for them to load.");
 
                 hasAcquired = true;
-            fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
-            {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+                {
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-                AssertLicenseParameters(config);
-                var fs = new RavenFileSystem(config, tenantId, transportState);
-                fs.Initialize();
+                    AssertLicenseParameters(config);
+                    var fs = new RavenFileSystem(config, tenantId, transportState);
+                    fs.Initialize();
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return fs;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    return fs;
+                }).ContinueWith(task =>
                 {
-                    Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
-            return true;
-        }
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                {
+                        Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+                return true;
+            }
             finally
             {
                 if (hasAcquired)
@@ -289,7 +290,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             Authentication.AssertLicensedBundles(config.ActiveBundles);
-                }
+        }
 
         protected override DateTime LastWork(RavenFileSystem resource)
         {

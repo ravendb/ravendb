@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Database.Server.Security;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -32,7 +33,7 @@ namespace Raven.Database.Server.Tenancy
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
         public int MaxIdleTimeForTenantDatabaseInSec { get; private set; }
-        
+
         public int FrequencyToCheckForIdleDatabasesInSec { get; private set; }
 
         public DatabasesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
@@ -169,35 +170,35 @@ namespace Raven.Database.Server.Tenancy
                     throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
 
                 hasAcquired = true;
-            database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
-            {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+                {
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-                AssertLicenseParameters(config);
-                var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
+                    AssertLicenseParameters(config);
+                    var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
 
-                documentDatabase.SpinBackgroundWorkers(false);
-                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-                documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+                    documentDatabase.SpinBackgroundWorkers(false);
+                    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+                    documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
                 // register only DB that has incremental backup set.
                 documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                documentDatabase.RequestManager = SystemDatabase.RequestManager;
-                return documentDatabase;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.RanToCompletion) 
-                    OnDatabaseLoaded(tenantId);
-
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    documentDatabase.RequestManager = SystemDatabase.RequestManager;
+                    return documentDatabase;
+                }).ContinueWith(task =>
                 {
-                    Logger.WarnException("Failed to create database " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
+                    if (task.Status == TaskStatus.RanToCompletion)
+                        OnDatabaseLoaded(tenantId);
+
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                {
+                        Logger.WarnException("Failed to create database " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
             }
             finally
             {
@@ -234,17 +235,17 @@ namespace Raven.Database.Server.Tenancy
             if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
             {
                 var compiledIndexCacheDirectory = parentConfiguration.CompiledIndexCacheDirectory;
-                config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
+                config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;
             }
 
             if (config.Settings[Constants.TempPath] == null)
-                config.Settings[Constants.TempPath] = parentConfiguration.TempPath;  
+                config.Settings[Constants.TempPath] = parentConfiguration.TempPath;
 
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForDatabaseTenant(tenantId);
 
-            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;           
+            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
 
             foreach (var setting in document.Settings)
             {
@@ -329,7 +330,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             Authentication.AssertLicensedBundles(config.ActiveBundles);
-                }
+        }
 
         public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)
         {

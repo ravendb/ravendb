@@ -34,7 +34,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 
                 try
                 {
-                waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                    waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException e)
                 {
@@ -44,7 +44,7 @@ namespace Raven.Database.Server.WebApi.Handlers
                 if (tce != null)
                 {
                     Logger.InfoException("Got task canceled exception.", tce);
-                    return await base.SendAsync(request, cancellationToken);
+                    return await base.SendAsync(request, cancellationToken).ConfigureAwait(false); ;
                 }
 
                 if (waiting == false)

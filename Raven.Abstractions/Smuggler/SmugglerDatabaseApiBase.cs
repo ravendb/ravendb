@@ -554,7 +554,7 @@ namespace Raven.Abstractions.Smuggler
                                     continue;
 
                                 if (string.IsNullOrEmpty(Options.TransformScript) == false)
-                                    document = await Operations.TransformDocument(document, Options.TransformScript);
+                                    document = await Operations.TransformDocument(document, Options.TransformScript).ConfigureAwait(false);
 
                                 // If document is null after a transform we skip it. 
                                 if (document == null)
