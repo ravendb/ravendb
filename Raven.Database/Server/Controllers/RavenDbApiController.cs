@@ -36,7 +36,7 @@ namespace Raven.Database.Server.Controllers
         public string DatabaseName { get; private set; }
 
         private string queryFromPostRequest;
-        
+
         public void SetPostRequestQuery(string query)
         {
             queryFromPostRequest = EscapingHelper.UnescapeLongDataString(query);
@@ -134,7 +134,7 @@ namespace Raven.Database.Server.Controllers
 
             var replicationDocument = replicationDestinationsDocument.DataAsJson.JsonDeserialization<ReplicationDocument>();
 
-            if (replicationDocument.Destinations.Count != 0) 
+            if (replicationDocument.Destinations.Count != 0)
                 return replicationDocument;
 
             erroResponseMessage = GetMessageWithObject(new
@@ -190,7 +190,7 @@ namespace Raven.Database.Server.Controllers
 
         public override HttpResponseMessage GetMessageWithString(string msg, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
         {
-            var result =base.GetMessageWithString(msg, code, etag);
+            var result = base.GetMessageWithString(msg, code, etag);
             RequestManager.AddAccessControlHeaders(this, result);
             HandleReplication(result);
             return result;
@@ -260,7 +260,7 @@ namespace Raven.Database.Server.Controllers
             var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length != 2)
                 throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
-            
+
             return new TransactionInformation
             {
                 Id = parts[0],
@@ -321,7 +321,7 @@ namespace Raven.Database.Server.Controllers
             if (!double.TryParse(GetQueryStringValue("distErrPrc"), NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
                 distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
             SpatialRelation spatialRelation;
-            
+
             if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation) && !string.IsNullOrWhiteSpace(queryShape))
             {
                 return new SpatialIndexQuery(query)
@@ -438,7 +438,7 @@ namespace Raven.Database.Server.Controllers
 
                     yield return highlightedField;
                 }
-                else 
+                else
                     throw new BadRequestException("Could not parse highlight query parameter as field highlight options");
             }
         }
@@ -465,7 +465,7 @@ namespace Raven.Database.Server.Controllers
             if (!bool.TryParse(GetQueryStringValue("overwriteExisting"), out result))
             {
                 // Check legacy key.
-                bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);         
+                bool.TryParse(GetQueryStringValue("checkForUpdates"), out result);
             }
 
             return result;
@@ -558,7 +558,7 @@ namespace Raven.Database.Server.Controllers
             var landlord = this.DatabasesLandlord;
 
             if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "<system>")
-            {                
+            {
                 landlord.LastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 
                 args = new RequestWebApiEventArgs
@@ -582,19 +582,19 @@ namespace Raven.Database.Server.Controllers
             }
             catch (Exception e)
             {
-				var cle = e as ConcurrentLoadTimeoutException;
-				string msg;
-				if (cle != null)
-				{
-					msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
-				}
-				else
-				{
-					msg = "Could not open database named: " + tenantId + " " + e.Message;
-				}
+                var cle = e as ConcurrentLoadTimeoutException;
+                string msg;
+                if (cle != null)
+                {
+                    msg = string.Format("The database {0} is currently being loaded, but there are too many requests waiting for database load. Please try again later, database loading continues.", tenantId);
+                }
+                else
+                {
+                    msg = "Could not open database named: " + tenantId + " " + e.Message;
+                }
 
-				Logger.WarnException(msg, e);
-				throw new HttpException(503, msg, e);
+                Logger.WarnException(msg, e);
+                throw new HttpException(503, msg, e);
             }
             if (hasDb)
             {
@@ -641,7 +641,7 @@ namespace Raven.Database.Server.Controllers
                     var msg = "Could not open database named: " + tenantId + Environment.NewLine + e;
 
                     Logger.WarnException(msg, e);
-                    throw new HttpException(503, msg,e);
+                    throw new HttpException(503, msg, e);
                 }
 
                 landlord.LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
@@ -727,7 +727,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     Remark = "Using windows auth",
                     User = windowsPrincipal.Identity.Name,
-                    IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
+                    IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") ||
                                     windowsPrincipal.IsAdministrator(anonymousUserAccessMode)
                 };
 
@@ -743,7 +743,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     Remark = "Using windows auth",
                     User = principalWithDatabaseAccess.Identity.Name,
-                    IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
+                    IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") ||
                                     principalWithDatabaseAccess.IsAdministrator(anonymousUserAccessMode),
                     IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
                     Databases =

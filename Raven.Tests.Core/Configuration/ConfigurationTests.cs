@@ -157,7 +157,7 @@ namespace Raven.Tests.Core.Configuration
             stronglyTypedConfiguration.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
             var configurationComparer = new ConfigurationComparer(inMemoryConfiguration, stronglyTypedConfiguration, propertyPathsToIgnore);
-            configurationComparer.Ignore(x=>x.EnableResponseLoggingForEmbeddedDatabases);
+            configurationComparer.Ignore(x => x.EnableResponseLoggingForEmbeddedDatabases);
             configurationComparer.Ignore(x => x.DynamicMemoryLimitForProcessing);
             configurationComparer.Assert(expected => expected.RejectClientsModeEnabled.Value, actual => actual.RejectClientsMode);
             configurationComparer.Assert(expected => expected.MaxSecondsForTaskToWaitForDatabaseToLoad.Value, actual => actual.MaxSecondsForTaskToWaitForDatabaseToLoad);
@@ -223,7 +223,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.AvailableMemoryForRaisingBatchSizeLimit.Value, actual => actual.AvailableMemoryForRaisingBatchSizeLimit);
             configurationComparer.Assert(expected => expected.MaxProcessingRunLatency.Value, actual => actual.MaxProcessingRunLatency);
             configurationComparer.Assert(expected => expected.DisableClusterDiscovery.Value, actual => actual.DisableClusterDiscovery);
-            configurationComparer.Assert(expected => expected.TurnOffDiscoveryClient.Value, actual => actual.TurnOffDiscoveryClient);            
+            configurationComparer.Assert(expected => expected.TurnOffDiscoveryClient.Value, actual => actual.TurnOffDiscoveryClient);
             configurationComparer.Assert(expected => expected.ServerName.Value, actual => actual.ServerName);
             configurationComparer.Assert(expected => expected.MaxStepsForScript.Value, actual => actual.MaxStepsForScript);
             configurationComparer.Assert(expected => expected.MaxRecentTouchesToRemember.Value, actual => actual.MaxRecentTouchesToRemember);
@@ -355,7 +355,7 @@ namespace Raven.Tests.Core.Configuration
                 {
                     if (property.Name == "ImplicitFetchFieldsFromDocumentMode")
                     {
-                        
+
                     }
                     if (property.PropertyType.IsEnum == false &&
                         property.PropertyType.FullName.StartsWith("System") == false)

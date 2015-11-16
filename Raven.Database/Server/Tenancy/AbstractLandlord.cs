@@ -24,15 +24,15 @@ namespace Raven.Database.Server.Tenancy
     public abstract class AbstractLandlord<TResource> : IDisposable
         where TResource : IDisposable
     {
-	    protected static string DisposingLock = Guid.NewGuid().ToString();
+        protected static string DisposingLock = Guid.NewGuid().ToString();
 
-	    protected readonly SemaphoreSlim ResourceSemaphore;
+        protected readonly SemaphoreSlim ResourceSemaphore;
 
         protected static readonly ILog Logger = LogManager.GetCurrentClassLogger();
-        
+
         protected readonly ConcurrentSet<string> Locks = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		protected readonly ConcurrentDictionary<string, ManualResetEvent> Cleanups = new ConcurrentDictionary<string, ManualResetEvent>(StringComparer.OrdinalIgnoreCase); 
+        protected readonly ConcurrentDictionary<string, ManualResetEvent> Cleanups = new ConcurrentDictionary<string, ManualResetEvent>(StringComparer.OrdinalIgnoreCase);
 
         public readonly AtomicDictionary<Task<TResource>> ResourcesStoresCache =
                 new AtomicDictionary<Task<TResource>>(StringComparer.OrdinalIgnoreCase);
@@ -40,30 +40,30 @@ namespace Raven.Database.Server.Tenancy
         public readonly ConcurrentDictionary<string, DateTime> LastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         public event Action<string> CleanupOccured;
 
-	    protected readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
+        protected readonly ConcurrentDictionary<string, TransportState> ResourseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
-	    public abstract string ResourcePrefix { get; }
+        public abstract string ResourcePrefix { get; }
 
-		protected readonly InMemoryRavenConfiguration systemConfiguration;
-		protected readonly DocumentDatabase systemDatabase;
+        protected readonly InMemoryRavenConfiguration systemConfiguration;
+        protected readonly DocumentDatabase systemDatabase;
 
-	    protected readonly TimeSpan ConcurrentDatabaseLoadTimeout;
+        protected readonly TimeSpan ConcurrentResourceLoadTimeout;
 
-	    protected AbstractLandlord(DocumentDatabase systemDatabase)
-	    {
-			systemConfiguration = systemDatabase.Configuration;
-			this.systemDatabase = systemDatabase;
-			ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.MaxConcurrentDatabaseLoads);
-		    ConcurrentDatabaseLoadTimeout = systemDatabase.Configuration.ConcurrentDatabaseLoadTimeout;
-	    }
+        protected AbstractLandlord(DocumentDatabase systemDatabase)
+        {
+            systemConfiguration = systemDatabase.Configuration;
+            this.systemDatabase = systemDatabase;
+            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.MaxConcurrentResourceLoads);
+            ConcurrentResourceLoadTimeout = systemDatabase.Configuration.ConcurrentResourceLoadTimeout;
+        }
 
-		public int MaxSecondsForTaskToWaitForDatabaseToLoad
-		{
-			get
-			{
-				return systemConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad;
-			}
-		}
+        public int MaxSecondsForTaskToWaitForDatabaseToLoad
+        {
+            get
+            {
+                return systemConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad;
+            }
+        }
 
         public IEnumerable<TransportState> GetUserAllowedTransportStates(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
         {
@@ -75,10 +75,10 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public string[] GetUserAllowedResourcesByPrefix( IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
+        public string[] GetUserAllowedResourcesByPrefix(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
         {
-	        List<string> approvedResources = null;
-	        var nextPageStart = 0;
+            List<string> approvedResources = null;
+            var nextPageStart = 0;
             var resources = systemDatabase.Documents
                 .GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
                 systemDatabase.Configuration.MaxPageSize, CancellationToken.None, ref nextPageStart);
@@ -130,84 +130,84 @@ namespace Raven.Database.Server.Tenancy
                 catch (Exception e)
                 {
                     Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-	                databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
+                    databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
                 }
             }
         }
 
-        public void Cleanup(string resource, 
-			TimeSpan? skipIfActiveInDuration, 
-			Func<TResource,bool> shouldSkip = null,
-			DocumentChangeTypes notificationType = DocumentChangeTypes.None)
+        public void Cleanup(string resource,
+            TimeSpan? skipIfActiveInDuration,
+            Func<TResource, bool> shouldSkip = null,
+            DocumentChangeTypes notificationType = DocumentChangeTypes.None)
         {
-			if(Cleanups.TryAdd(resource, new ManualResetEvent(false)) == false)
-				return;
+            if (Cleanups.TryAdd(resource, new ManualResetEvent(false)) == false)
+                return;
 
-	        try
-	        {
-		        using (ResourcesStoresCache.WithAllLocks())
-		        {
-			        DateTime time;
-			        Task<TResource> resourceTask;
-			        if (ResourcesStoresCache.TryGetValue(resource, out resourceTask) == false)
-			        {
-				        LastRecentlyUsed.TryRemove(resource, out time);
-				        return;
-			        }
-			        if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
-			        {
-				        LastRecentlyUsed.TryRemove(resource, out time);
-				        ResourcesStoresCache.TryRemove(resource, out resourceTask);
-				        return;
-			        }
-			        if (resourceTask.Status != TaskStatus.RanToCompletion)
-			        {
-				        return; // still starting up
-			        }
+            try
+            {
+                using (ResourcesStoresCache.WithAllLocks())
+                {
+                    DateTime time;
+                    Task<TResource> resourceTask;
+                    if (ResourcesStoresCache.TryGetValue(resource, out resourceTask) == false)
+                    {
+                        LastRecentlyUsed.TryRemove(resource, out time);
+                        return;
+                    }
+                    if (resourceTask.Status == TaskStatus.Faulted || resourceTask.Status == TaskStatus.Canceled)
+                    {
+                        LastRecentlyUsed.TryRemove(resource, out time);
+                        ResourcesStoresCache.TryRemove(resource, out resourceTask);
+                        return;
+                    }
+                    if (resourceTask.Status != TaskStatus.RanToCompletion)
+                    {
+                        return; // still starting up
+                    }
 
-			        var database = resourceTask.Result;
-			        if ((skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) ||
-			            (shouldSkip != null && shouldSkip(database)))
-			        {
-				        // this document might not be actively working with user, but it is actively doing indexes, we will 
-				        // wait with unloading this database until it hasn't done indexing for a while.
-				        // This prevent us from shutting down big databases that have been left alone to do indexing work.
-				        return;
-			        }
-			        try
-			        {
-				        database.Dispose();
-			        }
-			        catch (Exception e)
-			        {
-				        Logger.ErrorException("Could not cleanup tenant database: " + resource, e);
-				        return;
-			        }
+                    var database = resourceTask.Result;
+                    if ((skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) ||
+                        (shouldSkip != null && shouldSkip(database)))
+                    {
+                        // this document might not be actively working with user, but it is actively doing indexes, we will 
+                        // wait with unloading this database until it hasn't done indexing for a while.
+                        // This prevent us from shutting down big databases that have been left alone to do indexing work.
+                        return;
+                    }
+                    try
+                    {
+                        database.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.ErrorException("Could not cleanup tenant database: " + resource, e);
+                        return;
+                    }
 
-			        LastRecentlyUsed.TryRemove(resource, out time);
-			        ResourcesStoresCache.TryRemove(resource, out resourceTask);
+                    LastRecentlyUsed.TryRemove(resource, out time);
+                    ResourcesStoresCache.TryRemove(resource, out resourceTask);
 
-			        if (notificationType == DocumentChangeTypes.Delete)
-			        {
-				        TransportState transportState;
-				        ResourseTransportStates.TryRemove(resource, out transportState);
-				        if (transportState != null)
-				        {
-					        transportState.Dispose();
-				        }
-			        }
+                    if (notificationType == DocumentChangeTypes.Delete)
+                    {
+                        TransportState transportState;
+                        ResourseTransportStates.TryRemove(resource, out transportState);
+                        if (transportState != null)
+                        {
+                            transportState.Dispose();
+                        }
+                    }
 
-			        var onResourceCleanupOccured = CleanupOccured;
-			        if (onResourceCleanupOccured != null)
-				        onResourceCleanupOccured(resource);
-		        }
-	        }
-	        finally
-	        {
-		        ManualResetEvent cleanupLock;
-		        if (Cleanups.TryRemove(resource, out cleanupLock))
-			        cleanupLock.Set();
-	        }
+                    var onResourceCleanupOccured = CleanupOccured;
+                    if (onResourceCleanupOccured != null)
+                        onResourceCleanupOccured(resource);
+                }
+            }
+            finally
+            {
+                ManualResetEvent cleanupLock;
+                if (Cleanups.TryRemove(resource, out cleanupLock))
+                    cleanupLock.Set();
+            }
         }
 
         protected abstract DateTime LastWork(TResource resource);
@@ -218,7 +218,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException(tenantId + "' is currently locked and cannot be accessed");
             try
             {
-				Cleanup(tenantId, skipIfActiveInDuration: null);
+                Cleanup(tenantId, skipIfActiveInDuration: null);
                 actionToTake();
             }
             finally
@@ -229,16 +229,16 @@ namespace Raven.Database.Server.Tenancy
 
         public void Dispose()
         {
-	        Locks.TryAdd(DisposingLock);
+            Locks.TryAdd(DisposingLock);
 
             var exceptionAggregator = new ExceptionAggregator(Logger, "Failure to dispose landlord");
-			exceptionAggregator.Execute(() =>
-			{
-				foreach (var databaseTransportState in ResourseTransportStates)
-				{
-					databaseTransportState.Value.Dispose();
-				}
-			});
+            exceptionAggregator.Execute(() =>
+            {
+                foreach (var databaseTransportState in ResourseTransportStates)
+                {
+                    databaseTransportState.Value.Dispose();
+                }
+            });
 
             // shut down all databases in parallel, avoid having to wait for each one
             Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
@@ -268,14 +268,14 @@ namespace Raven.Database.Server.Tenancy
             });
             ResourcesStoresCache.Clear();
 
-	        try
-	        {
-		        ResourceSemaphore.Dispose();
-	        }
-	        catch (Exception e)
-	        {
-		        Logger.WarnException("Failed to dispose resource semaphore",e);
-	        }
+            try
+            {
+                ResourceSemaphore.Dispose();
+            }
+            catch (Exception e)
+            {
+                Logger.WarnException("Failed to dispose resource semaphore", e);
+            }
         }
     }
 }
