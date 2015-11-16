@@ -26,54 +26,54 @@ namespace Raven.Database.Server.Tenancy
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
-	    private bool initialized;
+        private bool initialized;
         private const string DATABASES_PREFIX = "Raven/Databases/";
         public override string ResourcePrefix { get { return DATABASES_PREFIX; } }
 
-		public int MaxIdleTimeForTenantDatabaseInSec { get; private set; }
-		
-		public int FrequencyToCheckForIdleDatabasesInSec { get; private set; }
+        public int MaxIdleTimeForTenantDatabaseInSec { get; private set; }
+        
+        public int FrequencyToCheckForIdleDatabasesInSec { get; private set; }
 
         public DatabasesLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
-			int val;
-			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
-				val = 900;
+            int val;
+            if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+                val = 900;
 
-	        MaxIdleTimeForTenantDatabaseInSec = val;
+            MaxIdleTimeForTenantDatabaseInSec = val;
 
-			if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
-				val = 60;
+            if (int.TryParse(SystemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
+                val = 60;
 
-	        FrequencyToCheckForIdleDatabasesInSec = val;
+            FrequencyToCheckForIdleDatabasesInSec = val;
 
-			string tempPath = Path.GetTempPath();
-			var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
-	        if (File.Exists(fullTempPath))
-	        {
-		        try
-		        {
-			        File.Delete(fullTempPath);
-		        }
-		        catch (Exception)
-		        {
-			        // we ignore this issue, nothing to do now, and we'll only see
-					// this as an error if there are actually uploads
-		        }
-	        }
-	        if (Directory.Exists(fullTempPath))
-	        {
-		        try
-		        {
-			        Directory.Delete(fullTempPath, true);
-		        }
-		        catch (Exception)
-		        {
-			        // there is nothing that we can do here, and it is possible that we have
-					// another database doing uploads for the same user, so we'll just 
-					// not any cleanup. Worst case, we'll waste some memory.
-		        }
-	        }
+            string tempPath = Path.GetTempPath();
+            var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
+            if (File.Exists(fullTempPath))
+            {
+                try
+                {
+                    File.Delete(fullTempPath);
+                }
+                catch (Exception)
+                {
+                    // we ignore this issue, nothing to do now, and we'll only see
+                    // this as an error if there are actually uploads
+                }
+            }
+            if (Directory.Exists(fullTempPath))
+            {
+                try
+                {
+                    Directory.Delete(fullTempPath, true);
+                }
+                catch (Exception)
+                {
+                    // there is nothing that we can do here, and it is possible that we have
+                    // another database doing uploads for the same user, so we'll just 
+                    // not any cleanup. Worst case, we'll waste some memory.
+                }
+            }
 
             Init();
         }
@@ -92,14 +92,14 @@ namespace Raven.Database.Server.Tenancy
         {
             if (string.IsNullOrWhiteSpace(tenantId) || tenantId.Equals("<system>", StringComparison.OrdinalIgnoreCase))
                 return systemConfiguration;
-			var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledDatabase);
+            var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledDatabase);
             if (document == null)
                 return null;
 
             return CreateConfiguration(tenantId, document, "Raven/DataDir", systemConfiguration);
         }
 
-		private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
+        private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
@@ -114,7 +114,7 @@ namespace Raven.Database.Server.Tenancy
             if (document.Settings["Raven/DataDir"] == null)
                 throw new InvalidOperationException("Could not find Raven/DataDir");
 
-			if (document.Disabled && !ignoreDisabledDatabase)
+            if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
 
             return document;
@@ -122,95 +122,95 @@ namespace Raven.Database.Server.Tenancy
 
         public async Task<DocumentDatabase> GetDatabaseInternal(string name)
         {
-	        if (string.Equals("<system>", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
-		        return systemDatabase;
-	        Task<DocumentDatabase> db;
-	        if (TryGetOrCreateResourceStore(name, out db))
-		        return await db;
-	        return null;
+            if (string.Equals("<system>", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
+                return systemDatabase;
+            Task<DocumentDatabase> db;
+            if (TryGetOrCreateResourceStore(name, out db))
+                return await db;
+            return null;
         }
 
-	    public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
+        public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
-			if (Locks.Contains(DisposingLock))
-				throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
+            if (Locks.Contains(DisposingLock))
+                throw new ObjectDisposedException("DatabaseLandlord","Server is shutting down, can't access any databases");
 
-			if (Locks.Contains(tenantId))
-				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
+            if (Locks.Contains(tenantId))
+                throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed.");
 
-	        ManualResetEvent cleanupLock;
-			if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad * 1000) == false)
-				throw new InvalidOperationException(string.Format("Database '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
+            ManualResetEvent cleanupLock;
+            if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxSecondsForTaskToWaitForDatabaseToLoad * 1000) == false)
+                throw new InvalidOperationException(string.Format("Database '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxSecondsForTaskToWaitForDatabaseToLoad));
 
-	        if (ResourcesStoresCache.TryGetValue(tenantId, out database))
-	        {
-		        if (database.IsFaulted || database.IsCanceled)
-		        {
-			        ResourcesStoresCache.TryRemove(tenantId, out database);
-			        DateTime time;
-			        LastRecentlyUsed.TryRemove(tenantId, out time);
-			        // and now we will try creating it again
-		        }
-		        else
-		        {
-			        return true;
-		        }
-	        }
+            if (ResourcesStoresCache.TryGetValue(tenantId, out database))
+            {
+                if (database.IsFaulted || database.IsCanceled)
+                {
+                    ResourcesStoresCache.TryRemove(tenantId, out database);
+                    DateTime time;
+                    LastRecentlyUsed.TryRemove(tenantId, out time);
+                    // and now we will try creating it again
+                }
+                else
+                {
+                    return true;
+                }
+            }
 
-	        var config = CreateTenantConfiguration(tenantId);
+            var config = CreateTenantConfiguration(tenantId);
             if (config == null)
                 return false;
 
-		    var hasAcquired = false;
-		    try
-		    {
-			    if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
-					throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
+            var hasAcquired = false;
+            try
+            {
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
 
-				hasAcquired = true;
-			    database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
-			    {
+                hasAcquired = true;
+                database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+                {
                 var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
-				    AssertLicenseParameters(config);
-				    var documentDatabase = new DocumentDatabase(config, transportState);
+                    AssertLicenseParameters(config);
+                    var documentDatabase = new DocumentDatabase(config, transportState);
 
                 documentDatabase.SpinBackgroundWorkers(false);
                 documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
                 documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
                 documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
                 // register only DB that has incremental backup set.
-				    documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
+                    documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
-				    // if we have a very long init process, make sure that we reset the last idle time for this db.
-				    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-				    return documentDatabase;
-			    }).ContinueWith(task =>
-			    {
-				    if (task.Status == TaskStatus.Faulted) // this observes the task exception
-				    {
-					    Logger.WarnException("Failed to create database " + tenantId, task.Exception);
-				    }
-				    return task;
-			    }).Unwrap());
-		    }
-		    finally
-		    {
-			    if (hasAcquired)
-				    ResourceSemaphore.Release();
-		    }
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    return documentDatabase;
+                }).ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        Logger.WarnException("Failed to create database " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
 
             if (database.IsFaulted && database.Exception != null)
-			{
-				// if we are here, there is an error, and if there is an error, we need to clear it from the 
-				// resource store cache so we can try to reload it.
-				// Note that we return the faulted task anyway, because we need the user to look at the error
-				if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
-				{
-					Task<DocumentDatabase> val;
-					ResourcesStoresCache.TryRemove(tenantId, out val);
-				}
-			}
+            {
+                // if we are here, there is an error, and if there is an error, we need to clear it from the 
+                // resource store cache so we can try to reload it.
+                // Note that we return the faulted task anyway, because we need the user to look at the error
+                if (database.Exception.Data.Contains("Raven/KeepInResourceStore") == false)
+                {
+                    Task<DocumentDatabase> val;
+                    ResourcesStoresCache.TryRemove(tenantId, out val);
+                }
+            }
 
             return true;
         }
@@ -226,11 +226,11 @@ namespace Raven.Database.Server.Tenancy
                 Settings = new NameValueCollection(parentConfiguration.Settings),
             };
 
-	        if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
-	        {
-				var compiledIndexCacheDirectory = parentConfiguration.CompiledIndexCacheDirectory;
-				config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
-	        }
+            if (config.Settings["Raven/CompiledIndexCacheDirectory"] == null)
+            {
+                var compiledIndexCacheDirectory = parentConfiguration.CompiledIndexCacheDirectory;
+                config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;  
+            }
 
             SetupTenantConfiguration(config);
 
@@ -249,7 +249,7 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings[securedSetting.Key] = securedSetting.Value;
             }
 
-			config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
 
             config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
             config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
@@ -397,7 +397,7 @@ namespace Raven.Database.Server.Tenancy
                     return;
                 var dbName = notification.Id.Substring(ravenDbPrefix.Length);
                 Logger.Info("Shutting down database {0} because the tenant database has been updated or removed", dbName);
-				Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
+                Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 
@@ -413,81 +413,81 @@ namespace Raven.Database.Server.Tenancy
             return dbTask != null && dbTask.Status == TaskStatus.RanToCompletion;
         }
 
-		private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
-		{
-			try
-			{
-				var database = documentDatabase as DocumentDatabase;
-				if (database == null)
-				{
-					return;
-				}
+        private void DocumentDatabaseDisposingStarted(object documentDatabase, EventArgs args)
+        {
+            try
+            {
+                var database = documentDatabase as DocumentDatabase;
+                if (database == null)
+                {
+                    return;
+                }
 
-				ResourcesStoresCache.Set(database.Name, (dbName) =>
-				{
-					var tcs = new TaskCompletionSource<DocumentDatabase>();
-					tcs.SetException(new ObjectDisposedException(database.Name, "Database named " + database.Name + " is being disposed right now and cannot be accessed.\r\n" +
-																 "Access will be available when the dispose process will end")
-					{
-						Data =
-						{
-							{"Raven/KeepInResourceStore", "true"}
-						}
-					});
-					// we need to observe this task exception in case no one is actually looking at it during disposal
-					GC.KeepAlive(tcs.Task.Exception);
-					return tcs.Task;
-				});
-			}
-			catch (Exception ex)
-			{
-				Logger.WarnException("Failed to substitute database task with temporary place holder. This should not happen", ex);
-			}
-		}
+                ResourcesStoresCache.Set(database.Name, (dbName) =>
+                {
+                    var tcs = new TaskCompletionSource<DocumentDatabase>();
+                    tcs.SetException(new ObjectDisposedException(database.Name, "Database named " + database.Name + " is being disposed right now and cannot be accessed.\r\n" +
+                                                                 "Access will be available when the dispose process will end")
+                    {
+                        Data =
+                        {
+                            {"Raven/KeepInResourceStore", "true"}
+                        }
+                    });
+                    // we need to observe this task exception in case no one is actually looking at it during disposal
+                    GC.KeepAlive(tcs.Task.Exception);
+                    return tcs.Task;
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.WarnException("Failed to substitute database task with temporary place holder. This should not happen", ex);
+            }
+        }
 
-		private void DocumentDatabaseDisposingEnded(object documentDatabase, EventArgs args)
-		{
-			try
-			{
-				var database = documentDatabase as DocumentDatabase;
-				if (database == null)
-				{
-					return;
-				}
+        private void DocumentDatabaseDisposingEnded(object documentDatabase, EventArgs args)
+        {
+            try
+            {
+                var database = documentDatabase as DocumentDatabase;
+                if (database == null)
+                {
+                    return;
+                }
 
-				ResourcesStoresCache.Remove(database.Name);
-			}
-			catch (Exception ex)
-			{
-				Logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
-			}
-		}
+                ResourcesStoresCache.Remove(database.Name);
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorException("Failed to remove database at the end of the disposal. This should not happen", ex);
+            }
+        }
 
-		private void UnloadDatabaseOnStorageInaccessible(object documentDatabase, EventArgs eventArgs)
-		{
-			try
-			{
-				var database = documentDatabase as DocumentDatabase;
-				if (database == null)
-				{
-					return;
-				}
+        private void UnloadDatabaseOnStorageInaccessible(object documentDatabase, EventArgs eventArgs)
+        {
+            try
+            {
+                var database = documentDatabase as DocumentDatabase;
+                if (database == null)
+                {
+                    return;
+                }
 
-				Task.Run(() =>
-				{
-					Thread.Sleep(2000); // let the exception thrown by the storage to be propagated into the client
+                Task.Run(() =>
+                {
+                    Thread.Sleep(2000); // let the exception thrown by the storage to be propagated into the client
 
-					Logger.Warn("Shutting down database {0} because its storage has become inaccessible", database.Name);
+                    Logger.Warn("Shutting down database {0} because its storage has become inaccessible", database.Name);
 
-					Cleanup(database.Name, skipIfActiveInDuration: null, shouldSkip: x => false);
-				});
+                    Cleanup(database.Name, skipIfActiveInDuration: null, shouldSkip: x => false);
+                });
 
-			}
-			catch (Exception ex)
-			{
-				Logger.ErrorException("Failed to cleanup database that storage is inaccessible. This should not happen", ex);
-			}
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorException("Failed to cleanup database that storage is inaccessible. This should not happen", ex);
+            }
 
-		}
+        }
     }
 }
