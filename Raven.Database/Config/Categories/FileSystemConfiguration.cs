@@ -28,10 +28,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/FileSystem/MaximumSynchronizationInterval")]
         public TimeSetting MaximumSynchronizationInterval { get; set; }
 
-        /// <summary>
-        /// The directory for the RavenDB file system. 
-        /// You can use the ~\ prefix to refer to RavenDB's base directory. 
-        /// </summary>
+        [Description("The directory for the RavenDB file system. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
         [DefaultValue(@"~\FileSystems")]
         [ConfigurationEntry("Raven/FileSystem/DataDir")]
         public string DataDirectory

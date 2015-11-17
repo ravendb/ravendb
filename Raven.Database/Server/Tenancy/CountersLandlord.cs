@@ -97,10 +97,8 @@ namespace Raven.Database.Server.Tenancy
                 config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            //TODO arek - verify that
             config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Counter.DataDirectory));
             config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath),config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
-            config.SetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
 
             config.CounterStorageName = tenantId;
 

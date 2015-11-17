@@ -13,9 +13,17 @@ namespace Raven.Database.Config.Categories
             TokenServer = serverUrl.EndsWith("/") ? serverUrl + "OAuth/API-Key" : serverUrl + "/OAuth/API-Key";
         }
 
+        [Description("The url clients should use for authenticating when using OAuth mode.\r\nDefault: http://RavenDB-Server-Url/OAuth/API-Key - the internal OAuth server")]
         [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Raven/OAuth/TokenServer")]
         [ConfigurationEntry("Raven/OAuthTokenServer")]
         public string TokenServer { get; set; }
+
+        [Description("The base 64 to the OAuth key use to communicate with the server. If no key is specified, one will be automatically created.\r\nDefault: none. ")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/OAuth/TokenCertificate")]
+        [ConfigurationEntry("Raven/OAuthTokenCertificate")]
+        public string TokenCertificate { get; set; }
 
         public bool UseDefaultTokenServer { get; private set; }
 
@@ -28,7 +36,7 @@ namespace Raven.Database.Config.Categories
         {
             base.Initialize(settings);
 
-            TokenKey = GetOAuthKey(settings);
+            TokenKey = GetOAuthKey();
             UseDefaultTokenServer = settings[RavenConfiguration.GetKey(x => x.OAuth.TokenServer)] == null;
         }
 
@@ -40,12 +48,11 @@ namespace Raven.Database.Config.Categories
             }
         });
 
-        private byte[] GetOAuthKey(NameValueCollection settings)
+        private byte[] GetOAuthKey()
         {
-            var key = settings["Raven/OAuthTokenCertificate"];
-            if (string.IsNullOrEmpty(key) == false)
+            if (string.IsNullOrEmpty(TokenCertificate) == false)
             {
-                return Convert.FromBase64String(key);
+                return Convert.FromBase64String(TokenCertificate);
             }
             return DefaultOauthKey.Value; // ensure we only create this once per process
         }

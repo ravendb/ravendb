@@ -247,9 +247,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Core.DataDirectory));
-            
             config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
-            config.SetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory), config.GetSetting(RavenConfiguration.GetKey(x => x.Core.VirtualDirectory)));
 
             config.DatabaseName = tenantId;
             config.IsTenantDatabase = true;

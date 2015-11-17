@@ -17,10 +17,7 @@ namespace Raven.Database.Config.Categories
 
         private string countersDataDirectory;
 
-        /// <summary>
-        /// The directory for the RavenDB counters. 
-        /// You can use the ~\ prefix to refer to RavenDB's base directory. 
-        /// </summary>
+        [Description("The directory for the RavenDB counters. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
         [DefaultValue(@"~\Counters")]
         [ConfigurationEntry("Raven/Counter/DataDir")]
         [ConfigurationEntry("Raven/Counters/DataDir")]
@@ -30,10 +27,7 @@ namespace Raven.Database.Config.Categories
             set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(coreConfiguration.WorkingDirectory, value); }
         }
 
-        /// <summary>
-        /// Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically
-        /// Purged on next counter storage startup. Default: 14 days.
-        /// </summary>
+        [Description("Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically purged on next counter storage startup.")]
         [DefaultValue(14)]
         [TimeUnit(TimeUnit.Days)]
         [ConfigurationEntry("Raven/Counter/TombstoneRetentionTimeInDays")]
