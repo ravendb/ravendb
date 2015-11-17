@@ -179,7 +179,7 @@ namespace Raven.Tests.Common
                     DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
                     Port = previousServer.SystemDatabase.Configuration.Core.Port,
                     AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-                    ActiveBundlesStringValue = "replication"
+                    _ActiveBundlesString = "replication"
                 }
             };
 

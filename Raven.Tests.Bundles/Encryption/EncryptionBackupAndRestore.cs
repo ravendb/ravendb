@@ -35,7 +35,7 @@ namespace Raven.Tests.Bundles.Encryption
                     Settings = new Dictionary<string, string>
                     {
                         {"Raven/DataDir", @"~\Databases\Db1"},
-                        { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"}
+                        { RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"}
                     },
                     SecuredSettings = new Dictionary<string, string>
                     {

@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
     {
         protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "ScriptedIndexResults";
+            configuration.Core._ActiveBundlesString = "ScriptedIndexResults";
         }
 
         public class Developer

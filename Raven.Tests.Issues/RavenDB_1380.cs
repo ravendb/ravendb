@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
 
         protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "replication";
+            configuration.Core._ActiveBundlesString = "replication";
         }
     }
 }

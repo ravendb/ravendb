@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
     {
         protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "ScriptedIndexResults";
+            configuration.Core._ActiveBundlesString = "ScriptedIndexResults";
         }
 
         private class People_By_Name_Different : AbstractIndexCreationTask<Person>

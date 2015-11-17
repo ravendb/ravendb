@@ -39,7 +39,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/NewIndexInMemoryMaxTime")]
         public TimeSetting NewIndexInMemoryMaxTime { get; set; }
 
-        [Description("New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale")]
+        [Description("The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing.")]
         [DefaultValue(64)]
         [MinValue(1)]
         [SizeUnit(SizeUnit.Megabytes)]
@@ -86,24 +86,28 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/MinIndexingTimeIntervalToStoreCommitPoint")]
         public TimeSetting MinIndexingIntervalToStoreCommitPoint { get; set; }
 
+        [Description("How long the database should be idle for before updating low priority indexes.")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningIdleIndexesInMin")]
         [ConfigurationEntry("Raven/TimeToWaitBeforeRunningIdleIndexes")]
         public TimeSetting TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
 
+        [Description("How long the database should wait before marking an index with the idle flag")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
         [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle")]
         public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; set; }
 
+        [Description("How long the database should wait before marking an index with the abandoned flag")]
         [DefaultValue(72)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingIdleIndexAsAbandonedInHrs")]
         [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned")]
         public TimeSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; set; }
 
+        [Description("How long the database should be idle for before updating abandoned indexes")]
         [DefaultValue(3)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningAbandonedIndexesInHrs")]

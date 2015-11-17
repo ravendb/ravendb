@@ -434,6 +434,8 @@ namespace Raven.Database.Config
                     yield return builder.ToString();
                 }
             }
+
+            yield return "Raven/LimitIndexesCapabilities\r\nType: bool\r\nDefault: false\r\nControl whatever RavenDB limits what the indexes can do (to avoid potentially destabilizing operations)";
         }
 
         public void SetSetting(string key, string value)

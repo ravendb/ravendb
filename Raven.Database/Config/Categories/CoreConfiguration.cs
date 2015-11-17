@@ -53,13 +53,14 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/MaxPageSize")]
         public int MaxPageSize { get; set; }
 
+        [Description("What is the suggested max latency for a single processing run that allows the database to increase the processing batch size")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/MaxProcessingRunLatency")]
         [ConfigurationEntry("Raven/MaxIndexingRunLatency")]
         public TimeSetting MaxProcessingRunLatency { get; set; }
 
-        [Description("Max number of items to take for indexing in a batch")]
+        [Description("The max number of items that will be processed in a single batch. Larger batch size result in faster processing, but higher memory usage.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [MinValue(128)]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToProcessInSingleBatch")]
@@ -169,7 +170,12 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/WebDir")]
         public string WebDir { get; set; }
 
-        [Description("Where to look for plugins for RavenDB")]
+        [Description("Allow to limit the loaded plugins by specifying a search pattern, such as Raven.*.dll. Multiple values can be specified, separated by a semi column (;).")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/BundlesSearchPattern")]
+        public string BundlesSearchPattern { get; set; }
+
+        [Description("The location of the plugins directory for RavenDB")]
         [DefaultValue(@"~\Plugins")]
         [ConfigurationEntry("Raven/PluginsDirectory")]
         public string PluginsDirectory
@@ -196,7 +202,7 @@ namespace Raven.Database.Config.Categories
                 // add new one
                 if (Directory.Exists(pluginsDirectory))
                 {
-                    var patterns = parent.GetSetting("Raven/BundlesSearchPattern") ?? "*.dll";
+                    var patterns = BundlesSearchPattern ?? "*.dll";
                     foreach (var pattern in patterns.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
                     {
                         parent.Catalog.Catalogs.Add(new BuiltinFilteringCatalog(new DirectoryCatalog(pluginsDirectory, pattern)));
@@ -244,20 +250,26 @@ namespace Raven.Database.Config.Categories
             }
         }
 
+        [Description("The TaskScheduler type to use for executing indexing. Provided as assembly qualified type name.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/TaskScheduler")]
         public string TaskScheduler { get; set; }
+        
+        [Description("The number of items that will be processed in a single batch. Larger batch size result in faster processing, but higher memory usage.\r\nDefault: 512 or 256 depending on CPU architecture")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/InitialNumberOfItemsToProcessInSingleBatch")]
+        [ConfigurationEntry("Raven/InitialNumberOfItemsToIndexInSingleBatch")]
+        // ReSharper disable once InconsistentNaming
+        public int? _InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
-        /// <summary>
-        /// The initial number of items to take when processing a batch
-        /// Default: 512 or 256 depending on CPU architecture
-        /// </summary>
         public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
-        /// <summary>
-        /// The initial number of items to take when reducing a batch
-        /// Default: 256 or 128 depending on CPU architecture
-        /// </summary>
+        [Description("The initial number of items to take when reducing a batch.\r\nDefault: 256 or 128 depending on CPU architecture")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/InitialNumberOfItemsToReduceInSingleBatch")]
+        // ReSharper disable once InconsistentNaming
+        public int? _InitialNumberOfItemsToReduceInSingleBatch { get; set; }
+
         public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
         [Description("If set all client request to the server will be rejected with the http 503 response. Other servers or the studio could still access the server.")]
@@ -338,13 +350,15 @@ namespace Raven.Database.Config.Categories
         [Description("Semicolon separated list of headers that server should ignore. e.g. Header-To-Ignore-1;Header-To-Ignore-2")]
         [DefaultValue("")]
         [ConfigurationEntry("Raven/Headers/Ignore")]
-        public string HeadersToIgnoreStringValue { get; set; }
+        // ReSharper disable once InconsistentNaming
+        public string _HeadersToIgnoreString { get; set; }
 
+        [Description("Semicolon separated list of bundles names, such as: 'Replication;Versioning'. If the value is not specified, none of the bundles are installed.")]
         [DefaultValue("")]
         [ConfigurationEntry("Raven/ActiveBundles")]
-        public string ActiveBundlesStringValue { get; set; }
+        public string _ActiveBundlesString { get; set; }
 
-        public IEnumerable<string> ActiveBundles => BundlesHelper.ProcessActiveBundles(ActiveBundlesStringValue)
+        public IEnumerable<string> ActiveBundles => BundlesHelper.ProcessActiveBundles(_ActiveBundlesString)
             .GetSemicolonSeparatedValues()
             .Distinct();
 
@@ -353,11 +367,10 @@ namespace Raven.Database.Config.Categories
         public override void Initialize(NameValueCollection settings)
         {
             base.Initialize(settings);
-
-            var initialNumberOfItemsToIndexInSingleBatch = settings["Raven/InitialNumberOfItemsToProcessInSingleBatch"] ?? settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
-            if (initialNumberOfItemsToIndexInSingleBatch != null)
+            
+            if (_InitialNumberOfItemsToProcessInSingleBatch != null)
             {
-                InitialNumberOfItemsToProcessInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch), MaxNumberOfItemsToProcessInSingleBatch);
+                InitialNumberOfItemsToProcessInSingleBatch = Math.Min(_InitialNumberOfItemsToProcessInSingleBatch.Value, MaxNumberOfItemsToProcessInSingleBatch);
             }
             else
             {
@@ -365,12 +378,10 @@ namespace Raven.Database.Config.Categories
                     defaultInitialNumberOfItemsToProcessInSingleBatch :
                     Math.Max(16, Math.Min(MaxNumberOfItemsToProcessInSingleBatch / 256, defaultInitialNumberOfItemsToProcessInSingleBatch));
             }
-
-            var initialNumberOfItemsToReduceInSingleBatch = settings["Raven/InitialNumberOfItemsToReduceInSingleBatch"];
-            if (initialNumberOfItemsToReduceInSingleBatch != null)
+            
+            if (_InitialNumberOfItemsToReduceInSingleBatch != null)
             {
-                InitialNumberOfItemsToReduceInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToReduceInSingleBatch),
-                    MaxNumberOfItemsToReduceInSingleBatch);
+                InitialNumberOfItemsToReduceInSingleBatch = Math.Min(_InitialNumberOfItemsToReduceInSingleBatch.Value, MaxNumberOfItemsToReduceInSingleBatch);
             }
             else
             {
@@ -390,7 +401,7 @@ namespace Raven.Database.Config.Categories
                 parent.CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
             }
 
-            HeadersToIgnore = new HashSet<string>(HeadersToIgnoreStringValue.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
+            HeadersToIgnore = new HashSet<string>(_HeadersToIgnoreString.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
         }
 
         private string GetDefaultVirtualDirectory()

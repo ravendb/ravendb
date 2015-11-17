@@ -19,7 +19,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Stati
 
         protected override OctetString GetData(DocumentDatabase database)
         {
-            return new OctetString(database.Configuration.Core.ActiveBundlesStringValue);
+            return new OctetString(database.Configuration.Core._ActiveBundlesString);
         }
     }
 }

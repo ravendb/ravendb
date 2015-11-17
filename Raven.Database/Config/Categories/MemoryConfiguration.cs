@@ -21,7 +21,8 @@ namespace Raven.Database.Config.Categories
             AvailableMemoryForRaisingBatchSizeLimit = Size.Min(new Size(768, SizeUnit.Megabytes), MemoryStatistics.TotalPhysicalMemory / 2);
         }
 
-        [Description("Limit of how much memory a batch processing can take")]
+        [Description("Maximum number of megabytes that can be used by database to control the maximum size of the processing batches.\r\n" +
+                     "Default: 1024 or 75% percent of available memory if 1GB is not available.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Memory/LimitForProcessingInMB")]
@@ -84,6 +85,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/MemoryCacheLimitCheckInterval")]
         public TimeSetting MemoryCacheLimitCheckInterval { get; set; }
 
+        [Description("The minimum amount of memory available for us to double the size of Raven/InitialNumberOfItemsToProcessInSingleBatch if we need to.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Memory/AvailableMemoryForRaisingBatchSizeLimitInMB")]

@@ -79,6 +79,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/AccessControlRequestHeaders")]
         public string AccessControlRequestHeaders { get; set; }
 
+        [Description("The url to redirect the user to when then try to access the local studio")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Server/RedirectStudioUrl")]
         [ConfigurationEntry("Raven/RedirectStudioUrl")]

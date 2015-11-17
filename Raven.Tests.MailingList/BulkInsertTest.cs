@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 
         protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "Versioning";
+            configuration.Core._ActiveBundlesString = "Versioning";
         }
 
         [Fact]

@@ -13,10 +13,12 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Quotas/Documents/SoftLimit")]
         public long DocsSoftLimit { get; set; }
 
+        [Description("The hard limit after which we refuse any additional writes")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Quotas/Size/HardLimitInKB")]
         public string SizeHardLimit { get; set; }
 
+        [Description("The soft limit before which we will warn about the quota")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Quotas/Size/SoftMarginInKB")]
         public string SizeSoftLimit { get; set; }

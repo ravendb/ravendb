@@ -32,7 +32,7 @@ namespace Raven.Database.TimeSeries.Controllers
                     var settings = ts.Value<RavenJObject>("Settings");
                     if (settings != null)
                     {
-                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue));
+                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString));
                         if (activeBundles != null)
                         {
                             bundles = activeBundles.Split(';');

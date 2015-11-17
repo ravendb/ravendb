@@ -395,6 +395,19 @@ namespace Raven.Tests.Core.Configuration
             }
         }
 
+        [Fact]
+        public void InitialNumberOfItemsToProcessTest()
+        {
+            var sut = new RavenConfiguration();
+
+            sut.SetSetting(RavenConfiguration.GetKey(x => x.Core._InitialNumberOfItemsToProcessInSingleBatch), "10");
+            sut.SetSetting(RavenConfiguration.GetKey(x => x.Core._InitialNumberOfItemsToReduceInSingleBatch), "3");
+            sut.Initialize();
+
+            Assert.Equal(10, sut.Core.InitialNumberOfItemsToProcessInSingleBatch);
+            Assert.Equal(3, sut.Core.InitialNumberOfItemsToReduceInSingleBatch);
+        }
+
         private List<ConfigurationItem> GetConfigurationItems(RavenConfiguration ravenConfiguration)
         {
             var result = new List<ConfigurationItem>();
