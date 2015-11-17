@@ -1,3 +1,24 @@
+function GetGitDirectory
+{
+    $path = "C:\Program Files\Git"
+    if (Test-Path $path) 
+    {
+        return $path
+    }
+    
+    $path = "C:\Program Files (x86)\Git"
+    if (Test-Path $path) 
+    {
+        return $path
+    }
+    
+    $path = "$env:USERPROFILE\AppData\Local\Programs\Git"
+    if (Test-Path $path) 
+    {
+        return $path
+    }
+}
+
 $path = split-path -parent $MyInvocation.MyCommand.Definition
 
 if (($args.Count -gt 0) -and ($args[0] -eq "force"))
@@ -20,18 +41,16 @@ else
     $result = $host.ui.PromptForChoice($title, $message, $options, 1) 
 }
 
-$gitPath = "C:\Program Files\Git\bin\git.exe";
-If (Test-Path $gitPath) {
-} else {
-    $gitPath = "C:\Program Files (x86)\Git\bin\git.exe";
-}
+$gitDirectory = GetGitDirectory
+$gitPath = "$gitDirectory\bin\git.exe"
+
 
 switch ($result)
-    {
-        0 {
-            Write-Host "Performing cleanup"
-            Get-ChildItem $path -Include bin,obj,build -Recurse -Force | Select -ExpandProperty FullName | Where {$_ -notlike '*Imports*' -and $_ -notlike '*pvc-packages*'} | Remove-Item -Force -Recurse
-            &$gitPath clean -f -x -d
-        }
-        1 { return; }
+{
+    0 {
+        Write-Host "Performing cleanup"
+        Get-ChildItem $path -Include bin,obj,build -Recurse -Force | Select -ExpandProperty FullName | Where {$_ -notlike '*Imports*' -and $_ -notlike '*pvc-packages*'} | Remove-Item -Force -Recurse
+        &$gitPath clean -f -x -d
     }
+    1 { return; }
+}
