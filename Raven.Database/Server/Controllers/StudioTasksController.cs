@@ -66,10 +66,10 @@ namespace Raven.Database.Server.Controllers
                 IsGlobalAdmin = userInfo.IsAdminGlobal,
                 CanReadWriteSettings = userInfo.IsAdminGlobal ||
                                        (userInfo.ReadWriteDatabases != null && 
-                                        userInfo.ReadWriteDatabases.Any(x => x.Equals("<system>", StringComparison.InvariantCultureIgnoreCase))),
+                                        userInfo.ReadWriteDatabases.Any(x => x.Equals(Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))),
                 CanReadSettings = userInfo.IsAdminGlobal ||
                                   (userInfo.ReadOnlyDatabases != null &&
-                                   userInfo.ReadOnlyDatabases.Any(x => x.Equals("<system>", StringComparison.InvariantCultureIgnoreCase))),
+                                   userInfo.ReadOnlyDatabases.Any(x => x.Equals(Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))),
                 CanExposeConfigOverTheWire = CanExposeConfigOverTheWire()
             };
 
