@@ -87,6 +87,22 @@ namespace Raven.Database.Prefetching
             }
         }
 
+        public bool TryPeekLastDocument(out JsonDocument result)
+        {
+            try
+            {
+                slim.EnterReadLock();
+
+                result = innerList.Values.LastOrDefault();
+
+                return result != null;
+            }
+            finally
+            {
+                slim.ExitReadLock();
+            }
+        }
+
         public bool TryDequeue(out JsonDocument result)
         {
             try
@@ -112,7 +128,6 @@ namespace Raven.Database.Prefetching
             JsonDocument result;
             return TryPeek(out result) == false ? null : result.Etag;
         }
-
 
         public int LoadedSize
         {
