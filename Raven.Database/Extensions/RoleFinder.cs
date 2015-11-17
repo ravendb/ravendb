@@ -226,7 +226,7 @@ namespace Raven.Database.Extensions
 
         public static bool IsAdministrator(this IPrincipal principal, DocumentDatabase database)
         {
-            var name = database.Name ?? "<system>";
+            var name = database.Name ?? Constants.SystemDatabase;
             return IsAdministrator(principal, name);
         }
 
@@ -262,11 +262,6 @@ namespace Raven.Database.Extensions
                 }
             }
 
-            var oneTimeTokenPrincipal = principal as OneTimeTokenPrincipal;
-            if (oneTimeTokenPrincipal != null)
-            {
-                //if (oneTimeTokenPrincipal.IsAdministratorInAnonymouseMode)
-            }
             return false;
         }
     }

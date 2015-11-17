@@ -67,8 +67,7 @@ namespace Raven.Database.Prefetching
             string prefetchingUserDescription, 
             bool isDefault = false,
             Func<int> getPrefetchintBehavioursCount = null,
-            Func<PrefetchingSummary> getPrefetcherSummary = null,
-            Func<bool> isDefaultBusy = null)
+            Func<PrefetchingSummary> getPrefetcherSummary = null)
         {
             this.context = context;
             this.autoTuner = autoTuner;
@@ -77,7 +76,6 @@ namespace Raven.Database.Prefetching
             this.IsDefault = isDefault;
             this.getPrefetchintBehavioursCount = getPrefetchintBehavioursCount ?? (() => 1);
             this.getPrefetcherSummary = getPrefetcherSummary ?? GetSummary;
-            this.isDefaultBusy = isDefaultBusy ?? (() => IsDefault);
             MemoryStatistics.RegisterLowMemoryHandler(this);
             LastTimeUsed = DateTime.MinValue;
 
@@ -100,7 +98,6 @@ namespace Raven.Database.Prefetching
         public bool IsDefault { get; private set; }
         private readonly Func<int> getPrefetchintBehavioursCount;
         private readonly Func<PrefetchingSummary> getPrefetcherSummary;
-        private readonly Func<bool> isDefaultBusy;
         public List<IndexToWorkOn> Indexes { get; set; }
         public string LastIndexedEtag { get; set; }
         public DateTime LastTimeUsed { get; private set; }
@@ -328,6 +325,10 @@ namespace Raven.Database.Prefetching
                 }
 
                 docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
+
+                // we removed some documents from the queue
+                // we'll try to create a new future batch, if possible
+                MaybeAddFutureBatch();
 
                 if (docsLoaded)
                 {
@@ -658,6 +659,27 @@ namespace Raven.Database.Prefetching
             };
         }
 
+        private void MaybeAddFutureBatch()
+        {
+            var maxFutureBatch = GetCompletedFutureBatchWithMaxStartingEtag();
+            if (maxFutureBatch != null)
+            {
+                // we found a future batch with the latest starting etag (which completed fetching documents)
+                // we'll try to create a new future batch using the latest results
+                MaybeAddFutureBatch(maxFutureBatch.Task.Result);
+            }
+            else if (futureIndexBatches.Count == 0 && prefetchingQueue.Count > 0)
+            {
+                // we don't have any future batches, but have some documents in the queue
+                // we'll try to create a new future batch using the latest document in the queue
+                JsonDocument lastDocument;
+                if (prefetchingQueue.TryPeekLastDocument(out lastDocument))
+                {
+                    MaybeAddFutureBatch(new List<JsonDocument> { lastDocument });
+                }
+            }
+        }
+
         private void MaybeAddFutureBatch(List<JsonDocument> past)
         {
             if (context.Configuration.DisableDocumentPreFetching || context.RunIndexing == false)
@@ -667,7 +689,7 @@ namespace Raven.Database.Prefetching
             if (past.Count == 0)
                 return;
 
-            var numberOfSplitTasks = Math.Max(2, Environment.ProcessorCount / 2); ;
+            var numberOfSplitTasks = Math.Max(2, Environment.ProcessorCount / 2);
             var actualFutureIndexBatchesCount = GetActualFutureIndexBatchesCount(numberOfSplitTasks);
             // no need to load more than 5 future batches
             if (actualFutureIndexBatchesCount > 5)
@@ -719,11 +741,7 @@ namespace Raven.Database.Prefetching
             }
 
             var localSummary = GetSummary();
-            // the default prefetcher will hold the updated or added documents
-            // if we have more than one prefetcher, we can allow prefetching more,
-            // if the default prefetcher isn't 'busy'.
-            var numberOfPrefetchingBehaviors = 
-                Math.Max(1, getPrefetchintBehavioursCount() - ((IsDefault || isDefaultBusy() == false) ? 1 : 0));
+            var numberOfPrefetchingBehaviors = getPrefetchintBehavioursCount();
 
             loadedSizeInBytes = localSummary.PrefetchingQueueLoadedSize + localSummary.FutureIndexBatchesLoadedSize;
             var maxLoadedSizeInBytesInASingleBatch = maxAllowedToLoadInBytes/numberOfPrefetchingBehaviors;
@@ -787,12 +805,7 @@ namespace Raven.Database.Prefetching
 
             if (futureIndexBatches.ContainsKey(nextEtag))
             {
-                FutureIndexBatch maxFutureIndexBatch = null;
-                foreach (var futureIndexBatch in futureIndexBatches.Values)
-                {
-                    if (maxFutureIndexBatch == null || futureIndexBatch.StartingEtag.CompareTo(maxFutureIndexBatch.StartingEtag) > 0)
-                        maxFutureIndexBatch = futureIndexBatch;
-                }
+                var maxFutureIndexBatch = GetCompletedFutureBatchWithMaxStartingEtag();
 
                 if (maxFutureIndexBatch == null || nextEtag.CompareTo(maxFutureIndexBatch.StartingEtag) >= 0 ||
                     maxFutureIndexBatch.Task.IsCompleted == false || maxFutureIndexBatch.Task.Status != TaskStatus.RanToCompletion)
@@ -870,6 +883,22 @@ namespace Raven.Database.Prefetching
                     nextEtag = accessor.Documents.GetBestNextDocumentEtag(lastEtagInBatch);
                 }
             });
+        }
+
+        private FutureIndexBatch GetCompletedFutureBatchWithMaxStartingEtag()
+        {
+            FutureIndexBatch maxFutureIndexBatch = null;
+
+            foreach (var futureIndexBatch in futureIndexBatches.Values)
+            {
+                if (futureIndexBatch.Task.IsCompleted == false || futureIndexBatch.Task.Status != TaskStatus.RanToCompletion)
+                    continue;
+
+                if (maxFutureIndexBatch == null || futureIndexBatch.StartingEtag.CompareTo(maxFutureIndexBatch.StartingEtag) > 0)
+                    maxFutureIndexBatch = futureIndexBatch;
+            }
+
+            return maxFutureIndexBatch;
         }
 
         private void CalculateAverageLoadTimes(out double loadTimePerDocMs, out long largestDocSize, out string largestDocKey)

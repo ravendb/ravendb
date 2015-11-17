@@ -34,8 +34,7 @@ namespace Raven.Database.Prefetching
                                             prefetchingUserDescription, 
                                             isDefault,
                                             GetPrefetchintBehavioursCount,
-                                            GetPrefetchingBehaviourSummary,
-                                            IsDefatultPrefetchingBehaviourBusy);
+                                            GetPrefetchingBehaviourSummary);
 
                 prefetchingBehaviors = new List<PrefetchingBehavior>(prefetchingBehaviors)
                 {
@@ -99,12 +98,6 @@ namespace Raven.Database.Prefetching
             }
 
             return summary;
-        }
-
-        private bool IsDefatultPrefetchingBehaviourBusy()
-        {
-            var defaultPrefetcher = prefetchingBehaviors.FirstOrDefault(x => x.IsDefault);
-            return defaultPrefetcher != null && defaultPrefetcher.IsEmpty() == false;
         }
 
         public void Dispose()
