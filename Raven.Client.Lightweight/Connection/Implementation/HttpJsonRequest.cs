@@ -208,7 +208,7 @@ namespace Raven.Client.Connection.Implementation
                         PostedData = postedData
                     });
                 }
-               
+
                 return cachedResult;
             }
 
@@ -240,9 +240,8 @@ namespace Raven.Client.Connection.Implementation
                 }
                 catch (HttpRequestException e)
                 {
-                        e.Data.Add(Constants.RequestFailedExceptionMarker, true);
-
                     var exception = ErrorResponseException.FromException(e);
+                    exception.Data.Add(Constants.RequestFailedExceptionMarker, true);
                     Response = exception.Response;
                     ResponseStatusCode = Response.StatusCode;
                     throw exception;
@@ -355,18 +354,18 @@ namespace Raven.Client.Connection.Implementation
             {
                 if (factory.CanLogRequest)
                 {
-                    factory.OnLogRequest(owner,new RequestResultArgs
+                    factory.OnLogRequest(owner, new RequestResultArgs
                     {
                         DurationMilliseconds = CalculateDuration(),
                         Method = Method,
-                    HttpResult = (int)ResponseStatusCode,
+                        HttpResult = (int)ResponseStatusCode,
                         Status = RequestStatus.ErrorOnServer,
-                    Result = ResponseStatusCode.ToString(),
+                        Result = ResponseStatusCode.ToString(),
                         Url = Url,
                         PostedData = postedData
                     });
                 }
-               
+
 
                 throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
             }
@@ -388,14 +387,14 @@ namespace Raven.Client.Connection.Implementation
                     {
                         DurationMilliseconds = CalculateDuration(),
                         Method = Method,
-                    HttpResult = (int)ResponseStatusCode,
+                        HttpResult = (int)ResponseStatusCode,
                         Status = RequestStatus.Cached,
                         Result = result.ToString(),
                         Url = Url,
                         PostedData = postedData
                     });
                 }
-               
+
 
                 return result;
             }
@@ -411,7 +410,7 @@ namespace Raven.Client.Connection.Implementation
                     {
                         DurationMilliseconds = CalculateDuration(),
                         Method = Method,
-                    HttpResult = (int)ResponseStatusCode,
+                        HttpResult = (int)ResponseStatusCode,
                         Status = RequestStatus.Cached,
                         Result = readToEnd,
                         Url = Url,

@@ -14,6 +14,7 @@ namespace Raven.Abstractions.Connection
 #if !DNXCORE50
         [NonSerialized]
 #endif
+
         private readonly HttpResponseMessage response;
 
         public HttpResponseMessage Response
@@ -97,16 +98,18 @@ namespace Raven.Abstractions.Connection
             : base(info, context)
         {
         }
+#endif
 
         public static ErrorResponseException FromException(HttpRequestException e)
         {
             var builder = new StringBuilder();
-
-            var webException = e.InnerException as WebException;
             var statusCode = HttpStatusCode.ServiceUnavailable;
+
+#if !DNXCORE50
+            var webException = e.InnerException as WebException;
             if (webException != null)
             {
-                builder.Append("WebExceptionMessage: ");
+                builder.Append("WebException Message: ");
                 builder.AppendLine(webException.Message);
                 builder.Append("Status Code: ");
                 builder.AppendLine(webException.Status.ToString());
@@ -119,18 +122,17 @@ namespace Raven.Abstractions.Connection
 
                     try
                     {
-                    using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
-                    using (var reader = new StreamReader(stream))
-                    {
-                        builder.Append("Response: ");
-                        builder.AppendLine(reader.ReadToEnd());
+                        using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
+                        using (var reader = new StreamReader(stream))
+                        {
+                            builder.Append("Response: ");
+                            builder.AppendLine(reader.ReadToEnd());
                         }
                     }
                     catch (Exception e2)
                     {
                         builder.Append("Failed to read the response: " + e2);
                     }
-
                 }
 
                 var win32Exception = webException.InnerException as Win32Exception;
@@ -140,13 +142,9 @@ namespace Raven.Abstractions.Connection
                     builder.AppendLine(win32Exception.Message);
                 }
             }
+#endif
 
-            return new ErrorResponseException
-            {
-                Response = new HttpResponseMessage(statusCode),
-                ResponseString = builder.ToString(),
-            };
+            return new ErrorResponseException(new HttpResponseMessage(statusCode), e.Message, responseString: builder.ToString());
         }
     }
 }
-#endif
