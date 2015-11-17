@@ -9,19 +9,6 @@ namespace Raven.Database.Config.Categories
 {
     public class ServerConfiguration : ConfigurationCategory
     {
-        /// <summary>
-        /// This much time has to pass before 
-        /// </summary>
-        [DefaultValue(15)]
-        [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry(Constants.ConcurrentResourceLoadTimeout)]
-        [ConfigurationEntry(Constants.ConcurrentResourceLoadTimeout + "InSec")]
-        public TimeSetting ConcurrentResourceLoadTimeout { get; set; }
-
-        [DefaultValue(8)]
-        [ConfigurationEntry(Constants.MaxConcurrentResourceLoads)]
-        public int MaxConcurrentResourceLoads { get; set; }
-
         [DefaultValue(512)]
         [ConfigurationEntry("Raven/Server/MaxConcurrentRequests")]
         [ConfigurationEntry("Raven/MaxConcurrentServerRequests")]
