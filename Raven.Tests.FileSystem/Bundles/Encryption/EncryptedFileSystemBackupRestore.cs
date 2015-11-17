@@ -99,7 +99,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                     Settings =
                     {
                         {RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
-                        {RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Encryption"}
+                        {RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"}
                     },
                     SecuredSettings = new Dictionary<string, string>
                     {

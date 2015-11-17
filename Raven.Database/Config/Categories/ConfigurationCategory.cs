@@ -21,7 +21,7 @@ namespace Raven.Database.Config.Categories
         {
             var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
-                where configurationEntryAttribute != null // filter out properties which are marked as configuration entry
+                where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
                 orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
                 select property;
 
@@ -70,7 +70,11 @@ namespace Raven.Database.Config.Categories
                             }
                             else
                             {
-                                property.SetValue(this, Convert.ChangeType(value, property.PropertyType));
+                                var t = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+                                var safeValue = (value == null) ? null : Convert.ChangeType(value, t);
+
+                                property.SetValue(this, safeValue);
                             }
                         }
                         else
@@ -101,7 +105,14 @@ namespace Raven.Database.Config.Categories
                 if (configuredValueSet)
                     continue;
 
-                var defaultValue = property.GetCustomAttribute<DefaultValueAttribute>().Value;
+                var defaultValueAttribute = property.GetCustomAttribute<DefaultValueAttribute>();
+
+                if (defaultValueAttribute == null)
+                {
+                    throw new InvalidOperationException($"Property '{property.Name}' does not have a default value attribute");
+                }
+
+                var defaultValue = defaultValueAttribute.Value;
 
                 if (DefaultValueSetInConstructor.Equals(defaultValue))
                     continue;

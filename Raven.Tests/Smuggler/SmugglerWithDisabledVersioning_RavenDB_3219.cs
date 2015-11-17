@@ -200,7 +200,7 @@ namespace Raven.Tests.Smuggler
                         Id = "Import",
                         Settings =
                         {
-                            { RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), "Versioning" },
+                            { RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Versioning" },
                             { "Raven/DataDir", NewDataPath() }
                         }
                     });

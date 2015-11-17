@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
@@ -13,6 +14,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -372,6 +374,7 @@ namespace Raven.Database.Config
         public void CopyParentSettings(RavenConfiguration parentConfiguration)
         {
             Core.Port = parentConfiguration.Core.Port;
+            Core.VirtualDirectory = parentConfiguration.Core.VirtualDirectory;
             OAuth.TokenKey = parentConfiguration.OAuth.TokenKey;
             OAuth.TokenServer = parentConfiguration.OAuth.TokenServer;
 
@@ -386,7 +389,53 @@ namespace Raven.Database.Config
 
         public IEnumerable<string> GetConfigOptionsDocs()
         {
-            return ConfigOptionDocs.OptionsDocs;
+            var categories = this.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(x => x.Type().BaseType == typeof(ConfigurationCategory));
+
+            foreach (var category in categories)
+            {
+                var configurationProperties = from property in category.PropertyType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                              let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
+                                              where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
+                                              orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
+                                              select property;
+
+                foreach (var configuration in configurationProperties)
+                {
+                    var key = configuration.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key;
+                    var defaultValueAttribute = configuration.GetCustomAttribute<DefaultValueAttribute>();
+                    var type = configuration.PropertyType.Name;
+                    var description = configuration.GetCustomAttribute<DescriptionAttribute>()?.Description;
+                    var minValueAttribute = configuration.GetCustomAttribute<MinValueAttribute>();
+                    var timeUnit = configuration.GetCustomAttribute<TimeUnitAttribute>()?.Unit;
+                    var sizeUnit = configuration.GetCustomAttribute<SizeUnitAttribute>()?.Unit;
+
+                    var builder = new StringBuilder();
+
+                    builder.AppendLine(key);
+                    builder.AppendLine($"Type: {type}");
+
+                    if (defaultValueAttribute != null && (defaultValueAttribute.Value == null || defaultValueAttribute.Value.Equals(ConfigurationCategory.DefaultValueSetInConstructor) == false))
+                    {
+                        builder.AppendLine($"Default: {defaultValueAttribute.Value ?? "null"}");
+                    }
+
+                    if (minValueAttribute != null)
+                    {
+                        builder.AppendLine($"Minimum: {minValueAttribute.Int32Value}");
+                    }
+
+                    if (timeUnit != null || sizeUnit != null)
+                    {
+                        builder.AppendLine($"Unit: {timeUnit?.ToString() ?? sizeUnit?.ToString()}");
+                    }
+
+                    builder.AppendLine(description);
+
+                    yield return builder.ToString();
+                }
+            }
+
+            yield return "Raven/LimitIndexesCapabilities\r\nType: bool\r\nDefault: false\r\nControl whatever RavenDB limits what the indexes can do (to avoid potentially destabilizing operations)";
         }
 
         public void SetSetting(string key, string value)

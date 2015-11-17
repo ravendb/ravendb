@@ -31,11 +31,9 @@ namespace Raven.Database.Config.Categories
         public int MaxConcurrentMultiGetRequests { get; set; }
 
 
-        /// <summary>
-        /// Determine the value of the Access-Control-Allow-Origin header sent by the server. 
-        /// Indicates the URL of a site trusted to make cross-domain requests to this server.
-        /// Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)
-        /// </summary>
+        [Description("Determine the value of the Access-Control-Allow-Origin header sent by the server. " +
+                     "Indicates the URL of a site trusted to make cross-domain requests to this server." +
+                     "Allowed values: null (don't send the header), *, http://example.org (space separated if multiple sites)")]
         [DefaultValue((string)null)]
         [ConfigurationEntry("Raven/Server/AccessControlAllowOrigin")]
         [ConfigurationEntry("Raven/AccessControlAllowOrigin")]
@@ -43,48 +41,39 @@ namespace Raven.Database.Config.Categories
 
         public HashSet<string> AccessControlAllowOrigin { get; set; }
 
-        /// <summary>
-        /// Determine the value of the Access-Control-Max-Age header sent by the server.
-        /// Indicates how long (seconds) the browser should cache the Access Control settings.
-        /// Ignored if AccessControlAllowOrigin is not specified.
-        /// Default: 1728000 (20 days)
-        /// </summary>
+        [Description("Determine the value of the Access-Control-Max-Age header sent by the server. " +
+                     "Indicates how long (seconds) the browser should cache the Access Control settings. " +
+                     "Ignored if AccessControlAllowOrigin is not specified.")]
         [DefaultValue("1728000" /* 20 days */)]
         [ConfigurationEntry("Raven/Server/AccessControlMaxAge")]
         [ConfigurationEntry("Raven/AccessControlMaxAge")]
         public string AccessControlMaxAge { get; set; }
 
-        /// <summary>
-        /// Determine the value of the Access-Control-Allow-Methods header sent by the server.
-        /// Indicates which HTTP methods (verbs) are permitted for requests from allowed cross-domain origins.
-        /// Ignored if AccessControlAllowOrigin is not specified.
-        /// Default: PUT,PATCH,GET,DELETE,POST
-        /// </summary>
+        [Description("Determine the value of the Access-Control-Allow-Methods header sent by the server." +
+                     " Indicates which HTTP methods (verbs) are permitted for requests from allowed cross-domain origins." +
+                     " Ignored if AccessControlAllowOrigin is not specified.")]
         [DefaultValue("PUT,PATCH,GET,DELETE,POST")]
         [ConfigurationEntry("Raven/Server/AccessControlAllowMethods")]
         [ConfigurationEntry("Raven/AccessControlAllowMethods")]
         public string AccessControlAllowMethods { get; set; }
 
-        /// <summary>
-        /// Determine the value of the Access-Control-Request-Headers header sent by the server.
-        /// Indicates which HTTP headers are permitted for requests from allowed cross-domain origins.
-        /// Ignored if AccessControlAllowOrigin is not specified.
-        /// Allowed values: null (allow whatever headers are being requested), HTTP header field name
-        /// </summary>
-        [DefaultValue((string)null)]
+        [Description("Determine the value of the Access-Control-Request-Headers header sent by the server. " +
+                     "Indicates which HTTP headers are permitted for requests from allowed cross-domain origins. " +
+                     "Ignored if AccessControlAllowOrigin is not specified. " +
+                     "Allowed values: null (allow whatever headers are being requested), HTTP header field name")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/Server/AccessControlRequestHeaders")]
         [ConfigurationEntry("Raven/AccessControlRequestHeaders")]
         public string AccessControlRequestHeaders { get; set; }
 
-        [DefaultValue((string)null)]
+        [Description("The url to redirect the user to when then try to access the local studio")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/Server/RedirectStudioUrl")]
         [ConfigurationEntry("Raven/RedirectStudioUrl")]
         public string RedirectStudioUrl { get; set; }
 
-        /// <summary>
-        /// The server name
-        /// </summary>
-        [DefaultValue((string)null)]
+        [Description("The server name")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/Server/Name")]
         [ConfigurationEntry("Raven/ServerName")]
         public string Name { get; set; }

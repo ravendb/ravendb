@@ -16,10 +16,7 @@ namespace Raven.Database.Config.Categories
 
         private string timeSeriesDataDirectory;
 
-        /// <summary>
-        /// The directory for the RavenDB time series. 
-        /// You can use the ~\ prefix to refer to RavenDB's base directory. 
-        /// </summary>
+        [Description("The directory for the RavenDB time series. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
         [DefaultValue(@"~\TimeSeries")]
         [ConfigurationEntry("Raven/TimeSeries/DataDir")]
         public string DataDirectory
@@ -28,10 +25,7 @@ namespace Raven.Database.Config.Categories
             set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(coreConfiguration.WorkingDirectory, value); }
         }
 
-        /// <summary>
-        /// Determines how long tombstones will be kept by a time series. After the specified time they will be automatically
-        /// Purged on next time series startup. Default: 14 days.
-        /// </summary>
+        [Description("Determines how long tombstones will be kept by a time series. After the specified time they will be automatically purged on next time series startup.")]
         [DefaultValue(14)]
         [TimeUnit(TimeUnit.Days)]
         [ConfigurationEntry("Raven/TimeSeries/TombstoneRetentionTimeInDays")]

@@ -12,11 +12,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/PreventSchemaUpdate")]
         public bool PreventSchemaUpdate { get; set; }
 
-        /// <summary>
-        /// You can use this setting to specify a maximum buffer pool size that can be used for transactional storage (in gigabytes). 
-        /// By default it is 4.
-        /// Minimum value is 2.
-        /// </summary>
+        [Description("You can use this setting to specify a maximum buffer pool size that can be used for transactional storage")]
         [DefaultValue(4)]
         [MinValue(2)]
         [SizeUnit(SizeUnit.Gigabytes)]
@@ -24,50 +20,38 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Voron/MaxBufferPoolSize")]
         public Size MaxBufferPoolSize { get; set; }
 
-        /// <summary>
-        /// You can use this setting to specify an initial file size for data file (in bytes).
-        /// </summary>
+        [Description("You can use this setting to specify an initial file size for data file")]
         [DefaultValue(null)]
         [SizeUnit(SizeUnit.Bytes)]
         [ConfigurationEntry("Raven/Storage/InitialFileSize")]
         [ConfigurationEntry("Raven/Voron/InitialFileSize")]
         public Size? InitialFileSize { get; set; }
 
-        /// <summary>
-        /// The maximum scratch buffer size that can be used by Voron. The value is in megabytes. 
-        /// Default: 6144.
-        /// </summary>
+        [Description("The maximum scratch buffer (modified data by active transactions) size that can be used by Voron")]
         [DefaultValue(6144)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Storage/MaxScratchBufferSizeInMB")]
         [ConfigurationEntry("Raven/Voron/MaxScratchBufferSize")]
         public Size MaxScratchBufferSize { get; set; }
 
-        /// <summary>
-        /// The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.
-        /// Default: 
-        /// 1024 when MaxScratchBufferSize > 1024, 
-        /// 512 when MaxScratchBufferSize > 512
-        /// null otherwise (disabled) 
-        /// </summary>
+        [Description("The minimum number of megabytes after which each scratch buffer size increase will create a notification. Used for indexing batch size tuning.\r\n" +
+                     "Default: \r\n" +
+                     "1024 when MaxScratchBufferSize > 1024,\r\n" +
+                     "512 when MaxScratchBufferSize > 512\r\n" +
+                     "null otherwise (disabled)")]
         [DefaultValue(null)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Storage/ScratchBufferSizeNotificationThresholdInMB")]
         [ConfigurationEntry("Raven/Voron/ScratchBufferSizeNotificationThreshold")]
         public Size? ScratchBufferSizeNotificationThreshold { get; set; }
 
-        /// <summary>
-        /// If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. 
-        /// Default: false.
-        /// </summary>
+        [Description("If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Storage/AllowIncrementalBackups")]
         [ConfigurationEntry("Raven/Voron/AllowIncrementalBackups")]
         public bool AllowIncrementalBackups { get; set; }
 
-        /// <summary>
-        /// You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.
-        /// </summary>
+        [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Storage/TempPath")]
         [ConfigurationEntry("Raven/Voron/TempPath")]
@@ -78,9 +62,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/TransactionJournalsPath")]
         public string JournalsStoragePath { get; set; }
 
-        /// <summary>
-        /// Whether to allow Voron to run in 32 bits process.
-        /// </summary>
+        [Description("Whether to allow Voron to run in 32 bits process.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Storage/AllowOn32Bits")]
         [ConfigurationEntry("Raven/Voron/AllowOn32Bits")]

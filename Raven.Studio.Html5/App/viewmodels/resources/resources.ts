@@ -403,23 +403,20 @@ class resources extends viewModelBase {
         var createResourceViewModel = new createResource();
         createResourceViewModel.createDatabasePart
             .creationTask
-            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, tempPath: string, storageEngine: string, incrementalBackup: boolean
+            .done((databaseName: string, bundles: string[], databasePath: string, databaseLogs: string, databaseIndexes: string, tempPath: string, incrementalBackup: boolean
                 , alertTimeout: string, alertRecurringTimeout: string, clusterWide: boolean) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 };
-                if (storageEngine) {
-                    // TODO arek - v4.0 just Voron 
-                    // settings["Raven/StorageTypeName"] = storageEngine;
-                }
+               
                 if (!clusterWide) {
                     settings["Raven-Non-Cluster-Database"] = "true";
                 }
                 if (incrementalBackup) {                    
-                        settings["Raven/Voron/AllowIncrementalBackups"] = "true";
+                    settings["Raven/Storage/AllowIncrementalBackups"] = "true";
                 }
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Voron/TempPath"] = tempPath;
+                    settings["Raven/Storage/TempPath"] = tempPath;
                 }
                 if (alertTimeout !== "") {
                     settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
@@ -429,7 +426,7 @@ class resources extends viewModelBase {
                 }
                 settings["Raven/DataDir"] = (!this.isEmptyStringOrWhitespace(databasePath)) ? databasePath : "~/" + databaseName;
                 if (!this.isEmptyStringOrWhitespace(databaseLogs)) {
-                    settings["Raven/Esent/LogsPath"] = databaseLogs;// TODO arek - v4.0 just Voron 
+                    settings["Raven/Storage/TransactionJournalsPath"] = databaseLogs;
                 }
                 if (!this.isEmptyStringOrWhitespace(databaseIndexes)) {
                     settings["Raven/IndexStoragePath"] = databaseIndexes;
@@ -440,20 +437,18 @@ class resources extends viewModelBase {
 
         createResourceViewModel.createFileSystemPart
             .creationTask
-            .done((fileSystemName: string, bundles: string[], fileSystemPath: string, filesystemLogs: string, tempPath: string, storageEngine: string) => {
+            .done((fileSystemName: string, bundles: string[], fileSystemPath: string, filesystemLogs: string, tempPath: string) => {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
 
                 settings["Raven/FileSystem/DataDir"] = (!this.isEmptyStringOrWhitespace(fileSystemPath)) ? fileSystemPath : "~\\FileSystems\\" + fileSystemName;
-                if (storageEngine) {
-                    settings["Raven/FileSystem/Storage"] = storageEngine;
-                }
+
                 if (!this.isEmptyStringOrWhitespace(filesystemLogs)) {
                     settings["Raven/TransactionJournalsPath"] = filesystemLogs;
                 }
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Voron/TempPath"] = tempPath;
+                    settings["Raven/Storage/TempPath"] = tempPath;
                 }
                 this.showFsCreationAdvancedStepsIfNecessary(fileSystemName, bundles, settings);
             });
@@ -466,7 +461,7 @@ class resources extends viewModelBase {
                 }
                 settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Voron/TempPath"] = tempPath;
+                    settings["Raven/Storage/TempPath"] = tempPath;
                 }
 
                 this.showCsCreationAdvancedStepsIfNecessary(counterStorageName, bundles, settings);
@@ -480,7 +475,7 @@ class resources extends viewModelBase {
                 }
                 settings["Raven/TimeSeries/DataDir"] = (!this.isEmptyStringOrWhitespace(timeSeriesPath)) ? timeSeriesPath : "~\\TimeSeries\\" + timeSeriesName;
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
-                    settings["Raven/Voron/TempPath"] = tempPath;
+                    settings["Raven/Storage/TempPath"] = tempPath;
                 }
 
                 this.showTsCreationAdvancedStepsIfNecessary(timeSeriesName, bundles, settings);

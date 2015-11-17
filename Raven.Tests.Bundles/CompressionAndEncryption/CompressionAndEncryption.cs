@@ -32,7 +32,7 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
                 {
                     DataDirectory = path,
                     Port = 8079,
-                    ActiveBundlesStringValue = "Compression;Encryption"
+                    _ActiveBundlesString = "Compression;Encryption"
                 },
                 Encryption =
                 {

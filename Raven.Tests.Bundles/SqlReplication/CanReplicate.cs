@@ -31,7 +31,7 @@ namespace Raven.Tests.Bundles.SqlReplication
     {
         protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "sqlReplication";
+            configuration.Core._ActiveBundlesString = "sqlReplication";
         }
 
         private const string defaultScript = @"

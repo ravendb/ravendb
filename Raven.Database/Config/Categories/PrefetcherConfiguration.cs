@@ -17,6 +17,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Prefetching/DurationLimit")]
         public TimeSetting DurationLimit { get; set; }
 
+        [Description("Disable document prefetching")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Prefetching/Disable")]
         [ConfigurationEntry("Raven/DisableDocumentPreFetching")]
@@ -30,18 +31,14 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/MaxNumberOfItemsToPreFetchForIndexing")]
         public int MaxNumberOfItemsToPreFetch { get; set; }
 
-        /// <summary>
-        /// Number of seconds after which prefetcher will stop reading documents from disk. Default: 5.
-        /// </summary>
+        [Description("Number of seconds after which prefetcher will stop reading documents from disk")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Prefetching/FetchingDocumentsFromDiskTimeoutInSec")]
         [ConfigurationEntry("Raven/Prefetcher/FetchingDocumentsFromDiskTimeout")]
         public TimeSetting FetchingDocumentsFromDiskTimeout { get; set; }
 
-        /// <summary>
-        /// Maximum number of megabytes after which prefetcher will stop reading documents from disk. Default: 256.
-        /// </summary>
+        [Description("Maximum number of megabytes after which prefetcher will stop reading documents from disk")]
         [DefaultValue(256)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Prefetching/MaximumSizeAllowedToFetchFromStorageInMB")]

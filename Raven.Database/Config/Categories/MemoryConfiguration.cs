@@ -21,9 +21,8 @@ namespace Raven.Database.Config.Categories
             AvailableMemoryForRaisingBatchSizeLimit = Size.Min(new Size(768, SizeUnit.Megabytes), MemoryStatistics.TotalPhysicalMemory / 2);
         }
 
-        /// <summary>
-        /// Limit of how much memory a batch processing can take (in MBytes)
-        /// </summary>
+        [Description("Maximum number of megabytes that can be used by database to control the maximum size of the processing batches.\r\n" +
+                     "Default: 1024 or 75% percent of available memory if 1GB is not available.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Memory/LimitForProcessingInMB")]
@@ -51,54 +50,42 @@ namespace Raven.Database.Config.Categories
             }
         }
 
-        // <summary>
-        /// Limit for low mem detection in linux
-        /// </summary>
+        [Description("Limit for low mem detection in linux")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Memory/LowMemoryLimitForLinuxDetectionInMB")]
         [ConfigurationEntry("Raven/LowMemoryLimitForLinuxDetectionInMB")]
         public Size LowMemoryForLinuxDetection { get; set; }
 
-        /// <summary>
-        /// An integer value that specifies the maximum allowable size, in megabytes, that caching 
-        /// document instances will use
-        /// </summary>
+        [Description("An integer value that specifies the maximum allowable size, in megabytes, that caching document instances will use")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Memory/MemoryCacheLimitInMB")]
         [ConfigurationEntry("Raven/MemoryCacheLimitMegabytes")]
         public Size MemoryCacheLimit { get; set; }
 
-        /// <summary>
-        /// The expiration value for documents in the internal managed cache
-        /// </summary>
+        [Description("The expiration value for documents in the internal managed cache")]
         [DefaultValue(360)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Memory/MemoryCacheExpirationInSec")]
         [ConfigurationEntry("Raven/MemoryCacheExpiration")]
         public TimeSetting MemoryCacheExpiration { get; set; }
 
-        /// <summary>
-        /// Percentage of physical memory used for caching
-        /// Allowed values: 0-99 (0 = autosize)
-        /// </summary>
+        [Description("Percentage of physical memory used for caching. Allowed values: 0-99 (0 = autosize)")]
         [DefaultValue(0 /* auto size */)]
         [ConfigurationEntry("Raven/Memory/MemoryCacheLimitPercentage")]
         [ConfigurationEntry("Raven/MemoryCacheLimitPercentage")]
         public int MemoryCacheLimitPercentage { get; set; }
 
-        /// <summary>
-        /// Interval for checking the memory cache limits
-        /// Allowed values: max precision is 1 second
-        /// Default: 00:02:00 (or value provided by system.runtime.caching app config)
-        /// </summary>
+        [Description("Interval for checking the memory cache limits. Allowed values: max precision is 1 second\r\n" +
+                     "Default: 00:02:00 (or value provided by system.runtime.caching app config)")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Memory/MemoryCacheLimitCheckIntervalInSec")]
         [ConfigurationEntry("Raven/MemoryCacheLimitCheckInterval")]
         public TimeSetting MemoryCacheLimitCheckInterval { get; set; }
 
+        [Description("The minimum amount of memory available for us to double the size of Raven/InitialNumberOfItemsToProcessInSingleBatch if we need to.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Memory/AvailableMemoryForRaisingBatchSizeLimitInMB")]

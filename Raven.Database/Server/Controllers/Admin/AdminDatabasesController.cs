@@ -41,8 +41,8 @@ namespace Raven.Database.Server.Controllers.Admin
             DatabasesLandlord.Unprotect(dbDoc);
 
             string activeBundles;
-            if (dbDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out activeBundles))
-                dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue)] = BundlesHelper.ProcessActiveBundles(activeBundles);
+            if (dbDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), out activeBundles))
+                dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = BundlesHelper.ProcessActiveBundles(activeBundles);
 
             return GetMessageWithObject(dbDoc, HttpStatusCode.OK, document.Etag);
         }
@@ -71,7 +71,7 @@ namespace Raven.Database.Server.Controllers.Admin
             var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>().ConfigureAwait(false);
             
             string bundles;			
-            if (dbDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue), out bundles) && bundles.Contains("Encryption"))
+            if (dbDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), out bundles) && bundles.Contains("Encryption"))
             {
                 if (dbDoc.SecuredSettings == null || !dbDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
                     !dbDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))

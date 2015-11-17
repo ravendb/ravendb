@@ -5,9 +5,7 @@ namespace Raven.Database.Config.Categories
 {
     public class EncryptionConfiguration : ConfigurationCategory
     {
-        /// <summary>
-        /// Whatever we should use FIPS compliant encryption algorithms
-        /// </summary>
+        [Description("Use FIPS compliant encryption algorithms.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Encryption/FIPS")]
         public bool UseFips { get; set; }
@@ -16,9 +14,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Encryption/KeyBitsPreference")]
         public int EncryptionKeyBitsPreference { get; set; }
 
-        /// <summary>
-        /// Whatever we should use SSL for this connection
-        /// </summary>
+        [Description("Whatever we should use SSL for this connection")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/UseSsl")]
         public bool UseSsl { get; set; }

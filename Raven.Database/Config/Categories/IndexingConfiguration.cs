@@ -14,42 +14,32 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/MaxIndexWritesBeforeRecreate")]
         public int MaxWritesBeforeRecreate { get; set; }
 
-        /// <summary>
-        /// Limits the number of map outputs that a simple index is allowed to create for a one source document. If a map operation applied to the one document
-        /// produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and
-        /// the appropriate error message will be added to the indexing errors.
-        /// Default value: 15. In order to disable this check set value to -1.
-        /// </summary>
+        [Description("Limits the number of map outputs that a simple index is allowed to create for a one source document. If a map operation applied to the one document " +
+                     "produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and " +
+                     "the appropriate error message will be added to the indexing errors. " +
+                     "In order to disable this check set value to -1.")]
         [DefaultValue(15)]
         [ConfigurationEntry("Raven/Indexing/MaxSimpleIndexOutputsPerDocument")]
         [ConfigurationEntry("Raven/MaxSimpleIndexOutputsPerDocument")]
         public int MaxSimpleIndexOutputsPerDocument { get; set; }
 
-        /// <summary>
-        /// Limits the number of map outputs that a map-reduce index is allowed to create for a one source document. If a map operation applied to the one document
-        /// produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and
-        /// the appropriate error message will be added to the indexing errors.
-        /// Default value: 50. In order to disable this check set value to -1.
-        /// </summary>
+        [Description("Limits the number of map outputs that a map-reduce index is allowed to create for a one source document. If a map operation applied to the one document " +
+                     "produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and " +
+                     "the appropriate error message will be added to the indexing errors. " +
+                     "In order to disable this check set value to -1.")]
         [DefaultValue(50)]
         [ConfigurationEntry("Raven/Indexing/MaxMapReduceIndexOutputsPerDocument")]
         [ConfigurationEntry("Raven/MaxMapReduceIndexOutputsPerDocument")]
         public int MaxMapReduceIndexOutputsPerDocument { get; set; }
 
-        /// <summary>
-        /// How long can we keep the new index in memory before we have to flush it
-        /// </summary>
+        [Description("How long can we keep the new index in memory before we have to flush it")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/NewIndexInMemoryMaxTimeInMin")]
         [ConfigurationEntry("Raven/NewIndexInMemoryMaxTime")]
         public TimeSetting NewIndexInMemoryMaxTime { get; set; }
 
-        /// <summary>
-        /// New indexes are kept in memory until they reach this integer value in bytes or until they're non-stale
-        /// Default: 64 MB
-        /// Minimum: 1 MB
-        /// </summary>
+        [Description("The max size in MB of a new index held in memory. When a new index size reaches that value or is no longer stale, it will be using on disk indexing, rather then RAM indexing.")]
         [DefaultValue(64)]
         [MinValue(1)]
         [SizeUnit(SizeUnit.Megabytes)]
@@ -57,80 +47,67 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/NewIndexInMemoryMaxMB")]
         public Size NewIndexInMemoryMaxSize { get; set; }
 
-        /// <summary>
-        /// Controls whatever RavenDB will create temporary indexes 
-        /// for queries that cannot be directed to standard indexes
-        /// </summary>
+        [Description("Controls whatever RavenDB will create temporary indexes for queries that cannot be directed to standard indexes")]
         [DefaultValue(true)]
         [ConfigurationEntry("Raven/Indexing/CreateAutoIndexesForAdHocQueriesIfNeeded")]
         [ConfigurationEntry("Raven/CreateAutoIndexesForAdHocQueriesIfNeeded")]
         public bool CreateAutoIndexesForAdHocQueriesIfNeeded { get; set; }
 
-        /// <summary>
-        /// When the database is shut down rudely, determine whatever to reset the index or to check it.
-        /// Checking the index may take some time on large databases
-        /// </summary>
+        [Description("When the database is shut down rudely, determine whatever to reset the index or to check it. Checking the index may take some time on large databases.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Indexing/ResetIndexOnUncleanShutdown")]
         [ConfigurationEntry("Raven/ResetIndexOnUncleanShutdown")]
         public bool ResetIndexOnUncleanShutdown { get; set; }
 
-        /// <summary>
-        /// Prevent index from being kept in memory. Default: false
-        /// </summary>
+        [Description("Prevent index from being kept in memory")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Indexing/DisableInMemory")]
         [ConfigurationEntry("Raven/DisableInMemoryIndexing")]
         public bool DisableInMemoryIndexing { get; set; }
 
-        /// <summary>
-        /// Maximum time interval for storing commit points for map indexes when new items were added.
-        /// The commit points are used to restore index if unclean shutdown was detected.
-        /// Default: 00:05:00 
-        /// </summary>
+        [Description("Maximum time interval for storing commit points for map indexes when new items were added. " +
+                     "The commit points are used to restore index if unclean shutdown was detected.")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/MaxIndexCommitPointStoreIntervalInMin")]
         [ConfigurationEntry("Raven/MaxIndexCommitPointStoreTimeInterval")]
         public TimeSetting MaxIndexCommitPointStoreInterval { get; set; }
 
-        /// <summary>
-        /// Maximum number of kept commit points to restore map index after unclean shutdown
-        /// Default: 5
-        /// </summary>
+        [Description("Maximum number of kept commit points to restore map index after unclean shutdown")]
         [DefaultValue(5)]
         [ConfigurationEntry("Raven/Indexing/MaxNumberOfStoredCommitPoints")]
         [ConfigurationEntry("Raven/MaxNumberOfStoredCommitPoints")]
         public int MaxNumberOfStoredCommitPoints { get; set; }
 
-        /// <summary>
-        /// Minimum interval between between successive indexing that will allow to store a  commit point
-        /// Default: 00:01:00
-        /// </summary>
+        [Description("Minimum interval between between successive indexing that will allow to store a  commit point")]
         [DefaultValue(1)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/MinIndexingIntervalToStoreCommitPointInMin")]
         [ConfigurationEntry("Raven/MinIndexingTimeIntervalToStoreCommitPoint")]
         public TimeSetting MinIndexingIntervalToStoreCommitPoint { get; set; }
 
+        [Description("How long the database should be idle for before updating low priority indexes.")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningIdleIndexesInMin")]
         [ConfigurationEntry("Raven/TimeToWaitBeforeRunningIdleIndexes")]
         public TimeSetting TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
 
+        [Description("How long the database should wait before marking an index with the idle flag")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
         [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle")]
         public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; set; }
 
+        [Description("How long the database should wait before marking an index with the abandoned flag")]
         [DefaultValue(72)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingIdleIndexAsAbandonedInHrs")]
         [ConfigurationEntry("Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned")]
         public TimeSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; set; }
 
+        [Description("How long the database should be idle for before updating abandoned indexes")]
         [DefaultValue(3)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeRunningAbandonedIndexesInHrs")]
@@ -166,9 +143,7 @@ namespace Raven.Database.Config.Categories
             }
         }
 
-        /// <summary>
-        /// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
-        /// </summary>
+        [Description("Indexes are flushed to a disk only if their in-memory size exceed the specified value")]
         [DefaultValue(5)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Indexing/FlushIndexToDiskSizeInMB")]

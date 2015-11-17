@@ -47,54 +47,39 @@ namespace Raven.Database.Config.Categories
             VirtualDirectory = GetDefaultVirtualDirectory();
         }
 
-        /// <summary>
-        /// The maximum allowed page size for queries. 
-        /// Default: 1024
-        /// Minimum: 10
-        /// </summary>
+        [Description("The maximum allowed page size for queries")]
         [DefaultValue(1024)]
         [MinValue(10)]
         [ConfigurationEntry("Raven/MaxPageSize")]
         public int MaxPageSize { get; set; }
 
+        [Description("What is the suggested max latency for a single processing run that allows the database to increase the processing batch size")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/MaxProcessingRunLatency")]
         [ConfigurationEntry("Raven/MaxIndexingRunLatency")]
         public TimeSetting MaxProcessingRunLatency { get; set; }
 
-        /// <summary>
-        /// Max number of items to take for indexing in a batch
-        /// Minimum: 128
-        /// </summary>
+        [Description("The max number of items that will be processed in a single batch. Larger batch size result in faster processing, but higher memory usage.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [MinValue(128)]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToProcessInSingleBatch")]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToIndexInSingleBatch")]
         public int MaxNumberOfItemsToProcessInSingleBatch { get; set; }
 
-        /// <summary>
-        /// Max number of items to take for reducing in a batch
-        /// Minimum: 128
-        /// </summary>
+        [Description("Max number of items to take for reducing in a batch")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [MinValue(128)]
         [ConfigurationEntry("Raven/MaxNumberOfItemsToReduceInSingleBatch")]
         public int MaxNumberOfItemsToReduceInSingleBatch { get; set; }
 
-        /// <summary>
-        /// The number that controls the if single step reduce optimization is performed.
-        /// If the count of mapped results if less than this value then the reduce is executed in single step.
-        /// Default: 1024
-        /// </summary>
+        [Description("The number that controls the if single step reduce optimization is performed." +
+                     "If the count of mapped results if less than this value then the reduce is executed in single step.")]
         [DefaultValue(1024)]
         [ConfigurationEntry("Raven/NumberOfItemsToExecuteReduceInSingleStep")]
         public int NumberOfItemsToExecuteReduceInSingleStep { get; set; }
 
-        /// <summary>
-        /// The maximum number of indexing, replication and sql replication tasks allowed to run in parallel
-        /// Default: The number of processors in the current machine
-        /// </summary>
+        [Description("The maximum number of indexing, replication and sql replication tasks allowed to run in parallel.\r\nDefault: The number of processors in the current machine")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [MinValue(1)]
         [ConfigurationEntry("Raven/MaxNumberOfParallelProcessingTasks")]
@@ -115,12 +100,7 @@ namespace Raven.Database.Config.Categories
             }
         }
 
-        /// <summary>
-        /// Should RavenDB's storage be in-memory. If set to true, Voron would be used as the
-        /// storage engine, regardless of what was specified for StorageTypeName
-        /// Allowed values: true/false
-        /// Default: false
-        /// </summary>
+        [Description("Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/RunInMemory")]
         public bool RunInMemory
@@ -140,11 +120,7 @@ namespace Raven.Database.Config.Categories
             set { workingDirectory = CalculateWorkingDirectory(value); }
         }
 
-        /// <summary>
-        /// The directory for the RavenDB database. 
-        /// You can use the ~\ prefix to refer to RavenDB's base directory. 
-        /// Default: ~\Databases\System
-        /// </summary>
+        [Description("The directory for the RavenDB database. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
         [DefaultValue(@"~\Databases\System")]
         [ConfigurationEntry("Raven/DataDir")]
         public string DataDirectory
@@ -153,7 +129,8 @@ namespace Raven.Database.Config.Categories
             set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
         }
 
-        [DefaultValue((string)null)]
+        [Description("The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/IndexStoragePath")]
         public string IndexStoragePath
         {
@@ -171,46 +148,34 @@ namespace Raven.Database.Config.Categories
             }
         }
 
-        /// <summary>
-        /// The hostname to use when creating the http listener (null to accept any hostname or address)
-        /// Default: none, binds to all host names
-        /// </summary>
-        [DefaultValue((string)null)]
+        [Description("The hostname to use when creating the http listener (null to accept any hostname or address). \r\nDefault: none, binds to all host names")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/HostName")]
         public string HostName { get; set; }
 
-        /// <summary>
-        /// The port to use when creating the http listener. 
-        /// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
-        /// </summary>
+        [Description("The port to use when creating the http listener.\r\nDefault: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.")]
         [DefaultValue("*")]
         [ConfigurationEntry("Raven/Port")]
         public string PortStringValue { get; set; }
 
         public int Port { get; set; }
 
-        /// <summary>
-        /// Allow to get config information over the wire.
-        /// Applies to endpoints: /debug/config, /debug...
-        /// Default: Open. You can set it to AdminOnly.
-        /// </summary>
+        [Description("Allow to get config information over the wire. Applies to endpoints: /debug/config, /debug...")]
         [DefaultValue("Open")]
         [ConfigurationEntry("Raven/ExposeConfigOverTheWire")]
         public string ExposeConfigOverTheWire { get; set; }
 
-        /// <summary>
-        /// The directory to search for RavenDB's WebUI. 
-        /// This is usually only useful if you are debugging RavenDB's WebUI. 
-        /// Default: ~/Raven/WebUI 
-        /// </summary>
+        [Description("The directory to search for RavenDB's WebUI. This is usually only useful if you are debugging RavenDB's WebUI. \r\nDefault: ~/Raven/WebUI")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Raven/WebDir")]
         public string WebDir { get; set; }
 
-        /// <summary>
-        /// Where to look for plugins for RavenDB. 
-        /// Default: ~\Plugins
-        /// </summary>
+        [Description("Allow to limit the loaded plugins by specifying a search pattern, such as Raven.*.dll. Multiple values can be specified, separated by a semi column (;).")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/BundlesSearchPattern")]
+        public string BundlesSearchPattern { get; set; }
+
+        [Description("The location of the plugins directory for RavenDB")]
         [DefaultValue(@"~\Plugins")]
         [ConfigurationEntry("Raven/PluginsDirectory")]
         public string PluginsDirectory
@@ -237,7 +202,7 @@ namespace Raven.Database.Config.Categories
                 // add new one
                 if (Directory.Exists(pluginsDirectory))
                 {
-                    var patterns = parent.GetSetting("Raven/BundlesSearchPattern") ?? "*.dll";
+                    var patterns = BundlesSearchPattern ?? "*.dll";
                     foreach (var pattern in patterns.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
                     {
                         parent.Catalog.Catalogs.Add(new BuiltinFilteringCatalog(new DirectoryCatalog(pluginsDirectory, pattern)));
@@ -246,10 +211,7 @@ namespace Raven.Database.Config.Categories
             }
         }
 
-        /// <summary>
-        /// Where the internal assemblies will be extracted to.
-        /// Default: ~\Assemblies
-        /// </summary>
+        [Description("Where the internal assemblies will be extracted to")]
         [DefaultValue(@"~\Assemblies")]
         [ConfigurationEntry("Raven/AssembliesDirectory")]
         public string AssembliesDirectory
@@ -264,11 +226,8 @@ namespace Raven.Database.Config.Categories
             }
         }
 
-        /// <summary>
-        /// Where we search for embedded files.
-        /// Default: null
-        /// </summary>
-        [DefaultValue((string)null)]
+        [Description("Where we search for embedded files")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/EmbeddedFilesDirectory")]
         public string EmbeddedFilesDirectory
         {
@@ -276,10 +235,7 @@ namespace Raven.Database.Config.Categories
             set { embeddedFilesDirectory = value.ToFullPath(); }
         }
 
-        /// <summary>
-        /// Where to cache the compiled indexes. Absolute path or relative to TEMP directory.
-        /// Default: ~\CompiledIndexCache
-        /// </summary>
+        [Description("Where to cache the compiled indexes. Absolute path or relative to TEMP directory.")]
         [DefaultValue(@"~\CompiledIndexCache")]
         [ConfigurationEntry("Raven/CompiledIndexCacheDirectory")]
         public string CompiledIndexCacheDirectory
@@ -294,109 +250,83 @@ namespace Raven.Database.Config.Categories
             }
         }
 
-        [DefaultValue((string)null)]
+        [Description("The TaskScheduler type to use for executing indexing. Provided as assembly qualified type name.")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/TaskScheduler")]
         public string TaskScheduler { get; set; }
+        
+        [Description("The number of items that will be processed in a single batch. Larger batch size result in faster processing, but higher memory usage.\r\nDefault: 512 or 256 depending on CPU architecture")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/InitialNumberOfItemsToProcessInSingleBatch")]
+        [ConfigurationEntry("Raven/InitialNumberOfItemsToIndexInSingleBatch")]
+        // ReSharper disable once InconsistentNaming
+        public int? _InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
-        /// <summary>
-        /// The initial number of items to take when processing a batch
-        /// Default: 512 or 256 depending on CPU architecture
-        /// </summary>
         public int InitialNumberOfItemsToProcessInSingleBatch { get; set; }
 
-        /// <summary>
-        /// The initial number of items to take when reducing a batch
-        /// Default: 256 or 128 depending on CPU architecture
-        /// </summary>
+        [Description("The initial number of items to take when reducing a batch.\r\nDefault: 256 or 128 depending on CPU architecture")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/InitialNumberOfItemsToReduceInSingleBatch")]
+        // ReSharper disable once InconsistentNaming
+        public int? _InitialNumberOfItemsToReduceInSingleBatch { get; set; }
+
         public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
-        /// <summary>
-        /// If set all client request to the server will be rejected with 
-        /// the http 503 response.
-        /// Other servers or the studio could still access the server.
-        /// </summary>
+        [Description("If set all client request to the server will be rejected with the http 503 response. Other servers or the studio could still access the server.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/RejectClientsModeEnabled")]
         public bool RejectClientsMode { get; set; }
 
-        /// <summary>
-        /// The time to wait before canceling a database operation such as load (many) or query
-        /// </summary>
+        [Description("The time to wait before canceling a database operation such as load (many) or query")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Raven/DatabaseOperationTimeoutInMin")]
         [ConfigurationEntry("Raven/DatabaseOperationTimeout")]
         public TimeSetting DatabaseOperationTimeout { get; set; }
 
-        /// <summary>
-        /// If True, turns off the discovery client.
-        /// </summary>
+        [Description("If True, turns off the discovery client")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/TurnOffDiscoveryClient")]
         public bool TurnOffDiscoveryClient { get; set; }
 
-        /// <summary>
-        /// The maximum number of recent document touches to store (i.e. updates done in
-        /// order to initiate indexing rather than because something has actually changed).
-        /// </summary>
+        [Description("The maximum number of recent document touches to store (i.e. updates done in order to initiate indexing rather than because something has actually changed).")]
         [DefaultValue(1024)]
         [ConfigurationEntry("Raven/MaxRecentTouchesToRemember")]
         public int MaxRecentTouchesToRemember { get; set; }
 
 
-        /// <summary>
-        /// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
-        /// purged on next database startup. Default: 14 days.
-        /// </summary>
+        [Description("Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically purged on next database startup. Default: 14 days.")]
         [DefaultValue(14)]
         [TimeUnit(TimeUnit.Days)]
         [ConfigurationEntry("Raven/TombstoneRetentionTimeInDays")]
         [ConfigurationEntry("Raven/TombstoneRetentionTime")]
         public TimeSetting TombstoneRetentionTime { get; set; }
 
-        /// <summary>
-        /// How FieldsToFetch are extracted from the document.
-        /// Default: Enabled. 
-        /// Other values are: 
-        ///     DoNothing (fields are not fetched from the document)
-        ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
-        /// </summary>
+        [Description("How FieldsToFetch are extracted from the document. Other values are:\r\n"+
+            "\tDoNothing (fields are not fetched from the document)\r\n" +
+            "\tException (an exception is thrown if we need to fetch fields from the document itself)")]
         [DefaultValue(ImplicitFetchFieldsMode.Enabled)]
         [ConfigurationEntry("Raven/ImplicitFetchFieldsFromDocumentMode")]
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
-        /// <summary>
-        /// Path to temporary directory used by server.
-        /// Default: Current user's temporary directory
-        /// </summary>
+        [Description("Path to temporary directory used by server\r\nDefault: Current user's temporary directory")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Raven/TempPath")]
         public string TempPath { get; set; }
 
-        /// <summary>
-        /// What sort of transaction mode to use. 
-        /// Allowed values: 
-        /// Lazy - faster, but can result in data loss in the case of server crash. 
-        /// Safe - slower, but will never lose data 
-        /// Default: Safe 
-        /// </summary>
+        [Description("What sort of transaction mode to use. Allowed values: \r\n" +
+                     "\tLazy - faster, but can result in data loss in the case of server crash\r\n" +
+                     "\tSafe - slower, but will never lose data")]
         [DefaultValue(TransactionMode.Safe)]
         [ConfigurationEntry("Raven/TransactionMode")]
         public TransactionMode TransactionMode { get; set; }
 
-        /// <summary>
-        /// Defines which operations are allowed for anonymous users.
-        /// Allowed values: All, Get, None
-        /// Default: Get
-        /// </summary>
+        [Description("Defines which operations are allowed for anonymous users. Allowed values: Get - read only, All - read & write, None - allows access to only authenticated users")]
         [DefaultValue(AnonymousUserAccessMode.Admin)]
         [ConfigurationEntry("Raven/AnonymousAccess")]
         public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
 
-        /// <summary>
-        /// The virtual directory to use when creating the http listener. 
-        /// Default: / 
-        /// </summary>
+        [Description("The virtual directory to use when creating the http listener.\r\nDefault: / ")]
         [DefaultValue(DefaultValueSetInConstructor)] // set in initialize
         [ConfigurationEntry("Raven/VirtualDirectory")]
         public string VirtualDirectory
@@ -417,15 +347,18 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/IgnoreSslCertificateErrors")]
         public IgnoreSslCertificateErrorsMode IgnoreSslCertificateErrors { get; set; }
 
+        [Description("Semicolon separated list of headers that server should ignore. e.g. Header-To-Ignore-1;Header-To-Ignore-2")]
         [DefaultValue("")]
         [ConfigurationEntry("Raven/Headers/Ignore")]
-        public string HeadersToIgnoreStringValue { get; set; }
+        // ReSharper disable once InconsistentNaming
+        public string _HeadersToIgnoreString { get; set; }
 
+        [Description("Semicolon separated list of bundles names, such as: 'Replication;Versioning'. If the value is not specified, none of the bundles are installed.")]
         [DefaultValue("")]
         [ConfigurationEntry("Raven/ActiveBundles")]
-        public string ActiveBundlesStringValue { get; set; }
+        public string _ActiveBundlesString { get; set; }
 
-        public IEnumerable<string> ActiveBundles => BundlesHelper.ProcessActiveBundles(ActiveBundlesStringValue)
+        public IEnumerable<string> ActiveBundles => BundlesHelper.ProcessActiveBundles(_ActiveBundlesString)
             .GetSemicolonSeparatedValues()
             .Distinct();
 
@@ -434,11 +367,10 @@ namespace Raven.Database.Config.Categories
         public override void Initialize(NameValueCollection settings)
         {
             base.Initialize(settings);
-
-            var initialNumberOfItemsToIndexInSingleBatch = settings["Raven/InitialNumberOfItemsToProcessInSingleBatch"] ?? settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
-            if (initialNumberOfItemsToIndexInSingleBatch != null)
+            
+            if (_InitialNumberOfItemsToProcessInSingleBatch != null)
             {
-                InitialNumberOfItemsToProcessInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch), MaxNumberOfItemsToProcessInSingleBatch);
+                InitialNumberOfItemsToProcessInSingleBatch = Math.Min(_InitialNumberOfItemsToProcessInSingleBatch.Value, MaxNumberOfItemsToProcessInSingleBatch);
             }
             else
             {
@@ -446,12 +378,10 @@ namespace Raven.Database.Config.Categories
                     defaultInitialNumberOfItemsToProcessInSingleBatch :
                     Math.Max(16, Math.Min(MaxNumberOfItemsToProcessInSingleBatch / 256, defaultInitialNumberOfItemsToProcessInSingleBatch));
             }
-
-            var initialNumberOfItemsToReduceInSingleBatch = settings["Raven/InitialNumberOfItemsToReduceInSingleBatch"];
-            if (initialNumberOfItemsToReduceInSingleBatch != null)
+            
+            if (_InitialNumberOfItemsToReduceInSingleBatch != null)
             {
-                InitialNumberOfItemsToReduceInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToReduceInSingleBatch),
-                    MaxNumberOfItemsToReduceInSingleBatch);
+                InitialNumberOfItemsToReduceInSingleBatch = Math.Min(_InitialNumberOfItemsToReduceInSingleBatch.Value, MaxNumberOfItemsToReduceInSingleBatch);
             }
             else
             {
@@ -471,7 +401,7 @@ namespace Raven.Database.Config.Categories
                 parent.CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
             }
 
-            HeadersToIgnore = new HashSet<string>(HeadersToIgnoreStringValue.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
+            HeadersToIgnore = new HashSet<string>(_HeadersToIgnoreString.GetSemicolonSeparatedValues(), StringComparer.OrdinalIgnoreCase);
         }
 
         private string GetDefaultVirtualDirectory()
