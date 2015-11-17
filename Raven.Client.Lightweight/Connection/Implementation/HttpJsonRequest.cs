@@ -240,10 +240,12 @@ namespace Raven.Client.Connection.Implementation
                 }
                 catch (HttpRequestException e)
                 {
-                    if (Response == null) //something bad happened and httpClient.SendAsync failed -> i.e. server down, network down
                         e.Data.Add(Constants.RequestFailedExceptionMarker, true);
 
-                    throw ErrorResponseException.FromHttpRequestException(e);
+                    var exception = ErrorResponseException.FromException(e);
+                    Response = exception.Response;
+                    ResponseStatusCode = Response.StatusCode;
+                    throw exception;
                 }
                 finally
                 {
@@ -301,9 +303,8 @@ namespace Raven.Client.Connection.Implementation
 
                     responseException = e;
                 }
-                var responseStatusCode = Response.StatusCode;
 
-                if (responseStatusCode == HttpStatusCode.Forbidden)
+                if (ResponseStatusCode == HttpStatusCode.Forbidden)
                 {
                     await HandleForbiddenResponseAsync(Response).ConfigureAwait(false);
                     throw responseException;
@@ -348,9 +349,9 @@ namespace Raven.Client.Connection.Implementation
         {
             if (Response.IsSuccessStatusCode)
                 return null;
-            if (Response.StatusCode == HttpStatusCode.Unauthorized ||
-                Response.StatusCode == HttpStatusCode.NotFound ||
-                Response.StatusCode == HttpStatusCode.Conflict)
+            if (ResponseStatusCode == HttpStatusCode.Unauthorized ||
+                ResponseStatusCode == HttpStatusCode.NotFound ||
+                ResponseStatusCode == HttpStatusCode.Conflict)
             {
                 if (factory.CanLogRequest)
                 {
@@ -358,9 +359,9 @@ namespace Raven.Client.Connection.Implementation
                     {
                         DurationMilliseconds = CalculateDuration(),
                         Method = Method,
-                        HttpResult = (int)Response.StatusCode,
+                    HttpResult = (int)ResponseStatusCode,
                         Status = RequestStatus.ErrorOnServer,
-                        Result = Response.StatusCode.ToString(),
+                    Result = ResponseStatusCode.ToString(),
                         Url = Url,
                         PostedData = postedData
                     });
@@ -370,7 +371,7 @@ namespace Raven.Client.Connection.Implementation
                 throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
             }
 
-            if (Response.StatusCode == HttpStatusCode.NotModified
+            if (ResponseStatusCode == HttpStatusCode.NotModified
                 && CachedRequestDetails != null)
             {
                 factory.UpdateCacheTime(this);
@@ -387,7 +388,7 @@ namespace Raven.Client.Connection.Implementation
                     {
                         DurationMilliseconds = CalculateDuration(),
                         Method = Method,
-                        HttpResult = (int)Response.StatusCode,
+                    HttpResult = (int)ResponseStatusCode,
                         Status = RequestStatus.Cached,
                         Result = result.ToString(),
                         Url = Url,
@@ -410,7 +411,7 @@ namespace Raven.Client.Connection.Implementation
                     {
                         DurationMilliseconds = CalculateDuration(),
                         Method = Method,
-                        HttpResult = (int)Response.StatusCode,
+                    HttpResult = (int)ResponseStatusCode,
                         Status = RequestStatus.Cached,
                         Result = readToEnd,
                         Url = Url,
@@ -438,7 +439,7 @@ namespace Raven.Client.Connection.Implementation
                         ProblematicText = ravenJObject.Value<string>("ProblematicText")
                     };
                 }
-                if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
+                if (ResponseStatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
                 {
                     throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
                 }
@@ -824,9 +825,9 @@ namespace Raven.Client.Connection.Implementation
                 Response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                 ResponseStatusCode = Response.StatusCode;
                 if (Response.IsSuccessStatusCode == false &&
-                    (Response.StatusCode == HttpStatusCode.PreconditionFailed ||
-                    Response.StatusCode == HttpStatusCode.Forbidden ||
-                    Response.StatusCode == HttpStatusCode.Unauthorized))
+                    (ResponseStatusCode == HttpStatusCode.PreconditionFailed ||
+                    ResponseStatusCode == HttpStatusCode.Forbidden ||
+                    ResponseStatusCode == HttpStatusCode.Unauthorized))
                 {
                     throw new ErrorResponseException(Response, "Failed request");
                 }
@@ -851,9 +852,9 @@ namespace Raven.Client.Connection.Implementation
                 ResponseStatusCode = Response.StatusCode;
 
                 if (Response.IsSuccessStatusCode == false &&
-                    (Response.StatusCode == HttpStatusCode.PreconditionFailed ||
-                    Response.StatusCode == HttpStatusCode.Forbidden ||
-                    Response.StatusCode == HttpStatusCode.Unauthorized))
+                    (ResponseStatusCode == HttpStatusCode.PreconditionFailed ||
+                    ResponseStatusCode == HttpStatusCode.Forbidden ||
+                    ResponseStatusCode == HttpStatusCode.Unauthorized))
                 {
                     throw new ErrorResponseException(Response, "Failed request");
                 }

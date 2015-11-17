@@ -1,9 +1,9 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Connection
@@ -48,16 +48,6 @@ namespace Raven.Abstractions.Connection
         {
             this.response = response;
             ResponseString = responseString;
-        }
-
-        public static ErrorResponseException FromHttpRequestException(HttpRequestException exception)
-        {
-            var ex = new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), exception.Message, exception.Message);
-
-            foreach (var key in exception.Data.Keys)
-                ex.Data[key] = exception.Data[key];
-
-            return ex;
         }
 
         public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
@@ -107,6 +97,47 @@ namespace Raven.Abstractions.Connection
             : base(info, context)
         {
         }
-#endif
+
+        public static ErrorResponseException FromException(HttpRequestException e)
+        {
+            var builder = new StringBuilder();
+
+            var webException = e.InnerException as WebException;
+            var statusCode = HttpStatusCode.ServiceUnavailable;
+            if (webException != null)
+            {
+                builder.Append("WebExceptionMessage: ");
+                builder.AppendLine(webException.Message);
+                builder.Append("Status Code: ");
+                builder.AppendLine(webException.Status.ToString());
+                var webResponse = webException.Response as HttpWebResponse;
+                if (webResponse != null)
+                {
+                    builder.Append("Response Status Code: ");
+                    statusCode = webResponse.StatusCode;
+                    builder.AppendLine(statusCode.ToString());
+
+                    using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
+                    using (var reader = new StreamReader(stream))
+                    {
+                        builder.Append("Response: ");
+                        builder.AppendLine(reader.ReadToEnd());
     }
 }
+
+                var win32Exception = webException.InnerException as Win32Exception;
+                if (win32Exception != null)
+                {
+                    //  builder.AppendLine(win32Exception.);
+                }
+            }
+
+            return new ErrorResponseException
+            {
+                Response = new HttpResponseMessage(statusCode),
+                ResponseString = builder.ToString(),
+            };
+        }
+    }
+}
+#endif
