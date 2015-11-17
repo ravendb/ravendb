@@ -117,18 +117,27 @@ namespace Raven.Abstractions.Connection
                     statusCode = webResponse.StatusCode;
                     builder.AppendLine(statusCode.ToString());
 
+                    try
+                    {
                     using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
                     using (var reader = new StreamReader(stream))
                     {
                         builder.Append("Response: ");
                         builder.AppendLine(reader.ReadToEnd());
-    }
-}
+                        }
+                    }
+                    catch (Exception e2)
+                    {
+                        builder.Append("Failed to read the response: " + e2);
+                    }
+
+                }
 
                 var win32Exception = webException.InnerException as Win32Exception;
                 if (win32Exception != null)
                 {
-                    //  builder.AppendLine(win32Exception.);
+                    builder.Append("Win32 Error: ");
+                    builder.AppendLine(win32Exception.Message);
                 }
             }
 
