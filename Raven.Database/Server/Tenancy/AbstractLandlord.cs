@@ -53,8 +53,8 @@ namespace Raven.Database.Server.Tenancy
         {
             systemConfiguration = systemDatabase.Configuration;
             this.systemDatabase = systemDatabase;
-            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.Server.MaxConcurrentResourceLoads);
-            ConcurrentResourceLoadTimeout = systemDatabase.Configuration.Server.ConcurrentResourceLoadTimeout.AsTimeSpan;
+            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.Tenants.MaxConcurrentResourceLoads);
+            ConcurrentResourceLoadTimeout = systemDatabase.Configuration.Tenants.ConcurrentResourceLoadTimeout.AsTimeSpan;
         }
 
         public TimeSpan MaxTimeForTaskToWaitForDatabaseToLoad => systemConfiguration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;

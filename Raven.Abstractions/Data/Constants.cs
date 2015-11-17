@@ -85,9 +85,6 @@ namespace Raven.Abstractions.Data
         public const string RavenJavascriptFunctions = "Raven/Javascript/Functions";
 
         // Server
-        public const string MaxConcurrentResourceLoads = "Raven/Tenants/MaxConcurrentResourceLoads";
-        public const string ConcurrentResourceLoadTimeout = "Raven/Tenants/ConcurrentResourceLoadTimeout";
-
         public const string RavenServerBuild = "Raven-Server-Build";
 
         public const string BulkImportHeartbeatDocKey = "Raven/BulkImport/Heartbeat";
