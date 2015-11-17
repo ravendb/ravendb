@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Controllers
                     var settings = fileSystem.Value<RavenJObject>("Settings");
                     if (settings != null)
                     {
-                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue));
+                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString));
                         if (activeBundles != null)
                         {
                             bundles = activeBundles.Split(';');

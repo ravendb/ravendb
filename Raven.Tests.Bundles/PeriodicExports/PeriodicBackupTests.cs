@@ -27,7 +27,7 @@ namespace Raven.Tests.Bundles.PeriodicExports
     {
         protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "PeriodicBackup";
+            configuration.Core._ActiveBundlesString = "PeriodicBackup";
         }
         public class User
         {

@@ -88,7 +88,7 @@ namespace Raven.Tests.Helpers
                     DataDirectory = directory,
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
-                    ActiveBundlesStringValue = activeBundles ?? string.Empty
+                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,

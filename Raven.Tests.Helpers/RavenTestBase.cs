@@ -191,7 +191,7 @@ namespace Raven.Tests.Helpers
                         DataDirectory = Path.Combine(dataDirectory, "System"),
                         Port = port ?? 8079,
                         AnonymousUserAccessMode = anonymousUserAccessMode,
-                        ActiveBundlesStringValue = activeBundles ?? string.Empty
+                        _ActiveBundlesString = activeBundles ?? string.Empty
                     }
                 },
                 Conventions = conventions ?? new DocumentConvention()
@@ -407,7 +407,7 @@ namespace Raven.Tests.Helpers
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-                    ActiveBundlesStringValue = activeBundles ?? string.Empty
+                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,

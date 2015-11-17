@@ -27,7 +27,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Voron/InitialFileSize")]
         public Size? InitialFileSize { get; set; }
 
-        [Description("The maximum scratch buffer size that can be used by Voron")]
+        [Description("The maximum scratch buffer (modified data by active transactions) size that can be used by Voron")]
         [DefaultValue(6144)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Storage/MaxScratchBufferSizeInMB")]

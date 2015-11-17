@@ -70,7 +70,11 @@ namespace Raven.Database.Config.Categories
                             }
                             else
                             {
-                                property.SetValue(this, Convert.ChangeType(value, property.PropertyType));
+                                var t = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+                                var safeValue = (value == null) ? null : Convert.ChangeType(value, t);
+
+                                property.SetValue(this, safeValue);
                             }
                         }
                         else

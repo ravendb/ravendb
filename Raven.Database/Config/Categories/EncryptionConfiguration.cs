@@ -5,7 +5,7 @@ namespace Raven.Database.Config.Categories
 {
     public class EncryptionConfiguration : ConfigurationCategory
     {
-        [Description("Whatever we should use FIPS compliant encryption algorithms")]
+        [Description("Use FIPS compliant encryption algorithms.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Encryption/FIPS")]
         public bool UseFips { get; set; }

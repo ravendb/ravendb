@@ -10,7 +10,7 @@ namespace Raven.Tests.Bundles.Encryption
     {
         protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "none";
+            configuration.Core._ActiveBundlesString = "none";
         }
 
         [Fact]

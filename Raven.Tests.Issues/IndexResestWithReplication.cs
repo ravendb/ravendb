@@ -20,7 +20,7 @@ namespace Raven.Tests.Issues
     {
         protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "Replication; Compression";
+            configuration.Core._ActiveBundlesString = "Replication; Compression";
         }
 
         [Fact]

@@ -17,6 +17,7 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Prefetching/DurationLimit")]
         public TimeSetting DurationLimit { get; set; }
 
+        [Description("Disable document prefetching")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Prefetching/Disable")]
         [ConfigurationEntry("Raven/DisableDocumentPreFetching")]

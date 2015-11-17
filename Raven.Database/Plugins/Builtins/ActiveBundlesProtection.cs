@@ -47,7 +47,7 @@ namespace Raven.Database.Plugins.Builtins
 
             var currentBundles = new List<string>();
             string value;
-            var activeBundlesSettingKey = RavenConfiguration.GetKey(x => x.Core.ActiveBundlesStringValue);
+            var activeBundlesSettingKey = RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString);
 
             if (currentDbDocument.Settings.TryGetValue(activeBundlesSettingKey, out value))
                 currentBundles = value.GetSemicolonSeparatedValues();

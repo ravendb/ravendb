@@ -17,7 +17,7 @@ namespace Raven.Tests.Issues
     {
         protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "PeriodicBackup;Replication";
+            configuration.Core._ActiveBundlesString = "PeriodicBackup;Replication";
         }
 
         [Fact]

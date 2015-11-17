@@ -69,7 +69,7 @@ namespace Raven.Tests.MailingList
 
         protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Core.ActiveBundlesStringValue = "ScriptedIndexResults";
+            configuration.Core._ActiveBundlesString = "ScriptedIndexResults";
             configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(ScriptedIndexResultsIndexTrigger)));
         }
 
