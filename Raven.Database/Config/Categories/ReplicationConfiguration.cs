@@ -12,34 +12,26 @@ namespace Raven.Database.Config.Categories
         [ConfigurationEntry("Raven/Replication/IndexAndTransformerReplicationLatency")]
         public TimeSetting IndexAndTransformerReplicationLatency { get; set; }
 
-        /// <summary>
-        /// Number of seconds after which replication will stop reading documents from disk. Default: 30.
-        /// </summary>
+        [Description("Number of seconds after which replication will stop reading documents from disk")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Replication/FetchingFromDiskTimeoutInSec")]
         [ConfigurationEntry("Raven/Replication/FetchingFromDiskTimeout")]
         public TimeSetting FetchingFromDiskTimeoutInSeconds { get; set; }
 
-        /// <summary>
-        /// Number of milliseconds before replication requests will timeout. Default: 60 * 1000.
-        /// </summary>
+        [Description("Number of milliseconds before replication requests will timeout")]
         [DefaultValue(60 * 1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Raven/Replication/ReplicationRequestTimeoutInMs")]
         [ConfigurationEntry("Raven/Replication/ReplicationRequestTimeout")]
         public TimeSetting ReplicationRequestTimeout { get; set; }
 
-        /// <summary>
-        /// Force us to buffer replication requests (useful if using windows auth under certain scenarios).
-        /// </summary>
+        [Description("Force us to buffer replication requests (useful if using windows auth under certain scenarios)")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Replication/ForceReplicationRequestBuffering")]
         public bool ForceReplicationRequestBuffering { get; set; }
 
-        /// <summary>
-        /// Maximum number of items replication will receive in single batch. Min: 512. Default: null (let source server decide).
-        /// </summary>
+        [Description("Maximum number of items replication will receive in single batch, null means let source server decide")]
         [DefaultValue(null)]
         [MinValue(512)]
         [ConfigurationEntry("Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch")]

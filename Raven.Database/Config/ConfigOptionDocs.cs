@@ -9,40 +9,19 @@ namespace Raven.Database.Config
         {
             //TODO arek RavenDB-3518
 
-            // Common
-            {"Raven/MaxPageSize", "int", null, "The maximum page size that can be specified on this server, default: 1,024."},
-            {"Raven/RunInMemory", "bool", "true,false", "Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing. Default: false."},
-            {"Raven/Headers/Ignore", "string", null, "Semicolon separated list of headers that server should ignore. e.g. Header-To-Ignore-1;Header-To-Ignore-2"},
-            
             // Studio
             {"Raven/RedirectStudioUrl", "string", null, "The url to redirect the user to when then try to access the local studio"},
 
             // Paths
-            {"Raven/DataDir", "string", null,"The path for the database directory. Can use ~\\ as the root, in which case the path will start from the server base directory. Default: ~\\Data."},
-            {"Raven/IndexStoragePath", "string", null,"The path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons. Default: ~\\Data\\Indexes."},			
 
             // Authentication
-            {"Raven/AnonymousAccess", "string", "Get,All,None", "Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users. Default: Get."},
-            {"Raven/OAuthTokenServer", "string", null, "The url clients should use for authenticating when using OAuth mode. Default: http://RavenDB-Server-Url/OAuth/API-Key - the internal OAuth server"},
-            {"Raven/OAuthTokenCertificate", "string", null, "The base 64 to the OAuth key use to communicate with the server. Default: none. If no key is specified, one will be automatically created."},
+
 
             // Network
-            {"Raven/HostName", "string", null, "The hostname to bind the embedded http server to, if we want to bind to a specific hostname, rather than all. Default: none."},
-            {"Raven/Port", "int", "1 - 65,536, *", "The port to bind the embedded http server. Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward."},
-            {"Raven/ExposeConfigOverTheWire", "string", null, "Allow to get config information over the wire. Default: Open."},
-            {"Raven/UseSsl", "bool", "false", "Enable/disable SSL. Default: false."},
-            {"Raven/HttpCompression", "bool", "true,false", "Whatever http compression is enabled. Default: true."},
-            {"Raven/VirtualDirectory", "string", null, "The virtual directory for the RavenDB server. Default: none."},
 
-            // Access-Control headers
-            {"Raven/AccessControlAllowOrigin", "string", null, "Configures the server to send Access-Control-Allow-Origin header with the specified value. Default: none. If this value isn't specified, all the access control settings are ignored."},
-            {"Raven/AccessControlMaxAge", "int", null, "Configures the server to send Access-Control-Max-Age header with the specified value. Default: 1728000 (20 days)."},
-            {"Raven/AccessControlAllowMethods", "string", null, "Configures the server to send Access-Control-Allow-Methods header with the specified value. Default: PUT,PATCH,GET,DELETE,POST."},
-            {"Raven/AccessControlRequestHeaders", "string", null, "Configures the server to send Access-Control-Request-Headers header with the specified value. Default: none."},
+
 
             // Tenants
-            {"Raven/Tenants/MaxIdleTimeForTenantDatabase", "int", null, "The time in seconds to allow a tenant database to be idle"},
-            {"Raven/Tenants/FrequencyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
             // Indexing
             {"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The max number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
@@ -83,16 +62,6 @@ namespace Raven.Database.Config
             {"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned."},
             {"Raven/MemoryCacheExpiration", "int", null, "The expiration value for documents in the internal document cache. Value is in seconds. Default: 60 minutes"},
             {"Raven/MemoryLimitForProcessing", "int", null, "Maximum number of megabytes that can be used by database to control the maximum size of the processing batches. Default: 1024 or 75% percent of available memory if 1GB is not available."},
-
-            // Esent
-            {"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 25% of RAM on 64 bits, 256 MB on 32 bits."},
-            {"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 512."},
-            {"Raven/Esent/PreferredVerPages", "int", null, "The preferred size of version store (in memory modified data) available. If the value exceed that level, optional background tasks data are removed from the version store. The value is in megabytes. Default: 472."},
-            {"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in megabytes. Default: 64."},
-            {"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 8192."},
-            {"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},
-            {"Raven/Esent/DbExtensionSize", "int", null, "The size that the database file will be enlarged with when the file is full. The value is in megabytes. Lower values result in smaller file size, but slower performance when the database size grows. Default: 8."},
-            {"Raven/Esent/CircularLog", "bool", "true / false", "Whatever circular logs will be used, defaults to true. If you want to use incremental backups, you need to turn this off, but logs will only be truncated on backup."},
 
             //Voron	
             {"Raven/Voron/AllowIncrementalBackups", "bool", "true / false", "If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. Default: false."},

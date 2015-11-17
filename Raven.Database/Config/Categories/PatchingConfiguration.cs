@@ -25,6 +25,7 @@ namespace Raven.Database.Config.Categories
         /// Default: 5
         /// </summary>
         [DefaultValue(5)]
+        [ConfigurationEntry("Raven/Patching/AdditionalStepsForScriptBasedOnDocumentSize")]
         [ConfigurationEntry("Raven/AdditionalStepsForScriptBasedOnDocumentSize")]
         public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
     }
