@@ -116,6 +116,11 @@ namespace Raven.Abstractions.Data
         public IndexLockMode LockMode { get; set; }
 
         /// <summary>
+        /// Indicates if it is a MapReduce index.
+        /// </summary>
+        public bool IsMapReduce { get; set; }
+
+        /// <summary>
         /// List of all entity names (collections) for which this index is working.
         /// </summary>
         public string[] ForEntityName { get; set; } 

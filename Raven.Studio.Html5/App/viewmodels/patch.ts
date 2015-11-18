@@ -30,8 +30,10 @@ import queryUtil = require("common/queryUtil");
 class patch extends viewModelBase {
 
     displayName = "patch";
-    indexNames = ko.observableArray<string>();
-    collections = ko.observableArray<collection>();
+    indexNames = ko.observableArray<string>([]);
+    indexNamesToSelect: KnockoutComputed<string[]>;
+    collections = ko.observableArray<collection>([]);
+    collectionToSelect: KnockoutComputed<collection[]>;
 
     currentCollectionPagedItems = ko.observable<pagedList>();
     selectedDocumentIndices = ko.observableArray<number>();
@@ -104,6 +106,24 @@ class patch extends viewModelBase {
         this.selectedIndex
             .where(indexName => indexName != null)
             .subscribe(indexName => this.fetchIndexFields(indexName));
+
+        this.indexNamesToSelect = ko.computed(() => {
+            var indexNames = this.indexNames();
+            var patchDocument = this.patchDocument();
+            if (indexNames.length === 0 || !patchDocument)
+                return [];
+
+            return indexNames.filter(x => x !== patchDocument.selectedItem());
+        });
+
+        this.collectionToSelect = ko.computed(() => {
+            var collections = this.collections();
+            var patchDocument = this.patchDocument();
+            if (collections.length === 0 || !patchDocument)
+                return [];
+
+            return collections.filter((x: collection) => x.name !== patchDocument.selectedItem());
+        });
     }
 
     compositionComplete() {
@@ -179,7 +199,6 @@ class patch extends viewModelBase {
         aceEditorBindingHandler.detached();
     }
 
-
     loadDocumentToTest(selectedItem: string) {
         if (selectedItem) {
             var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
@@ -240,8 +259,9 @@ class patch extends viewModelBase {
         this.patchDocument().selectedItem(coll.name);
         var list = coll.getDocuments();
         this.currentCollectionPagedItems(list);
-        list.fetch(0, 20);
-        $("#matchingDocumentsGrid").resize();
+        list.fetch(0, 20).always(() => $("#matchingDocumentsGrid").resize());
+        //;
+        //setTimeout(() => $("#matchingDocumentsGrid").resize(), 2000);
     }
 
     fetchAllIndexes(): JQueryPromise<any> {
