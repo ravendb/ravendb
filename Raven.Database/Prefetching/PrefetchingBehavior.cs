@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="PrefetchingBehavior.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -93,9 +93,8 @@ namespace Raven.Database.Prefetching
             }
         }
 
-        public PrefetchingUser PrefetchingUser { get; private set; }
-
-        public bool IsDefault { get; private set; }
+        public PrefetchingUser PrefetchingUser { get; }
+        public bool IsDefault { get; }
         private readonly Func<int> getPrefetchintBehavioursCount;
         private readonly Func<PrefetchingSummary> getPrefetcherSummary;
         public List<IndexToWorkOn> Indexes { get; set; }
@@ -616,7 +615,7 @@ namespace Raven.Database.Prefetching
                     LargestDocSize = largestDocSize,
                     LargestDocKey = largestDocKey
                 });
-                while (loadTimes.Count > 8)
+                while (loadTimes.Count > 10)
                 {
                     DiskFetchPerformanceStats _;
                     loadTimes.TryDequeue(out _);
@@ -628,12 +627,17 @@ namespace Raven.Database.Prefetching
 
         public PrefetchingSummary GetSummary()
         {
-            var size = 1024;
-            var count = context.LastActualIndexingBatchInfo.Count;
-            if (count > 0)
+            var loadTimesCount = loadTimes.Count;
+            var totalDocumentsCount = loadTimes.Sum(x => x.NumberOfDocuments);
+
+            long size = 1024;
+            var approximateDocumentCount = context.Configuration.InitialNumberOfItemsToProcessInSingleBatch;
+            if (loadTimesCount > 0 && totalDocumentsCount > 0)
             {
-                size = context.LastActualIndexingBatchInfo.Aggregate(0, (o, c) => o + c.TotalDocumentCount) / count;
+                size = loadTimes.Sum(x => x.TotalSize) / totalDocumentsCount / loadTimesCount;
+                approximateDocumentCount = totalDocumentsCount / loadTimesCount;
             }
+
             var futureIndexBatchesLoadedSize = futureIndexBatches.Values.Sum(x =>
             {
                 if (x.Task.Status == TaskStatus.RanToCompletion)
@@ -647,7 +651,7 @@ namespace Raven.Database.Prefetching
                 if (x.Task.Status == TaskStatus.RanToCompletion)
                     return x.Task.Result.Count;
 
-                return GetNumberOfItemsToProcessInSingleBatch() / 4 * 3;
+                return approximateDocumentCount;
             });
 
             return new PrefetchingSummary
@@ -781,6 +785,8 @@ namespace Raven.Database.Prefetching
                     splittedFutureIndexBatchesCount += 1;
                     if (splittedFutureIndexBatchesCount/numberOfSplitTasks != 1)
                         continue;
+
+                    splittedFutureIndexBatchesCount = 0;
                 }
                 actualFutureIndexBatchesCount++;
             }
@@ -1345,7 +1351,7 @@ namespace Raven.Database.Prefetching
     {
         public int PrefetchingQueueLoadedSize { get; set; }
         public int PrefetchingQueueDocsCount { get; set; }
-        public int FutureIndexBatchesLoadedSize { get; set; }
+        public long FutureIndexBatchesLoadedSize { get; set; }
         public int FutureIndexBatchesDocsCount { get; set; }
     }
 
