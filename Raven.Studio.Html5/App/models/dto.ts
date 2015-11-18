@@ -875,6 +875,11 @@ interface statusDebugDataSubscriptionsDto {
     ConnectionOptions: subscriptionConnectionOptionsDto;
 }
 
+interface subscriptionDto {
+    SubscriptionId: number;
+    AckEtag: string;
+}
+
 interface subscriptionCriteriaDto {
     KeyStartsWith: string;
     BelongsToAnyCollection: Array<string>;

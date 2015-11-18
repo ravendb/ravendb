@@ -20,6 +20,7 @@ class tasks extends viewModelBase {
         var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(this.activeDatabase()));
         var exportDatabaseUrl = ko.computed(() => appUrl.forExportDatabase(this.activeDatabase()));
         var toggleIndexingUrl = ko.computed(() => appUrl.forToggleIndexing(this.activeDatabase()));
+        var setAcknowledgedEtagUrl = ko.computed(() => appUrl.forSetAcknowledgedEtag(this.activeDatabase()));
         var sampleDataUrl = ko.computed(() => appUrl.forSampleData(this.activeDatabase()));
         var csvImportUrl = ko.computed(() => appUrl.forCsvImport(this.activeDatabase()));
 
@@ -27,6 +28,7 @@ class tasks extends viewModelBase {
             { route: ['databases/tasks', 'databases/tasks/importDatabase'], moduleId: 'viewmodels/database/tasks/importDatabase', title: 'Import Database', nav: true, hash: importDatabaseUrl },
             { route: 'databases/tasks/exportDatabase', moduleId: 'viewmodels/database/tasks/exportDatabase', title: 'Export Database', nav: true, hash: exportDatabaseUrl },
             { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/database/tasks/toggleIndexing', title: 'Toggle Indexing', nav: this.activeDatabase().isAdminCurrentTenant(), hash: toggleIndexingUrl },
+            { route: 'databases/tasks/subscriptionsTask', moduleId: 'viewmodels/database/tasks/subscriptionsTask', title: 'Subscriptions', nav: this.activeDatabase().isAdminCurrentTenant(), hash: setAcknowledgedEtagUrl },
             { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/database/tasks/createSampleData', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
             { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/database/tasks/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
         ];

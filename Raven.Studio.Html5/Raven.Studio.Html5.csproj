@@ -34,6 +34,8 @@
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\subscriptions\getSubscriptionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
@@ -85,6 +87,7 @@
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
+    <TypeScriptCompile Include="App\models\database\Subscription\Subscription.ts" />
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
@@ -130,6 +133,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\tasks\SubscriptionsTask.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
@@ -173,6 +177,7 @@
     <Content Include="App\views\database\status\indexing\perfDialogs\mapStatsInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceBatchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\mapBatchInfo.html" />
+    <Content Include="App\views\database\tasks\subscriptionsTask.html" />
     <Content Include="App\views\filesystem\search\fieldRangeFilter.html" />
     <Content Include="App\views\filesystem\search\fieldStringFilter.html" />
     <Content Include="App\views\databaseStudioConfig.html" />

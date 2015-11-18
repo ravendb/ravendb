@@ -684,6 +684,29 @@ namespace Raven.Database.Server.Controllers.Admin
             Database.StopIndexingWorkers(true);
         }
 
+
+        [HttpPost]
+        [RavenRoute("admin/setSubscriptionAckEtag")]
+        [RavenRoute("databases/{databaseName}/admin/setSubscriptionAckEtag")]
+        public HttpResponseMessage SetSubscriptionAckEtag()
+        {
+            var idStringVal = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStringVal, out id) == false)
+            {
+                return GetMessageWithString("Subscription Id is missing or invalid", HttpStatusCode.BadRequest);
+            }
+
+            var newEtag = GetQueryStringValue("newEtag");
+            if (string.IsNullOrEmpty(newEtag))
+            {
+                return GetMessageWithString("Acknowledged Etag Set Value is missing or invalid", HttpStatusCode.BadRequest);
+            }
+
+            Database.Subscriptions.SetAcknowledgeEtag(id, Etag.Parse(newEtag));
+            return GetEmptyMessage();
+        }
+
         [HttpPost]
         [RavenRoute("admin/startReducing")]
         [RavenRoute("databases/{databaseName}/admin/startReducing")]

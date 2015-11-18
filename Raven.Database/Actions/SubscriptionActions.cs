@@ -156,7 +156,10 @@ namespace Raven.Database.Actions
                 if(timeSinceBatchSent > options.AcknowledgmentTimeout)
                     throw new TimeoutException("The subscription cannot be acknowledged because the timeout has been reached.");
 
-                config.AckEtag = lastEtag;
+
+                if (config.AckEtag.CompareTo(lastEtag) < 0)
+                    config.AckEtag = lastEtag;
+
                 config.TimeOfLastClientActivity = SystemTime.UtcNow;
 
                 SaveSubscriptionConfig(id, config);
@@ -299,6 +302,26 @@ namespace Raven.Database.Actions
             });
 
             return subscriptions;
+        }
+
+        public void SetAcknowledgeEtag(long id, Etag lastEtag)
+        {
+            TransactionalStorage.Batch(accessor =>
+            {
+                var config = GetSubscriptionConfig(id);
+                config.AckEtag = lastEtag;
+                SaveSubscriptionConfig(id, config);
+            });
+        }
+
+        public Etag GetAcknowledgeEtag(long id)
+        {
+            Etag etag = null;
+            TransactionalStorage.Batch(accessor =>
+            {
+                etag = GetSubscriptionConfig(id).AckEtag;
+            });
+            return etag;
         }
     }
 }
