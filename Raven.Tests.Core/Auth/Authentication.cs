@@ -69,9 +69,9 @@ namespace Raven.Tests.Core.Auth
                     {
                         RequiredUsers = new List<WindowsAuthData>
                             {
-                                new WindowsAuthData()
+                                new WindowsAuthData
                                     {
-                                        Name = "test-domain\\test-user",
+                                        Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Domain, FactIfWindowsAuthenticationIsAvailable.Username),
                                         Enabled = true,
                                         Databases = new List<ResourceAccess>
                                             {
@@ -84,7 +84,7 @@ namespace Raven.Tests.Core.Auth
 
             using (var store = new DocumentStore
                 {
-                    Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain),
+                    Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username + "-2", FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain),
                     Url = this.Server.SystemDatabase.ServerUrl
                 }.Initialize())
             {
