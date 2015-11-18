@@ -1,9 +1,6 @@
 using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Tests.MailingList;
+
+using Raven.Tests.FileSystem.ClientApi;
 
 namespace Raven.Tryouts
 {
@@ -11,9 +8,14 @@ namespace Raven.Tryouts
     {
         static void Main(string[] args)
         {
-            using(var x = new MbsCountIndex())
+            for (int i = 0; i < 1000; i++)
             {
-                x.TypeIssue();
+                Console.Clear();
+                Console.WriteLine(i);
+                using (var x = new FileSessionListenersTests())
+                {
+                    x.ConflictListeners_RemoteVersion().Wait();
+                }
             }
         }
     }
