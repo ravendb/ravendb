@@ -10,10 +10,12 @@ namespace Raven.Tests.Common.Attributes
         private static bool triedLoading = false;
 
         public static string Username { get; private set; }
-
         public static string Domain { get; private set; }
-
         public static string Password { get; private set; }
+
+        public static string InvalidUsername { get; private set; }
+        public static string InvalidPassword { get; private set; }
+        public static string InvalidDomain { get; private set; }
 
         public static void LoadCredentials()
         {
@@ -39,6 +41,9 @@ namespace Raven.Tests.Common.Attributes
             Username = "local_user_test";
             Password = "local_user_test";
             Domain = "local_machine_name_test";
+            InvalidUsername = "local_machine_invalid_user";
+            InvalidPassword = "local_machine_invalid_user";
+            InvalidDomain = "local_machine_name_test";
 
             if (Username == "local_user_test")
             {
@@ -70,6 +75,18 @@ namespace Raven.Tests.Common.Attributes
                 Username = username[0];
             }
             Password = lines[1];
+
+            username = lines[2].Split('\\');
+            if (username.Length > 1)
+            {
+                InvalidDomain = username[0];
+                InvalidUsername = username[1];
+            }
+            else
+            {
+                InvalidUsername = username[0];
+            }
+            InvalidPassword = lines[3];
         }
     }
 }
