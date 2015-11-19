@@ -93,6 +93,8 @@ namespace Raven.Tests.Helpers.Util
             {
                 configuration.Settings[setting.Key] = setting.Value;
             }
+
+            configuration.Initialize();
         }
 
         private static Dictionary<string, string> ReadSettings()
@@ -101,16 +103,37 @@ namespace Raven.Tests.Helpers.Util
             var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (configuration.ContainsKey("settings"))
             {
-                foreach (RavenJObject setting in configuration.Value<RavenJArray>("settings"))
+                var settingsJson = configuration.Value<RavenJObject>("settings");
+                foreach (var settingKey in settingsJson.Keys)
                 {
-                    var key = setting.Value<string>("Key");
-                    var value = setting.Value<string>("Value");
-
-                    setting[key] = value;
+                    settings[settingKey] = settingsJson.Value<string>(settingKey);
                 }
             }
 
             return settings;
+        }
+
+        private static Dictionary<string, NetworkCredential> ReadCredentials()
+        {
+            var configuration = Configuration;
+            var credentials = new Dictionary<string, NetworkCredential>(StringComparer.OrdinalIgnoreCase);
+            if (configuration.ContainsKey("credentials"))
+            {
+                var credentialsJson = configuration.Value<RavenJObject>("credentials");
+
+                foreach (var credentialKey in credentialsJson.Keys)
+                {
+                    var credential = credentialsJson.Value<RavenJObject>(credentialKey);
+
+                    var userName = credential.Value<string>("UserName");
+                    var password = credential.Value<string>("Password");
+                    var domain = credential.Value<string>("Domain");
+
+                    credentials.Add(credentialKey, new NetworkCredential(userName, password, domain));
+                }
+            }
+
+            return credentials;
         }
 
         private static RavenJObject LoadConfiguration()
@@ -122,26 +145,6 @@ namespace Raven.Tests.Helpers.Util
                 return new RavenJObject();
 
             return RavenJObject.Parse(File.ReadAllText(path));
-        }
-
-        private static Dictionary<string, NetworkCredential> ReadCredentials()
-        {
-            var configuration = Configuration;
-            var credentials = new Dictionary<string, NetworkCredential>(StringComparer.OrdinalIgnoreCase);
-            if (configuration.ContainsKey("credentials"))
-            {
-                foreach (RavenJObject credential in configuration.Value<RavenJArray>("credentials"))
-                {
-                    var type = credential.Value<string>("Type");
-                    var userName = credential.Value<string>("UserName");
-                    var password = credential.Value<string>("Password");
-                    var domain = credential.Value<string>("Domain");
-
-                    credentials.Add(type, new NetworkCredential(userName, password, domain));
-                }
-            }
-
-            return credentials;
         }
     }
 }

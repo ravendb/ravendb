@@ -23,14 +23,15 @@ namespace Raven.Tests.Core
         public TestServerFixture()
         {
             var configuration = new RavenConfiguration();
+
+            ConfigurationHelper.ApplySettingsToConfiguration(configuration);
+
             configuration.Port = Port;
             configuration.ServerName = ServerName;
             configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
             configuration.DataDirectory = Path.Combine(configuration.DataDirectory, "Tests");
             configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 10;
             configuration.Storage.Voron.AllowOn32Bits = true;
-
-            ConfigurationHelper.ApplySettingsToConfiguration(configuration);
 
             IOExtensions.DeleteDirectory(configuration.DataDirectory);
 
