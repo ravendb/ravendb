@@ -16,6 +16,7 @@ pvc.Task("optimized-build", () => {
 		"Scripts/**/*.js",
 		"Scripts/**/*.css",
 		"index.html",
+		"favicon.ico",
 		"version.json"
 	};
 		
