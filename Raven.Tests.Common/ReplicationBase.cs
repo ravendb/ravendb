@@ -177,7 +177,9 @@ namespace Raven.Tests.Common
                 DefaultStorageTypeName = GetDefaultStorageType()
             };
 
-            serverConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            serverConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
+
+            ConfigurationHelper.ApplySettingsToConfiguration(serverConfiguration);
 
             ModifyConfiguration(serverConfiguration);
 

@@ -93,7 +93,7 @@ namespace Raven.Tests.Helpers
                 AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
                 Encryption = 
                 { 
-                    UseFips = SettingsHelper.UseFipsEncryptionAlgorithms 
+                    UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms 
                 },
                 FileSystem = 
                 {
@@ -107,6 +107,8 @@ namespace Raven.Tests.Helpers
             {
                 ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
             }
+
+            ConfigurationHelper.ApplySettingsToConfiguration(ravenConfiguration);
 
             if (customConfig != null)
             {

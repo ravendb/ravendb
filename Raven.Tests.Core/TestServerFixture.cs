@@ -10,6 +10,8 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common.Util;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Core
 {
@@ -27,6 +29,8 @@ namespace Raven.Tests.Core
             configuration.DataDirectory = Path.Combine(configuration.DataDirectory, "Tests");
             configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 10;
             configuration.Storage.Voron.AllowOn32Bits = true;
+
+            ConfigurationHelper.ApplySettingsToConfiguration(configuration);
 
             IOExtensions.DeleteDirectory(configuration.DataDirectory);
 

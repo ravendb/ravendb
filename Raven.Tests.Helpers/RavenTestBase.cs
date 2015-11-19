@@ -197,7 +197,7 @@ namespace Raven.Tests.Helpers
             };
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-            documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            documentStore.Configuration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             if (activeBundles != null)
             {
@@ -211,6 +211,8 @@ namespace Raven.Tests.Helpers
 
             try
             {
+                ConfigurationHelper.ApplySettingsToConfiguration(documentStore.Configuration);
+
                 if (configureStore != null)
                 {
                     configureStore(documentStore);
@@ -420,7 +422,7 @@ namespace Raven.Tests.Helpers
             };
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
-            ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
@@ -428,6 +430,8 @@ namespace Raven.Tests.Helpers
             {
                 ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
             }
+
+            ConfigurationHelper.ApplySettingsToConfiguration(ravenConfiguration);
 
             if (configureConfig != null)
                 configureConfig(ravenConfiguration);
