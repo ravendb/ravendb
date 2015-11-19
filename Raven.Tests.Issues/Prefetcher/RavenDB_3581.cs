@@ -298,7 +298,7 @@ namespace Raven.Tests.Issues.Prefetcher
         }
 
         [Fact]
-        public void MaybeAddFutureBatchWillFireUpOnceWhenLastActualIndexingBatchInfoContainsDataThanExceedsAvailableMemoryForRaisingBatchSizeLimit()
+        public void MaybeAddFutureBatchWillFireUpOnceWhenLastActualLoadedDataExceedsAvailableMemoryForRaisingBatchSizeLimit()
         {
             var mre1 = new ManualResetEventSlim();
             var mre2 = new ManualResetEventSlim();
@@ -311,13 +311,61 @@ namespace Raven.Tests.Issues.Prefetcher
                 if (count == 512)
                     mre1.Set();
 
-                if (count > 512)
+                if (count > 1536)
                     mre2.Set();
             };
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
 
-            prefetcher.WorkContext.LastActualIndexingBatchInfo.Add(new IndexingBatchInfo { TotalDocumentCount = 1024 * 1024 * 2 });
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1);
+
+            Assert.Equal(1, documents.Count);
+            Assert.True(mre1.Wait(TimeSpan.FromSeconds(3)));
+            Assert.False(mre2.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(1536, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire twice
+            Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
+        }
+
+        [Fact]
+        public void MaybeAddFutureBatchWillNotFireUpWhenLastActualLoadedDataExceedsAvailableMemoryForRaisingBatchSizeLimit()
+        {
+            var mre1 = new ManualResetEventSlim();
+
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 0);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                mre1.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1);
+
+            Assert.Equal(1, documents.Count);
+            Assert.False(mre1.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will not have any fututre batches
+            Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
+        }
+
+        [Fact]
+        public void MaybeAddFutureBatchWillFireUpOnceWhenLastActualLoadedDataExceedsMaxNumberOfItemsToProcessInSingleBatch()
+        {
+            var mre1 = new ManualResetEventSlim();
+            var mre2 = new ManualResetEventSlim();
+            var count = 0;
+
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 1023);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                count += i;
+                if (count == 512)
+                    mre1.Set();
+
+                if (count > 512)
+                    mre2.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
 
             var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1);
 
@@ -354,7 +402,7 @@ namespace Raven.Tests.Issues.Prefetcher
             Assert.Equal(1, documents.Count);
             Assert.True(mre1.Wait(TimeSpan.FromSeconds(3)));
             Assert.False(mre2.Wait(TimeSpan.FromSeconds(3)));
-            Assert.True(4096 > prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire once
+            Assert.True(4096 > prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 6 times
             Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
         }
 

@@ -630,11 +630,11 @@ namespace Raven.Database.Prefetching
             var loadTimesCount = loadTimes.Count;
             var totalDocumentsCount = loadTimes.Sum(x => x.NumberOfDocuments);
 
-            long size = 1024;
+            long size = 50000;
             var approximateDocumentCount = context.Configuration.InitialNumberOfItemsToProcessInSingleBatch;
             if (loadTimesCount > 0 && totalDocumentsCount > 0)
             {
-                size = loadTimes.Sum(x => x.TotalSize) / totalDocumentsCount / loadTimesCount;
+                size = loadTimes.Sum(x => x.TotalSize) / loadTimesCount;
                 approximateDocumentCount = totalDocumentsCount / loadTimesCount;
             }
 
@@ -723,7 +723,7 @@ namespace Raven.Database.Prefetching
             var maxAllowedToLoadInBytes = Math.Min(autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes,
                 context.Configuration.AvailableMemoryForRaisingBatchSizeLimit*1024*1024);
             var loadedSizeInBytes = globalSummary.PrefetchingQueueLoadedSize + globalSummary.FutureIndexBatchesLoadedSize;
-            if (loadedSizeInBytes > maxAllowedToLoadInBytes)
+            if (loadedSizeInBytes >= maxAllowedToLoadInBytes)
             {
                 log.Info("Skipping {2} prefetching because we already have {0:#,#;;0} kb (in all prefetchers)" +
                          "in the prefetching queue and in the future tasks and we have a limit of {1:#,#;;0} kb",
@@ -734,7 +734,7 @@ namespace Raven.Database.Prefetching
             }
 
             var loadedDocsCount = globalSummary.PrefetchingQueueDocsCount + globalSummary.FutureIndexBatchesDocsCount;
-            if (loadedDocsCount > context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
+            if (loadedDocsCount >= context.Configuration.MaxNumberOfItemsToProcessInSingleBatch)
             {
                 log.Info("Skipping {2} prefetching because we already have {0:#,#;;0} documents (in all prefetchers) " +
                          "in the prefetching queue and in the future tasks and our limit is {1:#,#;;0}",
@@ -749,7 +749,7 @@ namespace Raven.Database.Prefetching
 
             loadedSizeInBytes = localSummary.PrefetchingQueueLoadedSize + localSummary.FutureIndexBatchesLoadedSize;
             var maxLoadedSizeInBytesInASingleBatch = maxAllowedToLoadInBytes/numberOfPrefetchingBehaviors;
-            if (loadedSizeInBytes > maxLoadedSizeInBytesInASingleBatch)
+            if (loadedSizeInBytes >= maxLoadedSizeInBytesInASingleBatch)
             {
                 log.Info("Skipping {2} prefetching because we already have {0:#,#;;0} kb (in a single prefetcher) " +
                          "in the prefetching queue and in the future tasks and we have a limit of {1:#,#;;0} kb",
@@ -761,7 +761,7 @@ namespace Raven.Database.Prefetching
 
             loadedDocsCount = localSummary.PrefetchingQueueDocsCount + localSummary.FutureIndexBatchesDocsCount;
             var maxDocsInASingleBatch = context.Configuration.MaxNumberOfItemsToProcessInSingleBatch / numberOfPrefetchingBehaviors;
-            if (loadedDocsCount > maxDocsInASingleBatch)
+            if (loadedDocsCount >= maxDocsInASingleBatch)
             {
                 log.Info("Skipping {2} prefetching because we already have {0:#,#;;0} documents (in a single prefetcher)" +
                          "in the prefetching queue and in the future tasks and our limit is {1:#,#;;0}",
