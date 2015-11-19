@@ -84,7 +84,7 @@ namespace Raven.Tests.Core.Auth
 
             using (var store = new DocumentStore
                 {
-                    Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username + "-2", FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain),
+                    Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.InvalidUsername, FactIfWindowsAuthenticationIsAvailable.InvalidPassword, FactIfWindowsAuthenticationIsAvailable.InvalidDomain),
                     Url = this.Server.SystemDatabase.ServerUrl
                 }.Initialize())
             {
