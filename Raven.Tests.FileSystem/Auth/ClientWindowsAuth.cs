@@ -171,7 +171,7 @@ namespace Raven.Tests.FileSystem.Auth
             // in this test be careful if the specified credentials belong to admin user or not
             // to make this test pass you need to specify the credentials of a user who isn't an admin on this machine
 
-            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
+            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.User.UserName, FactIfWindowsAuthenticationIsAvailable.User.Password, FactIfWindowsAuthenticationIsAvailable.User.Domain));
             var server = GetServer();
 
             await client.UploadAsync("abc.bin", new RandomStream(3));
