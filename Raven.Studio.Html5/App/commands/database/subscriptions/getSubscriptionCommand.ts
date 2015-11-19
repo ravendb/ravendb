@@ -1,6 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import Subscription = require("models/database/Subscription/Subscription");
+import Subscription = require("models/database/subscription/subscription");
 
 class getSubscriptionCommand extends commandBase {
 

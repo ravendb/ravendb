@@ -1,7 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getSubscriptionCommand = require("commands/database/subscriptions/getSubscriptionCommand");
 import setSubscriptionCommand = require("commands/database/subscriptions/setSubscriptionAckEtagCommand");
-import Subscription = require("models/database/Subscription/Subscription");
+import Subscription = require("models/database/subscription/subscription");
 
 class SubscriptionsTask extends viewModelBase {
 
