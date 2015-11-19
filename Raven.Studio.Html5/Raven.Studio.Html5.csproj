@@ -87,7 +87,7 @@
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
-    <TypeScriptCompile Include="App\models\database\Subscription\Subscription.ts" />
+    <TypeScriptCompile Include="App\models\database\subscription\subscription.ts" />
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
@@ -133,7 +133,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
-    <TypeScriptCompile Include="App\viewmodels\database\tasks\SubscriptionsTask.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\tasks\subscriptionsTask.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
