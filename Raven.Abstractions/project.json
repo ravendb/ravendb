@@ -15,19 +15,19 @@
         "define": [ "PORTABLE" ]
       },
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23509",
+        "Microsoft.CSharp": "4.0.1-beta-23516",
         "Microsoft.Framework.ConfigurationModel": "1.0.0-beta4",
-        "System.Collections.Specialized": "4.0.1-beta-23509",
-        "System.IO.Compression": "4.1.0-beta-23509",
-        "System.Net.Http.WinHttpHandler": "4.0.0-beta-23509",
-        "System.Net.WebHeaderCollection": "4.0.1-beta-23509",
-        "System.Reflection.TypeExtensions": "4.1.0-beta-23509",
-        "System.Security.Cryptography.RSA": "4.0.0-beta-23311",
-        "System.Security.Principal": "4.0.1-beta-23509",
-        "System.ServiceModel.Primitives": "4.1.0-beta-23509",
-        "System.Text.RegularExpressions": "4.0.11-beta-23509",
-        "System.Threading.Thread": "4.0.0-beta-23509",
-        "System.Xml.XDocument": "4.0.11-beta-23509"
+        "System.Collections.Specialized": "4.0.1-beta-23516",
+        "System.IO.Compression": "4.1.0-beta-23516",
+        "System.Net.Http.WinHttpHandler": "4.0.0-beta-23516",
+        "System.Net.WebHeaderCollection": "4.0.1-beta-23516",
+        "System.Reflection.TypeExtensions": "4.1.0-beta-23516",
+        "System.Security.Cryptography.RSA": "4.0.0-beta-23225",
+        "System.Security.Principal": "4.0.1-beta-23516",
+        "System.ServiceModel.Primitives": "4.1.0-beta-23516",
+        "System.Text.RegularExpressions": "4.0.11-beta-23516",
+        "System.Threading.Thread": "4.0.0-beta-23516",
+        "System.Xml.XDocument": "4.0.11-beta-23516"
       }
     }
   }
