@@ -31,9 +31,7 @@ namespace Raven.Database.Config
 
         public IndexingConfiguration Indexing { get; set; }
 
-        public WebSocketsConfiguration WebSockets { get; private set; }
-
-        public HttpConfiguration Http { get; private set; }
+        public WebSocketsConfiguration WebSockets { get; set; }
 
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
@@ -45,7 +43,6 @@ namespace Raven.Database.Config
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
-            Http = new HttpConfiguration();
 
             this.settings = settings;
         }
@@ -269,8 +266,6 @@ namespace Raven.Database.Config
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 
             WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
-
-            Http.AuthenticationSchemes = new EnumSetting<AuthenticationSchemes?>(settings["Raven/Http/AuthenticationSchemes"], (AuthenticationSchemes?)null);
 
             MaxConcurrentResourceLoads = new IntegerSetting(settings[Constants.RavenMaxConcurrentResourceLoads], 8);
             ConcurrentResourceLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentResourceLoadTimeout],
@@ -523,11 +518,6 @@ namespace Raven.Database.Config
         public class WebSocketsConfiguration
         {
             public IntegerSetting InitialBufferPoolSize { get; set; }
-        }
-
-        public class HttpConfiguration
-        {
-            public EnumSetting<AuthenticationSchemes?> AuthenticationSchemes { get; set; }
         }
     }
 
