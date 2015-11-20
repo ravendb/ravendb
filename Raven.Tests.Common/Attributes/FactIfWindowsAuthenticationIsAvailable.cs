@@ -1,75 +1,62 @@
 using System.Diagnostics;
-using System.IO;
-using System.Text;
+using System.Net;
+
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Common.Attributes
 {
     public static class FactIfWindowsAuthenticationIsAvailable
     {
-        private static bool triedLoading = false;
+        private readonly static SkipException SkipException = new SkipException("Cannot execute this test, because this test rely on actual Windows Account name / password.");
 
-        public static string Username { get; private set; }
+        private static bool triedLoading;
 
-        public static string Domain { get; private set; }
+        public static NetworkCredential Admin { get; private set; }
 
-        public static string Password { get; private set; }
+        public static NetworkCredential User { get; private set; }
 
         public static void LoadCredentials()
         {
-            if (Username != null)
+            if (Admin != null)
                 return;
 
-            var skipException = new SkipException("Cannot execute this test, because this test rely on actual Windows Account name / password.");
             if (triedLoading)
-                throw skipException;
+                throw SkipException;
 
-            lock (typeof (FactIfWindowsAuthenticationIsAvailable))
+            lock (typeof(FactIfWindowsAuthenticationIsAvailable))
             {
                 triedLoading = true;
                 ActualLoad();
-                if (Username == null)
-                    throw skipException;
+                if (Admin == null)
+                    throw SkipException;
             }
         }
 
         [Conditional("DEBUG")]
         private static void LoadDebugCredentials()
         {
-            Username = "local_user_test";
-            Password = "local_user_test";
-            Domain = "local_machine_name_test";
+            Admin = new NetworkCredential("local_user_test", "local_user_test", "local_machine_name_test");
+            User = new NetworkCredential("local_machine_invalid_user", "local_machine_invalid_user", "local_machine_name_test");
 
-            if (Username == "local_user_test")
+            if (Admin.UserName == "local_user_test")
             {
-                Username = null;
+                Admin = null;
             }
         }
 
         private static void ActualLoad()
         {
-            var fileName = "WindowsAuthenticationCredentials.txt";
-            var path = Path.Combine(@"C:\Builds", fileName);
-            path = Path.GetFullPath(path);
+            var credentials = ConfigurationHelper.Credentials;
 
-            if (File.Exists(path) == false)
-            {
-                LoadDebugCredentials();
-                return;
-            }
+            NetworkCredential adminCredentials;
+            if (credentials.TryGetValue("Admin", out adminCredentials))
+                Admin = adminCredentials;
 
-            var lines = File.ReadAllLines(path, Encoding.UTF8);
-            var username = lines[0].Split('\\');
-            if (username.Length > 1)
-            {
-                Domain = username[0];
-                Username = username[1];
-            }
-            else
-            {
-                Username = username[0];
-            }
-            Password = lines[1];
+            NetworkCredential userCredentials;
+            if (credentials.TryGetValue("User", out userCredentials))
+                User = userCredentials;
         }
     }
 }

@@ -62,9 +62,9 @@ namespace Raven.Database.Impl.DTC
             public Etag committedEtag;
         }
 
-        protected readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>();
+        protected readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>(StringComparer.OrdinalIgnoreCase);
 
-        protected readonly ConcurrentDictionary<string, TransactionState> transactionStates = new ConcurrentDictionary<string, TransactionState>();
+        protected readonly ConcurrentDictionary<string, TransactionState> transactionStates = new ConcurrentDictionary<string, TransactionState>(StringComparer.OrdinalIgnoreCase);
 
         public object GetInFlightTransactionsInternalStateForDebugOnly()
         {

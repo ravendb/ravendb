@@ -38,9 +38,11 @@ namespace Raven.Database.Config
 
         public ClusterConfiguration Cluster { get; private set; }
 
-        public WebSocketsConfiguration WebSockets { get; set; }
+        public WebSocketsConfiguration WebSockets { get; private set; }
 
         public MonitoringConfiguration Monitoring { get; private set; }
+
+        public HttpConfiguration Http { get; private set; }
 
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
@@ -56,6 +58,7 @@ namespace Raven.Database.Config
             WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
             Monitoring = new MonitoringConfiguration();
+            Http = new HttpConfiguration();
 
             this.settings = settings;
         }
@@ -152,7 +155,7 @@ namespace Raven.Database.Config
             DataDir =
                 new StringSetting(settings["Raven/DataDir"], @"~\Databases\System");
             IndexStoragePath =
-                new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
+                new StringSetting(settings["Raven/Counters/DataDir"], @"~\Data\Counters");
 
             HostName =
                 new StringSetting(settings["Raven/HostName"], (string)null);
@@ -300,8 +303,10 @@ namespace Raven.Database.Config
 
             WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
 
-            MaxConcurrentDatabaseLoads = new IntegerSetting(settings[Constants.RavenMaxConcurrentDatabaseLoads], 8);
-            ConcurrentDatabaseLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentDatabaseLoadTimeout],
+            Http.AuthenticationSchemes = new EnumSetting<AuthenticationSchemes?>(settings["Raven/Http/AuthenticationSchemes"], (AuthenticationSchemes?)null);
+
+            MaxConcurrentResourceLoads = new IntegerSetting(settings[Constants.RavenMaxConcurrentResourceLoads], 8);
+            ConcurrentResourceLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentResourceLoadTimeout],
                 TimeSpan.FromSeconds(15),
                 TimeSpanArgumentType.FromParse);
 
@@ -338,9 +343,9 @@ namespace Raven.Database.Config
         }
 
 
-        public IntegerSetting MaxConcurrentDatabaseLoads { get; private set; }
+        public IntegerSetting MaxConcurrentResourceLoads { get; private set; }
 
-        public TimeSpanSetting ConcurrentDatabaseLoadTimeout { get; private set; }
+        public TimeSpanSetting ConcurrentResourceLoadTimeout { get; private set; }
 
         public IntegerSetting MaxClauseCount { get; private set; }
 
@@ -599,12 +604,17 @@ namespace Raven.Database.Config
             public IntegerSetting InitialBufferPoolSize { get; set; }
         }
 
+        public class HttpConfiguration
+        {
+            public EnumSetting<AuthenticationSchemes?> AuthenticationSchemes { get; set; }
+
 
         public class MonitoringConfiguration
         {
             public MonitoringConfiguration()
             {
                 Snmp = new SnmpConfiguration();
+    }
     }
 
             public SnmpConfiguration Snmp { get; private set; }

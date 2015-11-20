@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Indexing;
 
@@ -85,7 +84,7 @@ namespace Raven.Database.Prefetching
             return prefetchingBehaviors.Count;
         }
 
-        public PrefetchingSummary GetPrefetchingBehaviourSummary()
+        private PrefetchingSummary GetPrefetchingBehaviourSummary()
         {
             var summary = new PrefetchingSummary();
 

@@ -10,7 +10,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Impl.DTC;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -245,21 +244,28 @@ namespace Raven.Database.Impl
         {
             if (key == null)
                 return null;
-            JsonDocument doc;
-            if (disableCache == false && cache.TryGetValue(key, out doc))
-                return doc;
 
-            doc = actions.Documents.DocumentByKey(key);
+            // first we check the dtc state, then the cache and the storage, to avoid race conditions
+            var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
+
+            JsonDocument doc;
+
+            if (disableCache || cache.TryGetValue(key, out doc) == false)
+            {
+                doc = actions.Documents.DocumentByKey(key);
+            }
+
+            if (nonAuthoritativeInformationBehavior != null)
+                doc = nonAuthoritativeInformationBehavior(doc);
+
             JsonDocument.EnsureIdInMetadata(doc);
 
             if (doc != null && doc.Metadata != null)
                 doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
-
-            var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
-            if (nonAuthoritativeInformationBehavior != null)
-                doc = nonAuthoritativeInformationBehavior(doc);
-            if (disableCache == false)
+            
+            if (disableCache == false && (doc == null || doc.NonAuthoritativeInformation != true))
                 cache[key] = doc;
+
             if (cache.Count > 2048)
             {
                 // we are probably doing a stream here, no point in trying to cache things, we might be
@@ -267,6 +273,7 @@ namespace Raven.Database.Impl
                 disableCache = true;
                 cache.Clear();
             }
+
             return doc;
         }
 

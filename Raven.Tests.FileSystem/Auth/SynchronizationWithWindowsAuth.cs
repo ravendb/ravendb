@@ -37,7 +37,7 @@ namespace Raven.Tests.FileSystem.Auth
                                               {
                                                   new WindowsAuthData()
                                                   {
-                                                      Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Domain, FactIfWindowsAuthenticationIsAvailable.Username),
+                                                      Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Admin.Domain, FactIfWindowsAuthenticationIsAvailable.Admin.UserName),
                                                       Enabled = true,
                                                       Databases = new List<ResourceAccess>
                                                       {
@@ -54,7 +54,7 @@ namespace Raven.Tests.FileSystem.Auth
         public async Task CanSynchronizeFileContent()
         {
             var source = NewAsyncClient(0);
-            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
+            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             var ms = new MemoryStream(new byte[] { 3, 2, 1 });
 
@@ -72,7 +72,7 @@ namespace Raven.Tests.FileSystem.Auth
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
             var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             await sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } });
             content.Position = 0;
@@ -94,7 +94,7 @@ namespace Raven.Tests.FileSystem.Auth
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
             var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
+            var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             await sourceClient.UploadAsync("test.bin", content);
             content.Position = 0;
@@ -119,7 +119,7 @@ namespace Raven.Tests.FileSystem.Auth
         public async Task CanSynchronizeFileDelete()
         {
             var source = NewAsyncClient(0);
-            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain));
+            var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             await source.UploadAsync("test.bin", new RandomStream(1));
 

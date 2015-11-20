@@ -45,13 +45,13 @@ namespace Raven.Tests.Common
             checkPorts = true;
         }
 
-        public DocumentStore CreateStore(bool enableCompressionBundle = false, 
-            Action<DocumentStore> configureStore = null, 
-            AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
-            bool enableAuthorization = false, 
-            string requestedStorageType = "voron", 
-            bool useFiddler = false, 
-            [CallerMemberName] string databaseName = null, 
+        public DocumentStore CreateStore(bool enableCompressionBundle = false,
+            Action<DocumentStore> configureStore = null,
+            AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+            bool enableAuthorization = false,
+            string requestedStorageType = "voron",
+            bool useFiddler = false,
+            [CallerMemberName] string databaseName = null,
             bool runInMemory = true)
         {
             var port = PortRangeStart - stores.Count;
@@ -73,8 +73,8 @@ namespace Raven.Tests.Common
                 requestedStorage: storeTypeName,
                 activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
                 enableAuthentication: anonymousUserAccessMode == AnonymousUserAccessMode.None,
-                databaseName: databaseName, 
-                configureConfig: ConfigureConfig, 
+                databaseName: databaseName,
+                configureConfig: ConfigureConfig,
                 configureServer: ConfigureServer,
                 runInMemory: runInMemory);
 
@@ -85,10 +85,10 @@ namespace Raven.Tests.Common
 
             ConfigureDatabase(ravenDbServer.SystemDatabase, databaseName: databaseName);
 
-            var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, 
-                configureStore: configureStore, 
-                fiddler: useFiddler, 
-                databaseName: databaseName, 
+            var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer,
+                configureStore: configureStore,
+                fiddler: useFiddler,
+                databaseName: databaseName,
                 runInMemory: runInMemory);
 
             return documentStore;
@@ -135,19 +135,19 @@ namespace Raven.Tests.Common
 
         protected virtual void ConfigureServer(RavenDBOptions options)
         {
-            
+
         }
 
         protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
         {
-            
+
         }
 
         private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "esent", string databaseName = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var store = NewDocumentStore(port: port,
-                requestedStorage:storeTypeName,
+                requestedStorage: storeTypeName,
                 activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
                 anonymousUserAccessMode: anonymousUserAccessMode,
                 databaseName: databaseName);
@@ -170,18 +170,18 @@ namespace Raven.Tests.Common
             var previousServer = servers[index];
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Port);
-            var serverConfiguration = new RavenConfiguration
-            {
-                Settings = { { "Raven/ActiveBundles", "replication" } },
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-                DataDirectory = previousServer.SystemDatabase.Configuration.DataDirectory,
-                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory,
-                Port = previousServer.SystemDatabase.Configuration.Port,
-                DefaultStorageTypeName = GetDefaultStorageType()
-            };
+            var serverConfiguration = new RavenConfiguration { Settings = { { "Raven/ActiveBundles", "replication" } } };
 
-            serverConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            ConfigurationHelper.ApplySettingsToConfiguration(serverConfiguration);
+
+            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+            serverConfiguration.DataDirectory = previousServer.SystemDatabase.Configuration.DataDirectory;
+            serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
+            serverConfiguration.RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory;
+            serverConfiguration.Port = previousServer.SystemDatabase.Configuration.Port;
+            serverConfiguration.DefaultStorageTypeName = GetDefaultStorageType();
+
+            serverConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             ModifyConfiguration(serverConfiguration);
 
@@ -259,7 +259,7 @@ namespace Raven.Tests.Common
                     replicationDestination.Username = username;
                     replicationDestination.Password = password;
                     replicationDestination.Domain = domain;
-                }	         
+                }
 
                 SetupDestination(replicationDestination);
                 Console.WriteLine("writing rep dests for " + db + " " + source.Url);
@@ -376,11 +376,11 @@ namespace Raven.Tests.Common
             source.Put(
                 Constants.RavenReplicationDestinations,
                 null,
-                new RavenJObject 
+                new RavenJObject
                 {
                                      {
                                          "Destinations", new RavenJArray()
-                                     } 
+                                     }
                 },
                 new RavenJObject());
         }

@@ -10,6 +10,8 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common.Util;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Core
 {
@@ -21,6 +23,9 @@ namespace Raven.Tests.Core
         public TestServerFixture()
         {
             var configuration = new RavenConfiguration();
+
+            ConfigurationHelper.ApplySettingsToConfiguration(configuration);
+
             configuration.Port = Port;
             configuration.ServerName = ServerName;
             configuration.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;

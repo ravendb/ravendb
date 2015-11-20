@@ -43,7 +43,7 @@ namespace Raven.Tests.Common.Util
                 throw new Exception("Could not find Raven.server.exe.config");
             }
 
-            StartProcess(exePath, string.Format("--ram --set=Raven/Port==8079 --msgBox --set=Raven/AnonymousAccess==Admin --set=Raven/Encryption/FIPS=={0} --set=Raven/DataDir=={1}", SettingsHelper.UseFipsEncryptionAlgorithms, _dataDir));
+            StartProcess(exePath, string.Format("--ram --set=Raven/Port==8079 --msgBox --set=Raven/AnonymousAccess==Admin --set=Raven/Encryption/FIPS=={0} --set=Raven/DataDir=={1}", ConfigurationHelper.UseFipsEncryptionAlgorithms, _dataDir));
 
             Match match = WaitForConsoleOutputMatching(@"^\s*Server Url\s*:\s*(http://.*/)\s*$");
 
