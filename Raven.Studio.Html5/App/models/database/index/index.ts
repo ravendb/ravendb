@@ -24,6 +24,7 @@ class index {
 
     isOnRam = ko.observable<string>();
     lockMode = ko.observable<string>();
+    isMapReduce = ko.observable<boolean>();
     isIdle = ko.observable(false);
     isAbandoned = ko.observable(false);
     isErrored = ko.observable(false);
@@ -69,6 +70,7 @@ class index {
         this.lastReducedEtag = dto.LastReducedEtag;
         this.lastReducedTimestamp = dto.LastReducedTimestamp;
         this.lockMode(dto.LockMode);
+        this.isMapReduce(dto.IsMapReduce);
         this.name = dto.Name;
         this.priority = dto.Priority;
         this.reduceIndexingAttempts = dto.ReduceIndexingAttempts;

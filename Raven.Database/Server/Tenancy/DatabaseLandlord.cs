@@ -166,7 +166,7 @@ namespace Raven.Database.Server.Tenancy
             var hasAcquired = false;
             try
             {
-                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
                     throw new ConcurrentLoadTimeoutException("Too much databases loading concurrently, timed out waiting for them to load.");
 
                 hasAcquired = true;
@@ -181,11 +181,11 @@ namespace Raven.Database.Server.Tenancy
                     documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
                     documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
                     documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
-                // register only DB that has incremental backup set.
-                documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
+                    // register only DB that has incremental backup set.
+                    documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
                     documentDatabase.RequestManager = SystemDatabase.RequestManager;
                     return documentDatabase;
                 }).ContinueWith(task =>
@@ -194,7 +194,7 @@ namespace Raven.Database.Server.Tenancy
                         OnDatabaseLoaded(tenantId);
 
                     if (task.Status == TaskStatus.Faulted) // this observes the task exception
-                {
+                    {
                         Logger.WarnException("Failed to create database " + tenantId, task.Exception);
                     }
                     return task;
@@ -330,7 +330,7 @@ namespace Raven.Database.Server.Tenancy
             }
 
             Authentication.AssertLicensedBundles(config.ActiveBundles);
-        }
+                }
 
         public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)
         {

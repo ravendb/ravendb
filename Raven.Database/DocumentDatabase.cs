@@ -265,7 +265,7 @@ namespace Raven.Database
 
         public static string BuildVersion => buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture));
 
-	    public static string ProductVersion
+        public static string ProductVersion
         {
             get
             {
@@ -308,7 +308,7 @@ namespace Raven.Database
 
         public TaskScheduler BackgroundTaskScheduler => backgroundTaskScheduler;
 
-	    public InMemoryRavenConfiguration Configuration { get; private set; }
+        public InMemoryRavenConfiguration Configuration { get; private set; }
 
         public ConfigurationRetriever ConfigurationRetriever { get; private set; }
 
@@ -320,7 +320,7 @@ namespace Raven.Database
         /// </summary>
         public bool Disposed => disposed;
 
-	    [ImportMany]
+        [ImportMany]
         public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
         public DocumentActions Documents { get; private set; }
@@ -346,7 +346,7 @@ namespace Raven.Database
         [CLSCompliant(false)]
         public InFlightTransactionalState InFlightTransactionalState => inFlightTransactionalState;
 
-	    [ImportMany]
+        [ImportMany]
         public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
 
         public IndexDefinitionStorage IndexDefinitionStorage { get; private set; }
@@ -367,9 +367,9 @@ namespace Raven.Database
         [CLSCompliant(false)]
         public IndexingExecuter IndexingExecuter => indexingExecuter;
 
-	    public LastCollectionEtags LastCollectionEtags => lastCollectionEtags;
+        public LastCollectionEtags LastCollectionEtags => lastCollectionEtags;
 
-	    public MaintenanceActions Maintenance { get; private set; }
+        public MaintenanceActions Maintenance { get; private set; }
 
         /// <summary>
         ///     The name of the database.
@@ -388,7 +388,7 @@ namespace Raven.Database
 
         public Prefetcher Prefetcher => prefetcher;
 
-	    [ImportMany]
+        [ImportMany]
         public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
 
         public QueryActions Queries { get; private set; }
@@ -506,15 +506,15 @@ namespace Raven.Database
         }
 
         public IndexingPerformanceStatistics[] IndexingPerformanceStatistics => (from pair in IndexDefinitionStorage.IndexDefinitions
-	        let performance = IndexStorage.GetIndexingPerformance(pair.Key)
-	        select new IndexingPerformanceStatistics
-	        {
-		        IndexId = pair.Key,
-		        IndexName = pair.Value.Name,
-		        Performance = performance
-	        }).ToArray();
+            let performance = IndexStorage.GetIndexingPerformance(pair.Key)
+            select new IndexingPerformanceStatistics
+            {
+                IndexId = pair.Key,
+                IndexName = pair.Value.Name,
+                Performance = performance
+            }).ToArray();
 
-	    public DatabaseStatistics Statistics
+        public DatabaseStatistics Statistics
         {
             get
             {
@@ -581,6 +581,7 @@ namespace Raven.Database
                             index.IsTestIndex = indexDefinition.IsTestIndex;
                             index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
                             index.LockMode = indexDefinition.LockMode;
+                            index.IsMapReduce = indexDefinition.IsMapReduce;
 
                             index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
                             IndexSearcher searcher;
@@ -625,8 +626,8 @@ namespace Raven.Database
 
         public TransportState TransportState => transportState;
 
-	    public WorkContext WorkContext => workContext;
-	    public RequestManager RequestManager { get; set; }
+        public WorkContext WorkContext => workContext;
+        public RequestManager RequestManager { get; set; }
 
         public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
         {

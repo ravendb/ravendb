@@ -47,14 +47,14 @@ namespace Raven.Database.Server.Tenancy
         protected readonly InMemoryRavenConfiguration systemConfiguration;
         protected readonly DocumentDatabase systemDatabase;
 
-        protected readonly TimeSpan ConcurrentDatabaseLoadTimeout;
+        protected readonly TimeSpan ConcurrentResourceLoadTimeout;
 
         protected AbstractLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
             this.systemDatabase = systemDatabase;
-            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.MaxConcurrentDatabaseLoads);
-            ConcurrentDatabaseLoadTimeout = systemDatabase.Configuration.ConcurrentDatabaseLoadTimeout;
+            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.MaxConcurrentResourceLoads);
+            ConcurrentResourceLoadTimeout = systemDatabase.Configuration.ConcurrentResourceLoadTimeout;
         }
 
         public int MaxSecondsForTaskToWaitForDatabaseToLoad
@@ -63,49 +63,6 @@ namespace Raven.Database.Server.Tenancy
             {
                 return systemConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad;
             }
-        }
-
-        public IEnumerable<TransportState> GetUserAllowedTransportStates(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
-        {
-            foreach (var resourceName in GetUserAllowedResourcesByPrefix(user, systemDatabase, annonymouseUserAccessMode, mixedModeRequestAuthorizer, authHeader))
-            {
-                TransportState curTransportState;
-                if (ResourseTransportStates.TryGetValue(resourceName, out curTransportState))
-                    yield return curTransportState;
-            }
-        }
-
-        public string[] GetUserAllowedResourcesByPrefix(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
-        {
-            List<string> approvedResources = null;
-            var nextPageStart = 0;
-            var resources = systemDatabase.Documents
-                .GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
-                systemDatabase.Configuration.MaxPageSize, CancellationToken.None, ref nextPageStart);
-
-            var reourcesNames = resources
-                .Select(database =>
-                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(ResourcePrefix, string.Empty)).ToArray();
-
-            if (annonymouseUserAccessMode == AnonymousUserAccessMode.None)
-            {
-                if (user == null)
-                    return null;
-
-                bool isAdministrator = user.IsAdministrator(annonymouseUserAccessMode);
-                if (isAdministrator == false)
-                {
-                    var authorizer = mixedModeRequestAuthorizer;
-                    approvedResources = authorizer.GetApprovedResources(user, authHeader, reourcesNames);
-                }
-            }
-
-            if (approvedResources != null)
-            {
-                reourcesNames = reourcesNames.Where(resourceName => approvedResources.Contains(resourceName)).ToArray();
-            }
-
-            return reourcesNames;
         }
 
         public void Unprotect(DatabaseDocument databaseDocument)

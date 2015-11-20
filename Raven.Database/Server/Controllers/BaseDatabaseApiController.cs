@@ -554,8 +554,7 @@ namespace Raven.Database.Server.Controllers
                     Remark = "Using anonymous user",
                     IsAdminGlobal = anonymousUserAccessMode == AnonymousUserAccessMode.Admin,
                     IsAdminCurrentDb = anonymousUserAccessMode == AnonymousUserAccessMode.Admin ||
-                                       anonymousUserAccessMode == AnonymousUserAccessMode.All ||
-                                       anonymousUserAccessMode == AnonymousUserAccessMode.Get
+                                       anonymousUserAccessMode == AnonymousUserAccessMode.All
                 };
 
                 return anonymous;

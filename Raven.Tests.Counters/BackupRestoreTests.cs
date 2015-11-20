@@ -42,7 +42,7 @@ namespace Raven.Tests.Counters
                 RunInMemory = false,
                 DefaultStorageTypeName = "Voron",
                 AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
-                Encryption = { UseFips = SettingsHelper.UseFipsEncryptionAlgorithms },
+                Encryption = { UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms },
             };
 
             config.Counter.DataDirectory = BackupSourceDirectory;
@@ -98,9 +98,9 @@ namespace Raven.Tests.Counters
             {
                 using (var reader = restoredStorage.CreateReader())
                 {
-	                long? total;
-	                Assert.True(reader.TryGetCounterTotal("Bar", "Foo", out total));
-					Assert.NotNull(total);
+                    long? total;
+                    Assert.True(reader.TryGetCounterTotal("Bar", "Foo", out total));
+                    Assert.NotNull(total);
                     Assert.Equal(6, total.Value);
                     /*var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
                     var counterValues = counter.CounterValues.ToArray();
@@ -140,20 +140,20 @@ namespace Raven.Tests.Counters
             {
                 using (var reader = restoredStorage.CreateReader())
                 {
-					long? total;
-					Assert.True(reader.TryGetCounterTotal("Bar", "Foo", out total));
-					Assert.NotNull(total);
-					Assert.Equal(6, total.Value);
+                    long? total;
+                    Assert.True(reader.TryGetCounterTotal("Bar", "Foo", out total));
+                    Assert.NotNull(total);
+                    Assert.Equal(6, total.Value);
 
-					/*var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
+                    /*var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
                     var counterValues = counter.CounterValues.ToArray();
 
                     Assert.Equal(8, counterValues[0].Value);
                     Assert.True(counterValues[0].IsPositive());
                     Assert.Equal(2, counterValues[1].Value);
                     Assert.False(counterValues[1].IsPositive());*/
-				}
-			}
+                }
+            }
         }
 
         private void StoreCounterChange(long change, CounterStorage counterStorage)

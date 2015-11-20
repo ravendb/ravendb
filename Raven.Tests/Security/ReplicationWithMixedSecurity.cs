@@ -45,7 +45,7 @@ namespace Raven.Tests.Security
             }
             else
             {
-                store.Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username, FactIfWindowsAuthenticationIsAvailable.Password, FactIfWindowsAuthenticationIsAvailable.Domain);
+                store.Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
                 store.ApiKey = null;
             }
 
@@ -87,7 +87,7 @@ namespace Raven.Tests.Security
                                                    {
                                                        new WindowsAuthData()
                                                        {
-                                                           Name = FactIfWindowsAuthenticationIsAvailable.Username,
+                                                           Name = FactIfWindowsAuthenticationIsAvailable.Admin.UserName,
                                                            Enabled = true,
                                                            Databases = new List<ResourceAccess>
                                                            {
@@ -110,7 +110,7 @@ namespace Raven.Tests.Security
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Username, password: FactIfWindowsAuthenticationIsAvailable.Password, domain: FactIfWindowsAuthenticationIsAvailable.Domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
 
             using (var session = store1.OpenSession())
             {
@@ -139,7 +139,7 @@ namespace Raven.Tests.Security
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Username, password: FactIfWindowsAuthenticationIsAvailable.Password, domain: FactIfWindowsAuthenticationIsAvailable.Domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
 
             using (var session = store1.OpenAsyncSession())
             {

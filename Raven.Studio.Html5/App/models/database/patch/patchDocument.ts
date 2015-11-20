@@ -9,6 +9,8 @@ class patchDocument extends document {
     query = ko.observable<string>();
     script = ko.observable<string>();
     parameters = ko.observableArray<patchParam>();
+    allPatchOptions = ["Document", "Collection", "Index"];
+    patchOptions: KnockoutComputed<string[]>;
 
     constructor(dto: patchDto) {
         super(dto);
@@ -17,6 +19,8 @@ class patchDocument extends document {
         this.script(dto.Script);
         this.selectedItem(dto.SelectedItem);
         this.parameters(dto.Values.map(val => new patchParam(val)));
+
+        this.patchOptions = ko.computed(() => this.allPatchOptions.filter(x => x !== this.patchOnOption()));
     }
 
     static empty() {

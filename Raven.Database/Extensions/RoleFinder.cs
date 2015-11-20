@@ -1,20 +1,11 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
 using System.Security.Principal;
-using System.Threading;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.Security.OAuth;
-
-using Raven.SpecificPlatform.Windows;
-
 
 // Raven.Database.Extensions.RoleFinder interface to Raven.SpecificPlatform.Windows as Raven should NOT reference System.DirectoryServices.AccountManagement
 
@@ -127,7 +118,7 @@ namespace Raven.Database.Extensions
 
         public static bool IsAdministrator(this IPrincipal principal, DocumentDatabase database)
         {
-            var name = database.Name ?? "<system>";
+            var name = database.Name ?? Constants.SystemDatabase;
             return IsAdministrator(principal, name);
         }
 

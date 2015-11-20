@@ -175,7 +175,7 @@ namespace Raven.Database.Server.Tenancy
             var hasAcquired = false;
             try
             {
-                if (!ResourceSemaphore.Wait(ConcurrentDatabaseLoadTimeout))
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
                     throw new ConcurrentLoadTimeoutException("Too much timeseries loading concurrently, timed out waiting for them to load.");
 
                 timeSeries = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>

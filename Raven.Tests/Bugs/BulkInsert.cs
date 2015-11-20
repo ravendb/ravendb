@@ -2,6 +2,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Common;
+using Xunit;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
@@ -17,12 +18,9 @@ namespace Raven.Tests.Bugs
             {
                 CreateBulk(store);
 
-                try
-                {
-                    CreateBulk(store);
-                    //should throw a ConcurrencyException
-                }
-                catch (ConcurrencyException e) {}
+                //should throw a ConcurrencyException
+                var e = Assert.Throws<ConcurrencyException>(() => CreateBulk(store));
+                Assert.Contains(@"ConcurrencyException while writing bulk insert items in the server.", e.Message);
             }
         }
 
