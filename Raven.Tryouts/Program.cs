@@ -17,9 +17,7 @@ namespace Raven.Tryouts
                 catch (Exception e)
                 {
                     Debugger.Break();
-                }
-                Console.WriteLine("Dispose is done");
             }
+                Console.WriteLine("Dispose is done");
         }
     }
-}
