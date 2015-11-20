@@ -15,9 +15,9 @@
   "frameworks": {
     "dnxcore50": {
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23509",
-        "xunit": "2.2.0-beta1-build3208",
-        "xunit.runner.dnx": "2.1.0-rc1-build198"
+        "Microsoft.CSharp": "4.0.1-beta-23516",
+        "xunit": "2.1.0-rc2-build3176",
+        "xunit.runner.dnx": "2.1.0-rc1-build204"
       }
     }
   }

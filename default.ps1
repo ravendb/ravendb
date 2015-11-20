@@ -21,7 +21,7 @@ properties {
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     
-    $dnxVersion = "1.0.0-rc1-16048"
+    $dnxVersion = "1.0.0-rc1-final"
     $dnxArchitecture = "x64"
     $dnxToolsDir = "$base_dir\Tools\DNX"
     $dnvm = "$dnxToolsDir\dnvm.cmd"
@@ -103,7 +103,7 @@ task CompileHtml5 {
 
 task CompileDnx -depends Compile  {
 
-    &"$dnvm" install $dnxVersion -u -r coreclr -arch $dnxArchitecture
+    &"$dnvm" install $dnxVersion -r coreclr -arch $dnxArchitecture
 
     &"$dnvm" use -r coreclr -arch $dnxArchitecture $dnxVersion
 
