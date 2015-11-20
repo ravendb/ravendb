@@ -1,4 +1,6 @@
 using Bond;
+using System;
+using System.Text;
 using Voron.Data.Tables;
 
 namespace Voron.Tests.Tables
@@ -24,27 +26,58 @@ namespace Voron.Tests.Tables
             //    .DefineIndex("By/Etag&Collection", DocumentsFields.Collection, DocumentsFields.Etag)
             //    .DefineKey(DocumentsFields.Key);
 
-            _docsSchema = new TableSchema<Documents>("docs")                
-            
-                .DefineIndex("By/Etag", x => x.Etag)
-                .DefineIndex("By/Etag&Collection", x => x.Collection, x => x.Etag)
-                .DefineKey(x => x.Key);
+            _docsSchema = new TableSchema<Documents>("docs")
+                .DefineIndex<DocumentsKeys>("By/Etag", GetEtagKey)
+                .DefineIndex<DocumentsKeys>("By/Etag&Collection", GetEtagAndCollectionKey)
+                .DefineKey<DocumentsKeys>(GetKey);
         }
 
+        private static Slice GetEtagKey(Documents doc)
+        {
+            var writer = new SliceWriter(sizeof(long));
+            writer.WriteBigEndian(doc.Etag);
+            return writer.CreateSlice();
+        }
+
+        private static Slice GetEtagAndCollectionKey(Documents doc)
+        {
+            var size = Encoding.UTF8.GetByteCount(doc.Collection);
+            var writer = new SliceWriter(sizeof(long) + size);
+            writer.Write(doc.Collection);
+            writer.WriteBigEndian(doc.Etag);
+            return writer.CreateSlice();
+        }
+
+        private static Slice GetKey(Documents doc)
+        {
+            var size = Encoding.UTF8.GetByteCount(doc.Key);
+            var writer = new SliceWriter(size);
+            writer.Write(doc.Key);
+            return writer.CreateSlice();
+        }
+
+        [Schema]
         public sealed class Documents
         {
+            [Id(0)]
             public long Etag;
+            [Id(1)]
             public string Key;
+            [Id(2)]
             public string Collection;
-            public IBonded<string> Data;
+            [Id(3)]
+            public string Data;
         }
 
-        //public enum DocumentsFields
-        //{
-        //    Etag,
-        //    Key,
-        //    Collection,
-        //    Data,
-        //}
+        [Schema]
+        public sealed class DocumentsKeys
+        {
+            [Id(0)]
+            public long Etag;
+            [Id(1)]
+            public string Key;
+            [Id(2)]
+            public string Collection;
+        }
     }
 }

@@ -33,7 +33,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users");
                 //docs.Set(structure);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
 
                 //structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
@@ -43,7 +43,7 @@ namespace Voron.Tests.Tables
                 //   .Set(DocumentsFields.Collection, "Users");
                 //docs.Set(structure);
 
-                doc = new Documents { Etag = 2L, Key = "users/2", Data = new Bonded<string>("{'Name': 'Eini'}"), Collection = "Users" };
+                doc = new Documents { Etag = 2L, Key = "users/2", Data = "{'Name': 'Eini'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
@@ -58,25 +58,23 @@ namespace Voron.Tests.Tables
                 Assert.True(seekResults.MoveNext());
                 var reader = seekResults.Current;
 
-                throw new NotImplementedException();
+                var valueReader = reader.Key.CreateReader();
+                Assert.Equal("Users", valueReader.ReadString(5));
+                Assert.Equal(1L, valueReader.ReadBigEndianInt64());
+                var result = reader.Results.Single();
+                Assert.Equal("{'Name': 'Oren'}", result.Data);
 
-                //var valueReader = reader.Key.CreateReader();
-                //Assert.Equal("Users", valueReader.ReadString(5));
-                //Assert.Equal(1L, valueReader.ReadBigEndianInt64());
-                //var result = reader.Results.Single().ReadString(DocumentsFields.Data);
-                //Assert.Equal("{'Name': 'Oren'}", result);
+                Assert.True(seekResults.MoveNext());
+                reader = seekResults.Current;
 
-                //Assert.True(seekResults.MoveNext());
-                //reader = seekResults.Current;
+                valueReader = reader.Key.CreateReader();
+                Assert.Equal("Users", valueReader.ReadString(5));
+                Assert.Equal(2L, valueReader.ReadBigEndianInt64());
+                result = reader.Results.Single();
+                Assert.Equal("{'Name': 'Eini'}", result.Data);
 
-                //valueReader = reader.Key.CreateReader();
-                //Assert.Equal("Users", valueReader.ReadString(5));
-                //Assert.Equal(2L, valueReader.ReadBigEndianInt64());
-                //result = reader.Results.Single().ReadString(DocumentsFields.Data);
-                //Assert.Equal("{'Name': 'Eini'}", result);
-
-                //Assert.False(seekResults.MoveNext());
-                //tx.Commit();
+                Assert.False(seekResults.MoveNext());
+                tx.Commit();
             }
         }
 
@@ -102,7 +100,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users")
                 //    );
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
@@ -151,7 +149,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users")
                 //    );
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
@@ -169,7 +167,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users");
                 //docs.Set(structure);
 
-                var doc = new Documents { Etag = 2L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Eini'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 2L, Key = "users/1", Data = "{'Name': 'Eini'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
@@ -187,12 +185,10 @@ namespace Voron.Tests.Tables
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(2L, valueReader.ReadBigEndianInt64());
 
-                throw new NotImplementedException();
+                var result = reader.Results.Single();
+                Assert.Equal("{'Name': 'Eini'}", result.Data);
 
-                //var result = reader.Results.Single().ReadString(DocumentsFields.Data);
-                //Assert.Equal("{'Name': 'Eini'}", result);
-
-                //tx.Commit();
+                tx.Commit();
             }
         }
 

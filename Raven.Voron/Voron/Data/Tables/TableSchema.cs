@@ -26,7 +26,8 @@ namespace Voron.Data.Tables
 
         public class SchemaIndexDef
         {
-            public Type[] IndexedFieldsTypes;
+            public int FieldsCount;
+            public Func<T, Slice> CreateKey;
 
             public int Size;
             public bool IsFixedSize;
@@ -34,7 +35,7 @@ namespace Voron.Data.Tables
             public Slice Name;
 
             public bool CanUseFixedSizeTree =>
-                IndexedFieldsTypes.Length == 1 &&
+                FieldsCount == 1 &&
                 IsFixedSize &&
                 Size == sizeof(long) &&
                 MultiValue == false;
@@ -109,11 +110,14 @@ namespace Voron.Data.Tables
             return -1;
         }
 
-        public TableSchema<T> DefineIndex<W1>(string name, Expression<Func<T, W1>> first, bool multipleValue = false)
+        public TableSchema<T> DefineIndex<W1>(string name, Func<T, Slice> first, bool multipleValue = false)
         {
+            // Construct an Expression<Func, byte[]> to build the key from object Keys
+
             var schemaIndexDef = new SchemaIndexDef
             {
-                IndexedFieldsTypes = new[] { typeof(W1) },
+                CreateKey = first,
+                FieldsCount = 1,
                 IsFixedSize = IsFixedSizeType<W1>(),
                 Size = GetExpectedTypeSize<W1>(),
                 MultiValue = multipleValue,
@@ -125,27 +129,29 @@ namespace Voron.Data.Tables
             return this;
         }
 
-        public TableSchema<T> DefineIndex<W1, W2>(string name, Func<T, W1> first, Func<T, W2> second, bool multipleValue = false)
-        {
-            int size = -1;
-            int sizeW1 = GetExpectedTypeSize<W1>();
-            int sizeW2 = GetExpectedTypeSize<W1>();
-            if (sizeW1 != -1 && sizeW2 != -1)
-                size = sizeW1 + sizeW2;
+        //public TableSchema<T> DefineIndex<W1, W2>(string name, Expression<Func<T, W1>> first, Expression<Func<T, W2>> second, bool multipleValue = false)
+        //{
+        //    int size = -1;
+        //    int sizeW1 = GetExpectedTypeSize<W1>();
+        //    int sizeW2 = GetExpectedTypeSize<W1>();
+        //    if (sizeW1 != -1 && sizeW2 != -1)
+        //        size = sizeW1 + sizeW2;
 
-            var schemaIndexDef = new SchemaIndexDef
-            {
-                IndexedFieldsTypes = new[] { typeof(W1) },
-                IsFixedSize = false,
-                Size = size,
-                MultiValue = multipleValue,
-                Name = name
-            };
+        //    // Construct an Expression<Func, byte[]> to build the key from object Keys
 
-            this._indexes[name] = schemaIndexDef;
+        //    var schemaIndexDef = new SchemaIndexDef
+        //    {
+        //        IndexedFieldsTypes = new[] { typeof(W1) },
+        //        IsFixedSize = false,
+        //        Size = size,
+        //        MultiValue = multipleValue,
+        //        Name = name
+        //    };
 
-            return this;
-        }
+        //    this._indexes[name] = schemaIndexDef;
+
+        //    return this;
+        //}
 
 
         //private SchemaIndexDef CreateSchemaIndexDef(string name, bool multipleValue, T[] fieldsToIndex)
@@ -180,11 +186,14 @@ namespace Voron.Data.Tables
         //}
 
 
-        public TableSchema<T> DefineKey<W1>(Func<T, W1> first)
+        public TableSchema<T> DefineKey<W1>(Func<T, Slice> first)
         {
+            // Construct an Expression<Func, byte[]> to build the key from object Keys
+
             _pk = new SchemaIndexDef
             {
-                IndexedFieldsTypes = new[] { typeof(W1) },
+                CreateKey = first,
+                FieldsCount = 1,
                 IsFixedSize = IsFixedSizeType<W1>(),
                 Size = GetExpectedTypeSize<W1>(),
                 MultiValue = false,

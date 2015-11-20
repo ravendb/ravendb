@@ -97,7 +97,10 @@
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
     <Compile Include="Impl\FileHeaders\FixedSizeTreeHeader.cs" />
     <Compile Include="Impl\FileHeaders\RootObjectType.cs" />
+    <Compile Include="Impl\InputPointer.cs" />
+    <Compile Include="Impl\IntegerHelper.cs" />
     <Compile Include="Impl\LowLevelTransaction.cs" />
+    <Compile Include="Impl\OutputPointer.cs" />
     <Compile Include="Page.cs" />
     <Compile Include="Data\BTrees\PageHeader.cs" />
     <Compile Include="Data\Compact\PrefixTree.cs" />

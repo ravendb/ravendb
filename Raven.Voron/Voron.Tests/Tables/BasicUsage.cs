@@ -35,7 +35,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users")
                 //    );
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
@@ -49,9 +49,8 @@ namespace Voron.Tests.Tables
                 //var reader = docs.ReadByKey("users/1");
                 //var result = reader.ReadString(DocumentsFields.Data);
                 var doc = docs.ReadByKey("users/1");
-                var result = doc.Data.Deserialize(); // Lazy loading of data. 
 
-                Assert.Equal("{'Name': 'Oren'}", result);
+                Assert.Equal("{'Name': 'Oren'}", doc.Data);
                 tx.Commit();
             }
         }
@@ -78,7 +77,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users")
                 //    );
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
@@ -96,7 +95,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users")
                 //    );
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Eini'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Eini'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
@@ -111,9 +110,8 @@ namespace Voron.Tests.Tables
                 //var result = reader.ReadString(DocumentsFields.Data);
 
                 var doc = docs.ReadByKey("users/1");
-                var result = doc.Data.Deserialize();
 
-                Assert.Equal("{'Name': 'Eini'}", result);
+                Assert.Equal("{'Name': 'Eini'}", doc.Data);
                 tx.Commit();
             }
         }
@@ -140,7 +138,7 @@ namespace Voron.Tests.Tables
                 //    .Set(DocumentsFields.Collection, "Users")
                 //    );
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = new Bonded<string>("{'Name': 'Oren'}"), Collection = "Users" };
+                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
 
                 tx.Commit();
