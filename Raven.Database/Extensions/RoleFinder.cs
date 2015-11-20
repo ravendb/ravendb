@@ -1,20 +1,11 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
 using System.Security.Principal;
-using System.Threading;
+
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.Security.OAuth;
-
-using Raven.SpecificPlatform.Windows;
-
 
 // Raven.Database.Extensions.RoleFinder interface to Raven.SpecificPlatform.Windows as Raven should NOT reference System.DirectoryServices.AccountManagement
 
@@ -37,10 +28,10 @@ namespace Raven.Database.Extensions
 
             public bool IsOAuthNull = false;
             public bool IsGlobalAdmin = false;
-            }
+        }
 
         public static bool IsInRole(this IPrincipal principal, Raven.Database.Server.AnonymousUserAccessMode mode, WindowsBuiltInRole role)
-            {
+        {
             var primitiveParameters = new PrimitiveParams(principal);
             if (EnvironmentUtils.RunningOnPosix == false)
             {
@@ -49,7 +40,7 @@ namespace Raven.Database.Extensions
                 if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
                 {
                     return isModeAdmin;
-            }
+                }
                 var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
                 var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
 
@@ -57,7 +48,7 @@ namespace Raven.Database.Extensions
                     primitiveParameters.IsOAuthNull,
                     primitiveParameters.IsGlobalAdmin,
                     log.WarnException);
-        }
+            }
             else
                 throw new FeatureNotSupportedOnPosixException("IsInRole is not supported when running on posix");
         }
@@ -66,13 +57,13 @@ namespace Raven.Database.Extensions
         {
             var primitiveParameters = new PrimitiveParams(principal);
             if (EnvironmentUtils.RunningOnPosix == false)
-        {
+            {
                 bool isModeAdmin = (mode == Raven.Database.Server.AnonymousUserAccessMode.Admin);
 
                 if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
-            {
+                {
                     return isModeAdmin;
-            }
+                }
                 var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
                 var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
 
@@ -80,22 +71,22 @@ namespace Raven.Database.Extensions
                     primitiveParameters.IsOAuthNull,
                     primitiveParameters.IsGlobalAdmin,
                     log.WarnException);
-                }
+            }
             else
                 throw new FeatureNotSupportedOnPosixException("IsInRole is not supported when running on posix");
-                    }
+        }
 
         public static bool IsBackupOperator(this IPrincipal principal, Raven.Database.Server.AnonymousUserAccessMode mode)
-            {
+        {
             var primitiveParameters = new PrimitiveParams(principal);
             if (EnvironmentUtils.RunningOnPosix == false)
-                {
+            {
                 bool isModeAdmin = (mode == Raven.Database.Server.AnonymousUserAccessMode.All);
 
                 if (principal == null || principal.Identity == null | principal.Identity.IsAuthenticated == false)
-                    {
+                {
                     return isModeAdmin;
-                    }
+                }
                 var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
                 var windowsPrincipal = databaseAccessPrincipal == null ? principal as WindowsPrincipal : databaseAccessPrincipal.Principal;
 
@@ -103,18 +94,18 @@ namespace Raven.Database.Extensions
                     primitiveParameters.IsOAuthNull,
                     primitiveParameters.IsGlobalAdmin,
                     log.WarnException);
-                }
+            }
             else
                 throw new FeatureNotSupportedOnPosixException("IsInRole is not supported when running on posix");
-                }
+        }
 
         public class CachingRoleFinder
-            {
+        {
             private Raven.SpecificPlatform.Windows.RoleFinder.CachingRoleFinder cachingRoleFinder = new Raven.SpecificPlatform.Windows.RoleFinder.CachingRoleFinder();
             private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
             public bool IsInRole(WindowsIdentity windowsIdentity, WindowsBuiltInRole role)
-                {
+            {
                 if (EnvironmentUtils.RunningOnPosix == false)
                     return cachingRoleFinder.IsInRole(windowsIdentity, role, SystemTime.UtcNow, s => log.Debug(s),
                         false,
@@ -122,17 +113,17 @@ namespace Raven.Database.Extensions
                         log.WarnException);
                 else
                     throw new FeatureNotSupportedOnPosixException("IsInRole is not supported when running on posix");
-                }
             }
+        }
 
         public static bool IsAdministrator(this IPrincipal principal, DocumentDatabase database)
-            {
-            var name = database.Name ?? "<system>";
+        {
+            var name = database.Name ?? Constants.SystemDatabase;
             return IsAdministrator(principal, name);
-            }
+        }
 
         private static bool isDbAccessAdmin(IPrincipal principal, string databaseNane)
-            {
+        {
             var oauthPrincipal = principal as OAuthPrincipal;
             if (oauthPrincipal != null)
             {
@@ -145,34 +136,39 @@ namespace Raven.Database.Extensions
                     if (databaseNane == null &&
                         string.Equals(dbAccess.TenantId, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))
                         return false;
-                    }
-                    }
+                }
+            }
             return false;
-                    }
+        }
 
         public static bool IsAdministrator(this IPrincipal principal, string databaseName)
         {
             if (EnvironmentUtils.RunningOnPosix == false)
             {
-            var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
-            if (databaseAccessPrincipal != null)
-            {
-                if (databaseAccessPrincipal.AdminDatabases.Any(name => name == "*")
-                    && databaseName != null && databaseName != Constants.SystemDatabase)
-                    return true;
-                if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, databaseName, StringComparison.InvariantCultureIgnoreCase)))
-                    return true;
-                if (databaseName == null &&
-                    databaseAccessPrincipal.AdminDatabases.Any(
-                        name => string.Equals(name, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase)))
-                    if (string.Equals(dbAccess.TenantId, databaseName, StringComparison.InvariantCultureIgnoreCase))
+                var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
+                if (databaseAccessPrincipal != null)
+                {
+                    if (databaseAccessPrincipal.AdminDatabases.Any(name => name == "*")
+                        && databaseName != null && databaseName != Constants.SystemDatabase)
+                        return true;
+                    if (databaseAccessPrincipal.AdminDatabases.Any(name => string.Equals(name, databaseName, StringComparison.InvariantCultureIgnoreCase)))
                         return true;
                     if (databaseName == null &&
-                        string.Equals(dbAccess.TenantId, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))
-                        return false;
+                        databaseAccessPrincipal.AdminDatabases.Any(
+                            name => string.Equals(name, Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase)))
+                        return true;
+                    return false;
+                }
+
+                return isDbAccessAdmin(principal, databaseName);
+            }
+            else
+                throw new FeatureNotSupportedOnPosixException("IsInRole is not supported when running on posix");
+        }
+
 
         public static bool IsReadOnly(this IPrincipal principal, string databaseName)
-            {
+        {
 
             var databaseAccessPrincipal = principal as PrincipalWithDatabaseAccess;
             if (databaseAccessPrincipal != null)

@@ -7,9 +7,6 @@ namespace Raven.Tryouts
     public class Program
     {
         public static void Main()
-    {
-            
-            for (int i = 0; i < 10; i++)
         {
             for (int i = 0; i < 1000; i++)
             {
@@ -18,8 +15,8 @@ namespace Raven.Tryouts
                 using (var x = new FileSessionListenersTests())
                 {
                     x.ConflictListeners_RemoteVersion().Wait();
+                }
             }
         }
     }
-}
 }
