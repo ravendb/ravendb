@@ -52,12 +52,20 @@ namespace Raven.Tests.Common
 
         private void ShowLogsIfNecessary()
         {
-            if (!ShowLogs)
+            var testMemoryTarget = LogManager.GetTarget<TestMemoryTarget>();
+
+            if (testMemoryTarget == null)
                 return;
+
+            if (ShowLogs == false)
+            {
+                testMemoryTarget.ClearAll();
+                return;
+            }
             
             foreach (var databaseName in DatabaseNames)
             {
-                var target = LogManager.GetTarget<TestMemoryTarget>()[databaseName];
+                var target = testMemoryTarget[databaseName];
                 if (target == null)
                     continue;
 
@@ -75,6 +83,8 @@ namespace Raven.Tests.Common
                     WriteLine(writer);
                 }
             }
+
+            testMemoryTarget.ClearAll();
         }
 
         private static void WriteLine(TextWriter writer, string message = "")

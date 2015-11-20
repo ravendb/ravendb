@@ -184,20 +184,20 @@ namespace Raven.Tests.Helpers
             var documentStore = new EmbeddableDocumentStore
             {
                 UseEmbeddedHttpServer = port.HasValue,
-                Configuration =
-                {
-                    DefaultStorageTypeName = storageType,
-                    DataDirectory = Path.Combine(dataDirectory, "System"),
-                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                    RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-                    Port = port ?? 8079,
-                    AnonymousUserAccessMode = anonymousUserAccessMode
-                },
                 Conventions = conventions ?? new DocumentConvention()
             };
 
+            ConfigurationHelper.ApplySettingsToConfiguration(documentStore.Configuration);
+
+            documentStore.Configuration.DefaultStorageTypeName = storageType;
+            documentStore.Configuration.DataDirectory = Path.Combine(dataDirectory, "System");
+            documentStore.Configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
+            documentStore.Configuration.RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory;
+            documentStore.Configuration.Port = port ?? 8079;
+            documentStore.Configuration.AnonymousUserAccessMode = anonymousUserAccessMode;
+
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-            documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            documentStore.Configuration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             if (activeBundles != null)
             {
@@ -407,20 +407,21 @@ namespace Raven.Tests.Helpers
 
             var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
-            var ravenConfiguration = new RavenConfiguration
-            {
-                Port = port,
-                DataDirectory = Path.Combine(directory, "System"),
-                RunInMemory = runInMemory,
+            var ravenConfiguration = new RavenConfiguration();
+
+            ConfigurationHelper.ApplySettingsToConfiguration(ravenConfiguration);
+
+            ravenConfiguration.Port = port;
+            ravenConfiguration.DataDirectory = Path.Combine(directory, "System");
+            ravenConfiguration.RunInMemory = runInMemory;
 #if DEBUG
-                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
+            ravenConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory;
 #endif
-                DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-            };
+            ravenConfiguration.DefaultStorageTypeName = storageType;
+            ravenConfiguration.AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin;
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
-            ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
