@@ -108,10 +108,33 @@ namespace Raven.Client.Connection.Implementation
             conventions = requestParams.Convention;
 
             recreateHandler = factory.httpMessageHandler ?? (
-                () => new WebRequestHandler
+                () =>
                 {
-                    UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
-                    Credentials = _credentials != null ? _credentials.Credentials : null,
+                    var useDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false;
+                    ICredentials credentialsToUse = null;
+                    if (_credentials != null)
+                    {
+                        var networkCredentials = _credentials.Credentials as NetworkCredential;
+                        if (networkCredentials != null && factory.authenticationScheme != null)
+                        {
+                            var credentialCache = new CredentialCache();
+                            var uri = new Uri(requestParams.Url);
+                            credentialCache.Add(new Uri(string.Format("{0}://{1}:{2}/", uri.Scheme, uri.Host, uri.Port)), factory.authenticationScheme, networkCredentials);
+
+                            credentialsToUse = credentialCache;
+                        }
+                        else
+                        {
+                            credentialsToUse = _credentials.Credentials;
+                        }
+                    }      
+
+                    var handler = new WebRequestHandler
+                    {
+                        UseDefaultCredentials = useDefaultCredentials,
+                        Credentials = credentialsToUse
+                    };
+                    return handler;
                 }
             );
 
