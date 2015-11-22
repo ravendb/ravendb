@@ -16,6 +16,9 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
+using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -70,6 +73,12 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.True(resultMd5 == sourceMd5);
         }
 
+        protected override void ModifyStore(FilesStore store)
+        {
+            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+            base.ModifyStore(store);
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(5000)]
@@ -84,8 +93,8 @@ namespace Raven.Tests.FileSystem.Synchronization
             var sourceContent = new CombinedStream(SyncTestUtils.PrepareSourceStream(size), differenceChunk) {Position = 0};
             var destinationContent = SyncTestUtils.PrepareSourceStream(size);
             destinationContent.Position = 0;
-            var sourceClient = NewAsyncClient(0);
-            var destinationClient = NewAsyncClient(1);
+            var sourceClient = NewAsyncClient(0,fiddler:true);
+            var destinationClient = NewAsyncClient(1, fiddler: true);
 
             await destinationClient.UploadAsync("test.txt", destinationContent);
             sourceContent.Position = 0;
@@ -789,6 +798,44 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Equal(expected.FileName, result.FileName);
             Assert.Equal(expected.NeedListLength, result.NeedListLength);
             Assert.Equal(expected.Type, result.Type);
+}
+        [Fact]
+        public async Task Should_synchronize_copied_file()
+        {
+            var source = NewAsyncClient(0);
+            var destination = NewAsyncClient(1);
+            await source.UploadAsync("test.bin", new RandomStream(1024));
+            await source.CopyAsync("test.bin", "test-copy.bin");
+            await source.Synchronization.SetDestinationsAsync(destination.ToSynchronizationDestination());
+
+            var syncResult = await source.Synchronization.StartAsync();
+            Assert.Equal(1, syncResult.Length);
+            Assert.True(syncResult[0].Reports.All(r => r.Exception == null));
+
+            var destinationStream  = await destination.DownloadAsync("test-copy.bin");
+            var sourceStream = await destination.DownloadAsync("test-copy.bin");
+            Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
+    }
+
+        [Fact]
+        public async Task Should_resolve_copied_files()
+        {
+            var source = NewAsyncClient(0);
+            var destination = NewAsyncClient(1);
+            await source.UploadAsync("test.bin", new RandomStream(1024));
+            await source.CopyAsync("test.bin", "test-copy.bin");
+
+            await destination.UploadAsync("test.bin", new RandomStream(1024));
+            await destination.CopyAsync("test.bin", "test-copy.bin");
+
+            var result = SyncTestUtils.ResolveConflictAndSynchronize(source, destination, "test-copy.bin");
+
+            Assert.Null(result.Exception);
+
+            var destinationStream = await destination.DownloadAsync("test-copy.bin");
+            var sourceStream = await destination.DownloadAsync("test-copy.bin");
+            Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
+
         }
     }
 }

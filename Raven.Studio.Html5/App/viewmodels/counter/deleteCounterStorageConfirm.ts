@@ -1,9 +1,7 @@
 import deleteCounterStorageCommand = require("commands/counter/deleteCounterStorageCommand");
 import counterStorage = require("models/counter/counterStorage");
 import dialog = require("plugins/dialog");
-import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import router = require("plugins/router");
 
 class deleteCounterStorageConfirm extends dialogViewModelBase {
     private isKeepingFiles = ko.observable(true);

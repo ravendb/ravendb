@@ -9,7 +9,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class StudioController : RavenDbApiController
+    public class StudioController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("raven")]
@@ -39,7 +39,8 @@ namespace Raven.Database.Server.Controllers
                 return result;
             }
 
-            var docPath = GetRequestUrl().Replace("/studio/", "");
+            var url = GetRequestUrl();
+            var docPath = url.StartsWith("/studio/") ? url.Substring("/studio/".Length) : url;
             return WriteEmbeddedFile("~/Server/Html5Studio", "Raven.Database.Server.Html5Studio", "Raven.Studio.Html5", docPath);
         }
     }

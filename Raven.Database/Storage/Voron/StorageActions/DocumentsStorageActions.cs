@@ -322,8 +322,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             if (string.IsNullOrEmpty(key))
             {
-                if (logger.IsDebugEnabled) { logger.Debug("Document with empty key was not found"); };
-
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with empty key was not found");
                 return null;
             }
 
@@ -334,7 +334,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var metadataDocument = ReadDocumentMetadata(normalizedKey, sliceKey, out metadataSize);
             if (metadataDocument == null)
             {
-                if (logger.IsDebugEnabled) { logger.Debug("Document with key='{0}' was not found", key); }				
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with key='{0}' was not found", key);
                 return null;
             }
 
@@ -372,8 +373,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return ReadDocumentMetadata(normalizedKey, sliceKey, out _);
             }
 
-            if (logger.IsDebugEnabled) { logger.Debug("Document with key='{0}' was not found", key); }
-
+            if (logger.IsDebugEnabled)
+            logger.Debug("Document with key='{0}' was not found", key);
             return null;
         }
 
@@ -391,8 +392,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             ushort? existingVersion;
             if (!tableStorage.Documents.Contains(Snapshot, normalizedKeyAsSlice, writeBatch.Value, out existingVersion))
             {
-                if (logger.IsDebugEnabled) { logger.Debug("Document with key '{0}' was not found, and considered deleted", key); };
-
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
                 metadata = null;
                 deletedETag = null;
                 return false;
@@ -418,7 +419,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                           .Delete(writeBatch.Value, deletedETag);
 
             documentCacher.RemoveCachedDocument(normalizedKey, etag);
-
+            if (logger.IsDebugEnabled)
             if (logger.IsDebugEnabled) { logger.Debug("Deleted document with key = '{0}'", key); }
 
             return true;
@@ -429,16 +430,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException("key");
 
-            if (key != null && Encoding.UTF8.GetByteCount(key) >= UInt16.MaxValue)
-                throw new ArgumentException(string.Format("The dataKey must be a maximum of {0} bytes in Unicode, key is: '{1}'", UInt16.MaxValue, key), "key");
-
             Etag existingEtag;
             Etag newEtag;
 
             DateTime savedAt;
             var normalizedKey = CreateKey(key);
             var isUpdate = WriteDocumentData(key, normalizedKey, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
-
+            if (logger.IsDebugEnabled)
             if (logger.IsDebugEnabled) { logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key); }
 
             return new AddDocumentResult
@@ -489,8 +487,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             if (!tableStorage.Documents.Contains(Snapshot, normalizedKeySlice, writeBatch.Value))
             {
-                if (logger.IsDebugEnabled) { logger.Debug("Document with dataKey='{0}' was not found", key); }
-
+                if (logger.IsDebugEnabled)
+                logger.Debug("Document with dataKey='{0}' was not found", key);
                 preTouchEtag = null;
                 afterTouchEtag = null;
                 return;
@@ -511,7 +509,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             keyByEtagIndex.Delete(writeBatch.Value, preTouchEtag);
             keyByEtagIndex.Add(writeBatch.Value, newEtag, normalizedKey);
             etagTouches.Add(preTouchEtag, afterTouchEtag);
-
+            if (logger.IsDebugEnabled)
             if (logger.IsDebugEnabled) { logger.Debug("TouchDocument() - document with key = '{0}'", key); }
         }
 

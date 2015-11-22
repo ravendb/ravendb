@@ -48,10 +48,10 @@ namespace Raven.Database.FileSystem.Synchronization
 
             context = new SynchronizationTaskContext();
             synchronizationQueue = new SynchronizationQueue();
-            synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator);	
+            synchronizationStrategy = new SynchronizationStrategy(storage, sigGenerator, systemConfiguration);
         }
 
-        private string FileSystemUrl
+        public string FileSystemUrl
         {
             get { return string.Format("{0}/fs/{1}", systemConfiguration.ServerUrl.TrimEnd('/'), systemConfiguration.FileSystemName); }
         }
@@ -249,13 +249,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
         public async Task<SynchronizationReport> SynchronizeFileToAsync(string fileName, SynchronizationDestination destination)
         {
-            ICredentials credentials = null;
-            if (string.IsNullOrEmpty(destination.Username) == false)
-            {
-                credentials = string.IsNullOrEmpty(destination.Domain)
-                                  ? new NetworkCredential(destination.Username, destination.Password)
-                                  : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
-            }
+            ICredentials credentials = destination.Credentials;
 
             var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey, credentials: credentials);
 
@@ -296,13 +290,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
         private async Task<IEnumerable<Task<SynchronizationReport>>> SynchronizeDestinationAsync(SynchronizationDestination destination, bool forceSyncingAll)
         {
-            ICredentials credentials = null;
-            if (string.IsNullOrEmpty(destination.Username) == false)
-            {
-                credentials = string.IsNullOrEmpty(destination.Domain)
-                    ? new NetworkCredential(destination.Username, destination.Password)
-                    : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
-            }
+            ICredentials credentials = destination.Credentials;
 
             var synchronizationServerClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey, credentials);
 
@@ -691,7 +679,7 @@ namespace Raven.Database.FileSystem.Synchronization
             return result;
         }
 
-        private IEnumerable<SynchronizationDestination> GetSynchronizationDestinations()
+        internal IEnumerable<SynchronizationDestination> GetSynchronizationDestinations()
         {			
             var destinationsConfigExists = false;
             storage.Batch(accessor => destinationsConfigExists = accessor.ConfigExists(SynchronizationConstants.RavenSynchronizationDestinations));

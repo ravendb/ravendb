@@ -4,10 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document

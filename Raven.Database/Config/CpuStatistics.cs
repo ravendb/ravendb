@@ -12,9 +12,10 @@ using System.Management;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-using NLog.Internal;
+
 using Raven.Abstractions.Logging;
 using Raven.Database.Util;
+
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 using Sparrow.Collections;
@@ -37,6 +38,8 @@ namespace Raven.Database.Config
         private static int nextWriteIndex;
         private static readonly ManualResetEventSlim _domainUnload = new ManualResetEventSlim();
         private static bool dynamicLoadBalancing;
+
+        public static double Average { get; private set; }
 
         static CpuStatistics()
         {
@@ -91,7 +94,7 @@ namespace Raven.Database.Config
 
             nextWriteIndex = 0;
 
-            var average = LastUsages.Average();
+            var average = Average = LastUsages.Average();
             if (average < 0)
                 return; // there was an error in getting the CPU stats, ignoring
 

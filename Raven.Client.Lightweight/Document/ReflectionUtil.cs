@@ -9,7 +9,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Linq;
-using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
@@ -33,7 +32,7 @@ namespace Raven.Client.Document
             if (localFullName.TryGetValue(entityType, out result))
                 return result;
 
-            var asmName = new AssemblyName(entityType.Assembly().FullName).Name;
+            var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
             if (entityType.IsGenericType)
             {
                 var genericTypeDefinition = entityType.GetGenericTypeDefinition();

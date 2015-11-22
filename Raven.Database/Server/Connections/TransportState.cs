@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="TransportState.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,22 +6,26 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Server.Controllers;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.TimeSeries.Notifications;
+using Raven.Database.Server.Controllers.Admin;
 
 namespace Raven.Database.Server.Connections
 {
     public class TransportState : IDisposable
     {
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
         readonly TimeSensitiveStore<string> timeSensitiveStore = new TimeSensitiveStore<string>(TimeSpan.FromSeconds(45));
 
         readonly ConcurrentDictionary<string, ConnectionState> connections = new ConcurrentDictionary<string, ConnectionState>();
 
-        public TimeSensitiveStore<string> TimeSensitiveStore
+        private TimeSensitiveStore<string> TimeSensitiveStore
         {
             get { return timeSensitiveStore; }
         }
@@ -56,14 +60,14 @@ namespace Raven.Database.Server.Connections
                                                                                             });
         }
 
-        public event Action<object, IndexChangeNotification> OnIndexChangeNotification = delegate { }; 
+        public event Action<object, IndexChangeNotification> OnIndexChangeNotification = delegate { };
 
         public void Send(IndexChangeNotification indexChangeNotification)
         {
             OnIndexChangeNotification(this, indexChangeNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.Send(indexChangeNotification);
+                connectionState.Value.DocumentStore.Send(indexChangeNotification);
             }
         }
 
@@ -74,7 +78,7 @@ namespace Raven.Database.Server.Connections
             OnTransformerChangeNotification(this, transformerChangeNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.Send(transformerChangeNotification);
+                connectionState.Value.DocumentStore.Send(transformerChangeNotification);
             }
         }
 
@@ -85,18 +89,7 @@ namespace Raven.Database.Server.Connections
             OnDocumentChangeNotification(this, documentChangeNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.Send(documentChangeNotification);
-            }
-        }
-
-        public event Action<object, Notification> OnNotification = delegate { };
-
-        public void Send(Notification notification)
-        {
-            OnNotification(this, notification);
-            foreach (var connectionState in connections)
-            {
-                connectionState.Value.Send(notification);
+                connectionState.Value.DocumentStore.Send(documentChangeNotification);
             }
         }
 
@@ -107,7 +100,7 @@ namespace Raven.Database.Server.Connections
             OnBulkInsertChangeNotification(this, bulkInsertChangeNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.Send(bulkInsertChangeNotification);
+                connectionState.Value.DocumentStore.Send(bulkInsertChangeNotification);
             }
         }
 
@@ -118,7 +111,64 @@ namespace Raven.Database.Server.Connections
             OnReplicationConflictNotification(this, replicationConflictNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.Send(replicationConflictNotification);
+                connectionState.Value.DocumentStore.Send(replicationConflictNotification);
+            }
+        }
+
+        public event Action<object, FileSystemNotification> OnFileSystemNotification = delegate { };
+
+        public void Send(FileSystemNotification fileSystemNotification)
+        {
+            OnFileSystemNotification(this, fileSystemNotification);
+            foreach (var connectionState in connections)
+            {
+                if (fileSystemNotification is FileChangeNotification)
+                {
+                    
+                }
+                connectionState.Value.FileSystem.Send(fileSystemNotification);
+            }
+        }
+
+        public event Action<object, ChangeNotification> OnChangeNotification = delegate { };
+        public event Action<object, TimeSeriesChangeNotification> OnTimeSeriesChangeNotification = delegate { };
+
+        public void Send(ChangeNotification localChangeNotification)
+        {
+            OnChangeNotification(this, localChangeNotification);
+            foreach (var connectionState in connections)
+            {
+                connectionState.Value.CounterStorage.Send(localChangeNotification);
+            }
+        }
+
+        public void Send(TimeSeriesChangeNotification localChangeNotification)
+        {
+            OnTimeSeriesChangeNotification(this, localChangeNotification);
+            foreach (var connectionState in connections)
+            {
+                connectionState.Value.TimeSeries.Send(localChangeNotification);
+            }
+        }
+
+        public event Action<object, Raven.Abstractions.Counters.Notifications.BulkOperationNotification> OnCounterBulkOperationNotification = delegate { };
+        public event Action<object, Raven.Abstractions.TimeSeries.Notifications.BulkOperationNotification> OnTimeSeriesBulkOperationNotification = delegate { };
+
+        public void Send(Raven.Abstractions.Counters.Notifications.BulkOperationNotification bulkOperationNotification)
+        {
+            OnCounterBulkOperationNotification(this, bulkOperationNotification);
+            foreach (var connectionState in connections)
+            {
+                connectionState.Value.CounterStorage.Send(bulkOperationNotification);
+            }
+        }
+
+        public void Send(Raven.Abstractions.TimeSeries.Notifications.BulkOperationNotification bulkOperationNotification)
+        {
+            OnTimeSeriesBulkOperationNotification(this, bulkOperationNotification);
+            foreach (var connectionState in connections)
+            {
+                connectionState.Value.TimeSeries.Send(bulkOperationNotification);
             }
         }
 
@@ -129,7 +179,7 @@ namespace Raven.Database.Server.Connections
             OnDataSubscriptionChangeNotification(this, dataSubscriptionChangeNotification);
             foreach (var connectionState in connections)
             {
-                connectionState.Value.Send(dataSubscriptionChangeNotification);
+                connectionState.Value.DocumentStore.Send(dataSubscriptionChangeNotification);
             }
         }
 
@@ -149,7 +199,7 @@ namespace Raven.Database.Server.Connections
 
         public object[] DebugStatuses
         {
-            get { return connections.Values.Select(x=>x.DebugStatus).ToArray(); }
+            get { return connections.Values.Select(x => x.DebugStatus).ToArray(); }
         }
 
         public void Dispose()
@@ -162,7 +212,7 @@ namespace Raven.Database.Server.Connections
                 }
                 catch (Exception e)
                 {
-                    logger.InfoException("Could not disconnect transport connection", e);
+                    Logger.InfoException("Could not disconnect transport connection", e);
                 }
             }    
         }

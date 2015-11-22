@@ -5,16 +5,18 @@ using Raven.Abstractions.FileSystem;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.FileSystem;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.FileSystem.Extensions;
+
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 
 namespace Raven.Database.FileSystem.Synchronization.Multipart
@@ -54,7 +56,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
             var credentials = synchronizationServerClient.Credentials;
             var conventions = synchronizationServerClient.Conventions;
 
-            var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", "POST", credentials, conventions, timeout: TimeSpan.FromHours(12))
+            var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions, timeout: TimeSpan.FromHours(12))
             {
                 DisableRequestCompression = true
             };

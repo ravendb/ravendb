@@ -14,12 +14,14 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Trees.Fixed;
 using Voron.Util;
 
 namespace Voron.Trees
 {
     public unsafe partial class Tree
     {
+        private Dictionary<string, FixedSizeTree> _fixedSizeTrees;
         private readonly TreeMutableState _state = new TreeMutableState();
 
         private RecentlyFoundPages _recentlyFoundPages;
@@ -36,6 +38,10 @@ namespace Voron.Trees
         }
 
         private readonly Transaction _tx;
+        public Transaction Tx
+        {
+            get { return _tx; }
+        }
 
         private Tree(Transaction tx, long root)
         {
@@ -50,7 +56,6 @@ namespace Voron.Trees
         }
 
         public bool KeysPrefixing { get { return _state.KeysPrefixing; } }
-        public Transaction Tx { get { return _tx; } }
 
         public static Tree Open(Transaction tx, TreeRootHeader* header)
         {
@@ -125,6 +130,9 @@ namespace Voron.Trees
             structure.Write(pos);
         }
 
+        /// <summary>
+        /// This is using little endian
+        /// </summary>
         public long Increment(Slice key, long delta, ushort? version = null)
         {
             State.IsModified = true;
@@ -191,22 +199,14 @@ namespace Voron.Trees
         {
             Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
 
+            if (State.InWriteTransaction)
+                State.IsModified = true;
+
             if (_tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
-            if (KeysPrefixing == false)
-            {
-                if (key.Size + AbstractPager.RequiredSpaceForNewNode > AbstractPager.NodeMaxSize)
-                    throw new ArgumentException(
-                        "Key size is too big, must be at most " + (AbstractPager.NodeMaxSize - AbstractPager.RequiredSpaceForNewNode) + " bytes, but was " + key.Size, "key");
-
-            }
-            else
-            {
-                if (key.Size + AbstractPager.RequiredSpaceForNewNodePrefixedKeys > AbstractPager.NodeMaxSizePrefixedKeys)
-                    throw new ArgumentException(
-                        "Key size is too big, must be at most " + (AbstractPager.NodeMaxSizePrefixedKeys - AbstractPager.RequiredSpaceForNewNodePrefixedKeys) + " bytes, but was " + key.Size, "key");
-            }
+            if (AbstractPager.IsKeySizeValid(key.Size, KeysPrefixing) == false)
+                throw new ArgumentException("Key size is too big, must be at most " + AbstractPager.GetMaxKeySize(KeysPrefixing) + " bytes, but was " + key.Size, "key");
 
             Lazy<Cursor> lazy;
             NodeHeader* node;
@@ -266,7 +266,7 @@ namespace Voron.Trees
                 {
                     cursor.Update(cursor.Pages.First, page);
 
-                    var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+                var pageSplitter = new PageSplitter(_tx, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
                     dataPos = pageSplitter.Execute();
                 }
 
@@ -315,7 +315,7 @@ namespace Voron.Trees
             {
                 var overflowPage = _tx.GetReadOnlyPage(node->PageNumber);
                 FreePage(overflowPage);
-            }
+                }
 
             page.RemoveNode(page.LastSearchPosition);
         }
@@ -603,11 +603,11 @@ namespace Voron.Trees
             using ( var cursor = lazy.Value )
             {
                 var treeRebalancer = new TreeRebalancer(_tx, this, cursor);
-                var changedPage = page;
-                while (changedPage != null)
-                {
-                    changedPage = treeRebalancer.Execute(changedPage);
-                }
+            var changedPage = page;
+            while (changedPage != null)
+            {
+                changedPage = treeRebalancer.Execute(changedPage);
+            }
 
             }
 
@@ -715,6 +715,21 @@ namespace Voron.Trees
                         var tree = OpenMultiValueTree(_tx, key, node);
                         results.AddRange(tree.AllPages());
                     }
+                    else
+                    {
+                        if (State.Flags.HasFlag(TreeFlags.FixedSizeTrees))
+                        {
+                            var valueReader = NodeHeader.Reader(_tx, node);
+                            byte valueSize = *valueReader.Base;
+
+                            var fixedSizeTreeName = p.GetNodeKey(i);
+
+                            var fixedSizeTree = new FixedSizeTree(_tx, this, (Slice) fixedSizeTreeName, valueSize);
+
+                            var pages = fixedSizeTree.AllPages();
+                            results.AddRange(pages);
+                }
+            }
                 }
             }
             return results;
@@ -815,5 +830,41 @@ namespace Voron.Trees
                 _recentlyFoundPages.Clear();
         }
 
+        public FixedSizeTree FixedTreeFor(string key, byte valSize = 0)
+        {
+            if (_fixedSizeTrees == null)
+                _fixedSizeTrees= new Dictionary<string, FixedSizeTree>();
+
+            FixedSizeTree fixedTree;
+            if (_fixedSizeTrees.TryGetValue(key, out fixedTree) == false)
+            {
+                _fixedSizeTrees[key] = fixedTree = new FixedSizeTree(_tx, this, key, valSize);
+    }
+
+            State.Flags |= TreeFlags.FixedSizeTrees;
+
+            return fixedTree;
+}
+
+        public long DeleteFixedTreeFor(string key, byte valSize = 0)
+        {
+            var fixedSizeTree = FixedTreeFor(key, valSize);
+            var numberOfEntries = fixedSizeTree.NumberOfEntries;
+
+            foreach (var page in fixedSizeTree.AllPages())
+            {
+                _tx.FreePage(page);
+            }
+            _fixedSizeTrees.Remove(key);
+            Delete(key);
+            
+            return numberOfEntries;
+        }
+
+        [Conditional("DEBUG")]
+        public void DebugRenderAndShow()
+        {
+            DebugStuff.RenderAndShow(this);
+        }
     }
 }

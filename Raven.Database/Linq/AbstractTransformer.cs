@@ -6,6 +6,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
+using ValueType = System.ValueType;
 
 namespace Raven.Database.Linq
 {

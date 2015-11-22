@@ -20,13 +20,14 @@ using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.StorageActions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Storage.Esent.StorageActions
 {
     public partial class DocumentStorageActions : IMappedResultsStorageAction
     {
+        private static readonly Raven.Abstractions.Threading.ThreadLocal<IHashEncryptor> localSha1 = new Raven.Abstractions.Threading.ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
         private readonly ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel;
-        private static readonly ThreadLocal<IHashEncryptor> localSha1 = new ThreadLocal<IHashEncryptor>(() => Encryptor.Current.CreateHash());
         public static byte[] HashReduceKey(string reduceKey)
         {
             return localSha1.Value.Compute20(Encoding.UTF8.GetBytes(reduceKey));
@@ -177,7 +178,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 {
                     Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark.Item1, sortedBookmark.Item2);
                     var etagBinary = Api.RetrieveColumn(session, ScheduledReductions,
-                                                        tableColumnsCache.ScheduledReductionColumns["etag"]);					
+                                                        tableColumnsCache.ScheduledReductionColumns["etag"]);
                     if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
                     {
                         hasResult = true;
@@ -207,7 +208,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
         }
 
         public void DeleteScheduledReduction(int view, int level, string reduceKey)
-        {			
+        {
             Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
             Api.MakeKey(session, ScheduledReductions, view, MakeKeyGrbit.NewKey);
             Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);

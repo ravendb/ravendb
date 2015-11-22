@@ -68,7 +68,8 @@ namespace Rhino.Licensing
                 {
                     if (hostTask.IsFaulted)
                     {
-                        log.DebugException("Could not get time from: " + host, hostTask.Exception);
+                        if (log.IsDebugEnabled)
+                            log.DebugException("Could not get time from: " + host, hostTask.Exception);
                         return GetDateAsync();
                     }
                     var endPoint = new IPEndPoint(hostTask.Result[0], 123);
@@ -94,7 +95,9 @@ namespace Rhino.Licensing
                                        catch (Exception)
                                        {
                                        }
-                                       log.DebugException("Could not send time request to : " + host, sendTask.Exception);
+
+                                       if (log.IsDebugEnabled)
+                                           log.DebugException("Could not send time request to : " + host, sendTask.Exception);
                                        return GetDateAsync();
                                    }
 
@@ -110,13 +113,16 @@ namespace Rhino.Licensing
                                                       catch (Exception)
                                                       {
                                                       }
-                                                      log.DebugException("Could not get time response from: " + host, receiveTask.Exception);
+
+                                                      if (log.IsDebugEnabled)
+                                                          log.DebugException("Could not get time response from: " + host, receiveTask.Exception);
                                                       return GetDateAsync();
                                                   }
                                                   var result = receiveTask.Result;
                                                   if (IsResponseValid(result) == false)
                                                   {
-                                                      log.Debug("Did not get valid time information from " + host);
+                                                      if (log.IsDebugEnabled)
+                                                          log.Debug("Did not get valid time information from " + host);
                                                       return GetDateAsync();
                                                   }
                                                   var transmitTimestamp = GetTransmitTimestamp(result);

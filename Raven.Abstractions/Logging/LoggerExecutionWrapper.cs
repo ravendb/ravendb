@@ -25,6 +25,11 @@ namespace Raven.Abstractions.Logging
 
         #region ILog Members
 
+        public bool IsInfoEnabled
+        {
+            get { return LogManager.EnableDebugLogForTargets || logger.IsInfoEnabled; }
+        }
+
         public bool IsDebugEnabled
         {
             get { return LogManager.EnableDebugLogForTargets || logger.IsDebugEnabled; }
@@ -39,19 +44,19 @@ namespace Raven.Abstractions.Logging
         {
             if (logger.ShouldLog(logLevel))
             {
-                Func<string> wrappedMessageFunc = () =>
+            Func<string> wrappedMessageFunc = () =>
+            {
+                try
                 {
-                    try
-                    {
-                        return messageFunc();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
-                    }
-                    return null;
-                };
-                logger.Log(logLevel, wrappedMessageFunc);
+                    return messageFunc();
+                }
+                catch (Exception ex)
+                {
+                    Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
+                }
+                return null;
+            };
+            logger.Log(logLevel, wrappedMessageFunc);
             }
 
             if (targets.Count == 0)
@@ -74,7 +79,7 @@ namespace Raven.Abstractions.Logging
                 // nothing to be done here
                 return;
             }
-            string databaseName = LogContext.DatabaseName.Value;
+            string databaseName = LogContext.DatabaseName;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 

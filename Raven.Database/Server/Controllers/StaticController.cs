@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
     [Obsolete("Use RavenFS instead.")]
-    public class StaticController : RavenDbApiController
+    public class StaticController : ClusterAwareRavenDbApiController
     {
         [HttpGet]
         [RavenRoute("static/")]
@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/static/{*filename}")]
         public async Task<HttpResponseMessage> StaticPut(string filename)
         {
-            var newEtag = Database.Attachments.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), ReadInnerHeaders.FilterHeadersAttachment());
+            var newEtag = Database.Attachments.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false), ReadInnerHeaders.FilterHeadersAttachment());
 
             var msg = GetEmptyMessage(HttpStatusCode.Created);
             msg.Headers.Location = Database.Configuration.GetFullUrl("static/" + filename);

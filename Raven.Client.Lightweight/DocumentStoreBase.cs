@@ -90,7 +90,7 @@ namespace Raven.Client
         public abstract IDocumentSession OpenSession(string database);
         public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
         public abstract IDatabaseCommands DatabaseCommands { get; }
-
+        
         /// <summary>
         /// Executes index creation.
         /// </summary>

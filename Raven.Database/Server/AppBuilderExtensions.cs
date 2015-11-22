@@ -12,9 +12,13 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using Microsoft.Owin;
+using Rachis;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Raven.Database.DiskIO;
+using Raven.Database.Raft;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
@@ -26,6 +30,7 @@ using Raven.Database.Server.WebApi.Filters;
 using Raven.Database.Server.WebApi.Handlers;
 
 // ReSharper disable once CheckNamespace
+using Raven.Abstractions.Logging;
 namespace Owin
 {
     public static class AppBuilderExtensions
@@ -77,7 +82,7 @@ namespace Owin
 
             app.Use((context, func) => UpgradeToWebSockets(options, context, func));
 
-            app.UseWebApi(CreateHttpCfg(options));
+            app.Use<CustomExceptionMiddleware>().UseWebApi(CreateHttpCfg(options));
 
 
             return app;
@@ -89,7 +94,7 @@ namespace Owin
             if (accept == null)
             {
                 // Not a websocket request
-                await next();
+                await next().ConfigureAwait(false);
                 return;
             }
 
@@ -97,7 +102,7 @@ namespace Owin
 
             if (webSocketsTrasport != null)
             {
-                if (await webSocketsTrasport.TrySetupRequest())
+                if (await webSocketsTrasport.TrySetupRequest().ConfigureAwait(false))
                 {
                     accept(new Dictionary<string, object>()
                     {
@@ -105,8 +110,8 @@ namespace Owin
                         {"websocket.Buffer", webSocketsTrasport.PreAllocatedBuffer},
                         {"websocket.KeepAliveInterval", WebSocket.DefaultKeepAliveInterval}
                     }, webSocketsTrasport.Run);
-                }
             }
+        }
         }
 
         private static HttpConfiguration CreateHttpCfg(RavenDBOptions options)
@@ -116,8 +121,10 @@ namespace Owin
             cfg.Properties[typeof(DatabasesLandlord)] = options.DatabaseLandlord;
             cfg.Properties[typeof(FileSystemsLandlord)] = options.FileSystemLandlord;
             cfg.Properties[typeof(CountersLandlord)] = options.CountersLandlord;
+            cfg.Properties[typeof(TimeSeriesLandlord)] = options.TimeSeriesLandlord;
             cfg.Properties[typeof(MixedModeRequestAuthorizer)] = options.MixedModeRequestAuthorizer;
             cfg.Properties[typeof(RequestManager)] = options.RequestManager;
+            cfg.Properties[typeof(ClusterManager)] = options.ClusterManager;
             cfg.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad] = new SemaphoreSlim(options.SystemDatabase.Configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
             cfg.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad] = options.SystemDatabase.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
             cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
@@ -290,6 +297,8 @@ namespace Owin
 
         private class InterceptMiddleware : OwinMiddleware
         {
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
             public InterceptMiddleware(OwinMiddleware next)
                 : base(next)
             {
@@ -298,8 +307,37 @@ namespace Owin
             public override async Task Invoke(IOwinContext context)
             {
                 // Pre request stuff
-                await Next.Invoke(context);
+                try
+                {
+                    await Next.Invoke(context).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+                }
                 // Post request stuff
+            }
+        }
+
+        private class CustomExceptionMiddleware : OwinMiddleware
+        {
+            private static readonly ILog Log = LogManager.GetCurrentClassLogger();
+
+            public CustomExceptionMiddleware(OwinMiddleware next) : base(next)
+            {}
+
+            public override async Task Invoke(IOwinContext context)
+            {
+                try
+                {
+                    await Next.Invoke(context).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Exception thrown while invoking message from client to server, probably due to write fail to a closed connection which may normally occur when browsing",ex);
+                }
             }
         }
     }

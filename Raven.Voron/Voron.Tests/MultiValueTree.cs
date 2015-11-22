@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Voron.Impl;
 using Voron.Trees;
 using Xunit;
 
 namespace Voron.Tests
 {
-    public unsafe class MultiValueTree : StorageTest
+    public class MultiValueTree : StorageTest
     {
         [PrefixesFact]
         public void Single_MultiAdd_And_Read_DataStored()

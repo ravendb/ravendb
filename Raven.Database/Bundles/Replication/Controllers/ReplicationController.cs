@@ -8,7 +8,11 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 
+using Rachis.Storage;
+
 using Raven.Abstractions;
+using Raven.Abstractions.Cluster;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -24,7 +28,7 @@ using Raven.Client.Connection;
 using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
+using Raven.Database.Raft.Util;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
@@ -158,9 +162,51 @@ namespace Raven.Database.Bundles.Replication.Controllers
         [RavenRoute("databases/{databaseName}/replication/topology")]
         public HttpResponseMessage TopologyGet()
         {
-            var documentsController = new DocumentsController();
-            documentsController.InitializeFrom(this);
-            return documentsController.DocGet(Constants.RavenReplicationDestinations);
+            if (Database == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+
+            var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+            if (configurationDocument == null)
+                return GetEmptyMessage(HttpStatusCode.NotFound);
+
+            var mergedDocument = configurationDocument.MergedDocument;
+
+            var isInCluster = ClusterManager.IsActive() && Database.IsClusterDatabase();
+            var commitIndex = isInCluster ? ClusterManager.Engine.CommitIndex : -1;
+            var currentTopology = isInCluster ? ClusterManager.Engine.CurrentTopology : null;
+            var currentLeader = ClusterManager.Engine.CurrentLeader;
+            var isLeader = currentLeader == ClusterManager.Engine.Options.SelfConnection.Name;
+
+            var configurationDocumentWithClusterInformation = new ReplicationDocumentWithClusterInformation
+            {
+                ClientConfiguration = mergedDocument.ClientConfiguration,
+                Id = mergedDocument.Id,
+                Source = mergedDocument.Source,
+                ClusterCommitIndex = commitIndex
+            };
+
+            if (isInCluster)
+                configurationDocumentWithClusterInformation.ClusterInformation = new ClusterInformation(true, isLeader);
+
+            foreach (var destination in mergedDocument.Destinations)
+            {
+                var destinationIsLeader = isInCluster && isLeader == false && currentTopology != null && currentLeader != null;
+                if (destinationIsLeader)
+                {
+                    var destinationUrl = RaftHelper.GetNormalizedNodeUrl(destination.Url);
+                    var node = currentTopology.AllVotingNodes.FirstOrDefault(x => x.Uri.AbsoluteUri.ToLowerInvariant() == destinationUrl);
+                    if (node != null)
+                        destinationIsLeader = node.Name == currentLeader;
+                    else
+                        destinationIsLeader = false;
+        }
+
+                configurationDocumentWithClusterInformation
+                    .Destinations
+                    .Add(ReplicationDestination.ReplicationDestinationWithClusterInformation.Create(destination, isInCluster, destinationIsLeader));
+            }
+
+            return GetMessageWithObject(configurationDocumentWithClusterInformation);
         }
 
         [Obsolete("Use RavenFS instead.")]
@@ -204,6 +250,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
             const int BatchSize = 512;
 
             var src = GetQueryStringValue("from");
+            var collections = GetQueryStringValue("collections");
             if (string.IsNullOrEmpty(src))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
@@ -213,7 +260,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
             if (string.IsNullOrEmpty(src))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-            var array = await ReadJsonArrayAsync();
+            var array = await ReadJsonArrayAsync().ConfigureAwait(false);
             if (ReplicationTask != null)
                 ReplicationTask.HandleHeartbeat(src);
 
@@ -225,7 +272,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
                 var docIndex = 0;
                 var retries = 0;
-                while (retries< 3 && docIndex < array.Length)
+                while (retries < 3 && docIndex < array.Length)
                 {
                     var lastIndex = docIndex;
                     using (Database.DocumentLock.Lock())
@@ -234,7 +281,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                         {
                             for (var j = 0; j < BatchSize && docIndex < array.Length; j++, docIndex++)
                             {
-                                var document = (RavenJObject) array[docIndex];
+                                var document = (RavenJObject)array[docIndex];
                                 var metadata = document.Value<RavenJObject>("@metadata");
                                 if (metadata[Constants.RavenReplicationSource] == null)
                                 {
@@ -250,8 +297,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                 ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
                             }
 
-                            SaveReplicationSource(src, lastEtag, array.Length);
-                            retries = lastIndex == docIndex? retries: 0;
+                            SaveReplicationSource(src, lastEtag, array.Length, collections);
+                            retries = lastIndex == docIndex ? retries : 0;
                         });
                     }
 
@@ -274,11 +321,14 @@ namespace Raven.Database.Bundles.Replication.Controllers
             return GetEmptyMessage();
         }
 
-        private void SaveReplicationSource(string src, string lastEtag, int batchSize)
+        private void SaveReplicationSource(string src, string lastEtag, int batchSize, string collections = null)
         {
             Guid remoteServerInstanceId = Guid.Parse(GetQueryStringValue("dbid"));
 
             var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
+            if (!string.IsNullOrEmpty(collections))
+                replicationDocKey += ("/" + collections);
+
             var replicationDocument = Database.Documents.Get(replicationDocKey, null);
             var lastAttachmentId = Etag.Empty;
             if (replicationDocument != null)
@@ -298,6 +348,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                             LastDocumentEtag = Etag.Parse(lastEtag),
                             LastAttachmentEtag = lastAttachmentId,
                             ServerInstanceId = remoteServerInstanceId,
+                            SourceCollections = collections,
                             LastModified = SystemTime.UtcNow,
                             LastBatchSize = batchSize
                         }),
@@ -320,7 +371,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
             if (string.IsNullOrEmpty(src))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
 
-            var array = await ReadBsonArrayAsync();
+            var array = await ReadBsonArrayAsync().ConfigureAwait(false);
             using (Database.DisableAllTriggersForCurrentThread())
             {
                 var conflictResolvers = AttachmentReplicationConflictResolvers; 
@@ -389,7 +440,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             string src;
             string dbid;
-            var result = GetValuesForLastEtag(out src, out dbid);
+            string collections;
+            var result = GetValuesForLastEtag(out src, out dbid, out collections);
             if (result != null)
                 return result;
 
@@ -419,7 +471,11 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 {
                     var remoteServerInstanceId = Guid.Parse(dbid);
 
-                    document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId, null);
+                    var docKey = Constants.RavenReplicationSourcesBasePath + "/" + remoteServerInstanceId;
+                    if (!String.IsNullOrEmpty(collections))
+                        docKey += ("/" + collections);
+
+                    document = Database.Documents.Get(docKey, null);
                     if (document == null)
                     {
                         // migrate
@@ -427,7 +483,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                         if (document != null)
                         {
                             sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformationWithBatchInformation>();
-                            Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + sourceReplicationInformation.ServerInstanceId, Etag.Empty, document.DataAsJson, document.Metadata, null);
+                            Database.Documents.Put(docKey, Etag.Empty, document.DataAsJson, document.Metadata, null);
                             Database.Documents.Delete(Constants.RavenReplicationSourcesBasePath + "/" + src, document.Etag, null);
 
                             if (remoteServerInstanceId != sourceReplicationInformation.ServerInstanceId) 
@@ -488,7 +544,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 }
 
                 var currentEtag = GetQueryStringValue("currentEtag");
-                Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]. LowMemory: {3}. MaxNumberOfItemsToReceiveInSingleBatch: {4}.", src, sourceReplicationInformation.LastDocumentEtag, currentEtag, lowMemory, sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch));
+                if (Log.IsDebugEnabled)
+                    Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]. LowMemory: {3}. MaxNumberOfItemsToReceiveInSingleBatch: {4}.", src, sourceReplicationInformation.LastDocumentEtag, currentEtag, lowMemory, sourceReplicationInformation.MaxNumberOfItemsToReceiveInSingleBatch));
                 return GetMessageWithObject(sourceReplicationInformation);
             }
         }
@@ -500,13 +557,18 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             string src;
             string dbid;
-            var result = GetValuesForLastEtag(out src, out dbid);
+            string collections;
+            var result = GetValuesForLastEtag(out src, out dbid, out collections);
             if (result != null)
                 return result;
 
             using (Database.DisableAllTriggersForCurrentThread())
             {
-                var document = Database.Documents.Get(Constants.RavenReplicationSourcesBasePath + "/" + dbid, null);
+                var key = Constants.RavenReplicationSourcesBasePath + "/" + dbid;
+                if (!String.IsNullOrEmpty(collections))
+                    key += ("/" + collections);
+
+                var document = Database.Documents.Get(key, null);
 
                 SourceReplicationInformation sourceReplicationInformation;
 
@@ -553,11 +615,12 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 var metadata = document == null ? new RavenJObject() : document.Metadata;
 
                 var newDoc = RavenJObject.FromObject(sourceReplicationInformation);
-                log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
+                if (log.IsDebugEnabled)
+                    log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
                                   sourceReplicationInformation.LastDocumentEtag,
                                   sourceReplicationInformation.LastAttachmentEtag);
 
-                Database.Documents.Put(Constants.RavenReplicationSourcesBasePath + "/" + dbid, etag, newDoc, metadata, null);
+                Database.Documents.Put(key, etag, newDoc, metadata, null);
             }
 
             return GetEmptyMessage();
@@ -640,7 +703,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
             {
                 var internalPutIndex = InternalPutIndex(sideBySideReplicationInfo.SideBySideIndex, "Indexes to be replaced were equal, updated the side-by-side index.");
                 if (internalPutIndex.IsSuccessStatusCode)
-                    PutSideBySideIndexDocument(sideBySideReplicationInfo);
+                PutSideBySideIndexDocument(sideBySideReplicationInfo);
                 return internalPutIndex;
             }
 
@@ -712,15 +775,24 @@ namespace Raven.Database.Bundles.Replication.Controllers
             var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
 
             if (replicationTask == null)
-                return GetMessageWithString("Could not find replication task. Something is wrong here, check logs for more details",HttpStatusCode.BadRequest);
+                return GetMessageWithString("Could not find replication task. Something is wrong here, check logs for more details", HttpStatusCode.BadRequest);
 
             if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
             {
-                replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, true, false);
+                replicationTask.IndexReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
+
                 return GetEmptyMessage();
             }
 
-            replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes:true, replicateTransformers:false);
+            var indexName = GetQueryStringValue("indexName");
+
+            if (string.IsNullOrEmpty(indexName) == false)
+            {
+                replicationTask.IndexReplication.Execute(indexName);
+            return GetEmptyMessage();
+        }
+
+            replicationTask.IndexReplication.Execute();
             return GetEmptyMessage();
         }
 
@@ -737,18 +809,28 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             if (string.Equals(op, "replicate-all-to-destination", StringComparison.InvariantCultureIgnoreCase))
             {
-                replicationTask.ReplicateIndexesAndTransformersTask(null, dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false, false);
+                replicationTask.TransformerReplication.Execute(dest => dest.IsEqualTo(replicationDestination) && dest.SkipIndexReplication == false);
                 return GetEmptyMessage();
             }
 
-            replicationTask.ReplicateIndexesAndTransformersTask(null, replicateIndexes: false);
+            var transformerName = GetQueryStringValue("transformerName");
+
+            if (string.IsNullOrEmpty(transformerName) == false)
+            {
+                replicationTask.TransformerReplication.Execute(transformerName);
             return GetEmptyMessage();
         }
 
-        private HttpResponseMessage GetValuesForLastEtag(out string src, out string dbid)
+            replicationTask.TransformerReplication.Execute();
+            return GetEmptyMessage();
+        }
+
+        private HttpResponseMessage GetValuesForLastEtag(out string src, out string dbid, out string collections)
         {
             src = GetQueryStringValue("from");
             dbid = GetQueryStringValue("dbid");
+            collections = GetQueryStringValue("collections");
+
             if (dbid == Database.TransactionalStorage.Id.ToString())
                 throw new InvalidOperationException("Both source and target databases have database id = " + dbid +
                                                     "\r\nDatabase cannot replicate to itself.");

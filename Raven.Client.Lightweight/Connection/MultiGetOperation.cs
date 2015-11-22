@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Implementation;
@@ -178,7 +176,8 @@ namespace Raven.Client.Connection
                             id,
                             etag,
                             docResult,
-                            response);
+                            response)
+                            .ConfigureAwait(false);
                     }
 
                     continue;
@@ -193,7 +192,8 @@ namespace Raven.Client.Connection
                         id,
                         etag,
                         result,
-                        response);
+                        response)
+                        .ConfigureAwait(false);
                 }
             }
         }
@@ -205,7 +205,7 @@ namespace Raven.Client.Connection
             RavenJObject docResult,
             GetResponse response)
         {
-            var concurrencyException = await tryResolveConflictOrCreateConcurrencyException(id, docResult, etag);
+            var concurrencyException = await tryResolveConflictOrCreateConcurrencyException(id, docResult, etag).ConfigureAwait(false);
 
             if (concurrencyException != null)
                 throw concurrencyException;

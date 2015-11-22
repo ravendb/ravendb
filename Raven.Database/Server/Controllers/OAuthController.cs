@@ -14,7 +14,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class OAuthController : RavenDbApiController
+    public class OAuthController : BaseDatabaseApiController
     {
         const string TokenContentType = "application/json; charset=UTF-8";
         const string TokenGrantType = "client_credentials";
@@ -41,7 +41,7 @@ namespace Raven.Database.Server.Controllers
 
             //using (var reader = new StreamReader(context.Request.InputStream))
             //	requestContents = reader.ReadToEnd();
-            var requestContents = await ReadStringAsync();
+            var requestContents = await ReadStringAsync().ConfigureAwait(false);
 
             var requestContentsDictionary = OAuthHelper.ParseDictionary(requestContents);
             var rsaExponent = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);

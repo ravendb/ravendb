@@ -225,7 +225,7 @@ namespace Raven.Abstractions.Extensions
             {
                 var currentOffset = 0;
                 int read;
-                while ((read = await stream.ReadAsync(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
+                while ((read = await stream.ReadAsync(buffer, currentOffset, buffer.Length - currentOffset).ConfigureAwait(false)) != 0)
                 {
                     currentOffset += read;
                     if (currentOffset == buffer.Length)

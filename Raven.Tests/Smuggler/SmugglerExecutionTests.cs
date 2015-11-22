@@ -4,6 +4,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Embedded;
@@ -334,12 +335,12 @@ namespace Raven.Tests.Smuggler
                 }
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus,PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag);
 
                 store.DatabaseCommands.Delete(userId, null);
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -437,11 +438,11 @@ namespace Raven.Tests.Smuggler
 
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag);
 
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -593,7 +594,7 @@ namespace Raven.Tests.Smuggler
                 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                     servers[0].SystemDatabase.ServerUrl +
                                                                     "admin/periodicExport/purge-tombstones?docEtag=" + documentEtagAfterFirstDelete + "&attachmentEtag=" + attachmentEtagAfterFirstDelete,
-                                                                    "POST",
+                                                                    HttpMethods.Post,
                                                                     new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                     store.Conventions);
 
@@ -993,7 +994,7 @@ namespace Raven.Tests.Smuggler
         public async Task CanSkipFilesWhenUsingContinuations()
         {
             var dataDir = NewDataPath(forceCreateDir: true);
-            var continuationToken = "Token";
+            const string continuationToken = "Token";
 
             using (var store = NewRemoteDocumentStore( dataDirectory: dataDir ))
             {

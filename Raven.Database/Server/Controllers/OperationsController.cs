@@ -16,7 +16,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class OperationsController : RavenDbApiController
+    public class OperationsController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("operation/status")]
@@ -93,7 +93,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/operation/alert/dismiss")]
         public async Task<HttpResponseMessage> AlertDismiss()
         {
-            var request = await ReadJsonObjectAsync<RavenJObject>();
+            var request = await ReadJsonObjectAsync<RavenJObject>().ConfigureAwait(false);
             var key = request.Value<string>("key");
             var jsonDocument = Database.Documents.Get("Raven/Alerts", null);
             if (jsonDocument == null)

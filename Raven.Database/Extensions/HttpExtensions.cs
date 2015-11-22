@@ -3,6 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
@@ -47,6 +50,22 @@ namespace Raven.Database.Extensions
                 default:
                     return obj;
             }
+        }
+
+        public static HttpResponseMessage WithNoCache(this HttpResponseMessage message)
+        {
+            // Ensure that files are not cached at the browser side.
+            // "Cache-Control": "no-cache, no-store, must-revalidate";
+            // "Expires": 0;
+            message.Headers.CacheControl = new CacheControlHeaderValue()
+            {
+                MustRevalidate = true,
+                NoCache = true,
+                NoStore = true,
+                MaxAge = new TimeSpan(0, 0, 0, 0)
+            };
+
+            return message;
         }
     }
 }

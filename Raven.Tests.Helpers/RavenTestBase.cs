@@ -18,25 +18,25 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-
+using Rachis.Transport;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Client.Linq.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.FileSystem.Util;
+using Raven.Database.Raft;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -44,7 +44,6 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
-using Xunit;
 
 
 namespace Raven.Tests.Helpers
@@ -112,7 +111,7 @@ namespace Raven.Tests.Helpers
                         method.DeclaringType.Name,
                         method.Name))
                 .ToList();
-            if(messages.Any())
+            if (messages.Any())
                 throw new InvalidConstraintException("async Task methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
         }
 
@@ -184,20 +183,20 @@ namespace Raven.Tests.Helpers
             var documentStore = new EmbeddableDocumentStore
             {
                 UseEmbeddedHttpServer = port.HasValue,
-                Configuration =
-                {
-                    DefaultStorageTypeName = storageType,
-                    DataDirectory = Path.Combine(dataDirectory, "System"),
-                    RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                    RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-                    Port = port ?? 8079,
-                    AnonymousUserAccessMode = anonymousUserAccessMode
-                },
                 Conventions = conventions ?? new DocumentConvention()
             };
 
+            ConfigurationHelper.ApplySettingsToConfiguration(documentStore.Configuration);
+
+            documentStore.Configuration.DefaultStorageTypeName = storageType;
+            documentStore.Configuration.DataDirectory = Path.Combine(dataDirectory, "System");
+            documentStore.Configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
+            documentStore.Configuration.RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory;
+            documentStore.Configuration.Port = port ?? 8079;
+            documentStore.Configuration.AnonymousUserAccessMode = anonymousUserAccessMode;
+
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-            documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            documentStore.Configuration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             if (activeBundles != null)
             {
@@ -250,10 +249,18 @@ namespace Raven.Tests.Helpers
 
                 return documentStore;
             }
-            catch
+            catch (Exception)
             {
                 // We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
+                try
+                {
                 documentStore.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    // we don't want to hide the original error
+                    Console.WriteLine("Error when disposing of document store during error in initialization: " + exception);
+                }
                 throw;
             }
             finally
@@ -364,7 +371,7 @@ namespace Raven.Tests.Helpers
             return servers.First(x => x.SystemDatabase.Configuration.Port == port);
         }
 
-        private static string GetServerUrl(bool fiddler, string serverUrl)
+        protected static string GetServerUrl(bool fiddler, string serverUrl)
         {
             if (fiddler)
             {
@@ -399,6 +406,8 @@ namespace Raven.Tests.Helpers
             Action<InMemoryRavenConfiguration> configureConfig = null,
             [CallerMemberName] string databaseName = null)
         {
+            if (databaseName == ".ctor")
+                databaseName = "ctor";
             databaseName = NormalizeDatabaseName(databaseName != Constants.SystemDatabase ? databaseName : null);
 
             checkPorts = true;
@@ -407,20 +416,21 @@ namespace Raven.Tests.Helpers
 
             var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
-            var ravenConfiguration = new RavenConfiguration
-            {
-                Port = port,
-                DataDirectory = Path.Combine(directory, "System"),
-                RunInMemory = runInMemory,
+            var ravenConfiguration = new RavenConfiguration();
+
+            ConfigurationHelper.ApplySettingsToConfiguration(ravenConfiguration);
+
+            ravenConfiguration.Port = port;
+            ravenConfiguration.DataDirectory = Path.Combine(directory, "System");
+            ravenConfiguration.RunInMemory = runInMemory;
 #if DEBUG
-                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
+            ravenConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory;
 #endif
-                DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-            };
+            ravenConfiguration.DefaultStorageTypeName = storageType;
+            ravenConfiguration.AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin;
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
-            ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
@@ -613,28 +623,34 @@ namespace Raven.Tests.Helpers
             return jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
         }
 
-        protected void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus)
+        protected void WaitForPeriodicExport(DocumentDatabase db, PeriodicExportStatus previousStatus,
+            PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
         {
-            WaitForPeriodicExport(key => db.Documents.Get(key, null), previousStatus);
+            WaitForPeriodicExport(key => db.Documents.Get(key, null), previousStatus, statusEtags);
         }
 
-        protected void WaitForPeriodicExport(IDatabaseCommands commands, PeriodicExportStatus previousStatus)
+        protected void WaitForPeriodicExport(IDatabaseCommands commands, PeriodicExportStatus previousStatus,
+            PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
         {
-            WaitForPeriodicExport(commands.Get, previousStatus);
+            WaitForPeriodicExport(commands.Get, previousStatus, statusEtags);
         }
 
-        private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus)
+        private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus, 
+            PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
         {
             PeriodicExportStatus currentStatus = null;
             var done = SpinWait.SpinUntil(() =>
             {
                 currentStatus = GetPerodicBackupStatus(getDocument);
-                return currentStatus.LastDocsEtag != previousStatus.LastDocsEtag ||
-                       currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag ||
-                       currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag ||
-                       currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag;
+                return  (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsEtag) && currentStatus.LastDocsEtag != previousStatus.LastDocsEtag) ||
+                       (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag) && currentStatus.LastAttachmentsEtag != previousStatus.LastAttachmentsEtag) ||
+                       (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastDocsDeletionEtag) && currentStatus.LastDocsDeletionEtag != previousStatus.LastDocsDeletionEtag) ||
+                       (statusEtags.HasFlag(PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag) && currentStatus.LastAttachmentDeletionEtag != previousStatus.LastAttachmentDeletionEtag);
+
             }, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
-            if (!done) throw new Exception("WaitForPeriodicExport failed");
+            if (!done) 
+                throw new Exception("WaitForPeriodicExport failed");
+
             previousStatus.LastDocsEtag = currentStatus.LastDocsEtag;
             previousStatus.LastAttachmentsEtag = currentStatus.LastAttachmentsEtag;
             previousStatus.LastDocsDeletionEtag = currentStatus.LastDocsDeletionEtag;
@@ -716,14 +732,21 @@ namespace Raven.Tests.Helpers
             if (!done) throw new Exception("WaitForRestore failed");
         }
 
-        protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id)
+        protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, Etag afterEtag = null)
+        {
+            WaitForDocument(databaseCommands, id, TimeSpan.FromMinutes(5), afterEtag);
+        }
+
+        protected virtual void WaitForDocument(IDatabaseCommands databaseCommands, string id, TimeSpan timeout, Etag afterEtag = null)
         {
             var done = SpinWait.SpinUntil(() =>
             {
                 // We expect to get the doc from the <system> database
                 var doc = databaseCommands.Get(id);
+                if (afterEtag == null)
                 return doc != null;
-            }, TimeSpan.FromMinutes(5));
+                return EtagUtil.IsGreaterThan(doc.Etag, afterEtag);
+            }, timeout);
 
             if (!done) throw new Exception("WaitForDocument failed");
         }
@@ -805,7 +828,7 @@ namespace Raven.Tests.Helpers
 
         }*/
 
-        protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
+        protected void WaitForUserToContinueTheTest(bool debug = true, string url = null, string startPage = null)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
@@ -817,7 +840,7 @@ namespace Raven.Tests.Helpers
             }.Initialize())
             {
                 var databaseNameEncoded = Uri.EscapeDataString(Constants.SystemDatabase);
-                var documentsPage = documentStore.Url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                var documentsPage = documentStore.Url + (startPage ?? "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true");
                 var request = WebRequest.Create(documentsPage);
 
                 try
@@ -882,7 +905,6 @@ namespace Raven.Tests.Helpers
                     errors.Add(e);
                 }
             }
-
             stores.Clear();
 
             foreach (var server in servers)
@@ -1021,7 +1043,7 @@ namespace Raven.Tests.Helpers
             var url = store.Url.ForDatabase(string.IsNullOrEmpty(databaseName) == false ? databaseName : store.DefaultDatabase);
 
             var requestFactory = store.JsonRequestFactory;
-            var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", "POST", store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+            var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url + "/studio-tasks/createSampleData", HttpMethods.Post, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
             request.ExecuteRequest();
         }
 
@@ -1084,5 +1106,56 @@ namespace Raven.Tests.Helpers
                 transformer.Execute(documentStore);
             }
         }
+
+        public static IEnumerable<object[]> InsertOptions
+        {
+            get
+            {
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
+                yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
+                yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
+    }
+}
+
+        protected RavenDbServer CreateServerWithWindowsCredentials(int port, string username, string password, string domain, out NodeConnectionInfo nodeConnectionInfo)
+        {
+            var server = GetNewServer(port, enableAuthentication: true);
+            nodeConnectionInfo = ClusterManagerFactory.CreateSelfConnection(server.SystemDatabase);
+            nodeConnectionInfo.Username = username;
+            nodeConnectionInfo.Password = password;
+            nodeConnectionInfo.Domain = domain;
+
+            EnableAuthentication(server.SystemDatabase);
+            NewRemoteDocumentStore(ravenDbServer: server);
+            return server;
+        }
+
+        protected RavenDbServer CreateServerWithOAuth(int port, string apiKey, out NodeConnectionInfo nodeConnectionInfo)
+        {
+            var server = GetNewServer(port, enableAuthentication: true);
+            nodeConnectionInfo = ClusterManagerFactory.CreateSelfConnection(server.SystemDatabase);
+            nodeConnectionInfo.ApiKey = apiKey;
+
+            EnableAuthentication(server.SystemDatabase);
+
+            var apiKeyTokens = apiKey.Split('/');
+
+            server.SystemDatabase.Documents.Put("Raven/ApiKeys/" + apiKeyTokens[0], null, RavenJObject.FromObject(new ApiKeyDefinition
+            {
+                Databases = new List<ResourceAccess>
+                                    {
+                                        new ResourceAccess { TenantId = "*", Admin = true }, 
+                                        new ResourceAccess { TenantId = "<system>", Admin = true },
+                                    },
+                Enabled = true,
+                Name = apiKeyTokens[0],
+                Secret = apiKeyTokens[1]
+            }), new RavenJObject(), null);
+
+            NewRemoteDocumentStore(ravenDbServer: server);
+
+            return server;
+        }
+
     }
 }

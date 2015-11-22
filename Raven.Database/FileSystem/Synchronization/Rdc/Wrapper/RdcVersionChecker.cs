@@ -4,7 +4,9 @@ using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
+using Raven.Abstractions;
 
 namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 {
@@ -19,6 +21,9 @@ namespace Raven.Database.FileSystem.Synchronization.Rdc.Wrapper
 
         public RdcVersionChecker()
         {
+            if (EnvironmentUtils.RunningOnPosix)
+                throw new FeatureNotSupportedOnPosixException("RdcLibrary not supported when RunningOnPosix");
+            
             try
             {
                 _rdcLibrary = (IRdcLibrary)new RdcLibrary();

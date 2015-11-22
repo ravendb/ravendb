@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -30,7 +31,7 @@ namespace Raven.Client.FileSystem
         private readonly AtomicDictionary<IFilesChanges> fileSystemChanges = new AtomicDictionary<IFilesChanges>(StringComparer.OrdinalIgnoreCase);
         private readonly AtomicDictionary<IAsyncFilesCommandsImpl> fileSystemCommands = new AtomicDictionary<IAsyncFilesCommandsImpl>(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, IFilesReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IFilesReplicationInformer>(StringComparer.OrdinalIgnoreCase);
-
+        
         private bool initialized;
         private FilesSessionListeners listeners = new FilesSessionListeners();
 
@@ -53,7 +54,7 @@ namespace Raven.Client.FileSystem
             set
             {
                 credentials = value ?? CredentialCache.DefaultNetworkCredentials;
-            }
+        }
         }
         private ICredentials credentials;
 
@@ -89,7 +90,6 @@ namespace Raven.Client.FileSystem
                     Credentials,
                     jsonRequestFactory,
                     Conventions,
-                    commands.ReplicationInformer,
                     ((AsyncFilesServerClient) AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
                     () =>
                     {
@@ -127,9 +127,12 @@ namespace Raven.Client.FileSystem
         }
 
         public string DefaultFileSystem { get; set; }
-
+        private bool disableReplicationInformerGeneration = false;
         public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
         {
+            if (disableReplicationInformerGeneration)
+                return null;
+
             var key = Url;
             fsName = fsName ?? DefaultFileSystem;
             if (string.IsNullOrEmpty(fsName) == false)
@@ -211,7 +214,7 @@ namespace Raven.Client.FileSystem
         {
             if (initialized)
                 return this;
-
+            disableReplicationInformerGeneration = true;
             jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory);
 
             try
@@ -226,11 +229,11 @@ namespace Raven.Client.FileSystem
                 {
                     try
                     {
-                        AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
-                            .EnsureFileSystemExistsAsync().ConfigureAwait(false)
-                            .GetAwaiter().GetResult();
+
+                        AsyncFilesCommands.ForFileSystem(DefaultFileSystem).EnsureFileSystemExistsAsync().GetAwaiter().GetResult();
+
                     }
-                    catch(Exception)
+                    catch (Exception)
                     {
                         if (failIfCannotCreate)
                             throw;
@@ -241,6 +244,10 @@ namespace Raven.Client.FileSystem
             {
                 Dispose();
                 throw;
+            }
+            finally
+            {
+                disableReplicationInformerGeneration = false;
             }
 
             return this;
@@ -253,8 +260,8 @@ namespace Raven.Client.FileSystem
                     DefaultFileSystem, 
                     Conventions, 
                     new OperationCredentials(ApiKey, Credentials),
-                    jsonRequestFactory,
-                    currentSessionId,
+                    jsonRequestFactory, 
+                    currentSessionId, 
                     GetReplicationInformerForFileSystem,
                     Listeners.ConflictListeners);
         }
@@ -370,19 +377,19 @@ namespace Raven.Client.FileSystem
         {
             if (!String.IsNullOrWhiteSpace(ConnectionStringName))
             {
-                var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
-                parser.Parse();
+            var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
+            parser.Parse();
 
-                var options = parser.ConnectionStringOptions;
-                if (options.Credentials != null)
+            var options = parser.ConnectionStringOptions;
+            if (options.Credentials != null)
                     Credentials = options.Credentials;
-                if (string.IsNullOrEmpty(options.Url) == false)
+            if (string.IsNullOrEmpty(options.Url) == false)
                     Url = options.Url;
-                if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
+            if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
                     DefaultFileSystem = options.DefaultFileSystem;
-                if (string.IsNullOrEmpty(options.ApiKey) == false)
+            if (string.IsNullOrEmpty(options.ApiKey) == false)
                     ApiKey = options.ApiKey;
-            }
+        }
         }
 
         protected void EnsureNotClosed()

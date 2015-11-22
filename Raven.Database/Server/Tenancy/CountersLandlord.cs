@@ -8,20 +8,25 @@ using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Counters;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Connections;
+using Raven.Json.Linq;
+using Raven.Database.Server.Security;
+using Raven.Abstractions.Exceptions;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -29,18 +34,14 @@ namespace Raven.Database.Server.Tenancy
     {
         private bool initialized;
 
-        private const string COUNTERS_PREFIX = "Raven/Counters/";
-        public override string ResourcePrefix { get { return COUNTERS_PREFIX; } }
+        public override string ResourcePrefix { get { return Constants.Counter.Prefix; } }
 
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
 
         public CountersLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
-            Enabled = systemDatabase.Documents.Get("Raven/Counters/Enabled", null) != null;
             Init();
         }
-
-        public bool Enabled { get; set; }
 
         public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
@@ -53,30 +54,28 @@ namespace Raven.Database.Server.Tenancy
             {
                 if (notification.Id == null)
                     return;
-                const string ravenDbPrefix = "Raven/Counters/";
-                if (notification.Id.StartsWith(ravenDbPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+                if (notification.Id.StartsWith(ResourcePrefix, StringComparison.InvariantCultureIgnoreCase) == false)
                     return;
-                var dbName = notification.Id.Substring(ravenDbPrefix.Length);
+                var dbName = notification.Id.Substring(ResourcePrefix.Length);
                 Logger.Info("Shutting down counters {0} because the tenant counter document has been updated or removed", dbName);
                 Cleanup(dbName, skipIfActiveInDuration: null, notificationType: notification.Type);
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
+        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledCounterStorage = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
-            var document = GetTenantDatabaseDocument(tenantId);
+            var document = GetTenantDatabaseDocument(tenantId, ignoreDisabledCounterStorage);
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, "Raven/Counters/DataDir", systemDatabase.Configuration);
+            return CreateConfiguration(tenantId, document, Constants.Counter.DataDirectory, systemDatabase.Configuration);
         }
-
 
         protected InMemoryRavenConfiguration CreateConfiguration(
                         string tenantId,
-                        CountersDocument document,
+                        CounterStorageDocument document,
                         string folderPropName,
                         InMemoryRavenConfiguration parentConfiguration)
         {
@@ -87,10 +86,12 @@ namespace Raven.Database.Server.Tenancy
 
             SetupTenantConfiguration(config);
 
-            config.CustomizeValuesForDatabaseTenant(tenantId);
+            config.CustomizeValuesForCounterStorageTenant(tenantId);
 
-            config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            config.Settings["Raven/Counters/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+            /*config.Settings[Constants.Counter.DataDirectory] = parentConfiguration.Counter.DataDirectory;
+            //config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
+            //TODO: what counters storage dir path?
+            //config.Settings["Raven/Counters/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;*/
 
             foreach (var setting in document.Settings)
             {
@@ -103,53 +104,51 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings[securedSetting.Key] = securedSetting.Value;
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
+            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Counter.DataDirectory);
+            //config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
             config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.DataDirectory);
 
             config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
-            config.CountersDatabaseName = tenantId;
+            config.CounterStorageName = tenantId;
 
             config.Initialize();
             config.CopyParentSettings(parentConfiguration);
             return config;
         }
 
-
-
-        private CountersDocument GetTenantDatabaseDocument(string tenantId)
+        private CounterStorageDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledCounterStorage = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
-                jsonDocument = systemDatabase.Documents.Get("Raven/Counters/" + tenantId, null);
-            if (jsonDocument == null ||
-                jsonDocument.Metadata == null ||
+                jsonDocument = systemDatabase.Documents.Get(ResourcePrefix + tenantId, null);
+            if (jsonDocument == null || jsonDocument.Metadata == null ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
                 return null;
 
-            var document = jsonDocument.DataAsJson.JsonDeserialization<CountersDocument>();
-            if (document.Settings.Keys.Contains("Raven/Counters/DataDir") == false)
-                throw new InvalidOperationException("Could not find Raven/Counters/DataDir");
+            var document = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
+            if (document.Settings.Keys.Contains(Constants.Counter.DataDirectory) == false)
+                throw new InvalidOperationException("Could not find " + Constants.Counter.DataDirectory);
 
-            if (document.Disabled)
-                throw new InvalidOperationException("The database has been disabled.");
+            if (document.Disabled && !ignoreDisabledCounterStorage)
+                throw new InvalidOperationException("The counter storage has been disabled.");
 
             return document;
         }
 
+        public override async Task<CounterStorage> GetResourceInternal(string resourceName)
+        {
+            Task<CounterStorage> cs;
+            if (TryGetOrCreateResourceStore(resourceName, out cs))
+                return await cs.ConfigureAwait(false);
+            return null;
+        }
 
-
-        public bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> counter)
+        public override bool TryGetOrCreateResourceStore(string tenantId, out Task<CounterStorage> counter)
         {
             if (Locks.Contains(DisposingLock))
                 throw new ObjectDisposedException("CountersLandlord", "Server is shutting down, can't access any counters");
-
-            if (Enabled == false)
-            {
-                throw new InvalidOperationException("Counters are an experimental feature that is not enabled");
-            }
 
             if (Locks.Contains(tenantId))
                 throw new InvalidOperationException("Counters '" + tenantId + "' is currently locked and cannot be accessed");
@@ -188,7 +187,7 @@ namespace Raven.Database.Server.Tenancy
                 {
                     var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
                     var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
-                    AssertLicenseParameters();
+                    AssertLicenseParameters(config);
 
                     // if we have a very long init process, make sure that we reset the last idle time for this db.
                     LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
@@ -210,7 +209,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Unprotect(CountersDocument configDocument)
+        public void Unprotect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -237,7 +236,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        public void Protect(CountersDocument configDocument)
+        public void Protect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -256,7 +255,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        private void AssertLicenseParameters()
+        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
         {
             string maxDatabases;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfCounters", out maxDatabases))
@@ -267,7 +266,7 @@ namespace Raven.Database.Server.Tenancy
 
                     int nextPageStart = 0;
                     var databases =
-                        systemDatabase.Documents.GetDocumentsWithIdStartingWith("Raven/Counters/", null, null, 0,
+                        systemDatabase.Documents.GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
                             numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
                     if (databases.Count >= numberOfAllowedFileSystems)
                         throw new InvalidOperationException(
@@ -276,26 +275,59 @@ namespace Raven.Database.Server.Tenancy
                             "You can either upgrade your RavenDB license or delete a counter from the server");
                 }
             }
+
+            if (Authentication.IsLicensedForCounters == false)
+            {
+                throw new InvalidOperationException("Your license does not allow the use of the Counters");
+            }
+
+            Authentication.AssertLicensedBundles(config.ActiveBundles);
         }
 
-
-        public async Task<CounterStorage> GetCounterInternal(string name)
-        {
-            Task<CounterStorage> db;
-            if (TryGetOrCreateResourceStore(name, out db))
-                return await db;
-            return null;
-        }
-
-        public void ForAllCounters(Action<CounterStorage> action)
+        public void ForAllCountersInCacheOnly(Action<CounterStorage> action)
         {
             foreach (var value in ResourcesStoresCache
-                .Select(db => db.Value)
+                .Select(cs => cs.Value)
                 .Where(value => value.Status == TaskStatus.RanToCompletion))
             {
                 action(value.Result);
             }
         }
+
+        public void ForAllCounters(Action<CounterStorage> action)
+        {
+            using (systemDatabase.DisableAllTriggersForCurrentThread())
+            {
+                int nextPageStart = 0;
+                var counterDocs = systemDatabase.Documents.GetDocumentsWithIdStartingWith(ResourcePrefix, null, null,
+                    0, int.MaxValue, CancellationToken.None, ref nextPageStart).ToList();
+
+                foreach (var doc in counterDocs)
+                {
+                    var id = GetCounterIdFromDocumentKey(doc);
+                    Debug.Assert(String.IsNullOrWhiteSpace(id) == false, "key of counter should not be empty");
+                    Task<CounterStorage> counterFetchTask;
+                    if (!TryGetOrCreateResourceStore(id, out counterFetchTask))
+                        throw new InvalidOperationException(string.Format("Could not get counter specified by counter storage document. The id that wasn't found is {0}", id));
+
+                    var counter = AsyncHelpers.RunSync(() => counterFetchTask);
+                    action(counter);
+                }
+            }
+        }
+
+        private static string GetCounterIdFromDocumentKey(RavenJToken doc)
+        {
+            var metadata = doc.Value<RavenJObject>("@metadata");
+            var docKey = metadata.Value<string>("@id");
+            var startIndex = docKey.LastIndexOf('/') + 1;
+            if (startIndex >= docKey.Length)
+                throw new InvalidOperationException(string.Format("Counter document key is invalid. (got {0})", docKey));
+
+            var id = docKey.Substring(startIndex);
+            return id;
+        }
+
 
         protected override DateTime LastWork(CounterStorage resource)
         {

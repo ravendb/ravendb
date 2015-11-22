@@ -5,7 +5,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class StorageController : RavenFsApiController
+    public class StorageController : BaseFileSystemApiController
     {
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/storage/cleanup")]
@@ -19,6 +19,13 @@ namespace Raven.Database.FileSystem.Controllers
         public Task RetryRenaming()
         {
             return Files.ResumeFileRenamingAsync();
+        }
+
+        [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/storage/retryCopying")]
+        public Task RetryCopying()
+        {
+            return Files.ResumeFileCopyingAsync();
         }
     }
 }

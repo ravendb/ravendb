@@ -12,7 +12,7 @@ namespace Raven.Database.Server.Controllers
     [RavenRoute("databases/{databaseName}/logs/{action=logsget}")]
     [RavenRoute("logs/{action=logsget}")]
     [RavenRoute("logs/fs/{action=RavenFSLogsGet}")]
-    public class LogsController : RavenDbApiController
+    public class LogsController : BaseDatabaseApiController
     {
         [HttpGet]		
         public HttpResponseMessage RavenFsLogsGet(string type = null)

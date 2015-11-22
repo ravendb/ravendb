@@ -7,11 +7,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client;
@@ -155,7 +158,7 @@ namespace Raven.SlowTests.Issues
                 TellFirstInstanceToReplicateToSecondInstance();
 
                 var replicationInformerForDatabase = store1.GetReplicationInformerForDatabase(store1.DefaultDatabase);
-                await replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((AsyncServerClient)store1.AsyncDatabaseCommands);
+                await replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store1.AsyncDatabaseCommands);
 
                 var people = InitializeData(store1);
                 var lastPersonId = people.Last().Id;
@@ -189,9 +192,10 @@ namespace Raven.SlowTests.Issues
                 StopDatabase(0);
 
                 var e = Assert.Throws<AggregateException>(() => store1.DatabaseCommands.StreamDocs(fromEtag: startEtag1));
-                var requestException = e.InnerException as HttpRequestException;
+                var exception = e.ExtractSingleInnerException() as ErrorResponseException;
 
-                Assert.NotNull(requestException);
+                Assert.NotNull(exception);
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
             }
         }
 

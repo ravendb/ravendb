@@ -763,6 +763,7 @@ namespace Raven.Client.Document
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="indexName">Name of the index.</param>
+        /// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
         /// <returns></returns>
         [Obsolete("Use DocumentQuery instead.")]
         public IDocumentQuery<T> LuceneQuery<T>(string indexName, bool isMapReduce = false)
@@ -775,6 +776,7 @@ namespace Raven.Client.Document
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="indexName">Name of the index.</param>
+        /// <param name="isMapReduce">Indicates if index is a map-reduce index.</param>
         /// <returns></returns>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName, bool isMapReduce = false)
         {

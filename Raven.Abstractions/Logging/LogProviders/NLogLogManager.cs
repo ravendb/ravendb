@@ -75,6 +75,11 @@ namespace Raven.Abstractions.Logging.LogProviders
                 this.logger = logger;
             }
 
+            public bool IsInfoEnabled
+            {
+                get { return logger.IsInfoEnabled; }
+            }
+
             public bool IsDebugEnabled
             {
                 get { return logger.IsDebugEnabled; }

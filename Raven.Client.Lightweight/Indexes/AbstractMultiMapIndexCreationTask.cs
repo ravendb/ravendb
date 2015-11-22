@@ -1,7 +1,7 @@
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
-using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 using System;
 using System.Collections;
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+
 
 namespace Raven.Client.Indexes
 {
@@ -40,7 +41,7 @@ namespace Raven.Client.Indexes
             AddMap(expr);
 
             // Index child classes.
-            var children = typeof(TBase).Assembly().GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
+            var children = typeof(TBase).Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
             var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
             foreach (var child in children)
             {
@@ -72,7 +73,7 @@ namespace Raven.Client.Indexes
                 Stores = Stores,
                 TermVectors = TermVectors,
                 SpatialIndexes = SpatialIndexes,
-                Suggestions = IndexSuggestions,
+                SuggestionsOptions = IndexSuggestions,
                 AnalyzersStrings = AnalyzersStrings,
                 IndexesStrings = IndexesStrings,
                 StoresStrings = StoresStrings,

@@ -14,7 +14,7 @@ properties {
     $build_dir = "$base_dir\build"
     $sln_file_name = "zzz_RavenDB_Release.sln"
     $sln_file = "$base_dir\$sln_file_name"
-    $version = "3.0"
+    $version = "3.5"
     $tools_dir = "$base_dir\Tools"
     $release_dir = "$base_dir\Release"
     $liveTest_dir = "C:\Sites\RavenDB 3\Web"
@@ -56,7 +56,7 @@ task Compile -depends Init, CompileHtml5 {
     
     Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount
+    &"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount
     
     Write-Host "msbuild exit code:  $LastExitCode"
 
@@ -87,7 +87,9 @@ task CompileHtml5 {
     exec { & $tools_dir\Pvc\pvc.exe optimized-build }
     
     Copy-Item $base_dir\Raven.Studio.Html5\optimized-build $build_dir\Html5 -Recurse
-
+    Copy-Item $base_dir\Raven.Studio.Html5\fonts $build_dir\Html5 -Recurse -Force
+    Copy-Item $base_dir\Raven.Studio.Html5\Content $build_dir\Html5 -Recurse -Force
+    
     Set-Location $build_dir\Html5
     exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
     Set-Location $base_dir
@@ -101,16 +103,21 @@ task Test -depends Compile {
     Clear-Host
 
     $test_prjs = @( `
-        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
-        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
-        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
-        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
-        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
-        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
-        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+        "$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.Tests.dll", `
         "$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
-        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll")
+        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
+        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
+        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
+        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
+        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
+        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
+        "$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll", `
+        "$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll", `
+        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
+        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
+        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+        "$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
+        
     Write-Host $test_prjs
     
     $xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -202,17 +209,21 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Migration -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\Raven.Traffic -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
+    New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
     Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+task CopyMonitor {
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\amd64 $build_dir\Output\Monitor\amd64 -recurse
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\x86 $build_dir\Output\Monitor\x86 -recurse
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.exe $build_dir\Output\Monitor
+}
+
 task CopySmuggler {
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Client.Lightweight.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Jint.Raven.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\System.Reactive.Core.??? $build_dir\Output\Smuggler
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
@@ -284,17 +295,17 @@ function SignFile($filePath){
     if (!(Test-Path $signTool)) 
     {
         
-        $signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+    $signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+    
+    if (!(Test-Path $signTool)) 
+    {
+        $signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
     
         if (!(Test-Path $signTool)) 
         {
-            $signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
-
-            if (!(Test-Path $signTool)) 
-            {
-                throw "Could not find SignTool.exe under the specified path $signTool"
-            }
+            throw "Could not find SignTool.exe under the specified path $signTool"
         }
+    }
     }
   
     $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.pfx"
@@ -361,7 +372,7 @@ task CopyRootFiles {
     
     (Get-Content "$build_dir\Output\Start.cmd") | 
         Foreach-Object { $_ -replace "{build}", "$($env:buildlabel)" } |
-        Set-Content "$build_dir\Output\Start.cmd" -Encoding Default
+        Set-Content "$build_dir\Output\Start.cmd" -Encoding ASCII
 }
 
 task ZipOutput {
@@ -398,6 +409,7 @@ task DoReleasePart1 -depends Compile, `
     CleanOutputDirectory, `
     CreateOutpuDirectories, `
     CopySmuggler, `
+    CopyMonitor, `
     CopyBackup, `
     CopyMigration, `
     CopyClient, `

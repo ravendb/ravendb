@@ -11,7 +11,7 @@ namespace Raven.Client.Extensions
 {
     internal static class SecurityExtensions
     {
-        internal static void InitializeSecurity(Convention conventions, HttpJsonRequestFactory requestFactory, string serverUrl)
+        internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl)
         {
             if (conventions.HandleUnauthorizedResponseAsync != null)
                 return; // already setup by the user

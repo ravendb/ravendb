@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Runtime;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,11 +18,12 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
+using Raven.Abstractions.Smuggler;
+using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -32,8 +32,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Storage;
-using Raven.Database.Storage.Voron.Impl;
+using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -41,28 +40,141 @@ using Raven.Json.Linq;
 using Voron.Impl.Backup;
 
 using Raven.Client.Extensions;
+using Raven.Database.Bundles.Replication.Data;
+using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Commercial;
+using Raven.Database.Counters.Replication;
+using Raven.Database.FileSystem.Synchronization;
+using Raven.Database.Smuggler;
 using MaintenanceActions = Raven.Database.Actions.MaintenanceActions;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
     [RoutePrefix("")]
-    public class AdminController : BaseAdminController
+    public class AdminController : BaseAdminDatabaseApiController
     {
         private static readonly HashSet<string> TasksToFilterOut = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                                                                    {
                                                                       typeof(AuthenticationForCommercialUseOnly).FullName,
                                                                       typeof(RemoveBackupDocumentStartupTask).FullName,
                                                                       typeof(CreateFolderIcon).FullName,
-                                                                      typeof(DeleteRemovedIndexes).FullName
                                                                    };
+
+        [HttpPost]
+        [RavenRoute("admin/serverSmuggling")]
+        public async Task<HttpResponseMessage> ServerSmuggling()
+        {
+            var request = await ReadJsonObjectAsync<ServerSmugglerRequest>().ConfigureAwait(false);
+            var targetStore = CreateStore(request.TargetServer);
+
+            var status = new ServerSmugglingOperationState();
+            var cts = new CancellationTokenSource();
+            var task = Task.Run(async () =>
+            {
+                try
+                {
+                    foreach (var serverSmugglingItem in request.Config)
+                    {
+                        status.Messages.Add("Smuggling database " + serverSmugglingItem.Name);
+                        var documentKey = Constants.Database.Prefix + serverSmugglingItem.Name;
+                        if (targetStore.DatabaseCommands.Head(documentKey) == null)
+                        {
+                            var databaseJson = Database.Documents.Get(documentKey, null);
+                            var databaseDocument = databaseJson.ToJson().JsonDeserialization<DatabaseDocument>();
+                            databaseDocument.Id = documentKey;
+                            DatabasesLandlord.Unprotect(databaseDocument);
+                            targetStore.DatabaseCommands.GlobalAdmin.CreateDatabase(databaseDocument);
+                        }
+
+                        var source = await DatabasesLandlord.GetResourceInternal(serverSmugglingItem.Name).ConfigureAwait(false);
+
+                        var dataDumper = new DatabaseDataDumper(source, new SmugglerDatabaseOptions
+                        {
+                            Incremental = serverSmugglingItem.Incremental,
+                            StripReplicationInformation = serverSmugglingItem.StripReplicationInformation,
+                            ShouldDisableVersioningBundle = serverSmugglingItem.ShouldDisableVersioningBundle,
+                        });
+
+                        await dataDumper.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                        {
+                            To = new RavenConnectionStringOptions
+                            {
+                                Url = request.TargetServer.Url,
+                                DefaultDatabase = serverSmugglingItem.Name
+                            },
+                            ReportProgress = message => status.Messages.Add(message)
+                        }).ConfigureAwait(false);
+                    }
+
+                    status.Messages.Add("Server smuggling completed successfully. Selected databases have been smuggled.");
+                }
+                catch (Exception e)
+                {
+                    status.Messages.Add("Error: " + e.Message);
+                    status.State = RavenJObject.FromObject(new {Error = e.Message});
+                    status.Faulted = true;
+                    throw;
+                }
+                finally
+                {
+                    status.Completed = true;
+                }
+            }, cts.Token);
+
+            long id;
+            Database.Tasks.AddTask(task, status, new TaskActions.PendingTaskDescription
+            {
+                StartTime = SystemTime.UtcNow,
+                TaskType = TaskActions.PendingTaskType.ServerSmuggling,
+                Payload = "Server smuggling"
+
+            }, out id, cts);
+
+            return GetMessageWithObject(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
+        }
+
+        private class ServerSmugglingOperationState : IOperationState
+        {
+            public ServerSmugglingOperationState()
+            {
+                Messages = new List<string>();
+            }
+
+            public bool Completed { get; set; }
+            public bool Faulted { get; set; }
+            public List<string> Messages { get; private set; }
+            public RavenJToken State { get; set; }
+        }
+
+        private static DocumentStore CreateStore(ServerConnectionInfo connection)
+        {
+            var store = new DocumentStore
+            {
+                Url = connection.Url,
+                ApiKey = connection.ApiKey,
+                Credentials = connection.Credentials,
+                Conventions =
+                {
+                    FailoverBehavior = FailoverBehavior.FailImmediately,
+                    ShouldCacheRequest = s => false,
+                    ShouldAggressiveCacheTrackChanges = false,
+                    ShouldSaveChangesForceAggressiveCacheCheck = false,
+                }
+            };
+            store.Initialize(ensureDatabaseExists: false);
+            store.JsonRequestFactory.DisableAllCaching();
+            return store;
+        }
 
         [HttpPost]
         [RavenRoute("admin/backup")]
         [RavenRoute("databases/{databaseName}/admin/backup")]
         public async Task<HttpResponseMessage> Backup()
         {
-            var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>();
+            var backupRequest = await ReadJsonObjectAsync<DatabaseBackupRequest>().ConfigureAwait(false);
             var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
             bool incrementalBackup;
             if (bool.TryParse(incrementalString, out incrementalBackup) == false)
@@ -109,7 +221,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
-            var restoreRequest = await ReadJsonObjectAsync<DatabaseRestoreRequest>();
+            var restoreRequest = await ReadJsonObjectAsync<DatabaseRestoreRequest>().ConfigureAwait(false);
 
             DatabaseDocument databaseDocument = null;
 
@@ -181,7 +293,7 @@ namespace Raven.Database.Server.Controllers.Admin
                             var token = cts.Token;
                             do
                             {
-                                await Task.Delay(500, token);
+                                await Task.Delay(500, token).ConfigureAwait(false);
                             }
                             while (IsAnotherRestoreInProgress(out anotherRestoreResourceName));
                         }
@@ -285,7 +397,7 @@ namespace Raven.Database.Server.Controllers.Admin
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private void GenerateNewDatabaseId(string databaseName)
@@ -318,10 +430,10 @@ namespace Raven.Database.Server.Controllers.Admin
                 return;
 
             var database = databaseTask.Result;
-            var replicationDocumentAsJson = database.Documents.Get(Constants.RavenReplicationDestinations, null);
-            if (replicationDocumentAsJson != null)
+            var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<ReplicationDocument<ReplicationDestination.ReplicationDestinationWithConfigurationOrigin>>(Constants.RavenReplicationDestinations);
+            if (configurationDocument != null)
             {
-                var replicationDocument = replicationDocumentAsJson.DataAsJson.JsonDeserialization<ReplicationDocument>();
+                var replicationDocument = configurationDocument.MergedDocument;
                 foreach (var destination in replicationDocument.Destinations)
                 {
                     destination.Disabled = true;
@@ -425,6 +537,11 @@ namespace Raven.Database.Server.Controllers.Admin
         public HttpResponseMessage ForceLicenseUpdate()
         {
             Database.ForceLicenseUpdate();
+            DatabasesLandlord.ForAllDatabases(database =>
+            {
+                database.WorkContext.ShouldNotifyAboutWork(() => "License update");
+                database.WorkContext.NotifyAboutWork();
+            });
             return GetEmptyMessage();
         }
 
@@ -450,7 +567,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 try
                 {
 
-                    var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetDatabaseInternal(db));
+                    var targetDb = AsyncHelpers.RunSync(() => DatabasesLandlord.GetResourceInternal(db));
 
                     DatabasesLandlord.Lock(db, () => targetDb.TransactionalStorage.Compact(configuration, msg =>
                     {
@@ -504,7 +621,7 @@ namespace Raven.Database.Server.Controllers.Admin
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private static bool IsUpdateMessage(string msg)
@@ -588,9 +705,6 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/stats")]
         public HttpResponseMessage Stats()
         {
-            if (Database != DatabasesLandlord.SystemDatabase)
-                return GetMessageWithString("Admin stats can only be had from the root database", HttpStatusCode.NotFound);
-
             var stats = CreateAdminStats();
             return GetMessageWithObject(stats);
         }
@@ -710,9 +824,6 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/gc")]
         public HttpResponseMessage Gc()
         {
-            if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
-
             Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -726,10 +837,6 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/loh-compaction")]
         public HttpResponseMessage LohCompaction()
         {
-            if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Large Object Heap Garbage Collection is only possible from the system database", HttpStatusCode.BadRequest);
-
-
             Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -782,7 +889,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/debug/info-package")]
         public HttpResponseMessage InfoPackage()
         {
-            var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            var tempFileName = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
             try
             {
                 var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -803,7 +910,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     DatabasesLandlord.ForAllDatabases(database =>
                     {
                         var prefix = string.IsNullOrWhiteSpace(database.Name) ? "System" : database.Name;
-                        DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, prefix + "/");
+                        DebugInfoProvider.CreateInfoPackageForDatabase(package, database, RequestManager, ClusterManager, prefix + "/");
                     });
 
                     bool stacktrace;
@@ -833,7 +940,7 @@ namespace Raven.Database.Server.Controllers.Admin
             }
         }
 
-        private static void DumpStacktrace(ZipArchive package)
+        private void DumpStacktrace(ZipArchive package)
         {
             var stacktrace = package.CreateEntry("stacktraces.txt", CompressionLevel.Optimal);
 
@@ -849,7 +956,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 {
                     if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
 
-                    ravenDebugDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                    ravenDebugDir = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
                     var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
                     var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
 
@@ -1025,7 +1132,7 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 return GetMessageWithString("IO Test is only possible from the system database", HttpStatusCode.BadRequest);
             }
-            var json = await ReadJsonAsync();
+            var json = await ReadJsonAsync().ConfigureAwait(false);
             var testType = json.Value<string>("TestType");
 
             AbstractPerformanceTestRequest ioTestRequest;
@@ -1053,7 +1160,8 @@ namespace Raven.Database.Server.Controllers.Admin
             var task = Task.Factory.StartNew(() =>
             {
                 var debugInfo = new List<string>();
-
+                var hasFaulted = false;
+                var errors = new Exception[0];
                 using (var diskIo = AbstractDiskPerformanceTester.ForRequest(ioTestRequest, msg =>
                 {
                     debugInfo.Add(msg);
@@ -1062,17 +1170,44 @@ namespace Raven.Database.Server.Controllers.Admin
                 {
                     diskIo.TestDiskIO();
 
-                    var diskIoRequestAndResponse = new
-                    {
-                        Request = ioTestRequest,
-                        Result = diskIo.Result,
-                        DebugMsgs = debugInfo
-                    };
+                    RavenJObject diskPerformanceRequestResponseDoc;
 
-                    Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, RavenJObject.FromObject(diskIoRequestAndResponse), new RavenJObject(), null);
+                    if (diskIo.HasFailed == false)
+                    {
+                        diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
+                        {
+                            Request = ioTestRequest,
+// ReSharper disable once RedundantAnonymousTypePropertyName
+                            Result = diskIo.Result,
+                            DebugMsgs = debugInfo
+                        });
+                    }
+                    else
+                    {
+                        diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
+                        {
+                            Request = ioTestRequest,
+// ReSharper disable once RedundantAnonymousTypePropertyName
+                            Result = diskIo.Result,
+                            DebugMsgs = debugInfo,
+                            diskIo.HasFailed,
+                            diskIo.Errors
+                        });
+
+                        hasFaulted = true;
+                        errors = diskIo.Errors.ToArray();
+                    }
+
+                    Database.Documents.Put(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, diskPerformanceRequestResponseDoc, new RavenJObject(), null);
+
+                    if (hasFaulted && errors.Length > 0)
+                        throw errors.First();
+
+                    if (hasFaulted)
+                        throw new Exception("Disk I/O test has failed. See log for more details.");
                 }
             }, killTaskCts.Token);
-
+            
             long id;
             Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
             {
@@ -1084,16 +1219,13 @@ namespace Raven.Database.Server.Controllers.Admin
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         [HttpPost]
         [RavenRoute("admin/low-memory-notification")]
         public HttpResponseMessage LowMemoryNotification()
         {
-            if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
-
             MemoryStatistics.SimulateLowMemoryNotification();
 
             return GetEmptyMessage();
@@ -1103,9 +1235,6 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/low-memory-handlers-statistics")]
         public HttpResponseMessage GetLowMemoryStatistics()
         {
-            if (EnsureSystemDatabase() == false)
-                return GetMessageWithString("Low memory simulation is only possible from the system database", HttpStatusCode.BadRequest);
-
             return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
             {
                 DatabaseName = x.Key,
@@ -1118,8 +1247,183 @@ namespace Raven.Database.Server.Controllers.Admin
                     })
                 })
             }));
+        }
 
-            
+        [HttpPost]
+        [RavenRoute("admin/replication/topology/global")]
+        public async Task<HttpResponseMessage> GlobalReplicationTopology()
+        {
+            var request = await ReadJsonObjectAsync<GlobalReplicationTopologyRequest>().ConfigureAwait(false);
+
+            ReplicationTopology databasesTopology = null;
+            SynchronizationTopology filesystemsTopology = null;
+            CountersReplicationTopology counterStoragesTopology = null;
+
+            if (request.Databases)
+                databasesTopology = CollectReplicationTopology();
+
+            if (request.Filesystems)
+                filesystemsTopology = CollectFilesystemSynchronizationTopology();
+
+            if (request.Counters) 
+                counterStoragesTopology = CollectionCountersReplicationTopology();
+
+            return GetMessageWithObject(new
+            {
+                Databases = databasesTopology,
+                FileSystems = filesystemsTopology,
+                Counters = counterStoragesTopology
+            });
+        }
+
+        private ReplicationTopology CollectReplicationTopology()
+        {
+            var mergedTopology = new ReplicationTopology();
+
+            int nextPageStart = 0;
+            var databases = DatabasesLandlord.SystemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(DatabasesLandlord.ResourcePrefix, null, null, 0,
+                    int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+            var databaseNames = databases
+                .Select(database =>
+                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(DatabasesLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+            DatabasesLandlord.ForAllDatabases(db =>
+            {
+                if (db.IsSystemDatabase())
+                    return;
+
+                databaseNames.Remove(db.Name);
+                var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(db, new RavenJArray(), 10, Log);
+                var node = replicationSchemaDiscoverer.Discover();
+                var topology = node.Flatten();
+                topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+                topology.Connections.ForEach(connection =>
+                {
+                    if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+                    {
+                        mergedTopology.Connections.Add(connection);
+                    }
+                });
+            });
+
+            mergedTopology.SkippedResources = databaseNames;
+            return mergedTopology;
+        }
+
+        private SynchronizationTopology CollectFilesystemSynchronizationTopology()
+        {
+            var mergedTopology = new SynchronizationTopology();
+
+            int nextPageStart = 0;
+            var filesystems = DatabasesLandlord.SystemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(FileSystemsLandlord.ResourcePrefix, null, null, 0,
+                    int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+            var filesystemsNames = filesystems
+                .Select(database =>
+                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(FileSystemsLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+            FileSystemsLandlord.ForAllFileSystems(fs =>
+            {
+                filesystemsNames.Remove(fs.Name);
+
+                var synchronizationSchemaDiscoverer = new SynchronizationTopologyDiscoverer(fs, new RavenJArray(), 10, Log);
+                var node = synchronizationSchemaDiscoverer.Discover();
+                var topology = node.Flatten();
+                topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+                topology.Connections.ForEach(connection =>
+                {
+                    if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+                    {
+                        mergedTopology.Connections.Add(connection);
+                    }
+                });
+            });
+
+            mergedTopology.SkippedResources = filesystemsNames;
+
+            return mergedTopology;
+        }
+
+        private CountersReplicationTopology CollectionCountersReplicationTopology()
+        {
+            var mergedTopology = new CountersReplicationTopology();
+
+            int nextPageStart = 0;
+            var counters = DatabasesLandlord.SystemDatabase.Documents
+                .GetDocumentsWithIdStartingWith(CountersLandlord.ResourcePrefix, null, null, 0,
+                    int.MaxValue, CancellationToken.None, ref nextPageStart);
+
+            var countersNames = counters
+                .Select(database =>
+                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(CountersLandlord.ResourcePrefix, string.Empty)).ToHashSet();
+
+            CountersLandlord.ForAllCountersInCacheOnly(cs =>
+            {
+                countersNames.Remove(cs.Name);
+
+                var schemaDiscoverer = new CountersReplicationTopologyDiscoverer(cs, new RavenJArray(), 10, Log);
+                var node = schemaDiscoverer.Discover();
+                var topology = node.Flatten();
+                topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));
+                topology.Connections.ForEach(connection =>
+                {
+                    if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
+                    {
+                        mergedTopology.Connections.Add(connection);
+                    }
+                });
+            });
+
+            mergedTopology.SkippedResources = countersNames;
+
+            return mergedTopology;
+        }
+
+        [HttpGet]
+        [RavenRoute("admin/dump")]
+        public HttpResponseMessage Dump()
+        {
+            var stop = GetQueryStringValue("stop");
+            if (!string.IsNullOrEmpty(stop))
+            {
+                MiniDumper.Instance.StopTimer();
+                return GetMessageWithString("Dump Timer Canceled", HttpStatusCode.Accepted);
+            }
+
+            var usage = GetQueryStringValue("usage");
+            if (!string.IsNullOrEmpty(usage))
+                return GetMessageWithString(MiniDumper.PrintUsage(), HttpStatusCode.Accepted);
+
+            MiniDumper.Instance.StopTimer();
+
+            int timerCount;
+            int period = 0;
+            bool useTimer = 
+                int.TryParse(GetQueryStringValue("timer"), out timerCount) && 
+                int.TryParse(GetQueryStringValue("period"), out period);
+
+            var options = 
+                MiniDumper.Option.WithThreadInfo | 
+                MiniDumper.Option.WithProcessThreadData;
+            var ids = GetQueryStringValues("option");
+            foreach (var id in ids)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    options |= MiniDumper.StringToOption(id);
+                }
+            }
+
+            bool useStats = !string.IsNullOrEmpty(GetQueryStringValue("stats"));
+
+            if (useTimer == false)
+                return GetMessageWithString(MiniDumper.Instance.Write(options), HttpStatusCode.Accepted);
+
+            var url = $"http://{Request.RequestUri.Host}:{Request.RequestUri.Port}";
+            return GetMessageWithString(MiniDumper.Instance.StartTimer(timerCount, period, options, useStats, url), HttpStatusCode.Accepted);
         }
     }
 }

@@ -4,7 +4,6 @@ using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
-using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
 

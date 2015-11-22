@@ -179,6 +179,51 @@ namespace Voron.Tests.Storage
         }
 
         [Theory]
+        [InlineData(1)]
+        [InlineData(5)]
+        [InlineData(15)]
+        public void TreeReportContainsInfoAboutPagesUsedByFixedSizeTrees(int numberOfFixedSizeTrees)
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = Env.CreateTree(tx, "fixed-size-trees");
+
+                for (int treeNumber = 0; treeNumber < numberOfFixedSizeTrees; treeNumber++)
+                {
+                    var r = new Random();
+                    byte valueSize = (byte) r.Next(byte.MaxValue);
+
+                    var fst = tree.FixedTreeFor("test-" + treeNumber, valueSize);
+
+                    for (int i = 0; i < r.Next(1000); i++)
+                    {
+                        if(valueSize == 0)
+                            fst.Add(i);
+                        else 
+                            fst.Add(i, new byte[valueSize]);
+                    }
+                }
+                
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var report = Env.GenerateReport(tx, computeExactSizes: true);
+
+                Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.SpaceInUseInBytes + report.DataFile.FreeSpaceInBytes);
+                Assert.Equal(1, report.Trees.Count);
+
+                var treeReport = report.Trees[0];
+
+                Assert.True(treeReport.PageCount > 0);
+                Assert.Equal(treeReport.PageCount, treeReport.BranchPages + treeReport.LeafPages);
+                Assert.Equal(numberOfFixedSizeTrees, treeReport.EntriesCount);
+                Assert.True(treeReport.Density > 0 && treeReport.Density <= 1.0); // just the header of page root
+            }
+        }
+
+        [Theory]
         [InlineData(new[] { "key" }, 1000)]
         [InlineData(new[] { "key1", "key2" }, 1000)]
         [InlineData(new[] { "key" }, 1)]

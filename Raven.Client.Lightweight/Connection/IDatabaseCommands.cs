@@ -9,7 +9,9 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -68,12 +70,12 @@ namespace Raven.Client.Connection
         /// <param name="txId">transaction identifier</param>
         void Commit(string txId);
 
-        HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
+        HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
         /// <summary>
         ///     Create a http request to the specified relative url on the current database
         /// </summary>
-        HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
+        HttpJsonRequest CreateRequest(string relativeUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
         /// <summary>
         ///     Deletes the document with the specified key
@@ -119,7 +121,7 @@ namespace Raven.Client.Connection
         ///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact
         ///     with the specified database
         /// </summary>
-        IDatabaseCommands ForDatabase(string database);
+        IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
         /// <summary>
         ///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact
@@ -237,6 +239,11 @@ namespace Raven.Client.Connection
         IndexDefinition GetIndex(string name);
 
         /// <summary>
+        ///     Retrieves indexing performance statistics for all indexes
+        /// </summary>
+        IndexingPerformanceStatistics[] GetIndexingPerformanceStatistics();
+
+        /// <summary>
         ///     Retrieves all suggestions for an index merging
         /// </summary>
         IndexMergeResults GetIndexMergeSuggestions();
@@ -275,6 +282,19 @@ namespace Raven.Client.Connection
         ///     Retrieve the statistics for the database
         /// </summary>
         DatabaseStatistics GetStatistics();
+
+        /// <summary>
+        ///     Retrieve the user info
+        /// </summary>
+
+        UserInfo GetUserInfo();
+
+        /// <summary>
+        ///     Retrieves user permissions for a specified database
+        /// </summary>
+        /// <param name="database">name of the database we want to retrive the permissions</param>
+        /// <param name="readOnly">the type of the operations allowed, read only , or read-write</param>
+        UserPermission GetUserPermission(string database, bool readOnly);
 
         /// <summary>
         ///     Get the all terms stored in the index for the specified field
@@ -475,6 +495,8 @@ namespace Raven.Client.Connection
         ///      Creates multiple side by side indexes with the specified name, using given index definitions and priorities
         /// </summary>
         /// <param name="indexesToAdd">indexes to add</param>
+        /// <param name="minimumEtagBeforeReplace">The minimum etag after which indexes will be swapped.</param>
+        /// <param name="replaceTimeUtc">The minimum time after which indexes will be swapped.</param>
         string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null);
 
         /// <summary>

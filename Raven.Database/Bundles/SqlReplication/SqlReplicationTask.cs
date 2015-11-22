@@ -21,6 +21,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Config.Retriever;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Json;
@@ -99,7 +100,8 @@ namespace Raven.Database.Bundles.SqlReplication
                     return;
 
                 replicationConfigs = null;
-                Log.Debug(() => "Sql Replication configuration was changed.");
+                if (Log.IsDebugEnabled)
+                    Log.Debug(() => "Sql Replication configuration was changed.");
             };
 
             GetReplicationStatus();
@@ -166,15 +168,25 @@ namespace Raven.Database.Bundles.SqlReplication
                 );
         }
 
+        private bool IsHotSpare()
+        {
+            if (Database.RequestManager == null) return false;
+            return Database.RequestManager.IsInHotSpareMode;
+        }
+
         private void BackgroundSqlReplication()
         {
             int workCounter = 0;
             while (Database.WorkContext.DoWork)
             {
-                IsRunning = !shouldPause;
+                IsRunning = !IsHotSpare() && !shouldPause;
 
                 if (!IsRunning)
+                {
+                    Database.WorkContext.WaitForWork(TimeSpan.FromMinutes(10), ref workCounter, "Sql Replication");
+
                     continue;
+                }
 
                 var config = GetConfiguredReplicationDestinations();
                 if (config.Count == 0)
@@ -209,10 +221,10 @@ namespace Raven.Database.Bundles.SqlReplication
                     .Select(x =>
                     {
                         var result = new SqlConfigGroup
-                                     {
-                                         LastReplicatedEtag = x.Key,
-                                         ConfigsToWorkOn = x.Value
-                                     };
+                        {
+                            LastReplicatedEtag = x.Key,
+                            ConfigsToWorkOn = x.Value
+                        };
 
                         SetPrefetcherForIndexingGroup(result, usedPrefetchers);
 
@@ -314,7 +326,8 @@ namespace Raven.Database.Bundles.SqlReplication
                                                 {
                                                     if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)
                                                     {
-                                                        Log.Debug(
+                                                        if (Log.IsDebugEnabled)
+                                                            Log.Debug(
                                                             "Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
                                                             document.Key, replicationConfig.Name, info.TouchedEtag);
                                                         return false;
@@ -424,10 +437,10 @@ namespace Raven.Database.Bundles.SqlReplication
                                       TryGetDefaultPrefetcher(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
                                       GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers);
 
-            sqlConfig.PrefetchingBehavior.AdditionalInfo = 
+            sqlConfig.PrefetchingBehavior.AdditionalInfo =
                 string.Format("Default prefetcher: {0}. For sql config group: [Configs: {1}, LastReplicatedEtag: {2}]",
-                sqlConfig.PrefetchingBehavior == defaultPrefetchingBehavior, 
-                string.Join(", ", sqlConfig.ConfigsToWorkOn.Select(y => y.Name)), 
+                sqlConfig.PrefetchingBehavior == defaultPrefetchingBehavior,
+                string.Join(", ", sqlConfig.ConfigsToWorkOn.Select(y => y.Name)),
                 sqlConfig.LastReplicatedEtag);
         }
 
@@ -592,7 +605,8 @@ namespace Raven.Database.Bundles.SqlReplication
                     writer.DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled, identifiers);
                 }
                 writer.Commit();
-                Log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", identifiers), cfg.Name);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Replicated deletes of {0} for config {1}", string.Join(", ", identifiers), cfg.Name);
             }
 
             return true;
@@ -618,12 +632,14 @@ namespace Raven.Database.Bundles.SqlReplication
                 {
                     if (writer.Execute(scriptResult))
                     {
-                        Log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Replicated changes of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
                         replicationStats.CompleteSuccess(countOfReplicatedItems);
                     }
                     else
                     {
-                        Log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Replicated changes (with some errors) of {0} for replication {1}", string.Join(", ", docs.Select(d => d.Key)), cfg.Name);
                         replicationStats.Success(countOfReplicatedItems);
                     }
                 }
@@ -738,10 +754,9 @@ namespace Raven.Database.Bundles.SqlReplication
                            };
                 var scriptResult = ApplyConversionScript(sqlReplication, docs, stats);
 
-                var connectionsDoc = Database.Documents.Get(Constants.RavenSqlReplicationConnectionsDocumentName, null);
-                var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections();
+                var sqlReplicationConnections = Database.ConfigurationRetriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);
 
-                if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections, false, false))
+                if (PrepareSqlReplicationConfig(sqlReplication, sqlReplication.Name, stats, sqlReplicationConnections.MergedDocument, false, false))
                 {
                     if (performRolledbackTransaction)
                     {
@@ -797,14 +812,14 @@ namespace Raven.Database.Bundles.SqlReplication
             {
                 const string Prefix = "Raven/SqlReplication/Configuration/";
 
-                var connectionsDoc = accessor.Documents.DocumentByKey(Constants.RavenSqlReplicationConnectionsDocumentName);
-                var sqlReplicationConnections = connectionsDoc != null ? connectionsDoc.DataAsJson.JsonDeserialization<SqlReplicationConnections>() : new SqlReplicationConnections(); // backward compatibility
+                var configurationDocument = Database.ConfigurationRetriever.GetConfigurationDocument<SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>>(Constants.SqlReplication.SqlReplicationConnectionsDocumentName);
+                var sqlReplicationConnections = configurationDocument != null ? configurationDocument.MergedDocument : new SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin>(); // backward compatibility
 
                 foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(Prefix, 0, int.MaxValue, null))
                 {
                     var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
                     var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
-                    if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections)) 
+                    if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections))
                         continue;
                     sqlReplicationConfigs.Add(cfg);
                 }
@@ -813,7 +828,7 @@ namespace Raven.Database.Bundles.SqlReplication
             return sqlReplicationConfigs;
         }
 
-        private bool PrepareSqlReplicationConfig(SqlReplicationConfig cfg, string sqlReplicationConfigDocumentKey, SqlReplicationStatistics replicationStats, SqlReplicationConnections sqlReplicationConnections, bool writeToLog = true, bool validateSqlReplicationName = true)
+        private bool PrepareSqlReplicationConfig(SqlReplicationConfig cfg, string sqlReplicationConfigDocumentKey, SqlReplicationStatistics replicationStats, SqlReplicationConnections<SqlReplicationConnections.PredefinedSqlConnectionWithConfigurationOrigin> sqlReplicationConnections, bool writeToLog = true, bool validateSqlReplicationName = true)
         {
             if (validateSqlReplicationName && string.IsNullOrWhiteSpace(cfg.Name))
             {

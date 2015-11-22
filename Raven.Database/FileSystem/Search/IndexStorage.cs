@@ -370,12 +370,14 @@ namespace Raven.Database.FileSystem.Search
                 Query fileQuery;
                 if (string.IsNullOrEmpty(query))
                 {
-                    Log.Debug("Issuing query on index for all files");
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Issuing query on index for all files");
                     fileQuery = new MatchAllDocsQuery();
                 }
                 else
                 {
-                    Log.Debug("Issuing query on index for: {0}", query);
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Issuing query on index for: {0}", query);
                     var queryParser = new SimpleFilesQueryParser(analyzer);
                     fileQuery = queryParser.Parse(query);
                 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Web;
 
 using Raven.Abstractions.Data;
+using Raven.Database.Common;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -17,22 +18,23 @@ namespace Raven.Database.Server.Connections
     public class WebSocketsRequestParser
     {
         private const string CountersUrlPrefix = Constants.Counter.UrlPrefix;
+        private const string TimeSeriesUrlPrefix = Constants.TimeSeries.UrlPrefix;
         private const string DatabasesUrlPrefix = Constants.Database.UrlPrefix;
         private const string FileSystemsUrlPrefix = Constants.FileSystem.UrlPrefix;
 
         protected DatabasesLandlord DatabasesLandlord { get; private set; }
 
+        private readonly TimeSeriesLandlord timeSeriesLandlord;
         private readonly CountersLandlord countersLandlord;
-
         private readonly FileSystemsLandlord fileSystemsLandlord;
-
         private readonly MixedModeRequestAuthorizer authorizer;
 
         private readonly string expectedRequestSuffix;
 
-        public WebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+        public WebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
         {
             DatabasesLandlord = databasesLandlord;
+            this.timeSeriesLandlord = timeSeriesLandlord;
             this.countersLandlord = countersLandlord;
             this.fileSystemsLandlord = fileSystemsLandlord;
             this.authorizer = authorizer;
@@ -49,7 +51,7 @@ namespace Raven.Database.Server.Connections
                 Token = token
             };
 
-            await ValidateRequest(request);
+            await ValidateRequest(request).ConfigureAwait(false);
             AuthenticateRequest(request);
 
             return request;
@@ -62,7 +64,7 @@ namespace Raven.Database.Server.Connections
                 throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Id is mandatory.");
             }
 
-            request.ActiveResource = await GetActiveResource(request);
+            request.ActiveResource = await GetActiveResource(request).ConfigureAwait(false);
             request.ResourceName = request.ActiveResource.ResourceName ?? Constants.SystemDatabase;
         }
 
@@ -116,14 +118,17 @@ namespace Raven.Database.Server.Connections
                 IResourceStore activeResource;
                 switch (resourcePartsPathParts[1])
                 {
-                    case CountersUrlPrefix:
-                        activeResource = await countersLandlord.GetCounterInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2));
-                        break;
                     case DatabasesUrlPrefix:
-                        activeResource = await DatabasesLandlord.GetDatabaseInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2));
+                        activeResource = await DatabasesLandlord.GetResourceInternal(resourcePath.Substring(DatabasesUrlPrefix.Length + 2)).ConfigureAwait(false);
                         break;
                     case FileSystemsUrlPrefix:
-                        activeResource = await fileSystemsLandlord.GetFileSystemInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2));
+                        activeResource = await fileSystemsLandlord.GetResourceInternal(resourcePath.Substring(FileSystemsUrlPrefix.Length + 2)).ConfigureAwait(false);
+                        break;
+                    case CountersUrlPrefix:
+                        activeResource = await countersLandlord.GetResourceInternal(resourcePath.Substring(CountersUrlPrefix.Length + 2)).ConfigureAwait(false);
+                        break;
+                    case TimeSeriesUrlPrefix:
+                        activeResource = await timeSeriesLandlord.GetResourceInternal(resourcePath.Substring(TimeSeriesUrlPrefix.Length + 2)).ConfigureAwait(false);
                         break;
                     default:
                         throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Illegal websocket path.");
@@ -179,8 +184,8 @@ namespace Raven.Database.Server.Connections
 
     public class WatchTrafficWebSocketsRequestParser : WebSocketsRequestParser
     {
-        public WatchTrafficWebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
-            : base(databasesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
+        public WatchTrafficWebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+            : base(databasesLandlord, timeSeriesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
         {
         }
 
@@ -203,14 +208,14 @@ namespace Raven.Database.Server.Connections
 
     public class AdminLogsWebSocketsRequestParser : WebSocketsRequestParser
     {
-        public AdminLogsWebSocketsRequestParser(DatabasesLandlord databasesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
-            : base(databasesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
+        public AdminLogsWebSocketsRequestParser(DatabasesLandlord databasesLandlord, TimeSeriesLandlord timeSeriesLandlord, CountersLandlord countersLandlord, FileSystemsLandlord fileSystemsLandlord, MixedModeRequestAuthorizer authorizer, string expectedRequestSuffix)
+            : base(databasesLandlord, timeSeriesLandlord, countersLandlord, fileSystemsLandlord, authorizer, expectedRequestSuffix)
         {
         }
 
         protected override async Task ValidateRequest(WebSocketRequest request)
         {
-            await base.ValidateRequest(request);
+            await base.ValidateRequest(request).ConfigureAwait(false);
 
             if (request.ResourceName != Constants.SystemDatabase)
                 throw new WebSocketRequestValidationException(HttpStatusCode.BadRequest, "Request should be without resource context, or with system database.");

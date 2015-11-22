@@ -45,15 +45,18 @@ namespace Raven.Database.Server
             {
                 var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
                 if (listener != null)
-                {
                     new WindowsAuthConfigureHttpListener().Configure(listener, config);
-                }
+
                 startup.Configuration(app);
+
+                if (listener != null && config.Http.AuthenticationSchemes.HasValue)
+                    listener.AuthenticationSchemes = config.Http.AuthenticationSchemes.Value;
+
                 app.Use(async (context, _) =>
                 {
                     context.Response.StatusCode = 404;
                     context.Response.ReasonPhrase = "Not Found";
-                    await context.Response.Body.WriteAsync(NotFoundBody, 0, NotFoundBody.Length);
+                    await context.Response.Body.WriteAsync(NotFoundBody, 0, NotFoundBody.Length).ConfigureAwait(false);
                 });
             });
         }

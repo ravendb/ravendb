@@ -15,7 +15,7 @@
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
     <DefineConstants>Debug</DefineConstants>
-    <SuppressIces>ICE20</SuppressIces>
+    <SuppressIces>ICE20;ICE80</SuppressIces>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <OutputPath>bin\$(Configuration)\</OutputPath>
@@ -79,7 +79,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Raven.Web\Raven.Web.csproj">
       <Name>Raven.Web</Name>
-      <Project>{f49c2ed0-1844-44b4-a595-5fd152853b9c}</Project>
+      <Project>{5b815669-1a89-41d8-9e96-a3524b44e46b}</Project>
       <Private>True</Private>
       <DoNotHarvest>True</DoNotHarvest>
       <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
@@ -87,6 +87,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <WixExtension Include="WixUtilExtension">
+      <HintPath>..\Tools\WiX\3.7\WixUtilExtension.dll</HintPath>
+      <Name>WixUtilExtension</Name>
+    </WixExtension>
     <WixExtension Include="WixFirewallExtension">
       <HintPath>..\Tools\WiX\3.7\WixFirewallExtension.dll</HintPath>
       <Name>WixFirewallExtension</Name>
@@ -98,10 +102,6 @@
     <WixExtension Include="WixIIsExtension">
       <HintPath>..\Tools\WiX\3.7\WixIIsExtension.dll</HintPath>
       <Name>WixIIsExtension</Name>
-    </WixExtension>
-    <WixExtension Include="WixUtilExtension">
-      <HintPath>..\Tools\WiX\3.7\bin\WixUtilExtension.dll</HintPath>
-      <Name>WixUtilExtension</Name>
     </WixExtension>
     <WixExtension Include="WixUIExtension">
       <HintPath>..\Tools\WiX\3.7\WixUIExtension.dll</HintPath>
@@ -133,9 +133,10 @@
     <Folder Include="UI\Service" />
   </ItemGroup>
   <PropertyGroup>
-    <WixToolPath>..\tools\WiX\3.7\</WixToolPath>
+    <WixToolPath>..\Tools\WiX\3.7\</WixToolPath>
     <WixTargetsPath>$(WixToolPath)Wix.targets</WixTargetsPath>
     <WixTasksPath>wixtasks.dll</WixTasksPath>
+    <WixInstallPath>$(WixToolPath)bin</WixInstallPath>
   </PropertyGroup>
   <Import Project="$(WixTargetsPath)" />
   <PropertyGroup>

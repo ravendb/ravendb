@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Shard
 {

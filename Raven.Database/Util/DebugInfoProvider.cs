@@ -3,12 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Management;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -17,18 +12,27 @@ using Raven.Database.Bundles.Replication.Utils;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Config;
 using Raven.Database.Indexing;
+using Raven.Database.Raft;
+using Raven.Database.Raft.Dto;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Tasks;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Management;
+
 namespace Raven.Database.Util
 {
     public static class DebugInfoProvider
     {
-        const CompressionLevel compressionLevel = CompressionLevel.Optimal;
+        private const CompressionLevel CompressionLevel = System.IO.Compression.CompressionLevel.Optimal;
 
-        public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, string zipEntryPrefix = null)
+        public static void CreateInfoPackageForDatabase(ZipArchive package, DocumentDatabase database, RequestManager requestManager, ClusterManager clusterManager, string zipEntryPrefix = null)
         {
             zipEntryPrefix = zipEntryPrefix ?? string.Empty;
 
@@ -41,7 +45,7 @@ namespace Raven.Database.Util
 
             if (database.StartupTasks.OfType<ReplicationTask>().Any())
             {
-                var replication = package.CreateEntry(zipEntryPrefix + "replication.json", compressionLevel);
+                var replication = package.CreateEntry(zipEntryPrefix + "replication.json", CompressionLevel);
 
                 using (var statsStream = replication.Open())
                 using (var streamWriter = new StreamWriter(statsStream))
@@ -54,7 +58,7 @@ namespace Raven.Database.Util
             var sqlReplicationTask = database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (sqlReplicationTask != null)
             {
-                var replication = package.CreateEntry(zipEntryPrefix + "sql_replication.json", compressionLevel);
+                var replication = package.CreateEntry(zipEntryPrefix + "sql_replication.json", CompressionLevel);
 
                 using (var statsStream = replication.Open())
                 using (var streamWriter = new StreamWriter(statsStream))
@@ -64,7 +68,7 @@ namespace Raven.Database.Util
                 }
             }
 
-            var stats = package.CreateEntry(zipEntryPrefix + "stats.json", compressionLevel);
+            var stats = package.CreateEntry(zipEntryPrefix + "stats.json", CompressionLevel);
 
             using (var statsStream = stats.Open())
             using (var streamWriter = new StreamWriter(statsStream))
@@ -73,7 +77,16 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var metrics = package.CreateEntry(zipEntryPrefix + "metrics.json", compressionLevel);
+            var indexingPerformanceStats = package.CreateEntry(zipEntryPrefix + "indexing_performance_stats.json", CompressionLevel);
+
+            using (var statsStream = indexingPerformanceStats.Open())
+            using (var streamWriter = new StreamWriter(statsStream))
+            {
+                jsonSerializer.Serialize(streamWriter, database.IndexingPerformanceStatistics);
+                streamWriter.Flush();
+            }
+
+            var metrics = package.CreateEntry(zipEntryPrefix + "metrics.json", CompressionLevel);
 
             using (var metricsStream = metrics.Open())
             using (var streamWriter = new StreamWriter(metricsStream))
@@ -82,7 +95,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var logs = package.CreateEntry(zipEntryPrefix + "logs.csv", compressionLevel);
+            var logs = package.CreateEntry(zipEntryPrefix + "logs.csv", CompressionLevel);
 
             using (var logsStream = logs.Open())
             using (var streamWriter = new StreamWriter(logsStream))
@@ -106,7 +119,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var config = package.CreateEntry(zipEntryPrefix + "config.json", compressionLevel);
+            var config = package.CreateEntry(zipEntryPrefix + "config.json", CompressionLevel);
 
             using (var configStream = config.Open())
             using (var streamWriter = new StreamWriter(configStream))
@@ -116,7 +129,7 @@ namespace Raven.Database.Util
                 jsonWriter.Flush();
             }
 
-            var indexes = package.CreateEntry(zipEntryPrefix + "indexes.json", compressionLevel);
+            var indexes = package.CreateEntry(zipEntryPrefix + "indexes.json", CompressionLevel);
 
             using (var indexesStream = indexes.Open())
             using (var streamWriter = new StreamWriter(indexesStream))
@@ -125,7 +138,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var currentlyIndexing = package.CreateEntry(zipEntryPrefix + "currently-indexing.json", compressionLevel);
+            var currentlyIndexing = package.CreateEntry(zipEntryPrefix + "currently-indexing.json", CompressionLevel);
 
             using (var currentlyIndexingStream = currentlyIndexing.Open())
             using (var streamWriter = new StreamWriter(currentlyIndexingStream))
@@ -134,7 +147,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var queries = package.CreateEntry(zipEntryPrefix + "queries.json", compressionLevel);
+            var queries = package.CreateEntry(zipEntryPrefix + "queries.json", CompressionLevel);
 
             using (var queriesStream = queries.Open())
             using (var streamWriter = new StreamWriter(queriesStream))
@@ -143,7 +156,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var version = package.CreateEntry(zipEntryPrefix + "version.json", compressionLevel);
+            var version = package.CreateEntry(zipEntryPrefix + "version.json", CompressionLevel);
 
             using (var versionStream = version.Open())
             using (var streamWriter = new StreamWriter(versionStream))
@@ -156,7 +169,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var prefetchStatus = package.CreateEntry(zipEntryPrefix + "prefetch-status.json", compressionLevel);
+            var prefetchStatus = package.CreateEntry(zipEntryPrefix + "prefetch-status.json", CompressionLevel);
 
             using (var prefetchStatusStream = prefetchStatus.Open())
             using (var streamWriter = new StreamWriter(prefetchStatusStream))
@@ -165,7 +178,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var requestTracking = package.CreateEntry(zipEntryPrefix + "request-tracking.json", compressionLevel);
+            var requestTracking = package.CreateEntry(zipEntryPrefix + "request-tracking.json", CompressionLevel);
 
             using (var requestTrackingStream = requestTracking.Open())
             using (var streamWriter = new StreamWriter(requestTrackingStream))
@@ -174,7 +187,7 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var tasks = package.CreateEntry(zipEntryPrefix + "tasks.json", compressionLevel);
+            var tasks = package.CreateEntry(zipEntryPrefix + "tasks.json", CompressionLevel);
 
             using (var tasksStream = tasks.Open())
             using (var streamWriter = new StreamWriter(tasksStream))
@@ -183,14 +196,14 @@ namespace Raven.Database.Util
                 streamWriter.Flush();
             }
 
-            var systemUtilization = package.CreateEntry(zipEntryPrefix + "system-utilization.json", compressionLevel);
+            var systemUtilization = package.CreateEntry(zipEntryPrefix + "system-utilization.json", CompressionLevel);
 
             using (var systemUtilizationStream = systemUtilization.Open())
             using (var streamWriter = new StreamWriter(systemUtilizationStream))
             {
                 long totalPhysicalMemory = -1;
                 long availableMemory = -1;
-                object cpuTimes = null;
+                object cpuTimes;
 
                 try
                 {
@@ -221,6 +234,33 @@ namespace Raven.Database.Util
                 });
 
                 streamWriter.Flush();
+            }
+
+            if (clusterManager != null && database.IsSystemDatabase())
+            {
+                var clusterTopology = package.CreateEntry(zipEntryPrefix + "cluster-topology.json", CompressionLevel);
+
+                using (var stream = clusterTopology.Open())
+                using (var streamWriter = new StreamWriter(stream))
+                {
+                    jsonSerializer.Serialize(streamWriter, clusterManager.GetTopology());
+                    streamWriter.Flush();
+        }
+
+                var configurationJson = database.Documents.Get(Constants.Cluster.ClusterConfigurationDocumentKey, null);
+                if (configurationJson == null)
+                    return;
+
+                var configuration = configurationJson.DataAsJson.JsonDeserialization<ClusterConfiguration>();
+
+                var clusterConfiguration = package.CreateEntry(zipEntryPrefix + "cluster-configuration.json", CompressionLevel);
+
+                using (var stream = clusterConfiguration.Open())
+                using (var streamWriter = new StreamWriter(stream))
+                {
+                    jsonSerializer.Serialize(streamWriter, configuration);
+                    streamWriter.Flush();
+                }
             }
         }
 

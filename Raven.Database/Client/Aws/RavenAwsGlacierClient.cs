@@ -7,8 +7,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Web.Http;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
@@ -47,7 +45,7 @@ namespace Raven.Database.Client.Aws
             var headers = ConvertToHeaders(glacierVaultName, content.Headers);
 
             var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue("POST", url, now, headers);
+            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
             var response = AsyncHelpers.RunSync(() => client.PostAsync(url, content));

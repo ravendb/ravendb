@@ -18,6 +18,7 @@ using Jint.Runtime.Environments;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Json
@@ -74,7 +75,7 @@ namespace Raven.Database.Json
             if (document == null)
                 return null;
 
-            if (String.IsNullOrEmpty(patch.Script))
+            if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
             var resultDocument = ApplySingleScript(document, patch, size, docId, scope);
@@ -87,7 +88,7 @@ namespace Raven.Database.Json
         private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size, string docId, ScriptedJsonPatcherOperationScope scope)
         {
             Engine jintEngine;
-            var customFunctions = scope.CustomFunctions != null ? scope.CustomFunctions.DataAsJson : null;
+            var customFunctions = scope.CustomFunctions;
             try
             {
                 jintEngine = ScriptsCache.CheckoutScript(CreateEngine, patch, customFunctions);
@@ -110,7 +111,7 @@ namespace Raven.Database.Json
                 PrepareEngine(patch, docId, size, scope, jintEngine);
 
                 var jsObject = scope.ToJsObject(jintEngine, doc);
-                jintEngine.Invoke("ExecutePatchScript", jsObject);
+                scope.ActualPatchResult = jintEngine.Invoke("ExecutePatchScript", jsObject);
 
                 CleanupEngine(patch, jintEngine, scope);
 
@@ -216,10 +217,10 @@ namespace Raven.Database.Json
 
         private Engine CreateEngine(ScriptedPatchRequest patch)
         {
-            var scriptWithProperLines = NormalizeLineEnding(patch.Script);
+            var scriptWithProperLines = patch.Script.NormalizeLineEnding();
             // NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
             // This will all us to show proper line number using user lines locations.
-            var wrapperScript = String.Format(@"function ExecutePatchScript(docInner){{ (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
+            var wrapperScript = string.Format(@"function ExecutePatchScript(docInner){{ (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
 
             var jintEngine = new Engine(cfg =>
             {
@@ -229,13 +230,15 @@ namespace Raven.Database.Json
                 cfg.AllowDebuggerStatement(false);
 #endif
                 cfg.LimitRecursion(1024);
-                cfg.MaxStatements(maxSteps);
                 cfg.NullPropagation();
+                cfg.MaxStatements(int.MaxValue); // allow lodash to load
             });
 
             AddScript(jintEngine, "Raven.Database.Json.lodash.js");
             AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
             AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
+
+            jintEngine.Options.MaxStatements(maxSteps);
 
             jintEngine.Execute(wrapperScript, new ParserOptions
             {
@@ -243,21 +246,6 @@ namespace Raven.Database.Json
             });
 
             return jintEngine;
-        }
-
-        private static string NormalizeLineEnding(string script)
-        {
-            var sb = new StringBuilder();
-            using (var reader = new StringReader(script))
-            {
-                while (true)
-                {
-                    var line = reader.ReadLine();
-                    if (line == null)
-                        return sb.ToString();
-                    sb.AppendLine(line);
-                }
-            }
         }
 
         private static void AddScript(Engine jintEngine, string ravenDatabaseJsonMapJs)
@@ -282,7 +270,7 @@ namespace Raven.Database.Json
             if (arr == JsValue.Null || arr.IsArray() == false)
                 return;
 
-            foreach (var property in arr.AsArray().Properties)
+            foreach (var property in arr.AsArray().GetOwnProperties())
             {
                 if (property.Key == "length")
                     continue;

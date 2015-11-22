@@ -170,6 +170,7 @@ namespace Raven.Client.Document
         /// <typeparam name="TTransformer"></typeparam>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="id">The id.</param>
+        /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
         /// <returns></returns>
         TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
 
@@ -179,6 +180,7 @@ namespace Raven.Client.Document
         /// <typeparam name="TTransformer"></typeparam>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="ids">The id.</param>
+        /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
         /// <returns></returns>
         TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
     }

@@ -1,9 +1,5 @@
 using System;
-using System.Collections.Specialized;
-
-using Raven.Abstractions.Connection;
-using Raven.Client.Connection.Async;
-using Raven.Client.Document;
+using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
@@ -13,9 +9,38 @@ namespace Raven.Client.Connection
         public static string ForDatabase(this string url, string database)
         {
             if (!string.IsNullOrEmpty(database) && !url.Contains("/databases/"))
+            {
+                if (url.EndsWith("/"))
+                    return url + "databases/" + database;
+
                 return url + "/databases/" + database;
+            }
 
             return url;
+        }
+
+        public static string ForFilesystem(this string url, string filesystem)
+        {
+            if (url.EndsWith("/"))
+                return url + "fs/" + filesystem;
+
+            return url + "/fs/" + filesystem;
+        }
+
+        public static string ForCounter(this string url, string counter)
+        {
+            if (url.EndsWith("/"))
+                return url + "cs/" + counter;
+
+            return url + "/cs/" + counter;
+        }
+
+        public static string ForTimeSeries(this string url, string timeSeries)
+        {
+            if (url.EndsWith("/"))
+                return url + "ts/" + timeSeries;
+
+            return url + "/ts/" + timeSeries;
         }
 
         public static string Indexes(this string url, string index)
@@ -26,6 +51,11 @@ namespace Raven.Client.Connection
         public static string IndexDefinition(this string url, string index)
         {
             return url + "/indexes/" + index + "?definition=yes";
+        }
+
+        public static string IndexingPerformanceStatistics(this string url)
+        {
+            return url + "/debug/indexing-perf-stats";
         }
 
         public static string Transformer(this string url, string transformer)
@@ -41,6 +71,16 @@ namespace Raven.Client.Connection
         public static string Stats(this string url)
         {
             return url + "/stats";
+        }
+
+        public static string UserInfo(this string url)
+        {
+            return url + "/debug/user-info";
+        }
+
+        public static string UserPermission(this string url, string database, bool readOnly)
+        {
+            return url + "/debug/user-info" + "?database=" + database + "&method=" + (readOnly ? "GET" : "PUT");
         }
 
         public static string AdminStats(this string url)

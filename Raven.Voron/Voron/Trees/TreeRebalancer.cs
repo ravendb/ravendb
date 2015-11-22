@@ -47,7 +47,7 @@ namespace Voron.Trees
                 {
                     parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
                 }
-
+                
                 _tree.FreePage(page);
                 _cursor.Pop();
 
@@ -250,7 +250,7 @@ namespace Voron.Trees
             if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKeyToInsert) + Constants.NodeOffsetSize + SizeOf.NewPrefix(separatorKeyToInsert)) == false)
             {
                 var pageSplitter = new PageSplitter(_tx, _tree, seperatorKey, -1, pageNumber, NodeFlags.PageRef,
-                    0, _cursor, _tree.State);
+                    0, _cursor);
                 pageSplitter.Execute();
             }
             else

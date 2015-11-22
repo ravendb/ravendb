@@ -11,7 +11,8 @@ namespace Raven.Tests.MailingList
         public class User
         {
             public string Country { get; set; }
-        }
+        }	
+
 
         [Fact]
         public void WhenQueryContainsQuestionMark()
@@ -75,6 +76,29 @@ namespace Raven.Tests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var collection = session.Query<User>().Where(x => x.Country.In("Asia,Japan")).ToList();
+
+                    Assert.NotEmpty(collection);
+                }
+            }
+        }
+
+        [Fact]
+        public void WhenElementcontainsCommasInMiddleOfList()
+        {
+            using (var store = NewRemoteDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Country = "Asia,Japan"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var collection = session.Query<User>().Where(x => x.Country.In(new[]{"Korea","Asia,Japan","China"})).ToList();
 
                     Assert.NotEmpty(collection);
                 }

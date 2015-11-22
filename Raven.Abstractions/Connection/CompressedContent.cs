@@ -74,7 +74,7 @@ namespace Raven.Abstractions.Connection
                 }
                 else throw new InvalidOperationException("This shouldn't happen, ever.");
 
-                await originalContent.CopyToAsync(compressedStream);
+                await originalContent.CopyToAsync(compressedStream).ConfigureAwait(false);
 
                 if (compressedStream != null)
                 {

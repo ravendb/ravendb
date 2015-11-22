@@ -6,6 +6,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+
+using Sparrow;
+
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -13,9 +16,6 @@ using Voron.Impl.Paging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
-using Mono.Unix.Native;
-using Sparrow;
-using Voron.Trees;
 
 namespace Voron
 {
@@ -60,7 +60,7 @@ namespace Voron
                 _initialLogFileSize = value;
             }
         }
-        
+
         public long MaxScratchBufferSize { get; set; }
 
         public long MaxNumberOfPagesInMergedTransaction { get; set; }

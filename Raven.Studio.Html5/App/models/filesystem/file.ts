@@ -48,7 +48,6 @@ class file implements documentBase {
     getDocumentPropertyNames(): Array<string> {
         return ["Size", "LastModified"];
     }
-
 }
 
 export = file;

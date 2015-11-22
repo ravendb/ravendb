@@ -7,6 +7,9 @@ class cell {
     static checkboxTemplate = "checkboxTemplate";
     static externalIdTemplate = "externalIdTemplate";
     static customTemplate = "customTemplate";
+    static counterNameTemplate = "counterNameTemplate";
+    static counterGroupTemplate = "counterGroupTemplate";
+    static timeSeriesKeyTemplate = "timeSeriesKeyTemplate";
 
     constructor(data: any, public templateName: string) {
         this.update(data);
@@ -14,17 +17,17 @@ class cell {
 
     update(data: any) {
         if (this.isNumber(data)) {
-            data = data.toLocaleString();
+            data = data.toLocaleString('en-US');
         }
         this.data(data);
     }
 
     private isNumber(o) {
-        return typeof o === 'number' && isFinite(o);
+        return typeof o === "number" && isFinite(o);
     }
 
     reset() {
-        this.data('');       
+        this.data("");       
         this.resetFlag = true; 
     }
 }

@@ -54,7 +54,6 @@ namespace Voron.Impl
 #endif
          
             ReleaseInternal();
-            //_pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
         }
 
         private void ReleaseInternal()

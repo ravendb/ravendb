@@ -1,3 +1,5 @@
+using System.Net.Http;
+
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -168,7 +170,7 @@ namespace Raven.Client.Indexes
                 return;
 
             var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
+            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
             {
                 try
                 {
@@ -188,11 +190,11 @@ namespace Raven.Client.Indexes
                 return;
 
             var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
+            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
             {
                 try
                 {
-                    await replicateTransformerRequest.ExecuteRawResponseAsync();
+                    await replicateTransformerRequest.ExecuteRawResponseAsync().ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
@@ -211,8 +213,8 @@ namespace Raven.Client.Indexes
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches
             // the new definition.
-            await asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token);
-            await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands);
+            await asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token).ConfigureAwait(false);
+            await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
         }
     }
 

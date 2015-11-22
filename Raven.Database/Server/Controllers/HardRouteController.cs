@@ -11,7 +11,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class HardRouteController : RavenDbApiController
+    public class HardRouteController : BaseDatabaseApiController
     {
         [HttpGet][RavenRoute("favicon.ico")]
         public HttpResponseMessage FaviconGet()

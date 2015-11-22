@@ -2,19 +2,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
+using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
-using System.Text.RegularExpressions;
-using Raven.Abstractions.FileSystem.Notifications;
-using Raven.Abstractions.FileSystem;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class ConfigController : RavenFsApiController
+    public class ConfigController : BaseFileSystemApiController
     {
         private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -25,7 +25,7 @@ namespace Raven.Database.FileSystem.Controllers
             string[] names = null;
             Storage.Batch(accessor => { names = accessor.GetConfigNames(Paging.Start, Paging.PageSize).ToArray(); });
 
-            return this.GetMessageWithObject(names)
+            return GetMessageWithObject(names)
                        .WithNoCache();
         }
 
@@ -34,10 +34,10 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage Get(string name)
         {
             RavenJObject config = null;
+
             Storage.Batch(accessor => { config = accessor.GetConfig(name); });
-                
-            return this.GetMessageWithObject(config)
-                        .WithNoCache();
+
+            return GetMessageWithObject(config).WithNoCache();
         }
 
         [HttpGet]
@@ -82,7 +82,7 @@ namespace Raven.Database.FileSystem.Controllers
                 };
             });
 
-            return this.GetMessageWithObject(results)
+            return GetMessageWithObject(results)
                        .WithNoCache();
         }
 
@@ -90,13 +90,14 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/config")]
         public async Task<HttpResponseMessage> Put(string name)
         {
-            var json = await ReadJsonAsync();
+            var json = await ReadJsonAsync().ConfigureAwait(false);
 
             Storage.Batch(accessor => accessor.SetConfig(name, json));
 
             Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Set });
 
-            Log.Debug("Config '{0}' was inserted", name);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Config '{0}' was inserted", name);
 
             return GetMessageWithObject(json, HttpStatusCode.Created)
                 .WithNoCache();
@@ -110,7 +111,8 @@ namespace Raven.Database.FileSystem.Controllers
 
             Publisher.Publish(new ConfigurationChangeNotification { Name = name, Action = ConfigurationChangeAction.Delete });
 
-            Log.Debug("Config '{0}' was deleted", name);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Config '{0}' was deleted", name);
 
             return GetEmptyMessage(HttpStatusCode.NoContent);
         }

@@ -15,12 +15,13 @@ using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class RdcController : RavenFsApiController
+    public class RdcController : BaseFileSystemApiController
     {
         private static new readonly ILog Log = LogManager.GetCurrentClassLogger();
 
@@ -30,9 +31,10 @@ namespace Raven.Database.FileSystem.Controllers
         {
             var canonicalFilename = FileHeader.Canonize(id);
 
-            Log.Debug("Got signatures of a file '{0}' request", id);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Got signatures of a file '{0}' request", id);
 
-            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename))
+            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename, FileSystem.Configuration))
             {
                 var localRdcManager = new LocalRdcManager(signatureRepository, Storage, SigGenerator);
                 var resultContent = localRdcManager.GetSignatureContentForReading(canonicalFilename);
@@ -71,7 +73,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             long? fileLength = fileAndPages.TotalSize;
 
-            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename))
+            using (var signatureRepository = new StorageSignatureRepository(Storage, canonicalFilename, FileSystem.Configuration))
             {
                 var rdcManager = new LocalRdcManager(signatureRepository, Storage, SigGenerator);
                 var signatureManifest = await rdcManager.GetSignatureManifestAsync(
@@ -79,10 +81,11 @@ namespace Raven.Database.FileSystem.Controllers
                                                                 {
                                                                     Name = canonicalFilename,
                                                                     LastModified = fileAndPages.Metadata.Value<DateTime>(Constants.RavenLastModified).ToUniversalTime()
-                                                                });
+                                                                }).ConfigureAwait(false);
                 signatureManifest.FileLength = fileLength ?? 0;
 
-                Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", id, signatureManifest.Signatures.Count);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Signature manifest for a file '{0}' was downloaded. Signatures count was {1}", id, signatureManifest.Signatures.Count);
 
                 return GetMessageWithObject(signatureManifest)
                            .WithNoCache();

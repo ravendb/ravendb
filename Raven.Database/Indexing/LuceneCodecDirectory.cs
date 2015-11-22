@@ -373,6 +373,7 @@ namespace Raven.Database.Indexing
 
             private readonly FileInfo file;
             private readonly Stream stream;
+            private bool disposed;
 
             public CodecIndexOutput(FileInfo file, Func<Stream, Stream> applyCodecs)
             {
@@ -402,10 +403,15 @@ namespace Raven.Database.Indexing
 
             protected override void Dispose(bool disposing)
             {
+                if (disposed)
+                    return;
+
+                using (stream)
+                {
                 base.Dispose(disposing);
-                if (stream != null)
-                    stream.Close();
-                GC.SuppressFinalize(this);
+            }
+
+                disposed = true;
             }
 
             public override void Seek(long pos)

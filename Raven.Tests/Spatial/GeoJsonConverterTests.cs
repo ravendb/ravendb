@@ -1,25 +1,15 @@
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using GeoAPI.Geometries;
-using Lucene.Net.Util;
 using NetTopologySuite.Geometries;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Spatial.JsonConverters.GeoJson;
 using Xunit;
-using System;
-using Raven.Client.Document;
-using System.Text;
-using NetTopologySuite.Features;
-using Constants = Raven.Abstractions.Data.Constants;
-using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Tests.Spatial
 {

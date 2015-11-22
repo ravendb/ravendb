@@ -27,7 +27,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class FsStudioTasksController : RavenFsApiController
+    public class FsStudioTasksController : BaseFileSystemApiController
     {
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Controllers
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
-            string tempPath = Path.GetTempPath();
+            string tempPath = FileSystem.Configuration.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
                 File.Delete(fullTempPath);
@@ -69,7 +69,7 @@ namespace Raven.Database.FileSystem.Controllers
                     smugglerOptions.BatchSize = batchSize;
                     smugglerOptions.CancelToken = cts;
 
-                    await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath });
+                    await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath }).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -113,7 +113,7 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         [HttpPost]
@@ -150,8 +150,8 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             });
 
-            var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                string.Format("Dump of {0}, {1}", this.FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                string.Format("Dump of {0}, {1}", FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
                 smugglerOptions.NoneDefualtFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {

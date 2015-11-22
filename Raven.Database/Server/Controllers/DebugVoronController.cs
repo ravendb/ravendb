@@ -17,7 +17,7 @@ using Voron.Trees;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class DebugVoronController : BaseAdminController
+    public class DebugVoronController : BaseAdminDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("admin/voron/tree")]

@@ -2,8 +2,11 @@ using System;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
@@ -11,23 +14,23 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Actions;
-using Raven.Database.FileSystem.Plugins;
-using Raven.Database.Impl;
-using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
-using Raven.Database.Util;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Search;
 using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Voron;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Synchronization.Conflictuality;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
-using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
-using System.Runtime.InteropServices;
-using Raven.Abstractions.Data;
-using TaskActions = Raven.Database.FileSystem.Actions.TaskActions;
+using Raven.Database.Impl;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Connections;
+using Raven.Database.Util;
+using Raven.Abstractions.Threading;
+using Raven.Abstractions;
+using Raven.Database.Common;
 
 namespace Raven.Database.FileSystem
 {
@@ -48,7 +51,7 @@ namespace Raven.Database.FileSystem
         private readonly TransportState transportState;
         private readonly MetricsCountersManager metricsCounters;
 
-        private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+        private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
         private volatile bool disposed;
 
@@ -63,7 +66,7 @@ namespace Raven.Database.FileSystem
             ExtensionsState = new AtomicDictionary<object>();
 
             Name = name;
-            ResourceName = string.Concat(Abstractions.Data.Constants.FileSystem.UrlPrefix, "/", name);
+            ResourceName = string.Concat(Constants.FileSystem.UrlPrefix, "/", name);
             this.systemConfiguration = systemConfiguration;
 
             systemConfiguration.Container.SatisfyImportsOnce(this);
@@ -123,6 +126,8 @@ namespace Raven.Database.FileSystem
         {
             get
             {
+                if (EnvironmentUtils.RunningOnPosix)
+                    return false;
                 try
                 {
                     var rdcLibrary = new RdcLibrary();
@@ -154,7 +159,7 @@ namespace Raven.Database.FileSystem
                     {
                         throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
                     }
-                    return new Storage.Voron.TransactionalStorage(configuration);
+                    return new TransactionalStorage(configuration);
                 case InMemoryRavenConfiguration.EsentTypeName:
                     return new Storage.Esent.TransactionalStorage(configuration);
                 
@@ -367,7 +372,7 @@ namespace Raven.Database.FileSystem
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
                 FilesWritesPerSecond = Math.Round(metrics.FilesPerSecond.CurrentValue, 3),
 
-                RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+                RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
                 Requests = metrics.ConcurrentRequests.CreateMeterData()
             };
         }

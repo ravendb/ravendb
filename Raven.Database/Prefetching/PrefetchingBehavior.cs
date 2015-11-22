@@ -701,7 +701,7 @@ namespace Raven.Database.Prefetching
 
             // ensure that we don't use too much memory
             if (CanPrefetchMoreDocs(isFutureBatch: true) == false)
-                return; 
+                return;
 
             if (MemoryStatistics.IsLowMemory)
                 return;
@@ -783,7 +783,7 @@ namespace Raven.Database.Prefetching
                 if (futureIndexBatch.IsSplitted)
                 {
                     splittedFutureIndexBatchesCount += 1;
-                    if (splittedFutureIndexBatchesCount/numberOfSplitTasks != 1)
+                    if (splittedFutureIndexBatchesCount / numberOfSplitTasks != 1)
                         continue;
 
                     splittedFutureIndexBatchesCount = 0;
@@ -852,8 +852,8 @@ namespace Raven.Database.Prefetching
 
                 var numOfDocsToTakeInEachSplit = Math.Max(
                     context.Configuration.InitialNumberOfItemsToProcessInSingleBatch,
-                    (int) Math.Min((autoTuner.FetchingDocumentsFromDiskTimeout.TotalMilliseconds*0.7)/loadTimePerDocMs,
-                        (autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes*0.7)/largestDocSize));
+                    (int)Math.Min((autoTuner.FetchingDocumentsFromDiskTimeout.TotalMilliseconds * 0.7) / loadTimePerDocMs,
+                        (autoTuner.MaximumSizeAllowedToFetchFromStorageInBytes * 0.7) / largestDocSize));
 
                 if (log.IsDebugEnabled)
                 {
@@ -861,7 +861,7 @@ namespace Raven.Database.Prefetching
                               "largest doc key is: {3} and avg load time per doc is {4:0.#,#;;0} ms",
                         numberOfSplitTasks,
                         numOfDocsToTakeInEachSplit,
-                        largestDocSize/1024d,
+                        largestDocSize / 1024d,
                         largestDocKey,
                         loadTimePerDocMs);
                 }
@@ -1023,7 +1023,7 @@ namespace Raven.Database.Prefetching
 
         private static void LogEarlyExit(Etag nextEtag, Etag untilEtag, bool isEarlyExitBatch, List<JsonDocument> jsonDocuments, long timeElapsed)
         {
-            var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk)/1024;
+            var size = jsonDocuments.Sum(x => x.SerializedSizeOnDisk) / 1024;
             if (isEarlyExitBatch)
             {
                 log.Warn("After early exit: Got {0} documents ({1:#,#;;0} kb) in a future batch, starting from etag {2} to etag {4}, took {3:#,#;;0}ms",
@@ -1032,15 +1032,15 @@ namespace Raven.Database.Prefetching
 
             if (log.IsDebugEnabled)
             {
-                if (isEarlyExitBatch == false)
+                if (log.IsDebugEnabled && isEarlyExitBatch == false)
                 {
                     log.Debug("Got {0} documents ({1:#,#;;0} kb) in a future batch, starting from etag {2}, took {3:#,#;;0}ms",
                         jsonDocuments.Count, size, nextEtag, timeElapsed);
                 }
 
-                if (size > jsonDocuments.Count*8 || timeElapsed > 3000)
+                if (log.IsDebugEnabled && (size > jsonDocuments.Count * 8 || timeElapsed > 3000))
                 {
-                    var topSizes = jsonDocuments.OrderByDescending(x => x.SerializedSizeOnDisk).Take(10).Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk/1024));
+                    var topSizes = jsonDocuments.OrderByDescending(x => x.SerializedSizeOnDisk).Take(10).Select(x => string.Format("{0} - {1:#,#;;0}kb", x.Key, x.SerializedSizeOnDisk / 1024));
                     log.Debug("Slow load of documents in batch, maybe large docs? Top 10 largest docs are: ({0})", string.Join(", ", topSizes));
                 }
             }

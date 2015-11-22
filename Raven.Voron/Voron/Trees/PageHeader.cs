@@ -14,10 +14,21 @@ namespace Voron.Trees
         [FieldOffset(9)]
         public ushort Lower;
 
+        [FieldOffset(9)]
+        public ushort FixedSize_ValueSize;
+
         [FieldOffset(11)]
         public ushort Upper;
 
+        [FieldOffset(11)]
+        public ushort FixedSize_NumberOfEntries;
+
+
         [FieldOffset(13)]
         public int OverflowSize;
+
+        [FieldOffset(13)]
+        public ushort FixedSize_StartPosition;
     }
+
 }

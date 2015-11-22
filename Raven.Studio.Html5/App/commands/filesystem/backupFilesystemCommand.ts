@@ -1,8 +1,5 @@
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import document = require("models/document");
-import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import appUrl = require("common/appUrl");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 
 class backupFilesystemCommand extends commandBase {

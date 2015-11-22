@@ -68,7 +68,7 @@ namespace Voron.Tests.Trees
                 Assert.Equal(38, tx.Root.State.LeafPages);
                 Assert.Equal(3, tx.Root.State.BranchPages);
                 Assert.Equal(9, tx.Root.State.OverflowPages);
-                Assert.Equal(3, tx.Root.State.Depth);
+                Assert.Equal(3, tx.Root.State.Depth);				
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -160,7 +160,7 @@ namespace Voron.Tests.Trees
 
                 var allPages = tree.AllPages();
                 var allPagesDistinct = allPages.Distinct().ToList();
-
+                
                 Assert.Equal(allPagesDistinct.Count, allPages.Count);
             }
         }

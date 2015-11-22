@@ -15,6 +15,7 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Client.Connection
 {
@@ -40,7 +41,7 @@ namespace Raven.Client.Connection
         internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequestResult)
         {
             var handler = LogRequest;
-            if (handler != null)
+            if (handler != null) 
                 handler(sender, generateRequestResult());
         }
 
@@ -74,8 +75,8 @@ namespace Raven.Client.Connection
             var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
             {
                 ShouldCacheRequest =
-                    createHttpJsonRequestParams.AvoidCachingRequest == false &&
-                    createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
+                    createHttpJsonRequestParams.AvoidCachingRequest == false && 
+                    createHttpJsonRequestParams.ShouldCacheRequest(createHttpJsonRequestParams.Url)
             };
 
             if (request.ShouldCacheRequest && !DisableHttpCaching)
@@ -90,7 +91,7 @@ namespace Raven.Client.Connection
         }
 
         internal CachedRequestOp ConfigureCaching(string url, Action<string, string> setHeader)
-        {
+         {
             var cachedRequest = cache.Get(url);
             if (cachedRequest == null)
                 return new CachedRequestOp { SkipServerCheck = false };
@@ -174,6 +175,8 @@ namespace Raven.Client.Connection
         /// default ctor
         /// </summary>
         /// <param name="maxNumberOfCachedRequests"></param>
+        /// <param name="httpMessageHandler"></param>
+        /// <param name="acceptGzipContent"></param>
         public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true)
         {
             this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
@@ -214,7 +217,7 @@ namespace Raven.Client.Connection
                     return false;
 
                 return (bool)value;
-            }
+        }
             set { CallContext.LogicalSetData("Raven/Client/DisableHttpCaching", value); }
         }
 
@@ -279,12 +282,12 @@ namespace Raven.Client.Connection
 
         internal void IncrementCachedRequests()
         {
-            Interlocked.Increment(ref NumOfCachedRequests);
+             Interlocked.Increment(ref NumOfCachedRequests);
         }
 
         internal void CacheResponse(string url, RavenJToken data, NameValueCollection headers)
         {
-            if (string.IsNullOrEmpty(headers[Constants.MetadataEtagField]))
+            if (string.IsNullOrEmpty(headers[Constants.MetadataEtagField])) 
                 return;
 
             RavenJToken clone;

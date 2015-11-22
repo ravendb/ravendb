@@ -21,11 +21,13 @@ namespace Raven.Abstractions.Data
             if (AuthorizedDatabases == null)
                 return false;
 
-            if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("fs/"))
+            if (string.IsNullOrEmpty(tenantId) == false &&
+                (tenantId.StartsWith("fs/", StringComparison.OrdinalIgnoreCase) ||
+                 tenantId.StartsWith("cs/", StringComparison.OrdinalIgnoreCase) ||
+                 tenantId.StartsWith("ts/", StringComparison.OrdinalIgnoreCase)))
+            {
                 tenantId = tenantId.Substring(3);
-
-            if (string.IsNullOrEmpty(tenantId) == false && tenantId.StartsWith("counters/"))
-                tenantId = tenantId.Substring(9);
+            }
 
             ResourceAccess db;
             if (string.Equals(tenantId, "<system>") || string.IsNullOrWhiteSpace(tenantId))

@@ -4,9 +4,9 @@ using Raven.Tests.FileSystem.ClientApi;
 
 namespace Raven.Tryouts
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main()
         {
             for (int i = 0; i < 1000; i++)
             {

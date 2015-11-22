@@ -437,7 +437,7 @@ namespace Raven.Json.Linq
             return new JsonReaderException(message);
         }
 
-        internal new static bool IsPrimitiveToken(JsonToken token)
+        internal static bool IsPrimitiveToken(JsonToken token)
         {
             switch (token)
             {
