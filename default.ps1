@@ -200,7 +200,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
     New-Item $build_dir\Output\Backup -Type directory | Out-Null
     New-Item $build_dir\Output\Migration -Type directory | Out-Null
-    New-Item $build_dir\Output\Diag\Raven.Traffic -Type directory | Out-Null
+    New-Item $build_dir\Output\Diag\Traffic -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
 }
 
@@ -227,8 +227,8 @@ task CopyMigration {
 }
 
 task CopyRavenTraffic {
-    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Raven.Traffic
-    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Raven.Traffic
+    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Traffic
+    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Traffic
 }
 
 task CopyStorageExporter {
