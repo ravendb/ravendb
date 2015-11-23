@@ -165,6 +165,28 @@ namespace Raven.Database.Server.Controllers
             return GetEmptyMessage();
         }
 
+        [HttpPost]
+        [RavenRoute("subscriptions/setSubscriptionAckEtag")]
+        [RavenRoute("databases/{databaseName}/subscriptions/setSubscriptionAckEtag")]
+        public HttpResponseMessage SetSubscriptionAckEtag()
+        {
+            var idStringVal = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStringVal, out id) == false)
+            {
+                return GetMessageWithString("Subscription Id is missing or invalid", HttpStatusCode.BadRequest);
+            }
+
+            var newEtag = GetQueryStringValue("newEtag");
+            if (string.IsNullOrEmpty(newEtag))
+            {
+                return GetMessageWithString("Acknowledged Etag Set Value is missing or invalid", HttpStatusCode.BadRequest);
+            }
+
+            Database.Subscriptions.SetAcknowledgeEtag(id, Etag.Parse(newEtag));
+            return GetEmptyMessage();
+        }
+
         [HttpGet]
         [RavenRoute("subscriptions")]
         [RavenRoute("databases/{databaseName}/subscriptions")]
