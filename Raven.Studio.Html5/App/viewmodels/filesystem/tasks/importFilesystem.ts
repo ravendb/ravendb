@@ -6,6 +6,7 @@ import getOperationStatusCommand = require("commands/operations/getOperationStat
 
 class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
+    shouldDisableVersioningBundle = ko.observable(false);
     hasFileSelected = ko.observable(false);
     importedFileName = ko.observable<string>();
     isUploading = false;
@@ -62,7 +63,7 @@ class importDatabase extends viewModelBase {
         var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
         formData.append("file", fileInput.files[0]);
                 
-        new importFilesystemCommand(formData, this.batchSize(), this.activeFilesystem())
+        new importFilesystemCommand(formData, this.batchSize(), this.activeFilesystem(), this.shouldDisableVersioningBundle())
             .execute()
             .done((result: operationIdDto) => {
                 var operationId = result.OperationId;

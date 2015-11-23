@@ -105,6 +105,7 @@ namespace Raven.Smuggler
             filesystemOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
             filesystemOptionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
             filesystemOptionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => filesOptions.Incremental = true);
+            filesystemOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerFileSystem, "Disables versioning for the duration of the import", _ => filesOptions.ShouldDisableVersioningBundle = true);
             filesystemOptionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).UserName = value);
             filesystemOptionSet.Add("u2|user2|username2:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).UserName = value);
             filesystemOptionSet.Add("p|pass|password:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Password = value);

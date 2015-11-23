@@ -23,7 +23,20 @@ namespace Raven.Bundles.Versioning.Triggers
         {
             var jsonDocument = Database.Documents.Get(key, transactionInformation);
             if (jsonDocument == null)
+            {
+                if (Database.IsVersioningActive(metadata) == false)
+                    return VetoResult.Allowed;
+
+                if (Database.IsVersioningDisabledForImport(metadata))
+                    return VetoResult.Allowed;
+
+                if (Database.ChangesToRevisionsAllowed() == false &&
+                    metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
+                {
+                    return VetoResult.Deny("Creating a historical revision is not allowed");
+                }
                 return VetoResult.Allowed;
+            }
 
             if (Database.IsVersioningActive(metadata))
             {

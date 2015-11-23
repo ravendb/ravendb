@@ -32,10 +32,19 @@
                 <div class="form-group">
                     <label class="col-sm-2 control-label">Batch size</label>
                     <div class="col-sm-2">
-                        <input class="form-control" type="number" min="0" data-bind="value: batchSize" />
+                        <input class="form-control" type="number" min="0" data-bind="value: batchSize"/>
                     </div>
                 </div>
             </form>
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-5">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" data-bind="checked: shouldDisableVersioningBundle"> Disable versioning bundle during import
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
