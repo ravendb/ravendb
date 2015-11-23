@@ -109,7 +109,7 @@ namespace Raven.MiniDumper
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Failed to write dump : ${ex.Message}");
+                Console.WriteLine($"Failed to write dump : {ex.Message}");
                 Console.ResetColor();
                 return;
             }
@@ -141,7 +141,7 @@ namespace Raven.MiniDumper
         {
             Console.WriteLine(
                 @"
-Mini Dumper for RavenDB
+Mini Dumper for RavenDB (64 bit only)
 ----------------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------------
