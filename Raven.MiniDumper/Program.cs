@@ -23,12 +23,6 @@ namespace Raven.MiniDumper
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 
-            //// TODO : Check if neccessary:
-            //if (TraceEventSession.IsElevated() == false)
-            //{
-            //    Console.WriteLine("Raven.MiniDumper requires elevated privileges. Please run it as administrator.");
-            //    Environment.Exit((int)ExitCodes.InsufficientPrivileges);
-            //}
             Console.WriteLine();
             program.Execute();
         }
