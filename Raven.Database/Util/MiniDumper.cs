@@ -268,7 +268,7 @@ namespace Raven.Database.Util
                 }
                 catch (Exception ex)
                 {
-                    return $"Failed to find process id {pid.Value}. Exception=${ex.Message}";
+                    return $"Failed to find process id {pid.Value}. Exception={ex.Message}";
                 }
             }
 
