@@ -408,6 +408,7 @@ task ZipOutput {
             Bundles\*.* `
             Web\bin\*.* `
             Server\*.* `
+            Diag\*.* `
             *.*
     }
     
@@ -428,9 +429,9 @@ task DoReleasePart1 -depends Compile, `
     CopyServer, `
     SignServer, `
     CopyRootFiles, `
-    ZipOutput, `
     CopyRavenTraffic, `
-    CopyStorageExporter {	
+    CopyStorageExporter, `
+    ZipOutput {	
     
     Write-Host "Done building RavenDB"
 }
