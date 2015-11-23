@@ -167,7 +167,7 @@ namespace Raven.Database.Server.Controllers
 
         [HttpPost]
         [RavenRoute("subscriptions/setSubscriptionAckEtag")]
-        [RavenRoute("databases/{databaseName}/setSubscriptionAckEtag")]
+        [RavenRoute("databases/{databaseName}/subscriptions/setSubscriptionAckEtag")]
         public HttpResponseMessage SetSubscriptionAckEtag()
         {
             var idStringVal = GetQueryStringValue("id");
