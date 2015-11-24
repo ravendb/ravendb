@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
@@ -31,7 +32,7 @@ namespace Raven.Database.FileSystem.Controllers
     {
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
-        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize)
+        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize, bool shouldDisableVersioningBundle)
         {
             if (!Request.Content.IsMimeMultipartContent())
             {
@@ -67,6 +68,7 @@ namespace Raven.Database.FileSystem.Controllers
                     dataDumper.Progress += s => status.LastProgress = s;
                     var smugglerOptions = dataDumper.Options;
                     smugglerOptions.BatchSize = batchSize;
+                    smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
                     smugglerOptions.CancelToken = cts;
 
                     await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath }).ConfigureAwait(false);
@@ -87,6 +89,10 @@ namespace Raven.Database.FileSystem.Controllers
                     if (e is InvalidDataException)
                     {
                         status.ExceptionDetails = e.Message;
+                    }
+                    if (e is OperationVetoedException)
+                    {
+                        status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import File System";
                     }
                     else
                     {

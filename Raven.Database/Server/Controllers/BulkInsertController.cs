@@ -13,6 +13,7 @@ using System.Web.Http;
 using Raven.Unix.Native;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
@@ -106,6 +107,11 @@ namespace Raven.Database.Server.Controllers
                     currentDatabase.Notifications.RaiseNotifications(new BulkInsertChangeNotification { OperationId = operationId, Message = "Operation cancelled, likely because of a batch timeout", Type = DocumentChangeTypes.BulkInsertError });
                     status.IsTimedOut = true;
                     status.Faulted = true;
+                }
+                catch (OperationVetoedException e)
+                {
+                    status.Faulted = true;
+                    error = e;
                 }
                 catch (Exception e)
                 {

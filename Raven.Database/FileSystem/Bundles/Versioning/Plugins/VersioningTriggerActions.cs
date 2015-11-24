@@ -30,16 +30,33 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
             {
                 var file = accessor.ReadFile(name);
                 if (file == null)
-                    return;
-
-                if (fileSystem.ChangesToRevisionsAllowed() == false &&
-                    file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" &&
-                    accessor.IsVersioningActive(name))
                 {
-                    veto = VetoResult.Deny("Modifying a historical revision is not allowed");
+                    if (fileSystem.IsVersioningActive(name) == false)
+                        veto = VetoResult.Allowed;
+
+                    else if (accessor.IsVersioningDisabledForImport(metadata))
+                        veto = VetoResult.Allowed;
+
+                    else if (fileSystem.ChangesToRevisionsAllowed() == false &&
+                        metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
+                    {
+                        veto = VetoResult.Deny("Creating a historical revision is not allowed");
+                    }
+                    return;
+                }
+
+                if (accessor.IsVersioningActive(name))
+                {
+                    if (accessor.IsVersioningDisabledForImport(metadata))
+                        veto = VetoResult.Allowed;
+
+                    else if (fileSystem.ChangesToRevisionsAllowed() == false &&
+                             file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
+                    {
+                        veto = VetoResult.Deny("Modifying a historical revision is not allowed");
+                    }
                 }
             });
-
             return veto;
         }
 
