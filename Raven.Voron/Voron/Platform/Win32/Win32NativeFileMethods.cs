@@ -318,6 +318,7 @@ namespace Voron.Platform.Win32
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public extern static bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries,
             WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, ulong Flags);
 
@@ -359,6 +360,7 @@ namespace Voron.Platform.Win32
         // ReSharper restore UnusedMember.Local
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool UnmapViewOfFile(byte* lpBaseAddress);
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -428,6 +430,7 @@ namespace Voron.Platform.Win32
             AllocationType flAllocationType, MemoryProtection flProtect);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool VirtualFree(byte* lpAddress, UIntPtr dwSize,
             FreeType dwFreeType);
 
