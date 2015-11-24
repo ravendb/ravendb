@@ -186,7 +186,7 @@ namespace Raven.Database.Util
         // Overload requiring MiniDumpExceptionInformation
         [DllImport("dbghelp.dll",
             EntryPoint = "MiniDumpWriteDump",
-            CallingConvention = CallingConvention.StdCall,
+            CallingConvention = CallingConvention.Winapi,
             CharSet = CharSet.Unicode,
             ExactSpelling = true,
             SetLastError = true)]
@@ -201,7 +201,7 @@ namespace Raven.Database.Util
         // Overload supporting MiniDumpExceptionInformation == NULL
         [DllImport("dbghelp.dll",
             EntryPoint = "MiniDumpWriteDump",
-            CallingConvention = CallingConvention.StdCall,
+            CallingConvention = CallingConvention.Winapi,
             CharSet = CharSet.Unicode,
             ExactSpelling = true,
             SetLastError = true)]
@@ -216,45 +216,69 @@ namespace Raven.Database.Util
         [DllImport("kernel32.dll", EntryPoint = "GetCurrentThreadId", ExactSpelling = true)]
         private static extern uint GetCurrentThreadId();
 
-        private static bool Write(SafeHandle fileHandle, Option options, ExceptionInfo exceptionInfo)
+        private static bool Write(SafeHandle fileHandle, Option options, ExceptionInfo exceptionInfo, Process process = null)
         {
-            Process currentProcess = Process.GetCurrentProcess();
+            Process currentProcess = process ?? Process.GetCurrentProcess();
             IntPtr currentProcessHandle = currentProcess.Handle;
-            uint currentProcessId = (uint)currentProcess.Id;
+            uint currentProcessId = (uint) currentProcess.Id;
             MiniDumpExceptionInformation exp;
+
             exp.ThreadId = GetCurrentThreadId();
             exp.ClientPointers = false;
             exp.ExceptionPointers = IntPtr.Zero;
-            if (exceptionInfo == ExceptionInfo.Present)
+            if (exceptionInfo == ExceptionInfo.Present && process == null)
             {
                 exp.ExceptionPointers = System.Runtime.InteropServices.Marshal.GetExceptionPointers();
             }
             bool bRet = false;
             if (exp.ExceptionPointers == IntPtr.Zero)
             {
-                bRet = MiniDumpWriteDump(currentProcessHandle, currentProcessId, fileHandle, (uint)options, IntPtr.Zero,
+                bRet = MiniDumpWriteDump(currentProcessHandle, currentProcessId, fileHandle, (uint) options, IntPtr.Zero,
                     IntPtr.Zero, IntPtr.Zero);
             }
             else
             {
-                bRet = MiniDumpWriteDump(currentProcessHandle, currentProcessId, fileHandle, (uint)options, ref exp,
+                bRet = MiniDumpWriteDump(currentProcessHandle, currentProcessId, fileHandle, (uint) options, ref exp,
                     IntPtr.Zero, IntPtr.Zero);
             }
+
             return bRet;
         }
 
-        public string Write(Option? passedOptions = null)
+        public string Write(Option? passedOptions = null, string pathForDump = null, int? pid = null)
         {
             if (passedOptions != null)
                 options = passedOptions.Value;
-            var dumpDir = Path.Combine(Path.GetTempPath(), "RavenDBDumps");
+            var path = pathForDump ?? Path.GetTempPath();
+            var dumpDir = Path.Combine(path, "RavenDBDumps");
             if (Directory.Exists(dumpDir) == false)
                 Directory.CreateDirectory(dumpDir);
 
             var dumpFile = Path.Combine(dumpDir, $"RavenDBDump{DateTime.UtcNow.ToString("yyyyMMdd_hhmmss")}.dmp");
 
+            Process process = null;
+            if (pid != null)
+            {
+                try
+                {
+                    process = Process.GetProcessById(pid.Value);
+                }
+                catch (Exception ex)
+                {
+                    return $"Failed to find process id {pid.Value}. Exception={ex.Message}";
+                }
+            }
+
             using (FileStream fs = new FileStream(dumpFile, FileMode.Create, FileAccess.ReadWrite, FileShare.Write))
-                Write(fs.SafeFileHandle, options, MiniDumper.ExceptionInfo.Present);
+            {
+                if (Write(fs.SafeFileHandle, options, MiniDumper.ExceptionInfo.Present, process) != true)
+                {
+                    throw new Exception($"Failed to write dump ${dumpFile}, LastError = {Marshal.GetLastWin32Error()}, Make sure path is valid and you use appropriate x64/x86 platform and assemblies");
+                }
+        
+                fs.Flush();
+                fs.Close();
+            }
 
             if (additionalStats == true)
             {
