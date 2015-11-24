@@ -21,10 +21,11 @@ using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Common;
 
 namespace Raven.Smuggler.Database.Streams
 {
-    public class DatabaseSmugglerStreamSource : IDatabaseSmugglerSource
+    public class DatabaseSmugglerStreamSource : SmugglerStreamSourceBase, IDatabaseSmugglerSource
     {
         private readonly Stream _stream;
 
@@ -245,37 +246,37 @@ namespace Raven.Smuggler.Database.Streams
 
         public Task SkipDocumentsAsync(CancellationToken cancellationToken)
         {
-            return SkipAsync(cancellationToken);
+            return SkipAsync(_reader, cancellationToken);
         }
 
         public Task SkipIndexesAsync(CancellationToken cancellationToken)
         {
-            return SkipAsync(cancellationToken);
+            return SkipAsync(_reader, cancellationToken);
         }
 
         public Task SkipTransformersAsync(CancellationToken cancellationToken)
         {
-            return SkipAsync(cancellationToken);
+            return SkipAsync(_reader, cancellationToken);
         }
 
         public Task SkipDocumentDeletionsAsync(CancellationToken cancellationToken)
         {
-            return SkipAsync(cancellationToken);
+            return SkipAsync(_reader, cancellationToken);
         }
 
         public Task SkipIdentitiesAsync(CancellationToken cancellationToken)
         {
-            return SkipAsync(cancellationToken);
+            return SkipAsync(_reader, cancellationToken);
         }
 
         public Task SkipAttachmentsAsync(CancellationToken cancellationToken)
         {
-            return SkipAsync(cancellationToken);
+            return SkipAsync(_reader, cancellationToken);
         }
 
         public Task SkipAttachmentDeletionsAsync(CancellationToken cancellationToken)
         {
-            return SkipAsync(cancellationToken);
+            return SkipAsync(_reader, cancellationToken);
         }
 
         public Task AfterExecuteAsync(DatabaseSmugglerOperationState state)
@@ -285,18 +286,6 @@ namespace Raven.Smuggler.Database.Streams
 
         public void OnException(SmugglerException exception)
         {
-        }
-
-        private Task SkipAsync(CancellationToken cancellationToken)
-        {
-            while (_reader.Read() && _reader.TokenType != JsonToken.EndArray)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                RavenJToken.ReadFrom(_reader);
-            }
-
-            return new CompletedTask();
         }
 
         public void Dispose()

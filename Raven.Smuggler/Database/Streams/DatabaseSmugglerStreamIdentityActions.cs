@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Common;
 
 namespace Raven.Smuggler.Database.Streams
 {
-    public class DatabaseSmugglerStreamIdentityActions : DatabaseSmugglerStreamActionsBase, IDatabaseSmugglerIdentityActions
+    public class DatabaseSmugglerStreamIdentityActions : SmugglerStreamActionsBase, IDatabaseSmugglerIdentityActions
     {
         public DatabaseSmugglerStreamIdentityActions(JsonTextWriter writer)
             : base(writer, "Identities")

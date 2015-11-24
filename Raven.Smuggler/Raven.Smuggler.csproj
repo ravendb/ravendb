@@ -107,6 +107,24 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="Common\SmugglerNotifications.cs" />
+    <Compile Include="Common\SmugglerStreamSourceBase.cs" />
+    <Compile Include="Counter\CounterSmuggler.cs" />
+    <Compile Include="Counter\CounterSmugglerNotifications.cs" />
+    <Compile Include="Counter\CounterSmugglerOptions.cs" />
+    <Compile Include="Counter\CounterSmuggleType.cs" />
+    <Compile Include="Counter\DeltaSmuggler.cs" />
+    <Compile Include="Counter\ICounterSmugglerDeltaActions.cs" />
+    <Compile Include="Counter\ICounterSmugglerDestination.cs" />
+    <Compile Include="Counter\ICounterSmugglerSnapshotActions.cs" />
+    <Compile Include="Counter\ICounterSmugglerSource.cs" />
+    <Compile Include="Counter\CounterSmugglerBase.cs" />
+    <Compile Include="Counter\SnapshotSmuggler.cs" />
+    <Compile Include="Counter\Streams\CounterSmugglerStreamDeltaActions.cs" />
+    <Compile Include="Counter\Streams\CounterSmugglerStreamDestination.cs" />
+    <Compile Include="Counter\Streams\CounterSmugglerStreamDestinationOptions.cs" />
+    <Compile Include="Counter\Streams\CounterSmugglerStreamSnapshotActions.cs" />
+    <Compile Include="Counter\Streams\CounterSmugglerStreamSource.cs" />
     <Compile Include="Database\DatabaseSmugglerMessages.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -147,6 +165,7 @@
     <Compile Include="Database\SmugglerBase.cs" />
     <Compile Include="Database\SmuggleType.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamActionsBase.cs" />
+    <Compile Include="Common\SmugglerStreamActionsBase.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDestination.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentActions.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentDeletionActions.cs" />
@@ -199,6 +218,10 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>DatabaseSmugglerMessages.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Counter\Files\" />
+    <Folder Include="Counter\Remote\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
