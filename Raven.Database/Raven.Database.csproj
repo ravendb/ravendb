@@ -603,6 +603,7 @@
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\MiniDumper.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\SortFieldHelper.cs" />
