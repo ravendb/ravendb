@@ -1419,8 +1419,15 @@ namespace Raven.Database.Server.Controllers.Admin
 
             bool useStats = !string.IsNullOrEmpty(GetQueryStringValue("stats"));
 
-            if (useTimer == false)
-                return GetMessageWithString(MiniDumper.Instance.Write(options), HttpStatusCode.Accepted);
+            try
+            {
+                if (useTimer == false)
+                    return GetMessageWithString(MiniDumper.Instance.Write(options), HttpStatusCode.Accepted);
+            }
+            catch (Exception ex)
+            {
+                return GetMessageWithString(ex.Message, HttpStatusCode.ExpectationFailed);
+            }
 
             var url = $"http://{Request.RequestUri.Host}:{Request.RequestUri.Port}";
             return GetMessageWithString(MiniDumper.Instance.StartTimer(timerCount, period, options, useStats, url), HttpStatusCode.Accepted);

@@ -13,10 +13,12 @@ namespace Raven.MiniDumper
                Database.Util.MiniDumper.Option.WithProcessThreadData;
 
             DumpPath = Path.GetTempPath();
+            PdbsPath = null;
         }
         public int ProcessId { get; set; }
         public Database.Util.MiniDumper.Option DumpOption { get; set; }
         public string DumpPath { get; set; }
+        public string PdbsPath { get; set; }
 
         public Database.Util.MiniDumper.Option SetDumpOptions(string dumpOptions)
         {

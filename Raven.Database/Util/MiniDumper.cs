@@ -238,12 +238,9 @@ namespace Raven.Database.Util
             }
             else
             {
-                Console.WriteLine("Should not reach here .. ");
                 bRet = MiniDumpWriteDump(currentProcessHandle, currentProcessId, fileHandle, (uint) options, ref exp,
                     IntPtr.Zero, IntPtr.Zero);
             }
-
-            // int lastError = Marshal.GetLastWin32Error();
 
             return bRet;
         }
@@ -274,7 +271,11 @@ namespace Raven.Database.Util
 
             using (FileStream fs = new FileStream(dumpFile, FileMode.Create, FileAccess.ReadWrite, FileShare.Write))
             {
-                Write(fs.SafeFileHandle, options, MiniDumper.ExceptionInfo.Present, process);
+                if (Write(fs.SafeFileHandle, options, MiniDumper.ExceptionInfo.Present, process) != true)
+                {
+                    throw new Exception($"Failed to write dump ${dumpFile}, LastError = {Marshal.GetLastWin32Error()}, Make sure path is valid and you use appropriate x64/x86 platform and assemblies");
+                }
+        
                 fs.Flush();
                 fs.Close();
             }
