@@ -118,7 +118,7 @@ namespace Voron.Tests.Tables
                 var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
                 var handle = docs.ReadByKey("users/1");
-                Assert.Null(handle);
+                Assert.True(handle == TableHandle<Documents,DocumentData>.Null);
             }
         }
 

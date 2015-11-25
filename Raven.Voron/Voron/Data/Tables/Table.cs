@@ -27,8 +27,10 @@ namespace Voron.Data.Tables
     }
 
 
-    public unsafe class TableHandle<T, TData> 
+    public unsafe struct TableHandle<T, TData>
     {
+        public static readonly TableHandle<T, TData> Null;
+
         public T Key;
         private int Size;
         private byte* DataPointer;        
@@ -58,6 +60,20 @@ namespace Voron.Data.Tables
                 }                
             }
         }
+        
+        public static bool operator ==(TableHandle<T, TData> c1, TableHandle<T, TData> c2)
+        {
+            if (c1 == null || c2 == null)
+                return false;
+
+            return c1.DataPointer == c2.DataPointer && c1.Size == c2.Size;
+        }
+
+        public static bool operator !=(TableHandle<T, TData> c1, TableHandle<T, TData> c2)
+        {
+            return !(c1 == c2);
+        }
+
     }
 
     public unsafe class Table<T, TData>
