@@ -22,15 +22,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
-
-                //var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                //    .Set(DocumentsFields.Etag, 1L)
-                //    .Set(DocumentsFields.Key, "users/1")
-                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                //    .Set(DocumentsFields.Collection, "Users");
-                //docs.Set(structure);
 
                 var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
@@ -40,7 +32,6 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
 
                 var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
@@ -67,15 +58,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
-
-                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                //    .Set(DocumentsFields.Etag, 1L)
-                //    .Set(DocumentsFields.Key, "users/1")
-                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                //    .Set(DocumentsFields.Collection, "Users")
-                //    );
 
                 var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
@@ -85,7 +68,6 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
 
                 docs.DeleteByKey("users/1");
@@ -95,7 +77,6 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
 
                 var reader = docs.SeekTo("By/Etag", new Slice(EndianBitConverter.Big.GetBytes(1)));
@@ -116,15 +97,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
-
-                //docs.Set(new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                //    .Set(DocumentsFields.Etag, 1L)
-                //    .Set(DocumentsFields.Key, "users/1")
-                //    .Set(DocumentsFields.Data, "{'Name': 'Oren'}")
-                //    .Set(DocumentsFields.Collection, "Users")
-                //    );
 
                 var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
                 docs.Set(doc);
@@ -134,15 +107,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
-
-                //var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
-                //    .Set(DocumentsFields.Etag, 2L)
-                //    .Set(DocumentsFields.Key, "users/1")
-                //    .Set(DocumentsFields.Collection, "Users")
-                //    .Set(DocumentsFields.Data, "{'Name': 'Eini'}");
-                //docs.Set(structure);
 
                 var doc = new Documents { Etag = 2L, Key = "users/1", Data = "{'Name': 'Eini'}", Collection = "Users" };
                 docs.Set(doc);
@@ -152,7 +117,6 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
                 var docs = new Table<Documents>(_docsSchema, tx);
 
                 var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));

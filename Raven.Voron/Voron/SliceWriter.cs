@@ -6,7 +6,7 @@ namespace Voron
 {
     public struct SliceWriter
     {
-        private int _pos;
+        private volatile int _pos;
         private readonly byte[] _buffer;
 
         public SliceWriter(byte[] outsideBuffer)
@@ -48,6 +48,18 @@ namespace Voron
         public Slice CreateSlice()
         {
             return new Slice(_buffer);
+        }
+
+        public void Write(bool b)
+        {
+            _buffer[_pos] = b ? (byte)1 : (byte)0;
+            _pos += sizeof(byte);
+        }
+
+        public void Write(byte b)
+        {
+            _buffer[_pos] = b;
+            _pos += sizeof(byte);
         }
 
         public void Write(byte[] bytes, int? length = null)

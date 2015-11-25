@@ -1,187 +1,120 @@
-﻿using System;
+﻿using BenchmarkDotNet;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using Voron.Data.Tables;
 using Voron.Platform.Posix;
 using Voron.Tests;
+using Voron.Tests.Tables;
 using Xunit;
 
 namespace Voron.Tryout
 {
-    public unsafe class Program
+    public unsafe class Program : TableStorageTest
     {
-        public static int Main()
+        // [Params(32, 64, 512)]
+        [Params(32, 64)]
+        public int DataSize = 0;
+
+        private string data;
+
+        [Setup]
+        public void Setup()
         {
-            var sp = Stopwatch.StartNew();
-            using (var se = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            Random rnd = new Random();
+            DataDir = $"data.{rnd.Next()}.test";
+
+            data = new string('A', DataSize);
+
+            using (var tx = Env.WriteTransaction())
             {
-                using (var tx = se.WriteTransaction())
+                _docsSchema.Create(tx);
+
+                var docs = new Table<Documents>(_docsSchema, tx);
+
+                var doc = new Documents { Etag = 1L, Key = "users/test", Data = data, Collection = "Users" };
+                docs.Set(doc);
+                docs.ReadByKey(new Slice("users/test"));
+
+                tx.Commit();
+            }
+        }
+
+        //[Benchmark]
+        //[OperationsPerInvoke(100)]
+        //public TableStorageTest InsertInTable()
+        //{
+        //    for (int i = 0; i < 100; i++)
+        //    {
+        //        using (var tx = Env.WriteTransaction())
+        //        {
+        //            var docs = new Table<DocumentsFields>(_docsSchema, tx);
+
+        //            var structure = new Structure<DocumentsFields>(_docsSchema.StructureSchema)
+        //                .Set(DocumentsFields.Etag, 1L)
+        //                .Set(DocumentsFields.Key, "users/" + i)
+        //                .Set(DocumentsFields.Data, data)
+        //                .Set(DocumentsFields.Collection, "Users");
+        //            docs.Set(structure);
+
+        //            tx.Commit();
+        //        }
+        //    }
+
+        //    return this;
+        //}
+
+        [Benchmark]
+        public TableStorageTest InsertInTable()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = new Table<Documents>(_docsSchema, tx);
+
+                for (int i = 0; i < 100; i++)
                 {
-                    tx.CreateTree("test").Add("test", "val");
-                    tx.Commit();
+                    var doc = new Documents { Etag = 1L, Key = "users/" + i, Data = data, Collection = "Users" };
+                    docs.Set(doc);
                 }
 
-                using (var tx = se.ReadTransaction())
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var docs = new Table<Documents>(_docsSchema, tx);
+
+                for (int i = 0; i < 100; i++)
                 {
-                    Console.WriteLine(tx.ReadTree("test").Read("test").Reader.ToString());
+                    var t = docs.ReadByKey(new Slice("users/" + i));
                 }
             }
-            Console.WriteLine(sp.Elapsed);
-            return 0;
+
+            return this;
         }
 
-
-        static void RunAllTests()
+        public static void Main(string[] args)
         {
-            using (var fileWriter = new StreamWriter("unit-tests.txt", append: false))
-            {
-                var testAssembly = typeof(StorageTest).Assembly;
-                var allTestClassTypes = testAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(StorageTest))).ToList();
-                var allTestMethods = allTestClassTypes.SelectMany(t => t.GetMethods().Where(mt => mt.GetCustomAttributes(true)
-                                                                                               .OfType<FactAttribute>().Any()))
-                    .OrderBy(x => x.DeclaringType.Name + " " + x.Name)
-                    .ToList();
-                var total = allTestMethods.Count;
-                var failed = 0;
-                Console.Clear();
-                fileWriter.WriteLine("found " + total + " tests to run..");
-                Console.WriteLine("found " + total + " tests to run..");
-                foreach (var classType in allTestClassTypes)
-                {
-                    foreach (var testMethod in classType.GetMethods()
-                                                        .Where(mt =>
-                                                            mt.GetCustomAttributes(true).OfType<FactAttribute>().Any())
-                                                        .ToList())
-                    {
-                        Console.Write("Running test: " + testMethod.Name + "...");
-                        bool isFailed = false;
-                        //create new test class instance for each unit test method - just like unit test runner does
-                        var testClassInstance = classType.GetConstructor(Type.EmptyTypes).Invoke(null);
-                        try
-                        {
-                            var sw = Stopwatch.StartNew();
-                            fileWriter.Write("Running test: " + testMethod.Name + "...");
-                            try
-                            {
-                                var testMethodTask = Task.Run(() => testMethod.Invoke(testClassInstance, null));
-                                if (!testMethodTask.Wait(10000))
-                                {
-                                    throw new TimeoutException("The test " + testMethod + " has timed-out. Aborting execution");
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                fileWriter.WriteLine("Test failed. \n Reason: " + e);
-                                failed++;
-                                isFailed = true;
-                            }
-                            fileWriter.WriteLine("done. " + sw.ElapsedMilliseconds + "ms");
-                            fileWriter.WriteLine("-----------------------------------------------------------");
-                        }
-                        finally
-                        {
-                            classType.GetMethod("Dispose").Invoke(testClassInstance, null);
-                        }
-                        if (isFailed)
-                            Console.WriteLine("failed");
-                        else
-                            Console.WriteLine("succeeded");
-                    }
-                }
-                fileWriter.WriteLine("------------------------------------------------");
-                fileWriter.WriteLine("------------------------------------------------");
-                fileWriter.WriteLine("Out of total " + total + ", failed: " + failed);
-                fileWriter.Close();
-                Console.WriteLine("Out of total " + total + ", failed: " + failed);
-            }
-        }
+            var p = new Program();
+            p.DataSize = 256;
+            p.Setup();
+            p.InsertInTable();
 
-        static void TestEdgeCases()
-        {
-         
-            Console.WriteLine("done..");
-        }
+            //// Use reflection for a more maintainable way of creating the benchmark switcher,
+            //// Benchmarks are listed in namespace order first (e.g. BenchmarkDotNet.Samples.CPU,
+            //// BenchmarkDotNet.Samples.IL, etc) then by name, so the output is easy to understand
+            //var benchmarks = Assembly.GetExecutingAssembly().GetTypes()
+            //    .Where(t => t.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+            //                 .Any(m => m.GetCustomAttributes(typeof(BenchmarkAttribute), false).Any()))
+            //    .OrderBy(t => t.Namespace)
+            //    .ThenBy(t => t.Name)
+            //    .ToArray();
 
-        static void TestPageFileBacked()
-        {
-            if (File.Exists("test.map"))
-                File.Delete("test.map");
-            long initial = 4096;
-            using (var pager = new PosixTempMemoryMapPager(4096, "test.map", initial))
-            {
-                for (long size = initial; size < initial * 10000; size += 4096)
-                {
-                    Console.WriteLine(size);
-                    pager.EnsureContinuous(0, (int)size);
-                    pager.EnsureContinuous(0, (int)size / pager.PageSize);
-                    var p = pager.AcquirePagePointer(0);
-                    for (int i = 0; i < size; i++)
-                    {
-                        *(p + i) = 1;
-                    }
-                }
-            }
-        }
-
-        static void ScratchBufferGrowthTest()
-        {
-           
-            Console.WriteLine("done..");
-        }
-
-        static void TestMemoryPager()
-        {
-            if (File.Exists("test.p"))
-                File.Delete("test.p");
-            var pager = new PosixMemoryMapPager(4096, "test.p");
-            pager.EnsureContinuous(0, 150);
-            var p = pager.AcquirePagePointer(0);
-            for (int i = 0; i < 4096 * 150; i++)
-            {
-                *(p + i) = 1;
-            }
-            Console.WriteLine("don");
-        }
-
-
-        public class TestMethodRunnerCallback : ITestMethodRunnerCallback
-        {
-            int index;
-            public int FailedCount { get; private set; }
-
-            public void AssemblyFinished(TestAssembly testAssembly, int total, int failed, int skipped, double time)
-            {
-                Console.WriteLine(testAssembly.AssemblyFilename + " Total: " + total + " Failed: " + failed + " Skipped: " + skipped + " in " + time);
-                FailedCount = failed;
-            }
-
-            public void AssemblyStart(TestAssembly testAssembly)
-            {
-                Console.WriteLine("Starting: " + testAssembly);
-            }
-
-            public bool ClassFailed(TestClass testClass, string exceptionType, string message, string stackTrace)
-            {
-                Console.WriteLine("Class failed: " + testClass + " - " + message);
-                return true;
-            }
-
-            public void ExceptionThrown(TestAssembly testAssembly, Exception exception)
-            {
-                Console.WriteLine(exception);
-            }
-
-            public bool TestFinished(TestMethod testMethod)
-            {
-                return true;
-            }
-
-            public bool TestStart(TestMethod testMethod)
-            {
-                Console.WriteLine("{0,4}: {1}", ++index, testMethod.DisplayName);
-                return true;
-            }
+            //var competitionSwitch = new BenchmarkCompetitionSwitch(benchmarks);
+            //competitionSwitch.Run(args);
         }
     }
 }

@@ -15,7 +15,7 @@ namespace Voron.Tests
 	{
 		private StorageEnvironment _storageEnvironment;
 		protected StorageEnvironmentOptions _options;
-		protected const string DataDir = "test.data";
+		protected string DataDir = "test.data";
 
 		public StorageEnvironment Env
 		{

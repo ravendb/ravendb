@@ -1,11 +1,16 @@
 using Bond;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Text;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Util;
 using Voron.Util.Conversion;
 
 namespace Voron.Data.Tables
@@ -18,6 +23,151 @@ namespace Voron.Data.Tables
         public static readonly Slice StatsSlice = "Stats";
     }
 
+    public class TableIndexer<T>
+    {
+        public TableIndexer()
+        {
+            IsFixedSize = true;
+        }
+
+        private readonly List<Expression<Func<T, int>>> sizeCountingFunc = new List<Expression<Func<T, int>>>();
+        private readonly List<Expression> writing = new List<Expression>();
+
+        private readonly ParameterExpression Writer = Expression.Parameter(typeof(SliceWriter), "writer");
+        private readonly ParameterExpression Value = Expression.Parameter(typeof(T), "value");
+
+        private Expression WriteAction<W>(Expression<Func<T, W>> exp, MethodInfo method)
+        {
+            return Expression.Call(Writer, method, new[] { Expression.Invoke(exp, new[] { Value }) });
+        }
+
+        public TableIndexer<T> Add<W>(Expression<Func<T, W>> exp)
+        {
+            var type = typeof(W).GetBondDataType();            
+
+            int expectedSize = 0;
+            switch (type)
+            {
+                case BondDataType.BT_STRING:
+                case BondDataType.BT_WSTRING:
+                    {
+                        IsFixedSize = false;
+
+                        var pParam = Expression.Parameter(typeof(T), "pParam");
+
+                        Expression<Func<string, int>> calculate = x => Encoding.UTF8.GetByteCount(x);
+                        Expression<Func<T, int>> stringCount = Expression.Lambda<Func<T, int>>(
+                                                Expression.Invoke(calculate, new[] {
+                                                     Expression.Invoke(exp, new[] { pParam })
+                                                }), pParam);
+                        sizeCountingFunc.Add(stringCount);
+
+                        writing.Add(WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.Write(default(string)))));
+                        break;
+                    }
+                case BondDataType.BT_BOOL:
+                    {
+                        expectedSize = 1;
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.Write(default(bool))));
+                        writing.Add(action);
+                        break;
+                    }
+                case BondDataType.BT_INT8:
+                case BondDataType.BT_UINT8:
+                    {
+                        expectedSize = 1;
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.Write(default(byte))));
+                        writing.Add(action);
+                        break;
+                    }
+                case BondDataType.BT_INT16:
+                    {
+                        expectedSize = 2;
+                        ;
+
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.WriteBigEndian(default(short))));
+                        writing.Add(action);
+                        break;
+                    }
+                case BondDataType.BT_UINT16:
+                    {
+                        expectedSize = 2;
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.WriteBigEndian(default(ushort))));
+                        writing.Add(action);
+                        break;
+                    }
+                case BondDataType.BT_INT32:
+                    {
+                        expectedSize = 4;
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.WriteBigEndian(default(int))));
+                        writing.Add(action);
+                        break;
+                    }
+                case BondDataType.BT_UINT32:
+                    {
+                        expectedSize = 4;
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.WriteBigEndian(default(uint))));
+                        writing.Add(action);
+                        break;
+                    }
+                case BondDataType.BT_INT64:
+                    {
+                        expectedSize = 8;
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.WriteBigEndian(default(long))));
+                        writing.Add(action);
+                        break;
+                    }
+                case BondDataType.BT_UINT64:
+                    {
+                        expectedSize = 8;
+                        var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.WriteBigEndian(default(long))));
+                        writing.Add(action);
+                        break;
+                    }
+
+                default:
+                    throw new ArgumentException($"The type of {typeof(W).FullName} is not supported by the {nameof(TableIndexer<T>)}. Only basic types are supported.");
+            }
+        
+            ExpectedSize += expectedSize;                
+            Fields++;
+
+            return this;
+        }
+
+        static readonly ConstructorInfo sliceWriterCtor = typeof(SliceWriter).GetConstructor(new[] { typeof(int) });
+        static readonly MethodInfo createSliceMethod = Util.Reflection.MethodInfoOf( (SliceWriter w) => w.CreateSlice());
+
+        internal Expression<Func<T, Slice>> Generate()
+        {           
+            Expression addition = Expression.Constant(ExpectedSize);
+            foreach (var countFunc in sizeCountingFunc)
+                addition = Expression.Add(addition, Expression.Invoke(countFunc, new[] { Value }));
+
+            var vSize = Expression.Variable(typeof(int), "vSize");
+            var body = Expression.Block(
+                            new[] { vSize, Writer },
+                            Expression.Assign(vSize, addition),  // vSize = this.ExpectedSize + countFunc[0](T) + ... + countFunc[n](T)                
+                            Expression.Assign(Writer, Expression.New(sliceWriterCtor, new[] { vSize })),
+                            Expression.Block(writing),
+                            Expression.Call(Writer, createSliceMethod)
+                        );
+
+            Expression<Func<T, Slice>> result = Expression.Lambda<Func<T,Slice>>(body, Value);
+
+            return result;                                    
+        }
+
+        public int Fields { get; private set; }
+
+        public bool IsFixedSize { get; private set; }
+
+        /// <summary>
+        /// This is the expected size of the fixed size part of the index key.
+        /// </summary>
+        public int ExpectedSize { get; private set; }
+    }
+
     public unsafe class TableSchema<T>
     {
         public SchemaIndexDef Key => _pk;
@@ -26,7 +176,6 @@ namespace Voron.Data.Tables
 
         public class SchemaIndexDef
         {
-            public int FieldsCount;
             public Func<T, Slice> CreateKey;
 
             public int Size;
@@ -35,9 +184,8 @@ namespace Voron.Data.Tables
             public Slice Name;
 
             public bool CanUseFixedSizeTree =>
-                FieldsCount == 1 &&
                 IsFixedSize &&
-                Size == sizeof(long) &&
+                Size <= sizeof(long) &&
                 MultiValue == false;
         }
 
@@ -51,75 +199,17 @@ namespace Voron.Data.Tables
             Name = name;
         }
 
-        private bool IsFixedSizeType<X>()
+        public TableSchema<T> DefineIndex(string name, Action<TableIndexer<T>> indexGenerator, bool multipleValue = false)
         {
-            var fields = Reflection.GetSchemaFields(typeof(X));
-            foreach (var field in fields)
-            {
-                switch (Reflection.GetBondDataType(field.MemberType))
-                {
-                    case BondDataType.BT_LIST:
-                    case BondDataType.BT_MAP:
-                    case BondDataType.BT_SET:
-                    case BondDataType.BT_STOP:
-                    case BondDataType.BT_STOP_BASE:
-                    case BondDataType.BT_STRING:
-                    case BondDataType.BT_WSTRING:
-                    case BondDataType.BT_STRUCT:
-                    case BondDataType.BT_UNAVAILABLE:
-                        {
-                            return false;
-                        }
-                }
-            }
+            var indexer = new TableIndexer<T>();
+            indexGenerator(indexer);
 
-            return true;
-        }
-
-        private int GetExpectedTypeSize<X>()
-        {
-            switch (typeof(X).GetBondDataType())
-            {
-                case BondDataType.BT_LIST:
-                case BondDataType.BT_MAP:
-                case BondDataType.BT_SET:
-                case BondDataType.BT_STOP:
-                case BondDataType.BT_STOP_BASE:
-                case BondDataType.BT_STRING:
-                case BondDataType.BT_WSTRING:
-                case BondDataType.BT_STRUCT:
-                case BondDataType.BT_UNAVAILABLE:
-                    return -1;
-                case BondDataType.BT_BOOL:
-                case BondDataType.BT_INT8:
-                case BondDataType.BT_UINT8:
-                    return 1;
-                case BondDataType.BT_INT16:
-                case BondDataType.BT_UINT16:
-                    return 2;
-                case BondDataType.BT_FLOAT:
-                case BondDataType.BT_INT32:
-                case BondDataType.BT_UINT32:
-                    return 4;                    
-                case BondDataType.BT_DOUBLE:
-                case BondDataType.BT_INT64:
-                case BondDataType.BT_UINT64:
-                    return 8;
-            }
-
-            return -1;
-        }
-
-        public TableSchema<T> DefineIndex<W1>(string name, Func<T, Slice> first, bool multipleValue = false)
-        {
             // Construct an Expression<Func, byte[]> to build the key from object Keys
-
             var schemaIndexDef = new SchemaIndexDef
             {
-                CreateKey = first,
-                FieldsCount = 1,
-                IsFixedSize = IsFixedSizeType<W1>(),
-                Size = GetExpectedTypeSize<W1>(),
+                CreateKey = indexer.Generate().Compile(),
+                IsFixedSize = indexer.IsFixedSize,
+                Size = indexer.ExpectedSize,
                 MultiValue = multipleValue,
                 Name = name
             };
@@ -129,94 +219,23 @@ namespace Voron.Data.Tables
             return this;
         }
 
-        //public TableSchema<T> DefineIndex<W1, W2>(string name, Expression<Func<T, W1>> first, Expression<Func<T, W2>> second, bool multipleValue = false)
-        //{
-        //    int size = -1;
-        //    int sizeW1 = GetExpectedTypeSize<W1>();
-        //    int sizeW2 = GetExpectedTypeSize<W1>();
-        //    if (sizeW1 != -1 && sizeW2 != -1)
-        //        size = sizeW1 + sizeW2;
-
-        //    // Construct an Expression<Func, byte[]> to build the key from object Keys
-
-        //    var schemaIndexDef = new SchemaIndexDef
-        //    {
-        //        IndexedFieldsTypes = new[] { typeof(W1) },
-        //        IsFixedSize = false,
-        //        Size = size,
-        //        MultiValue = multipleValue,
-        //        Name = name
-        //    };
-
-        //    this._indexes[name] = schemaIndexDef;
-
-        //    return this;
-        //}
-
-
-        //private SchemaIndexDef CreateSchemaIndexDef(string name, bool multipleValue, T[] fieldsToIndex)
-        //{
-        //    var isFixedSize = true;
-        //    var size = 0;
-
-        //    foreach (var field in fieldsToIndex)
-        //    {
-        //        var structureField = _schema.Fields[field.GetHashCode()];
-        //        var fixedSizeField = structureField as FixedSizeField;
-        //        isFixedSize &= fixedSizeField != null;
-        //        size = fixedSizeField?.Size ?? 0;
-        //    }
-
-        //    var schemaIndexDef = new SchemaIndexDef
-        //    {
-        //        IndexedFields = fieldsToIndex,
-        //        IsFixedSize = isFixedSize,
-        //        Size = size,
-        //        MultiValue = multipleValue,
-        //        Name = name
-        //    };
-        //    return schemaIndexDef;
-        //}
-
-
-        //public TableSchema<T> DefineKey(params T[] fieldsToIndex)
-        //{
-        //    _pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
-        //    return this;
-        //}
-
-
-        public TableSchema<T> DefineKey<W1>(Func<T, Slice> first)
+        public TableSchema<T> DefineKey(Action<TableIndexer<T>> indexGenerator)
         {
             // Construct an Expression<Func, byte[]> to build the key from object Keys
+            var indexer = new TableIndexer<T>();
+            indexGenerator(indexer);
 
             _pk = new SchemaIndexDef
             {
-                CreateKey = first,
-                FieldsCount = 1,
-                IsFixedSize = IsFixedSizeType<W1>(),
-                Size = GetExpectedTypeSize<W1>(),
+                CreateKey = indexer.Generate().Compile(),
+                IsFixedSize = indexer.IsFixedSize,
+                Size = indexer.ExpectedSize,
                 MultiValue = false,
                 Name = "PK"
             };
 
             return this;
         }
-
-        public TableSchema<T> DefineKey<W1, W2>(Func<T, W1> first, Func<T, W2> second)
-        {
-            //_pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
-            throw new NotImplementedException();
-            return this;
-        }
-
-        public TableSchema<T> DefineKey<W1, W2, W3>(Func<T, W1> first, Func<T, W2> second, Func<T, W3> third)
-        {
-            //_pk = CreateSchemaIndexDef("PK", false, fieldsToIndex);
-            throw new NotImplementedException();
-            return this;
-        }
-
 
         /// <summary>
         /// A table is stored inside a tree, and has the following keys in it

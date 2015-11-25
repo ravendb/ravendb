@@ -31,6 +31,10 @@ namespace Voron.Data.Tables
         private FixedSizeTree _activeCandidateSection;
         private readonly int _pageSize;
 
+        private static readonly ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>> readerOfTPool = new ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>>(() => new Deserializer<CompactBinaryReader<InputPointer>>(typeof(T)));
+        private static readonly ObjectPool<Serializer<CompactBinaryWriter<OutputBuffer>>> writerOfTPool = new ObjectPool<Serializer<CompactBinaryWriter<OutputBuffer>>>(() => new Serializer<CompactBinaryWriter<OutputBuffer>>(typeof(T)));
+        private static readonly ObjectPool<OutputBuffer> buffersPool = new ObjectPool<OutputBuffer>(() => new OutputBuffer(512));
+
         public FixedSizeTree FixedSizeKey
         {
             get
@@ -90,14 +94,14 @@ namespace Voron.Data.Tables
 
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
-            //DeleteValueFromIndex(previousId, new StructureReader<T>(data, _schema.StructureSchema));
-            //DeleteValueFromIndex(newId, new StructureReader<T>(data, _schema.StructureSchema));
-
             // Read from pointer. 
+            var readerOfT = readerOfTPool.Allocate();
+
             var input = new InputPointer(data, size);
-            var reader = new FastBinaryReader<InputPointer>(input);
-            // We can write to an intermediate buffer and then issue a memory copy.
-            var value = Deserialize<T>.From(reader);
+            var reader = new CompactBinaryReader<InputPointer>(input);
+            var value = readerOfT.Deserialize<T>(reader);
+
+            readerOfTPool.Free(readerOfT);
 
             DeleteValueFromIndex(previousId, value);
             DeleteValueFromIndex(newId, value);
@@ -127,23 +131,19 @@ namespace Voron.Data.Tables
             int size;
             var ptr = DirectRead(id, out size);
 
-            // Read from pointer. 
-            var input = new InputPointer(ptr, size);
-            var reader = new FastBinaryReader<InputPointer>(input);
-            // We can write to an intermediate buffer and then issue a memory copy.
-            return Deserialize<T>.From(reader);
+            var readerOfT = readerOfTPool.Allocate();
+            try
+            {
+                // Read from pointer. 
+                var input = new InputPointer(ptr, size);
+                var reader = new CompactBinaryReader<InputPointer>(input);
+                return readerOfT.Deserialize<T>(reader);
+            }
+            finally
+            {
+                readerOfTPool.Free(readerOfT);
+            }
         }
-
-        //public StructureReader<T> ReadByKey(Slice key)
-        //{
-        //    var readResult = GetTree(_schema.Key.Name).Read(key);
-        //    if (readResult == null)
-        //        return null;
-        //    var id = readResult.Reader.ReadLittleEndianInt64();
-        //    int size;
-        //    var ptr = DirectRead(id, out size);
-        //    return new StructureReader<T>(ptr, _schema.StructureSchema);
-        //}
 
         private byte* DirectRead(long id, out int size)
         {
@@ -179,27 +179,18 @@ namespace Voron.Data.Tables
             Update(id, value);
         }
 
-        //public void Set(Structure<T> value)
-        //{
-        //    var reader = new StructureReader<T>(value, _schema.StructureSchema);
-        //    var pkVal = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
-        //    var pkIndex = GetTree(_schema.Key.Name);
-        //    var readResult = pkIndex.Read(pkVal);
-        //    if (readResult == null)
-        //    {
-        //        Insert(value);
-        //        return;
-        //    }
-        //    long id = readResult.Reader.ReadLittleEndianInt64();
-        //    Update(id, value);
-        //}
-
         private void Update(long id, T value)
         {
-            var output = new OutputBuffer();
-            var writer = new FastBinaryWriter<OutputBuffer>(output);
-            // We can write to an intermediate buffer and then issue a memory copy.
-            Serialize.To(writer, value);
+            var writerOfT = writerOfTPool.Allocate();
+
+            var output = buffersPool.Allocate();
+            output.Position = 0;
+
+            var writer = new CompactBinaryWriter<OutputBuffer>(output);
+            writerOfT.Serialize(value, writer);
+
+            buffersPool.Free(output);
+            writerOfTPool.Free(writerOfT);
 
             int size = (int)output.Position;
 
@@ -264,51 +255,6 @@ namespace Voron.Data.Tables
             Insert(value);
         }
 
-        //private void Update(long id, Structure<T> value)
-        //{
-        //    var size = value.GetSize();
-        //    var prevIsSmall = id % _pageSize != 0;
-        //    // first, try to fit in place, either in small or large sections
-        //    if (size < ActiveDataSmallSection.MaxItemSize)
-        //    {
-        //        int _;
-        //        byte* pos;
-        //        if (prevIsSmall &&
-        //            ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
-        //        {
-        //            var oldData = ActiveDataSmallSection.DirectRead(id, out _);
-
-        //            DeleteValueFromIndex(id, new StructureReader<T>(oldData, _schema.StructureSchema));
-        //            value.Write(pos);
-        //            InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
-
-        //            return;
-        //        }
-        //    }
-        //    else if (prevIsSmall == false)
-        //    {
-        //        var pageNumber = id / _pageSize;
-        //        var page = _tx.LowLevelTransaction.GetPage(pageNumber);
-        //        var existingNumberOfPages = _tx.LowLevelTransaction
-        //            .DataPager.GetNumberOfOverflowPages(page.OverflowSize);
-        //        var newNumberOfPages = _tx.LowLevelTransaction
-        //            .DataPager.GetNumberOfOverflowPages(size);
-        //        if (existingNumberOfPages == newNumberOfPages)
-        //        {
-        //            page.OverflowSize = size;
-        //            var pos = page.Pointer + sizeof(PageHeader);
-        //            DeleteValueFromIndex(id, new StructureReader<T>(pos, _schema.StructureSchema));
-        //            value.Write(pos);
-        //            InsertIndexValuesFor(id, new StructureReader<T>(pos, _schema.StructureSchema));
-
-        //            return;
-        //        }
-        //    }
-        //    // can't fit in place, will just delete & insert instead
-        //    Delete(id);
-        //    Insert(value);
-        //}
-
         private void Delete(long id)
         {
             int size;
@@ -316,11 +262,14 @@ namespace Voron.Data.Tables
             if (ptr == null)
                 return;
 
+            var readerOfT = readerOfTPool.Allocate();
+
             // Read from pointer. 
             var input = new InputPointer(ptr, size);
-            var reader = new FastBinaryReader<InputPointer>(input);
-            // We can write to an intermediate buffer and then issue a memory copy.
-            var value = Deserialize<T>.From(reader);
+            var reader = new CompactBinaryReader<InputPointer>(input);
+            var value = readerOfT.Deserialize<T>(reader);
+
+            readerOfTPool.Free(readerOfT);
 
             DeleteValueFromIndex(id, value);
 
@@ -375,9 +324,13 @@ namespace Voron.Data.Tables
 
         private void DeleteValueFromIndex(long id, byte* ptr, int size)
         {
+            var readerOfT = readerOfTPool.Allocate();
+
             var input = new InputPointer(ptr, size);
-            var reader = new FastBinaryReader<InputPointer>(input);
-            T value = Deserialize<T>.From(reader);
+            var reader = new CompactBinaryReader<InputPointer>(input);
+            T value = readerOfT.Deserialize<T>(reader);
+
+            readerOfTPool.Free(readerOfT);
 
             DeleteValueFromIndex(id, value);
         }
@@ -399,36 +352,22 @@ namespace Voron.Data.Tables
             }
         }
 
-        //private void DeleteValueFromIndex(long id, StructureReader<T> value)
-        //{
-        //    var keySlice = GetSliceFromStructure(value, _schema.Key.IndexedFields);
-        //    var pkTree = GetTree(_schema.Key.Name);
-        //    pkTree.Delete(keySlice);
-
-        //    foreach (var indexDef in _schema.Indexes.Values)
-        //    {
-        //        var indexTree = GetTree(indexDef.Name);
-        //        var val = GetSliceFromStructure(value, indexDef.IndexedFields);
-        //        var fst = new FixedSizeTree(_tx.LowLevelTransaction,indexTree, val,0);
-        //        fst.Delete(id);
-        //    }
-        //}
-
-        private int GetStorageSize(T value)
-        {
-            throw new NotImplementedException();
-        }
-
         private void Insert(T value)
         {
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
-            var output = new OutputBuffer();
-            var writer = new FastBinaryWriter<OutputBuffer>(output);
-            // We can write to an intermediate buffer and then issue a memory copy.
-            Serialize.To(writer, value);
+            var writerOfT = writerOfTPool.Allocate();
+
+            var output = buffersPool.Allocate();
+            output.Position = 0;
+
+            var writer = new CompactBinaryWriter<OutputBuffer>(output);
+            writerOfT.Serialize(value, writer);
+
+            buffersPool.Free(output);
+            writerOfTPool.Free(writerOfT);
 
             int size = (int)output.Position;
 
@@ -479,39 +418,6 @@ namespace Voron.Data.Tables
             InsertIndexValuesFor(id, value);
         }
 
-        //private void Insert(Structure<T> value)
-        //{
-        //    var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
-        //    NumberOfEntries++;
-        //    stats->NumberOfEntries = NumberOfEntries;
-
-        //    var size = value.GetSize();
-        //    long id;
-        //    if (size < ActiveDataSmallSection.MaxItemSize)
-        //    {
-        //        id = AllocateFromSmallActiveSection(size);
-        //        byte* pos;
-        //        if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-        //        {
-        //            throw new InvalidOperationException(
-        //                $"After successfully allocating {size:#,#;;0} bytes," +
-        //                $" failed to write them on {_schema.Name}");
-        //        }
-        //        value.Write(pos);
-        //    }
-        //    else
-        //    {
-        //        var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
-        //        var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
-        //        page.Flags = PageFlags.Overflow | PageFlags.RawData;
-        //        page.OverflowSize = size;
-        //        byte* pos = page.Pointer + sizeof(PageHeader);
-        //        value.Write(pos);
-        //        id = page.PageNumber;
-        //    }
-        //    InsertIndexValuesFor(id, new StructureReader<T>(value, _schema.StructureSchema));
-        //}
-
         private void InsertIndexValuesFor(long id, T value)
         {
             var isAsBytes = EndianBitConverter.Little.GetBytes(id);
@@ -528,23 +434,6 @@ namespace Voron.Data.Tables
                 index.Add(id);
             }
         }
-
-        //private void InsertIndexValuesFor(long id, StructureReader<T> reader)
-        //{
-        //    var isAsBytes = EndianBitConverter.Little.GetBytes(id);
-
-        //    var pkval = GetSliceFromStructure(reader, _schema.Key.IndexedFields);
-        //    var pkIndex = GetTree(_schema.Key.Name);
-        //    pkIndex.Add(pkval, isAsBytes, 0);
-
-        //    foreach (var indexDef in _schema.Indexes.Values)
-        //    {
-        //        var indexTree = GetTree(indexDef.Name);
-        //        var val = GetSliceFromStructure(reader, indexDef.IndexedFields);
-        //        var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
-        //        index.Add(id);
-        //    }
-        //}
 
         private long AllocateFromSmallActiveSection(int size)
         {
@@ -684,9 +573,17 @@ namespace Voron.Data.Tables
             byte* rawData = DirectRead(id, out size);
 
             // Read from pointer. 
-            var input = new InputPointer(rawData, size);
-            var reader = new FastBinaryReader<InputPointer>(input);
-            return Deserialize<T>.From(reader);
+            var readerOfT = readerOfTPool.Allocate();
+            try
+            {
+                var input = new InputPointer(rawData, size);
+                var reader = new CompactBinaryReader<InputPointer>(input);
+                return readerOfT.Deserialize<T>(reader);
+            }
+            finally
+            {
+                readerOfTPool.Free(readerOfT);
+            }
         }
     }
 }
