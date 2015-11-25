@@ -26,20 +26,20 @@ namespace Voron.Tests.Tables
             using (var tx = Env.WriteTransaction())
             {
                 // var docs = new Table<DocumentsFields>(_docsSchema, tx);
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
-                var doc = docs.ReadByKey("users/1");
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var handle = docs.ReadByKey("users/1");
 
-                Assert.Equal("{'Name': 'Oren'}", doc.Data);
+                Assert.Equal("{'Name': 'Oren'}", handle.Value.Data);
                 tx.Commit();
             }
         }
@@ -56,30 +56,30 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Eini'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Eini'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
-                var doc = docs.ReadByKey("users/1");
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var handle = docs.ReadByKey("users/1");
 
-                Assert.Equal("{'Name': 'Eini'}", doc.Data);
+                Assert.Equal("{'Name': 'Eini'}", handle.Value.Data);
                 tx.Commit();
             }
         }
@@ -96,17 +96,17 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -115,10 +115,10 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = docs.ReadByKey("users/1");
-                Assert.Null(doc);
+                var handle = docs.ReadByKey("users/1");
+                Assert.Null(handle);
             }
         }
 

@@ -23,20 +23,20 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
 
-                doc = new Documents { Etag = 2L, Key = "users/2", Data = "{'Name': 'Eini'}", Collection = "Users" };
-                docs.Set(doc);
+                doc = new Documents { Etag = 2L, Key = "users/2", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Eini'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
                 var seekResults = docs.SeekTo("By/Etag&Collection", "Users").GetEnumerator();
                 Assert.True(seekResults.MoveNext());
@@ -45,8 +45,8 @@ namespace Voron.Tests.Tables
                 var valueReader = reader.Key.CreateReader();
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(1L, valueReader.ReadBigEndianInt64());
-                var result = reader.Results.Single();
-                Assert.Equal("{'Name': 'Oren'}", result.Data);
+                var handle = reader.Results.Single();
+                Assert.Equal("{'Name': 'Oren'}", handle.Value.Data);
 
                 Assert.True(seekResults.MoveNext());
                 reader = seekResults.Current;
@@ -54,8 +54,8 @@ namespace Voron.Tests.Tables
                 valueReader = reader.Key.CreateReader();
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(2L, valueReader.ReadBigEndianInt64());
-                result = reader.Results.Single();
-                Assert.Equal("{'Name': 'Eini'}", result.Data);
+                handle = reader.Results.Single();
+                Assert.Equal("{'Name': 'Eini'}", handle.Value.Data);
 
                 Assert.False(seekResults.MoveNext());
                 tx.Commit();
@@ -74,17 +74,17 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -93,7 +93,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
                 var reader = docs.SeekTo("By/Etag&Collection", "Users");
                 Assert.Empty(reader);
@@ -113,27 +113,27 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Data = "{'Name': 'Oren'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 2L, Key = "users/1", Data = "{'Name': 'Eini'}", Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 2L, Key = "users/1", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = "{'Name': 'Eini'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
                 var reader = docs.SeekTo("By/Etag&Collection", "Users")
                                  .First();
@@ -142,8 +142,8 @@ namespace Voron.Tests.Tables
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(2L, valueReader.ReadBigEndianInt64());
 
-                var result = reader.Results.Single();
-                Assert.Equal("{'Name': 'Eini'}", result.Data);
+                var handle = reader.Results.Single();
+                Assert.Equal("{'Name': 'Eini'}", handle.Value.Data);
 
                 tx.Commit();
             }

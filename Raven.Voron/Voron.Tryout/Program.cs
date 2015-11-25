@@ -33,10 +33,10 @@ namespace Voron.Tryout
             {
                 _docsSchema.Create(tx);
 
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/test", Data = data, Collection = "Users" };
-                docs.Set(doc);
+                var doc = new Documents { Etag = 1L, Key = "users/test", Collection = "Users" };
+                docs.Set(doc, new DocumentData { Data = data });
                 docs.ReadByKey(new Slice("users/test"));
 
                 tx.Commit();
@@ -72,12 +72,15 @@ namespace Voron.Tryout
         {
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
+                long etag = 1L;
                 for (int i = 0; i < 100; i++)
                 {
-                    var doc = new Documents { Etag = 1L, Key = "users/" + i, Data = data, Collection = "Users" };
-                    docs.Set(doc);
+                    var doc = new Documents { Etag = etag, Key = "users/" + i, Collection = "Users" };
+                    docs.Set(doc, new DocumentData { Data = data });
+
+                    etag++;
                 }
 
                 tx.Commit();
@@ -85,7 +88,7 @@ namespace Voron.Tryout
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents>(_docsSchema, tx);
+                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
 
                 for (int i = 0; i < 100; i++)
                 {
@@ -99,7 +102,7 @@ namespace Voron.Tryout
         public static void Main(string[] args)
         {
             var p = new Program();
-            p.DataSize = 256;
+            p.DataSize = 2000;
             p.Setup();
             p.InsertInTable();
 

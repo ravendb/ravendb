@@ -16,7 +16,51 @@ using Bond.Protocols;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class Table<T>
+    internal sealed class SharedPool
+    {
+        public static readonly ObjectPool<OutputBuffer> Buffers = new ObjectPool<OutputBuffer>(() => new OutputBuffer(512));
+    }
+
+    internal sealed class SharedPool<T>
+    {
+        public static readonly ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>> Reader = new ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>>(() => new Deserializer<CompactBinaryReader<InputPointer>>(typeof(T)));        
+    }
+
+
+    public unsafe class TableHandle<T, TData> 
+    {
+        public T Key;
+        private int Size;
+        private byte* DataPointer;        
+
+        public TableHandle( T indexKeys, byte* ptr, int size)
+        {
+            this.Key = indexKeys;
+            this.DataPointer = ptr;
+            this.Size = size;
+        }
+
+        public TData Value
+        {
+            get
+            {
+                var readerOfT = SharedPool<TData>.Reader.Allocate();
+
+                try
+                {                    
+                    var input = new InputPointer(DataPointer, Size);
+                    var reader = new CompactBinaryReader<InputPointer>(input);
+                    return readerOfT.Deserialize<TData>(reader);
+                }
+                finally
+                {
+                    SharedPool<TData>.Reader.Free(readerOfT);
+                }                
+            }
+        }
+    }
+
+    public unsafe class Table<T, TData>
     {
         private Dictionary<Slice, Tree> _treesBySlice;
         private Dictionary<string, Slice> _sliceByName;
@@ -30,10 +74,6 @@ namespace Voron.Data.Tables
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
         private readonly int _pageSize;
-
-        private static readonly ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>> readerOfTPool = new ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>>(() => new Deserializer<CompactBinaryReader<InputPointer>>(typeof(T)));
-        private static readonly ObjectPool<Serializer<CompactBinaryWriter<OutputBuffer>>> writerOfTPool = new ObjectPool<Serializer<CompactBinaryWriter<OutputBuffer>>>(() => new Serializer<CompactBinaryWriter<OutputBuffer>>(typeof(T)));
-        private static readonly ObjectPool<OutputBuffer> buffersPool = new ObjectPool<OutputBuffer>(() => new OutputBuffer(512));
 
         public FixedSizeTree FixedSizeKey
         {
@@ -95,13 +135,13 @@ namespace Voron.Data.Tables
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
             // Read from pointer. 
-            var readerOfT = readerOfTPool.Allocate();
+            var readerOfT = SharedPool<T>.Reader.Allocate();
 
             var input = new InputPointer(data, size);
             var reader = new CompactBinaryReader<InputPointer>(input);
             var value = readerOfT.Deserialize<T>(reader);
 
-            readerOfTPool.Free(readerOfT);
+            SharedPool<T>.Reader.Free(readerOfT);
 
             DeleteValueFromIndex(previousId, value);
             DeleteValueFromIndex(newId, value);
@@ -120,28 +160,30 @@ namespace Voron.Data.Tables
             NumberOfEntries = stats->NumberOfEntries;
         }
 
-        public T ReadByKey(Slice key)
+        public TableHandle<T, TData> ReadByKey(Slice key)
         {
             var readResult = GetTree(_schema.Key.Name).Read(key);
             if (readResult == null)
-                return default(T);
+                return default(TableHandle<T, TData>);
 
             var id = readResult.Reader.ReadLittleEndianInt64();
 
             int size;
-            var ptr = DirectRead(id, out size);
+            var rawData = DirectRead(id, out size);
 
-            var readerOfT = readerOfTPool.Allocate();
+            var readerOfT = SharedPool<T>.Reader.Allocate();
             try
             {
                 // Read from pointer. 
-                var input = new InputPointer(ptr, size);
+                var input = new InputPointer(rawData, size);
                 var reader = new CompactBinaryReader<InputPointer>(input);
-                return readerOfT.Deserialize<T>(reader);
+                var keys = readerOfT.Deserialize<T>(reader);
+
+                return new TableHandle<T, TData>(keys, rawData + input.Position, size - (int)input.Position);
             }
             finally
             {
-                readerOfTPool.Free(readerOfT);
+                SharedPool<T>.Reader.Free(readerOfT);
             }
         }
 
@@ -162,7 +204,7 @@ namespace Voron.Data.Tables
             return ActiveDataSmallSection.DirectRead(id, out size);
         }
 
-        public void Set(T value)
+        public void Set(T value, TData data)
         {
             // We create an indexed 
             var pkValue = GetSliceFromStructure(value, _schema.Key);
@@ -171,27 +213,25 @@ namespace Voron.Data.Tables
             var readResult = pkIndex.Read(pkValue);
             if (readResult == null)
             {
-                Insert(value);
+                Insert(value, data);
                 return;
             }
 
             long id = readResult.Reader.ReadLittleEndianInt64();
-            Update(id, value);
+            Update(id, value, data);
         }
 
-        private void Update(long id, T value)
+        private void Update(long id, T value, TData data)
         {
-            var writerOfT = writerOfTPool.Allocate();
-
-            var output = buffersPool.Allocate();
+            var output = SharedPool.Buffers.Allocate();
             output.Position = 0;
 
             var writer = new CompactBinaryWriter<OutputBuffer>(output);
-            writerOfT.Serialize(value, writer);
+            Serialize.To(writer, value);
+            Serialize.To(writer, data);
 
-            buffersPool.Free(output);
-            writerOfTPool.Free(writerOfT);
-
+            SharedPool.Buffers.Free(output);
+ 
             int size = (int)output.Position;
 
             // first, try to fit in place, either in small or large sections
@@ -252,7 +292,7 @@ namespace Voron.Data.Tables
 
             // can't fit in place, will just delete & insert instead
             Delete(id);
-            Insert(value);
+            Insert(value, data);
         }
 
         private void Delete(long id)
@@ -262,14 +302,14 @@ namespace Voron.Data.Tables
             if (ptr == null)
                 return;
 
-            var readerOfT = readerOfTPool.Allocate();
+            var readerOfT = SharedPool<T>.Reader.Allocate();
 
             // Read from pointer. 
             var input = new InputPointer(ptr, size);
             var reader = new CompactBinaryReader<InputPointer>(input);
             var value = readerOfT.Deserialize<T>(reader);
 
-            readerOfTPool.Free(readerOfT);
+            SharedPool<T>.Reader.Free(readerOfT);
 
             DeleteValueFromIndex(id, value);
 
@@ -324,13 +364,13 @@ namespace Voron.Data.Tables
 
         private void DeleteValueFromIndex(long id, byte* ptr, int size)
         {
-            var readerOfT = readerOfTPool.Allocate();
+            var readerOfT = SharedPool<T>.Reader.Allocate();
 
             var input = new InputPointer(ptr, size);
             var reader = new CompactBinaryReader<InputPointer>(input);
             T value = readerOfT.Deserialize<T>(reader);
 
-            readerOfTPool.Free(readerOfT);
+            SharedPool<T>.Reader.Free(readerOfT);
 
             DeleteValueFromIndex(id, value);
         }
@@ -352,22 +392,20 @@ namespace Voron.Data.Tables
             }
         }
 
-        private void Insert(T value)
+        private void Insert(T value, TData data)
         {
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
-            var writerOfT = writerOfTPool.Allocate();
-
-            var output = buffersPool.Allocate();
+            var output = SharedPool.Buffers.Allocate();
             output.Position = 0;
 
             var writer = new CompactBinaryWriter<OutputBuffer>(output);
-            writerOfT.Serialize(value, writer);
+            Serialize.To(writer, value);
+            Serialize.To(writer, data);
 
-            buffersPool.Free(output);
-            writerOfTPool.Free(writerOfT);
+            SharedPool.Buffers.Free(output);
 
             int size = (int)output.Position;
 
@@ -522,7 +560,7 @@ namespace Voron.Data.Tables
             Delete(id);
         }
 
-        private IEnumerable<T> GetSecondaryIndexForValue(Tree tree, Slice value)
+        private IEnumerable<TableHandle<T, TData>> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
             var fstIndex = new FixedSizeTree(_tx.LowLevelTransaction, tree, value, 0);
             using (var it = fstIndex.Iterate())
@@ -541,7 +579,7 @@ namespace Voron.Data.Tables
         public class SeekResult
         {
             public Slice Key;
-            public IEnumerable<T> Results;
+            public IEnumerable<TableHandle<T, TData>> Results;
         }
 
         //TODO: need a proper way to handle this instead of just saying slice
@@ -567,22 +605,24 @@ namespace Voron.Data.Tables
             }
         }
 
-        private T ReadById(long id)
+        private TableHandle<T, TData> ReadById(long id)
         {
             int size;
             byte* rawData = DirectRead(id, out size);
 
             // Read from pointer. 
-            var readerOfT = readerOfTPool.Allocate();
+            var readerOfT = SharedPool<T>.Reader.Allocate();
             try
             {
                 var input = new InputPointer(rawData, size);
                 var reader = new CompactBinaryReader<InputPointer>(input);
-                return readerOfT.Deserialize<T>(reader);
+                var keys = readerOfT.Deserialize<T>(reader);
+
+                return new TableHandle<T, TData>(keys, rawData + input.Position, size - (int)input.Position);
             }
             finally
             {
-                readerOfTPool.Free(readerOfT);
+                SharedPool<T>.Reader.Free(readerOfT);
             }
         }
     }
