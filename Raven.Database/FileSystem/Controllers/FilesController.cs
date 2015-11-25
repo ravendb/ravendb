@@ -110,7 +110,8 @@ namespace Raven.Database.FileSystem.Controllers
                 else
                 {
                     int results;
-                    var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results);
+                    long durationInMs;
+                    var keys = Search.Query(null, null, Paging.Start, Paging.PageSize, out results, out durationInMs);
 
                     Storage.Batch(accessor => list.AddRange(keys.Select(accessor.ReadFile).Where(x => x != null)));
                 }
