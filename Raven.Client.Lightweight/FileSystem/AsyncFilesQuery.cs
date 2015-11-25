@@ -13,6 +13,15 @@ namespace Raven.Client.FileSystem
         #region IAsyncFilesQuery operations
 
         /// <summary>
+        ///     Provide statistics about the query, such as total count of matching records
+        /// </summary>
+        IAsyncFilesQuery<T> IAsyncFilesQueryBase<T, IAsyncFilesQuery<T>>.Statistics(out FilesQueryStatistics stats)
+        {
+            Statistics(out stats);
+            return this;
+        }
+
+        /// <summary>
         ///   This function exists solely to forbid in memory where clause on IAsyncFilesQuery, because
         ///   that is nearly always a mistake.
         /// </summary>
@@ -25,7 +34,6 @@ If you really want to do in memory filtering on the data returned from the query
         {
             throw new NotSupportedException();
         }
-
 
         /// <summary>
         /// Filter the results using the specified where clause.

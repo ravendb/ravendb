@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Tests.Helpers;
 using Xunit;
 using Raven.Json.Linq;
 using Raven.Client.FileSystem.Shard;
@@ -30,13 +28,13 @@ namespace Raven.Tests.FileSystem.Shard
         [Fact]
         public void CanGetSharding()
         {
-            var shards = shardedClient.GetShardsToOperateOn(new ShardRequestData{Keys = new List<string>{"test.bin"}});
+            var shards = shardedClient.GetShardsToOperateOn(new ShardRequestData { Keys = new List<string> { "test.bin" } });
             Assert.Equal(shards.Count, 2);
         }
 
         [Fact]
         public async Task CanGetFileFromSharding()
-        {       
+        {
             var ms = new MemoryStream();
             var streamWriter = new StreamWriter(ms);
             var expected = new string('a', 1024);
@@ -46,7 +44,7 @@ namespace Raven.Tests.FileSystem.Shard
             var newFileName = await shardedClient.UploadAsync("abc.txt", ms);
 
             var ms2 = await shardedClient.DownloadAsync(newFileName);
-          
+
             var actual = new StreamReader(ms2).ReadToEnd();
             Assert.Equal(expected, actual);
         }
@@ -196,7 +194,39 @@ namespace Raven.Tests.FileSystem.Shard
         }
 
         [Fact]
+        public async Task CanSearchForNotExistingFilesBySizeWithSharding()
+        {
+            await shardedClient.UploadAsync("1", StreamOfLength(1));
+            await shardedClient.UploadAsync("2", StreamOfLength(2));
+            await shardedClient.UploadAsync("3", StreamOfLength(3));
+            await shardedClient.UploadAsync("4", StreamOfLength(4));
+            await shardedClient.UploadAsync("5", StreamOfLength(5));
+
+            var result = await shardedClient.SearchAsync("__size_numeric:[Lx7 TO Lx9]");
+
+            Assert.Equal(0, result.FileCount);
+            Assert.Equal(0, result.Files.Count);
+        }
+
+        [Fact]
         public async Task CanSearchForFilesBySizeWithShardingWithFields()
+        {
+            var name1 = await shardedClient.UploadAsync("1", StreamOfLength(1));
+            var name2 = await shardedClient.UploadAsync("2", StreamOfLength(2));
+            var name3 = await shardedClient.UploadAsync("3", StreamOfLength(3));
+            var name4 = await shardedClient.UploadAsync("4", StreamOfLength(4));
+            var name5 = await shardedClient.UploadAsync("5", StreamOfLength(5));
+
+            var result = await shardedClient.SearchAsync("__size_numeric:[Lx2 TO Lx4]", new[] { "__size" });
+            var files = result.Files;
+            var fileNames = files.Select(f => f.FullPath).ToArray();
+
+            Assert.Equal(3, result.FileCount);
+            Assert.Equal(new[] { name2, name3, name4 }, fileNames);
+        }
+
+        [Fact]
+        public async Task CanSearchForFilesWithShardingWithFields()
         {
             var name1 = await shardedClient.UploadAsync("111", StreamOfLength(100));
             var name2 = await shardedClient.UploadAsync("2", StreamOfLength(2));
@@ -204,11 +234,11 @@ namespace Raven.Tests.FileSystem.Shard
             var name4 = await shardedClient.UploadAsync("4", StreamOfLength(4));
             var name5 = await shardedClient.UploadAsync("55555", StreamOfLength(5));
 
-            var result = await shardedClient.SearchAsync("", new []{"__size"});
+            var result = await shardedClient.SearchAsync("", new[] { "__size" });
             var files = result.Files;
             var fileNames = files.Select(f => f.FullPath).ToArray();
 
-            Assert.Equal(new[] {name2, name3, name4, name5, name1 }, fileNames);
+            Assert.Equal(new[] { name2, name3, name4, name5, name1 }, fileNames);
         }
 
         [Fact]
