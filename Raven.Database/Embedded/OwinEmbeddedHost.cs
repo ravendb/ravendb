@@ -8,11 +8,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.WebSockets;
 using Microsoft.Owin;
 using Microsoft.Owin.Hosting;
 using Microsoft.Owin.Hosting.Engine;
 using Microsoft.Owin.Hosting.ServerFactory;
 using Microsoft.Owin.Hosting.Services;
+using Microsoft.Owin.Hosting.Tracing;
 using Owin;
 
 namespace Raven.Database.Embedded
@@ -55,7 +57,9 @@ namespace Raven.Database.Embedded
             }
 
             var testServerFactory = new OwinEmbeddedServerFactory();
-            IServiceProvider services = ServicesFactory.Create();
+            IServiceProvider services = ServicesFactory.Create(
+                serviceProvider => serviceProvider.AddInstance<ITraceOutputFactory>(new NullTraceOutputFactory())
+                );
             var engine = services.GetService<IHostingEngine>();
             var context = new StartContext(options)
             {
@@ -105,6 +109,14 @@ namespace Raven.Database.Embedded
                 public void Dispose()
                 {
                 }
+            }
+        }
+
+        private class NullTraceOutputFactory : ITraceOutputFactory
+        {
+            public TextWriter Create(string outputFile)
+            {
+                return StreamWriter.Null;
             }
         }
     }
