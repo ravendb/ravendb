@@ -20,6 +20,8 @@ properties {
     $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
+    $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
+    $nowarn = "1591 1573 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
 }
 
 task default -depends Test, DoReleasePart1
@@ -52,13 +54,12 @@ task Init -depends Verify40, Clean {
 task Compile -depends Init, CompileHtml5 {
     
     $commit = Get-Git-Commit-Full
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
-    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    &"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount
+    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
     
-    Write-Host "msbuild exit code:  $LastExitCode"
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=12.0 /maxcpucount /verbosity:minimal
+    
+    Write-Host "msbuild exit code: $LastExitCode"
 
     if( $LastExitCode -ne 0){
         throw "Failed to build"
@@ -75,10 +76,8 @@ task CompileHtml5 {
     
     "{ ""BuildVersion"": $env:buildlabel }" | Out-File "Raven.Studio.Html5\version.json" -Encoding UTF8
     
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
-    exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+    exec { &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="$nowarn" /verbosity:minimal }
     
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -420,7 +419,7 @@ task DoReleasePart1 -depends Compile, `
     CopyRootFiles, `
     ZipOutput, `
     CopyRavenTraffic, `
-    CopyStorageExporter {	
+    CopyStorageExporter {   
     
     Write-Host "Done building RavenDB"
 }
@@ -428,7 +427,7 @@ task DoRelease -depends DoReleasePart1, `
     CopyInstaller, `
     SignInstaller,
     CreateNugetPackages,
-    CreateSymbolSources {	
+    CreateSymbolSources {   
     
     Write-Host "Done building RavenDB"
 }
@@ -517,7 +516,7 @@ task Upload {
     if (Test-Path $uploader) {
         $log = $env:push_msg 
         if(($log -eq $null) -or ($log.Length -eq 0)) {
-          $log = git log -n 1 --oneline		
+          $log = git log -n 1 --oneline     
         }
         
         $log = $log.Replace('"','''') # avoid problems because of " escaping the output
@@ -750,14 +749,14 @@ task CreateSymbolSources -depends CreateNugetPackages {
         $srcDirNames = @($srcDirName1)
         if ($dirName -eq "RavenDB.Server") {
             $srcDirNames += @("Raven.Smuggler")
-        }		
+        }       
         
         foreach ($srcDirName in $srcDirNames) {
             Write-Host $srcDirName
             $csprojFile = $srcDirName -replace ".*\\", ""
             $csprojFile += ".csproj"
         
-            Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
+            Get-ChildItem $srcDirName\*.cs -Recurse |   ForEach-Object {
                 $indexOf = $_.FullName.IndexOf($srcDirName)
                 $copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
                 $copyTo = "$nuget_dir\$dirName\src\$copyTo"
@@ -782,7 +781,7 @@ task CreateSymbolSources -depends CreateNugetPackages {
                     
                     if ($fileToCopy.EndsWith("\*.cs")) {
                         #Get-ChildItem "$srcDirName\$fileToCopy" | ForEach-Object {
-                        #	Copy-Item $_.FullName "$nuget_dir\$dirName\src\$copyToPath".Replace("\*.cs", "\") -Recurse -Force
+                        #   Copy-Item $_.FullName "$nuget_dir\$dirName\src\$copyToPath".Replace("\*.cs", "\") -Recurse -Force
                         #}
                     } else {
                         New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
@@ -805,8 +804,8 @@ task CreateSymbolSources -depends CreateNugetPackages {
                         $srcDirName2 = "Raven.Voron/" + $srcDirName2
                     }
 
-                    Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
-                        $indexOf = $_.FullName.IndexOf($srcDirName2)	
+                    Get-ChildItem $srcDirName2\*.cs -Recurse |  ForEach-Object {
+                        $indexOf = $_.FullName.IndexOf($srcDirName2)    
                         $copyTo = $_.FullName.Substring($indexOf + $srcDirName2.Length + 1)
                         $copyTo = "$nuget_dir\$dirName\src\$srcDirName2\$copyTo"
                         
