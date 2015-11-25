@@ -259,7 +259,11 @@ namespace Raven.Database.Impl.DTC
             return results;
         }
 
-
+        public override IInFlightStateSnapshot GetSnapshot()
+        {
+            return new InFlightStateSnapshot(changedInTransaction, transactionStates);
+        }
+        
         public void Dispose()
         {
             _database.TimerManager.ReleaseTimer(timer);

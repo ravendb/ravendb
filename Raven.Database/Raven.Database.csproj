@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -169,6 +169,10 @@
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.1.37.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Collections.Immutable.1.1.37\lib\dotnet\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
@@ -277,7 +281,12 @@
     <Compile Include="FileSystem\Synchronization\SynchronizationConfigAccessor.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTaskContext.cs" />
     <Compile Include="FileSystem\Util\RandomProvider.cs" />
+    <Compile Include="Impl\DTC\ChangedDoc.cs" />
+    <Compile Include="Impl\DTC\EmptyInFlightStateSnapshot.cs" />
+    <Compile Include="Impl\DTC\IInFlightStateSnapshot.cs" />
+    <Compile Include="Impl\DTC\InFlightStateSnapshot.cs" />
     <Compile Include="Impl\DTC\ItemsToTouch.cs" />
+    <Compile Include="Impl\DTC\TransactionState.cs" />
     <Compile Include="Indexing\PropertyAccessor.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortField.cs" />
     <Compile Include="Indexing\Sorting\Custom\CustomSortFieldCompartor.cs" />

@@ -551,7 +551,7 @@ namespace Raven.Database.Indexing
             var lastEtag = last.Etag;
             var lastModified = last.LastModified.Value;
 
-            var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);
+            var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers);
 
             var filteredDocs =
                 BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>

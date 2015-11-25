@@ -177,7 +177,7 @@ namespace Raven.Database
                     Transformers = new TransformerActions(this, recentTouches, uuidGenerator, Log);
                     Documents = new DocumentActions(this, recentTouches, uuidGenerator, Log);
 
-                    inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, 
+                    inFlightTransactionalState = TransactionalStorage.InitializeInFlightTransactionalState(this, 
                         (key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
                         (key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
 

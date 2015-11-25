@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
-using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl.DTC
@@ -65,11 +63,9 @@ namespace Raven.Database.Impl.DTC
             return false;
         }
 
-        public new Func<TDocument, TDocument> GetNonAuthoritativeInformationBehavior<TDocument>(TransactionInformation tx,
-                                                                                            string key)
-            where TDocument : class, IJsonDocumentMetadata, new()
+        public override IInFlightStateSnapshot GetSnapshot()
         {
-            return null;
+            return EmptyInFlightStateSnapshot.Instance;
         }
 
         public new bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
