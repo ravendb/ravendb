@@ -19,7 +19,6 @@ using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -55,7 +54,7 @@ namespace Raven.Database.FileSystem.Search
         };
 
         private readonly string name;
-        private readonly InMemoryRavenConfiguration configuration; 
+        private readonly RavenConfiguration configuration; 
         private readonly object writerLock = new object();
         private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
@@ -70,7 +69,7 @@ namespace Raven.Database.FileSystem.Search
         private FileStream crashMarker;
         private bool resetIndexOnUncleanShutdown = false;
 
-        public IndexStorage(string name, InMemoryRavenConfiguration configuration)
+        public IndexStorage(string name, RavenConfiguration configuration)
         {
             if (configuration == null)
                 throw new ArgumentNullException("configuration");
@@ -156,13 +155,13 @@ namespace Raven.Database.FileSystem.Search
                     if (recoveryTried == false && luceneDirectory != null)
                     {
                         recoveryTried = true;
-                        StartupLog.WarnException("Could not open index for file system '" + name + "'. Trying to recover index", e);
+                        StartupLog.WarnException($"Could not open index for file system '{name}'. Trying to recover index", e);
                         StartupLog.Info("Recover functionality is still not implemented. Skipping.");
                     }
                     else
                     {
                         resetTried = true;
-                        StartupLog.WarnException("Could not open index for file system '" + name + "'. Recovery operation failed, forcibly resetting index", e);
+                        StartupLog.WarnException($"Could not open index for file system '{name}'. Recovery operation failed, forcibly resetting index", e);
 
                         TryResettingIndex();                        
                     }
@@ -287,7 +286,7 @@ namespace Raven.Database.FileSystem.Search
                         if (luceneDirectory.FileExists("writing-to-index.lock")) // we had an unclean shutdown
                         {
                             if (resetIndexOnUncleanShutdown)
-                                throw new InvalidOperationException(string.Format("Rude shutdown detected on '{0}' index in '{1}' directory.", name, path));
+                                throw new InvalidOperationException($"Rude shutdown detected on '{name}' index in '{path}' directory.");
 
                             CheckIndexAndTryToFix(luceneDirectory);
                             luceneDirectory.DeleteFile("writing-to-index.lock");
@@ -332,7 +331,7 @@ namespace Raven.Database.FileSystem.Search
 
         private void CheckIndexAndTryToFix(LuceneDirectory directory)
         {
-            StartupLog.Warn(string.Format("Unclean shutdown detected on file system '{0}', checking the index for errors. This may take a while.", name));
+            StartupLog.Warn($"Unclean shutdown detected on file system '{name}', checking the index for errors. This may take a while.");
 
             var memoryStream = new MemoryStream();
             var stringWriter = new StreamWriter(memoryStream);
@@ -347,7 +346,7 @@ namespace Raven.Database.FileSystem.Search
 
             if (StartupLog.IsWarnEnabled)
             {
-                StartupLog.Warn("Checking index for file system '{0}' took: {1}, clean: {2}", name, sp.Elapsed, status.clean);
+                StartupLog.Warn($"Checking index for file system '{name}' took: {sp.Elapsed}, clean: {status.clean}");
                 memoryStream.Position = 0;
 
                 Log.Warn(new StreamReader(memoryStream).ReadToEnd());
@@ -356,14 +355,15 @@ namespace Raven.Database.FileSystem.Search
             if (status.clean)
                 return;
 
-            StartupLog.Warn("Attempting to fix index of file system: '{0}'", name);
+            StartupLog.Warn($"Attempting to fix index of file system: '{name}'");
             sp.Restart();
             checkIndex.FixIndex(status);
-            StartupLog.Warn("Fixed index of file system '{0}' in {1}", name, sp.Elapsed);
+            StartupLog.Warn($"Fixed index of file system '{name}' in {sp.Elapsed}");
         }
 
-        public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults)
+        public string[] Query(string query, string[] sortFields, int start, int pageSize, out int totalResults, out long durationInMs)
         {
+            var sp = Stopwatch.StartNew();
             IndexSearcher searcher;
             using (GetSearcher(out searcher))
             {
@@ -372,12 +372,14 @@ namespace Raven.Database.FileSystem.Search
                 {
                     if (Log.IsDebugEnabled)
                         Log.Debug("Issuing query on index for all files");
+
                     fileQuery = new MatchAllDocsQuery();
                 }
                 else
                 {
                     if (Log.IsDebugEnabled)
-                        Log.Debug("Issuing query on index for: {0}", query);
+                        Log.Debug($"Issuing query on index for: {query}");
+
                     var queryParser = new SimpleFilesQueryParser(analyzer);
                     fileQuery = queryParser.Parse(query);
                 }
@@ -391,7 +393,9 @@ namespace Raven.Database.FileSystem.Search
                     var document = searcher.Doc(topDocs.ScoreDocs[i].Doc);
                     results.Add(document.Get("__key"));
                 }
+
                 totalResults = topDocs.TotalHits;
+                durationInMs = sp.ElapsedMilliseconds;
                 return results.ToArray();
             }
         }
@@ -472,11 +476,11 @@ namespace Raven.Database.FileSystem.Search
 
                 if (long.TryParse(value, out longValue))
                 {
-                    doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetLongValue(longValue));
+                    doc.Add(new NumericField($"{key.ToLower(CultureInfo.InvariantCulture)}_numeric", Field.Store.NO, true).SetLongValue(longValue));
                 }
                 else if (double.TryParse(value, out doubleValue))
                 {
-                    doc.Add(new NumericField(string.Format("{0}_numeric", key.ToLower(CultureInfo.InvariantCulture)), Field.Store.NO, true).SetDoubleValue(doubleValue));
+                    doc.Add(new NumericField($"{key.ToLower(CultureInfo.InvariantCulture)}_numeric", Field.Store.NO, true).SetDoubleValue(doubleValue));
                 }				
             }
         }
@@ -561,7 +565,7 @@ namespace Raven.Database.FileSystem.Search
 
         public void Dispose()
         {
-            var exceptionAggregator = new ExceptionAggregator(Log, string.Format("Could not properly close index storage for file system '{0}'", name));
+            var exceptionAggregator = new ExceptionAggregator(Log, $"Could not properly close index storage for file system '{name}'");
 
             exceptionAggregator.Execute(() => { if (analyzer != null) analyzer.Close(); });
             exceptionAggregator.Execute(() => { if (currentIndexSearcherHolder != null)  currentIndexSearcherHolder.SetIndexSearcher(null); });

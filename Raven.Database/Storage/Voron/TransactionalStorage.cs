@@ -36,6 +36,7 @@ using Task = System.Threading.Tasks.Task;
 using Raven.Unix.Native;
 using Raven.Abstractions;
 using Raven.Abstractions.Threading;
+using Raven.Database.Config.Settings;
 using Raven.Database.Util;
 using Voron.Impl.Paging;
 
@@ -58,7 +59,7 @@ namespace Raven.Storage.Voron
         private IDocumentCacher documentCacher;
         private IUuidGenerator uuidGenerator;
 
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
 
         private readonly Action onCommit;
         private readonly Action onStorageInaccessible;
@@ -72,7 +73,7 @@ namespace Raven.Storage.Voron
         private Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>> scheduledReductionsPerViewAndLevel
             = new Lazy<ConcurrentDictionary<int, RemainingReductionPerLevel>>(() => new ConcurrentDictionary<int, RemainingReductionPerLevel>());
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
+        public TransactionalStorage(RavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
         {
             this.configuration = configuration;
             this.onCommit = onCommit;
@@ -83,7 +84,7 @@ namespace Raven.Storage.Voron
             documentCacher = new DocumentCacher(configuration);
             exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(
-                configuration.Storage.Voron.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
+                configuration.Storage.MaxBufferPoolSize.GetValue(SizeUnit.Bytes), 
                 int.MaxValue); // 2GB max buffer size (voron limit)
             this.onNestedTransactionEnter = onNestedTransactionEnter;
             this.onNestedTransactionExit = onNestedTransactionExit;
@@ -334,10 +335,10 @@ namespace Raven.Storage.Voron
 
             options.OnScratchBufferSizeChanged += size =>
             {
-                if (configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold < 0)
+                if (configuration.Storage.ScratchBufferSizeNotificationThreshold == null)
                     return;
 
-                if (size < configuration.Storage.Voron.ScratchBufferSizeNotificationThreshold * 1024L * 1024L)
+                if (new Size(size, SizeUnit.Bytes) < configuration.Storage.ScratchBufferSizeNotificationThreshold)
                     return;
 
                 RunTransactionalStorageNotificationHandlers();
@@ -360,16 +361,16 @@ namespace Raven.Storage.Voron
             Id = tableStorage.Id;
         }
 
-        private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnly();
-            options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
-            options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
+            options.InitialFileSize = configuration.Storage.InitialFileSize?.GetValue(SizeUnit.Bytes);
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.GetValue(SizeUnit.Bytes);
 
             return options;
         }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             var directoryPath = configuration.Core.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo (directoryPath);
@@ -383,12 +384,12 @@ namespace Raven.Storage.Voron
                     filePathFolder.Create ();
             }
 
-            var tempPath = configuration.Storage.Voron.TempPath;
-            var journalPath = configuration.Storage.Voron.JournalsStoragePath;
+            var tempPath = configuration.Storage.TempPath;
+            var journalPath = configuration.Storage.JournalsStoragePath;
             var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = configuration.Storage.Voron.AllowIncrementalBackups;
-            options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
-            options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
+            options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
+            options.InitialFileSize = configuration.Storage.InitialFileSize?.GetValue(SizeUnit.Bytes);
+            options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.GetValue(SizeUnit.Bytes);
 
             return options;
         }
@@ -477,7 +478,7 @@ namespace Raven.Storage.Voron
         }
         public bool SupportsDtc { get { return false; } }
 
-        public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
+        public void Compact(RavenConfiguration ravenConfiguration, Action<string> output)
         {
             if (ravenConfiguration.Core.RunInMemory)
                 throw new InvalidOperationException("Cannot compact in-memory running Voron storage");

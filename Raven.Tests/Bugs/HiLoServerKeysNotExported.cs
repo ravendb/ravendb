@@ -47,15 +47,15 @@ namespace Raven.Tests.Bugs
             if(server != null)
                 server.Dispose();
 
-            server = new RavenDbServer(new RavenConfiguration
+            server = new RavenDbServer(new AppSettingsBasedConfiguration
                                         {
                                             Core =
                                             {
                                                 DataDirectory = "HiLoData",
                                                 Port = 8079,
+                                                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
                                             },
                                             RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                                            AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
                                         })
             {
                 UseEmbeddedHttpServer = true

@@ -6,6 +6,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 
@@ -13,14 +14,14 @@ namespace Raven.Database.Impl
 {
     public class DocumentCacher : IDocumentCacher, ILowMemoryHandler
     {
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
         private MemoryCache cachedSerializedDocuments;
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         
         [ThreadStatic]
         private static bool skipSettingDocumentInCache;
 
-        public DocumentCacher(InMemoryRavenConfiguration configuration)
+        public DocumentCacher(RavenConfiguration configuration)
         {
             this.configuration = configuration;
             cachedSerializedDocuments = CreateCache();
@@ -34,7 +35,7 @@ namespace Raven.Database.Impl
             {
                 {"physicalMemoryLimitPercentage", configuration.Memory.MemoryCacheLimitPercentage.ToString()},
                 {"pollingInterval",  configuration.Memory.MemoryCacheLimitCheckInterval.AsTimeSpan.ToString(@"hh\:mm\:ss")},
-                {"cacheMemoryLimitMegabytes", configuration.Memory.MemoryCacheLimit.Megabytes.ToString()}
+                {"cacheMemoryLimitMegabytes", (configuration.Memory.MemoryCacheLimit.GetValue(SizeUnit.Bytes) / 1024 / 1024).ToString()}
             });
             log.Info(@"MemoryCache Settings:
   PhysicalMemoryLimit = {0}

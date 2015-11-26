@@ -18,11 +18,11 @@ namespace Raven.Database.FileSystem.Synchronization
     {
         private readonly SigGenerator sigGenerator;
 
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
 
         private readonly ITransactionalStorage storage;
 
-        public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration)
+        public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator, RavenConfiguration configuration)
         {
             this.storage = storage;
             this.sigGenerator = sigGenerator;

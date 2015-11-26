@@ -2,17 +2,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Xunit;
 
 namespace Raven.Tests.Counters
 {
     public class CounterReplicationTests : RavenBaseCountersTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
-            configuration.Settings[Constants.Counter.ReplicationLatencyMs] = "10";
-            configuration.Counter.ReplicationLatencyInMs = 10;
+            configuration.Counter.ReplicationLatency = new TimeSetting(10, TimeUnit.Milliseconds);
         }
 
         [Fact]

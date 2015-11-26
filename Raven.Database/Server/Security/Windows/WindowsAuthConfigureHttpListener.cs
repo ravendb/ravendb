@@ -10,8 +10,8 @@ namespace Raven.Database.Server.Security.Windows
     {
         public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/[\w\.\-_]+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        private InMemoryRavenConfiguration configuration;
-        public void Configure(HttpListener listener, InMemoryRavenConfiguration config)
+        private RavenConfiguration configuration;
+        public void Configure(HttpListener listener, RavenConfiguration config)
         {
             configuration = config;
             listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
@@ -44,10 +44,10 @@ namespace Raven.Database.Server.Security.Windows
             }
 
             if (IsAdminRequest.IsMatch(request.RawUrl) && 
-                configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+                configuration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
                 return AuthenticationSchemes.IntegratedWindowsAuthentication;
 
-            switch (configuration.AnonymousUserAccessMode)
+            switch (configuration.Core.AnonymousUserAccessMode)
             {
                 case AnonymousUserAccessMode.Admin:
                 case AnonymousUserAccessMode.All:
@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Security.Windows
                 case AnonymousUserAccessMode.None:
                     return AuthenticationSchemes.IntegratedWindowsAuthentication;
                 default:
-                    throw new ArgumentException(string.Format("Cannot understand access mode: '{0}'", configuration.AnonymousUserAccessMode));
+                    throw new ArgumentException(string.Format("Cannot understand access mode: '{0}'", configuration.Core.AnonymousUserAccessMode));
             }
         }
     }

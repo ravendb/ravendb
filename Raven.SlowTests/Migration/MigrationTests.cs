@@ -79,9 +79,9 @@ namespace Raven.SlowTests.Migration
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Storage.Voron.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
+            configuration.Storage.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
             configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
             configuration.Core.RunInMemory = false;
         }

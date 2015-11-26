@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -22,6 +23,7 @@ using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Database.Smuggler.Common;
 using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Exceptions;
@@ -127,7 +129,7 @@ for(var customFunction in customFunctions) {{
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
-            string tempPath = Database.Configuration.TempPath;
+            string tempPath = Database.Configuration.Core.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
                 File.Delete(fullTempPath);
@@ -241,46 +243,41 @@ for(var customFunction in customFunctions) {{
         [RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
         public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
         {
-            throw new NotImplementedException();
-      
-   //         var requestString = smugglerOptionsJson.SmugglerOptions;
-   //         SmugglerDatabaseOptions smugglerOptions;
+            var requestString = smugglerOptionsJson.SmugglerOptions;
+            DatabaseSmugglerOptions smugglerOptions;
 
-   //         using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
-            //{
-            //	var serializer = JsonExtensions.CreateDefaultJsonSerializer();
-   //             smugglerOptions = (SmugglerDatabaseOptions)serializer.Deserialize(jsonReader, typeof(SmugglerDatabaseOptions));
-            //}
-            
-   //         var result = GetEmptyMessage();
-            
-   //         // create PushStreamContent object that will be called when the output stream will be ready.
-            //result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
-            //{
-            //    try
-            //    {
-            //	    var dataDumper = new DatabaseDataDumper(Database, smugglerOptions);
-            //	    await dataDumper.ExportData(
-            //		    new SmugglerExportOptions<RavenConnectionStringOptions>
-            //		    {
-            //			    ToStream = outputStream
-            //		    }).ConfigureAwait(false);
-            //    }
-            //    finally
-            //    {
-            //        outputStream.Close();
-            //    }
-            //});
-            
-   //         var fileName = String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ? 
-         //       string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
-         //       smugglerOptions.NoneDefualtFileName;
-   //         result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
-   //         {
-   //             FileName = fileName + ".ravendump"
-   //         };
-            
-            //return new CompletedTask<HttpResponseMessage>(result);
+            using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
+            {
+                var serializer = JsonExtensions.CreateDefaultJsonSerializer();
+                smugglerOptions = (DatabaseSmugglerOptions)serializer.Deserialize(jsonReader, typeof(DatabaseSmugglerOptions));
+            }
+
+            var result = GetEmptyMessage();
+
+            // create PushStreamContent object that will be called when the output stream will be ready.
+            result.Content = new PushStreamContent(async (outputStream, content, arg3) =>
+            {
+                try
+                {
+                    var smuggler = new DatabaseSmuggler(smugglerOptions, new DatabaseSmugglerEmbeddedSource(Database), new DatabaseSmugglerStreamDestination(outputStream, leaveOpen: true));
+                    await smuggler.ExecuteAsync().ConfigureAwait(false);
+                }
+                finally
+                {
+                    outputStream.Close();
+                }
+            });
+
+            var fileName = // TODO [ppekrol] String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm"));// :
+              //  smugglerOptions.NoneDefualtFileName;
+
+            result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = fileName + ".ravendump"
+            };
+
+            return new CompletedTask<HttpResponseMessage>(result);
         }
         
         [HttpPost]
@@ -696,6 +693,23 @@ for(var customFunction in customFunctions) {{
             {
                 OperationId = id
             }, HttpStatusCode.Accepted);
+        }
+
+        [HttpPost]
+        [RavenRoute("studio-tasks/validateExportOptions")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/validateExportOptions")]
+        public HttpResponseMessage ValidateExportOptions([FromBody] DatabaseSmugglerOptions smugglerOptions)
+        {
+            try
+            {
+                new SmugglerJintHelper().Initialize(smugglerOptions);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidDataException("Incorrect transform script", e);
+            }
+
+            return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
         private static void GetConflictDocuments(IEnumerable<JsonDocument> conflicts, IStorageActionsAccessor actions, string documentId, string transactionalStorageId, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)

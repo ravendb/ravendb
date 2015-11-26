@@ -257,8 +257,8 @@ namespace Raven.Database.Server.Controllers.Admin
             var existingDatabase = Database.Documents.GetDocumentMetadata("Raven/Databases/" + databaseName);
             if (existingDatabase != null)
                 return GetMessageWithString("Cannot do an online restore for an existing database, delete the database " + databaseName + " and restore again.", HttpStatusCode.BadRequest);
-
-            var ravenConfiguration = new RavenConfiguration
+            
+            var ravenConfiguration = new AppSettingsBasedConfiguration(initialize: false)
             {
                 DatabaseName = databaseName,
                 IsTenantDatabase = true
@@ -268,13 +268,11 @@ namespace Raven.Database.Server.Controllers.Admin
             {
                 foreach (var setting in databaseDocument.Settings)
                 {
-                    ravenConfiguration.Settings[setting.Key] = setting.Value;
+                    ravenConfiguration.SetSetting(setting.Key, setting.Value);
                 }
             }
 
-            if (File.Exists(Path.Combine(restoreRequest.BackupLocation, BackupMethods.Filename)))
-                ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
-            else if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
+            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
                 throw new StorageNotSupportedException("Esent is no longer supported. Use Voron instead."); ;
 
             ravenConfiguration.CustomizeValuesForDatabaseTenant(databaseName);
@@ -338,15 +336,15 @@ namespace Raven.Database.Server.Controllers.Admin
                     if (databaseDocument == null)
                         return;
 
-                    databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
-                    databaseDocument.Settings.Remove(Constants.RavenIndexPath);
-                    databaseDocument.Settings.Remove(Constants.RavenTxJournalPath);
+                    databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = documentDataDir;
+                    databaseDocument.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.IndexStoragePath));
+                    databaseDocument.Settings.Remove(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath));
 
                     if (restoreRequest.IndexesLocation != null)
-                        databaseDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                        databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
 
                     if (restoreRequest.JournalsLocation != null)
-                        databaseDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                        databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
 
                     bool replicationBundleRemoved = false;
                     if (restoreRequest.DisableReplicationDestinations)
@@ -416,13 +414,13 @@ namespace Raven.Database.Server.Controllers.Admin
         private static bool TryRemoveReplicationBundle(DatabaseDocument databaseDocument)
         {
             string value;
-            if (databaseDocument.Settings.TryGetValue(Constants.ActiveBundles, out value) == false)
+            if (databaseDocument.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), out value) == false)
                 return false;
 
             var bundles = value.GetSemicolonSeparatedValues();
             var removed = bundles.RemoveAll(n => n.Equals("Replication", StringComparison.OrdinalIgnoreCase)) > 0;
 
-            databaseDocument.Settings[Constants.ActiveBundles] = string.Join(";", bundles);
+            databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = string.Join(";", bundles);
             return removed;
         }
 
@@ -450,10 +448,10 @@ namespace Raven.Database.Server.Controllers.Admin
             var databaseDocumentAsJson = DatabasesLandlord.SystemDatabase.Documents.Get(Constants.Database.Prefix + databaseName);
             var databaseDocument = databaseDocumentAsJson.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-            var bundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
+            var bundles = databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)].GetSemicolonSeparatedValues();
             bundles.Add("Replication");
 
-            databaseDocument.Settings[Constants.ActiveBundles] = string.Join(";", bundles);
+            databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = string.Join(";", bundles);
 
             DatabasesLandlord
                     .SystemDatabase
@@ -648,8 +646,8 @@ namespace Raven.Database.Server.Controllers.Admin
         public HttpResponseMessage IndexingStatus()
         {
             string indexDisableStatus;
-            bool result;
-            if (bool.TryParse(Database.Configuration.Settings[Constants.IndexingDisabled], out result) && result)
+
+            if (Database.Configuration.Indexing.Disabled)
             {
                 indexDisableStatus = "Disabled";
             }
@@ -725,7 +723,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
             var stats = new AdminStatistics
             {
-                ServerName = currentConfiguration.ServerName,
+                ServerName = currentConfiguration.Server.Name,
                 TotalNumberOfRequests = RequestManager.NumberOfRequests,
                 Uptime = SystemTime.UtcNow - RequestManager.StartUpTime,
                 Memory = new AdminMemoryStatistics
@@ -893,7 +891,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("admin/debug/info-package")]
         public HttpResponseMessage InfoPackage()
         {
-            var tempFileName = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
+            var tempFileName = Path.Combine(Database.Configuration.Core.TempPath, Path.GetRandomFileName());
             try
             {
                 var jsonSerializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -960,7 +958,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 {
                     if (Debugger.IsAttached) throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
 
-                    ravenDebugDir = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
+                    ravenDebugDir = Path.Combine(Database.Configuration.Core.TempPath, Path.GetRandomFileName());
                     var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
                     var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
 
@@ -1378,6 +1376,57 @@ namespace Raven.Database.Server.Controllers.Admin
             mergedTopology.SkippedResources = countersNames;
 
             return mergedTopology;
+        }
+
+        [HttpGet]
+        [RavenRoute("admin/dump")]
+        public HttpResponseMessage Dump()
+        {
+            var stop = GetQueryStringValue("stop");
+            if (!string.IsNullOrEmpty(stop))
+            {
+                MiniDumper.Instance.StopTimer();
+                return GetMessageWithString("Dump Timer Canceled", HttpStatusCode.Accepted);
+            }
+
+            var usage = GetQueryStringValue("usage");
+            if (!string.IsNullOrEmpty(usage))
+                return GetMessageWithString(MiniDumper.PrintUsage(), HttpStatusCode.Accepted);
+
+            MiniDumper.Instance.StopTimer();
+
+            int timerCount;
+            int period = 0;
+            bool useTimer =
+                int.TryParse(GetQueryStringValue("timer"), out timerCount) &&
+                int.TryParse(GetQueryStringValue("period"), out period);
+
+            var options =
+                MiniDumper.Option.WithThreadInfo |
+                MiniDumper.Option.WithProcessThreadData;
+            var ids = GetQueryStringValues("option");
+            foreach (var id in ids)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    options |= MiniDumper.StringToOption(id);
+                }
+            }
+
+            bool useStats = !string.IsNullOrEmpty(GetQueryStringValue("stats"));
+
+            try
+            {
+                if (useTimer == false)
+                    return GetMessageWithString(MiniDumper.Instance.Write(options), HttpStatusCode.Accepted);
+            }
+            catch (Exception ex)
+            {
+                return GetMessageWithString(ex.Message, HttpStatusCode.ExpectationFailed);
+            }
+
+            var url = $"http://{Request.RequestUri.Host}:{Request.RequestUri.Port}";
+            return GetMessageWithString(MiniDumper.Instance.StartTimer(timerCount, period, options, useStats, url), HttpStatusCode.Accepted);
         }
     }
 }

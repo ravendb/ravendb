@@ -36,7 +36,6 @@ namespace Raven.Client.FileSystem
         IAsyncFilesOrderedQuery<T> ThenByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
     }
 
-
     /// <summary>
     /// A query against a file system.
     /// </summary>
@@ -47,6 +46,11 @@ namespace Raven.Client.FileSystem
         /// Gets the files convention from the query session
         /// </summary>
         FilesConvention Conventions { get; }
+
+        /// <summary>
+        ///   Provide statistics about the query, such as total count of matching records
+        /// </summary>
+        TSelf Statistics(out FilesQueryStatistics stats);
 
         /// <summary>
         ///   This function exists solely to forbid in memory where clause on IFilesQuery, because
@@ -77,7 +81,6 @@ This is likely a bug, because this will execute the filter in memory, rather tha
         ///   Defaults to NotAnalyzed
         /// </remarks>
         TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
-
 
         /// <summary>
         /// Matches exact value

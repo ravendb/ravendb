@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Raft.Util;
 using Raven.Database.Server.WebApi.Attributes;
@@ -30,7 +31,7 @@ namespace Raven.Database.Server.Controllers
                     var settings = database.Value<RavenJObject>("Settings");
                     if (settings != null)
                     {
-                        var activeBundles = settings.Value<string>("Raven/ActiveBundles");
+                        var activeBundles = settings.Value<string>(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString));
                         if (activeBundles != null)
                         {
                             bundles = activeBundles.Split(';');
@@ -42,11 +43,11 @@ namespace Raven.Database.Server.Controllers
                     {
                         Name = dbName,
                         Disabled = database.Value<bool>("Disabled"),
-                        IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.IndexingDisabled),
-                        RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.RejectClientsModeEnabled),
-                        ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), Constants.Cluster.NonClusterDatabaseMarker),
+                        IndexingDisabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), RavenConfiguration.GetKey(x => x.Indexing.Disabled)),
+                        RejectClientsEnabled = GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), RavenConfiguration.GetKey(x => x.Core.RejectClientsMode)),
+                        ClusterWide = ClusterManager.IsActive() && !GetBooleanSettingStatus(database.Value<RavenJObject>("Settings"), RavenConfiguration.GetKey(x => x.Cluster.NonClusterDatabaseMarker)),
                         Bundles = bundles,
-                        IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
+                        IsAdminCurrentTenant = DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin,
                         IsLoaded = DatabasesLandlord.IsDatabaseLoaded(dbName)
                     };
                 }).ToList();

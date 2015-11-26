@@ -54,16 +54,16 @@ namespace Raven.Tests.FileSystem.Storage
         {
             path = path ?? NewDataPath();
 
-            var configuration = new InMemoryRavenConfiguration
+            var configuration = new RavenConfiguration
             {
                 FileSystem =
                 {
                     DataDirectory = path
                 },
-                Settings = new NameValueCollection
-                           {
-                               { Constants.RunInMemory, runInMemory.ToString() }
-                           }
+                Core =
+                {
+                    RunInMemory = runInMemory
+                }
             };
 
             ITransactionalStorage storage;

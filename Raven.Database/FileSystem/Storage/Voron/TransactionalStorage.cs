@@ -37,13 +37,11 @@ namespace Raven.Database.FileSystem.Storage.Voron
 {
     public class TransactionalStorage : ITransactionalStorage
     {
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
 
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly string path;
-
-        private readonly NameValueCollection settings;
 
         private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
         private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
@@ -60,11 +58,10 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private OrderedPartCollection<AbstractFileCodec> fileCodecs;
         private UuidGenerator uuidGenerator;
 
-        public TransactionalStorage(InMemoryRavenConfiguration configuration)
+        public TransactionalStorage(RavenConfiguration configuration)
         {
             this.configuration = configuration;
             path = configuration.FileSystem.DataDirectory.ToFullPath();
-            settings = configuration.Settings;
 
             RecoverFromFailedCompact(path);
 
@@ -100,21 +97,18 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         public Guid Id { get; private set; }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, RavenConfiguration configuration)
         {
-            bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
+            if (configuration.Core.RunInMemory)
+                return StorageEnvironmentOptions.CreateMemoryOnly();
 
             var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
-
-            var tempPath = settings[Constants.Voron.TempPath];
-            var journalPath = settings[Constants.RavenTxJournalPath];
-            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, configuration.Storage.TempPath, configuration.Storage.JournalsStoragePath);
+            options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
             return options;
         }
 
@@ -125,12 +119,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             fileCodecs = codecs;
             uuidGenerator = generator;
-
-            bool runInMemory;
-            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
-
-            var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
-                CreateStorageOptionsFromConfiguration(path, settings);
+            
+            var persistenceSource = CreateStorageOptionsFromConfiguration(path, configuration);
 
             tableStorage = new TableStorage(persistenceSource, bufferPool);
             var schemaCreator = new SchemaCreator(configuration, tableStorage, Output, Log);
@@ -252,12 +242,9 @@ namespace Raven.Database.FileSystem.Storage.Voron
             new RestoreOperation(restoreRequest, configuration, output).Execute();
         }
 
-        public void Compact(InMemoryRavenConfiguration ravenConfiguration, Action<string> output)
+        public void Compact(RavenConfiguration ravenConfiguration, Action<string> output)
         {
-            bool runInMemory;
-            bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
-
-            if (runInMemory)
+            if (configuration.Core.RunInMemory)
                 throw new InvalidOperationException("Cannot compact in-memory running Voron storage");
 
             tableStorage.Dispose();
@@ -270,7 +257,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             RecoverFromFailedCompact(sourcePath);
 
-            var sourceOptions = CreateStorageOptionsFromConfiguration(path, settings);
+            var sourceOptions = CreateStorageOptionsFromConfiguration(path, configuration);
             var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath);
 
             output("Executing storage compaction");

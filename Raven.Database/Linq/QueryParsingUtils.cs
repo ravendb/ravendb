@@ -285,7 +285,7 @@ namespace Raven.Database.Linq
 
         private static readonly ConcurrentDictionary<string, CacheEntry> cacheEntries = new ConcurrentDictionary<string, CacheEntry>();
 
-        public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, InMemoryRavenConfiguration configuration)
+        public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath, RavenConfiguration configuration)
         {
             source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
             var indexCacheDir = GetIndexCacheDir(configuration);
@@ -361,7 +361,7 @@ namespace Raven.Database.Linq
             }
         }
 
-        private static bool TryGetDiskCacheResult(string source, string name, InMemoryRavenConfiguration configuration, string indexFilePath,
+        private static bool TryGetDiskCacheResult(string source, string name, RavenConfiguration configuration, string indexFilePath,
                                                   out Type type)
         {
             // It's not in the in-memory cache. See if it's been cached on disk.
@@ -421,11 +421,11 @@ namespace Raven.Database.Linq
             return indexFilePath;
         }
 
-        private static string GetIndexCacheDir(InMemoryRavenConfiguration configuration)
+        private static string GetIndexCacheDir(RavenConfiguration configuration)
         {
             var indexCacheDir = configuration.Core.CompiledIndexCacheDirectory;
             if (string.IsNullOrWhiteSpace(indexCacheDir))
-                indexCacheDir = Path.Combine(configuration.TempPath, "Raven", "CompiledIndexCache");
+                indexCacheDir = Path.Combine(configuration.Core.TempPath, "Raven", "CompiledIndexCache");
 
             if (configuration.Core.RunInMemory == false)
             {
@@ -454,7 +454,7 @@ namespace Raven.Database.Linq
         }
 
         private static Type DoActualCompilation(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions,
-                                                string basePath, string indexFilePath, InMemoryRavenConfiguration configuration)
+                                                string basePath, string indexFilePath, RavenConfiguration configuration)
         {
             var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
 

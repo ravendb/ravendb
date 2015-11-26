@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CountersLandlord.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -24,6 +24,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 
@@ -35,14 +36,14 @@ namespace Raven.Database.Server.Tenancy
 
         public override string ResourcePrefix { get { return Constants.Counter.Prefix; } }
 
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        public event Action<RavenConfiguration> SetupTenantConfiguration = delegate { };
 
         public CountersLandlord(DocumentDatabase systemDatabase) : base(systemDatabase)
         {
             Init();
         }
 
-        public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+        public RavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
         public void Init()
         {
@@ -61,7 +62,7 @@ namespace Raven.Database.Server.Tenancy
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledCounterStorage = false)
+        public RavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledCounterStorage = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
@@ -69,45 +70,35 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.Counter.DataDirectory, systemDatabase.Configuration);		
+            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.Counter.DataDirectory), systemDatabase.Configuration);		
         }
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
+        protected RavenConfiguration CreateConfiguration(
                         string tenantId,
                         CounterStorageDocument document,
                         string folderPropName,
-                        InMemoryRavenConfiguration parentConfiguration)
+                        RavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+            var config = RavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForCounterStorageTenant(tenantId);
 
-            /*config.Settings[Constants.Counter.DataDirectory] = parentConfiguration.Counter.DataDirectory;
-            //config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            //TODO: what counters storage dir path?
-            //config.Settings["Raven/Counters/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;*/
-
             foreach (var setting in document.Settings)
             {
-                config.Settings[setting.Key] = setting.Value;
+                config.SetSetting(setting.Key, setting.Value);
             }
+
             Unprotect(document);
 
             foreach (var securedSetting in document.SecuredSettings)
             {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
+                config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Counter.DataDirectory);
-            //config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.Core.DataDirectory);
-
-            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Counter.DataDirectory));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath),config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(parentConfiguration.Core.DataDirectory));
 
             config.CounterStorageName = tenantId;
 
@@ -127,8 +118,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<CounterStorageDocument>();
-            if (document.Settings.Keys.Contains(Constants.Counter.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find " + Constants.Counter.DataDirectory);
+            if (document.Settings.Keys.Contains(RavenConfiguration.GetKey(x => x.Counter.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.Counter.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledCounterStorage)
                 throw new InvalidOperationException("The counter storage has been disabled.");
@@ -154,7 +145,7 @@ namespace Raven.Database.Server.Tenancy
 
             ManualResetEvent cleanupLock;
             if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
-                throw new InvalidOperationException(string.Format("Counters '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
+                throw new InvalidOperationException($"Counters '{tenantId}' are currently being restarted and cannot be accessed. We already waited {MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds} seconds.");
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out counter))
             {
@@ -175,27 +166,41 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+            var hasAcquired = false;
+            try
             {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
-                var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
-                AssertLicenseParameters(config);
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
 
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return cs;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                hasAcquired = true;
+                counter = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                    Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
-            return true;
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                    var cs = new CounterStorage(systemDatabase.ServerUrl, tenantId, config, transportState);
+                    AssertLicenseParameters(config);
+
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    return cs;
+                }).ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        Logger.WarnException("Failed to create counters " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+                return true;
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
-        public void Unprotect(CounterStorageDocument configDocument)
+            public
+            void Unprotect(CounterStorageDocument configDocument)
         {
             if (configDocument.SecuredSettings == null)
             {
@@ -241,7 +246,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+        private void AssertLicenseParameters(RavenConfiguration config)
         {
             string maxDatabases;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfCounters", out maxDatabases))
@@ -267,7 +272,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException("Your license does not allow the use of the Counters");
         }
 
-            Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.Core.ActiveBundles);
         }
 
         public void ForAllCountersInCacheOnly(Action<CounterStorage> action)

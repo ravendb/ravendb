@@ -67,7 +67,7 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                var tombstoneRetentionTime = store.DocumentDatabase.Configuration.TombstoneRetentionTime;
+                var tombstoneRetentionTime = store.DocumentDatabase.Configuration.Core.TombstoneRetentionTime.AsTimeSpan;
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(tombstoneRetentionTime.Add(tombstoneRetentionTime));
 

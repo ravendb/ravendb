@@ -181,13 +181,9 @@ namespace Raven.Tests.Issues.Prefetcher
                 count += i;
 
                 if (count == 1536)
-                {
-                    //The reason i have added this wait is because the 'FutureBatchCompleted'
-                    //event is fired before the task ends resulting in prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize
-                    //not calculating the correct batches size. 
-                    SpinWait.SpinUntil(() => false, TimeSpan.FromMilliseconds(16));
-                    mre.Set();
-                }
+                    {
+                        mre.Set();
+                    }
             };
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -260,7 +256,7 @@ namespace Raven.Tests.Issues.Prefetcher
         {
             var mre = new ManualResetEventSlim();
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(MemoryStatistics.TotalPhysicalMemory, SizeUnit.Megabytes));
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = MemoryStatistics.TotalPhysicalMemory);
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i => mre.Set();
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -309,7 +305,7 @@ namespace Raven.Tests.Issues.Prefetcher
             var mre2 = new ManualResetEventSlim();
             var count = 0;
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(1, SizeUnit.Megabytes));
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new Size(1, SizeUnit.Megabytes));
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
             {
                 count += i;
@@ -340,7 +336,7 @@ namespace Raven.Tests.Issues.Prefetcher
             var mre2 = new ManualResetEventSlim();
             var count = 0;
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new SizeSetting(1, SizeUnit.Megabytes));
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new Size(1, SizeUnit.Megabytes));
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
             {
                 count += i;

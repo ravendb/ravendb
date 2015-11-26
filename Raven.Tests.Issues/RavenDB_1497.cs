@@ -41,9 +41,9 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(DataDir);
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Storage.Voron.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
+            configuration.Storage.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
             configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
             configuration.Core.RunInMemory = false;
         }
@@ -107,12 +107,9 @@ namespace Raven.Tests.Issues
 
                 var output = new StringBuilder();
 
-                MaintenanceActions.Restore(new RavenConfiguration
+                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
                     {
-                        Settings =
-                        {
-                            {Constants.Voron.AllowIncrementalBackups, "true"}
-                        }
+                        Storage = { AllowIncrementalBackups = true }
                     }, new DatabaseRestoreRequest
                     {
                         BackupLocation = BackupDir,
@@ -122,7 +119,7 @@ namespace Raven.Tests.Issues
 
                 Assert.DoesNotContain("error", output.ToString().ToLower());
 
-                using (var db = new DocumentDatabase(new RavenConfiguration { Core = { DataDirectory = DataDir }}, null))
+                using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration { Core = { DataDirectory = DataDir }}, null))
                 {
                     var indexStats = db.Statistics.Indexes;
 

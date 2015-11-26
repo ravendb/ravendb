@@ -104,7 +104,7 @@ namespace Raven.Database.Indexing
 
         private int nextQueryId = 0;
 
-        public InMemoryRavenConfiguration Configuration { get; set; }
+        public RavenConfiguration Configuration { get; set; }
         public IndexStorage IndexStorage { get; set; }
 
         public TaskScheduler TaskScheduler { get; set; }

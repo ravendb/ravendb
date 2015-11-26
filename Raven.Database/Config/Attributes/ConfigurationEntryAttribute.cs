@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Database.Config.Attributes
 {
@@ -12,9 +13,12 @@ namespace Raven.Database.Config.Attributes
     {
         public string Key { get; set; }
 
-        public ConfigurationEntryAttribute(string key)
+        public ConfigurationEntryAttribute(string key, [CallerLineNumber]int order = 0) // the default order is the order of declaration in a configuration class
         {
             Key = key;
+            Order = order;
         }
+
+        public int Order { get; private set; }
     }
 }

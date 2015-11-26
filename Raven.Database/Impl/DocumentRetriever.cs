@@ -32,7 +32,7 @@ namespace Raven.Database.Impl
         private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
         private readonly IStorageActionsAccessor actions;
         private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
         private readonly Dictionary<string, RavenJToken> transformerParameters;
@@ -41,7 +41,7 @@ namespace Raven.Database.Impl
 
         public Etag Etag = Etag.Empty;
 
-        public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
+        public DocumentRetriever(RavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
             Dictionary<string, RavenJToken> transformerParameters = null,
             HashSet<string> itemsToInclude = null)
         {
@@ -153,7 +153,7 @@ namespace Raven.Database.Impl
                 var fieldsToFetchFromDocument = fieldsToFetch.Fields.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
                 if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
                 {
-                    switch (configuration.ImplicitFetchFieldsFromDocumentMode)
+                    switch (configuration.Core.ImplicitFetchFieldsFromDocumentMode)
                     {
                         case ImplicitFetchFieldsMode.Enabled:
                             doc = GetDocumentWithCaching(queryResult);
@@ -183,7 +183,7 @@ namespace Raven.Database.Impl
                                                   "Fetching id: {2}", indexDefinition.Name, string.Join(", ", fieldsToFetchFromDocument), fetchingId);
                             throw new ImplicitFetchFieldsFromDocumentNotAllowedException(message);
                         default:
-                            throw new ArgumentOutOfRangeException(configuration.ImplicitFetchFieldsFromDocumentMode.ToString());
+                            throw new ArgumentOutOfRangeException(configuration.Core.ImplicitFetchFieldsFromDocumentMode.ToString());
                     }
                 }
             }

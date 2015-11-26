@@ -21,6 +21,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Tenancy
@@ -31,7 +32,7 @@ namespace Raven.Database.Server.Tenancy
 
         public override string ResourcePrefix { get { return Constants.TimeSeries.Prefix; } }
 
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        public event Action<RavenConfiguration> SetupTenantConfiguration = delegate { };
 
         public TimeSeriesLandlord(DocumentDatabase systemDatabase)
             : base(systemDatabase)
@@ -39,7 +40,7 @@ namespace Raven.Database.Server.Tenancy
             Init();
         }
 
-        public InMemoryRavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
+        public RavenConfiguration SystemConfiguration { get { return systemDatabase.Configuration; } }
 
         public void Init()
         {
@@ -58,7 +59,7 @@ namespace Raven.Database.Server.Tenancy
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledTimeSeries = false)
+        public RavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledTimeSeries = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
@@ -66,45 +67,37 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.TimeSeries.DataDirectory, systemDatabase.Configuration);
+            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), systemDatabase.Configuration);
         }
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
+        protected RavenConfiguration CreateConfiguration(
                         string tenantId,
                         TimeSeriesDocument document,
                         string folderPropName,
-                        InMemoryRavenConfiguration parentConfiguration)
+                        RavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+            var config = RavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForTimeSeriesTenant(tenantId);
 
-            config.Settings[Constants.TimeSeries.DataDirectory] = parentConfiguration.TimeSeries.DataDirectory;
-            //config.Settings["Raven/StorageEngine"] = parentConfiguration.DefaultStorageTypeName;
-            //TODO: what time series dir path?
-            //config.Settings["Raven/TimeSeries/Storage"] = parentConfiguration.FileSystem.DefaultStorageTypeName;
+            config.SetSetting(RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory), parentConfiguration.TimeSeries.DataDirectory);
 
             foreach (var setting in document.Settings)
             {
-                config.Settings[setting.Key] = setting.Value;
+                config.SetSetting(setting.Key, setting.Value);
             }
             Unprotect(document);
 
             foreach (var securedSetting in document.SecuredSettings)
             {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
+                config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.Core.DataDirectory);
-            //config.Settings["Raven/Esent/LogsPath"] = config.Settings["Raven/Esent/LogsPath"].ToFullPath(parentConfiguration.DataDirectory);
-            config.Settings[Constants.RavenTxJournalPath] = config.Settings[Constants.RavenTxJournalPath].ToFullPath(parentConfiguration.Core.DataDirectory);
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.Core.DataDirectory));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath).ToFullPath(parentConfiguration.Core.DataDirectory)));
 
-            config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
             config.TimeSeriesName = tenantId;
 
             config.Initialize();
@@ -123,8 +116,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<TimeSeriesDocument>();
-            if (document.Settings.Keys.Contains(Constants.TimeSeries.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find " + Constants.TimeSeries.DataDirectory);
+            if (document.Settings.Keys.Contains(RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.TimeSeries.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledTimeSeriesStorage)
                 throw new InvalidOperationException("The time series has been disabled.");
@@ -150,7 +143,7 @@ namespace Raven.Database.Server.Tenancy
 
             ManualResetEvent cleanupLock;
             if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
-                throw new InvalidOperationException(string.Format("TimeSeries '{0}' are currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
+                throw new InvalidOperationException($"TimeSeries '{tenantId}' are currently being restarted and cannot be accessed. We already waited {MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds} seconds.");
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out timeSeries))
             {
@@ -171,6 +164,13 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
+            var hasAcquired = false;
+            try
+            {
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
+
+                hasAcquired = true;
             timeSeries = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
             {
                 var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
@@ -189,6 +189,12 @@ namespace Raven.Database.Server.Tenancy
                 return task;
             }).Unwrap());
             return true;
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
         public void Unprotect(TimeSeriesDocument configDocument)
@@ -237,7 +243,7 @@ namespace Raven.Database.Server.Tenancy
             }
         }
 
-        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+        private void AssertLicenseParameters(RavenConfiguration config)
         {
             string maxDatabases;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfTimeSeries", out maxDatabases))
@@ -263,7 +269,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException("Your license does not allow the use of the TimeSeries");
             }
 
-            Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.Core.ActiveBundles);
         }
 
         public void ForAllTimeSeries(Action<TimeSeriesStorage> action)

@@ -20,7 +20,7 @@ namespace Raven.Tests.Bundles.LiveTest
 {
     public class PutTriggerTests : RavenTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(LiveTestDatabaseDocumentPutTrigger).Assembly));
         }
@@ -49,11 +49,11 @@ namespace Raven.Tests.Bundles.LiveTest
                 var databaseDocument = document.DataAsJson.Deserialize<DatabaseDocument>(store.Conventions);
                 AsserDatabaseDocument(databaseDocument);
 
-                databaseDocument.Settings[Constants.SizeHardLimitInKB] = "123";
-                databaseDocument.Settings[Constants.SizeSoftLimitInKB] = "321";
-                databaseDocument.Settings[Constants.DocsHardLimit] = "456";
-                databaseDocument.Settings[Constants.DocsSoftLimit] = "654";
-                databaseDocument.Settings[Constants.RunInMemory] = "false";
+                databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit)] = "123";
+                databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit)] = "321";
+                databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit)] = "456";
+                databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit)] = "654";
+                databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
 
                 store.DatabaseCommands.Put("Raven/Databases/Northwind", null, RavenJObject.FromObject(databaseDocument), document.Metadata);
 
@@ -67,17 +67,17 @@ namespace Raven.Tests.Bundles.LiveTest
 
         private static void AsserDatabaseDocument(DatabaseDocument databaseDocument)
         {
-            var activeBundles = databaseDocument.Settings[Constants.ActiveBundles].GetSemicolonSeparatedValues();
+            var activeBundles = databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)].GetSemicolonSeparatedValues();
 
             Assert.Contains("Replication", activeBundles);
 
             Assert.Contains("Quotas", activeBundles);
-            Assert.Equal(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Quotas/Size/HardLimitInKB"], databaseDocument.Settings[Constants.SizeHardLimitInKB]);
-            Assert.Equal(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Quotas/Size/SoftLimitInKB"], databaseDocument.Settings[Constants.SizeSoftLimitInKB]);
-            Assert.Null(databaseDocument.Settings[Constants.DocsHardLimit]);
-            Assert.Null(databaseDocument.Settings[Constants.DocsSoftLimit]);
+            Assert.Equal(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Quotas/Size/HardLimitInKB"], databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.SizeHardLimit)]);
+            Assert.Equal(ConfigurationManager.AppSettings["Raven/Bundles/LiveTest/Quotas/Size/SoftLimitInKB"], databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.SizeSoftLimit)]);
+            Assert.Null(databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.DocsHardLimit)]);
+            Assert.Null(databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Quotas.DocsSoftLimit)]);
 
-            Assert.True(bool.Parse(databaseDocument.Settings[Constants.RunInMemory]));
+            Assert.True(bool.Parse(databaseDocument.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)]));
         }
     }
 }

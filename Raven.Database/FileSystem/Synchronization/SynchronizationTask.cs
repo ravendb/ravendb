@@ -31,7 +31,7 @@ namespace Raven.Database.FileSystem.Synchronization
         private readonly ITransactionalStorage storage;
         private readonly SynchronizationQueue synchronizationQueue;
         private readonly SynchronizationStrategy synchronizationStrategy;
-        private readonly InMemoryRavenConfiguration systemConfiguration;
+        private readonly RavenConfiguration systemConfiguration;
         private readonly SynchronizationTaskContext context;
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>> activeIncomingSynchronizations =
@@ -40,7 +40,7 @@ namespace Raven.Database.FileSystem.Synchronization
         private int failedAttemptsToGetDestinationsConfig;
         private long workCounter;
 
-        public SynchronizationTask(ITransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher, InMemoryRavenConfiguration systemConfiguration)
+        public SynchronizationTask(ITransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher, RavenConfiguration systemConfiguration)
         {
             this.storage = storage;
             this.publisher = publisher;
@@ -194,7 +194,7 @@ namespace Raven.Database.FileSystem.Synchronization
             {
                 Log.Debug("Starting the synchronization task");
 
-                var timeToWait = systemConfiguration.FileSystem.MaximumSynchronizationInterval;
+                var timeToWait = systemConfiguration.FileSystem.MaximumSynchronizationInterval.AsTimeSpan;
 
                 while (context.DoWork)
                 {
@@ -214,7 +214,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
                     timeToWait = runningBecauseOfDataModifications
                         ? TimeSpan.FromSeconds(30)
-                        : systemConfiguration.FileSystem.MaximumSynchronizationInterval;
+                        : systemConfiguration.FileSystem.MaximumSynchronizationInterval.AsTimeSpan;
                 }
             }, TaskCreationOptions.LongRunning);
 

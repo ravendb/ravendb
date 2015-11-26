@@ -32,7 +32,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
                 if (file == null)
                     return;
 
-                if (fileSystem.ChangesToRevisionsAllowed() == false &&
+                if (fileSystem.Configuration.FileSystem.Versioning.ChangesToRevisionsAllowed == false &&
                     file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" &&
                     accessor.IsVersioningActive(name))
                 {

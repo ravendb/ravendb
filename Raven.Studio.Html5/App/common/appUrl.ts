@@ -718,6 +718,11 @@ class appUrl {
         return "#databases/tasks/toggleIndexing?" + databasePart;
     }
 
+    static forSetAcknowledgedEtag(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/tasks/subscriptionsTask?" + databasePart;
+    }
+
     static forSampleData(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/sampleData?" + databasePart;

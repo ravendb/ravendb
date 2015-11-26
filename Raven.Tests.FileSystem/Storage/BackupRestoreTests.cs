@@ -84,9 +84,7 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
             {
-                config.Settings["Raven/Esent/CircularLog"] = "false";
-                config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
-                config.Storage.Voron.AllowIncrementalBackups = true;
+                config.Storage.AllowIncrementalBackups = true;
             }))
             {
                 await CreateSampleData(store);
@@ -129,9 +127,7 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
             {
-                config.Settings["Raven/Esent/CircularLog"] = "false";
-                config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
-                config.Storage.Voron.AllowIncrementalBackups = true;
+                config.Storage.AllowIncrementalBackups = true;
             }, fileSystemName: "RavenDB_2824_one"))
             {
                 await CreateSampleData(store);
@@ -147,9 +143,7 @@ namespace Raven.Tests.FileSystem.Storage
 
             using (var store = (FilesStore)NewStore(index: 1, requestedStorage: requestedStorage, runInMemory: false, customConfig: config =>
             {
-                config.Settings["Raven/Esent/CircularLog"] = "false";
-                config.Settings["Raven/Voron/AllowIncrementalBackups"] = "true";
-                config.Storage.Voron.AllowIncrementalBackups = true;
+                config.Storage.AllowIncrementalBackups = true;
             }, fileSystemName: "RavenDB_2824_two"))
             {
                 await store.AsyncFilesCommands.Admin.StartBackup(backupDir, null, true, store.DefaultFileSystem);  // use the same BackupDir on purpose

@@ -138,7 +138,7 @@ namespace Raven.Tests.Common
             
         }
 
-        protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
+        protected virtual void ConfigureConfig(RavenConfiguration ravenConfiguration)
         {
             
         }
@@ -170,18 +170,17 @@ namespace Raven.Tests.Common
             var previousServer = servers[index];
 
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Core.Port);
-            var serverConfiguration = new RavenConfiguration
+            var serverConfiguration = new AppSettingsBasedConfiguration
             {
-                Settings = { { "Raven/ActiveBundles", "replication" } },
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =
                 {
                     RunInMemory = previousServer.SystemDatabase.Configuration.Core.RunInMemory,
                     DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
                     Port = previousServer.SystemDatabase.Configuration.Core.Port,
-                },
-                DefaultStorageTypeName = GetDefaultStorageType()
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+                    _ActiveBundlesString = "replication"
+                }
             };
 
             serverConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;

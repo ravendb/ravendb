@@ -1,3 +1,5 @@
+using Raven.Abstractions.FileSystem;
+
 namespace Raven.Client.FileSystem
 {
     /// <summary>
@@ -20,5 +22,14 @@ namespace Raven.Client.FileSystem
         /// Gets or sets the skipped results
         /// </summary>
         public int SkippedResults { get; set; }
+
+        /// <summary>
+        /// Update the query stats from the query results
+        /// </summary>
+        internal void UpdateQueryStats(SearchResults searchResults)
+        {
+            DurationMilliseconds = searchResults.DurationMilliseconds;
+            TotalResults = searchResults.FileCount;
+        }
     }
 }

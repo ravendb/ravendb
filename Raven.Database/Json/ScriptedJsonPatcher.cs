@@ -58,8 +58,8 @@ namespace Raven.Database.Json
             }
             else
             {
-                maxSteps = database.Configuration.MaxStepsForScript;
-                additionalStepsPerSize = database.Configuration.AdditionalStepsForScriptBasedOnDocumentSize;
+                maxSteps = database.Configuration.Patching.MaxStepsForScript;
+                additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             }
 
             totalScriptSteps = maxSteps;
@@ -270,7 +270,7 @@ namespace Raven.Database.Json
             if (arr == JsValue.Null || arr.IsArray() == false)
                 return;
 
-            foreach (var property in arr.AsArray().Properties)
+            foreach (var property in arr.AsArray().GetOwnProperties())
             {
                 if (property.Key == "length")
                     continue;

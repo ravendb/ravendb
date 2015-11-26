@@ -23,7 +23,7 @@ namespace Raven.Tests.Counters
         private const string CounterStorageId = "FooBar";
 
         private readonly CounterStorage storage;
-        private readonly RavenConfiguration config;
+        private readonly AppSettingsBasedConfiguration config;
 
         public BackupRestoreTests()
         {
@@ -35,21 +35,19 @@ namespace Raven.Tests.Counters
             RestoreToDirectory += uniqueId;
             DocumentDatabaseDirectory += uniqueId;
 
-            config = new RavenConfiguration
+            config = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
                     RunInMemory = false,
                     DataDirectory = DocumentDatabaseDirectory,
                     Port = 8090,
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 },
-                DefaultStorageTypeName = "Voron",
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 Encryption = { UseFips = SettingsHelper.UseFipsEncryptionAlgorithms },
             };
 
             config.Counter.DataDirectory = BackupSourceDirectory;
-            config.Settings["Raven/StorageTypeName"] = config.DefaultStorageTypeName;
             config.PostInit();
 
             storage = new CounterStorage("http://localhost:8080","TestCounter",config);
@@ -91,7 +89,7 @@ namespace Raven.Tests.Counters
             var restoreOperation = NewRestoreOperation();
             restoreOperation.Execute();
 
-            var restoreConfig = new RavenConfiguration
+            var restoreConfig = new AppSettingsBasedConfiguration
             {
                 Core = { RunInMemory = false }
             };
@@ -130,7 +128,7 @@ namespace Raven.Tests.Counters
             var restoreOperation = NewRestoreOperation();
             restoreOperation.Execute();
 
-            var restoreConfig = new RavenConfiguration
+            var restoreConfig = new AppSettingsBasedConfiguration
             {
                 Core = { RunInMemory = false }
             };

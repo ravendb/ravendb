@@ -20,9 +20,9 @@ namespace Raven.Tests.Replication
 {
     public class IndexReplication : ReplicationBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "Replication";
+            configuration.Core._ActiveBundlesString = "Replication";
         }
 
         public class User
@@ -253,13 +253,13 @@ namespace Raven.Tests.Replication
         public void Should_replicate_all_indexes_if_relevant_endpoint_is_hit()
         {
             var requestFactory = new HttpRavenRequestFactory();
-            using (var sourceServer = GetNewServer(8077))
+            using (var sourceServer = GetNewServer(8076))
             using (var source = NewRemoteDocumentStore(ravenDbServer: sourceServer))
-            using (var destinationServer1 = GetNewServer(8078))
+            using (var destinationServer1 = GetNewServer(8077))
             using (var destination1 = NewRemoteDocumentStore(ravenDbServer: destinationServer1))
-            using (var destinationServer2 = GetNewServer())
+            using (var destinationServer2 = GetNewServer(8078))
             using (var destination2 = NewRemoteDocumentStore(ravenDbServer: destinationServer2))
-            using (var destinationServer3 = GetNewServer(8081))
+            using (var destinationServer3 = GetNewServer(8079))
             using (var destination3 = NewRemoteDocumentStore(ravenDbServer: destinationServer3))
             {
                 CreateDatabaseWithReplication(source, "testDB");
@@ -271,6 +271,12 @@ namespace Raven.Tests.Replication
                 source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
                 // ReSharper disable once AccessToDisposedClosure
                 SetupReplication(source, "testDB", store => false, destination1, destination2, destination3);
+
+                // index replication can be triggered if we haven't replicated anything yet, bypassing this
+                source.DatabaseCommands.ForDatabase("testDB").Put("keys/1", null, new RavenJObject(), new RavenJObject());
+                WaitForDocument(destination1.DatabaseCommands.ForDatabase("testDB"), "keys/1");
+                WaitForDocument(destination2.DatabaseCommands.ForDatabase("testDB"), "keys/1");
+                WaitForDocument(destination3.DatabaseCommands.ForDatabase("testDB"), "keys/1");
 
                 //make sure not to replicate the index automatically
                 var userIndex = new UserIndex();

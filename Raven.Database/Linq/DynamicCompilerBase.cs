@@ -14,7 +14,7 @@ namespace Raven.Database.Linq
         
         protected OrderedPartCollection<AbstractDynamicCompilationExtension> extensions;
         protected string basePath;
-        protected readonly InMemoryRavenConfiguration configuration;
+        protected readonly RavenConfiguration configuration;
         protected string name;
         private string cSharpSafeName;
         public string CompiledQueryText { get; set; }
@@ -38,7 +38,7 @@ namespace Raven.Database.Linq
             }
         }
 
-        public DynamicCompilerBase(InMemoryRavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath)
+        public DynamicCompilerBase(RavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath)
         {
             this.configuration = configuration;
             this.name = name;

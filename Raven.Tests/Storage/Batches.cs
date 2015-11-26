@@ -29,7 +29,7 @@ namespace Raven.Tests.Storage
         [PropertyData("Storages")]
         public void BatchNestingAndCommits(string storageType)
         {
-            using (var dd = new DocumentDatabase(new RavenConfiguration
+            using (var dd = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
                 Core = {
                     DataDirectory = NewDataPath("DataDirectory")

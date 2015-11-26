@@ -15,6 +15,7 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database.Util;
+using Raven.Storage.Voron;
 
 namespace Raven.StorageExporter
 {
@@ -24,7 +25,7 @@ namespace Raven.StorageExporter
         {
             baseDirectory = databaseBaseDirectory;
             outputDirectory = databaseOutputFile;
-            var ravenConfiguration = new RavenConfiguration();
+            var ravenConfiguration = new AppSettingsBasedConfiguration();
             ravenConfiguration.Core.DataDirectory = databaseBaseDirectory;
             ravenConfiguration.Storage.PreventSchemaUpdate = true;
             CreateTransactionalStorage(ravenConfiguration);
@@ -182,7 +183,7 @@ namespace Raven.StorageExporter
             return false;
         }
 
-        private void CreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration)
+        private void CreateTransactionalStorage(RavenConfiguration ravenConfiguration)
         {
             if (String.IsNullOrEmpty(ravenConfiguration.Core.DataDirectory) == false && Directory.Exists(ravenConfiguration.Core.DataDirectory))
             {
@@ -209,11 +210,11 @@ namespace Raven.StorageExporter
             ConsoleUtils.PrintErrorAndFail(string.Format("Could not detect storage file under the given directory:{0}", ravenConfiguration.Core.DataDirectory));
         }
 
-        public static bool TryToCreateTransactionalStorage(InMemoryRavenConfiguration ravenConfiguration, out ITransactionalStorage storage)
+        public static bool TryToCreateTransactionalStorage(RavenConfiguration ravenConfiguration, out ITransactionalStorage storage)
         {
             storage = null;
             if (File.Exists(Path.Combine(ravenConfiguration.Core.DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
+                storage = new TransactionalStorage(ravenConfiguration, () => { }, () => { }, () => { }, () => { });
 
             if (storage != null)
             {
@@ -223,10 +224,9 @@ namespace Raven.StorageExporter
             return false;
         }
 
-        public static bool ValidateStorageExsist(string dataDir)
+        public static bool ValidateStorageExist(string dataDir)
         {
-            return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename))
-                   || File.Exists(Path.Combine(dataDir, "Data"));
+            return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename));
         }
 
 

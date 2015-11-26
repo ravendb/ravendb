@@ -18,9 +18,9 @@ namespace Raven.Tests.Issues
 {
     public class IndexResestWithReplication : RavenTestBase
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "Replication; Compression";
+            configuration.Core._ActiveBundlesString = "Replication; Compression";
         }
 
         [Fact]

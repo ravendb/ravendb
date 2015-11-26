@@ -23,7 +23,7 @@ namespace Raven.Database.Server
 
         private const string CompressedAssemblySuffix = AssemblySuffix + ".zip";
         
-        public static string GetExtractedAssemblyLocationFor(Type type, InMemoryRavenConfiguration configuration)
+        public static string GetExtractedAssemblyLocationFor(Type type, RavenConfiguration configuration)
         {
             if (File.Exists(type.Assembly.Location))
                 return type.Assembly.Location;
@@ -33,7 +33,7 @@ namespace Raven.Database.Server
             return Path.Combine(configuration.Core.AssembliesDirectory, name + AssemblySuffix);
         }
 
-        public static void ExtractEmbeddedAssemblies(InMemoryRavenConfiguration configuration)
+        public static void ExtractEmbeddedAssemblies(RavenConfiguration configuration)
         {
             lock (locker)
             {

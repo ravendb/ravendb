@@ -18,25 +18,26 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
         protected readonly DocumentStore documentStore;
         private RavenDbServer ravenDbServer;
         private bool closed = false;
-        private Raven.Database.Config.RavenConfiguration settings;
+        private Raven.Database.Config.AppSettingsBasedConfiguration settings;
 
         public CompressionAndEncryption()
         {
             path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
             path = Path.Combine(path, "TestDb").Substring(6);
             Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-            settings = new Raven.Database.Config.RavenConfiguration
-            {				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+            settings = new Raven.Database.Config.AppSettingsBasedConfiguration
+            {
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =
                 {
                     DataDirectory = path,
                     Port = 8079,
+                    _ActiveBundlesString = "Compression;Encryption"
                 },
-                Settings =
-                    {
-                        {"Raven/Encryption/Key", "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="},
-                        {"Raven/ActiveBundles", "Compression;Encryption"}
-                    }
+                Encryption =
+                {
+                    EncryptionKey = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="
+                }
             };
             ConfigureServer(settings);
             settings.PostInit();
@@ -52,7 +53,7 @@ namespace Raven.Tests.Bundles.CompressionAndEncryption
             documentStore.Initialize();
         }
 
-        protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration ravenConfiguration)
+        protected virtual void ConfigureServer(Raven.Database.Config.AppSettingsBasedConfiguration appSettingsBasedConfiguration)
         {
         }
 

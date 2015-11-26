@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Prefetching
 {
@@ -19,7 +20,7 @@ namespace Raven.Database.Prefetching
 
         private readonly SortedList<Etag, JsonDocument> innerList;
 
-        private int loadedSize;
+        private Size loadedSize = new Size(0, SizeUnit.Bytes);
 
         public ConcurrentJsonDocumentSortedList()
         {
@@ -68,7 +69,7 @@ namespace Raven.Database.Prefetching
 
             innerList[value.Etag] = value;
 
-            loadedSize += value.SerializedSizeOnDisk;
+            loadedSize += new Size(value.SerializedSizeOnDisk, SizeUnit.Bytes);
         }
 
         public bool TryPeek(out JsonDocument result)
@@ -96,7 +97,7 @@ namespace Raven.Database.Prefetching
                 if (result != null)
                 {
                     innerList.RemoveAt(0);
-                    loadedSize -= result.SerializedSizeOnDisk;
+                    loadedSize -= new Size(result.SerializedSizeOnDisk, SizeUnit.Bytes);
                 }
 
                 return result != null;
@@ -114,7 +115,7 @@ namespace Raven.Database.Prefetching
         }
 
 
-        public int LoadedSize
+        public Size LoadedSize
         {
             get
             {
@@ -142,7 +143,7 @@ namespace Raven.Database.Prefetching
                         break;
 
                     innerList.RemoveAt(i);
-                    loadedSize -= doc.SerializedSizeOnDisk;
+                    loadedSize -= new Size(doc.SerializedSizeOnDisk, SizeUnit.Bytes);
                 }
             }
             finally
@@ -157,7 +158,7 @@ namespace Raven.Database.Prefetching
             try
             {
                 innerList.Clear();
-                loadedSize = 0;
+                loadedSize = new Size(0, SizeUnit.Bytes);
             }
             finally
             {

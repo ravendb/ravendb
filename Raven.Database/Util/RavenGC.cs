@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Util
 {
@@ -59,7 +60,7 @@ namespace Raven.Database.Util
         private static void ReleaseMemoryBeforeGC()
         {
 
-            if (MemoryStatistics.AvailableMemoryInMb < ((double)MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemoryInMb)/10)
+            if (MemoryStatistics.AvailableMemory < (MemoryStatistics.TotalPhysicalMemory - MemoryStatistics.AvailableMemory)/10)
             {
                 if (Environment.TickCount - lastTimeMemoryReleasedBeforeGC < fiveSecondsInTicks)
                     return;
@@ -203,10 +204,12 @@ namespace Raven.Database.Util
         });
         private static double memoryDifferenceLastGc;
 
+        private static readonly Size MinMemoryToRunGc = new Size(1536, SizeUnit.Megabytes);
+
         public static void ConsiderRunningGC()
         {
-            var availableMemoryInMb = MemoryStatistics.AvailableMemoryInMb;
-            if (availableMemoryInMb >= 1536 ||
+            var availableMemoryInMb = MemoryStatistics.AvailableMemory;
+            if (availableMemoryInMb >= MinMemoryToRunGc ||
                 availableMemoryInMb > (MemoryStatistics.TotalPhysicalMemory*0.2))
             {
                 // there is no point in even running this if we have more than 1.5GB of memory or more than 20% of 

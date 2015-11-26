@@ -30,7 +30,7 @@ namespace Raven.Bundles.Versioning.Triggers
                 if (Database.IsVersioningDisabledForImport(metadata))
                     return VetoResult.Allowed;
 
-                if (Database.ChangesToRevisionsAllowed() == false &&
+                if (Database.Configuration.Versioning.ChangesToRevisionsAllowed == false &&
                     jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
                 {
                     return VetoResult.Deny("Modifying a historical revision is not allowed");

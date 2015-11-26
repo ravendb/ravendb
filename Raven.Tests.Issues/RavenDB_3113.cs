@@ -2,6 +2,7 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Database.Config;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -16,8 +17,7 @@ namespace Raven.Tests.Issues
             using (var store = new EmbeddableDocumentStore())
             {				
                 store.Configuration.Core.RunInMemory = true;
-                store.Configuration.Settings[Constants.ActiveBundles] = "Versioning";
-                store.Configuration.DefaultStorageTypeName = "voron";
+                store.Configuration.Core._ActiveBundlesString = "Versioning";
                 store.Initialize();
 
                 DoTest(store);
@@ -37,8 +37,8 @@ namespace Raven.Tests.Issues
                     Id = "Raven/Databases/FooDB",
                     Settings =
                     {
-                        { Constants.ActiveBundles, "Versioning"},
-                        { Constants.RavenDataDir, "~/Data"}
+                        { RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Versioning"},
+                        { RavenConfiguration.GetKey(x => x.Core.DataDirectory), "~/Data"}
                     }
                 });
 

@@ -45,7 +45,7 @@ namespace Raven.Database.FileSystem.Controllers
         private void StreamToClient(Stream stream, int pageSize, Etag etag)
         {
             using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(FileSystemsLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (var timeout = cts.TimeoutAfter(FileSystemsLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan))
             using (var writer = new JsonTextWriter(new StreamWriter(stream)))
             {
                 writer.WriteStartObject();

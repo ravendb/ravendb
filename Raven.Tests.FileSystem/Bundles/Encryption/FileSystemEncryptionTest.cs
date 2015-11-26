@@ -25,7 +25,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
         {
             return NewAsyncClient(requestedStorage: requestedStorage, runInMemory: false, fileSystemName: fileSystemName, dataDirectory: dataPath, activeBundles: "Encryption", customConfig: configuration =>
             {
-                configuration.Settings["Raven/Encryption/Key"] = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
+                configuration.Encryption.EncryptionKey = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
             });
         }
 

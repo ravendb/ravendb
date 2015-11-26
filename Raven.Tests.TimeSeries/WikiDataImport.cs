@@ -22,7 +22,7 @@ namespace Raven.Tests.TimeSeries
         [Fact(Skip = "Run only when needed")]
         public void Import()
         {
-            var storage = new TimeSeriesStorage("http://localhost:8080/", "TimeSeriesTest", new RavenConfiguration
+            var storage = new TimeSeriesStorage("http://localhost:8080/", "TimeSeriesTest", new AppSettingsBasedConfiguration
             {
                 TimeSeries =
                 {

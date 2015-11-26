@@ -122,7 +122,7 @@ namespace Raven.Database.Indexing
                         token.ThrowIfCancellationRequested();
                         var parallelStats = new ParallelBatchStats
                         {
-                            StartDelay = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
+                            StartDelay = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds
                         };
 
                         var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(context.Database, indexDefinition, viewGenerator, logIndexing);
@@ -234,7 +234,7 @@ namespace Raven.Database.Indexing
                     performanceStats.Add(new ParallelPerformanceStats
                     {
                         NumberOfThreads = parallelOperations.Count,
-                        DurationMs = (long) (SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
+                        DurationMs = (long)(SystemTime.UtcNow - parallelProcessingStart).TotalMilliseconds,
                         BatchedOperations = parallelOperations.ToList()
                     });
 
@@ -277,7 +277,7 @@ namespace Raven.Database.Indexing
             InitializeIndexingPerformanceCompleteDelegate(performance, sourceCount, count, performanceStats);
 
             if (logIndexing.IsDebugEnabled)
-                logIndexing.Debug("Indexed {0} documents for {1}", count, PublicName);
+            logIndexing.Debug("Indexed {0} documents for {1}", count, PublicName);
 
             return performance;
         }
@@ -325,9 +325,9 @@ namespace Raven.Database.Indexing
             if (directory is RAMDirectory) // no point in trying to store commits for ram index
                 return false;
             // no often than specified indexing interval
-            return (LastIndexTime - PreviousIndexTime > context.Configuration.MinIndexingTimeIntervalToStoreCommitPoint ||
+            return (LastIndexTime - PreviousIndexTime > context.Configuration.Indexing.MinIndexingIntervalToStoreCommitPoint.AsTimeSpan ||
                 // at least once for specified time interval
-                    LastIndexTime - LastCommitPointStoreTime > context.Configuration.MaxIndexCommitPointStoreTimeInterval);
+                    LastIndexTime - LastCommitPointStoreTime > context.Configuration.Indexing.MaxIndexCommitPointStoreInterval.AsTimeSpan);
         }
 
         private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
@@ -431,14 +431,15 @@ namespace Raven.Database.Indexing
             {
                 stats.Operation = IndexingWorkStats.Status.Ignore;
                 if (logIndexing.IsDebugEnabled)
-                    logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+
                 var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
                     .Where(x => x != null)
                     .ToList();
 
                 keys.Apply(
                     key =>
-                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.DocumentIdFieldName, key)));
+                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.DocumentIdFieldName, key.ToLowerInvariant())));
 
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
                 batchers.ApplyAndIgnoreAllErrors(

@@ -1,3 +1,4 @@
+using System;
 using System.Configuration;
 using System.Data.Common;
 
@@ -7,7 +8,7 @@ namespace Raven.Tests.Common.Attributes
 {
     public class MaybeSqlServerIsAvailable
     {
-        private static bool triedLoading = false;
+        private static bool triedLoading;
         private static ConnectionStringSettings connectionStringSettings;
         public static ConnectionStringSettings ConnectionStringSettings
         {
@@ -17,14 +18,14 @@ namespace Raven.Tests.Common.Attributes
                 {
                     var skipException = new SkipException("Cannot execute this test, because there are no valid connection strings in this machine");
 
-                    if(triedLoading)
+                    if (triedLoading)
                         throw skipException;
 
                     lock (typeof(MaybeSqlServerIsAvailable))
                     {
                         triedLoading = true;
                         connectionStringSettings = GetAppropriateConnectionStringNameInternal();
-                        if(connectionStringSettings == null)
+                        if (connectionStringSettings == null)
                             throw skipException;
                     }
                 }
@@ -32,31 +33,41 @@ namespace Raven.Tests.Common.Attributes
             }
         }
 
-    
+
         private static ConnectionStringSettings GetAppropriateConnectionStringNameInternal()
         {
-            foreach (ConnectionStringSettings connectionString in new[]
+            foreach (var settings in new[]
             {
                 ConfigurationManager.ConnectionStrings["SqlExpress"],
                 ConfigurationManager.ConnectionStrings["LocalHost"],
+                ConfigurationManager.ConnectionStrings["CiHost"],
             })
             {
-                if(connectionString == null)
+                if (settings == null)
                     continue;
 
-                var providerFactory = DbProviderFactories.GetFactory(connectionString.ProviderName);
+                var connectionStringName = settings.Name;
+                var connectionStringProvider = settings.ProviderName;
+                var connectionString = settings.ConnectionString;
+
+                if (string.Equals(connectionStringName, "CiHost", StringComparison.OrdinalIgnoreCase))
+                    connectionString = connectionString.Replace("Initial Catalog=Raven.Tests", "Initial Catalog=Raven.Tests" + Environment.MachineName);
+
+                var localSettings = new ConnectionStringSettings(connectionStringName, connectionString, connectionStringProvider);
+
+                var providerFactory = DbProviderFactories.GetFactory(localSettings.ProviderName);
                 try
                 {
                     using (var connection = providerFactory.CreateConnection())
                     {
-                        connection.ConnectionString = connectionString.ConnectionString;
+                        connection.ConnectionString = localSettings.ConnectionString;
                         connection.Open();
                     }
-                    return connectionString;
+                    return localSettings;
                 }
-                    // ReSharper disable EmptyGeneralCatchClause
+                // ReSharper disable EmptyGeneralCatchClause
                 catch
-                    // ReSharper restore EmptyGeneralCatchClause
+                // ReSharper restore EmptyGeneralCatchClause
                 {
                 }
             }

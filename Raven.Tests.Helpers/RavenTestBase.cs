@@ -177,34 +177,28 @@ namespace Raven.Tests.Helpers
             DocumentConvention conventions = null)
         {
             databaseName = NormalizeDatabaseName(databaseName);
-
-            var storageType = GetDefaultStorageType(requestedStorage);
+            
             var dataDirectory = dataDir ?? NewDataPath(databaseName);
             var documentStore = new EmbeddableDocumentStore
             {
                 UseEmbeddedHttpServer = port.HasValue,
                 Configuration =
                 {
-                    DefaultStorageTypeName = storageType,
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                     Core =
                     {
                         RunInMemory = runInMemory,
                         DataDirectory = Path.Combine(dataDirectory, "System"),
                         Port = port ?? 8079,
-                    },
-                    AnonymousUserAccessMode = anonymousUserAccessMode
+                        AnonymousUserAccessMode = anonymousUserAccessMode,
+                        _ActiveBundlesString = activeBundles ?? string.Empty
+                    }
                 },
                 Conventions = conventions ?? new DocumentConvention()
             };
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
             documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-
-            if (activeBundles != null)
-            {
-                documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
-            }
 
             if (catalog != null)
             {
@@ -384,19 +378,6 @@ namespace Raven.Tests.Helpers
             return serverUrl;
         }
 
-        public static string GetDefaultStorageType(string requestedStorage = null)
-        {
-            string defaultStorageType = null;
-
-            var envVar = Environment.GetEnvironmentVariable("raventest_storage_engine");
-            if (string.IsNullOrEmpty(envVar) == false)
-                defaultStorageType = envVar;
-            else if (requestedStorage != null)
-                defaultStorageType = requestedStorage;
-
-            return defaultStorageType ?? "voron";
-        }
-
         protected bool checkPorts = false;
 
         protected RavenDbServer GetNewServer(int port = 8079,
@@ -406,7 +387,7 @@ namespace Raven.Tests.Helpers
             bool enableAuthentication = false,
             string activeBundles = null,
             Action<RavenDBOptions> configureServer = null,
-            Action<InMemoryRavenConfiguration> configureConfig = null,
+            Action<RavenConfiguration> configureConfig = null,
             [CallerMemberName] string databaseName = null)
         {
             if (databaseName == ".ctor")
@@ -416,33 +397,25 @@ namespace Raven.Tests.Helpers
             checkPorts = true;
             if (dataDirectory != null)
                 pathsToDelete.Add(dataDirectory);
-
-            var storageType = GetDefaultStorageType(requestedStorage);
+            
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
                     RunInMemory = runInMemory,
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
+                    AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
+                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
-                DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
             };
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
             ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
-
-            ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
-
-            if (activeBundles != null)
-            {
-                ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
-            }
 
             if (configureConfig != null)
                 configureConfig(ravenConfiguration);
@@ -492,10 +465,9 @@ namespace Raven.Tests.Helpers
         public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, string tempDir = null, bool? runInMemory = null, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null, Action onCommit = null)
         {
             ITransactionalStorage newTransactionalStorage;
-            string storageType = GetDefaultStorageType(requestedStorage);
 
             var dataDirectory = dataDir ?? NewDataPath();
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
@@ -505,7 +477,7 @@ namespace Raven.Tests.Helpers
             };
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-            ravenConfiguration.Storage.Voron.TempPath = tempDir;
+            ravenConfiguration.Storage.TempPath = tempDir;
 
             Action onCommitNotification = () =>
             {
@@ -526,7 +498,7 @@ namespace Raven.Tests.Helpers
         {
         }
 
-        protected virtual void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected virtual void ModifyConfiguration(RavenConfiguration configuration)
         {
         }
 
@@ -761,7 +733,7 @@ namespace Raven.Tests.Helpers
                 databaseName = embeddableDocumentStore.DefaultDatabase;
                 embeddableDocumentStore.Configuration.Core.Port = port;
                 SetStudioConfigToAllowSingleDb(embeddableDocumentStore);
-                embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+                embeddableDocumentStore.Configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
                 NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
                 server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
                 url = embeddableDocumentStore.Configuration.ServerUrl;

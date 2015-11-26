@@ -468,7 +468,7 @@ namespace Raven.Database.Server.Controllers
             var resourcesNames = resourcesData.Select(resourceObject => resourceObject.Name).ToArray();
 
             List<string> approvedResources = null;
-            if (SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
+            if (SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
             {
                 var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
@@ -480,7 +480,7 @@ namespace Raven.Database.Server.Controllers
                 if (user == null)
                     return authMsg;
 
-                if (user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
+                if (user.IsAdministrator(SystemConfiguration.Core.AnonymousUserAccessMode) == false)
                 {
                     approvedResources = authorizer.GetApprovedResources(user, this, resourcesNames);
                 }
@@ -490,7 +490,7 @@ namespace Raven.Database.Server.Controllers
                     var principalWithDatabaseAccess = user as PrincipalWithDatabaseAccess;
                     if (principalWithDatabaseAccess != null)
                     {
-                        var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode);
+                        var isAdminGlobal = principalWithDatabaseAccess.IsAdministrator(SystemConfiguration.Core.AnonymousUserAccessMode);
                         x.IsAdminCurrentTenant = isAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Resource);
                     }
                     else
@@ -533,7 +533,7 @@ namespace Raven.Database.Server.Controllers
                 var anonymous = new UserInfo
                 {
                     Remark = "Using anonymous user",
-                    IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+                    IsAdminGlobal = DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
                 };
                 return anonymous;
             }
@@ -546,7 +546,7 @@ namespace Raven.Database.Server.Controllers
                     Remark = "Using windows auth",
                     User = windowsPrincipal.Identity.Name,
                     IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") || 
-                                    windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+                                    windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode)
                 };
 
                 windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Resource);
@@ -563,7 +563,7 @@ namespace Raven.Database.Server.Controllers
                     User = principalWithDatabaseAccess.Identity.Name,
                     IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator("<system>") || 
                         principalWithDatabaseAccess.IsAdministrator(
-                            DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                            DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode),
                     IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Resource),
                     Databases =
                         principalWithDatabaseAccess.AdminDatabases.Concat(
@@ -594,7 +594,7 @@ namespace Raven.Database.Server.Controllers
                 {
                     Remark = "Using OAuth",
                     User = oAuthPrincipal.Name,
-                    IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+                    IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.Core.AnonymousUserAccessMode),
                     IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Resource),
                     Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
                                               .Select(db => db.TenantId != null ? new DatabaseInfo
@@ -626,11 +626,11 @@ namespace Raven.Database.Server.Controllers
 
         protected bool CanExposeConfigOverTheWire()
         {
-            if (string.Equals(SystemConfiguration.Core.ExposeConfigOverTheWire, "AdminOnly", StringComparison.OrdinalIgnoreCase) && SystemConfiguration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
+            if (string.Equals(SystemConfiguration.Core.ExposeConfigOverTheWire, "AdminOnly", StringComparison.OrdinalIgnoreCase) && SystemConfiguration.Core.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
             {
                 var authorizer = (MixedModeRequestAuthorizer)ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
                 var user = authorizer.GetUser(this);
-                if (user == null || user.IsAdministrator(SystemConfiguration.AnonymousUserAccessMode) == false)
+                if (user == null || user.IsAdministrator(SystemConfiguration.Core.AnonymousUserAccessMode) == false)
                 {
                     return false;
                 }

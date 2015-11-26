@@ -46,7 +46,7 @@ namespace Raven.Database.Util
             return key;
         }
 
-        public static void DeleteDatabaseFiles(InMemoryRavenConfiguration configuration)
+        public static void DeleteDatabaseFiles(RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
                 return;
@@ -56,8 +56,8 @@ namespace Raven.Database.Util
             if (configuration.Core.IndexStoragePath != null)
                 IOExtensions.DeleteDirectory(configuration.Core.IndexStoragePath);
 
-            if (configuration.Storage.Voron.JournalsStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Storage.Voron.JournalsStoragePath);
+            if (configuration.Storage.JournalsStoragePath != null)
+                IOExtensions.DeleteDirectory(configuration.Storage.JournalsStoragePath);
         }
     }
 }

@@ -7,6 +7,7 @@ using System;
 
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
+using Raven.Database.Config;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -20,7 +21,7 @@ namespace Raven.Tests.Issues
         {
             var e = Assert.Throws<InvalidOperationException>(() =>
             {
-                using (var store = new EmbeddableDocumentStore { RunInMemory = true, Configuration = { TempPath = "ZF1:\\" } }.Initialize())
+                using (var store = new EmbeddableDocumentStore { RunInMemory = true, Configuration = { Core = { TempPath = "ZF1:\\" } } }.Initialize())
                 {
                 }
             });
@@ -33,14 +34,14 @@ namespace Raven.Tests.Issues
         {
             var path = NewDataPath();
 
-            using (var store = new EmbeddableDocumentStore { RunInMemory = true, DefaultDatabase = "DB1", Configuration = { TempPath = path } })
+            using (var store = new EmbeddableDocumentStore { RunInMemory = true, DefaultDatabase = "DB1", Configuration = { Core = { TempPath = path } } })
             {
                 store.Initialize();
 
-                Assert.Equal(path, store.SystemDatabase.Configuration.TempPath);
+                Assert.Equal(path, store.SystemDatabase.Configuration.Core.TempPath);
 
                 Assert.Equal("DB1", store.DocumentDatabase.Name);
-                Assert.Equal(path, store.DocumentDatabase.Configuration.TempPath);
+                Assert.Equal(path, store.DocumentDatabase.Configuration.Core.TempPath);
             }
         }
 
@@ -52,11 +53,11 @@ namespace Raven.Tests.Issues
 
             Assert.NotEqual(path1, path2);
 
-            using (var store = new EmbeddableDocumentStore { RunInMemory = true, Configuration = { TempPath = path1 } })
+            using (var store = new EmbeddableDocumentStore { RunInMemory = true, Configuration = { Core = { TempPath = path1 }}})
             {
                 store.Initialize();
 
-                Assert.Equal(path1, store.SystemDatabase.Configuration.TempPath);
+                Assert.Equal(path1, store.SystemDatabase.Configuration.Core.TempPath);
 
                 store
                     .DatabaseCommands
@@ -67,13 +68,13 @@ namespace Raven.Tests.Issues
                         Settings =
                         {
                             { "Raven/DataDir", NewDataPath() },
-                            { Constants.TempPath, path2 }
+                            { RavenConfiguration.GetKey(x => x.Core.TempPath), path2 }
                         }
                     });
 
                 var database = store.ServerIfEmbedded.Options.DatabaseLandlord.GetResourceInternal("DB1").Result;
                 Assert.Equal("DB1", database.Name);
-                Assert.Equal(path2, database.Configuration.TempPath);
+                Assert.Equal(path2, database.Configuration.Core.TempPath);
             }
         }
     }

@@ -40,7 +40,7 @@ namespace Raven.Bundles.Replication.Tasks
             this.replication = replication;
 
             replicationFrequency = database.Configuration.Replication.IndexAndTransformerReplicationLatency.AsTimeSpan; //by default 10 min
-            lastQueriedFrequency = TimeSpan.FromSeconds(database.Configuration.TimeToWaitBeforeRunningIdleIndexes.TotalSeconds / 2);
+            lastQueriedFrequency = TimeSpan.FromSeconds(database.Configuration.Indexing.TimeToWaitBeforeRunningIdleIndexes.AsTimeSpan.TotalSeconds / 2);
             TimeToWaitBeforeSendingDeletesOfIndexesToSiblings = TimeSpan.FromMinutes(1);
         }
 

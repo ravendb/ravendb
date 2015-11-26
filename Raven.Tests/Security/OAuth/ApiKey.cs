@@ -19,9 +19,9 @@ namespace Raven.Tests.Security.OAuth
     {
         private const string apiKey = "test/ThisIsMySecret";
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 
 
             Authentication.EnableOnce();

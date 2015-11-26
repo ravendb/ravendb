@@ -17,9 +17,8 @@ namespace Raven.Tests.FileSystem
 
         public StorageTest()
         {
-            var configuration = new InMemoryRavenConfiguration
+            var configuration = new RavenConfiguration
                                 {
-                                    Settings = new NameValueCollection(), 
                                     FileSystem =
                                     {
                                         DataDirectory = "test"

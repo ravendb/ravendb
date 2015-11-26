@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.DiskIO;
 using Raven.Database.Plugins;
 using Raven.Database.Raft;
@@ -29,7 +30,7 @@ namespace Raven.Database.Server
 
         private bool preventDisposing;
 
-        public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
+        public RavenDBOptions(RavenConfiguration configuration, DocumentDatabase db = null)
         {
             if (configuration == null)
                 throw new ArgumentNullException("configuration");
@@ -40,7 +41,6 @@ namespace Raven.Database.Server
                 HttpEndpointRegistration.RegisterAdminLogsTarget();
                 if (db == null)
                 {
-                    configuration.UpdateDataDirForLegacySystemDb();
                     systemDatabase = new DocumentDatabase(configuration, null);
                     systemDatabase.SpinBackgroundWorkers(false);
                 }
@@ -49,7 +49,7 @@ namespace Raven.Database.Server
                     systemDatabase = db;
                 }
 
-                WebSocketBufferPool.Initialize(configuration.WebSockets.InitialBufferPoolSize);
+                WebSocketBufferPool.Initialize((int) configuration.WebSockets.InitialBufferPoolSize.GetValue(SizeUnit.Bytes));
                 fileSystemLandlord = new FileSystemsLandlord(systemDatabase);
                 databasesLandlord = new DatabasesLandlord(systemDatabase);
                 countersLandlord = new CountersLandlord(systemDatabase);
@@ -163,10 +163,10 @@ namespace Raven.Database.Server
 
         private class RavenServer : IRavenServer
         {
-            private readonly InMemoryRavenConfiguration systemConfiguration;
+            private readonly RavenConfiguration systemConfiguration;
             private readonly DocumentDatabase systemDatabase;
 
-            public RavenServer(DocumentDatabase systemDatabase, InMemoryRavenConfiguration systemConfiguration)
+            public RavenServer(DocumentDatabase systemDatabase, RavenConfiguration systemConfiguration)
             {
                 this.systemDatabase = systemDatabase;
                 this.systemConfiguration = systemConfiguration;
@@ -177,7 +177,7 @@ namespace Raven.Database.Server
                 get { return systemDatabase; }
             }
 
-            public InMemoryRavenConfiguration SystemConfiguration
+            public RavenConfiguration SystemConfiguration
             {
                 get { return systemConfiguration; }
             }

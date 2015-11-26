@@ -33,12 +33,9 @@ namespace Raven.Tests.Issues
                 {
                     Core =
                     {
-                        Port = 8079
+                        Port = 8079,
+                        CompiledIndexCacheDirectory = compiledIndexCacheDirectory
                     },
-                    Settings = new NameValueCollection
-                    {
-                        {"Raven/CompiledIndexCacheDirectory", compiledIndexCacheDirectory} 
-                    }
                 }
 
             })

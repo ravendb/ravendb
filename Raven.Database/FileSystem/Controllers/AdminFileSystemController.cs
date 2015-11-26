@@ -67,10 +67,10 @@ namespace Raven.Database.FileSystem.Controllers
             EnsureFileSystemHasRequiredSettings(id, fsDoc);
 
             string bundles;
-            if (fsDoc.Settings.TryGetValue(Constants.ActiveBundles, out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
+            if (fsDoc.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), out bundles) && bundles.IndexOf("Encryption", StringComparison.OrdinalIgnoreCase) != -1)
             {
-                if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(Constants.EncryptionKeySetting) ||
-                    !fsDoc.SecuredSettings.ContainsKey(Constants.AlgorithmTypeSetting))
+                if (fsDoc.SecuredSettings == null || !fsDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey)) ||
+                    !fsDoc.SecuredSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Encryption.AlgorithmType)))
                 {
                     return GetMessageWithString(string.Format("Failed to create '{0}' file system, because of invalid encryption configuration.", id), HttpStatusCode.BadRequest);
                 }
@@ -87,8 +87,8 @@ namespace Raven.Database.FileSystem.Controllers
 
         private static void EnsureFileSystemHasRequiredSettings(string id, FileSystemDocument fsDoc)
         {
-            if (!fsDoc.Settings.ContainsKey(Constants.FileSystem.DataDirectory))
-                fsDoc.Settings[Constants.FileSystem.DataDirectory] = "~/FileSystems/" + id;
+            if (!fsDoc.Settings.ContainsKey(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)))
+                fsDoc.Settings[RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = "~/FileSystems/" + id;
         }
 
         [HttpDelete]
@@ -267,7 +267,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             if (incrementalBackup &&
                 transactionalStorage is Storage.Voron.TransactionalStorage &&
-                FileSystem.Configuration.Storage.Voron.AllowIncrementalBackups == false)
+                FileSystem.Configuration.Storage.AllowIncrementalBackups == false)
             {
                 throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
             }
@@ -277,9 +277,6 @@ namespace Raven.Database.FileSystem.Controllers
                 Started = SystemTime.UtcNow,
                 IsRunning = true,
             })));
-
-            if (filesystemDocument.Settings.ContainsKey(Constants.FileSystem.Storage) == false)
-                filesystemDocument.Settings[Constants.FileSystem.Storage] = transactionalStorage.FriendlyName.ToLower() ?? transactionalStorage.GetType().AssemblyQualifiedName;
 
             transactionalStorage.StartBackupOperation(DatabasesLandlord.SystemDatabase, FileSystem, backupDestinationDirectory, incrementalBackup, filesystemDocument);
 
@@ -412,7 +409,7 @@ namespace Raven.Database.FileSystem.Controllers
                 return GetMessageWithString(errorMessage, HttpStatusCode.BadRequest);
             }
 
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 FileSystemName = filesystemName,
             };
@@ -421,12 +418,10 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 foreach (var setting in filesystemDocument.Settings)
                 {
-                    ravenConfiguration.Settings[setting.Key] = setting.Value;
+                    ravenConfiguration.SetSetting(setting.Key, setting.Value);
                 }
             }
 
-
-            ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
             ravenConfiguration.CustomizeValuesForFileSystemTenant(filesystemName);
             ravenConfiguration.Initialize();
 
@@ -494,12 +489,12 @@ namespace Raven.Database.FileSystem.Controllers
                     if (filesystemDocument == null)
                         return;
 
-                    filesystemDocument.Settings[Constants.FileSystem.DataDirectory] = documentDataDir;
+                    filesystemDocument.Settings[RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)] = documentDataDir;
 
                     if (restoreRequest.IndexesLocation != null)
-                        filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
+                        filesystemDocument.Settings[RavenConfiguration.GetKey(x => x.Core.IndexStoragePath)] = restoreRequest.IndexesLocation;
                     if (restoreRequest.JournalsLocation != null)
-                        filesystemDocument.Settings[Constants.RavenTxJournalPath] = restoreRequest.JournalsLocation;
+                        filesystemDocument.Settings[RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)] = restoreRequest.JournalsLocation;
                     filesystemDocument.Id = filesystemName;
 
                     FileSystemsLandlord.Protect(filesystemDocument);

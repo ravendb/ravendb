@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Database.Server.Tenancy
 {
@@ -33,9 +34,9 @@ namespace Raven.Database.Server.Tenancy
 
         public override string ResourcePrefix { get { return Constants.FileSystem.Prefix; } }
 
-        public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+        public event Action<RavenConfiguration> SetupTenantConfiguration = delegate { };
 
-        public InMemoryRavenConfiguration SystemConfiguration
+        public RavenConfiguration SystemConfiguration
         {
             get { return systemDatabase.Configuration; }
         }
@@ -68,7 +69,7 @@ namespace Raven.Database.Server.Tenancy
             };
         }
 
-        public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
+        public RavenConfiguration CreateTenantConfiguration(string tenantId, bool ignoreDisabledFileSystem = false)
         {
             if (string.IsNullOrWhiteSpace(tenantId))
                 throw new ArgumentException("tenantId");
@@ -76,37 +77,33 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, Constants.FileSystem.DataDirectory, this.SystemConfiguration);
+            return CreateConfiguration(tenantId, document, RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), this.SystemConfiguration);
         }
 
-        protected InMemoryRavenConfiguration CreateConfiguration(
+        protected RavenConfiguration CreateConfiguration(
                                 string tenantId,
                                 FileSystemDocument document,
                                 string folderPropName,
-                                InMemoryRavenConfiguration parentConfiguration)
+                                RavenConfiguration parentConfiguration)
         {
-            var config = new InMemoryRavenConfiguration
-            {
-                Settings = new NameValueCollection(parentConfiguration.Settings),
-            };
+            var config = RavenConfiguration.CreateFrom(parentConfiguration);
 
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForFileSystemTenant(tenantId);
-            config.Settings[Constants.FileSystem.Storage] = parentConfiguration.FileSystem.DefaultStorageTypeName;
 
             foreach (var setting in document.Settings)
             {
-                config.Settings[setting.Key] = setting.Value;
+                config.SetSetting(setting.Key, setting.Value);
             }
             Unprotect(document);
 
             foreach (var securedSetting in document.SecuredSettings)
             {
-                config.Settings[securedSetting.Key] = securedSetting.Value;
+                config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
 
-            config.Settings[folderPropName] = config.Settings[folderPropName].ToFullPath(parentConfiguration.FileSystem.DataDirectory);
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(parentConfiguration.FileSystem.DataDirectory));
             config.FileSystemName = tenantId;
 
             config.Initialize();
@@ -174,8 +171,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<FileSystemDocument>();
-            if (document.Settings.Keys.Contains(Constants.FileSystem.DataDirectory) == false)
-                throw new InvalidOperationException("Could not find " + Constants.FileSystem.DataDirectory);
+            if (document.Settings.Keys.Contains(RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory)) == false)
+                throw new InvalidOperationException("Could not find " + RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory));
 
             if (document.Disabled && !ignoreDisabledFileSystem)
                 throw new InvalidOperationException("The file system has been disabled.");
@@ -206,7 +203,7 @@ namespace Raven.Database.Server.Tenancy
 
             ManualResetEvent cleanupLock;
             if (Cleanups.TryGetValue(tenantId, out cleanupLock) && cleanupLock.WaitOne(MaxTimeForTaskToWaitForDatabaseToLoad) == false)
-                throw new InvalidOperationException(string.Format("File system '{0}' is currently being restarted and cannot be accessed. We already waited {1} seconds.", tenantId, MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds));
+                throw new InvalidOperationException($"File system '{tenantId}' is currently being restarted and cannot be accessed. We already waited {MaxTimeForTaskToWaitForDatabaseToLoad.TotalSeconds} seconds.");
 
             if (ResourcesStoresCache.TryGetValue(tenantId, out fileSystem))
             {
@@ -227,29 +224,42 @@ namespace Raven.Database.Server.Tenancy
             if (config == null)
                 return false;
 
-            fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
+            var hasAcquired = false;
+            try
             {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                if (!ResourceSemaphore.Wait(ConcurrentResourceLoadTimeout))
+                    throw new ConcurrentLoadTimeoutException("Too much counters loading concurrently, timed out waiting for them to load.");
 
-                AssertLicenseParameters(config);
-                var fs = new RavenFileSystem(config, tenantId, transportState);
-                fs.Initialize();
-
-                // if we have a very long init process, make sure that we reset the last idle time for this db.
-                LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
-                return fs;
-            }).ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                hasAcquired = true;
+                fileSystem = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                    Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
-                }
-                return task;
-            }).Unwrap());
-            return true;
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+
+                    AssertLicenseParameters(config);
+                    var fs = new RavenFileSystem(config, tenantId, transportState);
+                    fs.Initialize();
+
+                    // if we have a very long init process, make sure that we reset the last idle time for this db.
+                    LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    return fs;
+                }).ContinueWith(task =>
+                {
+                    if (task.Status == TaskStatus.Faulted) // this observes the task exception
+                    {
+                        Logger.WarnException("Failed to create filesystem " + tenantId, task.Exception);
+                    }
+                    return task;
+                }).Unwrap());
+                return true;
+            }
+            finally
+            {
+                if (hasAcquired)
+                    ResourceSemaphore.Release();
+            }
         }
 
-        private void AssertLicenseParameters(InMemoryRavenConfiguration config)
+        private void AssertLicenseParameters(RavenConfiguration config)
         {
             string maxFileSystmes;
             if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfFileSystems", out maxFileSystmes))
@@ -275,7 +285,7 @@ namespace Raven.Database.Server.Tenancy
                 throw new InvalidOperationException("Your license does not allow the use of the RavenFS");
             }
 
-            Authentication.AssertLicensedBundles(config.ActiveBundles);
+            Authentication.AssertLicensedBundles(config.Core.ActiveBundles);
         }
 
         protected override DateTime LastWork(RavenFileSystem resource)

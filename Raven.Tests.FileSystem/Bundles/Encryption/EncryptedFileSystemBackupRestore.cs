@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common.Util;
 
@@ -97,8 +98,8 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                     Id = Constants.FileSystem.Prefix + "FS1",
                     Settings =
                     {
-                        {Constants.FileSystem.DataDirectory, Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
-                        {Constants.ActiveBundles, "Encryption"}
+                        {RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
+                        {RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"}
                     },
                     SecuredSettings = new Dictionary<string, string>
                     {

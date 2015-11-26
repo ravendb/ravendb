@@ -23,6 +23,7 @@ using Raven.Client.Document;
 using Raven.Client.FileSystem;
 using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem;
 using Raven.Database.Server;
@@ -74,41 +75,34 @@ namespace Raven.Tests.Helpers
                                                     bool enableAuthentication = false,
                                                     string fileSystemName = null,
                                                     string activeBundles = null,
-                                                    Action<RavenConfiguration> customConfig = null)
+                                                    Action<AppSettingsBasedConfiguration> customConfig = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-            var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new RavenConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
                     RunInMemory = runInMemory,
                     DataDirectory = directory,
                     Port = port,
+                    AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
-#endif                
-                DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
+#endif          
                 Encryption = 
                 { 
                     UseFips = SettingsHelper.UseFipsEncryptionAlgorithms 
                 },
                 FileSystem = 
                 {
-                    MaximumSynchronizationInterval = this.SynchronizationInterval, 
+                    MaximumSynchronizationInterval = new TimeSetting((long) this.SynchronizationInterval.TotalSeconds, TimeUnit.Seconds), 
                     DataDirectory = Path.Combine(directory, "FileSystems"),
-                    DefaultStorageTypeName = storageType
                 },
             };
-
-            if (activeBundles != null)
-            {
-                ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
-            }
 
             if (customConfig != null)
             {
@@ -141,7 +135,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
-                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
+                                                bool runInMemory = true, Action<AppSettingsBasedConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -180,7 +174,7 @@ namespace Raven.Tests.Helpers
             ICredentials credentials = null, 
             string requestedStorage = null, 
             [CallerMemberName] string fileSystemName = null, 
-            Action<RavenConfiguration> customConfig = null,
+            Action<AppSettingsBasedConfiguration> customConfig = null,
             string activeBundles = null,
             string dataDirectory = null,
             bool runInMemory = true)
@@ -265,19 +259,6 @@ namespace Raven.Tests.Helpers
             var hash = new Guid(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(fileSystemName))).ToString("N").Substring(0, 8);
 
             return string.Format("{0}_{1}_{2}", prefix, hash, suffix);
-        }
-
-        public static string GetDefaultStorageType(string requestedStorage = null)
-        {
-            string defaultStorageType;
-            var envVar = Environment.GetEnvironmentVariable("raventest_storage_engine");
-            if (string.IsNullOrEmpty(envVar) == false)
-                defaultStorageType = envVar;
-            else if (requestedStorage != null)
-                defaultStorageType = requestedStorage;
-            else
-                defaultStorageType = "voron";
-            return defaultStorageType;
         }
 
         protected static string StreamToString(Stream stream)

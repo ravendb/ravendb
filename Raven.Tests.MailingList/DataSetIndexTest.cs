@@ -15,7 +15,7 @@ namespace Raven.Tests.MailingList
     {
         private const int MaxNumberOfItemsInDataSet = 50;
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
             configuration.Indexing.MaxSimpleIndexOutputsPerDocument = 100;
         }

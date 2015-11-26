@@ -16,10 +16,9 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_2699 : RavenTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
+        protected override void ModifyConfiguration(RavenConfiguration config)
         {
-            config.Settings[Constants.Voron.AllowIncrementalBackups] = "true";
-            config.Storage.Voron.AllowIncrementalBackups = true;
+            config.Storage.AllowIncrementalBackups = true;
         }
 
         [Theory]

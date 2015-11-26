@@ -67,9 +67,9 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
+            configuration.Core._ActiveBundlesString = "ScriptedIndexResults";
             configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(ScriptedIndexResultsIndexTrigger)));
         }
 

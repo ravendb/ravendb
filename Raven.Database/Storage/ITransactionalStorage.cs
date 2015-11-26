@@ -44,7 +44,7 @@ namespace Raven.Database.Storage
 
         bool IsAlreadyInBatch { get; }
 
-        void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
+        void Compact(RavenConfiguration configuration, Action<string> output);
         Guid ChangeId();
         void ClearCaches();
         void DumpAllStorageTables();

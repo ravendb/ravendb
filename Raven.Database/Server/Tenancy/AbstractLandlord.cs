@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,22 +43,21 @@ namespace Raven.Database.Server.Tenancy
 
         public abstract string ResourcePrefix { get; }
 
-        protected readonly InMemoryRavenConfiguration systemConfiguration;
+        protected readonly RavenConfiguration systemConfiguration;
         protected readonly DocumentDatabase systemDatabase;
+
+        protected readonly SemaphoreSlim ResourceSemaphore;
+        protected readonly TimeSpan ConcurrentResourceLoadTimeout;
 
         protected AbstractLandlord(DocumentDatabase systemDatabase)
         {
             systemConfiguration = systemDatabase.Configuration;
             this.systemDatabase = systemDatabase;
+            ResourceSemaphore = new SemaphoreSlim(systemDatabase.Configuration.Tenants.MaxConcurrentResourceLoads);
+            ConcurrentResourceLoadTimeout = systemDatabase.Configuration.Tenants.ConcurrentResourceLoadTimeout.AsTimeSpan;
         }
 
-        public TimeSpan MaxTimeForTaskToWaitForDatabaseToLoad
-        {
-            get
-            {
-                return systemConfiguration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
-            }
-        }
+        public TimeSpan MaxTimeForTaskToWaitForDatabaseToLoad => systemConfiguration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 
         public IEnumerable<TransportState> GetUserAllowedTransportStates(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
         {
@@ -266,6 +265,15 @@ namespace Raven.Database.Server.Tenancy
                 // there is no else, the db is probably faulted
             });
             ResourcesStoresCache.Clear();
+
+            try
+            {
+                ResourceSemaphore.Dispose();
+            }
+            catch (Exception e)
+            {
+                Logger.WarnException("Failed to dispose resource semaphore", e);
+            }
         }
 
         public abstract Task<TResource> GetResourceInternal(string resourceName);
@@ -273,15 +281,8 @@ namespace Raven.Database.Server.Tenancy
         public abstract bool TryGetOrCreateResourceStore(string resourceName, out Task<TResource> resourceTask);
 
         private ConcurrentDictionary<string, DateTime> _lastRecentlyUsed;
-        public ConcurrentDictionary<string, DateTime> LastRecentlyUsed
-        {
-            get
-            {
-                if (_lastRecentlyUsed == null)
-                    _lastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-
-                return _lastRecentlyUsed;
-            }
-        }
+        public ConcurrentDictionary<string, DateTime> LastRecentlyUsed => 
+            _lastRecentlyUsed ?? 
+                (_lastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase));
     }
 }

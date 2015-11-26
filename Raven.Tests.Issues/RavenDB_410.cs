@@ -89,7 +89,7 @@ namespace Raven.Tests.Issues
 
                 var documentDatabase = server.Server.GetDatabaseInternal("mydb");
                 documentDatabase.Wait();
-                Assert.Equal("Pass", documentDatabase.Result.Configuration.Settings["Secret"]);
+                Assert.Equal("Pass", documentDatabase.Result.Configuration.GetSetting("Secret"));
             }
         }
     }

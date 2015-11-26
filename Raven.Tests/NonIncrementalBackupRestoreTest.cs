@@ -40,19 +40,14 @@ namespace Raven.Tests
 
         private void InitializeDocumentDatabase(string storageName)
         {
-            db = new DocumentDatabase(new RavenConfiguration
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     RunInMemory = false,
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
-                {
-                    {"Raven/Esent/CircularLog", "false"}
-                }
             }, null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
         }
@@ -72,21 +67,18 @@ namespace Raven.Tests
             db.Dispose();
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new RavenConfiguration
+            MaintenanceActions.Restore(new AppSettingsBasedConfiguration
             {
-                DefaultStorageTypeName = storageName,
                 Core =
                 {
                     RunInMemory = false,
                     DataDirectory = DataDir
                 },
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Settings =
+                Storage =
                 {
-                    {"Raven/Esent/CircularLog", "false"},
-                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                    AllowIncrementalBackups = false
                 }
-
             }, new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
@@ -94,7 +86,7 @@ namespace Raven.Tests
                 Defrag = true
             }, s => { });
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -127,20 +119,14 @@ namespace Raven.Tests
 
             //data directiory still exists --> should fail to restore backup
             Assert.Throws<IOException>(() => 
-                MaintenanceActions.Restore(new RavenConfiguration
+                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
                 {
-                    DefaultStorageTypeName = storageName, 
                     Core =
                     {
                         RunInMemory = false,
                         DataDirectory = DataDir
                     },
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                    Settings =
-                    {
-                        {"Raven/Esent/CircularLog", "false"}
-                    }
-
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -169,20 +155,14 @@ namespace Raven.Tests
 
             //index directiory doesn't exists --> should NOT fail to restore backup
             Assert.DoesNotThrow(() =>
-                MaintenanceActions.Restore(new RavenConfiguration
+                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
                 {
-                    DefaultStorageTypeName = storageName,
                     Core =
                     {
                         RunInMemory = false,
                         DataDirectory = DataDir,
                     },
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                    Settings =
-                    {
-                        {"Raven/Esent/CircularLog", "false"}
-                    }
-
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -190,7 +170,7 @@ namespace Raven.Tests
                     Defrag = true
                 }, s => { }));
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir
@@ -229,20 +209,14 @@ namespace Raven.Tests
 
             //index is corrupted --> should NOT fail to restore backup
             Assert.DoesNotThrow(() =>
-                MaintenanceActions.Restore(new RavenConfiguration
+                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
                 {
-                    DefaultStorageTypeName = storageName,
                     Core =
                     {
                         RunInMemory = false,
                         DataDirectory = DataDir,
                     },
                     RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                    Settings =
-                    {
-                        {"Raven/Esent/CircularLog", "false"}
-                    }
-
                 }, new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
@@ -250,7 +224,7 @@ namespace Raven.Tests
                     Defrag = true
                 }, s => { }));
 
-            db = new DocumentDatabase(new RavenConfiguration {
+            db = new DocumentDatabase(new AppSettingsBasedConfiguration {
                 Core =
                 {
                     DataDirectory = DataDir

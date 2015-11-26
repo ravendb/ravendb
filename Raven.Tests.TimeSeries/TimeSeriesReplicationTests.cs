@@ -2,17 +2,17 @@ using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Xunit;
 
 namespace Raven.Tests.TimeSeries
 {
     public class TimeSeriesReplicationTests : RavenBaseTimeSeriesTest
     {
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
-            configuration.Settings[Constants.TimeSeries.ReplicationLatencyMs] = "10";
-            configuration.TimeSeries.ReplicationLatencyInMs = 10;
+            configuration.TimeSeries.ReplicationLatency = new TimeSetting(10, TimeUnit.Milliseconds);
         }
 
         [Fact]

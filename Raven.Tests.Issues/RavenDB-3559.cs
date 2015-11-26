@@ -24,9 +24,9 @@ namespace Raven.Tests.Issues
     public class RavenDB_3559 : RavenTestBase
     {
         private const string Operation = "Content/View";
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
         

@@ -26,16 +26,16 @@ namespace Raven.Tests.Bugs.MultiTenancy
         protected RavenDbServer GetNewServer(int port)
         {
             var dataDirectory = Path.Combine(NewDataPath(), "System");
-            var configuration = new RavenConfiguration
+            var configuration = new AppSettingsBasedConfiguration
             {
                 Core =
                 {
                     DataDirectory = dataDirectory,
                     Port = port,
-                },
-                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
+                }
             };
-            configuration.Core.RunInMemory = configuration.DefaultStorageTypeName == InMemoryRavenConfiguration.VoronTypeName;
+            configuration.Core.RunInMemory = true;
 
             var ravenDbServer = new RavenDbServer(configuration)
             {
@@ -190,7 +190,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
                         Id = "Raven/Databases/Northwind",
                         Settings =
                             {
-                                { Constants.RunInMemory, "true"},
+                                { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
                                 {"Raven/DataDir", "Northwind"}
                             }
                     });

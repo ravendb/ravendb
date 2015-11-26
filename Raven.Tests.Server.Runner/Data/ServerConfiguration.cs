@@ -31,20 +31,21 @@ namespace Raven.Tests.Server.Runner.Data
 
         public RavenConfiguration ConvertToRavenConfiguration()
         {
-            var configuration = new RavenConfiguration
+            var configuration = new RavenConfiguration()
                                 {
                                     Core =
                                     {
                                         RunInMemory = RunInMemory,
-                                         Port = Port,
+                                        Port = Port,
                                     },
-                                    DefaultStorageTypeName = DefaultStorageTypeName
                                 };
 
             foreach (var key in Settings.Keys)
             {
-                configuration.Settings.Add(key, Settings[key]);
+                configuration.SetSetting(key, Settings[key]);
             }
+
+            configuration.Initialize();
 
             return configuration;
         }

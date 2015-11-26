@@ -16,6 +16,7 @@ using System.Web.Http.Routing;
 
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.FileSystem.Extensions;
@@ -107,7 +108,7 @@ namespace Raven.Database.Common
             }
         }
 
-        public override InMemoryRavenConfiguration ResourceConfiguration
+        public override RavenConfiguration ResourceConfiguration
         {
             get
             {
@@ -164,7 +165,7 @@ namespace Raven.Database.Common
             }
         }
 
-        public override InMemoryRavenConfiguration SystemConfiguration
+        public override RavenConfiguration SystemConfiguration
         {
             get
             {
@@ -191,7 +192,7 @@ namespace Raven.Database.Common
         {
             base.InnerInitialization(controllerContext);
 
-            _maxNumberOfThreadsForResourceToLoadSemaphore = (SemaphoreSlim)controllerContext.Configuration.Properties[InMemoryRavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)];
+            _maxNumberOfThreadsForResourceToLoadSemaphore = (SemaphoreSlim)controllerContext.Configuration.Properties[RavenConfiguration.GetKey(x => x.Server.MaxConcurrentRequestsForDatabaseDuringLoad)];
             _resourceLandlord = (TResourceLandlord)controllerContext.Configuration.Properties[typeof(TResourceLandlord)];
 
             ResourceName = GetResourceName(controllerContext, ResourceType);
@@ -240,20 +241,31 @@ namespace Raven.Database.Common
             }
             catch (Exception e)
             {
-                msg = "Could not open resource named: " + resourceName + " " + e.Message;
+                var cle = e as ConcurrentLoadTimeoutException;
+                if (cle != null)
+                {
+                    msg = $"The resource {resourceName} is currently being loaded, " +
+                          "but there are too many requests waiting for resources to load. " +
+                          "Please try again later, resource loading continues.";
+                }
+                else
+                {
+                    msg = $"Could not open resource named: {resourceName} {e.Message}";
+                }
+
                 Log.WarnException(msg, e);
-                throw new HttpException(503, msg, e);
+                throw new HttpException(503, msg, e); 
             }
             if (hasResource)
             {
                 try
                 {
-                    TimeSpan timeToWaitForResourceToLoad = MaxTimeForTaskToWaitForResourceToLoad;
+                    var timeToWaitForResourceToLoad = MaxTimeForTaskToWaitForResourceToLoad;
                     if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
                     {
                         if (MaxNumberOfThreadsForResourceToLoadSemaphore.Wait(0) == false)
                         {
-                            msg = string.Format("The resource {0} is currently being loaded, but there are too many requests waiting for resource load. Please try again later, resource loading continues.", resourceName);
+                            msg = $"The resource {resourceName} is currently being loaded, but there are too many requests waiting for resource load. Please try again later, resource loading continues.";
                             Log.Warn(msg);
                             throw new TimeoutException(msg);
                         }
@@ -262,7 +274,7 @@ namespace Raven.Database.Common
                         {
                             if (await Task.WhenAny(resourceStoreTask, Task.Delay(timeToWaitForResourceToLoad)).ConfigureAwait(false) != resourceStoreTask)
                             {
-                                msg = string.Format("The resource {0} is currently being loaded, but after {1} seconds, this request has been aborted. Please try again later, resource loading continues.", resourceName, timeToWaitForResourceToLoad.TotalSeconds);
+                                msg = $"The resource {resourceName} is currently being loaded, but after {timeToWaitForResourceToLoad.TotalSeconds} seconds, this request has been aborted. Please try again later, resource loading continues.";
                                 Log.Warn(msg);
                                 throw new TimeoutException(msg);
                             }
@@ -298,7 +310,7 @@ namespace Raven.Database.Common
                 switch (ResourceType)
                 {
                     case ResourceType.Database:
-                        return Resource.Configuration.RejectClientsMode;
+                        return Resource.Configuration.Core.RejectClientsMode;
                     case ResourceType.FileSystem:
                     case ResourceType.Counter:
                     case ResourceType.TimeSeries:

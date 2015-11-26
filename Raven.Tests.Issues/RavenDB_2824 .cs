@@ -23,10 +23,9 @@ namespace Raven.Tests.Issues
             BackupDir = NewDataPath("BackupDatabase");
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
+        protected override void ModifyConfiguration(RavenConfiguration config)
         {
-            config.Settings[Constants.Voron.AllowIncrementalBackups] = "true";
-            config.Storage.Voron.AllowIncrementalBackups = true;
+            config.Storage.AllowIncrementalBackups = true;
         }
 
         [Theory]

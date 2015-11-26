@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
                 if (file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) != "Historical")
                     return;
 
-                if (FileSystem.ChangesToRevisionsAllowed() || accessor.IsVersioningActive(name) == false)
+                if (FileSystem.Configuration.FileSystem.Versioning.ChangesToRevisionsAllowed || accessor.IsVersioningActive(name) == false)
                     return;
 
                 var revisionPos = name.LastIndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);

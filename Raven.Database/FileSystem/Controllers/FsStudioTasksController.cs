@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Controllers
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
-            string tempPath = FileSystem.Configuration.TempPath;
+            string tempPath = FileSystem.Configuration.Core.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
                 File.Delete(fullTempPath);
@@ -150,9 +150,9 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             });
 
-            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+            var fileName = string.IsNullOrEmpty(smugglerOptions.NoneDefaultFileName) || (smugglerOptions.NoneDefaultFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
                 string.Format("Dump of {0}, {1}", FileSystemName, DateTime.Now.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)) :
-                smugglerOptions.NoneDefualtFileName;
+                smugglerOptions.NoneDefaultFileName;
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
                 FileName = fileName + ".ravendump"

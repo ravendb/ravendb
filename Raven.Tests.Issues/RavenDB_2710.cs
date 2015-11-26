@@ -15,9 +15,9 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_2710 : RavenTestBase
     {
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup;Replication";
+            configuration.Core._ActiveBundlesString = "PeriodicBackup;Replication";
         }
 
         [Fact]
@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(store.Configuration.TombstoneRetentionTime);
+                SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(store.Configuration.Core.TombstoneRetentionTime.AsTimeSpan);
 
                 // create document
                 string user1;

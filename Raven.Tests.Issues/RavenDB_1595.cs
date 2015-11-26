@@ -52,17 +52,16 @@ namespace Raven.Tests.Issues
         {
             Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
-            var serverConfiguration = new Database.Config.RavenConfiguration
+            var serverConfiguration = new Database.Config.AppSettingsBasedConfiguration
             {
-                AnonymousUserAccessMode = Database.Server.AnonymousUserAccessMode.Admin,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
                 Core =
                 {
                     RunInMemory = false,
                     DataDirectory = dataDirectory,
                     Port = port,
-                },
-                DefaultStorageTypeName = "voron"
+                    AnonymousUserAccessMode = Database.Server.AnonymousUserAccessMode.Admin,
+                }
             };
 
             if (removeDataDirectory)

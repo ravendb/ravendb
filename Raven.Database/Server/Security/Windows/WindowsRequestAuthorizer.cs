@@ -64,7 +64,7 @@ namespace Raven.Database.Server.Security.Windows
             Func<HttpResponseMessage> onRejectingRequest;
             var tenantId = controller.ResourceName ?? Constants.SystemDatabase;
             var userCreated = TryCreateUser(controller, tenantId, out onRejectingRequest);
-            if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
+            if (server.SystemConfiguration.Core.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
             {
                 msg = onRejectingRequest();
                 return false;
@@ -77,14 +77,14 @@ namespace Raven.Database.Server.Security.Windows
                 CurrentOperationContext.User.Value = controller.User;
 
                 // admins always go through
-                if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
+                if (user.Principal.IsAdministrator(server.SystemConfiguration.Core.AnonymousUserAccessMode))
                 {
                     msg = controller.GetEmptyMessage();
                     return true;
                 }
 
                 // backup operators can go through
-                if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
+                if (user.Principal.IsBackupOperator(server.SystemConfiguration.Core.AnonymousUserAccessMode))
                 {
                     msg = controller.GetEmptyMessage();
                     return true;
@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Security.Windows
             }
 
             bool isGetRequest = IsGetRequest(controller);
-            switch (server.SystemConfiguration.AnonymousUserAccessMode)
+            switch (server.SystemConfiguration.Core.AnonymousUserAccessMode)
             {
                 case AnonymousUserAccessMode.Admin:
                 case AnonymousUserAccessMode.All:
@@ -155,9 +155,9 @@ namespace Raven.Database.Server.Security.Windows
                         Reason = "User is null or not authenticated"
                     });
                     controller.AddHeader("Raven-Required-Auth", "Windows", msg);
-                    if (string.IsNullOrEmpty(controller.SystemConfiguration.OAuthTokenServer) == false)
+                    if (string.IsNullOrEmpty(controller.SystemConfiguration.OAuth.TokenServer) == false)
                     {
-                        controller.AddHeader("OAuth-Source", controller.SystemConfiguration.OAuthTokenServer, msg);
+                        controller.AddHeader("OAuth-Source", controller.SystemConfiguration.OAuth.TokenServer, msg);
                     }
                     msg.StatusCode = HttpStatusCode.Unauthorized;
 

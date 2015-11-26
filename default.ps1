@@ -20,6 +20,8 @@ properties {
     $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
+    $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
+    $nowarn = "1591 1573 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
 }
 
 task default -depends Test, DoReleasePart1
@@ -52,22 +54,11 @@ task Init -depends Verify40, Clean {
 task Compile -depends Init, CompileHtml5 {
     
     $commit = Get-Git-Commit-Full
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
     
     Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    $_decSep = [System.Threading.Thread]::CurrentThread.CurrentUICulture.NumberFormat.CurrencyDecimalSeparator;
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=12.0 /maxcpucount /verbosity:minimal
  
-    $highestToolVersion = $(Get-ChildItem -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions\" | 
-        Where { $_.Name -match '\\\d+.\d+$' } | 
-        Sort-Object -property  @{Expression={[System.Convert]::ToDecimal($_.Name.Substring($_.Name.LastIndexOf("\") + 1).Replace(".",$_decSep).Replace(",",$_decSep))}} -Descending |
-        Select-Object -First 1)		
-        
-    $highestToolVersion = $highestToolVersion.ToString().Substring($highestToolVersion.ToString().LastIndexOf("\") + 1)	
-    $msbuild_command = "C:\Program Files (x86)\MSBuild\" + $highestToolVersion + "\Bin\MSBuild.exe"
-    $build_config = "/p:Configuration=" + $global:configuration
-    & $msbuild_command @($sln_file,$build_config,"/p:nowarn='1591 1573'","/p:VisualStudioVersion=12.0","/maxcpucount")
-    
     Write-Host "msbuild exit code:  $LastExitCode"
 
     if( $LastExitCode -ne 0){
@@ -85,10 +76,8 @@ task CompileHtml5 {
     
     "{ ""BuildVersion"": $env:buildlabel }" | Out-File "Raven.Studio.Html5\version.json" -Encoding UTF8
     
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
-    exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+    exec { &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="$nowarn" /verbosity:minimal }
     
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -217,7 +206,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
     New-Item $build_dir\Output\Backup -Type directory | Out-Null
     New-Item $build_dir\Output\Migration -Type directory | Out-Null
-    New-Item $build_dir\Output\Diag\Raven.Traffic -Type directory | Out-Null
+    New-Item $build_dir\Output\Diag\Traffic -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
     New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
@@ -248,8 +237,8 @@ task CopyMigration {
 }
 
 task CopyRavenTraffic {
-    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Raven.Traffic
-    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Raven.Traffic
+    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Traffic
+    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Traffic
 }
 
 task CopyStorageExporter {
@@ -408,6 +397,7 @@ task ZipOutput {
             Bundles\*.* `
             Web\bin\*.* `
             Server\*.* `
+            Diag\*.* `
             *.*
     }
     
@@ -428,9 +418,9 @@ task DoReleasePart1 -depends Compile, `
     CopyServer, `
     SignServer, `
     CopyRootFiles, `
-    ZipOutput, `
     CopyRavenTraffic, `
-    CopyStorageExporter {	
+    CopyStorageExporter, `
+    ZipOutput {	
     
     Write-Host "Done building RavenDB"
 }

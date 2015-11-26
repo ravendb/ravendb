@@ -23,12 +23,12 @@ namespace Raven.Database.FileSystem.Synchronization
 
         private readonly SigGenerator sigGenerator;
 
-        private readonly InMemoryRavenConfiguration configuration;
+        private readonly RavenConfiguration configuration;
 
         private DataInfo fileDataInfo;
         private SynchronizationMultipartRequest multipartRequest;
 
-        public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration) : base(file, sourceServerUrl, storage)
+        public ContentUpdateWorkItem(string file, string sourceServerUrl, ITransactionalStorage storage, SigGenerator sigGenerator, RavenConfiguration configuration) : base(file, sourceServerUrl, storage)
         {
             this.sigGenerator = sigGenerator;
             this.configuration = configuration;

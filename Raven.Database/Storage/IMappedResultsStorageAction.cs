@@ -9,6 +9,7 @@ using System.Threading;
 
 using Raven.Database.Indexing;
 using Raven.Abstractions.Data;
+using Raven.Database.Config.Settings;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -163,7 +164,7 @@ namespace Raven.Database.Storage
         public string Source { get; set; }
 
         [JsonIgnore]
-        public int Size { get; set; }
+        public Size Size { get; set; }
 
         public override string ToString()
         {

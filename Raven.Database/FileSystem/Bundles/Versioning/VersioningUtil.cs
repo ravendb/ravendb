@@ -23,17 +23,6 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
 
         public const string DefaultConfigurationName = "Raven/Versioning/DefaultConfiguration";
 
-        public static bool ChangesToRevisionsAllowed(this RavenFileSystem fileSystem)
-        {
-            var changesToRevisionsAllowed = fileSystem.Configuration.Settings[Constants.FileSystem.Versioning.ChangesToRevisionsAllowed];
-            if (changesToRevisionsAllowed == null)
-                return false;
-            bool result;
-            if (bool.TryParse(changesToRevisionsAllowed, out result) == false)
-                return false;
-            return result;
-        }
-
         public static bool IsVersioningActive(this RavenFileSystem fileSystem, string filePath)
         {
             var exists = false;

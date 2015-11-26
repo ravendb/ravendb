@@ -14,6 +14,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Indexing
 {
@@ -165,9 +166,9 @@ namespace Raven.Database.Indexing
             indexWriter.DeleteDocuments(forceCommitTerm);
         }
 
-        public long RamSizeInBytes()
+        public Size RamSize()
         {
-            return indexWriter.RamSizeInBytes();
+            return new Size(indexWriter.RamSizeInBytes(), SizeUnit.Bytes);
         }
 
         public void Optimize()

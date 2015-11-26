@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
@@ -124,6 +123,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Abstractions.Database", "Raven.Abstractions.Database\Raven.Abstractions.Database.csproj", "{AE07B425-0EF2-4710-B747-67B8EC20FCB7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Smuggler", "Raven.Tests.Smuggler\Raven.Tests.Smuggler.csproj", "{44A7D299-5AE6-4E2E-9E32-18CB9FD82264}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.MiniDumper", "Raven.MiniDumper\Raven.MiniDumper.csproj", "{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -401,6 +402,12 @@ Global
 		{44A7D299-5AE6-4E2E-9E32-18CB9FD82264}.Profiling|Any CPU.Build.0 = Release|Any CPU
 		{44A7D299-5AE6-4E2E-9E32-18CB9FD82264}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{44A7D299-5AE6-4E2E-9E32-18CB9FD82264}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Profiling|Any CPU.ActiveCfg = Release|Any CPU
+		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Profiling|Any CPU.Build.0 = Release|Any CPU
+		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -443,6 +450,7 @@ Global
 		{775CC9C6-BD75-459C-B266-CA1CD389F1A4} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
 		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
 		{44A7D299-5AE6-4E2E-9E32-18CB9FD82264} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
+		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57

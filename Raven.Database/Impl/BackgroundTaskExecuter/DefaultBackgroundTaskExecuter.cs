@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
         public void ExecuteAllBuffered<T>(WorkContext context, IList<T> source, Action<IEnumerator<T>> action)
         {
             var maxNumberOfParallelIndexTasks = context.CurrentNumberOfParallelTasks;
-            var size = Math.Max(source.Count / maxNumberOfParallelIndexTasks, 1024);
+            var size = Math.Max((int)Math.Ceiling(source.Count / (double)maxNumberOfParallelIndexTasks), 1024);
             if (maxNumberOfParallelIndexTasks == 1 || source.Count <= size)
             {
                 using (var e = source.GetEnumerator())

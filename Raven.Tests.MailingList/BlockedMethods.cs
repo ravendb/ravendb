@@ -104,7 +104,7 @@ namespace Raven.Tests.MailingList
 
         private void Compile(string code)
         {
-            var configuration = new InMemoryRavenConfiguration();
+            var configuration = new RavenConfiguration();
             configuration.Initialize();
             var dynamicViewCompiler = new DynamicViewCompiler("test", new IndexDefinition
             {

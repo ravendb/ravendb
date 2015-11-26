@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -34,6 +34,8 @@
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\subscriptions\getSubscriptionCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
@@ -72,6 +74,7 @@
     <TypeScriptCompile Include="App\models\database\debug\debugDocumentStats.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesGroup.ts" />
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
+    <TypeScriptCompile Include="App\models\database\subscription\subscription.ts" />
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
@@ -117,6 +120,7 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\reduceBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
+    <TypeScriptCompile Include="App\viewmodels\database\tasks\subscriptionsTask.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
@@ -161,6 +165,7 @@
     <Content Include="App\views\database\status\indexing\perfDialogs\mapStatsInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\reduceBatchInfo.html" />
     <Content Include="App\views\database\status\indexing\perfDialogs\mapBatchInfo.html" />
+    <Content Include="App\views\database\tasks\subscriptionsTask.html" />
     <Content Include="App\views\filesystem\search\fieldRangeFilter.html" />
     <Content Include="App\views\filesystem\search\fieldStringFilter.html" />
     <Content Include="App\views\backup.html" />
@@ -809,7 +814,7 @@
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\createSampleDataClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\createSampleDataCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\studio\exportDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\database\studio\validateExportDatabaseOptionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\getCachedCollectionsCount.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\getClientBuildVersionCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\getLatestServerBuildVersionCommand.ts" />
@@ -1322,7 +1327,7 @@
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
-    <Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
+  <Import Project="$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(SolutionDir)\packages\MSBuild.Microsoft.VisualStudio.Web.targets.14.0.0\tools\VSToolsPath\WebApplications\Microsoft.WebApplication.targets')" />
   <ProjectExtensions>
     <VisualStudio>
       <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">

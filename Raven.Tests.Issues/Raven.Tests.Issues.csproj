@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -145,6 +145,7 @@
     <Compile Include="RavenDB-3726.cs" />
     <Compile Include="RavenDB-3763.cs" />
     <Compile Include="RavenDB-3818.cs" />
+    <Compile Include="RavenDB-4011.cs" />
     <Compile Include="RavenDB_3981.cs" />
     <Compile Include="RavenDB_3488.cs" />
     <Compile Include="RavenDB-3472-async.cs" />
@@ -465,6 +466,9 @@
     <Compile Include="RavenDB_3917.cs" />
     <Compile Include="RavenDB_3929.cs" />
     <Compile Include="RavenDB_3938.cs" />
+    <Compile Include="RavenDB_3985.cs" />
+    <Compile Include="RavenDB_3996.cs" />
+    <Compile Include="RavenDB_4010.cs" />
     <Compile Include="RavenDB_406.cs" />
     <Compile Include="RavenDB_410.cs" />
     <Compile Include="RavenDB_421.cs" />
@@ -509,6 +513,7 @@
     <Compile Include="RavenDB_2344.cs" />
     <Compile Include="RavenDB_2907.cs" />
     <Compile Include="RavenDB_3555.cs" />
+    <Compile Include="RavenDB_3994.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />

@@ -204,10 +204,11 @@ namespace Raven.Client.Linq
             bool isNotEqualCheckBoundsToAndAlsoLeft = (andAlso.Left.NodeType == ExpressionType.NotEqual);
             bool isNotEqualCheckBoundsToAndAlsoRight = (andAlso.Right.NodeType == ExpressionType.NotEqual);
 
-            if (isNotEqualCheckBoundsToAndAlsoRight == true && isNotEqualCheckBoundsToAndAlsoLeft == true)
-                isNotEqualCheckBoundsToAndAlsoLeft = false; // avoid empty group (i.e. : "a != 1 && a != 2"  should generate "((-a:1 AND a:*) AND -a:2)"
+            if (isNotEqualCheckBoundsToAndAlsoRight && isNotEqualCheckBoundsToAndAlsoLeft)
+                // avoid empty group (i.e. : "a != 1 && a != 2"  should generate "((-a:1 AND a:*) AND -a:2)"
+                isNotEqualCheckBoundsToAndAlsoLeft = false;
 
-            if (isNotEqualCheckBoundsToAndAlsoLeft == true || isNotEqualCheckBoundsToAndAlsoRight == true)
+            if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
             {
                 subClauseDepth++;
                 documentQuery.OpenSubclause();
@@ -219,7 +220,7 @@ namespace Raven.Client.Linq
             VisitExpression(andAlso.Right);
             isNotEqualCheckBoundsToAndAlso = false;
 
-            if (isNotEqualCheckBoundsToAndAlsoLeft == true || isNotEqualCheckBoundsToAndAlsoRight == true)
+            if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
             {
                 subClauseDepth--;
                 documentQuery.CloseSubclause();

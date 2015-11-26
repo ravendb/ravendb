@@ -270,9 +270,36 @@
     <Compile Include="Config\Attributes\MinValueAttribute.cs" />
     <Compile Include="Config\Attributes\SizeUnitAttribute.cs" />
     <Compile Include="Config\Attributes\TimeUnitAttribute.cs" />
-    <Compile Include="Config\Settings\SizeSetting.cs" />
+    <Compile Include="Config\Categories\BulkInsertConfiguration.cs" />
+    <Compile Include="Config\Categories\ClusterConfiguration.cs" />
+    <Compile Include="Config\Categories\ConfigurationCategory.cs" />
+    <Compile Include="Config\Categories\CoreConfiguration.cs" />
+    <Compile Include="Config\Categories\CounterConfiguration.cs" />
+    <Compile Include="Config\Categories\EncryptionConfiguration.cs" />
+    <Compile Include="Config\Categories\ExpirationBundleConfiguration.cs" />
+    <Compile Include="Config\Categories\FileSystemConfiguration.cs" />
+    <Compile Include="Config\Categories\FileSystemVersioningBundleConfiguration.cs" />
+    <Compile Include="Config\Categories\QuotasBundleConfiguration.cs" />
+    <Compile Include="Config\ImplicitFetchFieldsMode.cs" />
+    <Compile Include="Config\Categories\IndexingConfiguration.cs" />
+    <Compile Include="Config\Categories\LicenseConfiguration.cs" />
+    <Compile Include="Config\Categories\MemoryConfiguration.cs" />
+    <Compile Include="Config\Categories\MonitoringConfiguration.cs" />
+    <Compile Include="Config\Categories\OAuthConfiguration.cs" />
+    <Compile Include="Config\Categories\PatchingConfiguration.cs" />
+    <Compile Include="Config\Categories\PrefetcherConfiguration.cs" />
+    <Compile Include="Config\Categories\QueryConfiguration.cs" />
+    <Compile Include="Config\Categories\ReplicationConfiguration.cs" />
+    <Compile Include="Config\Categories\ServerConfiguration.cs" />
+    <Compile Include="Config\Settings\Size.cs" />
     <Compile Include="Config\Settings\TimeSetting.cs" />
+    <Compile Include="Config\Categories\StorageConfiguration.cs" />
+    <Compile Include="Config\Categories\StudioConfiguration.cs" />
     <Compile Include="Config\SystemInfoLogging.cs" />
+    <Compile Include="Config\Categories\TenantConfiguration.cs" />
+    <Compile Include="Config\Categories\TimeSeriesConfiguration.cs" />
+    <Compile Include="Config\Categories\VersioningBundleConfiguration.cs" />
+    <Compile Include="Config\Categories\WebSocketsConfiguration.cs" />
     <Compile Include="Counters\Backup\BackupOperation.cs" />
     <Compile Include="Counters\Backup\RestoreOperation.cs" />
     <Compile Include="Counters\Controllers\BaseAdminCountersApiController.cs" />
@@ -388,8 +415,6 @@
     <Compile Include="Config\Retriever\ReplicationConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\SqlReplicationConfigurationRetriever.cs" />
     <Compile Include="Config\Retriever\VersioningConfigurationRetriever.cs" />
-    <Compile Include="Config\Settings\EnumSetting.cs" />
-    <Compile Include="Config\Settings\NullableIntegerSettingWithMin.cs" />
     <Compile Include="Counters\Controllers\CountersChangesController.cs" />
     <Compile Include="Counters\Notifications\NotificationPublisher.cs" />
     <Compile Include="Data\DiskSpaceNotification.cs" />
@@ -578,6 +603,7 @@
     <Compile Include="Util\DevelopmentHelper.cs" />
     <Compile Include="Util\CultureHelper.cs" />
     <Compile Include="Util\DebugInfoProvider.cs" />
+    <Compile Include="Util\MiniDumper.cs" />
     <Compile Include="Util\RavenGC.cs" />
     <Compile Include="Util\ResourceTimerManager.cs" />
     <Compile Include="Util\SortFieldHelper.cs" />
@@ -607,7 +633,6 @@
     <Compile Include="Counters\CountersMetricsManager.cs" />
     <Compile Include="Counters\ReplicationMessage.cs" />
     <Compile Include="Counters\CounterStorage.cs" />
-    <Compile Include="Config\Settings\NullableIntegerSetting.cs" />
     <Compile Include="Embedded\ResponseStream.cs" />
     <Compile Include="Extensions\HttpExtensions.cs" />
     <Compile Include="Extensions\MetricExtension.cs" />
@@ -875,14 +900,6 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
-    <Compile Include="Config\StronglyTypedRavenSettings.cs" />
-    <Compile Include="Config\Settings\BooleanSetting.cs" />
-    <Compile Include="Config\Settings\IntegerSetting.cs" />
-    <Compile Include="Config\Settings\IntegerSettingWithMin.cs" />
-    <Compile Include="Config\Settings\MultipliedIntegerSetting.cs" />
-    <Compile Include="Config\Settings\Setting.cs" />
-    <Compile Include="Config\Settings\StringSetting.cs" />
-    <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
     <Compile Include="Extensions\RoleFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
@@ -946,7 +963,6 @@
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
-    <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
     <Compile Include="Data\QueryResultWithIncludes.cs" />
     <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
@@ -1187,7 +1203,7 @@
     <Compile Include="Indexing\RobustEnumerator.cs" />
     <Compile Include="Indexing\SpatialField.cs" />
     <Compile Include="Indexing\SimpleQueryParser.cs" />
-    <Compile Include="Config\InMemoryRavenConfiguration.cs" />
+    <Compile Include="Config\RavenConfiguration.cs" />
     <Compile Include="Impl\IUuidGenerator.cs" />
     <Compile Include="Linq\Ast\CaptureSelectNewFieldNamesVisitor.cs" />
     <Compile Include="Plugins\IStartupTask.cs" />
@@ -1230,7 +1246,7 @@
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="Plugins\VetoResult.cs" />
-    <Compile Include="Config\RavenConfiguration.cs" />
+    <Compile Include="Config\AppSettingsBasedConfiguration.cs" />
     <Compile Include="Queries\SuggestionQueryExtensions.cs" />
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />
     <Compile Include="Queries\TermsQueryRunner.cs" />
@@ -1380,6 +1396,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Analyzer Include="..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
   <ItemGroup Label="LuceneQuery-Raven-Database-IndexingFiles">

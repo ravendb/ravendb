@@ -51,13 +51,13 @@ namespace Raven.Tests.Core.Smuggler
         [Fact]
         public async Task CanUseBetween()
         {
-            using (var server1 = new RavenDbServer(new RavenConfiguration()
+            using (var server1 = new RavenDbServer(new AppSettingsBasedConfiguration()
             {
                 Core =
                 {
                     Port = Port1
                 },
-                ServerName = ServerName1
+                Server = { Name = ServerName1 }
             })
             {
                 RunInMemory = true,
@@ -83,13 +83,13 @@ namespace Raven.Tests.Core.Smuggler
                         session.SaveChanges();
                     }
 
-                    using (var server2 = new RavenDbServer(new RavenConfiguration()
+                    using (var server2 = new RavenDbServer(new AppSettingsBasedConfiguration()
                     {
                         Core =
                         {
                             Port = Port2
                         },
-                        ServerName = ServerName2
+                        Server = { Name = ServerName2 }
                     })
                     {
                         RunInMemory = true,
@@ -137,13 +137,13 @@ namespace Raven.Tests.Core.Smuggler
         [InlineData(false)]
         public async Task CanExportAndImportData(bool disableCompressionOnImport)
         {
-            using (var server1 = new RavenDbServer(new RavenConfiguration
+            using (var server1 = new RavenDbServer(new AppSettingsBasedConfiguration
             {
                 Core =
                 {
                     Port = Port1
                 },
-                ServerName = ServerName1
+                Server = { Name = ServerName1 }
             })
             {
                 RunInMemory = true,
@@ -182,13 +182,16 @@ namespace Raven.Tests.Core.Smuggler
 
                     await smuggler.ExecuteAsync();
 
-                    using (var server2 = new RavenDbServer(new RavenConfiguration()
+                    using (var server2 = new RavenDbServer(new AppSettingsBasedConfiguration()
                     {
                         Core =
                         {
                         Port = Port2,
                         },
-                        ServerName = ServerName2
+                        Server =
+                        {
+                            Name = ServerName2
+                        }
                     })
                     {
                         RunInMemory = true,

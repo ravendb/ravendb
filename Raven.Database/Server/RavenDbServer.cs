@@ -25,7 +25,7 @@ namespace Raven.Server
         private readonly DocumentStore documentStore;
         private readonly FilesStore filesStore;
 
-        private InMemoryRavenConfiguration configuration;
+        private RavenConfiguration configuration;
         private IServerThingsForTests serverThingsForTests;
         private RavenDBOptions options;
         private OwinHttpServer owinHttpServer;
@@ -33,10 +33,10 @@ namespace Raven.Server
         private string url;
 
         public RavenDbServer()
-            : this(new RavenConfiguration())
+            : this(new AppSettingsBasedConfiguration())
         {}
 
-        public RavenDbServer(InMemoryRavenConfiguration configuration)
+        public RavenDbServer(RavenConfiguration configuration)
         {
             this.configuration = configuration;
             documentStore = new DocumentStore
@@ -55,7 +55,7 @@ namespace Raven.Server
             };
         }
 
-        public InMemoryRavenConfiguration Configuration
+        public RavenConfiguration Configuration
         {
             get { return configuration; }
             set { configuration = value; }
@@ -95,7 +95,7 @@ namespace Raven.Server
 
         public RavenDbServer Initialize(Action<RavenDBOptions> configure = null)
         {
-            if (configuration.IgnoreSslCertificateErrors == IgnoreSslCertificateErrorsMode.All)
+            if (configuration.Core.IgnoreSslCertificateErrors == IgnoreSslCertificateErrorsMode.All)
             {
                 // we ignore either all or none at the moment
                 ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;

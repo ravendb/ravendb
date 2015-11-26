@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
     public class DynamicIndexSort3Specs : RavenTest
     {
 
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
         {
             configuration.Indexing.MaxSimpleIndexOutputsPerDocument = 100;
         }

@@ -41,7 +41,7 @@ namespace Raven.Database.Client
             set { server.UseEmbeddedHttpServer = value; }
         }
 
-        public InMemoryRavenConfiguration Configuration
+        public RavenConfiguration Configuration
         {
             get { return server.Configuration; }
             set { server.Configuration = value; }

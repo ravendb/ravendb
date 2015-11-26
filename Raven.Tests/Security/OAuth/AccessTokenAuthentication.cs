@@ -27,9 +27,9 @@ namespace Raven.Tests.Security.OAuth
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
+        protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
         {
-            ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            ravenConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 
@@ -47,7 +47,7 @@ namespace Raven.Tests.Security.OAuth
             var authorizedDatabases = databases.Split(',').Select(tenantId=> new ResourceAccess{TenantId = tenantId}).ToList();
             var body = RavenJObject.FromObject(new AccessTokenBody { UserId = user, AuthorizedDatabases = authorizedDatabases, Issued = issued }).ToString(Formatting.None);
 
-            var signature = valid ? AccessToken.Sign(body, server.SystemDatabase.Configuration.OAuthTokenKey) : "InvalidSignature";
+            var signature = valid ? AccessToken.Sign(body, server.SystemDatabase.Configuration.OAuth.TokenKey) : "InvalidSignature";
 
             var token = RavenJObject.FromObject(new { Body = body, Signature = signature }).ToString(Formatting.None);
 

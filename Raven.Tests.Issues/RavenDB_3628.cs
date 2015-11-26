@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -74,11 +75,9 @@ namespace Raven.Tests.Issues
             }
         }
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
         {
-            configuration.Settings["Raven/Esent/MaxVerPages"] = "1";
-            configuration.Settings["Raven/Esent/PreferredVerPages"] = "1";
-            configuration.Settings[Constants.Voron.MaxScratchBufferSize] = "7";
+            configuration.Storage.MaxScratchBufferSize = new Size(7, SizeUnit.Megabytes);
         }
 
         [Theory]

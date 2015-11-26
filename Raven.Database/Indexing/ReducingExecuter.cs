@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Database.Impl.BackgroundTaskExecuter;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -236,7 +237,7 @@ namespace Raven.Database.Indexing
 
                             reduceParams.Take = context.CurrentNumberOfItemsToReduceInSingleBatch;
 
-                            int size = 0;                  
+                            Size size = new Size(0, SizeUnit.Bytes);                  
           
                             IList<MappedResultInfo> persistedResults;
                             var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -334,7 +335,7 @@ namespace Raven.Database.Indexing
                     }
                     finally
                     {
-                        long _;
+                        Size _;
                         autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(reduceBatchAutoThrottlerId, out _);
                     }
                 }
@@ -413,7 +414,7 @@ namespace Raven.Database.Indexing
 
                         var getItemsToReduceDuration = Stopwatch.StartNew();
 
-                        int scheduledItemsSum = 0;
+                        Size scheduledItemsSum = new Size(0, SizeUnit.Bytes);
                         int scheduledItemsCount = 0;
                         List<int> scheduledItemsMappedBuckets = new List<int>();
                         using (StopwatchScope.For(getItemsToReduceDuration))
@@ -526,7 +527,7 @@ namespace Raven.Database.Indexing
 
                     var count = mappedResults.Count;
 
-                    int size = 0;
+                    var size = new Size(0, SizeUnit.Bytes);
                     foreach ( var item in mappedResults )
                     {
                         item.Bucket = 0;
@@ -575,7 +576,7 @@ namespace Raven.Database.Indexing
             }
             finally
             {
-                long _;
+                Size _;
                 autoTuner.CurrentlyUsedBatchSizesInBytes.TryRemove(reducingBatchThrottlerId, out _);
             }
 
@@ -641,7 +642,7 @@ namespace Raven.Database.Indexing
                     {
                         context.NotifyAboutWork();
             }
-                }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.Memory.LimitForProcessing.Megabytes, description: string.Format("Executing Indexex Reduction on {0} indexes", indexesToWorkOn.Count));
+                }, allowPartialBatchResumption: MemoryStatistics.AvailableMemory > 1.5 * context.Configuration.Memory.LimitForProcessing, description: string.Format("Executing Indexex Reduction on {0} indexes", indexesToWorkOn.Count));
                 Interlocked.Increment(ref executedPartially);
             }
             finally

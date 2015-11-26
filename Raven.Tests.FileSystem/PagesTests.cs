@@ -20,16 +20,12 @@ namespace Raven.Tests.FileSystem
         private readonly RavenJObject metadataWithEtag = new RavenJObject();
         public PagesTests()
         {
-            var configuration = new InMemoryRavenConfiguration
+            var configuration = new RavenConfiguration
             {
                 FileSystem =
                 {
                     DataDirectory = "test"
-                },
-                Settings = new NameValueCollection
-                           {
-                               { Constants.MetadataEtagField, Guid.Empty.ToString() }
-                           }
+                }
             };
 
             IOExtensions.DeleteDirectory("test");

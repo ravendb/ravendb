@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 
@@ -46,18 +47,20 @@ namespace Raven.Database.Plugins.Builtins
 
             var currentBundles = new List<string>();
             string value;
-            if (currentDbDocument.Settings.TryGetValue(Constants.ActiveBundles, out value))
+            var activeBundlesSettingKey = RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString);
+
+            if (currentDbDocument.Settings.TryGetValue(activeBundlesSettingKey, out value))
                 currentBundles = value.GetSemicolonSeparatedValues();
 
             var newDbDocument = document.JsonDeserialization<DatabaseDocument>();
             var newBundles = new List<string>();
-            if (newDbDocument.Settings.TryGetValue(Constants.ActiveBundles, out value))
+            if (newDbDocument.Settings.TryGetValue(activeBundlesSettingKey, out value))
                 newBundles = value.GetSemicolonSeparatedValues();
 
             if (currentBundles.Count != newBundles.Count || currentBundles.TrueForAll(x => newBundles.Contains(x, StringComparer.InvariantCultureIgnoreCase)) == false)
             {
                 return VetoResult.Deny(
-                    "You should not change 'Raven/ActiveBundles' setting for a database. This setting should be set only once when a database is created. " +
+                    "You should not change '" + activeBundlesSettingKey + "' setting for a database. This setting should be set only once when a database is created. " +
                     "If you really need to override it you have to specify {\"" + Constants.AllowBundlesChange +
                     "\": true} in metadata of a database document every time when you send it." + Environment.NewLine +
                     "Current: " + string.Join("; ", currentBundles) + Environment.NewLine +

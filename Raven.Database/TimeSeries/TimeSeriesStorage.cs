@@ -54,7 +54,7 @@ namespace Raven.Database.TimeSeries
         public string ResourceName { get; private set; }
         public TransportState TransportState { get; private set; }
         public AtomicDictionary<object> ExtensionsState { get; private set; }
-        public InMemoryRavenConfiguration Configuration { get; private set; }
+        public RavenConfiguration Configuration { get; private set; }
         public DateTime LastWrite { get; set; }
 
         public JsonSerializer JsonSerializer { get; set; }
@@ -65,7 +65,7 @@ namespace Raven.Database.TimeSeries
             get { return metricsTimeSeries; }
         }
 
-        public TimeSeriesStorage(string serverUrl, string timeSeriesName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
+        public TimeSeriesStorage(string serverUrl, string timeSeriesName, RavenConfiguration configuration, TransportState receivedTransportState = null)
         {
             Name = timeSeriesName;
             TimeSeriesUrl = string.Format("{0}ts/{1}", serverUrl, timeSeriesName);
@@ -73,8 +73,7 @@ namespace Raven.Database.TimeSeries
 
             metricsTimeSeries = new TimeSeriesMetricsManager();
 
-            var options = configuration.Core.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : CreateStorageOptionsFromConfiguration(configuration.TimeSeries.DataDirectory, configuration.Settings);
+            var options = CreateStorageOptionsFromConfiguration(configuration);
 
             JsonSerializer = new JsonSerializer();
             storageEnvironment = new StorageEnvironment(options);
@@ -82,7 +81,7 @@ namespace Raven.Database.TimeSeries
             notificationPublisher = new NotificationPublisher(TransportState);
             ExtensionsState = new AtomicDictionary<object>();
             ReplicationTask = new ReplicationTask(this);
-            ReplicationTimeoutInMs = configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
+            ReplicationTimeoutInMs = (int) configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
 
             Configuration = configuration;
             Initialize();
@@ -115,25 +114,18 @@ namespace Raven.Database.TimeSeries
             }
         }
 
-        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, NameValueCollection settings)
+        private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
-            bool result;
-            if (bool.TryParse(settings[Constants.RunInMemory] ?? "false", out result) && result)
+            if (configuration.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly();
 
-            bool allowIncrementalBackupsSetting;
-            if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)
-                throw new ArgumentException(Constants.Voron.AllowIncrementalBackups + " settings key contains invalid value");
-
-            var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
+            var directoryPath = configuration.TimeSeries.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
             if (filePathFolder.Exists == false)
                 filePathFolder.Create();
-
-            var tempPath = settings[Constants.Voron.TempPath];
-            var journalPath = settings[Constants.RavenTxJournalPath];
-            var options = StorageEnvironmentOptions.ForPath(directoryPath, tempPath, journalPath);
-            options.IncrementalBackupEnabled = allowIncrementalBackupsSetting;
+            
+            var options = StorageEnvironmentOptions.ForPath(directoryPath, configuration.Storage.TempPath, configuration.Storage.JournalsStoragePath);
+            options.IncrementalBackupEnabled = configuration.Storage.AllowIncrementalBackups;
             return options;
         }
 

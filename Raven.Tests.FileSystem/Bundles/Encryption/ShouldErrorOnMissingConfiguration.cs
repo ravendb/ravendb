@@ -8,6 +8,7 @@ using System.Collections.Generic;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
+using Raven.Database.Config;
 using Raven.Tests.Helpers;
 
 using Xunit;
@@ -28,7 +29,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"
                     }
                 },
                 // SecuredSettings = new Dictionary<string, string>() - intentionally not saving them - should avoid NRE on server side 
@@ -43,7 +44,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
@@ -58,12 +59,12 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
                 {
-                    {Constants.EncryptionKeySetting, ""}
+                    {RavenConfiguration.GetKey(x => x.Encryption.EncryptionKey), ""}
                 }
             }).Wait());
 
@@ -76,12 +77,12 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 Settings =
                 {
                     {
-                        Constants.ActiveBundles, "Encryption"
+                        RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"
                     }
                 },
                 SecuredSettings = new Dictionary<string, string>()
                 {
-                    {Constants.AlgorithmTypeSetting, ""}
+                    {RavenConfiguration.GetKey(x => x.Encryption.AlgorithmType), ""}
                 }
             }).Wait());
 
