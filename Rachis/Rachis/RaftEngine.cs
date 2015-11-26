@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -174,7 +175,11 @@ namespace Rachis
                     var timeout = behavior.Timeout - lastHeartBeat;
                     var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);
                     if (_eventLoopCancellationTokenSource.IsCancellationRequested)
+                    {
+                        if (_log.IsDebugEnabled)
+                            _log.Debug("Cancellation request from event loop");
                         break;
+                    }
 
                     if (hasMessage == false)
                     {
@@ -228,11 +233,18 @@ namespace Rachis
                     break;
                 case RaftEngineState.CandidateByRequest:
                     StateBehavior = new CandidateStateBehavior(this, true);
-                    break;
+                    //setting state before calling election because the state may change to leader before 
+                    //we set it to CandidateByRequest
+                    AssertStateAndRaiseStateChanged(state, oldState);
+                    StateBehavior.HandleTimeout();
+                    return;
                 case RaftEngineState.Candidate:
                     StateBehavior = new CandidateStateBehavior(this, false);
+                    //setting state before calling election because the state may change to leader before 
+                    //we set it to CandidateStateBehavior
+                    AssertStateAndRaiseStateChanged(state, oldState);
                     StateBehavior.HandleTimeout();
-                    break;
+                    return;
                 case RaftEngineState.SnapshotInstallation:
                     StateBehavior = new SnapshotInstallationStateBehavior(this);
                     break;
@@ -249,6 +261,12 @@ namespace Rachis
                     throw new ArgumentOutOfRangeException(state.ToString());
             }
 
+            AssertStateAndRaiseStateChanged(state, oldState);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AssertStateAndRaiseStateChanged(RaftEngineState state, RaftEngineState oldState)
+        {
             Debug.Assert(StateBehavior != null, "StateBehavior != null");
             OnStateChanged(state);
             if (_log.IsDebugEnabled)
