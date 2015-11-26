@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using Voron.Data.BTrees;
 using Voron.Impl;
 
 namespace Voron.Data.Fixed

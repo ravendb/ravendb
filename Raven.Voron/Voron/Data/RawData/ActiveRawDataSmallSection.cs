@@ -32,14 +32,13 @@ namespace Voron.Data.RawData
         {
             var allocatedSize = (short) size;
             size += sizeof (short) /*allocated size */+ sizeof (short) /*actual size*/;
+            
             // we need to have the size value here, so we add that
-
             if (allocatedSize <= 0)
-                throw new ArgumentException("size must be greater than zero, but was " + allocatedSize);
+                throw new ArgumentException($"Size must be greater than zero, but was {allocatedSize}");
 
             if (size > MaxItemSize || size > short.MaxValue)
-                throw new ArgumentException("Cannot allocate an item of " + size +
-                                            " bytes in a small data section. Maximum is: " + MaxItemSize);
+                throw new ArgumentException($"Cannot allocate an item of {size} bytes in a small data section. Maximum is: {MaxItemSize}");
 
             //  start reading from the last used page, to skip full pages
             for (var i = _sectionHeader->LastUsedPage; i < _sectionHeader->NumberOfPages; i++)
@@ -112,11 +111,11 @@ namespace Voron.Data.RawData
                 while (pos < maxUsedPos)
                 {
                     var sizes = ((short*) (tmp.TempPagePointer + pos));
+
                     var allocatedSize = sizes[0];
                     if (allocatedSize <= 0)
-                        throw new InvalidDataException("Allocated size cannot be zero or negative, but was " +
-                                                       allocatedSize +
-                                                       " in page " + pageHeader->PageNumber);
+                        throw new InvalidDataException($"Allocated size cannot be zero or negative, but was {allocatedSize} in page {pageHeader->PageNumber}");
+
                     var usedSize = sizes[1]; // used size
                     if (usedSize < 0)
                     {

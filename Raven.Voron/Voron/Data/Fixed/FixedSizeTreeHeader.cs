@@ -5,8 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System.Runtime.InteropServices;
+using Voron.Impl.FileHeaders;
 
-namespace Voron.Impl.FileHeaders
+namespace Voron.Data.Fixed
 {
 	public class FixedSizeTreeHeader
 	{

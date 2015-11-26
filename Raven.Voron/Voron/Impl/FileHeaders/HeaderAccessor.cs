@@ -27,11 +27,7 @@ namespace Voron.Impl.FileHeaders
 		private FileHeader* _theHeader;
 		private IntPtr _headerPtr;
 
-		internal static string[] HeaderFileNames = new[]
-		{
-			"headers.one",
-			"headers.two"
-		};
+		internal static string[] HeaderFileNames = { "headers.one", "headers.two" };
 
 		public HeaderAccessor(StorageEnvironment env)
 		{

@@ -442,11 +442,7 @@ namespace Voron.Data.Tables
 
                 byte* pos;
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                {
-                    throw new InvalidOperationException(
-                        $"After successfully allocating {size:#,#;;0} bytes," +
-                        $" failed to write them on {_schema.Name}");
-                }
+                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {_schema.Name}");
 
                 // MemoryCopy into final position.
                 unsafe
