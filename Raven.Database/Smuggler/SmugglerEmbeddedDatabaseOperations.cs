@@ -59,7 +59,7 @@ namespace Raven.Database.Smuggler
         }
 
         [Obsolete("Use RavenFS instead.")]
-        public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
+        public Task<Etag> ExportAttachmentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
         {
             var lastEtag = startAttachmentsDeletionEtag;
             database.TransactionalStorage.Batch(accessor =>
@@ -82,7 +82,7 @@ namespace Raven.Database.Smuggler
             return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, Options.BatchSize));
         }
 
-        public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
+        public Task<Etag> ExportDocumentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
         {
             var lastEtag = startDocsEtag;
             database.TransactionalStorage.Batch(accessor =>

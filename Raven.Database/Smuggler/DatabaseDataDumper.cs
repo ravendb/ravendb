@@ -26,7 +26,7 @@ namespace Raven.Database.Smuggler
             Operations = new SmugglerEmbeddedDatabaseOperations(database);
         }
 
-        public override async Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch)
+        public override async Task ExportDeletions(SmugglerJsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch)
         {
             jsonWriter.WritePropertyName("DocsDeletions");
             jsonWriter.WriteStartArray();

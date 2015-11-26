@@ -12,6 +12,7 @@ using StringUtils = Raven.Json.Utilities.StringUtils;
 using System.Collections.Concurrent;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Smuggler;
 
 namespace Raven.Json.Linq
 {
@@ -343,6 +344,94 @@ namespace Raven.Json.Linq
         /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
         /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
         public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
+        {
+            WriteTo(writer, new JsonConverterCollection(converters));
+        }
+
+        public override void WriteTo(SmugglerJsonTextWriter writer, JsonConverterCollection converters)
+        {
+            switch (_valueType)
+            {
+                case JTokenType.Comment:
+                    writer.WriteComment(_value.ToString());
+                    return;
+                case JTokenType.Raw:
+                    writer.WriteRawValue((_value != null) ? _value.ToString() : null);
+                    return;
+                case JTokenType.Null:
+                    writer.WriteNull();
+                    return;
+                case JTokenType.Undefined:
+                    writer.WriteUndefined();
+                    return;
+            }
+
+            if (_value != null)
+            {
+                Type typeToFind = _value.GetType();
+
+                // If we are using the default converters we will try to avoid repeatedly check the same types as 
+                // GetMatchingConverter is a costly call with a very low probability to hit (less than 1% in real scenarios).
+                JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, typeToFind);
+                if (matchingConverter != null)
+                {
+                    matchingConverter.WriteJson(writer.GetCurrentJsonTextWriter(), _value, JsonExtensions.CreateDefaultJsonSerializer());
+                    return;
+                }
+            }
+
+            switch (_valueType)
+            {
+                case JTokenType.Integer:
+                    writer.WriteValue(Convert.ToInt64(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Float:
+                    if (_value is decimal)
+                    {
+                        writer.WriteValue((decimal)_value);
+                        return;
+                    }
+                    if (_value is float)
+                    {
+                        writer.WriteValue((float)_value);
+                        return;
+                    }
+                    writer.WriteValue(Convert.ToDouble(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.String:
+                    writer.WriteValue((_value != null) ? _value.ToString() : null);
+                    return;
+                case JTokenType.Boolean:
+                    writer.WriteValue(Convert.ToBoolean(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Date:
+#if !PocketPC && !NET20
+                    if (_value is DateTimeOffset)
+                        writer.WriteValue((DateTimeOffset)_value);
+                    else
+#endif
+                        writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
+                    return;
+                case JTokenType.Bytes:
+                    writer.WriteValue((byte[])_value);
+                    return;
+                case JTokenType.Guid:
+                case JTokenType.Uri:
+                case JTokenType.TimeSpan:
+                    writer.WriteValue((_value != null) ? _value.ToString() : null);
+                    return;
+            }
+
+            throw MiscellaneousUtils.CreateArgumentOutOfRangeException("TokenType", _valueType, "Unexpected token type.");
+        }
+
+
+        /// <summary>
+        /// Writes this token to a <see cref="JsonWriter"/>.
+        /// </summary>
+        /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
+        /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
+        public override void WriteTo(SmugglerJsonTextWriter writer, params JsonConverter[] converters)
         {
             WriteTo(writer, new JsonConverterCollection(converters));
         }

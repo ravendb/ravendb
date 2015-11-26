@@ -724,21 +724,21 @@ namespace Raven.Tests.Smuggler
             {
             }
 
-            public Task<Etag> ExportDocuments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportDocuments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 Operations.Initialize(Options);
 
                 return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
-            public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportAttachments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 Operations.Initialize(Options);
 
                 return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
-            public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtags)
+            public override Task ExportDeletions(SmugglerJsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtags)
             {
                 return base.ExportDeletions(jsonWriter, result, maxEtags);
             }
@@ -758,8 +758,9 @@ namespace Raven.Tests.Smuggler
                     session.SaveChanges();
                 }
 
+                // ADIADI :: TODO : test also with splitted export.. 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -782,7 +783,7 @@ namespace Raven.Tests.Smuggler
                 }
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -808,7 +809,7 @@ namespace Raven.Tests.Smuggler
                 }
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -831,7 +832,7 @@ namespace Raven.Tests.Smuggler
                 }
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -866,7 +867,7 @@ namespace Raven.Tests.Smuggler
 
                 Etag user6DeletionEtag = null, user9DeletionEtag = null, attach5DeletionEtag = null, attach7DeletionEtag = null;
 
-                WaitForUserToContinueTheTest(store);
+               //WaitForUserToContinueTheTest(url:store.Url);
 
                 store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
@@ -882,7 +883,7 @@ namespace Raven.Tests.Smuggler
                 });
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
