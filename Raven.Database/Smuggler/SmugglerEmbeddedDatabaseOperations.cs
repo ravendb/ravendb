@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -59,7 +59,7 @@ namespace Raven.Database.Smuggler
         }
 
         [Obsolete("Use RavenFS instead.")]
-        public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
+        public Task<Etag> ExportAttachmentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
         {
             var lastEtag = startAttachmentsDeletionEtag;
             database.TransactionalStorage.Batch(accessor =>
@@ -70,7 +70,8 @@ namespace Raven.Database.Smuggler
                     {
                         {"Key", listItem.Key}
                     };
-                    o.WriteTo(jsonWriter);
+                    jsonWriter.Write(o);
+
                     lastEtag = listItem.Etag;
                 }
             });
@@ -82,18 +83,19 @@ namespace Raven.Database.Smuggler
             return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, Options.BatchSize));
         }
 
-        public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
+        public Task<Etag> ExportDocumentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
         {
             var lastEtag = startDocsEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
                 foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
                 {
-                    var o = new RavenJObject
+                    var ravenJObj = new RavenJObject
                     {
                         {"Key", listItem.Key}
                     };
-                    o.WriteTo(jsonWriter);
+                    jsonWriter.Write(ravenJObj);
+
                     lastEtag = listItem.Etag;
                 }
             });

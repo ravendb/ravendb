@@ -48,6 +48,9 @@ namespace Raven.Abstractions.Smuggler
 
         public virtual async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
         {
+            if (exportOptions.IsIncrementalExport == true)
+                Options.Incremental = true;
+
             Operations.Configure(Options);
             Operations.Initialize(Options);
 
@@ -110,15 +113,22 @@ namespace Raven.Abstractions.Smuggler
                 //				};
             }
 
+            var maxSplitExportFileSize = !ownedStream ? 0 : Options.MaxSplitExportFileSize;
+
+            if (exportOptions.MaxSplitExportFileSize > 0)
+                maxSplitExportFileSize = exportOptions.MaxSplitExportFileSize;
+
             try
             {
-                using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
+                using (var countingStream = new CountingStream(stream))
+                using (var gZipStream = new GZipStream(countingStream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
+
+                using (var jsonWriter = new SmugglerJsonTextWriter(streamWriter, maxSplitExportFileSize, countingStream, result.FilePath)
                 {
-                    var jsonWriter = new JsonTextWriter(streamWriter)
-                    {
-                        Formatting = Formatting.Indented
-                    };
+                    Formatting = Formatting.Indented
+                })
+                {
                     jsonWriter.WriteStartObject();
                     jsonWriter.WritePropertyName("Indexes");
                     jsonWriter.WriteStartArray();
@@ -204,7 +214,7 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        private async Task ExportIdentities(JsonTextWriter jsonWriter, ItemType operateOnTypes)
+        private async Task ExportIdentities(SmugglerJsonTextWriter jsonWriter, ItemType operateOnTypes)
         {
             var retries = RetriesCount;
 
@@ -245,11 +255,12 @@ namespace Raven.Abstractions.Smuggler
                 {
                     try
                     {
-                        new RavenJObject
+                        var o = new RavenJObject
                         {
-                            { "Key", identityInfo.Key },
-                            { "Value", identityInfo.Value }
-                        }.WriteTo(jsonWriter);
+                            {"Key", identityInfo.Key},
+                            {"Value", identityInfo.Value}
+                        };
+                        jsonWriter.Write(o);
                     }
                     catch (Exception e)
                     {
@@ -339,7 +350,7 @@ namespace Raven.Abstractions.Smuggler
             WriteLastEtagsToFile(result, etagFileLocation);
         }
 
-        private async Task ExportTransformers(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
+        private async Task ExportTransformers(RavenConnectionStringOptions src, SmugglerJsonTextWriter jsonWriter)
         {
             var totalCount = 0;
             var retries = RetriesCount;
@@ -380,7 +391,7 @@ namespace Raven.Abstractions.Smuggler
                 {
                     try
                     {
-                        transformer.WriteTo(jsonWriter);
+                        jsonWriter.Write(transformer);
                     }
                     catch (Exception e)
                     {
@@ -393,10 +404,10 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        public abstract Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch);
+        public abstract Task ExportDeletions(SmugglerJsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch);
 
         [Obsolete("Use RavenFS instead.")]
-        protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+        protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
         {
             var totalCount = 0;
             var retries = RetriesCount;
@@ -479,14 +490,14 @@ namespace Raven.Abstractions.Smuggler
                             var attachmentData = await Operations.GetAttachmentData(attachmentInformation).ConfigureAwait(false);
                             if (attachmentData == null)
                                 continue;
-
-                            new RavenJObject
+                            var ravenJsonObj = new RavenJObject
                             {
-                                { "Data", attachmentData },
-                                { "Metadata", attachmentInformation.Metadata },
-                                { "Key", attachmentInformation.Key },
-                                { "Etag", new RavenJValue(attachmentInformation.Etag.ToString()) }
-                            }.WriteTo(jsonWriter);
+                                {"Data", attachmentData},
+                                {"Metadata", attachmentInformation.Metadata},
+                                {"Key", attachmentInformation.Key},
+                                {"Etag", new RavenJValue(attachmentInformation.Etag.ToString())}
+                            };
+                            jsonWriter.Write(ravenJsonObj);
 
                             lastEtag = attachmentInformation.Etag;
                         }
@@ -511,7 +522,7 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
         {
             var now = SystemTime.UtcNow;
             var totalCount = 0;
@@ -562,7 +573,7 @@ namespace Raven.Abstractions.Smuggler
 
                                 try
                                 {
-                                    document.WriteTo(jsonWriter);
+                                    jsonWriter.Write(document);
                                 }
                                 catch (Exception e)
                                 {
@@ -613,7 +624,7 @@ namespace Raven.Abstractions.Smuggler
                                 if (doc != null)
                                 {
                                     doc.Metadata["@id"] = doc.Key;
-                                    doc.ToJson().WriteTo(jsonWriter);
+                                    jsonWriter.Write(doc.ToJson());
                                     totalCount++;
                                 }
                             });
@@ -692,18 +703,36 @@ namespace Raven.Abstractions.Smuggler
 
         public virtual async Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions)
         {
+            if (importOptions.IsIncrementalImport == true)
+                Options.Incremental = true;
+            int countSpinnedFiles;
+            string nextPartFileName;
             if (Options.Incremental == false)
             {
                 Stream stream = importOptions.FromStream;
                 bool ownStream = false;
                 try
                 {
-                    if (stream == null)
+                    countSpinnedFiles = 0;
+                    nextPartFileName = importOptions.FromFile;
+                    do
                     {
-                        stream = File.OpenRead(importOptions.FromFile);
-                        ownStream = true;
-                    }
-                    await ImportData(importOptions, stream).ConfigureAwait(false);
+                        if (stream == null)
+                        {
+                            stream = File.OpenRead(nextPartFileName);
+                            ownStream = true;
+                        }
+                        Operations.ShowProgress("Starting to import file: {0}", nextPartFileName);
+                        await ImportData(importOptions, stream).ConfigureAwait(false);
+
+                        if (ownStream == true)
+                        {
+                            nextPartFileName = 
+                                $"{importOptions.FromFile}.part{++countSpinnedFiles:D3}";
+                            stream?.Dispose();
+                            stream = null;
+                        }
+                    } while (ownStream == true && File.Exists(nextPartFileName) == true);
                 }
                 finally
                 {
@@ -720,27 +749,41 @@ namespace Raven.Abstractions.Smuggler
 
             if (files.Length == 0)
                 return;
-
+            
             var oldItemType = Options.OperateOnTypes;
 
             Options.OperateOnTypes = Options.OperateOnTypes & ~(ItemType.Indexes | ItemType.Transformers);
 
             for (var i = 0; i < files.Length - 1; i++)
             {
-                using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
+                countSpinnedFiles = 0;
+                nextPartFileName = Path.Combine(importOptions.FromFile, files[i]);
+                do
                 {
-                    Operations.ShowProgress("Starting to import file: {0}", files[i]);
-                    await ImportData(importOptions, fileStream).ConfigureAwait(false);
-                }
+                    using (var fileStream = File.OpenRead(nextPartFileName))
+                    {
+                        Operations.ShowProgress("Starting to import file: {0}", nextPartFileName);
+                        await ImportData(importOptions, fileStream).ConfigureAwait(false);
+                    }
+                    nextPartFileName = 
+                        $"{Path.Combine(importOptions.FromFile, files[i])}.part{++countSpinnedFiles:D3}";
+                } while (File.Exists(nextPartFileName) == true);
             }
 
             Options.OperateOnTypes = oldItemType;
 
-            using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
+            countSpinnedFiles = 0;
+            nextPartFileName = Path.Combine(importOptions.FromFile, files.Last());
+            do
             {
-                Operations.ShowProgress("Starting to import file: {0}", files.Last());
-                await ImportData(importOptions, fileStream).ConfigureAwait(false);
-            }
+                using (var fileStream = File.OpenRead(nextPartFileName))
+                {
+                    Operations.ShowProgress("Starting to import file: {0}", nextPartFileName);
+                    await ImportData(importOptions, fileStream).ConfigureAwait(false);
+                }
+                nextPartFileName = 
+                    $"{Path.Combine(importOptions.FromFile, files.Last())}.part{++countSpinnedFiles:D3}";
+            } while (File.Exists(nextPartFileName) == true);
         }
 
         public abstract Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions);
@@ -850,7 +893,8 @@ namespace Raven.Abstractions.Smuggler
 
             exportSectionRegistar.Keys.ForEach(k => exportCounts[k] = 0);
 
-            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndObject)
+
+           while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndObject)
             {
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
 
@@ -1331,7 +1375,7 @@ namespace Raven.Abstractions.Smuggler
             return count;
         }
 
-        private async Task ExportIndexes(RavenConnectionStringOptions src, JsonTextWriter jsonWriter)
+        private async Task ExportIndexes(RavenConnectionStringOptions src, SmugglerJsonTextWriter jsonWriter)
         {
             var totalCount = 0;
             int retries = RetriesCount;
@@ -1370,7 +1414,7 @@ namespace Raven.Abstractions.Smuggler
                 {
                     try
                     {
-                        index.WriteTo(jsonWriter);
+                        jsonWriter.Write(index);
                     }
                     catch (Exception e)
                     {
