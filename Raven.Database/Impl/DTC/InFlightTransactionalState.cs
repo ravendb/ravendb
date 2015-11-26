@@ -49,7 +49,7 @@ namespace Raven.Database.Impl.DTC
             this.replicationEnabled = replicationEnabled;
         }
 
-        public Etag AddDocumentInTransaction(
+        public virtual Etag AddDocumentInTransaction(
             string key,
             Etag etag,
             RavenJObject data,
@@ -74,7 +74,7 @@ namespace Raven.Database.Impl.DTC
                                   });
         }
 
-        public void DeleteDocumentInTransaction(
+        public virtual void DeleteDocumentInTransaction(
             TransactionInformation transactionInformation,
             string key,
             Etag etag,
@@ -89,7 +89,7 @@ namespace Raven.Database.Impl.DTC
             });
         }
 
-        public bool IsModified(string key)
+        public virtual bool IsModified(string key)
         {
             var value = currentlyCommittingTransaction.Value;
             if (string.IsNullOrEmpty(value))
@@ -234,7 +234,7 @@ namespace Raven.Database.Impl.DTC
                 throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
         }
 
-        public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
+        public virtual bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
         {
             return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocument
             {
@@ -247,7 +247,7 @@ namespace Raven.Database.Impl.DTC
             }, out document);
         }
 
-        public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocumentMetadata document)
+        public virtual bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocumentMetadata document)
         {
             return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocumentMetadata
             {
@@ -283,7 +283,7 @@ namespace Raven.Database.Impl.DTC
             return true;
         }
 
-        public bool HasTransaction(string txId)
+        public virtual bool HasTransaction(string txId)
         {
             return transactionStates.ContainsKey(txId);
         }
