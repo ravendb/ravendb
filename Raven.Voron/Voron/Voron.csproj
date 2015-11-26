@@ -84,9 +84,14 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\Fixed\FixedSizeTreePageFlags.cs" />
+    <Compile Include="Data\Fixed\FixedSizeTreePageHeader.cs" />
     <Compile Include="Data\RawData\ActiveRawDataSmallSection.cs" />
     <Compile Include="Data\RawData\DataMovedDelegate.cs" />
+    <Compile Include="Data\RawData\RawDataPageFlags.cs" />
     <Compile Include="Data\RawData\RawDataSection.cs" />
+    <Compile Include="Data\RawData\RawDataSmallPageHeader.cs" />
+    <Compile Include="Data\RawData\RawDataSmallSectionPageHeader.cs" />
     <Compile Include="Data\Tables\TableSchemaStats.cs" />
     <Compile Include="Data\Tables\Table.cs" />
     <Compile Include="Data\Tables\TableSchema.cs" />
@@ -125,6 +130,7 @@
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
+    <Compile Include="PageFlags.cs" />
     <Compile Include="Platform\Posix\AllowBuildOnWindows.cs" />
     <Compile Include="Platform\Posix\PosixHelper.cs" />
     <Compile Include="Platform\Posix\PosixJournalWriter.cs" />

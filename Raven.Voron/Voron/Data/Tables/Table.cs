@@ -32,8 +32,8 @@ namespace Voron.Data.Tables
         public static readonly TableHandle<T, TData> Null;
 
         public T Key;
-        private int Size;
-        private byte* DataPointer;        
+        private readonly int Size;
+        private readonly byte* DataPointer;        
 
         public TableHandle( T indexKeys, byte* ptr, int size)
         {
@@ -60,12 +60,25 @@ namespace Voron.Data.Tables
                 }                
             }
         }
-        
+
+        public override bool Equals(object obj)
+        {
+            if (obj is TableHandle<T, TData>)
+            {
+                var o = (TableHandle<T, TData>)obj;
+                return o == this;
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return (int)(this.Size * 17 + this.DataPointer);
+        }
+
         public static bool operator ==(TableHandle<T, TData> c1, TableHandle<T, TData> c2)
         {
-            if (c1 == null || c2 == null)
-                return false;
-
             return c1.DataPointer == c2.DataPointer && c1.Size == c2.Size;
         }
 
