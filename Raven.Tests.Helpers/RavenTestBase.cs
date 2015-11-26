@@ -860,7 +860,12 @@ namespace Raven.Tests.Helpers
             GC.SuppressFinalize(this);
 
             var errors = new List<Exception>();
-
+            //Disposing of the raft engine first otherwise raft will go crazy
+            //during the dispose process
+            foreach (var server in servers)
+            {
+                server.Options.ClusterManager.Value?.Dispose();
+            }
             foreach (var store in stores)
             {
                 try

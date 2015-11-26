@@ -12,7 +12,7 @@ namespace Raven.Database.Config.Categories
             MaxStepDownDrainTime = new TimeSetting((long)RaftEngineOptions.DefaultMaxStepDownDrainTime.TotalSeconds, TimeUnit.Seconds);
         }
 
-        [DefaultValue(RaftEngineOptions.DefaultElectionTimeout * 5)] // 6000ms
+        [DefaultValue(RaftEngineOptions.DefaultElectionTimeout * 10)] // 12000ms
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Raven/Cluster/ElectionTimeoutInMs")]
         [ConfigurationEntry("Raven/Cluster/ElectionTimeout")]

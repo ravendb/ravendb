@@ -28,8 +28,6 @@ namespace Rachis.Behaviors
             _wonTrialElection = forcedElection;
             _random = new Random((int)(engine.Name.GetHashCode() + DateTime.UtcNow.Ticks));
             Timeout = _random.Next(engine.Options.ElectionTimeout / 2, engine.Options.ElectionTimeout);
-            if (forcedElection)
-                StartElection();
         }
 
         public override void HandleTimeout()

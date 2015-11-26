@@ -1,6 +1,5 @@
 using System;
-
-using Raven.Tests.FileSystem.ClientApi;
+using System.Diagnostics;
 
 namespace Raven.Tryouts
 {
@@ -8,14 +7,18 @@ namespace Raven.Tryouts
     {
         public static void Main()
         {
-            for (int i = 0; i < 1000; i++)
+            using (var testClass = new Tests.Raft.Client.Documents())
             {
-                Console.Clear();
-                Console.WriteLine(i);
-                using (var x = new FileSessionListenersTests())
+                try
                 {
-                    x.ConflictListeners_RemoteVersion().Wait();
+                    testClass.DeleteShouldBePropagated(3);
+                    Console.WriteLine("Test is done");
                 }
+                catch (Exception e)
+                {
+                    Debugger.Break();
+                }
+                Console.WriteLine("Dispose is done");
             }
         }
     }
