@@ -284,7 +284,7 @@ namespace Raven.Database.Config
             Indexing.MaxNumberOfStoredIndexingBatchInfoElements = new IntegerSetting(settings[Constants.MaxNumberOfStoredIndexingBatchInfoElements], 512);
             Indexing.UseLuceneASTParser = new BooleanSetting(settings[Constants.UseLuceneASTParser], true);
 
-            Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 5);		// 6000ms
+            Cluster.ElectionTimeout = new IntegerSetting(settings["Raven/Cluster/ElectionTimeout"], RaftEngineOptions.DefaultElectionTimeout * 10);		// 12000ms
             Cluster.HeartbeatTimeout = new IntegerSetting(settings["Raven/Cluster/HeartbeatTimeout"], RaftEngineOptions.DefaultHeartbeatTimeout * 5);	// 1500ms
             Cluster.MaxLogLengthBeforeCompaction = new IntegerSetting(settings["Raven/Cluster/MaxLogLengthBeforeCompaction"], RaftEngineOptions.DefaultMaxLogLengthBeforeCompaction);
             Cluster.MaxEntriesPerRequest = new IntegerSetting(settings["Raven/Cluster/MaxEntriesPerRequest"], RaftEngineOptions.DefaultMaxEntiresPerRequest);

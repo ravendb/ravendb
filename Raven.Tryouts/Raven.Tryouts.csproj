@@ -127,6 +127,14 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\xunit\xunit.extensions.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
@@ -191,6 +199,10 @@
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
       <Name>Raven.Tests.Helpers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Raft\Raven.Tests.Raft.csproj">
+      <Project>{99d596eb-a15d-4407-bd28-da46d5635773}</Project>
+      <Name>Raven.Tests.Raft</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
