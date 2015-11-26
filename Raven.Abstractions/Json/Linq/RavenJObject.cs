@@ -11,7 +11,6 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 using Raven.Abstractions.Data;
 using System.Runtime.CompilerServices;
-using Raven.Abstractions.Smuggler;
 
 namespace Raven.Json.Linq
 {
@@ -301,36 +300,12 @@ namespace Raven.Json.Linq
             writer.WriteEndObject();
         }
 
-        public override void WriteTo(SmugglerJsonTextWriter writer, JsonConverterCollection converters)
-        {
-            writer.WriteStartObject();
-
-            if (Properties != null)
-            {
-                foreach (var property in Properties)
-                {
-                    writer.WritePropertyName(property.Key);
-                    if (property.Value == null)
-                        writer.WriteNull();
-                    else
-                        property.Value.WriteTo(writer, converters);
-                }
-            }
-
-            writer.WriteEndObject();
-        }
-
         /// <summary>
         /// Writes this token to a <see cref="JsonWriter"/>.
         /// </summary>
         /// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
         /// <param name="converters">A collection of <see cref="JsonConverter"/> which will be used when writing the token.</param>
         public override void WriteTo(JsonWriter writer, params JsonConverter[] converters)
-        {
-            WriteTo(writer, new JsonConverterCollection(converters));
-        }
-
-        public override void WriteTo(SmugglerJsonTextWriter writer, params JsonConverter[] converters)
         {
             WriteTo(writer, new JsonConverterCollection(converters));
         }

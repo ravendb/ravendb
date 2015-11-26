@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -70,7 +70,8 @@ namespace Raven.Database.Smuggler
                     {
                         {"Key", listItem.Key}
                     };
-                    o.WriteTo(jsonWriter);
+                    jsonWriter.Write(o);
+
                     lastEtag = listItem.Etag;
                 }
             });
@@ -89,11 +90,12 @@ namespace Raven.Database.Smuggler
             {
                 foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
                 {
-                    var o = new RavenJObject
+                    var ravenJObj = new RavenJObject
                     {
                         {"Key", listItem.Key}
                     };
-                    o.WriteTo(jsonWriter);
+                    jsonWriter.Write(ravenJObj);
+
                     lastEtag = listItem.Etag;
                 }
             });

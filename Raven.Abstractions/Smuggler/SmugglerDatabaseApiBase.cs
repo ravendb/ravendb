@@ -115,12 +115,8 @@ namespace Raven.Abstractions.Smuggler
             try
             {
                 using (var countingStream = new CountingStream(stream))
-#if FALSE
                 using (var gZipStream = new GZipStream(countingStream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
-#else
-                using (var streamWriter = new StreamWriter(countingStream))
-#endif
 
                 using (var jsonWriter = new SmugglerJsonTextWriter(streamWriter, maxSplitExportFileSize, countingStream, result.FilePath)
                 {
@@ -253,11 +249,12 @@ namespace Raven.Abstractions.Smuggler
                 {
                     try
                     {
-                        new RavenJObject
+                        var o = new RavenJObject
                         {
-                            { "Key", identityInfo.Key },
-                            { "Value", identityInfo.Value }
-                        }.WriteTo(jsonWriter);
+                            {"Key", identityInfo.Key},
+                            {"Value", identityInfo.Value}
+                        };
+                        jsonWriter.Write(o);
                     }
                     catch (Exception e)
                     {
@@ -388,7 +385,7 @@ namespace Raven.Abstractions.Smuggler
                 {
                     try
                     {
-                        transformer.WriteTo(jsonWriter);
+                        jsonWriter.Write(transformer);
                     }
                     catch (Exception e)
                     {
@@ -487,14 +484,14 @@ namespace Raven.Abstractions.Smuggler
                             var attachmentData = await Operations.GetAttachmentData(attachmentInformation).ConfigureAwait(false);
                             if (attachmentData == null)
                                 continue;
-
-                            new RavenJObject
+                            var ravenJsonObj = new RavenJObject
                             {
-                                { "Data", attachmentData },
-                                { "Metadata", attachmentInformation.Metadata },
-                                { "Key", attachmentInformation.Key },
-                                { "Etag", new RavenJValue(attachmentInformation.Etag.ToString()) }
-                            }.WriteTo(jsonWriter);
+                                {"Data", attachmentData},
+                                {"Metadata", attachmentInformation.Metadata},
+                                {"Key", attachmentInformation.Key},
+                                {"Etag", new RavenJValue(attachmentInformation.Etag.ToString())}
+                            };
+                            jsonWriter.Write(ravenJsonObj);
 
                             lastEtag = attachmentInformation.Etag;
                         }
@@ -570,7 +567,7 @@ namespace Raven.Abstractions.Smuggler
 
                                 try
                                 {
-                                    document.WriteTo(jsonWriter);
+                                    jsonWriter.Write(document);
                                 }
                                 catch (Exception e)
                                 {
@@ -621,7 +618,7 @@ namespace Raven.Abstractions.Smuggler
                                 if (doc != null)
                                 {
                                     doc.Metadata["@id"] = doc.Key;
-                                    doc.ToJson().WriteTo(jsonWriter);
+                                    jsonWriter.Write(doc.ToJson());
                                     totalCount++;
                                 }
                             });
@@ -700,14 +697,16 @@ namespace Raven.Abstractions.Smuggler
 
         public virtual async Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions)
         {
+            int countSpinnedFiles;
+            string nextPartFileName;
             if (Options.Incremental == false)
             {
                 Stream stream = importOptions.FromStream;
                 bool ownStream = false;
                 try
                 {
-                    int countSpinnedFiles = 0;
-                    var nextPartFileName = importOptions.FromFile;
+                    countSpinnedFiles = 0;
+                    nextPartFileName = importOptions.FromFile;
                     do
                     {
                         if (stream == null)
@@ -715,11 +714,13 @@ namespace Raven.Abstractions.Smuggler
                             stream = File.OpenRead(nextPartFileName);
                             ownStream = true;
                         }
+                        Operations.ShowProgress("Starting to import file: {0}", nextPartFileName);
                         await ImportData(importOptions, stream).ConfigureAwait(false);
 
                         if (ownStream == true)
                         {
-                            nextPartFileName = $"{importOptions.FromFile}.part{++countSpinnedFiles:D3}";
+                            nextPartFileName = 
+                                $"{importOptions.FromFile}.part{++countSpinnedFiles:D3}";
                             stream?.Dispose();
                             stream = null;
                         }
@@ -740,27 +741,41 @@ namespace Raven.Abstractions.Smuggler
 
             if (files.Length == 0)
                 return;
-
+            
             var oldItemType = Options.OperateOnTypes;
 
             Options.OperateOnTypes = Options.OperateOnTypes & ~(ItemType.Indexes | ItemType.Transformers);
 
             for (var i = 0; i < files.Length - 1; i++)
             {
-                using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
+                countSpinnedFiles = 0;
+                nextPartFileName = Path.Combine(importOptions.FromFile, files[i]);
+                do
                 {
-                    Operations.ShowProgress("Starting to import file: {0}", files[i]);
-                    await ImportData(importOptions, fileStream).ConfigureAwait(false);
-                }
+                    using (var fileStream = File.OpenRead(nextPartFileName))
+                    {
+                        Operations.ShowProgress("Starting to import file: {0}", nextPartFileName);
+                        await ImportData(importOptions, fileStream).ConfigureAwait(false);
+                    }
+                    nextPartFileName = 
+                        $"{Path.Combine(importOptions.FromFile, files[i])}.part{++countSpinnedFiles:D3}";
+                } while (File.Exists(nextPartFileName) == true);
             }
 
             Options.OperateOnTypes = oldItemType;
 
-            using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
+            countSpinnedFiles = 0;
+            nextPartFileName = Path.Combine(importOptions.FromFile, files.Last());
+            do
             {
-                Operations.ShowProgress("Starting to import file: {0}", files.Last());
-                await ImportData(importOptions, fileStream).ConfigureAwait(false);
-            }
+                using (var fileStream = File.OpenRead(nextPartFileName))
+                {
+                    Operations.ShowProgress("Starting to import file: {0}", nextPartFileName);
+                    await ImportData(importOptions, fileStream).ConfigureAwait(false);
+                }
+                nextPartFileName = 
+                    $"{Path.Combine(importOptions.FromFile, files.Last())}.part{++countSpinnedFiles:D3}";
+            } while (File.Exists(nextPartFileName) == true);
         }
 
         public abstract Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions);
@@ -779,13 +794,8 @@ namespace Raven.Abstractions.Smuggler
             try
             {
                 stream.Position = 0;
-#if TRUE
                 sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
                 var streamReader = new StreamReader(sizeStream);
-#else
-                var streamReader = new StreamReader(stream);
-#endif
-
 
                 jsonReader = new RavenJsonTextReader(streamReader);
 
@@ -1396,7 +1406,7 @@ namespace Raven.Abstractions.Smuggler
                 {
                     try
                     {
-                        index.WriteTo(jsonWriter);
+                        jsonWriter.Write(index);
                     }
                     catch (Exception e)
                     {
