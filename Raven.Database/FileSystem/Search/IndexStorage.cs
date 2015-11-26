@@ -438,17 +438,25 @@ namespace Raven.Database.FileSystem.Search
                 {
                     foreach (var metadataHolder in metadataKey)
                     {
-                        var array = metadataHolder.Value as RavenJArray;
-                        if (array != null)
+                        var value = metadataHolder.Value;
+                        if (value is RavenJObject)
+                            continue; // we don't need to index complex objects.
+
+                        var array = value as RavenJArray;
+                        if (array == null)
                         {
-                            // Object is an array. Therefore, we index each token. 
-                            foreach (var item in array)
-                                AddField(doc, metadataHolder.Key, item.ToString());
+                            AddField(doc, metadataHolder.Key, value.ToString());
+                            continue;
                         }
-                        else
+
+                        // object is an array. therefore, we index each token. 
+                        foreach (var item in array)
                         {
-                            AddField(doc, metadataHolder.Key, metadataHolder.Value.ToString());
-                        }                            
+                            if (item is RavenJObject)
+                                continue; // we don't need to index complex objects.
+
+                            AddField(doc, metadataHolder.Key, item.ToString());
+                        }
                     }
                 }
 
