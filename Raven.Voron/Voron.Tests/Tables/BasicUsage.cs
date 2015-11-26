@@ -39,7 +39,7 @@ namespace Voron.Tests.Tables
                 var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
                 var handle = docs.ReadByKey("users/1");
 
-                Assert.Equal("{'Name': 'Oren'}", handle.Value.Data);
+                Assert.Equal("{'Name': 'Oren'}", handle.GetValue().Data);
                 tx.Commit();
             }
         }
@@ -79,7 +79,7 @@ namespace Voron.Tests.Tables
                 var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
                 var handle = docs.ReadByKey("users/1");
 
-                Assert.Equal("{'Name': 'Eini'}", handle.Value.Data);
+                Assert.Equal("{'Name': 'Eini'}", handle.GetValue().Data);
                 tx.Commit();
             }
         }

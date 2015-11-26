@@ -40,7 +40,7 @@ namespace Voron.Tests.Tables
 
                 Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
                 var handle = reader.Results.Single();
-                Assert.Equal("{'Name': 'Oren'}", handle.Value.Data);
+                Assert.Equal("{'Name': 'Oren'}", handle.GetValue().Data);
 
                 tx.Commit();
             }
@@ -126,7 +126,7 @@ namespace Voron.Tests.Tables
                 Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
 
                 var handle = reader.Results.Single();
-                Assert.Equal("{'Name': 'Eini'}", handle.Value.Data);
+                Assert.Equal("{'Name': 'Eini'}", handle.GetValue().Data);
 
                 tx.Commit();
             }

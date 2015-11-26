@@ -42,23 +42,20 @@ namespace Voron.Data.Tables
             this.Size = size;
         }
 
-        public TData Value
+        public TData GetValue()
         {
-            get
-            {
-                var readerOfT = SharedPool<TData>.Reader.Allocate();
+            var readerOfT = SharedPool<TData>.Reader.Allocate();
 
-                try
-                {                    
-                    var input = new InputPointer(DataPointer, Size);
-                    var reader = new CompactBinaryReader<InputPointer>(input);
-                    return readerOfT.Deserialize<TData>(reader);
-                }
-                finally
-                {
-                    SharedPool<TData>.Reader.Free(readerOfT);
-                }                
+            try
+            {                    
+                var input = new InputPointer(DataPointer, Size);
+                var reader = new CompactBinaryReader<InputPointer>(input);
+                return readerOfT.Deserialize<TData>(reader);
             }
+            finally
+            {
+                SharedPool<TData>.Reader.Free(readerOfT);
+            }                
         }
 
         public override bool Equals(object obj)

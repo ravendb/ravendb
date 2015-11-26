@@ -46,7 +46,7 @@ namespace Voron.Tests.Tables
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(1L, valueReader.ReadBigEndianInt64());
                 var handle = reader.Results.Single();
-                Assert.Equal("{'Name': 'Oren'}", handle.Value.Data);
+                Assert.Equal("{'Name': 'Oren'}", handle.GetValue().Data);
 
                 Assert.True(seekResults.MoveNext());
                 reader = seekResults.Current;
@@ -55,7 +55,7 @@ namespace Voron.Tests.Tables
                 Assert.Equal("Users", valueReader.ReadString(5));
                 Assert.Equal(2L, valueReader.ReadBigEndianInt64());
                 handle = reader.Results.Single();
-                Assert.Equal("{'Name': 'Eini'}", handle.Value.Data);
+                Assert.Equal("{'Name': 'Eini'}", handle.GetValue().Data);
 
                 Assert.False(seekResults.MoveNext());
                 tx.Commit();
@@ -143,7 +143,7 @@ namespace Voron.Tests.Tables
                 Assert.Equal(2L, valueReader.ReadBigEndianInt64());
 
                 var handle = reader.Results.Single();
-                Assert.Equal("{'Name': 'Eini'}", handle.Value.Data);
+                Assert.Equal("{'Name': 'Eini'}", handle.GetValue().Data);
 
                 tx.Commit();
             }
