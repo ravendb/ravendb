@@ -1043,5 +1043,96 @@ namespace Raven.Tests.FileSystem.ClientApi
                 }
             }
         }
+
+        [Fact]
+        public async Task CanSearchInMetadataArrayFields1()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var metadata = new RavenJObject
+                {
+                    {"test", new RavenJArray { 1, 2 } }
+                };
+                session.RegisterUpload("test.file", CreateUniformFileStream(10), metadata);
+                await session.SaveChangesAsync();
+
+                FilesQueryStatistics stats;
+                var query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 1)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test.file", query.First().Name);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 2)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test.file", query.First().Name);
+            }
+        }
+
+        [Fact]
+        public async Task CanSearchInMetadataArrayFields2()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var metadata1 = new RavenJObject
+                {
+                    {"test", new RavenJArray { 1, 2 } }
+                };
+                session.RegisterUpload("test1.file", CreateUniformFileStream(10), metadata1);
+
+                var metadata2 = new RavenJObject
+                {
+                    {"test", new RavenJArray { 1, 3 } }
+                };
+                session.RegisterUpload("test2.file", CreateUniformFileStream(10), metadata2);
+                await session.SaveChangesAsync();
+
+                FilesQueryStatistics stats;
+                var query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 1)
+                                       .ToListAsync();
+
+                Assert.Equal(2, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(2, query.Count());
+                Assert.Equal("test1.file", query[0].Name);
+                Assert.Equal("test2.file", query[1].Name);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 2)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test1.file", query.First().Name);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 3)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test2.file", query.First().Name);
+            }
+        }
     }
 }
