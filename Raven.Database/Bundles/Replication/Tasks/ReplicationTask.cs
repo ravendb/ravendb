@@ -143,11 +143,15 @@ namespace Raven.Bundles.Replication.Tasks
         public void Pause()
         {
             shouldPause = true;
+            if (log.IsDebugEnabled)
+                log.Debug($"Replication task stopped for {docDb.Name}");
         }
 
         public void Continue()
         {
             shouldPause = false;
+            if (log.IsDebugEnabled)
+                log.Debug($"Replication task continued for {docDb.Name}");
         }
 
         private bool IsHotSpare()
@@ -165,7 +169,7 @@ namespace Raven.Bundles.Replication.Tasks
 
                 var name = GetType().Name;
 
-                var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
+                var timeToWait = TimeSpan.FromMinutes(5);
                 bool runningBecauseOfDataModifications = false;
                 var context = docDb.WorkContext;
                 NotifySiblings();
@@ -187,9 +191,9 @@ namespace Raven.Bundles.Replication.Tasks
                         }
                     }
 
-                    runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+                    runningBecauseOfDataModifications = context.WaitForWork(timeToWait, ref workCounter, name);
 
-                    timeToWaitInMinutes = runningBecauseOfDataModifications
+                    timeToWait = runningBecauseOfDataModifications
                         ? TimeSpan.FromSeconds(30)
                         : TimeSpan.FromMinutes(5);
                 }
