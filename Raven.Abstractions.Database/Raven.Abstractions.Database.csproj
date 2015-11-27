@@ -57,6 +57,10 @@
     <Compile Include="Json\JintOperationScope.cs" />
     <Compile Include="Smuggler\Counter\CounterSmugglerOperationState.cs" />
     <Compile Include="Smuggler\Other\LastFilesEtagsInfo.cs" />
+    <Compile Include="Smuggler\Common\CommonSmugglerOptions.cs" />
+    <Compile Include="Smuggler\FileSystem\FileSystemSmugglerOperationState.cs" />
+    <Compile Include="Smuggler\FileSystem\FileSystemSmugglerOptions.cs" />
+    <Compile Include="Smuggler\FileSystem\LastFilesEtagsInfo.cs" />
     <Compile Include="Smuggler\Other\CounterOperationState.cs" />
     <Compile Include="Smuggler\Database\DatabaseSmugglerOptions.cs" />
     <Compile Include="Smuggler\Common\FilterSettings.cs" />

@@ -97,6 +97,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
   </ItemGroup>
@@ -132,6 +133,30 @@
     </Compile>
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteBase.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentDeletionActions.cs" />
+    <Compile Include="FileSystem\ConfigurationSmuggler.cs" />
+    <Compile Include="FileSystem\FileSmuggler.cs" />
+    <Compile Include="FileSystem\FileSystemSmuggler.cs" />
+    <Compile Include="FileSystem\Files\FileSmugglingDestination.cs" />
+    <Compile Include="FileSystem\Files\FileSmugglingSource.cs" />
+    <Compile Include="FileSystem\ISmuggleConfigurationsToDestination.cs" />
+    <Compile Include="FileSystem\ISmuggleFilesToDestination.cs" />
+    <Compile Include="FileSystem\Remote\FileStoreHelper.cs" />
+    <Compile Include="FileSystem\Remote\RemoteSmugglingDestination.cs" />
+    <Compile Include="FileSystem\Remote\RemoteSmugglingSource.cs" />
+    <Compile Include="FileSystem\Remote\SmuggleConfigurationsToRemote.cs" />
+    <Compile Include="FileSystem\Remote\SmuggleFilesToRemote.cs" />
+    <Compile Include="FileSystem\SmugglerBase.cs" />
+    <Compile Include="FileSystem\FileSystemSmugglerNotifications.cs" />
+    <Compile Include="FileSystem\FileSystemSmugglingResult.cs" />
+    <Compile Include="FileSystem\IFileSystemSmugglerDestination.cs" />
+    <Compile Include="FileSystem\IFileSystemSmugglerSource.cs" />
+    <Compile Include="FileSystem\SmuggleType.cs" />
+    <Compile Include="FileSystem\Streams\ConfigEntry.cs" />
+    <Compile Include="FileSystem\Streams\FileEntry.cs" />
+    <Compile Include="FileSystem\Streams\SmuggleConfigurationsToStream.cs" />
+    <Compile Include="FileSystem\Streams\StreamSmugglingDestination.cs" />
+    <Compile Include="FileSystem\Streams\SmuggleFilesToStream.cs" />
+    <Compile Include="FileSystem\Streams\StreamSmugglingSource.cs" />
     <Compile Include="Helpers\ServerValidation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Database\AttachmentDeletionsSmuggler.cs" />
@@ -178,6 +203,7 @@
     <Compile Include="Helpers\ServerValidation.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SmugglerConstants.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">
@@ -217,12 +243,14 @@
     <EmbeddedResource Include="Database\DatabaseSmugglerMessages.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>DatabaseSmugglerMessages.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Counter\Files\" />
     <Folder Include="Counter\Remote\" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />

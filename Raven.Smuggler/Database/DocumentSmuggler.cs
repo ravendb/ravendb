@@ -128,7 +128,7 @@ namespace Raven.Smuggler.Database
                                             continue;
 
                                         if (Options.StripReplicationInformation)
-                                            currentDocument["@metadata"] = SmugglerHelper.StripReplicationInformationFromMetadata(metadata);
+                                            currentDocument["@metadata"] = SmugglerHelper.StripReplicationInformationFromMetadata(metadata); //TODO arek - why there three methods are in SmugglerHelper, they are used just here
 
                                         if (Options.ShouldDisableVersioningBundle)
                                             currentDocument["@metadata"] = SmugglerHelper.DisableVersioning(metadata);

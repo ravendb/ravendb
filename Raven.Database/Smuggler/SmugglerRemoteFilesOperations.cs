@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Database.Smuggler.FileSystem;
 using Raven.Abstractions.Database.Smuggler.Other;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;

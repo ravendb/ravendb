@@ -309,6 +309,10 @@
     <Compile Include="Counters\Replication\CountersReplicationTopologyDiscoverer.cs" />
     <Compile Include="FileSystem\Controllers\BaseAdminFileSystemApiController.cs" />
     <Compile Include="FileSystem\Controllers\SynchronizationTopologyController.cs" />
+    <Compile Include="FileSystem\Smuggler\Embedded\EmbeddedSmugglingDestination.cs" />
+    <Compile Include="FileSystem\Smuggler\Embedded\EmbeddedSmugglingSource.cs" />
+    <Compile Include="FileSystem\Smuggler\Embedded\SmuggleConfigurationsToEmbedded.cs" />
+    <Compile Include="FileSystem\Smuggler\Embedded\SmuggleFilesToEmbedded.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopologyNode.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopologyDiscoverer.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopology.cs" />
@@ -448,7 +452,6 @@
     <Compile Include="Impl\BackgroundTaskExecuter\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\IBackgroundTaskExecuter.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\RavenThreadPool.cs" />
-    <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="FileSystem\Storage\CopyFileOperation.cs" />
     <Compile Include="FileSystem\Storage\Voron\Schema\Updates\From10To11.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationBehavior.cs" />
@@ -541,7 +544,6 @@
     <Compile Include="Server\WebApi\Handlers\ThrottlingHandler.cs" />
     <Compile Include="Server\WebApi\RouteCacher.cs" />
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
-    <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
     <Compile Include="ShiftReduceParserCode.cs" />
     <!--<Compile Include="Smuggler\Client\ChunkedBulkInsertOperation.cs" />-->
     <!--<Compile Include="Smuggler\Client\ChunkedRemoteBulkInsertOperation.cs" />-->

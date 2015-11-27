@@ -2,6 +2,7 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Database.Smuggler
 {
+    // TODO arek - remove this class
     public class SmugglerFilesOptions : SmugglerOptions<FilesConnectionStringOptions>
     {
         public SmugglerFilesOptions()

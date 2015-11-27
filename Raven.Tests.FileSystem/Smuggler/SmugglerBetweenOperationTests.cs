@@ -13,6 +13,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.FileSystem;
+using Raven.Smuggler.FileSystem;
+using Raven.Smuggler.FileSystem.Remote;
 
 using Xunit;
 
@@ -474,24 +477,6 @@ namespace Raven.Tests.FileSystem.Smuggler
         {
             using (var store = NewStore())
             {
-                var server = GetServer();
-
-                var smugglerApi = new SmugglerFilesApi();
-
-                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
-                {
-                    From = new FilesConnectionStringOptions
-                    {
-                        Url = store.Url,
-                        DefaultFileSystem = SourceFilesystem
-                    },
-                    To = new FilesConnectionStringOptions
-                    {
-                        Url = store.Url,
-                        DefaultFileSystem = DestinationFilesystem
-                    }
-                };
-
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
 
@@ -507,7 +492,18 @@ namespace Raven.Tests.FileSystem.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await smugglerApi.Between(options);
+                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+
+                await smuggler.ExecuteAsync(new RemoteSmugglingSource(new FilesConnectionStringOptions
+                {
+                    Url = store.Url,
+                    DefaultFileSystem = SourceFilesystem
+                }),
+                new RemoteSmugglingDestination(new FilesConnectionStringOptions
+                {
+                    Url = store.Url,
+                    DefaultFileSystem = DestinationFilesystem
+                }));
 
                 using (var session = store.OpenAsyncSession(DestinationFilesystem))
                 {
