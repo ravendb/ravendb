@@ -48,6 +48,9 @@ namespace Raven.Abstractions.Smuggler
 
         public virtual async Task<OperationState> ExportData(SmugglerExportOptions<RavenConnectionStringOptions> exportOptions)
         {
+            if (exportOptions.IsIncrementalExport == true)
+                Options.Incremental = true;
+
             Operations.Configure(Options);
             Operations.Initialize(Options);
 
@@ -700,6 +703,8 @@ namespace Raven.Abstractions.Smuggler
 
         public virtual async Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions)
         {
+            if (importOptions.IsIncrementalImport == true)
+                Options.Incremental = true;
             int countSpinnedFiles;
             string nextPartFileName;
             if (Options.Incremental == false)

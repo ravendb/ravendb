@@ -1122,8 +1122,7 @@ namespace Raven.Tests.Smuggler
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task CanExportImportSmugglerMaxSplitExportFileSize()
+        private string CreateTestExportFile(int docFirstId, int numberOfDocs)
         {
             string exportString1 = @"
 {
@@ -1196,10 +1195,7 @@ namespace Raven.Tests.Smuggler
   ""Transformers"": [],
   ""Identities"": []
 }'";
-
             var fileToExportTo = Path.GetTempFileName();
-            var splittedFileToExportTo = Path.GetTempFileName();
-
             var fileStream = File.OpenWrite(fileToExportTo);
             using (var gzipStream = new GZipStream(fileStream, CompressionMode.Compress, leaveOpen: true))
             using (var streamWriter = new StreamWriter(gzipStream))
@@ -1207,7 +1203,7 @@ namespace Raven.Tests.Smuggler
                 streamWriter.Write(exportString1);
                 int docs;
                 // 200K docs should produce about 2MB of compressed export file
-                for (docs = 1; docs < 200000; docs++)
+                for (docs = docFirstId; docs < numberOfDocs; docs++)
                 {
                     streamWriter.Write($"{docStringPart1}{docs}{docStringPart2}{docs}{docStringPart3},");
                 }
@@ -1218,8 +1214,16 @@ namespace Raven.Tests.Smuggler
             fileStream.Flush();
             fileStream.Close();
             fileStream.Dispose();
-            
 
+            return fileToExportTo;
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CanExportImportSmugglerMaxSplitExportFileSize()
+        {
+            var fileToExportTo = CreateTestExportFile(1, 200000); 
+            var splittedFileToExportTo = Path.GetTempFileName();
+            Assert.NotNull(splittedFileToExportTo);
             try
             {
                 using (var store = NewRemoteDocumentStore())
@@ -1230,7 +1234,7 @@ namespace Raven.Tests.Smuggler
                     // import one file:
                     await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fileToExportTo, To = connectionStringOptions });
 
-                    // export as 2 files:
+                    // export as two files:
                     await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = splittedFileToExportTo, From = connectionStringOptions, MaxSplitExportFileSize = 1 });
 
                     Assert.True(File.Exists(splittedFileToExportTo));
@@ -1266,7 +1270,72 @@ namespace Raven.Tests.Smuggler
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportImportIncrementalSmugglerMaxSplitExportFileSize()
         {
+            var fileToExportTo = CreateTestExportFile(1, 10000);
+            var fileToExportIncrementalTo = CreateTestExportFile(10001, 200000);
+            var mainFileToExportTo = Path.GetTempFileName();
+            Assert.NotNull(mainFileToExportTo);
+            var directoryToExportIncrementalTo =
+                Path.Combine(Path.GetDirectoryName(mainFileToExportTo), "TestIncremental");
+            Directory.CreateDirectory(directoryToExportIncrementalTo);
+            string secondaryFileToExportTo = null;
+            try
+            {
+                using (var store = NewRemoteDocumentStore())
+                {
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
+                    var smuggler = new SmugglerDatabaseApi();
+
+                    // import one file:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fileToExportTo, To = connectionStringOptions });
+
+                    // export as one files:
+                    await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = mainFileToExportTo, From = connectionStringOptions });
+                    Assert.True(File.Exists(mainFileToExportTo));
+
+                    // export incremental as two files:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fileToExportIncrementalTo, To = connectionStringOptions });
+                    var operState = await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = directoryToExportIncrementalTo, From = connectionStringOptions, MaxSplitExportFileSize = 1, IsIncrementalExport = true});
+
+                    secondaryFileToExportTo = operState.FilePath;
+                    Assert.True(File.Exists(secondaryFileToExportTo));
+                    Assert.True(File.Exists($"{secondaryFileToExportTo}.part001"));
+                    Assert.False(File.Exists($"{secondaryFileToExportTo}.part002"));
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("testdoc/20000");
+                        session.Delete("testdoc/199997");
+                        session.SaveChanges();
+                        var o = session.Load<object>("testdoc/20000");
+                        Assert.Null(o);
+                        o = session.Load<object>("testdoc/199997");
+                        Assert.Null(o);
+                    }
+
+                    // import two files:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = directoryToExportIncrementalTo, To = connectionStringOptions, IsIncrementalImport = true});
+
+                    using (var session = store.OpenSession())
+                    {
+                        var o = session.Load<object>("testdoc/20000");
+                        Assert.NotNull(o);
+                        o = session.Load<object>("testdoc/199997");
+                        Assert.NotNull(o);
+                    }
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(fileToExportTo);
+                IOExtensions.DeleteFile(fileToExportIncrementalTo);
+                IOExtensions.DeleteFile(mainFileToExportTo);
+                if (secondaryFileToExportTo != null)
+                {
+                    IOExtensions.DeleteFile(secondaryFileToExportTo);
+                    IOExtensions.DeleteFile($"{secondaryFileToExportTo}.part001");
+                }
+                IOExtensions.DeleteDirectory(directoryToExportIncrementalTo);
+            }
         }
-        
     }
 }
