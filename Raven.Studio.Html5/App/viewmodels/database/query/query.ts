@@ -573,7 +573,8 @@ class query extends viewModelBase {
     addSortBy() {
         var sort = new querySort();
         sort.fieldName.subscribe(() => this.runQuery());
-        sort.sortDirection.subscribe(() => this.runQuery());
+        sort.isAscending.subscribe(() => this.runQuery());
+        sort.isRange.subscribe(() => this.runQuery());
         this.sortBys.push(sort);
     }
 
