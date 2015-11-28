@@ -102,6 +102,11 @@ namespace Raven.Abstractions.Smuggler
         /// The stream to write the export.
         /// </summary>
         public Stream ToStream { get; set; }
+
+        /// <summary>
+        /// Optional: Split exported file size in MB.
+        /// </summary>
+        public int MaxSplitExportFileSize { get; set; }
     }
 
     public class SmugglerImportOptions<T> where T : ConnectionStringOptions

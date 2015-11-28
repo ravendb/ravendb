@@ -18,10 +18,12 @@ using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Server.Controllers;
 using Xunit;
 using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
@@ -758,7 +760,6 @@ namespace Raven.Tests.Smuggler
                     session.SaveChanges();
                 }
 
-                // ADIADI :: TODO : test also with splitted export.. 
                 using (var textStream = new StringWriter())
                 using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
@@ -1120,6 +1121,152 @@ namespace Raven.Tests.Smuggler
                 }
             }
         }
-  
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CanExportImportSmugglerMaxSplitExportFileSize()
+        {
+            string exportString1 = @"
+{
+   ""Indexes"": [
+                  {
+      ""name"": ""Raven/DocumentsByEntityName"",
+                    ""definition"": {
+        ""IndexId"": 1,
+                      ""Name"": ""Raven/DocumentsByEntityName"",
+                      ""LockMode"": ""LockedIgnore"",
+                      ""IndexVersion"": 0,
+                      ""Map"": ""from doc in docs \r\nselect new \r\n{ \r\n    Tag = doc[\""@metadata\""][\""Raven-Entity-Name\""], \r\n    LastModified = (DateTime)doc[\""@metadata\""][\""Last-Modified\""],\r\n    LastModifiedTicks = ((DateTime)doc[\""@metadata\""][\""Last-Modified\""]).Ticks \r\n};"",
+                      ""Maps"": [
+                        ""from doc in docs \r\nselect new \r\n{ \r\n    Tag = doc[\""@metadata\""][\""Raven-Entity-Name\""], \r\n    LastModified = (DateTime)doc[\""@metadata\""][\""Last-Modified\""],\r\n    LastModifiedTicks = ((DateTime)doc[\""@metadata\""][\""Last-Modified\""]).Ticks \r\n};""
+        ],
+        ""Reduce"": null,
+        ""IsMapReduce"": false,
+        ""IsCompiled"": false,
+        ""Stores"": {},
+        ""Indexes"": {
+          ""Tag"": ""NotAnalyzed"",
+          ""LastModified"": ""NotAnalyzed"",
+          ""LastModifiedTicks"": ""NotAnalyzed""
+        },
+        ""SortOptions"": {
+          ""LastModified"": ""String"",
+          ""LastModifiedTicks"": ""Long""
+        },
+        ""Analyzers"": {},
+        ""Fields"": [
+          ""Tag"",
+          ""LastModified"",
+          ""LastModifiedTicks"",
+          ""__document_id""
+        ],
+        ""Suggestions"": null,
+        ""SuggestionsOptions"": [],
+        ""TermVectors"": {},
+        ""SpatialIndexes"": {},
+        ""InternalFieldsMapping"": {},
+        ""MaxIndexOutputsPerDocument"": null,
+        ""Type"": ""Map"",
+        ""DisableInMemoryIndexing"": true,
+        ""IsTestIndex"": false,
+        ""IsSideBySideIndex"": false
+      }
+}
+  ],            
+  ""Docs"": [";
+
+            var docStringPart1 = @"
+    {
+      ""Smuggler"": ""Test_";
+
+            var docStringPart2 = @""",
+      ""@metadata"": {
+        ""Raven-Entity-Name"": ""testdoc"",
+        ""@id"": ""testdoc/";
+
+            var docStringPart3 = @""",
+        ""Last-Modified"": ""2015-11-27T23:33:27.8437754Z"",
+        ""Raven-Last-Modified"": ""2015-11-27T23:33:27.8437754"",
+        ""@etag"": ""01000000-0000-0001-0000-000000000001"",
+        ""Non-Authoritative-Information"": false
+      }
+    }";
+            var exportString2 = @"
+  ],
+  ""Attachments"": [],
+  ""Transformers"": [],
+  ""Identities"": []
+}'";
+
+            var fileToExportTo = Path.GetTempFileName();
+            var splittedFileToExportTo = Path.GetTempFileName();
+
+            var fileStream = File.OpenWrite(fileToExportTo);
+            using (var gzipStream = new GZipStream(fileStream, CompressionMode.Compress, leaveOpen: true))
+            using (var streamWriter = new StreamWriter(gzipStream))
+            {
+                streamWriter.Write(exportString1);
+                int docs;
+                // 200K docs should produce about 2MB of compressed export file
+                for (docs = 1; docs < 200000; docs++)
+                {
+                    streamWriter.Write($"{docStringPart1}{docs}{docStringPart2}{docs}{docStringPart3},");
+                }
+                streamWriter.Write($"{docStringPart1}{docs}{docStringPart2}{docs}{docStringPart3}");
+                streamWriter.Write(exportString2);
+                streamWriter.Flush();
+            }
+            fileStream.Flush();
+            fileStream.Close();
+            fileStream.Dispose();
+            
+
+            try
+            {
+                using (var store = NewRemoteDocumentStore())
+                {
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
+                    var smuggler = new SmugglerDatabaseApi();
+
+                    // import one file:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fileToExportTo, To = connectionStringOptions });
+
+                    // export as 2 files:
+                    await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = splittedFileToExportTo, From = connectionStringOptions, MaxSplitExportFileSize = 1 });
+
+                    Assert.True(File.Exists(splittedFileToExportTo));
+                    Assert.True(File.Exists($"{splittedFileToExportTo}.part001"));
+                    Assert.False(File.Exists($"{splittedFileToExportTo}.part002"));
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("testdoc/199997");
+                        session.SaveChanges();
+                        var o = session.Load<object>("testdoc/199997");
+                        Assert.Null(o);
+                    }
+
+                    // import two files:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = splittedFileToExportTo, To = connectionStringOptions });
+
+                    using (var session = store.OpenSession())
+                    {
+                        var o = session.Load<object>("testdoc/199997");
+                        Assert.NotNull(o);
+                    }
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(splittedFileToExportTo);
+                IOExtensions.DeleteFile($"{splittedFileToExportTo}.part001");
+                IOExtensions.DeleteFile(fileToExportTo);
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CanExportImportIncrementalSmugglerMaxSplitExportFileSize()
+        {
+        }
+        
     }
 }

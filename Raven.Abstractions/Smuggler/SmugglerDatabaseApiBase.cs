@@ -112,6 +112,9 @@ namespace Raven.Abstractions.Smuggler
 
             var maxSplitExportFileSize = !ownedStream ? 0 : Options.MaxSplitExportFileSize;
 
+            if (exportOptions.MaxSplitExportFileSize > 0)
+                maxSplitExportFileSize = exportOptions.MaxSplitExportFileSize;
+
             try
             {
                 using (var countingStream = new CountingStream(stream))
