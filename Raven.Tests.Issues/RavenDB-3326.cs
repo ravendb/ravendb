@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
-using Raven.Tests.MailingList;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -23,11 +19,14 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer {Name = "John", Address = "Tel Aviv"});
+                    session.Store(new Customer { Name = "John", Address = "Tel Aviv" });
                     session.SaveChanges();
-          
-                    WaitForIndexing(store);
+                }
 
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
                     var query = session.Query<Customer>(index.IndexName)
                         .Select(r => new
                         {
@@ -35,16 +34,20 @@ namespace Raven.Tests.Issues
                             OtherThanName = r.Address,
                         });
 
-                         var enumerator = session.Advanced.Stream(query);
+                    var enumerator = session.Advanced.Stream(query);
 
-                        while (enumerator.MoveNext())
-                        {
-                            Assert.Equal("John",enumerator.Current.Document.Name); 
-                            Assert.Equal("Tel Aviv",enumerator.Current.Document.OtherThanName);
-                        }
+                    while (enumerator.MoveNext())
+                    {
+                        Assert.Equal("John", enumerator.Current.Document.Name);
+                        Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
+
+                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.TemporaryScoreValue));
                     }
                 }
             }
+        }
+
         [Fact]
         public async Task streaming_and_projections_with_property_rename_Async()
         {
@@ -55,14 +58,15 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer {Name = "John", Address = "Tel Aviv"});
+                    session.Store(new Customer { Name = "John", Address = "Tel Aviv" });
                     session.SaveChanges();
                 }
 
                 WaitForIndexing(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    
+
                     var query = session.Query<Customer>(index.IndexName)
                         .Select(r => new
                         {
@@ -76,12 +80,13 @@ namespace Raven.Tests.Issues
                     {
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
+
+                        Assert.NotNull(enumerator.Current.Key);
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.TemporaryScoreValue));
                     }
                 }
             }
         }
-
-      
 
         public class Customer
         {
@@ -100,7 +105,5 @@ namespace Raven.Tests.Issues
                                    };
             }
         }
+    }
 }
-}
- 
-
