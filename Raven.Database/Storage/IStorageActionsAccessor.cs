@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
+using Raven.Database.Impl.DTC;
 
 namespace Raven.Database.Storage
 {
@@ -22,6 +23,7 @@ namespace Raven.Database.Storage
         IIndexingStorageActions Indexing { get; }
         IGeneralStorageActions General { get; }
         IMappedResultsStorageAction MapReduce { get; }
+        IInFlightStateSnapshot InFlightStateSnapshot { get; }
         bool IsNested { get; set; }
         event Action OnStorageCommit;
         event Action BeforeStorageCommit;
