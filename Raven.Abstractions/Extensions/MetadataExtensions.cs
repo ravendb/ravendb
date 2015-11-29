@@ -8,9 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Text;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -31,7 +29,7 @@ namespace Raven.Abstractions.Extensions
             "Non-Authoritative-Information",
             "Raven-Timer-Request",
             "Raven-Authenticated-User",
-            "Raven-Last-Modified",
+            Constants.RavenLastModified,
             "Has-Api-Key",
 
             // COTS
@@ -120,6 +118,13 @@ namespace Raven.Abstractions.Extensions
             "X-SITE-DEPLOYMENT-ID",
         };
 
+        private static readonly HashSet<string> HeadersToIgnoreForClient = HeadersToIgnoreClient.Except(new[]
+        {
+            Constants.MetadataEtagField,
+            Constants.LastModified,
+            Constants.RavenLastModified
+        }).ToHashSet();
+
         private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                                                                                {
                                                                                    "Temp",
@@ -160,7 +165,7 @@ namespace Raven.Abstractions.Extensions
         /// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
         public static RavenJObject FilterHeadersToObject(this RavenJObject self)
         {
-            return FilterHeadersToObject(self, HeadersToIgnoreClient, PrefixesInHeadersToIgnoreClient);
+            return FilterHeadersToObject(self, HeadersToIgnoreForClient, PrefixesInHeadersToIgnoreClient);
         }
 
         [Obsolete("Use RavenFS instead.")]
@@ -186,7 +191,7 @@ namespace Raven.Abstractions.Extensions
                 {
                     if (PrefixesInHeadersToIgnoreClient.Any(prefix => header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                         continue;
-                    if (HeadersToIgnoreClient.Contains(header))
+                    if (HeadersToIgnoreForClient.Contains(header))
                         continue;
                     var valuesNonDistinct = self.GetValues(header);
                     if (valuesNonDistinct == null)
