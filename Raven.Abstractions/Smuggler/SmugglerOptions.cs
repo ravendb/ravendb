@@ -102,6 +102,16 @@ namespace Raven.Abstractions.Smuggler
         /// The stream to write the export.
         /// </summary>
         public Stream ToStream { get; set; }
+
+        /// <summary>
+        /// Optional: Split exported file size in MB.
+        /// </summary>
+        public int MaxSplitExportFileSize { get; set; }
+
+        /// <summary>
+        /// Optional: Set exported file as incremental directory.
+        /// </summary>
+        public bool IsIncrementalExport { get; set; }
     }
 
     public class SmugglerImportOptions<T> where T : ConnectionStringOptions
@@ -117,5 +127,10 @@ namespace Raven.Abstractions.Smuggler
         /// The stream to read from of the import data.
         /// </summary>
         public Stream FromStream { get; set; }
+
+        /// <summary>
+        /// Optional: Set imported file as incremental directory.
+        /// </summary>
+        public bool IsIncrementalImport { get; set; }
     }
 }
