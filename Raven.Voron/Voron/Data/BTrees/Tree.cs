@@ -104,26 +104,6 @@ namespace Voron.Data.BTrees
             CopyStreamToPointer(_llt, value, pos);
         }
 
-        public StructReadResult<T> ReadStruct<T>(Slice key, StructureSchema<T> schema)
-        {
-            var readResult = Read(key);
-
-            if (readResult == null)
-                return null;
-
-            return new StructReadResult<T>(new StructureReader<T>(readResult.Reader.Base, schema), readResult.Version);
-        }
-
-        public void WriteStruct(Slice key, IStructure structure, ushort? version = null)
-        {
-            structure.AssertValidStructure();
-
-            State.IsModified = true;
-            var pos = DirectAdd(key, structure.GetSize(), version: version);
-
-            structure.Write(pos);
-        }
-
         /// <summary>
         /// This is using little endian
         /// </summary>

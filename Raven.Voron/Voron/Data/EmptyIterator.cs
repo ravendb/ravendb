@@ -31,10 +31,6 @@ namespace Voron.Data
             throw new InvalidOperationException("No current page");
         }
 
-        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
-        {
-            throw new InvalidOperationException("No current page");
-        }
 
         public event Action<IIterator> OnDispoal;
 

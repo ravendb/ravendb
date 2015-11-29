@@ -191,13 +191,6 @@ namespace Voron.Data.BTrees
 			return TreeNodeHeader.Reader(_tx, Current);
 		}
 
-		public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
-		{
-			var valueReader = TreeNodeHeader.Reader(_tx, Current);
-
-			return new StructureReader<T>(valueReader.Base, schema);
-		}
-
 		public void Dispose()
 		{
 		    if (_disposed)

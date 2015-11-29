@@ -13,7 +13,7 @@ namespace Voron.Data
         bool MovePrev();
         bool Skip(int count);
         ValueReader CreateReaderForCurrent();
-        StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema);
+
         event Action<IIterator> OnDispoal;
     }
 }

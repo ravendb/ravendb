@@ -120,11 +120,6 @@ namespace Voron.Data.BTrees
             return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
         }
 
-        public StructureReader<T> ReadStructForCurrent<T>(StructureSchema<T> schema)
-        {
-            throw new NotSupportedException("Multi trees do not support reading/writing structures");
-        }
-
         public event Action<IIterator> OnDispoal;
     }
 }
