@@ -17,7 +17,7 @@ namespace Rachis.Tests
 
         public long LastAppliedIndex
         {
-            get { return _lastAppliedIndex; }
+            get { return Thread.VolatileRead(ref _lastAppliedIndex); }
             private set { Thread.VolatileWrite(ref _lastAppliedIndex, value); }
         }
 
