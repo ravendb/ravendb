@@ -5,13 +5,13 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders.Admin
 {
-    public class AdminOAuthCertificateResponder : AbstractRequestResponder
+    public class AdminOAuthCertificateResponder : AdminResponder
     {
         public override string UrlPattern
         {
             get
             {
-                return "^/admin/generate-oauth-certificate";
+                return "^/admin/generate-oauth-certificate$";
             }
         }
 
@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Responders.Admin
             }
         }
 
-        public override void Respond(IHttpContext context)
+        public override void RespondToAdmin(IHttpContext context)
         {
             string certificate;
             using (var rsa = new RSACryptoServiceProvider())
