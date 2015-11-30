@@ -4,5 +4,9 @@
       "dependencies": {
       }
     }
+  },
+  "runtimes": {
+    "win": {
+    }
   }
 }

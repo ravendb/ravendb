@@ -12,7 +12,7 @@
     }
   },
   "runtimes": {
-    "win-anycpu": {
+    "win": {
     }
   }
 }
