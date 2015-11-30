@@ -22,7 +22,8 @@ using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
-
+using System.Security.Cryptography;
+using System.Text;
 using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
@@ -61,6 +62,26 @@ namespace Raven.Database.Server.Controllers.Admin
                                                                       typeof(RemoveBackupDocumentStartupTask).FullName,
                                                                       typeof(CreateFolderIcon).FullName,
                                                                    };
+
+        [HttpGet]
+        [RavenRoute("admin/generate-oauth-certificate")]
+        public HttpResponseMessage GenerateOAuthCertificate()
+        {
+            string certificate;
+            using (var rsa = new RSACryptoServiceProvider())
+                certificate = Convert.ToBase64String(rsa.ExportCspBlob(true));
+
+            var message = GetEmptyMessage();
+            message.Content = new StringContent(certificate, Encoding.UTF8);
+            message.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "oauth-certificate.txt"
+            };
+
+            message.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+            return message;
+        }
 
         [HttpPost]
         [RavenRoute("admin/serverSmuggling")]
