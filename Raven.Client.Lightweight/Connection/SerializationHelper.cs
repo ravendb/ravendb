@@ -11,7 +11,6 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
-using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -62,6 +61,7 @@ namespace Raven.Client.Connection
             }
 
             var lastModified = GetLastModified(metadata);
+            metadata[Constants.LastModified] = lastModified;
 
             var etag = Extract(metadata, "@etag", Etag.Empty, (string g) => HttpExtensions.EtagHeaderToEtag(g));
             var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
@@ -199,9 +199,12 @@ namespace Raven.Client.Connection
                                                            HttpStatusCode statusCode)
         {
             var jsonData = (RavenJObject)requestJson;
-            var meta = headers.FilterHeadersToObject();
+            var metadata = headers.FilterHeadersToObject();
 
             var etag = headers.ETag.Tag;
+
+            var lastModified = GetLastModifiedDate(headers);
+            metadata[Constants.LastModified] = lastModified;
 
             return new JsonDocument
             {
@@ -209,8 +212,8 @@ namespace Raven.Client.Connection
                 NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
                 Key = key,
                 Etag = HttpExtensions.EtagHeaderToEtag(etag),
-                LastModified = GetLastModifiedDate(headers),
-                Metadata = meta
+                LastModified = lastModified,
+                Metadata = metadata
             };
         }
 
@@ -219,9 +222,12 @@ namespace Raven.Client.Connection
                                                            HttpStatusCode statusCode)
         {
             var jsonData = (RavenJObject)requestJson;
-            var meta = headers.FilterHeadersToObject();
+            var metadata = headers.FilterHeadersToObject();
 
             var etag = headers[Constants.MetadataEtagField];
+
+            var lastModified = GetLastModifiedDate(headers);
+            metadata[Constants.LastModified] = lastModified;
 
             return new JsonDocument
             {
@@ -229,8 +235,8 @@ namespace Raven.Client.Connection
                 NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
                 Key = key,
                 Etag = HttpExtensions.EtagHeaderToEtag(etag),
-                LastModified = GetLastModifiedDate(headers),
-                Metadata = meta
+                LastModified = lastModified,
+                Metadata = metadata
             };
         }
 
@@ -263,10 +269,10 @@ namespace Raven.Client.Connection
                                                                            HttpResponseHeaders headers,
                                                                            HttpStatusCode statusCode)
         {
-            RavenJObject meta = null;
+            RavenJObject metadata = null;
             try
             {
-                meta = headers.FilterHeadersToObject();
+                metadata = headers.FilterHeadersToObject();
             }
             catch (JsonReaderException jre)
             {
@@ -276,6 +282,7 @@ namespace Raven.Client.Connection
             string lastModified = headers.GetFirstValue(Constants.RavenLastModified) ?? headers.GetFirstValue(Constants.LastModified);
             var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            metadata[Constants.LastModified] = lastModified;
 
             return new JsonDocumentMetadata
             {
@@ -283,7 +290,7 @@ namespace Raven.Client.Connection
                 Key = key,
                 Etag = HttpExtensions.EtagHeaderToEtag(etag),
                 LastModified = lastModifiedDate,
-                Metadata = meta
+                Metadata = metadata
             };
         }
 
@@ -294,10 +301,10 @@ namespace Raven.Client.Connection
                                                                            NameValueCollection headers,
                                                                            HttpStatusCode statusCode)
         {
-            RavenJObject meta = null;
+            RavenJObject metadata = null;
             try
             {
-                meta = headers.FilterHeadersToObject();
+                metadata = headers.FilterHeadersToObject();
             }
             catch (JsonReaderException jre)
             {
@@ -307,6 +314,7 @@ namespace Raven.Client.Connection
             string lastModified = headers[Constants.RavenLastModified] ?? headers[Constants.LastModified];
             var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            metadata[Constants.LastModified] = lastModified;
 
             return new JsonDocumentMetadata
             {
@@ -314,7 +322,7 @@ namespace Raven.Client.Connection
                 Key = key,
                 Etag = HttpExtensions.EtagHeaderToEtag(etag),
                 LastModified = lastModifiedDate,
-                Metadata = meta
+                Metadata = metadata
             };
         }
     }
