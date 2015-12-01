@@ -355,10 +355,9 @@ namespace Raven.Database.FileSystem.Controllers
                 {
                     if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
                     {
-                        var msg = "The filesystem " + tenantId +
-                                  " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.";
+                        var msg = string.Format("The filesystem {0} is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, file system loading continues.", tenantId);
                         Logger.Warn(msg);
-                        throw new HttpException(503, msg);
+                        throw new TimeoutException(msg);
                     }
 
                     args = new RequestWebApiEventArgs()
@@ -374,7 +373,8 @@ namespace Raven.Database.FileSystem.Controllers
                 }
                 catch (Exception e)
                 {
-                    var msg = "Could not open file system named: " + tenantId + ", " + e.InnerException.Message;
+                    var msg = "Could not open file system named: " + tenantId + Environment.NewLine + e;
+
                     Logger.WarnException(msg, e);
                     throw new HttpException(503, msg, e);
                 }
