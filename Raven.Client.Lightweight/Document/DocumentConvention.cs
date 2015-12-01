@@ -95,6 +95,7 @@ namespace Raven.Client.Document
             ShouldSaveChangesForceAggressiveCacheCheck = true;
             IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
             AcceptGzipContent = true;
+            AuthenticationScheme = null;
         }
 
         private IEnumerable<object> DefaultApplyReduceFunction(
@@ -683,6 +684,8 @@ namespace Raven.Client.Document
         public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; }
 
         public bool AcceptGzipContent { get; set; }
+
+        public string AuthenticationScheme { get; set; }
 
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 

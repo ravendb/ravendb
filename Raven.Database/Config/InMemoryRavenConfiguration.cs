@@ -11,7 +11,6 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,11 +49,9 @@ namespace Raven.Database.Config
 
         public EncryptionConfiguration Encryption { get; private set; }
 
-        public IndexingConfiguration Indexing { get; private set; }
+        public IndexingConfiguration Indexing { get; set; }
 
-        public WebSocketsConfiguration WebSockets { get; private set; }
-
-        public HttpConfiguration Http { get; private set; }
+        public WebSocketsConfiguration WebSockets { get; set; }
 
         public InMemoryRavenConfiguration()
         {
@@ -65,7 +62,6 @@ namespace Raven.Database.Config
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
-            Http = new HttpConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -339,8 +335,6 @@ namespace Raven.Database.Config
 
             MaxConcurrentResourceLoads = ravenSettings.MaxConcurrentResourceLoads.Value;
             ConcurrentResourceLoadTimeout = ravenSettings.ConcurrentResourceLoadTimeout.Value;
-
-            Http.AuthenticationSchemes = ravenSettings.Http.AuthenticationSchemes.Value;
 
             PostInit();
 
@@ -1506,11 +1500,6 @@ namespace Raven.Database.Config
         public class WebSocketsConfiguration
         {
             public int InitialBufferPoolSize { get; set; }
-        }
-
-        public class HttpConfiguration
-        {
-            public AuthenticationSchemes? AuthenticationSchemes { get; set; }
         }
 
         public void UpdateDataDirForLegacySystemDb()

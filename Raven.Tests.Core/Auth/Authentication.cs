@@ -7,6 +7,8 @@ using Raven.Tests.Core.Utils.Entities;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Tests.Common.Attributes;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Core.Auth
@@ -63,11 +65,11 @@ namespace Raven.Tests.Core.Auth
             Raven.Database.Server.Security.Authentication.EnableOnce();
             this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             this.Server.SystemDatabase.Documents.Put(
-                "Raven/Authorization/WindowsSettings", 
+                "Raven/Authorization/WindowsSettings",
                 null,
                 RavenJObject.FromObject(new WindowsAuthDocument
-                    {
-                        RequiredUsers = new List<WindowsAuthData>
+                {
+                    RequiredUsers = new List<WindowsAuthData>
                             {
                                 new WindowsAuthData
                                     {
@@ -80,23 +82,30 @@ namespace Raven.Tests.Core.Auth
                                             }
                                     }
                             }
-                    }), new RavenJObject(), null);
+                }), new RavenJObject(), null);
 
             using (var store = new DocumentStore
-                {
-                    Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.User.UserName, FactIfWindowsAuthenticationIsAvailable.User.Password, FactIfWindowsAuthenticationIsAvailable.User.Domain),
-                    Url = this.Server.SystemDatabase.ServerUrl
-                }.Initialize())
             {
-                Assert.Throws<Raven.Abstractions.Connection.ErrorResponseException>(() => store.DatabaseCommands.Put("users/1", null, RavenJObject.FromObject(new User {}), new RavenJObject()));
+                Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.User.UserName, FactIfWindowsAuthenticationIsAvailable.User.Password, FactIfWindowsAuthenticationIsAvailable.User.Domain),
+                Url = this.Server.SystemDatabase.ServerUrl
+            })
+            {
+                ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
+
+                store.Initialize();
+                Assert.Throws<Raven.Abstractions.Connection.ErrorResponseException>(() => store.DatabaseCommands.Put("users/1", null, RavenJObject.FromObject(new User { }), new RavenJObject()));
             }
 
             using (var store = new DocumentStore
             {
                 Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain),
                 Url = this.Server.SystemDatabase.ServerUrl
-            }.Initialize())
+            })
             {
+                ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
+
+                store.Initialize();
+
                 store.DatabaseCommands.Put("users/1", null, RavenJObject.FromObject(new User { }), new RavenJObject());
                 var result = store.DatabaseCommands.Get("users/1");
                 Assert.NotNull(result);

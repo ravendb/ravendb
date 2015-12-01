@@ -56,6 +56,8 @@ namespace Raven.Client.Connection
 
         internal readonly bool acceptGzipContent;
 
+        internal readonly string authenticationScheme;
+
         private SimpleCache cache;
 
         internal int NumOfCachedRequests;
@@ -174,11 +176,12 @@ namespace Raven.Client.Connection
         /// default ctor
         /// </summary>
         /// <param name="maxNumberOfCachedRequests"></param>
-        public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true)
+        public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true, string authenticationScheme = null)
         {
             this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
             this.httpMessageHandler = httpMessageHandler;
             this.acceptGzipContent = acceptGzipContent;
+            this.authenticationScheme = authenticationScheme;
             httpClientCache = new HttpClientCache(ServicePointManager.MaxServicePointIdleTime);
 
             ResetCache();
