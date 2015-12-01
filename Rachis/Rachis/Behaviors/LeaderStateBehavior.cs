@@ -63,8 +63,7 @@ namespace Rachis.Behaviors
             // messages from nodes not considered to be in the cluster.
             if (tcc.Previous == null)
                 return;
-            //This is added to prevent nodes timingout during cluster creation.
-            heartbeatMre.Set();
+
             var removedNodes = tcc.Previous.AllNodeNames.Except(tcc.Requested.AllNodeNames).ToList();
             foreach (var removedNode in removedNodes)
             {
@@ -82,7 +81,7 @@ namespace Rachis.Behaviors
                 });
             }
         }
-        private AutoResetEvent heartbeatMre = new AutoResetEvent(false);
+
         private void Heartbeat()
         {
             var startTime = SystemTime.UtcNow;
@@ -103,7 +102,7 @@ namespace Rachis.Behaviors
                 var wait = Math.Max(0, Engine.Options.HeartbeatTimeout - (int)(SystemTime.UtcNow - startTime).Milliseconds);
                 if (_log.IsDebugEnabled)
                     _log.Debug("HeartBeat going to sleep for {0}", wait);
-                heartbeatMre.WaitOne(wait);
+                Thread.Sleep(wait);
             }
         }
 
