@@ -21,7 +21,6 @@ using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
 using System.Dynamic;
-using System.Runtime.Remoting.Messaging;
 
 namespace Raven.Client.Document.Async
 {
@@ -494,7 +493,10 @@ namespace Raven.Client.Document.Async
                 Etag etag = null;
                 if (meta != null)
                 {
-                    key = meta.Value<string>(Constants.DocumentIdFieldName);
+                    key = meta.Value<string>("@id") ??
+                          meta.Value<string>(Constants.DocumentIdFieldName) ??
+                          ravenJObject.Value<string>(Constants.DocumentIdFieldName);
+
                     var value = meta.Value<string>("@etag");
                     if (value != null)
                         etag = Etag.Parse(value);
