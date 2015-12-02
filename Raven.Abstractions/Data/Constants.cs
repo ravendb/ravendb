@@ -13,7 +13,6 @@ namespace Raven.Abstractions.Data
 			};
 			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
-
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
@@ -47,6 +46,9 @@ namespace Raven.Abstractions.Data
 		public const string RavenAlerts = "Raven/Alerts";
 
 		// Server
+		public const string RavenMaxConcurrentDatabaseLoads = "Raven/Tenants/MaxConcurrentDatabaseLoads";
+		public const string ConcurrentDatabaseLoadTimeout = "Raven/Tenants/ConcurrentDatabaseLoadTimeout";
+
 		public const string MaxConcurrentServerRequests = "Raven/MaxConcurrentServerRequests";
 		public const string MaxConcurrentMultiGetRequests = "Raven/MaxConcurrentMultiGetRequests";
 	    public const string MaxConcurrentRequestsForDatabaseDuringLoad = "Raven/MaxConcurrentRequestsForDatabaseDuringLoad";

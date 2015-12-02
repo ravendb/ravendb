@@ -164,7 +164,12 @@ namespace Raven.Database.Config
 			MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 
 			FlushIndexToDiskSizeInMb = new IntegerSetting(settings["Raven/Indexing/FlushIndexToDiskSizeInMb"], 5);
-		}
+
+			MaxConcurrentDatabaseLoads = new IntegerSetting(settings[Constants.RavenMaxConcurrentDatabaseLoads], 8);
+			ConcurrentDatabaseLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentDatabaseLoadTimeout],
+				TimeSpan.FromSeconds(15),
+				TimeSpanArgumentType.FromParse);
+        }
 
 		private string GetDefaultWebDir()
 		{
@@ -185,6 +190,10 @@ namespace Raven.Database.Config
 
 			return val;
 		}
+
+		public IntegerSetting MaxConcurrentDatabaseLoads { get; private set; }
+
+		public TimeSpanSetting ConcurrentDatabaseLoadTimeout { get; private set; }
 
 		public IntegerSetting MaxConcurrentServerRequests { get; private set; }
 
