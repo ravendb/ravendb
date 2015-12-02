@@ -256,7 +256,7 @@ namespace Raven.Tests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata.Value<string>(Constants.MetadataEtagField));
+                    Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
                     Assert.NotNull(metadata.Value<string>(Constants.LastModified));
@@ -290,7 +290,7 @@ namespace Raven.Tests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata.Value<string>(Constants.MetadataEtagField));
+                    Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
                     Assert.NotNull(metadata.Value<string>(Constants.LastModified));
@@ -325,7 +325,7 @@ namespace Raven.Tests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata.Value<string>(Constants.MetadataEtagField));
+                    Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
                     Assert.NotNull(metadata.Value<string>(Constants.LastModified));
@@ -360,7 +360,7 @@ namespace Raven.Tests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata.Value<string>(Constants.MetadataEtagField));
+                    Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
                     Assert.NotNull(metadata.Value<string>(Constants.LastModified));
@@ -393,7 +393,6 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(customer.Etag);
                 Assert.NotNull(customer.LastModified);
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.MetadataEtagField));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenClrType));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenEntityName));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.LastModified));
@@ -425,7 +424,6 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(customer.Etag);
                 Assert.NotNull(customer.LastModified);
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.MetadataEtagField));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenClrType));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenEntityName));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.LastModified));
