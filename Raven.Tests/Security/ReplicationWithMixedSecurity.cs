@@ -17,6 +17,8 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Security
@@ -34,6 +36,8 @@ namespace Raven.Tests.Security
 
         protected override void ModifyStore(DocumentStore store)
         {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+
             var isApiStore = _storeCounter % 2 == 0;
 
             store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
@@ -47,6 +51,8 @@ namespace Raven.Tests.Security
             {
                 store.Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
                 store.ApiKey = null;
+
+                ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
             }
 
             _storeCounter++;

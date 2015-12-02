@@ -11,6 +11,7 @@ using System.IO;
 using System.Net;
 using System.Reflection;
 
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Json.Linq;
@@ -119,7 +120,7 @@ namespace Raven.Tests.Helpers.Util
             configuration.Initialize();
         }
 
-        public static void ApplySettingsToConventions(DocumentConvention conventions)
+        public static void ApplySettingsToConventions(Convention conventions)
         {
             var settings = ClientSettings;
 
