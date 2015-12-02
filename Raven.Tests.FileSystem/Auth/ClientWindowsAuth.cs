@@ -24,12 +24,22 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Tests.Common.Attributes;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.FileSystem.Auth
 {
     public class ClientWindowsAuth : RavenFilesTestWithLogs
     {
+        protected override void ModifyStore(FilesStore store)
+        {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+            ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
+
+            base.ModifyStore(store);
+        }
+
         public ClientWindowsAuth()
         {
             FactIfWindowsAuthenticationIsAvailable.LoadCredentials();

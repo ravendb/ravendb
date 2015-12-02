@@ -15,6 +15,11 @@ namespace Raven.Client
 {
     public abstract class Convention
     {
+        protected Convention()
+        {
+            AuthenticationScheme = null;
+        }
+
         protected Dictionary<Type, MemberInfo> idPropertyCache = new Dictionary<Type, MemberInfo>();
 
         /// <summary>
@@ -49,6 +54,8 @@ namespace Raven.Client
         /// Whatever or not RavenDB should cache the request to the specified url.
         /// </summary>
         public Func<string, bool> ShouldCacheRequest { get; set; }
+
+        public string AuthenticationScheme { get; set; }
 
         /// <summary>
         /// Gets the identity property.
