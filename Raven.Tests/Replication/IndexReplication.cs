@@ -11,6 +11,7 @@ using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Database.Bundles.Replication;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -401,6 +402,15 @@ namespace Raven.Tests.Replication
 
                 //turn-off automatic index replication - precaution
                 source.Conventions.IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.None;
+
+                var sourceReplicationTask = sourceServer.Options.DatabaseLandlord
+                    .GetResourceInternal("testDB").Result
+                    .StartupTasks
+                    .OfType<ReplicationTask>()
+                    .First();
+
+                sourceReplicationTask.Pause();
+
                 // ReSharper disable once AccessToDisposedClosure
                 //we setup replication so replication to destination2 will have "disabled" flag
                 SetupReplication(source, "testDB", store => store == destination2, destination1, destination2, destination3);
@@ -409,9 +419,12 @@ namespace Raven.Tests.Replication
                 var userIndex = new UserIndex();
                 var anotherUserIndex = new AnotherUserIndex();
                 var yetAnotherUserIndex = new YetAnotherUserIndex();
+                var conflictIndex = new RavenConflictDocuments();
                 source.DatabaseCommands.ForDatabase("testDB").PutIndex(userIndex.IndexName, userIndex.CreateIndexDefinition());
                 source.DatabaseCommands.ForDatabase("testDB").PutIndex(anotherUserIndex.IndexName, anotherUserIndex.CreateIndexDefinition());
                 source.DatabaseCommands.ForDatabase("testDB").PutIndex(yetAnotherUserIndex.IndexName, yetAnotherUserIndex.CreateIndexDefinition());
+
+                sourceReplicationTask.Continue();
 
                 var replicationRequestUrl = $"{source.Url}/databases/testDB/replication/replicate-indexes?op=replicate-all";
                 var replicationRequest = requestFactory.Create(replicationRequestUrl, HttpMethods.Post, new RavenConnectionStringOptions
@@ -420,29 +433,27 @@ namespace Raven.Tests.Replication
                 });
                 replicationRequest.ExecuteRequest();
 
-                WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName);
-                WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName);
-                WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName);
+                Assert.True(WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName));
+                Assert.True(WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName));
+                Assert.True(WaitForIndexToReplicate(destination1.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName));
 
-                var expectedIndexNames = new List<string> { userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName, ConflictDocumentsIndex };
-                expectedIndexNames.Sort(StringComparer.InvariantCultureIgnoreCase);
+                var expectedIndexNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { conflictIndex.IndexName, userIndex.IndexName, anotherUserIndex.IndexName, yetAnotherUserIndex.IndexName };
                 var indexStatsAfterReplication1 = destination1.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
-                indexStatsAfterReplication1.Sort(StringComparer.InvariantCultureIgnoreCase);
                 Assert.Equal(expectedIndexNames, indexStatsAfterReplication1);
 
 
 
-                WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName);
-                WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName);
-                WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName);
+                Assert.True(WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), userIndex.IndexName));
+                Assert.True(WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), anotherUserIndex.IndexName));
+                Assert.True(WaitForIndexToReplicate(destination3.DatabaseCommands.ForDatabase("testDB"), yetAnotherUserIndex.IndexName));
                 var indexStatsAfterReplication3 = destination3.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
-                indexStatsAfterReplication3.Sort(StringComparer.InvariantCultureIgnoreCase);
                 Assert.Equal(expectedIndexNames, indexStatsAfterReplication3);
 
 
                 //since destination2 has disabled flag - indexes should not replicate to here
-                var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Where(x => x.Name != ConflictDocumentsIndex).ToList();
-                Assert.Empty(indexStatsAfterReplication2);
+                var expectedConflitDocumentsOnlyName = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase) { conflictIndex.IndexName };
+                var indexStatsAfterReplication2 = destination2.DatabaseCommands.ForDatabase("testDB").GetStatistics().Indexes.Select(x => x.Name).ToList();
+                Assert.Equal(expectedConflitDocumentsOnlyName, indexStatsAfterReplication2);
             }
         }
 
