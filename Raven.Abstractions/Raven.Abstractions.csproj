@@ -204,6 +204,7 @@
     <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexingPerformanceStatistics.cs" />
     <Compile Include="Data\IndexingPerformanceStats.cs" />
+    <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\SideBySideIndexes.cs" />
     <Compile Include="Data\IndexToAdd.cs" />
     <Compile Include="Data\IOperationState.cs" />

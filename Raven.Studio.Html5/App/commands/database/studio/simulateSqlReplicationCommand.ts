@@ -15,8 +15,7 @@ class simulateSqlReplicationCommand extends  commandBase{
             performRolledBackTransaction: this.performRolledbackTransaction,
             sqlReplication: JSON.stringify(this.simulatedSqlReplication.toDto())
         };
-
-        return this.query<sqlReplicationSimulationResultDto>("/studio-tasks/simulate-sql-replication", args, this.db, null, 60000);
+        return this.post("/studio-tasks/simulate-sql-replication", JSON.stringify(args), this.db, { dataType: undefined }, 60000);
     }
 }
 
