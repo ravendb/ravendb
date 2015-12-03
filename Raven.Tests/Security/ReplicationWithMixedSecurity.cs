@@ -51,9 +51,9 @@ namespace Raven.Tests.Security
             {
                 store.Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
                 store.ApiKey = null;
-
-                ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
             }
+
+            ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
 
             _storeCounter++;
         }
@@ -116,7 +116,7 @@ namespace Raven.Tests.Security
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain, authenticationScheme: store2.Conventions.AuthenticationScheme);
 
             using (var session = store1.OpenSession())
             {
@@ -145,7 +145,7 @@ namespace Raven.Tests.Security
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain, authenticationScheme: store2.Conventions.AuthenticationScheme);
 
             using (var session = store1.OpenAsyncSession())
             {
