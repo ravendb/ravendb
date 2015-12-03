@@ -68,41 +68,42 @@ namespace Rhino.Licensing
                 var endPoint = new IPEndPoint(addresses[0], 123);
 
                 var socket = new UdpClient();
-                socket.Connect(endPoint);
-                socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
-                socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
-                var sntpData = new byte[SntpDataLength];
-                sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
-
                 try
                 {
-                    await socket.SendAsync(sntpData, sntpData.Length).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
+                    socket.Connect(endPoint);
+                    socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
+                    socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
+                    var sntpData = new byte[SntpDataLength];
+                    sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
+
                     try
                     {
-                        socket.Close();
+                        await socket.SendAsync(sntpData, sntpData.Length).ConfigureAwait(false);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                    }
-                    log.DebugException("Could not send time request to : " + host, e);
-                    return await GetDateAsync();
-                }
-
-                try
-                {
-                    var result = await socket.ReceiveAsync();
-                    if (IsResponseValid(result.Buffer) == false)
-                    {
-                        log.Debug("Did not get valid time information from " + host);
+                        log.DebugException("Could not send time request to : " + host, e);
                         return await GetDateAsync();
                     }
-                    var transmitTimestamp = GetTransmitTimestamp(result.Buffer);
-                    return transmitTimestamp;
+
+                    try
+                    {
+                        var result = await socket.ReceiveAsync();
+                        if (IsResponseValid(result.Buffer) == false)
+                        {
+                            log.Debug("Did not get valid time information from " + host);
+                            return await GetDateAsync();
+                        }
+                        var transmitTimestamp = GetTransmitTimestamp(result.Buffer);
+                        return transmitTimestamp;
+                    }
+                    catch (Exception e)
+                    {
+                        log.DebugException("Could not get time response from: " + host, e);
+                        return await GetDateAsync();
+                    }
                 }
-                catch (Exception e)
+                finally 
                 {
                     try
                     {
@@ -111,10 +112,7 @@ namespace Rhino.Licensing
                     catch (Exception)
                     {
                     }
-                    log.DebugException("Could not get time response from: " + host, e);
-                    return await GetDateAsync();
                 }
-                                     
             }
             catch (Exception e)
             {
