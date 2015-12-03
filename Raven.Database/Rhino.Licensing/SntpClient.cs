@@ -64,7 +64,7 @@ namespace Rhino.Licensing
             var host = hosts[index];
             try
             {
-                var addresses = await Dns.GetHostAddressesAsync(host);
+                var addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
                 var endPoint = new IPEndPoint(addresses[0], 123);
 
                 var socket = new UdpClient();
@@ -82,28 +82,31 @@ namespace Rhino.Licensing
                     }
                     catch (Exception e)
                     {
-                        log.DebugException("Could not send time request to : " + host, e);
-                        return await GetDateAsync();
+                        if (log.IsDebugEnabled)
+                            log.DebugException("Could not send time request to : " + host, e);
+                        return await GetDateAsync().ConfigureAwait(false);
                     }
 
                     try
                     {
-                        var result = await socket.ReceiveAsync();
+                        var result = await socket.ReceiveAsync().ConfigureAwait(false);
                         if (IsResponseValid(result.Buffer) == false)
                         {
-                            log.Debug("Did not get valid time information from " + host);
-                            return await GetDateAsync();
+                            if (log.IsDebugEnabled)
+                                log.Debug("Did not get valid time information from " + host);
+                            return await GetDateAsync().ConfigureAwait(false);
                         }
                         var transmitTimestamp = GetTransmitTimestamp(result.Buffer);
                         return transmitTimestamp;
                     }
                     catch (Exception e)
                     {
-                        log.DebugException("Could not get time response from: " + host, e);
-                        return await GetDateAsync();
+                        if (log.IsDebugEnabled)
+                            log.DebugException("Could not get time response from: " + host, e);
+                        return await GetDateAsync().ConfigureAwait(false);
                     }
                 }
-                finally 
+                finally
                 {
                     try
                     {
@@ -116,8 +119,9 @@ namespace Rhino.Licensing
             }
             catch (Exception e)
             {
-                log.DebugException("Could not get time from: " + host, e);
-                return await GetDateAsync();
+                if (log.IsDebugEnabled)
+                    log.DebugException("Could not get time from: " + host, e);
+                return await GetDateAsync().ConfigureAwait(false);
             }
         }
 
