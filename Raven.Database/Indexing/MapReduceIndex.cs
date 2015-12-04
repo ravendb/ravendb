@@ -502,34 +502,6 @@ namespace Raven.Database.Indexing
                     actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
                 }
             });
-            Write((writer, analyzer, stats) =>
-            {
-                stats.Operation = IndexingWorkStats.Status.Ignore;
-                if (logIndexing.IsDebugEnabled)
-                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
-
-                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
-                    .Where(x => x != null)
-                    .ToList();
-
-                keys.Apply(
-                    key =>
-                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.ReduceKeyFieldName, key.ToLowerInvariant())));
-
-                writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
-                batchers.ApplyAndIgnoreAllErrors(
-                    e =>
-                    {
-                        logIndexing.WarnException("Failed to dispose on index update trigger in " + PublicName, e);
-                        context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
-                    },
-                    batcher => batcher.Dispose());
-
-                return new IndexedItemsInfo(null)
-                {
-                    ChangedDocs = keys.Length
-                };
-            });
         }
 
         public class ReduceDocuments
@@ -700,12 +672,12 @@ namespace Raven.Database.Indexing
                     stats.Operation = IndexingWorkStats.Status.Reduce;
 
                     try
-                    {                                                
+                    {
                         if (Level == 2)
                         {
                             RemoveExistingReduceKeysFromIndex(indexWriter, deleteExistingDocumentsDuration);
                         }
-                        
+
                         foreach (var mappedResults in MappedResultsByBucket)
                         {
                             var input = mappedResults.Select(x =>
@@ -736,7 +708,7 @@ namespace Raven.Database.Indexing
 
                                 stats.ReduceSuccesses++;
                             }
-                        }                        
+                        }
                     }
                     catch (Exception e)
                     {

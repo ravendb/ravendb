@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Impl.DTC;
 using Raven.Storage.Voron;
 
 namespace Raven.Database.Storage.Voron
@@ -66,6 +67,14 @@ namespace Raven.Database.Storage.Voron
         public IGeneralStorageActions General { get; private set; }
 
         public IMappedResultsStorageAction MapReduce { get; private set; }
+
+        public IInFlightStateSnapshot InFlightStateSnapshot
+        {
+            get
+            {
+                return EmptyInFlightStateSnapshot.Instance;
+            }
+        }
 
         public bool IsNested { get; set; }
         public event Action OnStorageCommit;

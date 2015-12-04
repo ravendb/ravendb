@@ -83,7 +83,10 @@ namespace Raven.Tests.Helpers
 
             var ravenConfiguration = new RavenConfiguration();
 
-            ConfigurationHelper.ApplySettingsToConfiguration(ravenConfiguration);
+            if (customConfig != null)
+            {
+                customConfig(ravenConfiguration);
+            }
 
             ravenConfiguration.Port = port;
             ravenConfiguration.DataDirectory = directory;
@@ -102,11 +105,6 @@ namespace Raven.Tests.Helpers
             if (activeBundles != null)
             {
                 ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
-            }
-
-            if (customConfig != null)
-            {
-                customConfig(ravenConfiguration);
             }
 
             if (enableAuthentication)

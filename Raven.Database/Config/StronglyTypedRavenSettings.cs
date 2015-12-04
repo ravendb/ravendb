@@ -42,8 +42,6 @@ namespace Raven.Database.Config
 
         public MonitoringConfiguration Monitoring { get; private set; }
 
-        public HttpConfiguration Http { get; private set; }
-
         public StronglyTypedRavenSettings(NameValueCollection settings)
         {
             Replication = new ReplicationConfiguration();
@@ -58,7 +56,6 @@ namespace Raven.Database.Config
             WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
             Monitoring = new MonitoringConfiguration();
-            Http = new HttpConfiguration();
 
             this.settings = settings;
         }
@@ -93,6 +90,7 @@ namespace Raven.Database.Config
                     Math.Min(16, (int)(MemoryStatistics.AvailableMemoryInMb * 0.10))); // AvailableMemory reports in MB
             MaxPageSize =
                 new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
+
             MemoryCacheLimitMegabytes =
                 new IntegerSetting(settings["Raven/MemoryCacheLimitMegabytes"], GetDefaultMemoryCacheLimitMegabytes);
             MemoryCacheExpiration =
@@ -253,6 +251,16 @@ namespace Raven.Database.Config
 
             Esent.JournalsStoragePath = new StringSetting(string.IsNullOrEmpty(esentLogsPath) ? txJournalPath : esentLogsPath, (string)null);
 
+            var defaultCacheSize = Environment.Is64BitProcess ? Math.Min(1024, (MemoryStatistics.TotalPhysicalMemory / 4)) : 256;
+            Esent.CacheSizeMax = new IntegerSetting(settings[Constants.Esent.CacheSizeMax], defaultCacheSize);
+            Esent.MaxVerPages = new IntegerSetting(settings[Constants.Esent.MaxVerPages], 512);
+            Esent.PreferredVerPages = new IntegerSetting(settings[Constants.Esent.PreferredVerPages], 472);
+            Esent.DbExtensionSize = new IntegerSetting(settings[Constants.Esent.DbExtensionSize], 8);
+            Esent.LogFileSize = new IntegerSetting(settings[Constants.Esent.LogFileSize], 64);
+            Esent.LogBuffers = new IntegerSetting(settings[Constants.Esent.LogBuffers], 8192);
+            Esent.MaxCursors = new IntegerSetting(settings[Constants.Esent.MaxCursors], 2048);
+            Esent.CircularLog = new BooleanSetting(settings[Constants.Esent.CircularLog], true);
+
             Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
             Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
             Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"], false);
@@ -297,13 +305,11 @@ namespace Raven.Database.Config
             TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 
             ImplicitFetchFieldsFromDocumentMode = new EnumSetting<ImplicitFetchFieldsMode>(settings["Raven/ImplicitFetchFieldsFromDocumentMode"], ImplicitFetchFieldsMode.Enabled);
-
-            if (settings["Raven/MaxServicePointIdleTime"] != null)
+            
+            if (settings["Raven/MaxServicePointIdleTime"] != null) 
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 
             WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
-
-            Http.AuthenticationSchemes = new EnumSetting<AuthenticationSchemes?>(settings["Raven/Http/AuthenticationSchemes"], (AuthenticationSchemes?)null);
 
             MaxConcurrentResourceLoads = new IntegerSetting(settings[Constants.RavenMaxConcurrentResourceLoads], 8);
             ConcurrentResourceLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentResourceLoadTimeout],
@@ -333,7 +339,7 @@ namespace Raven.Database.Config
 
             // we need to leave ( a lot ) of room for other things as well, so we min the cache size
             var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
-                                    // reduce the unmanaged cache size from the default min
+                // reduce the unmanaged cache size from the default min
                                     cacheSizeMaxSetting.Value;
 
             if (val < 0)
@@ -383,7 +389,7 @@ namespace Raven.Database.Config
         public TimeSpanSetting PrewarmFacetsOnIndexingMaxAge { get; private set; }
 
         public TimeSpanSetting PrewarmFacetsSyncronousWaitTime { get; private set; }
-
+        
         public IntegerSettingWithMin MaxNumberOfItemsToProcessInSingleBatch { get; private set; }
 
         public IntegerSetting AvailableMemoryForRaisingBatchSizeLimit { get; private set; }
@@ -515,6 +521,22 @@ namespace Raven.Database.Config
         public class EsentConfiguration
         {
             public StringSetting JournalsStoragePath { get; set; }
+
+            public IntegerSetting CacheSizeMax { get; set; }
+
+            public IntegerSetting MaxVerPages { get; set; }
+
+            public IntegerSetting PreferredVerPages { get; set; }
+
+            public IntegerSetting DbExtensionSize { get; set; }
+
+            public IntegerSetting LogFileSize { get; set; }
+
+            public IntegerSetting LogBuffers { get; set; }
+
+            public IntegerSetting MaxCursors { get; set; }
+
+            public BooleanSetting CircularLog { get; set; }
         }
 
         public class IndexingConfiguration
@@ -622,12 +644,6 @@ namespace Raven.Database.Config
                 public StringSetting Community { get; set; }
             }
         }
-
-        public class HttpConfiguration
-        {
-            public EnumSetting<AuthenticationSchemes?> AuthenticationSchemes { get; set; }
-        }
-    }
 
     public enum ImplicitFetchFieldsMode
     {

@@ -114,7 +114,7 @@ namespace Raven.Database
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {
                 if (Log.IsDebugEnabled)
-                    Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
+                Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
                 initializer = new DocumentDatabaseInitializer(this, configuration);
                 initializer.ValidateLicense();
@@ -187,7 +187,7 @@ namespace Raven.Database
 
                     ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
-                    inFlightTransactionalState = TransactionalStorage.GetInFlightTransactionalState(this, 
+                    inFlightTransactionalState = TransactionalStorage.InitializeInFlightTransactionalState(this, 
                         (key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
                         (key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
 
@@ -197,8 +197,8 @@ namespace Raven.Database
 
                     // Index codecs must be initialized before we try to read an index
                     InitializeIndexCodecTriggers();
-                    initializer.InitializeIndexStorage();
 
+                
                     CompleteWorkContextSetup();
 
                     prefetcher = new Prefetcher(workContext);
@@ -218,7 +218,7 @@ namespace Raven.Database
                     ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
 
                     if (Log.IsDebugEnabled)
-                        Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+                    Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
                 }
                 catch (Exception e)
                 {
@@ -262,8 +262,8 @@ namespace Raven.Database
         public event Action<DocumentDatabase> OnBackupComplete;
 
         public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
-
-        public static string BuildVersion => buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture));
+            get { return buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture)); }
+        }
 
         public static string ProductVersion
         {
@@ -305,8 +305,8 @@ namespace Raven.Database
 
         [Obsolete("Use RavenFS instead.")]
         public AttachmentActions Attachments { get; private set; }
-
-        public TaskScheduler BackgroundTaskScheduler => backgroundTaskScheduler;
+            get { return backgroundTaskScheduler; }
+        }
 
         public InMemoryRavenConfiguration Configuration { get; private set; }
 
@@ -317,8 +317,8 @@ namespace Raven.Database
 
         /// <summary>
         ///     Whatever this database has been disposed
-        /// </summary>
-        public bool Disposed => disposed;
+            get { return disposed; }
+        }
 
         [ImportMany]
         public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
@@ -343,8 +343,8 @@ namespace Raven.Database
             }
         }
 
-        [CLSCompliant(false)]
-        public InFlightTransactionalState InFlightTransactionalState => inFlightTransactionalState;
+            get { return inFlightTransactionalState; }
+        }
 
         [ImportMany]
         public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
@@ -364,10 +364,10 @@ namespace Raven.Database
 
         public IndexActions Indexes { get; private set; }
 
-        [CLSCompliant(false)]
-        public IndexingExecuter IndexingExecuter => indexingExecuter;
-
-        public LastCollectionEtags LastCollectionEtags => lastCollectionEtags;
+            get { return indexingExecuter; }
+        }
+            get { return lastCollectionEtags; }
+        }
 
         public MaintenanceActions Maintenance { get; private set; }
 
@@ -385,8 +385,8 @@ namespace Raven.Database
         public SubscriptionActions Subscriptions { get; private set; }
 
         public PatchActions Patches { get; private set; }
-
-        public Prefetcher Prefetcher => prefetcher;
+            get { return prefetcher; }
+        }
 
         [ImportMany]
         public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
@@ -576,8 +576,8 @@ namespace Raven.Database
                     {
                         try
                         {
-                            IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
                             index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
+                            index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
                             index.IsTestIndex = indexDefinition.IsTestIndex;
                             index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
                             index.LockMode = indexDefinition.LockMode;
@@ -623,11 +623,11 @@ namespace Raven.Database
 
         [CLSCompliant(false)]
         public TransformerActions Transformers { get; private set; }
+            get { return transportState; }
+        }
 
-        public TransportState TransportState => transportState;
-
-        public WorkContext WorkContext => workContext;
-        public RequestManager RequestManager { get; set; }
+            get { return workContext; }
+        }
 
         public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
         {
@@ -639,7 +639,7 @@ namespace Raven.Database
                     Stopwatch sp = Stopwatch.StartNew();
                     BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands, token);
                     if (Log.IsDebugEnabled)
-                        Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
+                    Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
                     return result;
                 }
 
@@ -659,7 +659,7 @@ namespace Raven.Database
                 {
                     inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
                     if (Log.IsDebugEnabled)
-                        Log.Debug("Prepare of tx {0} completed", txId);
+                    Log.Debug("Prepare of tx {0} completed", txId);
                 }
                 catch (Exception e)
                 {
@@ -683,7 +683,7 @@ namespace Raven.Database
                     {
                         inFlightTransactionalState.Commit(txId);
                         if (Log.IsDebugEnabled)
-                            Log.Debug("Commit of tx {0} completed", txId);
+                        Log.Debug("Commit of tx {0} completed", txId);
                         workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
                     }
                     finally
@@ -762,7 +762,7 @@ namespace Raven.Database
                 return;
 
             if (Log.IsDebugEnabled)
-                Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+            Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 
             var metrics = WorkContext.MetricsCounters;
 
@@ -836,12 +836,12 @@ namespace Raven.Database
             });
 
             exceptionAggregator.Execute(() =>
-            {
                 StopMappingThreadPool();
+                    indexingBackgroundTask.Wait();
             });
             exceptionAggregator.Execute(() =>
-            {
                 StopReducingThreadPool();
+                    reducingBackgroundTask.Wait();
             });
 
             exceptionAggregator.Execute(() =>
@@ -890,7 +890,7 @@ namespace Raven.Database
             }
 
             if (Log.IsDebugEnabled)
-                Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+            Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
         }
 
         /// <summary>
@@ -1009,8 +1009,8 @@ namespace Raven.Database
 
             backgroundWorkersSpun = true;
             indexingWorkersStoppedManually = false;
-
             workContext.StartWork();
+            indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 
             MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
                     {
@@ -1045,14 +1045,14 @@ namespace Raven.Database
                 ReducingThreadPool.DrainThePendingTasks();
                 ReducingThreadPool.Dispose();
                 ReducingThreadPool = null;
-            }
+        }
         }
 
         public void StopBackgroundWorkers()
         {
             workContext.StopWork();
             StopMappingThreadPool();
-            StopReducingThreadPool();
+                reducingBackgroundTask.Wait();
 
             backgroundWorkersSpun = false;
         }
@@ -1322,11 +1322,11 @@ namespace Raven.Database
             {
                 try
                 {
-                    foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
-                    {
-                        alterConfiguration.AlterConfiguration(configuration);
-                    }
+                foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+                {
+                    alterConfiguration.AlterConfiguration(configuration);
                 }
+            }
                 catch (ReflectionTypeLoadException e)
                 {
                     //throw more informative exception
@@ -1421,12 +1421,12 @@ namespace Raven.Database
         public void SpinReduceWorker()
         {
             throw new NotImplementedException();
-        }
+    }
 
         public void StopReduceWorkers()
         {
             throw new NotImplementedException();
-        }
+}
 
         
 

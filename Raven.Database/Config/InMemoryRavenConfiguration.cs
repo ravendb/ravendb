@@ -11,7 +11,6 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,15 +54,13 @@ namespace Raven.Database.Config
 
         public EncryptionConfiguration Encryption { get; private set; }
 
-        public IndexingConfiguration Indexing { get; private set; }
+        public IndexingConfiguration Indexing { get; set; }
 
         public ClusterConfiguration Cluster { get; private set; }
 
         public MonitoringConfiguration Monitoring { get; private set; }
 
         public WebSocketsConfiguration WebSockets { get; private set; }
-
-        public HttpConfiguration Http { get; private set; }
 
         public InMemoryRavenConfiguration()
         {
@@ -78,7 +75,6 @@ namespace Raven.Database.Config
             WebSockets = new WebSocketsConfiguration();
             Cluster = new ClusterConfiguration();
             Monitoring = new MonitoringConfiguration();
-            Http = new HttpConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -303,6 +299,7 @@ namespace Raven.Database.Config
             AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
             RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
+            // Voron settings
             Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
             Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
             Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
@@ -312,7 +309,17 @@ namespace Raven.Database.Config
             Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
             Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
+            // Esent settings
             Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
+            Storage.Esent.CacheSizeMax = ravenSettings.Esent.CacheSizeMax.Value;
+            Storage.Esent.MaxVerPages = ravenSettings.Esent.MaxVerPages.Value;
+            Storage.Esent.PreferredVerPages = ravenSettings.Esent.PreferredVerPages.Value;
+            Storage.Esent.DbExtensionSize = ravenSettings.Esent.DbExtensionSize.Value;
+            Storage.Esent.LogFileSize = ravenSettings.Esent.LogFileSize.Value;
+            Storage.Esent.LogBuffers = ravenSettings.Esent.LogBuffers.Value;
+            Storage.Esent.MaxCursors = ravenSettings.Esent.MaxCursors.Value;
+            Storage.Esent.CircularLog = ravenSettings.Esent.CircularLog.Value;
+
             Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
 
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
@@ -363,9 +370,6 @@ namespace Raven.Database.Config
 
             MaxConcurrentResourceLoads = ravenSettings.MaxConcurrentResourceLoads.Value;
             ConcurrentResourceLoadTimeout = ravenSettings.ConcurrentResourceLoadTimeout.Value;
-
-            Http.AuthenticationSchemes = ravenSettings.Http.AuthenticationSchemes.Value;
-
             TempPath = ravenSettings.TempPath.Value;
 
             FillMonitoringSettings(ravenSettings);
@@ -834,8 +838,8 @@ namespace Raven.Database.Config
         /// </summary>
         public string DataDirectory
         {
-            get { return dataDirectory; }
-            set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
+            get { return countersDataDirectory; }
+            set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
         }
 
         /// <summary>
@@ -996,11 +1000,11 @@ namespace Raven.Database.Config
 
         [JsonIgnore]
         public AggregateCatalog Catalog { get; set; }
-
         public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
         private string indexStoragePath;
 
+        private string countersDataDirectory;
         private int? maxNumberOfParallelIndexTasks;
 
         //this is static so repeated initializations in the same process would not trigger reflection on all MEF plugins
@@ -1400,6 +1404,14 @@ namespace Raven.Database.Config
             public class EsentConfiguration
             {
                 public string JournalsStoragePath { get; set; }
+                public int CacheSizeMax { get; set; }
+                public int MaxVerPages { get; set; }
+                public int PreferredVerPages { get; set; }
+                public int DbExtensionSize { get; set; }
+                public int LogFileSize { get; set; }
+                public int LogBuffers { get; set; }
+                public int MaxCursors { get; set; }
+                public bool CircularLog { get; set; }
             }
 
             public class VoronConfiguration
@@ -1665,14 +1677,6 @@ namespace Raven.Database.Config
             }
         }
 
-        public class WebSocketsConfiguration
-        {
-            public int InitialBufferPoolSize { get; set; }
-        }
-
-        public class HttpConfiguration
-        {
-            public AuthenticationSchemes? AuthenticationSchemes { get; set; }
         }
 
         public void UpdateDataDirForLegacySystemDb()

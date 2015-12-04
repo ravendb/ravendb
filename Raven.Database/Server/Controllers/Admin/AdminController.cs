@@ -22,8 +22,6 @@ using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
-using Raven.Abstractions.Smuggler;
-using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -32,7 +30,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Tasks;
+using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -57,8 +55,28 @@ namespace Raven.Database.Server.Controllers.Admin
                                                                    {
                                                                       typeof(AuthenticationForCommercialUseOnly).FullName,
                                                                       typeof(RemoveBackupDocumentStartupTask).FullName,
-                                                                      typeof(CreateFolderIcon).FullName,
+                                                                      typeof(DeleteRemovedIndexes).FullName
                                                                    };
+
+        [HttpGet]
+        [RavenRoute("admin/generate-oauth-certificate")]
+        public HttpResponseMessage GenerateOAuthCertificate()
+        {
+            string certificate;
+            using (var rsa = new RSACryptoServiceProvider())
+                certificate = Convert.ToBase64String(rsa.ExportCspBlob(true));
+
+            var message = GetEmptyMessage();
+            message.Content = new StringContent(certificate, Encoding.UTF8);
+            message.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileName = "oauth-certificate.txt"
+            };
+
+            message.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+            return message;
+        }
 
         [HttpPost]
         [RavenRoute("admin/serverSmuggling")]
@@ -704,7 +722,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpGet]
         [RavenRoute("admin/stats")]
         public HttpResponseMessage Stats()
-        {
+
             var stats = CreateAdminStats();
             return GetMessageWithObject(stats);
         }
@@ -823,7 +841,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpGet]
         [RavenRoute("admin/gc")]
         public HttpResponseMessage Gc()
-        {
+
             Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -836,7 +854,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpPost]
         [RavenRoute("admin/loh-compaction")]
         public HttpResponseMessage LohCompaction()
-        {
+
             Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -1176,10 +1194,10 @@ namespace Raven.Database.Server.Controllers.Admin
                     {
                         diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
                         {
-                            Request = ioTestRequest,
+                        Request = ioTestRequest,
 // ReSharper disable once RedundantAnonymousTypePropertyName
-                            Result = diskIo.Result,
-                            DebugMsgs = debugInfo
+                        Result = diskIo.Result,
+                        DebugMsgs = debugInfo
                         });
                     }
                     else
@@ -1207,7 +1225,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         throw new Exception("Disk I/O test has failed. See log for more details.");
                 }
             }, killTaskCts.Token);
-            
+
             long id;
             Database.Tasks.AddTask(task, new TaskBasedOperationState(task, operationStatus), new TaskActions.PendingTaskDescription
             {
@@ -1225,7 +1243,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpPost]
         [RavenRoute("admin/low-memory-notification")]
         public HttpResponseMessage LowMemoryNotification()
-        {
+
             MemoryStatistics.SimulateLowMemoryNotification();
 
             return GetEmptyMessage();
@@ -1234,7 +1252,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpGet]
         [RavenRoute("admin/low-memory-handlers-statistics")]
         public HttpResponseMessage GetLowMemoryStatistics()
-        {
+
             return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
             {
                 DatabaseName = x.Key,
@@ -1254,7 +1272,7 @@ namespace Raven.Database.Server.Controllers.Admin
         public async Task<HttpResponseMessage> GlobalReplicationTopology()
         {
             var request = await ReadJsonObjectAsync<GlobalReplicationTopologyRequest>().ConfigureAwait(false);
-
+            
             ReplicationTopology databasesTopology = null;
             SynchronizationTopology filesystemsTopology = null;
             CountersReplicationTopology counterStoragesTopology = null;
@@ -1304,13 +1322,13 @@ namespace Raven.Database.Server.Controllers.Admin
                     if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
                     {
                         mergedTopology.Connections.Add(connection);
-                    }
+    }
                 });
             });
 
             mergedTopology.SkippedResources = databaseNames;
             return mergedTopology;
-        }
+}
 
         private SynchronizationTopology CollectFilesystemSynchronizationTopology()
         {

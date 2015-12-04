@@ -138,6 +138,7 @@ namespace Raven.Tests.Core.BulkInsert
         public void DocumentsInChunkConstraintMakeSureUnneedConnectionsNotCreated()
         {
             var bulkInsertStartsCounter = 0;
+            var mre = new ManualResetEventSlim();
             using (var store = GetDocumentStore())
             {
                 using (var bulkInsert = store.BulkInsert(options: new Abstractions.Data.BulkInsertOptions
@@ -151,7 +152,10 @@ namespace Raven.Tests.Core.BulkInsert
                     store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(x =>
                     {
                         if (x.Type == DocumentChangeTypes.BulkInsertStarted)
+                        {
                             Interlocked.Increment(ref bulkInsertStartsCounter);
+                            mre.Set();
+                        }
                     });
 
                     for (int i = 0; i < 20; i++)
@@ -162,7 +166,7 @@ namespace Raven.Tests.Core.BulkInsert
                         });
                     }
                 }
-
+                mre.Wait(1000);
                 Assert.Equal(1, bulkInsertStartsCounter);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
