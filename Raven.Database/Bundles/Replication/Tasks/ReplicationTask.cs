@@ -1438,7 +1438,7 @@ namespace Raven.Bundles.Replication.Tasks
             replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
             {
                 Url = url,
-                AuthenticationScheme = destination.AuthenticationScheme
+                AuthenticationScheme = destination.AuthenticationScheme,
                 ApiKey = destination.ApiKey,
             };
 

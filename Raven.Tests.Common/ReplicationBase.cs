@@ -248,7 +248,6 @@ namespace Raven.Tests.Common
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
                     IgnoredClient = ignoredClient,
-                    SkipIndexReplication = false, //precaution
                     AuthenticationScheme = authenticationScheme,
                     SpecifiedCollections = specifiedCollections,
                     SkipIndexReplication = skipIndexReplication

@@ -305,8 +305,8 @@ namespace Raven.Database.Config
             TombstoneRetentionTime = new TimeSpanSetting(settings["Raven/TombstoneRetentionTime"], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
 
             ImplicitFetchFieldsFromDocumentMode = new EnumSetting<ImplicitFetchFieldsMode>(settings["Raven/ImplicitFetchFieldsFromDocumentMode"], ImplicitFetchFieldsMode.Enabled);
-            
-            if (settings["Raven/MaxServicePointIdleTime"] != null) 
+
+            if (settings["Raven/MaxServicePointIdleTime"] != null)
                 ServicePointManager.MaxServicePointIdleTime = Convert.ToInt32(settings["Raven/MaxServicePointIdleTime"]);
 
             WebSockets.InitialBufferPoolSize = new IntegerSetting(settings["Raven/WebSockets/InitialBufferPoolSize"], 128 * 1024);
@@ -339,7 +339,7 @@ namespace Raven.Database.Config
 
             // we need to leave ( a lot ) of room for other things as well, so we min the cache size
             var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
-                // reduce the unmanaged cache size from the default min
+                                    // reduce the unmanaged cache size from the default min
                                     cacheSizeMaxSetting.Value;
 
             if (val < 0)
@@ -389,7 +389,7 @@ namespace Raven.Database.Config
         public TimeSpanSetting PrewarmFacetsOnIndexingMaxAge { get; private set; }
 
         public TimeSpanSetting PrewarmFacetsSyncronousWaitTime { get; private set; }
-        
+
         public IntegerSettingWithMin MaxNumberOfItemsToProcessInSingleBatch { get; private set; }
 
         public IntegerSetting AvailableMemoryForRaisingBatchSizeLimit { get; private set; }
@@ -644,6 +644,7 @@ namespace Raven.Database.Config
                 public StringSetting Community { get; set; }
             }
         }
+    }
 
     public enum ImplicitFetchFieldsMode
     {

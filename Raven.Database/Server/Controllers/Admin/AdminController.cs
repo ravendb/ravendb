@@ -22,25 +22,26 @@ using Raven.Database.Actions;
 using Raven.Database.Backup;
 using Raven.Database.Config;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+
+using Raven.Abstractions.Smuggler;
+using Raven.Client.Document;
 using Raven.Database.DiskIO;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
-using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi.Attributes;
-using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 using Voron.Impl.Backup;
 
-using Raven.Client.Extensions;
 using Raven.Database.Bundles.Replication.Data;
 using Raven.Database.Bundles.Replication.Impl;
-using Raven.Database.Commercial;
 using Raven.Database.Counters.Replication;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.Smuggler;
@@ -54,8 +55,7 @@ namespace Raven.Database.Server.Controllers.Admin
         private static readonly HashSet<string> TasksToFilterOut = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                                                                    {
                                                                       typeof(AuthenticationForCommercialUseOnly).FullName,
-                                                                      typeof(RemoveBackupDocumentStartupTask).FullName,
-                                                                      typeof(DeleteRemovedIndexes).FullName
+                                                                      typeof(RemoveBackupDocumentStartupTask).FullName
                                                                    };
 
         [HttpGet]
@@ -129,7 +129,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 catch (Exception e)
                 {
                     status.Messages.Add("Error: " + e.Message);
-                    status.State = RavenJObject.FromObject(new {Error = e.Message});
+                    status.State = RavenJObject.FromObject(new { Error = e.Message });
                     status.Faulted = true;
                     throw;
                 }
@@ -327,9 +327,9 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
             }
             Database.Documents.Put(RestoreInProgress.RavenRestoreInProgressDocumentKey, null, RavenJObject.FromObject(new RestoreInProgress
-                                                                                                                {
-                                                                                                                    Resource = databaseName
-                                                                                                                }), new RavenJObject(), null);
+            {
+                Resource = databaseName
+            }), new RavenJObject(), null);
 
             DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 
@@ -379,7 +379,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                         RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
 
-                    if (restoreRequest.GenerateNewDatabaseId) 
+                    if (restoreRequest.GenerateNewDatabaseId)
                         GenerateNewDatabaseId(databaseName);
 
                     if (replicationBundleRemoved)
@@ -539,7 +539,7 @@ namespace Raven.Database.Server.Controllers.Admin
             try
             {
                 request.Timeout = 5000;
-                using (var response = (HttpWebResponse) request.GetResponse())
+                using (var response = (HttpWebResponse)request.GetResponse())
                 {
                     return GetMessageWithObject(new { Success = response.StatusCode == HttpStatusCode.OK });
                 }
@@ -591,7 +591,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     {
                         bool skipProgressReport = false;
                         bool isProgressReport = false;
-                        if(IsUpdateMessage(msg))
+                        if (IsUpdateMessage(msg))
                         {
                             isProgressReport = true;
                             var now = SystemTime.UtcNow;
@@ -603,7 +603,7 @@ namespace Raven.Database.Server.Controllers.Admin
                                 compactStatus.LastProgressMessage = msg;
                             }
                             else skipProgressReport = true;
-                            
+
                         }
                         if (!skipProgressReport)
                         {
@@ -722,7 +722,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpGet]
         [RavenRoute("admin/stats")]
         public HttpResponseMessage Stats()
-
+        {
             var stats = CreateAdminStats();
             return GetMessageWithObject(stats);
         }
@@ -841,7 +841,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpGet]
         [RavenRoute("admin/gc")]
         public HttpResponseMessage Gc()
-
+        {
             Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -854,7 +854,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpPost]
         [RavenRoute("admin/loh-compaction")]
         public HttpResponseMessage LohCompaction()
-
+        {
             Action<DocumentDatabase> clearCaches = documentDatabase => documentDatabase.TransactionalStorage.ClearCaches();
             Action afterCollect = () => DatabasesLandlord.ForAllDatabases(clearCaches);
 
@@ -939,8 +939,8 @@ namespace Raven.Database.Server.Controllers.Admin
                 var response = new HttpResponseMessage();
 
                 response.Content = new StreamContent(new FileStream(tempFileName, FileMode.Open, FileAccess.Read))
-                                   {
-                                       Headers =
+                {
+                    Headers =
                                        {
                                            ContentDisposition = new ContentDispositionHeaderValue("attachment")
                                                                 {
@@ -948,7 +948,7 @@ namespace Raven.Database.Server.Controllers.Admin
                                                                 },
                                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
                                        }
-                                   };
+                };
 
                 return response;
             }
@@ -998,7 +998,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         EnableRaisingEvents = true
                     };
 
-                    
+
 
                     process.OutputDataReceived += (sender, args) => output += args.Data;
                     process.ErrorDataReceived += (sender, args) => output += args.Data;
@@ -1086,7 +1086,7 @@ namespace Raven.Database.Server.Controllers.Admin
                 }
                 return GetMessageWithObject(connectionState);
             }
-            
+
             var watchCatogory = GetQueryStringValues("watch-category");
             var categoriesToWatch = watchCatogory.Select(
                 x =>
@@ -1162,11 +1162,11 @@ namespace Raven.Database.Server.Controllers.Admin
                 case BatchPerformanceTestRequest.Mode:
                     ioTestRequest = json.JsonDeserialization<BatchPerformanceTestRequest>();
                     break;
-                default: 
+                default:
                     return GetMessageWithObject(new
-                {
-                    Error = "test type is invalid: " + testType
-                }, HttpStatusCode.BadRequest);
+                    {
+                        Error = "test type is invalid: " + testType
+                    }, HttpStatusCode.BadRequest);
             }
 
             Database.Documents.Delete(AbstractDiskPerformanceTester.PerformanceResultDocumentKey, null, null);
@@ -1194,10 +1194,10 @@ namespace Raven.Database.Server.Controllers.Admin
                     {
                         diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
                         {
-                        Request = ioTestRequest,
-// ReSharper disable once RedundantAnonymousTypePropertyName
-                        Result = diskIo.Result,
-                        DebugMsgs = debugInfo
+                            Request = ioTestRequest,
+                            // ReSharper disable once RedundantAnonymousTypePropertyName
+                            Result = diskIo.Result,
+                            DebugMsgs = debugInfo
                         });
                     }
                     else
@@ -1205,7 +1205,7 @@ namespace Raven.Database.Server.Controllers.Admin
                         diskPerformanceRequestResponseDoc = RavenJObject.FromObject(new
                         {
                             Request = ioTestRequest,
-// ReSharper disable once RedundantAnonymousTypePropertyName
+                            // ReSharper disable once RedundantAnonymousTypePropertyName
                             Result = diskIo.Result,
                             DebugMsgs = debugInfo,
                             diskIo.HasFailed,
@@ -1243,7 +1243,7 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpPost]
         [RavenRoute("admin/low-memory-notification")]
         public HttpResponseMessage LowMemoryNotification()
-
+        {
             MemoryStatistics.SimulateLowMemoryNotification();
 
             return GetEmptyMessage();
@@ -1252,16 +1252,17 @@ namespace Raven.Database.Server.Controllers.Admin
         [HttpGet]
         [RavenRoute("admin/low-memory-handlers-statistics")]
         public HttpResponseMessage GetLowMemoryStatistics()
-
-            return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x=>x.DatabaseName).Select(x=> new
+        {
+            return GetMessageWithObject(MemoryStatistics.GetLowMemoryHandlersStatistics().GroupBy(x => x.DatabaseName).Select(x => new
             {
                 DatabaseName = x.Key,
-                Types = x.GroupBy(y=>y.Name).Select(y=> new
+                Types = x.GroupBy(y => y.Name).Select(y => new
                 {
                     MemoryHandlerName = y.Key,
-                    MemoryHandlers = y.Select(z=> new {
-                    z.EstimatedUsedMemory,
-                    z.Metadata
+                    MemoryHandlers = y.Select(z => new
+                    {
+                        z.EstimatedUsedMemory,
+                        z.Metadata
                     })
                 })
             }));
@@ -1272,7 +1273,7 @@ namespace Raven.Database.Server.Controllers.Admin
         public async Task<HttpResponseMessage> GlobalReplicationTopology()
         {
             var request = await ReadJsonObjectAsync<GlobalReplicationTopologyRequest>().ConfigureAwait(false);
-            
+
             ReplicationTopology databasesTopology = null;
             SynchronizationTopology filesystemsTopology = null;
             CountersReplicationTopology counterStoragesTopology = null;
@@ -1283,7 +1284,7 @@ namespace Raven.Database.Server.Controllers.Admin
             if (request.Filesystems)
                 filesystemsTopology = CollectFilesystemSynchronizationTopology();
 
-            if (request.Counters) 
+            if (request.Counters)
                 counterStoragesTopology = CollectionCountersReplicationTopology();
 
             return GetMessageWithObject(new
@@ -1322,13 +1323,13 @@ namespace Raven.Database.Server.Controllers.Admin
                     if (mergedTopology.Connections.Any(c => c.Source == connection.Source && c.Destination == connection.Destination) == false)
                     {
                         mergedTopology.Connections.Add(connection);
-    }
+                    }
                 });
             });
 
             mergedTopology.SkippedResources = databaseNames;
             return mergedTopology;
-}
+        }
 
         private SynchronizationTopology CollectFilesystemSynchronizationTopology()
         {
@@ -1419,12 +1420,12 @@ namespace Raven.Database.Server.Controllers.Admin
 
             int timerCount;
             int period = 0;
-            bool useTimer = 
-                int.TryParse(GetQueryStringValue("timer"), out timerCount) && 
+            bool useTimer =
+                int.TryParse(GetQueryStringValue("timer"), out timerCount) &&
                 int.TryParse(GetQueryStringValue("period"), out period);
 
-            var options = 
-                MiniDumper.Option.WithThreadInfo | 
+            var options =
+                MiniDumper.Option.WithThreadInfo |
                 MiniDumper.Option.WithProcessThreadData;
             var ids = GetQueryStringValues("option");
             foreach (var id in ids)

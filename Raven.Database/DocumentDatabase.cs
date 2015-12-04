@@ -114,7 +114,7 @@ namespace Raven.Database
             using (LogManager.OpenMappedContext("database", Name ?? Constants.SystemDatabase))
             {
                 if (Log.IsDebugEnabled)
-                Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
+                    Log.Debug("Start loading the following database: {0}", Name ?? Constants.SystemDatabase);
 
                 initializer = new DocumentDatabaseInitializer(this, configuration);
                 initializer.ValidateLicense();
@@ -187,8 +187,8 @@ namespace Raven.Database
 
                     ConfigurationRetriever = new ConfigurationRetriever(systemDatabase ?? this, this);
 
-                    inFlightTransactionalState = TransactionalStorage.InitializeInFlightTransactionalState(this, 
-                        (key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation), 
+                    inFlightTransactionalState = TransactionalStorage.InitializeInFlightTransactionalState(this,
+                        (key, etag, document, metadata, transactionInformation) => Documents.Put(key, etag, document, metadata, transactionInformation),
                         (key, etag, transactionInformation) => Documents.Delete(key, etag, transactionInformation));
 
                     InitializeTriggersExceptIndexCodecs();
@@ -197,12 +197,12 @@ namespace Raven.Database
 
                     // Index codecs must be initialized before we try to read an index
                     InitializeIndexCodecTriggers();
+                    initializer.InitializeIndexStorage();
 
-                
                     CompleteWorkContextSetup();
 
                     prefetcher = new Prefetcher(workContext);
-                    
+
                     IndexReplacer = new IndexReplacer(this);
                     indexingExecuter = new IndexingExecuter(workContext, prefetcher, IndexReplacer);
                     InitializeTriggersExceptIndexCodecs();
@@ -218,7 +218,7 @@ namespace Raven.Database
                     ReducingExecuter = new ReducingExecuter(workContext, IndexReplacer);
 
                     if (Log.IsDebugEnabled)
-                    Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+                        Log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
                 }
                 catch (Exception e)
                 {
@@ -262,8 +262,8 @@ namespace Raven.Database
         public event Action<DocumentDatabase> OnBackupComplete;
 
         public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
-            get { return buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture)); }
-        }
+
+        public static string BuildVersion => buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture));
 
         public static string ProductVersion
         {
@@ -305,8 +305,8 @@ namespace Raven.Database
 
         [Obsolete("Use RavenFS instead.")]
         public AttachmentActions Attachments { get; private set; }
-            get { return backgroundTaskScheduler; }
-        }
+
+        public TaskScheduler BackgroundTaskScheduler => backgroundTaskScheduler;
 
         public InMemoryRavenConfiguration Configuration { get; private set; }
 
@@ -317,8 +317,8 @@ namespace Raven.Database
 
         /// <summary>
         ///     Whatever this database has been disposed
-            get { return disposed; }
-        }
+        /// </summary>
+        public bool Disposed => disposed;
 
         [ImportMany]
         public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
@@ -343,8 +343,8 @@ namespace Raven.Database
             }
         }
 
-            get { return inFlightTransactionalState; }
-        }
+        [CLSCompliant(false)]
+        public InFlightTransactionalState InFlightTransactionalState => inFlightTransactionalState;
 
         [ImportMany]
         public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
@@ -364,10 +364,10 @@ namespace Raven.Database
 
         public IndexActions Indexes { get; private set; }
 
-            get { return indexingExecuter; }
-        }
-            get { return lastCollectionEtags; }
-        }
+        [CLSCompliant(false)]
+        public IndexingExecuter IndexingExecuter => indexingExecuter;
+
+        public LastCollectionEtags LastCollectionEtags => lastCollectionEtags;
 
         public MaintenanceActions Maintenance { get; private set; }
 
@@ -385,8 +385,8 @@ namespace Raven.Database
         public SubscriptionActions Subscriptions { get; private set; }
 
         public PatchActions Patches { get; private set; }
-            get { return prefetcher; }
-        }
+
+        public Prefetcher Prefetcher => prefetcher;
 
         [ImportMany]
         public OrderedPartCollection<AbstractPutTrigger> PutTriggers { get; set; }
@@ -435,20 +435,20 @@ namespace Raven.Database
                     Type = "Put"
                 })
                    .Concat(DeleteTriggers.Select(x => new TriggerInfo
-                    {
-                        Name = x.ToString(),
-                        Type = "Delete"
-                    }))
+                   {
+                       Name = x.ToString(),
+                       Type = "Delete"
+                   }))
                    .Concat(ReadTriggers.Select(x => new TriggerInfo
-                    {
-                        Name = x.ToString(),
-                        Type = "Read"
-                    }))
+                   {
+                       Name = x.ToString(),
+                       Type = "Read"
+                   }))
                    .Concat(IndexUpdateTriggers.Select(x => new TriggerInfo
-                        {
-                            Name = x.ToString(),
-                            Type = "Index Update"
-                        })).ToList();
+                   {
+                       Name = x.ToString(),
+                       Type = "Index Update"
+                   })).ToList();
 
                 var types = new[]
                 {
@@ -473,13 +473,13 @@ namespace Raven.Database
 
                 var customBundles = FindPluginBundles(types);
                 return new PluginsInfo
-                            {
-                                Triggers = triggerInfos,
-                                Extensions = extensions,
-                                CustomBundles = customBundles
-                            };
+                {
+                    Triggers = triggerInfos,
+                    Extensions = extensions,
+                    CustomBundles = customBundles
+                };
             }
-        }	
+        }
 
         private List<string> FindPluginBundles(Type[] types)
         {
@@ -506,13 +506,13 @@ namespace Raven.Database
         }
 
         public IndexingPerformanceStatistics[] IndexingPerformanceStatistics => (from pair in IndexDefinitionStorage.IndexDefinitions
-            let performance = IndexStorage.GetIndexingPerformance(pair.Key)
-            select new IndexingPerformanceStatistics
-            {
-                IndexId = pair.Key,
-                IndexName = pair.Value.Name,
-                Performance = performance
-            }).ToArray();
+                                                                                 let performance = IndexStorage.GetIndexingPerformance(pair.Key)
+                                                                                 select new IndexingPerformanceStatistics
+                                                                                 {
+                                                                                     IndexId = pair.Key,
+                                                                                     IndexName = pair.Value.Name,
+                                                                                     Performance = performance
+                                                                                 }).ToArray();
 
         public DatabaseStatistics Statistics
         {
@@ -546,20 +546,20 @@ namespace Raven.Database
 
                     result.StaleIndexes = IndexStorage.Indexes.Where(indexId => IndexStorage.IsIndexStale(indexId, LastCollectionEtags))
                     .Select(indexId =>
-        {
-            Index index = IndexStorage.GetIndexInstance(indexId);
-            return index == null ? null : index.PublicName;
-        }).ToArray();
+                    {
+                        Index index = IndexStorage.GetIndexInstance(indexId);
+                        return index == null ? null : index.PublicName;
+                    }).ToArray();
 
                     result.Indexes = actions.Indexing.GetIndexesStats().Where(x => x != null).Select(x =>
-        {
-            Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
-            if (indexInstance == null)
-                return null;
-            x.Name = indexInstance.PublicName;
-            x.SetLastDocumentEtag(result.LastDocEtag);
-            return x;
-        })
+                    {
+                        Index indexInstance = IndexStorage.GetIndexInstance(x.Id);
+                        if (indexInstance == null)
+                            return null;
+                        x.Name = indexInstance.PublicName;
+                        x.SetLastDocumentEtag(result.LastDocEtag);
+                        return x;
+                    })
                         .Where(x => x != null)
                         .ToArray();
 
@@ -576,8 +576,8 @@ namespace Raven.Database
                     {
                         try
                         {
+                            IndexDefinition indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index.Id);
                             index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Id);
-                            index.Performance = IndexStorage.GetIndexingPerformance(index.Id);
                             index.IsTestIndex = indexDefinition.IsTestIndex;
                             index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
                             index.LockMode = indexDefinition.LockMode;
@@ -623,11 +623,11 @@ namespace Raven.Database
 
         [CLSCompliant(false)]
         public TransformerActions Transformers { get; private set; }
-            get { return transportState; }
-        }
 
-            get { return workContext; }
-        }
+        public TransportState TransportState => transportState;
+
+        public WorkContext WorkContext => workContext;
+        public RequestManager RequestManager { get; set; }
 
         public BatchResult[] Batch(IList<ICommandData> commands, CancellationToken token)
         {
@@ -639,7 +639,7 @@ namespace Raven.Database
                     Stopwatch sp = Stopwatch.StartNew();
                     BatchResult[] result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands, token);
                     if (Log.IsDebugEnabled)
-                    Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
+                        Log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
                     return result;
                 }
 
@@ -659,7 +659,7 @@ namespace Raven.Database
                 {
                     inFlightTransactionalState.Prepare(txId, resourceManagerId, recoveryInformation);
                     if (Log.IsDebugEnabled)
-                    Log.Debug("Prepare of tx {0} completed", txId);
+                        Log.Debug("Prepare of tx {0} completed", txId);
                 }
                 catch (Exception e)
                 {
@@ -683,7 +683,7 @@ namespace Raven.Database
                     {
                         inFlightTransactionalState.Commit(txId);
                         if (Log.IsDebugEnabled)
-                        Log.Debug("Commit of tx {0} completed", txId);
+                            Log.Debug("Commit of tx {0} completed", txId);
                         workContext.ShouldNotifyAboutWork(() => "DTC transaction commited");
                     }
                     finally
@@ -709,21 +709,21 @@ namespace Raven.Database
         {
             MetricsCountersManager metrics = WorkContext.MetricsCounters;
             return new DatabaseMetrics
-        {
-            RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
-            DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
-            IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
-            ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
+            {
+                RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
+                DocsWritesPerSecond = Math.Round(metrics.DocsPerSecond.CurrentValue, 3),
+                IndexedPerSecond = Math.Round(metrics.IndexedPerSecond.CurrentValue, 3),
+                ReducedPerSecond = Math.Round(metrics.ReducedPerSecond.CurrentValue, 3),
                 RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
                 RequestDurationLastMinute = metrics.RequestDurationLastMinute.GetData(),
-            Requests = metrics.ConcurrentRequests.CreateMeterData(),
-            Gauges = metrics.Gauges,
-            StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
-            StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
-            ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
-            ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
-            ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
-        };
+                Requests = metrics.ConcurrentRequests.CreateMeterData(),
+                Gauges = metrics.Gauges,
+                StaleIndexMaps = metrics.StaleIndexMaps.CreateHistogramData(),
+                StaleIndexReduces = metrics.StaleIndexReduces.CreateHistogramData(),
+                ReplicationBatchSizeMeter = metrics.ReplicationBatchSizeMeter.ToMeterDataDictionary(),
+                ReplicationBatchSizeHistogram = metrics.ReplicationBatchSizeHistogram.ToHistogramDataDictionary(),
+                ReplicationDurationHistogram = metrics.ReplicationDurationHistogram.ToHistogramDataDictionary()
+            };
         }
 
 
@@ -762,7 +762,7 @@ namespace Raven.Database
                 return;
 
             if (Log.IsDebugEnabled)
-            Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+                Log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 
             var metrics = WorkContext.MetricsCounters;
 
@@ -772,8 +772,8 @@ namespace Raven.Database
                 Thread.Sleep(100);
             }
 
-            if ( EnvironmentUtils.RunningOnPosix )				
-                MemoryStatistics.StopPosixLowMemThread ();
+            if (EnvironmentUtils.RunningOnPosix)
+                MemoryStatistics.StopPosixLowMemThread();
 
             EventHandler onDisposing = Disposing;
             _tpCts.Cancel();
@@ -792,19 +792,19 @@ namespace Raven.Database
             var exceptionAggregator = new ExceptionAggregator(Log, "Could not properly dispose of DatabaseDocument");
 
             exceptionAggregator.Execute(() =>
-                            {
-                                if (prefetcher != null)
-                                    prefetcher.Dispose();
-                            });
+            {
+                if (prefetcher != null)
+                    prefetcher.Dispose();
+            });
 
             exceptionAggregator.Execute(() =>
-                            {
-                                initializer.UnsubscribeToDomainUnloadOrProcessExit();
-                                disposed = true;
+            {
+                initializer.UnsubscribeToDomainUnloadOrProcessExit();
+                disposed = true;
 
-                                if (workContext != null)
-                                    workContext.StopWorkRude();
-                            });
+                if (workContext != null)
+                    workContext.StopWorkRude();
+            });
 
             if (initializer != null)
             {
@@ -836,12 +836,12 @@ namespace Raven.Database
             });
 
             exceptionAggregator.Execute(() =>
+            {
                 StopMappingThreadPool();
-                    indexingBackgroundTask.Wait();
             });
             exceptionAggregator.Execute(() =>
+            {
                 StopReducingThreadPool();
-                    reducingBackgroundTask.Wait();
             });
 
             exceptionAggregator.Execute(() =>
@@ -890,7 +890,7 @@ namespace Raven.Database
             }
 
             if (Log.IsDebugEnabled)
-            Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+                Log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
         }
 
         /// <summary>
@@ -1009,8 +1009,8 @@ namespace Raven.Database
 
             backgroundWorkersSpun = true;
             indexingWorkersStoppedManually = false;
+
             workContext.StartWork();
-            indexingBackgroundTask = Task.Factory.StartNew(indexingExecuter.Execute, CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 
             MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
                     {
@@ -1045,14 +1045,14 @@ namespace Raven.Database
                 ReducingThreadPool.DrainThePendingTasks();
                 ReducingThreadPool.Dispose();
                 ReducingThreadPool = null;
-        }
+            }
         }
 
         public void StopBackgroundWorkers()
         {
             workContext.StopWork();
             StopMappingThreadPool();
-                reducingBackgroundTask.Wait();
+            StopReducingThreadPool();
 
             backgroundWorkersSpun = false;
         }
@@ -1261,7 +1261,7 @@ namespace Raven.Database
             {
                 var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
                 if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
-                    && configuration.Storage.Voron.AllowOn32Bits == false && 
+                    && configuration.Storage.Voron.AllowOn32Bits == false &&
                     Environment.Is64BitProcess == false)
                 {
                     throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
@@ -1322,11 +1322,11 @@ namespace Raven.Database
             {
                 try
                 {
-                foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
-                {
-                    alterConfiguration.AlterConfiguration(configuration);
+                    foreach (IAlterConfiguration alterConfiguration in configuration.Container.GetExportedValues<IAlterConfiguration>())
+                    {
+                        alterConfiguration.AlterConfiguration(configuration);
+                    }
                 }
-            }
                 catch (ReflectionTypeLoadException e)
                 {
                     //throw more informative exception
@@ -1346,11 +1346,11 @@ namespace Raven.Database
             {
                 string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
                 database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
-                            {
-                                if (database.StorageInaccessible != null)
-                                    database.StorageInaccessible(database, EventArgs.Empty);
+                {
+                    if (database.StorageInaccessible != null)
+                        database.StorageInaccessible(database, EventArgs.Empty);
 
-                            }, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
+                }, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
                 database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
             }
 
@@ -1391,7 +1391,7 @@ namespace Raven.Database
                             Title = string.Format("Index disk '{0}' has {1}MB ({2}%) of free space and it has reached the {3}MB threshold. Indexing was disabled.", notification.Path, freeSpaceInMb, (int)(notification.FreeSpaceInPercentage * 100), thresholdInMb),
                             UniqueKey = "Free space (index)"
                         });
-        }
+                    }
                     else
                     {
                         if (freeSpaceInMb <= warningThresholdInMb)
@@ -1421,14 +1421,11 @@ namespace Raven.Database
         public void SpinReduceWorker()
         {
             throw new NotImplementedException();
-    }
+        }
 
         public void StopReduceWorkers()
         {
             throw new NotImplementedException();
-}
-
-        
-
+        }
     }
 }

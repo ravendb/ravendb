@@ -1677,6 +1677,9 @@ namespace Raven.Database.Config
             }
         }
 
+        public class WebSocketsConfiguration
+        {
+            public int InitialBufferPoolSize { get; set; }
         }
 
         public void UpdateDataDirForLegacySystemDb()
