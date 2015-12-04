@@ -31,6 +31,8 @@ namespace Raven.Client
 
         public double RequestTimeThresholdInMilliseconds { get; set; }
 
+        public string AuthenticationScheme { get; set; }
+
         /// <summary>
         /// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
         /// in async manner

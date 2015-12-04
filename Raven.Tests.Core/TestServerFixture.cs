@@ -11,6 +11,8 @@ using Raven.Database.Config.Settings;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
+using Raven.Tests.Common.Util;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Core
 {
@@ -22,6 +24,9 @@ namespace Raven.Tests.Core
         public TestServerFixture()
         {
             var configuration = new AppSettingsBasedConfiguration();
+
+            ConfigurationHelper.ApplySettingsToConfiguration(configuration);
+
             configuration.Core.Port = Port;
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;

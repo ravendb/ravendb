@@ -96,10 +96,13 @@ namespace Raven.Bundles.Replication.Tasks
         {
             docDb = database;
 
-            var replicationRequestTimeoutInMs = (int) docDb.Configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
+            var replicationRequestTimeoutInMs = (int)docDb.Configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
 
             autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext, PrefetchingUser.Replicator);
-            httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
+            httpRavenRequestFactory = new HttpRavenRequestFactory
+            {
+                RequestTimeoutInMs = replicationRequestTimeoutInMs
+            };
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
             var disposableAction = new DisposableAction(task.Wait);
@@ -214,7 +217,7 @@ namespace Raven.Bundles.Replication.Tasks
                     tcsReplicationOnce.SetResult(null);
                     return tcsReplicationOnce.Task;
                 }
-                
+
                 var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
                 var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
@@ -417,7 +420,7 @@ namespace Raven.Bundles.Replication.Tasks
                 var shouldReplicateTo = currentReplicationAttempts % 10 == 0;
                 if (log.IsDebugEnabled)
                     log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-                    dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                        dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 100)
@@ -425,7 +428,7 @@ namespace Raven.Bundles.Replication.Tasks
                 var shouldReplicateTo = currentReplicationAttempts % 5 == 0;
                 if (log.IsDebugEnabled)
                     log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-                    dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                        dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
             if (failureInformation.FailureCount > 10)
@@ -433,7 +436,7 @@ namespace Raven.Bundles.Replication.Tasks
                 var shouldReplicateTo = currentReplicationAttempts % 2 == 0;
                 if (log.IsDebugEnabled)
                     log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
-                    dest, failureInformation.FailureCount, shouldReplicateTo == false);
+                        dest, failureInformation.FailureCount, shouldReplicateTo == false);
                 return shouldReplicateTo;
             }
             return true;
@@ -479,7 +482,7 @@ namespace Raven.Bundles.Replication.Tasks
                                     return false;
                                 }
                             }
-                                    
+
                             if (destinationsReplicationInformationForSource.LastDocumentEtag == Etag.Empty)
                             {
                                 IndexReplication.Execute();
@@ -573,7 +576,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
             }
         }
-    
+
 
         private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
         {
@@ -888,11 +891,11 @@ namespace Raven.Bundles.Replication.Tasks
                             new FilterReplicatedDocs(docDb.Documents, destination, prefetchingBehavior, destinationId, result.LastEtag),
                             new FilterAndTransformSpecifiedCollections(docDb, destination, destinationId)
                         })
-                                    {
+                        {
                             handled = handler.Handle(handled);
-                                        }
+                        }
 
-                        docsToReplicate = handled.ToList();								
+                        docsToReplicate = handled.ToList();
 
                         docsSinceLastReplEtag += fetchedDocs.Count;
                         result.CountOfFilteredDocumentsWhichAreSystemDocuments +=
@@ -937,7 +940,7 @@ namespace Raven.Bundles.Replication.Tasks
                             var diff = fetchedDocs.Except(docsToReplicate).Select(x => x.Key);
                             return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
                                 docsSinceLastReplEtag,
-                                docsToReplicate.Count,
+                                    docsToReplicate.Count,
                                 destination,
                                 string.Join(", ", diff),
                                 lastEtag);
@@ -1096,13 +1099,13 @@ namespace Raven.Bundles.Replication.Tasks
                     var dbName = string.IsNullOrEmpty(docDb.Name) ? "<system>" : docDb.Name;
 
                     docDb.AddAlert(new Alert
-                        {
-                            AlertLevel = AlertLevel.Error,
-                            CreatedAt = SystemTime.UtcNow,
-                            Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
-                            Title = "Wrong replication source: " + replicationDocument.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
-                            UniqueKey = "Wrong source: " + replicationDocument.Source + ", " + docDb.TransactionalStorage.Id
-                        });
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = SystemTime.UtcNow,
+                        Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
+                        Title = "Wrong replication source: " + replicationDocument.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
+                        UniqueKey = "Wrong source: " + replicationDocument.Source + ", " + docDb.TransactionalStorage.Id
+                    });
 
                     wrongReplicationSourceAlertSent = true;
                 }
@@ -1159,6 +1162,7 @@ namespace Raven.Bundles.Replication.Tasks
             replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
             {
                 Url = url,
+                AuthenticationScheme = destination.AuthenticationScheme,
                 ApiKey = destination.ApiKey,
             };
 
@@ -1166,7 +1170,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 replicationStrategy.SpecifiedCollections = new Dictionary<string, string>(destination.SpecifiedCollections, StringComparer.OrdinalIgnoreCase);
             }
-            
+
             if (string.IsNullOrEmpty(destination.Username) == false)
             {
                 replicationStrategy.ConnectionStringOptions.Credentials = string.IsNullOrEmpty(destination.Domain)
@@ -1343,7 +1347,7 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 { "Error", new RavenJObject
                                            {
-                                               { "Type", exception.GetType().Name }, 
+                                               { "Type", exception.GetType().Name },
                                                { "Message", exception.Message }
                                            } }
                             });
