@@ -75,7 +75,7 @@ namespace Raven.Tests.FileSystem.Issues
 
             rfs.Storage.Batch(accessor =>
             {
-                files = accessor.GetFilesAfter(Etag.Empty, 10, new GetFilesOptions()).ToList();
+                files = accessor.GetFilesAfter(Etag.Empty, 10).ToList();
             });
 
             Assert.Equal(2, files.Count);
@@ -88,7 +88,7 @@ namespace Raven.Tests.FileSystem.Issues
 
             rfs.Storage.Batch(accessor =>
             {
-                files = accessor.GetFilesAfter(Etag.Empty, 10, new GetFilesOptions()).ToList();
+                files = accessor.GetFilesAfter(Etag.Empty, 10).ToList();
             });
 
             Assert.Equal(2, files.Count);

@@ -443,6 +443,7 @@
     <Compile Include="FileSystem\Plugins\AbstractFileMetadataUpdateTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\Builtins\HideDownloadingFileTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\IBackgroundTaskExecuter.cs" />
