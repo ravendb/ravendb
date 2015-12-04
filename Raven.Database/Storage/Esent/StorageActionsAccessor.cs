@@ -10,6 +10,7 @@ using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Esent.StorageActions;
 using Raven.Database.Tasks;
@@ -30,9 +31,10 @@ namespace Raven.Storage.Esent
 
         private readonly DateTime createdAt = SystemTime.UtcNow;
         [CLSCompliant(false)]
-        public StorageActionsAccessor(DocumentStorageActions inner)
+        public StorageActionsAccessor(DocumentStorageActions inner, IInFlightStateSnapshot snapshot)
         {
             this.inner = inner;
+            InFlightStateSnapshot = snapshot;
         }
 
         public IDocumentStorageActions Documents
@@ -80,6 +82,7 @@ namespace Raven.Storage.Esent
         {
             get { return inner; }
         }
+        public IInFlightStateSnapshot InFlightStateSnapshot { get; private set; }
 
         public bool IsNested { get; set; }
 

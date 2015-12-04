@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions;
@@ -28,43 +29,14 @@ namespace Raven.Database.Impl.DTC
         protected readonly Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> DatabasePut;
         protected readonly Func<string, Etag, TransactionInformation, bool> DatabaseDelete;
         private readonly bool replicationEnabled;
+        
+        private readonly object modifyChangedInTransaction = new object();
 
-        protected class TransactionState
-        {
-            public readonly List<DocumentInTransactionData> Changes = new List<DocumentInTransactionData>();
+        protected ImmutableDictionary<string, ChangedDoc> changedInTransaction = ImmutableDictionary<string, ChangedDoc>.Empty;
 
-            [CLSCompliant(false)]
-            public volatile Reference<DateTime> LastSeen = new Reference<DateTime>();
+        private readonly object modifyTransactionStates = new object();
 
-            private TimeSpan timeout;
-            public TimeSpan Timeout
-            {
-                get
-                {
-                    if (timeout < TimeSpan.FromSeconds(30))
-                        return TimeSpan.FromSeconds(30);
-                    return timeout;
-        }
-
-                set { timeout = value; }
-            }
-
-            public TransactionState()
-            {
-                Timeout = TimeSpan.FromMinutes(3);
-            }
-        }
-
-        protected class ChangedDoc
-        {
-            public string transactionId;
-            public Etag currentEtag;
-            public Etag committedEtag;
-        }
-
-        protected readonly ConcurrentDictionary<string, ChangedDoc> changedInTransaction = new ConcurrentDictionary<string, ChangedDoc>(StringComparer.OrdinalIgnoreCase);
-
-        protected readonly ConcurrentDictionary<string, TransactionState> transactionStates = new ConcurrentDictionary<string, TransactionState>(StringComparer.OrdinalIgnoreCase);
+        protected ImmutableDictionary<string, TransactionState> transactionStates = ImmutableDictionary<string, TransactionState>.Empty;
 
         public object GetInFlightTransactionsInternalStateForDebugOnly()
         {
@@ -78,7 +50,7 @@ namespace Raven.Database.Impl.DTC
             this.replicationEnabled = replicationEnabled;
         }
 
-        public Etag AddDocumentInTransaction(
+        public virtual Etag AddDocumentInTransaction(
             string key,
             Etag etag,
             RavenJObject data,
@@ -103,7 +75,7 @@ namespace Raven.Database.Impl.DTC
                                   });
         }
 
-        public void DeleteDocumentInTransaction(
+        public virtual void DeleteDocumentInTransaction(
             TransactionInformation transactionInformation,
             string key,
             Etag etag,
@@ -118,7 +90,7 @@ namespace Raven.Database.Impl.DTC
             });
         }
 
-        public bool IsModified(string key)
+        public virtual bool IsModified(string key)
         {
             var value = currentlyCommittingTransaction.Value;
             if (string.IsNullOrEmpty(value))
@@ -129,49 +101,29 @@ namespace Raven.Database.Impl.DTC
             return doc.transactionId != value;
         }
 
-        public Func<TDocument, TDocument> GetNonAuthoritativeInformationBehavior<TDocument>(TransactionInformation tx, string key) where TDocument : class, IJsonDocumentMetadata, new()
-        {
-            ChangedDoc existing;
-            if (changedInTransaction.TryGetValue(key, out existing) == false || (tx != null && tx.Id == existing.transactionId))
-                return null;
-
-            if (transactionStates.ContainsKey(existing.transactionId) == false)
-            {
-                changedInTransaction.TryRemove(key, out existing);
-                return null;// shouldn't happen, but we have better be on the safe side
-            }
-
-            return document =>
-            {
-                if (document == null)
-                {
-                    return new TDocument
-                    {
-                        Key = key,
-                        Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
-                        LastModified = DateTime.MinValue,
-                        NonAuthoritativeInformation = true,
-                        Etag = Etag.Empty
-                    };
-                }
-
-                document.NonAuthoritativeInformation = true;
-                return document;
-            };
-        }
+        public abstract IInFlightStateSnapshot GetSnapshot();
 
         public virtual void Rollback(string id)
         {
             TransactionState value;
-            if (transactionStates.TryRemove(id, out value) == false)
+            if (transactionStates.TryGetValue(id, out value) == false)
                 return;
+
+            lock (modifyTransactionStates)
+            {
+                transactionStates = transactionStates.Remove(id);
+            }
+
             lock (value)
             {
-                foreach (var change in value.Changes)
+                lock (modifyChangedInTransaction)
                 {
-                    ChangedDoc guid;
-                    changedInTransaction.TryRemove(change.Key, out guid);
+                    foreach (var change in value.Changes)
+                    {
+                        changedInTransaction = changedInTransaction.Remove(change.Key);
+                    }
                 }
+                
                 value.Changes.Clear();
             }
         }
@@ -190,7 +142,20 @@ namespace Raven.Database.Impl.DTC
         {
             try
             {
-                var state = transactionStates.GetOrAdd(transactionInformation.Id, id => new TransactionState());
+                TransactionState state;
+
+                if (transactionStates.TryGetValue(transactionInformation.Id, out state) == false)
+                {
+                    lock (modifyTransactionStates)
+                    {
+                        if (transactionStates.TryGetValue(transactionInformation.Id, out state) == false) // check it once again, after we retrieved the lock - could be added while we waited for the lock
+                        {
+                            state = new TransactionState();
+                            transactionStates = transactionStates.Add(transactionInformation.Id, state);
+                        }
+                    }
+                }
+                
                 lock (state)
                 {
                     state.LastSeen = new Reference<DateTime>
@@ -205,27 +170,33 @@ namespace Raven.Database.Impl.DTC
                         EnsureValidEtag(key, etag, committedEtag, currentTxVal);
                         state.Changes.Remove(currentTxVal);
                     }
-                    var result = changedInTransaction.AddOrUpdate(key, s =>
-                    {
-                        EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 
-                        return new ChangedDoc
-                        {
-                            transactionId = transactionInformation.Id,
-                            committedEtag = committedEtag,
-                            currentEtag = item.Etag
-                        };
-                    }, (_, existing) =>
+                    ChangedDoc result;
+
+                    lock (modifyChangedInTransaction)
                     {
-                        if (existing.transactionId == transactionInformation.Id)
+                        if (changedInTransaction.TryGetValue(key, out result))
+                        {
+                            if (result.transactionId != transactionInformation.Id)
+                                throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + result);
+
+                            EnsureValidEtag(key, etag, committedEtag, currentTxVal);
+                            result.currentEtag = item.Etag;
+                        }
+                        else
                         {
                             EnsureValidEtag(key, etag, committedEtag, currentTxVal);
-                            existing.currentEtag = item.Etag;
-                            return existing;
-                        }
 
-                        throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + existing);
-                    });
+                            result = new ChangedDoc
+                            {
+                                transactionId = transactionInformation.Id,
+                                committedEtag = committedEtag,
+                                currentEtag = item.Etag
+                            };
+
+                            changedInTransaction = changedInTransaction.Add(key, result);
+                        }
+                    }
 
                     state.Changes.Add(item);
 
@@ -264,7 +235,7 @@ namespace Raven.Database.Impl.DTC
                 throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
         }
 
-        public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
+        public virtual bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
         {
             return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocument
             {
@@ -277,7 +248,7 @@ namespace Raven.Database.Impl.DTC
             }, out document);
         }
 
-        public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocumentMetadata document)
+        public virtual bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocumentMetadata document)
         {
             return TryGetInternal(key, transactionInformation, (theKey, change) => new JsonDocumentMetadata
             {
@@ -313,7 +284,7 @@ namespace Raven.Database.Impl.DTC
             return true;
         }
 
-        public bool HasTransaction(string txId)
+        public virtual bool HasTransaction(string txId)
         {
             return transactionStates.ContainsKey(txId);
         }
