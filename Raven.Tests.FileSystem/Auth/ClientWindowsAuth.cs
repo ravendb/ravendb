@@ -125,7 +125,7 @@ namespace Raven.Tests.FileSystem.Auth
 
             await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"), "testName");
 
-            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain)))
+            using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", conventions: client.Conventions, credentials: new OperationCredentials(null, new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain))))
             {
                 await createdFsClient.UploadAsync("foo", new MemoryStream(new byte[] {1}));
             }
@@ -173,38 +173,6 @@ namespace Raven.Tests.FileSystem.Auth
             await storageClient.RetryRenamingAsync();
 
             await storageClient.CleanUpAsync();
-        }
-
-        [Fact]
-        public async Task ShouldThrowWhenWindowsDocumentDoesNotContainFileSystem()
-        {
-            // in this test be careful if the specified credentials belong to admin user or not
-            // to make this test pass you need to specify the credentials of a user who isn't an admin on this machine
-
-            var client = NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.User.UserName, FactIfWindowsAuthenticationIsAvailable.User.Password, FactIfWindowsAuthenticationIsAvailable.User.Domain));
-            var server = GetServer();
-
-            await client.UploadAsync("abc.bin", new RandomStream(3));
-
-            using (var anotherClient = new AsyncFilesServerClient(GetServerUrl(false, server.SystemDatabase.ServerUrl), "ShouldThrow_WindowsDocumentDoesNotContainsThisFS", 
-                credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain)))
-            {
-                await anotherClient.EnsureFileSystemExistsAsync(); // will pass because by using this api key we have access to <system> database
-
-                ErrorResponseException errorResponse = null;
-
-                try
-                {
-                    await anotherClient.UploadAsync("def.bin", new MemoryStream(1)); // should throw because a file system ShouldThrow_WindowsDocumentDoesNotContainsThisFS isn't added to ApiKeyDefinition
-                }
-                catch (InvalidOperationException ex)
-                {
-                    errorResponse = ex.InnerException as ErrorResponseException;
-                }
-
-                Assert.NotNull(errorResponse);
-                Assert.Equal(HttpStatusCode.Forbidden, errorResponse.StatusCode);
-            }
         }
     }
 }

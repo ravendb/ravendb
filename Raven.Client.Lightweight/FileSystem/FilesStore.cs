@@ -212,7 +212,7 @@ namespace Raven.Client.FileSystem
             if (initialized)
                 return this;
 
-            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory);
+            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, authenticationScheme: conventions.AuthenticationScheme);
 
             try
             {

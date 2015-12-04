@@ -257,7 +257,11 @@ namespace Raven.Database.FileSystem.Synchronization
                                   : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
             }
 
-            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, apiKey: destination.ApiKey, credentials: credentials);
+            var conventions = new FilesConvention();
+            if (string.IsNullOrEmpty(destination.AuthenticationScheme) == false)
+                conventions.AuthenticationScheme = destination.AuthenticationScheme;
+
+            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, convention: conventions, apiKey: destination.ApiKey, credentials: credentials);
 
             RavenJObject destinationMetadata;
 
