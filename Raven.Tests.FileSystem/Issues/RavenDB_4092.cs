@@ -8,8 +8,8 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.FileSystem;
-using Raven.Abstractions.Smuggler;
 using Raven.Database.FileSystem.Smuggler;
 using Raven.Tests.Helpers;
 
