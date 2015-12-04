@@ -1,10 +1,9 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 
 namespace Rhino.Licensing
 {
@@ -62,6 +61,9 @@ namespace Rhino.Licensing
                     "After trying out all the hosts, was unable to find anyone that could tell us what the time is");
             }
             var host = hosts[index];
+
+            var exceptionWasThrown = false;
+
             try
             {
                 var addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
@@ -82,10 +84,14 @@ namespace Rhino.Licensing
                     }
                     catch (Exception e)
                     {
+                        exceptionWasThrown = true;
+
                         if (log.IsDebugEnabled)
                             log.DebugException("Could not send time request to : " + host, e);
-                        return await GetDateAsync().ConfigureAwait(false);
                     }
+
+                    if (exceptionWasThrown)
+                        return await GetDateAsync().ConfigureAwait(false);
 
                     try
                     {
@@ -103,8 +109,9 @@ namespace Rhino.Licensing
                     {
                         if (log.IsDebugEnabled)
                             log.DebugException("Could not get time response from: " + host, e);
-                        return await GetDateAsync().ConfigureAwait(false);
                     }
+
+                    return await GetDateAsync().ConfigureAwait(false);
                 }
                 finally
                 {
@@ -121,8 +128,9 @@ namespace Rhino.Licensing
             {
                 if (log.IsDebugEnabled)
                     log.DebugException("Could not get time from: " + host, e);
-                return await GetDateAsync().ConfigureAwait(false);
             }
+
+            return await GetDateAsync().ConfigureAwait(false);
         }
 
         private bool IsResponseValid(byte[] sntpData)
