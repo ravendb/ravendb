@@ -58,7 +58,6 @@ namespace Raven.Abstractions.Data
         public bool EnlistInDistributedTransactions { get; set; }
 
         public string DefaultDatabase { get; set; }
-
         
         public FailoverServers FailoverServers { get; set; }
 
