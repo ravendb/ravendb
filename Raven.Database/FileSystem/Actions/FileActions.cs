@@ -438,8 +438,11 @@ namespace Raven.Database.FileSystem.Actions
                     }
                     catch (Exception e)
                     {
-                        Log.Warn(string.Format("Could not delete file '{0}' from storage", deletingFileName), e);
-                        return;
+                        var warnMessage = string.Format("Could not delete file '{0}' from storage", deletingFileName);
+
+                        Log.Warn(warnMessage, e);
+
+                        throw new InvalidOperationException(warnMessage, e);
                     }
                     var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
 
