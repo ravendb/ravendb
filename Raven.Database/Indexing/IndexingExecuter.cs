@@ -294,7 +294,7 @@ namespace Raven.Database.Indexing
                     indexBatchOperation =>
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
-                using (LogContext.WithDatabase(context.DatabaseName))
+                using (LogContext.WithResource(context.DatabaseName))
                 {
                     try
                     {
@@ -511,7 +511,7 @@ namespace Raven.Database.Indexing
             };
 
 
-            using (LogContext.WithDatabase(context.DatabaseName))
+            using (LogContext.WithResource(context.DatabaseName))
             using (MapIndexingInProgress(new List<Index> { indexToWorkOn.Index }))
             {
                 IndexingBatchForIndex indexingBatchForIndex;

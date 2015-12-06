@@ -1161,7 +1161,7 @@ namespace Raven.Database
 
         private void ExecuteStartupTasks()
         {
-            using (LogContext.WithDatabase(Name))
+            using (LogContext.WithResource(Name))
             {
                 foreach (var task in StartupTasks)
                 {

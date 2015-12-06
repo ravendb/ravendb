@@ -165,7 +165,7 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void Execute()
         {
-            using (LogContext.WithDatabase(docDb.Name))
+            using (LogContext.WithResource(docDb.Name))
             {
                 if (log.IsDebugEnabled)
                 log.Debug("Replication task started.");
@@ -247,7 +247,7 @@ namespace Raven.Bundles.Replication.Tasks
                     var replicationTask = Task.Factory.StartNew(
                         () =>
                         {
-                            using (LogContext.WithDatabase(docDb.Name))
+                            using (LogContext.WithResource(docDb.Name))
                             using (CultureHelper.EnsureInvariantCulture())
                             {
                                 try
@@ -343,18 +343,18 @@ namespace Raven.Bundles.Replication.Tasks
             while (true)
             {
                 int nextPageStart = skip; // will trigger rapid pagination
-                var docs = docDb.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, CancellationToken.None, ref nextPageStart);
-                if (docs.Length == 0)
+                var replicationSourceDocs = docDb.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, CancellationToken.None, ref nextPageStart);
+                if (replicationSourceDocs.Length == 0)
                 {
                     notifications.TryAdd(null, 15 * 1000); // marker to stop notify this
                     return;
                 }
 
-                skip += docs.Length;
+                skip += replicationSourceDocs.Length;
 
-                foreach (RavenJObject doc in docs)
+                foreach (var replicationSourceDoc in replicationSourceDocs)
                 {
-                    var sourceReplicationInformation = doc.JsonDeserialization<SourceReplicationInformation>();
+                    var sourceReplicationInformation = replicationSourceDoc.JsonDeserialization<SourceReplicationInformation>();
                     if (string.IsNullOrEmpty(sourceReplicationInformation.Source))
                         continue;
 
@@ -380,7 +380,7 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
         {
-            using (LogContext.WithDatabase(docDb.Name))
+            using (LogContext.WithResource(docDb.Name))
                 while (true)
                 {
                     RavenConnectionStringOptions connectionStringOptions;
@@ -395,6 +395,7 @@ namespace Raven.Bundles.Replication.Tasks
                         log.ErrorException("Could not get connection string options to notify sibling servers about restart", e);
                         return;
                     }
+
                     try
                     {
                         var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;

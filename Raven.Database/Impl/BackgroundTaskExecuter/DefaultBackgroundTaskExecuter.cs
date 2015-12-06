@@ -111,7 +111,7 @@ namespace Raven.Database.Indexing
                     MaxDegreeOfParallelism = maxNumberOfParallelProcessingTasks
                 }, (item, _, index) =>
                 {
-                    using (LogContext.WithDatabase(context.DatabaseName))
+                    using (LogContext.WithResource(context.DatabaseName))
                     {
                         action(item, currentStart + index);
                     }
@@ -141,7 +141,7 @@ namespace Raven.Database.Indexing
                 return;
             }
 
-            using (LogContext.WithDatabase(context.DatabaseName))
+            using (LogContext.WithResource(context.DatabaseName))
             using (var semaphoreSlim = new SemaphoreSlim(context.CurrentNumberOfParallelTasks))
             {
                 var tasks = new Task[result.Count];

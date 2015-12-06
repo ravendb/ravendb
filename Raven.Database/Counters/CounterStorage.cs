@@ -11,7 +11,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Counters.Notifications;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Common;
@@ -23,7 +22,6 @@ using Raven.Database.Impl;
 using Raven.Database.Server.Connections;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 using Voron;
 using Voron.Impl;
 using Voron.Trees;
@@ -67,7 +65,7 @@ namespace Raven.Database.Counters
 
         public unsafe CounterStorage(string serverUrl, string storageName, InMemoryRavenConfiguration configuration, TransportState receivedTransportState = null)
         {
-            CounterStorageUrl = string.Format("{0}cs/{1}", serverUrl, storageName);
+            CounterStorageUrl = $"{serverUrl}cs/{storageName}";
             Name = storageName;
             ResourceName = string.Concat(Constants.Counter.UrlPrefix, "/", storageName);
 
@@ -169,41 +167,20 @@ namespace Raven.Database.Counters
             }
         }
 
-        string IResourceStore.Name
-        {
-            get { return Name; }
-        }
+        string IResourceStore.Name => Name;
 
         [CLSCompliant(false)]
-        public CountersMetricsManager MetricsCounters
-        {
-            get { return metricsCounters; }
-        }
+        public CountersMetricsManager MetricsCounters => metricsCounters;
 
-        public TransportState TransportState
-        {
-            get { return transportState; }
-        }
+        public TransportState TransportState => transportState;
 
-        public NotificationPublisher Publisher
-        {
-            get { return notificationPublisher; }
-        }
+        public NotificationPublisher Publisher => notificationPublisher;
 
-        public ReplicationTask ReplicationTask
-        {
-            get { return replicationTask; }
-        }
+        public ReplicationTask ReplicationTask => replicationTask;
 
-        public StorageEnvironment Environment
-        {
-            get { return storageEnvironment; }
-        }
+        public StorageEnvironment Environment => storageEnvironment;
 
-        private JsonSerializer JsonSerializer
-        {
-            get { return jsonSerializer; }
-        }
+        private JsonSerializer JsonSerializer => jsonSerializer;
 
         public AtomicDictionary<object> ExtensionsState { get; private set; }
 
@@ -223,7 +200,7 @@ namespace Raven.Database.Counters
                     LastCounterEtag = lastEtag,
                     ReplicationTasksCount = replicationTask.GetActiveTasksCount(),
                     CounterStorageSize = SizeHelper.Humane(Environment.Stats().UsedDataFileSizeInBytes),
-                    ReplicatedServersCount = 0, //TODO: get the correct number
+                    ReplicatedServersCount = replicationTask.DestinationStats.Count,
                     RequestsPerSecond = Math.Round(metricsCounters.RequestsPerSecondCounter.CurrentValue, 3),
                 };
                 return stats;
@@ -399,7 +376,10 @@ namespace Raven.Database.Counters
                         var countersInGroup = groupToCounters.MultiCount(it.CurrentKey);
                         if (skip - countersInGroup <= 0)
                             break;
-                        skip -= (int)countersInGroup; //TODO: is there a better way?
+
+                        //there is no better way than this, since we do not know
+                        //how many counters in each group beforehand
+                        skip -= (int)countersInGroup; 
                     } while (it.MoveNext());
 
                     var isEmptyGroup = groupName.Equals(string.Empty);
@@ -430,18 +410,18 @@ namespace Raven.Database.Counters
                                 var counterIdBuffer = valueReader.ReadBytes(sizeof(long), out used);
                                 counterDetails.IdSlice = new Slice(counterIdBuffer, sizeof(long));
 
-								yield return counterDetails;
+                                yield return counterDetails;
                             } while (iterator.MoveNext());
                         }
                     } while (isEmptyGroup && it.MoveNext());
                 }
             }
 
-			//TODO : discuss whether this is redundant with GetCounterSummariesByPrefix()
-			public IEnumerable<CounterSummary> GetCounterSummariesByGroup(string groupName, int skip, int take)
+            public IEnumerable<CounterSummary> GetCounterSummariesByGroup(string groupName, int skip, int take)
             {
                 ThrowIfDisposed();
                 var countersDetails = (take != -1) ? GetCountersDetails(groupName, skip).Take(take) : GetCountersDetails(groupName, skip);
+                
                 var serverIdBuffer = new byte[parent.sizeOfGuid];
                 return countersDetails.Select(counterDetails => new CounterSummary
                 {
@@ -459,7 +439,7 @@ namespace Raven.Database.Counters
                     it.RequiredPrefix = counterIdSlice;
                     var seekResult = it.Seek(it.RequiredPrefix);
                     //should always be true
-                    Debug.Assert(seekResult == true);
+                    Debug.Assert(seekResult);
 
                     long totalChangeBySign = 0;
                     do
@@ -564,13 +544,13 @@ namespace Raven.Database.Counters
                 {
                     if (!it.Seek(Slice.BeforeAllKeys))
                         yield break;
-	                if (!string.IsNullOrEmpty(counterNamePrefix))
-	                {
-		                it.RequiredPrefix = counterNamePrefix;
-		                it.Seek(it.RequiredPrefix);
-	                }
+                    if (!string.IsNullOrEmpty(counterNamePrefix))
+                    {
+                        it.RequiredPrefix = counterNamePrefix;
+                        it.Seek(it.RequiredPrefix);
+                    }
 
-	                var taken = 0;
+                    var taken = 0;
                     var skipped = 0;
                     do
                     {
@@ -697,7 +677,7 @@ namespace Raven.Database.Counters
                 }
             }
 
-            public IEnumerable<ServerEtagAndSourceName> GetServerSources()
+            public IEnumerable<ReplicationSourceInfo> GetReplicationSources()
             {
                 ThrowIfDisposed();
                 var lookupDict = GetServerEtags().ToDictionary(x => x.ServerId, x => x.Etag);
@@ -713,7 +693,7 @@ namespace Raven.Database.Counters
                         it.CurrentKey.CreateReader().Read(serverIdBuffer, 0, serverIdBuffer.Length);
                         var serverId = new Guid(serverIdBuffer);
 
-                        yield return new ServerEtagAndSourceName
+                        yield return new ReplicationSourceInfo
                         {
                             ServerId = serverId,
                             SourceName = it.CreateReaderForCurrent().ToString(),
@@ -934,10 +914,7 @@ namespace Raven.Database.Counters
                 public byte[] CounterNameWithId = new byte[0];
             }
 
-            public string Name
-            {
-                get { return parent.Name; }
-            }
+            public string Name => parent.Name;
 
             public Writer(CounterStorage parent, Transaction tx)
             {
@@ -1466,7 +1443,7 @@ namespace Raven.Database.Counters
             public long Etag { get; set; }
         }
 
-        public class ServerEtagAndSourceName : ServerEtag
+        public class ReplicationSourceInfo : ServerEtag
         {
             public string SourceName { get; set; }
         }

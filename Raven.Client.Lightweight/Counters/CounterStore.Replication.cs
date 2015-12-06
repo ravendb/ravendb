@@ -14,7 +14,7 @@ namespace Raven.Client.Counters
         {
             AssertInitialized();
 
-            var requestUriString = $"{Url}/cs/{Name}/replications/get";
+            var requestUriString = $"{Url}/cs/{Name}/replication/config";
 
             using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
             {
@@ -26,7 +26,7 @@ namespace Raven.Client.Counters
         public async Task SaveReplicationsAsync(CountersReplicationDocument newReplicationDocument, CancellationToken token = default(CancellationToken))
         {
             AssertInitialized();
-            var requestUriString = $"{Url}/cs/{Name}/replications/save";
+            var requestUriString = $"{Url}/cs/{Name}/replication/config";
 
             using (var request = CreateHttpJsonRequest(requestUriString, HttpMethods.Post))
             {

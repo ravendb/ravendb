@@ -275,7 +275,8 @@ namespace Raven.Database.Config
             Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
             Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
             Counter.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.Counter.DeletedTombstonesInBatch], 1000);
-            Counter.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.Counter.ReplicationLatencyMs], 30 * 1000);
+            Counter.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.Counter.ReplicationLatencyMs], 30 * 1000);			
+            Counter.BatchTimeout = new TimeSpanSetting(settings[Constants.Counter.BatchTimeout], TimeSpan.FromSeconds(360), TimeSpanArgumentType.FromParse);
 
             TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
             TimeSeries.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.TimeSeries.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
@@ -347,7 +348,6 @@ namespace Raven.Database.Config
 
             return val;
         }
-
 
         public IntegerSetting MaxConcurrentResourceLoads { get; private set; }
 
@@ -599,6 +599,8 @@ namespace Raven.Database.Config
             public IntegerSetting DeletedTombstonesInBatch { get; set; }
 
             public IntegerSetting ReplicationLatencyInMs { get; set; }
+
+            public TimeSpanSetting BatchTimeout { get; set; }
         }
 
         public class TimeSeriesConfiguration
