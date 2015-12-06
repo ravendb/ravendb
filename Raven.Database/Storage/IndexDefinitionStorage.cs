@@ -120,7 +120,7 @@ namespace Raven.Database.Storage
 
                     indexFailReason.Add(indexDefinition.IndexId, reason);
 
-                    using (LogContext.WithDatabase(configuration.DatabaseName))
+                    using (LogContext.WithResource(configuration.DatabaseName))
                     {
                         logger.WarnException(string.Format("Could not compile index '{0} ({1})', skipping bad index", indexDefinition.IndexId, indexDefinition.Name), e);
                     }
@@ -635,7 +635,7 @@ public bool Contains(string indexName)
 
             var sb = new StringBuilder();
 
-	        var indexNamesToId = indexNameToId.ToArray();
+            var indexNamesToId = indexNameToId.ToArray();
             foreach (var index in indexNamesToId)
             {
                 sb.Append($"{index.Value} - {index.Key}{Environment.NewLine}");

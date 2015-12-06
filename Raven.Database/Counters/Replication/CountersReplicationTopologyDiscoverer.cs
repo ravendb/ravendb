@@ -43,12 +43,12 @@ namespace Raven.Database.Counters.Replication
                 return root;
 
             CountersReplicationDocument replicationData;
-            IEnumerable<CounterStorage.ServerEtagAndSourceName> serverSources;
+            IEnumerable<CounterStorage.ReplicationSourceInfo> serverSources;
 
             using (var reader = counterStorage.CreateReader())
             {
                 replicationData = reader.GetReplicationData();
-                serverSources = reader.GetServerSources().ToList();
+                serverSources = reader.GetReplicationSources().ToList();
             }
 
             if (@from.Contains(counterStorage.CounterStorageUrl) == false)
@@ -64,14 +64,14 @@ namespace Raven.Database.Counters.Replication
             return root;
         }
 
-        private List<CountersReplicationTopologySourceNode> HandleSources(IEnumerable<CounterStorage.ServerEtagAndSourceName> serverSources, CountersReplicationTopologyRootNode root)
+        private List<CountersReplicationTopologySourceNode> HandleSources(IEnumerable<CounterStorage.ReplicationSourceInfo> serverSources, CountersReplicationTopologyRootNode root)
         {
             return serverSources
                 .Select(HandleSource)
                 .ToList();
         }
 
-        private CountersReplicationTopologySourceNode HandleSource(CounterStorage.ServerEtagAndSourceName source)
+        private CountersReplicationTopologySourceNode HandleSource(CounterStorage.ReplicationSourceInfo source)
         {
             if (from.Contains(source.SourceName))
             {

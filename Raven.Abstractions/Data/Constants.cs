@@ -329,6 +329,9 @@ namespace Raven.Abstractions.Data
 
             public const string DeletedTombstonesInBatch = "Raven/Counter/DeletedTombstonesInBatch";
 
+            //in seconds
+            public const string BatchTimeout = "Raven/Counter/BatchTimeout";
+
             //in milliseconds
             public const string ReplicationLatencyMs = "Raven/Counter/ReplicationLatency";
 

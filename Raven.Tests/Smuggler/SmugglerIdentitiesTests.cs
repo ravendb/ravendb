@@ -59,7 +59,7 @@ namespace Raven.Tests.Smuggler
                         ToFile = backupPath,
                         From = new EmbeddedRavenConnectionStringOptions
                         {
-                            DefaultDatabase = store.DefaultDatabase
+                            DefaultResource = store.DefaultDatabase
                         }
                     });
             }
@@ -80,7 +80,7 @@ namespace Raven.Tests.Smuggler
                         FromFile = backupPath,
                         To = new EmbeddedRavenConnectionStringOptions
                         {
-                            DefaultDatabase = documentStore.DefaultDatabase
+                            DefaultResource = documentStore.DefaultDatabase
                         }
                     });
 
@@ -232,7 +232,7 @@ namespace Raven.Tests.Smuggler
                     From = new RavenConnectionStringOptions
                     {
                         Url = store.Url,
-                        DefaultDatabase = "N1"
+                        DefaultResource = "N1"
                     }
                 }).Wait(TimeSpan.FromSeconds(15));
 
@@ -254,7 +254,7 @@ namespace Raven.Tests.Smuggler
                     FromFile = backupPath,
                     To = new RavenConnectionStringOptions
                     {
-                        DefaultDatabase = "N2",
+                        DefaultResource = "N2",
                         Url = store.Url
                     }
                 }).Wait(TimeSpan.FromSeconds(15));
@@ -285,7 +285,7 @@ namespace Raven.Tests.Smuggler
                     FromFile = backupPath,
                     To = new RavenConnectionStringOptions
                     {
-                        DefaultDatabase = "N3",
+                        DefaultResource = "N3",
                         Url = store.Url
                     }
                 }).Wait(TimeSpan.FromSeconds(15));
@@ -319,7 +319,7 @@ namespace Raven.Tests.Smuggler
                     Assert.True(attachment.Metadata.ContainsKey(Constants.RavenReplicationVersion));
 
                     var smuggler = new DatabaseDataDumper(store.DocumentDatabase, new SmugglerDatabaseOptions { StripReplicationInformation = true });
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToStream = stream, From = new RavenConnectionStringOptions { DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToStream = stream, From = new RavenConnectionStringOptions { DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 stream.Position = 0;
@@ -332,7 +332,7 @@ namespace Raven.Tests.Smuggler
                         FromStream = stream,
                         To = new RavenConnectionStringOptions
                         {
-                            DefaultDatabase = store.DefaultDatabase,
+                            DefaultResource = store.DefaultDatabase,
                         }
                     }).Wait(TimeSpan.FromSeconds(15));
 
@@ -355,7 +355,7 @@ namespace Raven.Tests.Smuggler
                         FromStream = stream,
                         To = new RavenConnectionStringOptions
                         {
-                            DefaultDatabase = store.DefaultDatabase,
+                            DefaultResource = store.DefaultDatabase,
                         }
                     }).Wait(TimeSpan.FromSeconds(15));
 

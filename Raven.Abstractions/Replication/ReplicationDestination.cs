@@ -85,6 +85,8 @@ namespace Raven.Abstractions.Replication
         /// </summary>
         public bool Disabled { get; set; }
 
+        public string AuthenticationScheme { get; set; }
+
         /// <summary>
         /// Gets or sets the Client URL of the replication destination
         /// </summary>

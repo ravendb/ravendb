@@ -200,7 +200,7 @@ namespace Raven.Tests.Smuggler
                     From = new RavenConnectionStringOptions
                     {
                         Url = store.Url,
-                        DefaultDatabase = store.DefaultDatabase
+                        DefaultResource = store.DefaultDatabase
                     }
                 });
         }
@@ -217,7 +217,7 @@ namespace Raven.Tests.Smuggler
                     To = new RavenConnectionStringOptions
                     {
                         Url = documentStore.Url,
-                        DefaultDatabase = documentStore.DefaultDatabase
+                        DefaultResource = documentStore.DefaultDatabase
                     }
                 });
         }

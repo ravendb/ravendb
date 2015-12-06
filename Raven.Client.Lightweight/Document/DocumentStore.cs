@@ -205,8 +205,8 @@ namespace Raven.Client.Document
                 Credentials = options.Credentials;
             if (string.IsNullOrEmpty(options.Url) == false)
                 Url = options.Url;
-            if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
-                DefaultDatabase = options.DefaultDatabase;
+            if (string.IsNullOrEmpty(options.DefaultResource) == false)
+                DefaultDatabase = options.DefaultResource;
             if (string.IsNullOrEmpty(options.ApiKey) == false)
                 ApiKey = options.ApiKey;
             if (options.FailoverServers != null)
@@ -374,7 +374,7 @@ namespace Raven.Client.Document
 
             AssertValidConfiguration();
 
-            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent);
+            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, Conventions.AcceptGzipContent, Conventions.AuthenticationScheme);
 
             try
             {

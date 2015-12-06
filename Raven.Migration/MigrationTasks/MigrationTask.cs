@@ -29,7 +29,7 @@ namespace Raven.Migration.MigrationTasks
 
             ValidateThatServerIsUpAndDatabaseExists(options, s);
 
-            s.DefaultDatabase = options.DefaultDatabase;
+            s.DefaultDatabase = options.DefaultResource;
 
             return s;
         }
@@ -49,8 +49,8 @@ namespace Raven.Migration.MigrationTasks
 
             try
             {
-                var commands = !string.IsNullOrEmpty(options.DefaultDatabase)
-                                   ? s.DatabaseCommands.ForDatabase(options.DefaultDatabase)
+                var commands = !string.IsNullOrEmpty(options.DefaultResource)
+                                   ? s.DatabaseCommands.ForDatabase(options.DefaultResource)
                                    : s.DatabaseCommands;
 
                 commands.GetStatistics(); // check if database exist
@@ -64,7 +64,7 @@ namespace Raven.Migration.MigrationTasks
                     throw new InvalidOperationException(
                         string.Format(
                             "Migration tool does not support database creation (database '{0}' on server '{1}' must exist before running this tool).",
-                            options.DefaultDatabase,
+                            options.DefaultResource,
                             s.Url), e);
 
 

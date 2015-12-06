@@ -79,7 +79,7 @@ namespace Raven.Abstractions.Logging
                 // nothing to be done here
                 return;
             }
-            string databaseName = LogContext.DatabaseName;
+            string databaseName = LogContext.ResourceName;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
 

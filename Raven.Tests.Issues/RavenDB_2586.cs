@@ -32,12 +32,12 @@ namespace Raven.Tests.Issues
                                     From = new RavenConnectionStringOptions
                                     {
                                         Url = store.Url, 
-                                        DefaultDatabase = "DB1"
+                                        DefaultResource = "DB1"
                                     },
                                     To = new RavenConnectionStringOptions
                                     {
                                         Url = store.Url, 
-                                        DefaultDatabase = "DB2"
+                                        DefaultResource = "DB2"
                                     }
                               };
 

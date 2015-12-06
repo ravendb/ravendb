@@ -91,7 +91,7 @@ namespace Raven.Database.Smuggler
 
             ServerValidation.ValidateThatServerIsUpAndDatabaseExists(connectionStringOptions, s);
 
-            s.DefaultDatabase = connectionStringOptions.DefaultDatabase;
+            s.DefaultDatabase = connectionStringOptions.DefaultResource;
 
             return s;
         }

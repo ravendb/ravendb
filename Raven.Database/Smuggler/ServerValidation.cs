@@ -21,8 +21,8 @@ namespace Raven.Database.Smuggler
 
             try
             {
-                var commands = !string.IsNullOrEmpty(server.DefaultDatabase)
-                                   ? s.DatabaseCommands.ForDatabase(server.DefaultDatabase)
+                var commands = !string.IsNullOrEmpty(server.DefaultResource)
+                                   ? s.DatabaseCommands.ForDatabase(server.DefaultResource)
                                    : s.DatabaseCommands;
 
                 commands.GetStatistics(); // check if database exist
@@ -36,7 +36,7 @@ namespace Raven.Database.Smuggler
                     throw new SmugglerException(
                         string.Format(
                             "Smuggler does not support database creation (database '{0}' on server '{1}' must exist before running Smuggler).",
-                            server.DefaultDatabase,
+                            server.DefaultResource,
                             s.Url), e);
 
 

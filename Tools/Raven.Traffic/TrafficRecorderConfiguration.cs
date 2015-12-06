@@ -125,7 +125,7 @@ namespace TrafficRecorder
             }
 
             config.ConnectionString.Url = args[1];
-            config.ConnectionString.DefaultDatabase = args[2];
+            config.ConnectionString.DefaultResource = args[2];
             config.ResourceName = args[2];
             config.RecordFilePath = args[3];
             InitOptionsSetObject(config).Parse(args);

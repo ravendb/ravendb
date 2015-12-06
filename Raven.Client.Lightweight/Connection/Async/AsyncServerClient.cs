@@ -608,6 +608,8 @@ namespace Raven.Client.Connection.Async
             var method = String.IsNullOrEmpty(key) ? HttpMethod.Post : HttpMethod.Put;
             if (etag != null)
                 metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
+            else
+                metadata.Remove(Constants.MetadataEtagField);
 
             if (key != null)
                 key = Uri.EscapeDataString(key);
@@ -1667,7 +1669,9 @@ namespace Raven.Client.Connection.Async
                     metadata = new RavenJObject();
 
                 if (etag != null)
-                    metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
+                    metadata[Constants.MetadataEtagField] = new RavenJValue((string) etag);
+                else
+                    metadata.Remove(Constants.MetadataEtagField);
 
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(operationMetadata.Url, key), HttpMethod.Put, metadata, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))))
                 {

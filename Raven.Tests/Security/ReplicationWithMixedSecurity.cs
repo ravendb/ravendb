@@ -17,6 +17,8 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Security
@@ -34,6 +36,8 @@ namespace Raven.Tests.Security
 
         protected override void ModifyStore(DocumentStore store)
         {
+            FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+
             var isApiStore = _storeCounter % 2 == 0;
 
             store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
@@ -48,6 +52,8 @@ namespace Raven.Tests.Security
                 store.Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
                 store.ApiKey = null;
             }
+
+            ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
 
             _storeCounter++;
         }
@@ -110,7 +116,7 @@ namespace Raven.Tests.Security
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain, authenticationScheme: store2.Conventions.AuthenticationScheme);
 
             using (var session = store1.OpenSession())
             {
@@ -139,7 +145,7 @@ namespace Raven.Tests.Security
             Authentication.EnableOnce();
             var store2 = CreateStore(enableAuthorization: true, anonymousUserAccessMode: AnonymousUserAccessMode.None);
 
-            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain);
+            TellFirstInstanceToReplicateToSecondInstance(username: FactIfWindowsAuthenticationIsAvailable.Admin.UserName, password: FactIfWindowsAuthenticationIsAvailable.Admin.Password, domain: FactIfWindowsAuthenticationIsAvailable.Admin.Domain, authenticationScheme: store2.Conventions.AuthenticationScheme);
 
             using (var session = store1.OpenAsyncSession())
             {

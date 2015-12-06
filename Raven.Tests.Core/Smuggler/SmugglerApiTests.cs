@@ -99,8 +99,8 @@ namespace Raven.Tests.Core.Smuggler
                             var smugglerApi = new SmugglerDatabaseApi();
                             await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
                             {
-                                From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
-                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }
+                                From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultResource = "db1" },
+                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultResource = "db2" }
                             });
 
                             var docs = store2.DatabaseCommands.GetDocuments(0, 10);
@@ -164,7 +164,7 @@ namespace Raven.Tests.Core.Smuggler
 
                     await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> 
                         { 
-                            From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
+                            From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultResource = "db1" },
                             ToFile = BackupDir,							
                         });
 
@@ -190,7 +190,7 @@ namespace Raven.Tests.Core.Smuggler
                             await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
                             {
                                 FromFile = BackupDir,
-                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultDatabase = "db2" }
+                                To = new RavenConnectionStringOptions { Url = "http://localhost:" + Port2, DefaultResource = "db2" }
                             });
                             
                             var docs = store2.DatabaseCommands.GetDocuments(0, 10);

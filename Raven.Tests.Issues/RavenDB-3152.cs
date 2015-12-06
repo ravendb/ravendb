@@ -89,12 +89,12 @@ namespace Raven.Tests.Issues
                         From = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba1"
+                            DefaultResource = "Dba1"
                         },
                         To = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba2"
+                            DefaultResource = "Dba2"
                         }
 
                     });
@@ -193,12 +193,12 @@ namespace Raven.Tests.Issues
                         From = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba1"
+                            DefaultResource = "Dba1"
                         },
                         To = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba2"
+                            DefaultResource = "Dba2"
                         }
 
                     });
@@ -250,12 +250,12 @@ namespace Raven.Tests.Issues
                         From = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba1"
+                            DefaultResource = "Dba1"
                         },
                         To = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba2"
+                            DefaultResource = "Dba2"
                         }
 
                     });
@@ -343,7 +343,7 @@ namespace Raven.Tests.Issues
                         From = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba1"
+                            DefaultResource = "Dba1"
                         }
                     });
     
@@ -384,7 +384,7 @@ namespace Raven.Tests.Issues
                         From = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba1"
+                            DefaultResource = "Dba1"
                         }
                     });
 
@@ -408,7 +408,7 @@ namespace Raven.Tests.Issues
                         To = new RavenConnectionStringOptions
                         {
                             Url = server.SystemDatabase.Configuration.ServerUrl,
-                            DefaultDatabase = "Dba2"
+                            DefaultResource = "Dba2"
                         }
                     });
 

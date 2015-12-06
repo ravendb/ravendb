@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
                 new CopyAttachmentsToFileSystem(new RavenConnectionStringOptions()
                 {
                     Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase
+                    DefaultResource = store.DefaultDatabase
                 }, new RavenConnectionStringOptions()
                 {
                     Url = store.Url,
@@ -60,7 +60,7 @@ namespace Raven.Tests.Issues
                 new CopyAttachmentsToFileSystem(new RavenConnectionStringOptions()
                 {
                     Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase
+                    DefaultResource = store.DefaultDatabase
                 }, new RavenConnectionStringOptions()
                 {
                     Url = store.Url,
@@ -98,7 +98,7 @@ namespace Raven.Tests.Issues
                 new CopyAttachmentsToFileSystem(new RavenConnectionStringOptions()
                 {
                     Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase
+                    DefaultResource = store.DefaultDatabase
                 }, new RavenConnectionStringOptions()
                 {
                     Url = "http://localhost:8078",
@@ -118,7 +118,7 @@ namespace Raven.Tests.Issues
                 new CopyAttachmentsToFileSystem(new RavenConnectionStringOptions()
                 {
                     Url = store.Url,
-                    DefaultDatabase = store.DefaultDatabase
+                    DefaultResource = store.DefaultDatabase
                 }, new RavenConnectionStringOptions()
                 {
                     Url = "http://localhost:8078",

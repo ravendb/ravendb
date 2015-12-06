@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
                                                   From = new RavenConnectionStringOptions
                                                          {
                                                              Url = store2.Url,
-                                                             DefaultDatabase = store2.DefaultDatabase
+                                                             DefaultResource = store2.DefaultDatabase
                                                          },
                                                   ToStream = stream
                                               });
@@ -81,7 +81,7 @@ namespace Raven.Tests.Issues
                                             FromStream = stream,
                                             To = new RavenConnectionStringOptions
                                                  {
-                                                     DefaultDatabase = "Northwind",
+                                                     DefaultResource = "Northwind",
                                                      Url = store2.Url
                                                  }
                                         });

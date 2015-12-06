@@ -21,7 +21,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Does_not_throw_snapshot_error_on_transaction_patch_batch()
         {
-            using (var documentStore = this.NewDocumentStore())
+            using (var documentStore = this.NewDocumentStore(requestedStorage: "esent"))
             {
                 documentStore.DatabaseCommands.Put("Company/1", null, new RavenJObject(), new RavenJObject());
 

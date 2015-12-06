@@ -54,7 +54,7 @@ namespace Raven.Tests.Issues
                     {
                         From = new RavenConnectionStringOptions
                         {
-                            DefaultDatabase = store1.DefaultDatabase,
+                            DefaultResource = store1.DefaultDatabase,
                             Url = store1.Url
                         },
                         ToStream = stream
@@ -67,7 +67,7 @@ namespace Raven.Tests.Issues
                         FromStream = stream,
                         To = new RavenConnectionStringOptions
                         {
-                            DefaultDatabase = store2.DefaultDatabase,
+                            DefaultResource = store2.DefaultDatabase,
                             Url = store2.Url
                         }
                     });
@@ -129,12 +129,12 @@ namespace Raven.Tests.Issues
                     {
                         From = new RavenConnectionStringOptions
                         {
-                            DefaultDatabase = store1.DefaultDatabase,
+                            DefaultResource = store1.DefaultDatabase,
                             Url = store1.Url
                         },
                         To = new RavenConnectionStringOptions
                         {
-                            DefaultDatabase = store2.DefaultDatabase,
+                            DefaultResource = store2.DefaultDatabase,
                             Url = store2.Url
                         }
                     });

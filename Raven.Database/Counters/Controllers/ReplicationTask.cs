@@ -11,6 +11,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;
@@ -71,8 +72,7 @@ namespace Raven.Database.Counters.Controllers
             var runningBecauseOfDataModification = false;
             var timeToWait = TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs * 10);
 
-            //NotifySiblings(); //TODO: implement
-
+            NotifySiblings();
             while (!cancellation.IsCancellationRequested)
             {
                 SendReplicationToAllServers(runningBecauseOfDataModification);
@@ -81,6 +81,7 @@ namespace Raven.Database.Counters.Controllers
                     TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs) : //by default this is 30 sec
                     TimeSpan.FromMilliseconds(storage.Configuration.Counter.ReplicationLatencyInMs * 10); //by default this is 5 min
             }
+
         }
 
         private bool WaitForCountersUpdate(TimeSpan timeout)
@@ -148,17 +149,17 @@ namespace Raven.Database.Counters.Controllers
             var replicationTask = Task.Factory.StartNew(
                 () =>
                 {
-                    //using (LogContext.WithDatabase(storage.Name)) //TODO: log with counter storage contexe
-                    //{
-                    try
+                    using (LogContext.WithResource(storage.Name))
                     {
-                        if (ReplicateTo(destination)) SignalCounterUpdate();
+                        try
+                        {
+                            if (ReplicateTo(destination)) SignalCounterUpdate();
+                        }
+                        catch (Exception e)
+                        {
+                            Log.ErrorException("Could not replicate to " + dest, e);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        Log.ErrorException("Could not replicate to " + dest, e);
-                    }
-                    //}
                 });
 
             activeTasks.Enqueue(replicationTask);
@@ -178,7 +179,6 @@ namespace Raven.Database.Counters.Controllers
         private bool ReplicateTo(CounterReplicationDestination destination)
         {
             var replicationStopwatch = Stopwatch.StartNew();
-            //todo: here, build url according to :destination.Url + '/counters/' + destination.
             try
             {
                 string lastError;
@@ -194,7 +194,7 @@ namespace Raven.Database.Counters.Controllers
                         result = true;
                         break;
                     case ReplicationResult.NotReplicated:
-                        //TODO: Record not replicated
+                        Log.Info($"Nothing to replicate to {destination.CounterStorageUrl}");
                         RecordSuccess(destination.CounterStorageUrl, SystemTime.UtcNow);
                         break;
                     default:
@@ -332,7 +332,7 @@ namespace Raven.Database.Counters.Controllers
             CountersReplicationDocument replicationData;
             using (var reader = storage.CreateReader())
                 replicationData = reader.GetReplicationData();
-            return (replicationData != null) ? replicationData.Destinations : null;
+            return replicationData?.Destinations;
         }
         
         private bool IsNotFailing(string destServerName, int currentReplicationAttempts)
@@ -364,13 +364,12 @@ namespace Raven.Database.Counters.Controllers
             return true;
         }
 
-        private ReplicationMessage GetCountersDataSinceEtag(long etag, out long lastEtagSent)
+        private ReplicationMessage GetCountersDataSinceEtag(long etag, out long lastEtagSent, int take = 1024)
         {
             var message = new ReplicationMessage { ServerId = storage.ServerId, SendingServerName = storage.CounterStorageUrl };
-
             using (var reader = storage.CreateReader())
             {
-                message.Counters = reader.GetCountersSinceEtag(etag + 1).Take(1024).ToList(); //TODO: Capped this...how to get remaining values?
+                message.Counters = reader.GetCountersSinceEtag(etag + 1,take: take).ToList(); 
                 lastEtagSent = message.Counters.Count > 0 ? message.Counters.Max(x => x.Etag) : etag; // change this once changed this function do a reall paging
             }
 
@@ -393,13 +392,14 @@ namespace Raven.Database.Counters.Controllers
                         : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
                 }
                 lastError = string.Empty;
+
+                connectionStringOptions.DefaultResource = destination.CounterStorageName;
                 return connectionStringOptions;
             }
             catch (Exception e)
             {
                 lastError = e.Message;
-                Log.ErrorException(string.Format("Ignoring bad replication config!{0}Could not figure out connection options for [Url: {1}]",
-                    Environment.NewLine, destination.ServerUrl), e);
+                Log.ErrorException($"Ignoring bad replication config!{Environment.NewLine}Could not figure out connection options for [Url: {destination.ServerUrl}]", e);
                 return null;
             }
         }
@@ -411,33 +411,66 @@ namespace Raven.Database.Counters.Controllers
         }
 
         //Notifies servers which send us counters that we are back online
-        private void NotifySiblings() //TODO: implement
+        private void NotifySiblings()
         {
             var notifications = new BlockingCollection<RavenConnectionStringOptions>();
 
             Task.Factory.StartNew(() => NotifySibling(notifications));
 
-            var replicationDestinations = GetReplicationDestinations();
-            foreach (var replicationDestination in replicationDestinations)
+            try
             {
-                string lastError;
-                notifications.TryAdd(GetConnectionOptionsSafe(replicationDestination, out lastError), 15 * 1000);
-            }
+                //since counters always have two-way replication, this means 
+                var replicationDestinations = GetReplicationDestinations();
+                if (replicationDestinations != null)
+                {
+                    foreach (var replicationDestination in replicationDestinations)
+                    {
+                        string lastError;
+                        notifications.TryAdd(GetConnectionOptionsSafe(replicationDestination, out lastError), 15*1000);
+                    }
+                }
 
-            //TODO: add to notifications to the source server, the servers we get the replications from
+                IEnumerable<CounterStorage.ReplicationSourceInfo> replicationSources;
+                using (var reader = storage.CreateReader())
+                    replicationSources = reader.GetReplicationSources().ToList();
+
+                foreach (var sourceInfo in replicationSources)
+                {
+                    var match = replicationDestinations.FirstOrDefault(x =>
+                        x.ServerUrl.Equals(sourceInfo.SourceName,
+                            StringComparison.OrdinalIgnoreCase));
+
+                    //no need to resend heartbeat if two-way replication because we did it earlier
+                    if (match == null)
+                    {
+                        notifications.TryAdd(new RavenConnectionStringOptions
+                        {
+                            Url = sourceInfo.SourceName
+                        }, 15*1000);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error("Failed to get destinations for heartbeats. This should not happen and should be reported", e);
+            }
+            finally
+            {
+                notifications.CompleteAdding();
+            }
         }
 
         private void NotifySibling(BlockingCollection<RavenConnectionStringOptions> collection)
         {
-            // using (LogContext.WithDatabase(docDb.Name)) todo:implement log context
-            while (true)
+            using (LogContext.WithResource(storage.Name))
+            while (!collection.IsAddingCompleted)
             {
                 RavenConnectionStringOptions connectionStringOptions;
                 try
                 {
-                    collection.TryTake(out connectionStringOptions, 15 * 1000, cancellation.Token);
+                    collection.TryTake(out connectionStringOptions, 3000, cancellation.Token);
                     if (connectionStringOptions == null)
-                        return;
+                        continue;
                 }
                 catch (Exception e)
                 {
@@ -446,7 +479,8 @@ namespace Raven.Database.Counters.Controllers
                 }
                 try
                 {
-                    var url = connectionStringOptions.Url + "/cs/" + storage.Name + "/replication/heartbeat?from=" + Uri.EscapeDataString(storage.CounterStorageUrl);
+                        
+                    var url = $"{connectionStringOptions.Url}/cs/{connectionStringOptions.DefaultResource}/replication/heartbeat?sourceServer={Uri.EscapeDataString(storage.CounterStorageUrl)}";
                     var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
                     request.WebRequest.ContentLength = 0;
                     request.ExecuteRequest();

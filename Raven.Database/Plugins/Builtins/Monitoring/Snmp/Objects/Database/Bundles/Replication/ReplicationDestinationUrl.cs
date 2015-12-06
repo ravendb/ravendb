@@ -20,7 +20,7 @@ namespace Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Bundl
 
         public override OctetString GetData(DocumentDatabase database, ReplicationTask task, ReplicationStrategy destination)
         {
-            return new OctetString(destination.ConnectionStringOptions.Url.ForDatabase(destination.ConnectionStringOptions.DefaultDatabase));
+            return new OctetString(destination.ConnectionStringOptions.Url.ForDatabase(destination.ConnectionStringOptions.DefaultResource));
         }
     }
 }

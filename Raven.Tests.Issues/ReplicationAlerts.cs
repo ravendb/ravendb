@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
                     From = new RavenConnectionStringOptions
                     {
                         Url = store1.Url,
-                        DefaultDatabase = store1.DefaultDatabase
+                        DefaultResource = store1.DefaultDatabase
                     }
                 }).Wait(TimeSpan.FromSeconds(15));
             Assert.True(File.Exists(DumpFile));
@@ -70,7 +70,7 @@ namespace Raven.Tests.Issues
                     To = new RavenConnectionStringOptions
                     {
                         Url = store3.Url,
-                        DefaultDatabase = store3.DefaultDatabase
+                        DefaultResource = store3.DefaultDatabase
                     }
                 }).Wait(TimeSpan.FromSeconds(15));
 

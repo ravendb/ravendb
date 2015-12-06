@@ -108,7 +108,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
             var task = Task.Factory.StartNew(() =>
             {
-                using (LogContext.WithDatabase(database.Name))
+                using (LogContext.WithResource(database.Name))
                 {
                     try
                     {

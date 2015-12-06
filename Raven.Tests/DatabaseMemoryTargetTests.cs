@@ -14,13 +14,13 @@ namespace Raven.Tests
 
         public DatabaseMemoryTargetTests()
         {
-            LogContext.DatabaseName = DatabaseName;
+            LogContext.ResourceName = DatabaseName;
             sut = new DatabaseMemoryTarget();
         }
 
         public void Dispose()
         {
-            LogContext.DatabaseName = null;
+            LogContext.ResourceName = null;
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace Raven.Tests
         [Fact]
         public void When_context_database_name_is_null_The_should_be_recorded_for_sys_log()
         {
-            LogContext.DatabaseName = null;
+            LogContext.ResourceName = null;
             sut.Write(new LogEventInfo { LoggerName = "Raven.x", Level = LogLevel.Info });
             Assert.Equal(1, sut[Constants.SystemDatabase].GeneralLog.Count());
         }
