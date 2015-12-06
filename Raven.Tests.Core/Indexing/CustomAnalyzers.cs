@@ -4,9 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+
 using Raven.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Core.Utils.Indexes;
+
 using Xunit;
 
 namespace Raven.Tests.Core.Indexing
@@ -24,11 +26,11 @@ namespace Raven.Tests.Core.Indexing
                 {
                     session.Store(new Company { Name = "C" });
                     session.Store(new Company { Name = "a" });
-                    session.Store(new Company { Name = "c" });
-                    session.Store(new Company { Name = "a" });
+                    session.Store(new Company { Name = "æ" });
+                    session.Store(new Company { Name = "¹" });
                     session.Store(new Company { Name = "A" });
                     session.Store(new Company { Name = "c" });
-                    session.Store(new Company { Name = "A" });
+                    session.Store(new Company { Name = "¥" });
                     session.Store(new Company { Name = "D" });
                     session.Store(new Company { Name = "d" });
                     session.Store(new Company { Name = "b" });
@@ -41,12 +43,12 @@ namespace Raven.Tests.Core.Indexing
                     Assert.Equal(10, companies.Length);
                     Assert.Equal("a", companies[0].Name);
                     Assert.Equal("A", companies[1].Name);
-                    Assert.Equal("a", companies[2].Name);
-                    Assert.Equal("A", companies[3].Name);
+                    Assert.Equal("¹", companies[2].Name);
+                    Assert.Equal("¥", companies[3].Name);
                     Assert.Equal("b", companies[4].Name);
                     Assert.Equal("c", companies[5].Name);
                     Assert.Equal("C", companies[6].Name);
-                    Assert.Equal("c", companies[7].Name);
+                    Assert.Equal("æ", companies[7].Name);
                     Assert.Equal("d", companies[8].Name);
                     Assert.Equal("D", companies[9].Name);
                 }

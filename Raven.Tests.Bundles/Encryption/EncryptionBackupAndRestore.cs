@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
+using Raven.Database.Config.Settings;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -20,6 +21,13 @@ namespace Raven.Tests.Bundles.Encryption
 {
     public class EncryptionBackupAndRestore : RavenTest
     {
+        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        {
+            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
+
+            base.ModifyConfiguration(configuration);
+        }
+
         [Theory]
         [PropertyData("Storages")]
         public async Task CanRestoreAnEncryptedDatabase(string storageEngineTypeName)

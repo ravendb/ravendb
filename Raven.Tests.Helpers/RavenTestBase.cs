@@ -177,7 +177,7 @@ namespace Raven.Tests.Helpers
             DocumentConvention conventions = null)
         {
             databaseName = NormalizeDatabaseName(databaseName);
-            
+
             var dataDirectory = dataDir ?? NewDataPath(databaseName);
             var documentStore = new EmbeddableDocumentStore
             {
@@ -198,7 +198,7 @@ namespace Raven.Tests.Helpers
             };
 
             documentStore.Configuration.FileSystem.DataDirectory = Path.Combine(dataDirectory, "FileSystem");
-            documentStore.Configuration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            documentStore.Configuration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             if (catalog != null)
             {
@@ -251,7 +251,7 @@ namespace Raven.Tests.Helpers
                 // We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
                 try
                 {
-                documentStore.Dispose();
+                    documentStore.Dispose();
                 }
                 catch (Exception exception)
                 {
@@ -397,7 +397,7 @@ namespace Raven.Tests.Helpers
             checkPorts = true;
             if (dataDirectory != null)
                 pathsToDelete.Add(dataDirectory);
-            
+
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
             var ravenConfiguration = new AppSettingsBasedConfiguration
             {
@@ -415,7 +415,7 @@ namespace Raven.Tests.Helpers
             };
 
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
-            ravenConfiguration.Encryption.UseFips = SettingsHelper.UseFipsEncryptionAlgorithms;
+            ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             if (configureConfig != null)
                 configureConfig(ravenConfiguration);
@@ -484,7 +484,7 @@ namespace Raven.Tests.Helpers
                 if (onCommit != null)
                     onCommit();
             };
-            
+
             newTransactionalStorage = new Raven.Storage.Voron.TransactionalStorage(ravenConfiguration, onCommitNotification, () => { }, () => { }, () => { });
             newTransactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
             return newTransactionalStorage;
@@ -524,7 +524,7 @@ namespace Raven.Tests.Helpers
             {
                 databaseCommands = databaseCommands.ForDatabase(database);
             }
-            
+
             timeout = timeout ?? (Debugger.IsAttached
                 ? TimeSpan.FromMinutes(5)
                 : TimeSpan.FromSeconds(20));
@@ -606,7 +606,7 @@ namespace Raven.Tests.Helpers
             WaitForPeriodicExport(commands.Get, previousStatus, statusEtags);
         }
 
-        private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus, 
+        private void WaitForPeriodicExport(Func<string, JsonDocument> getDocument, PeriodicExportStatus previousStatus,
             PeriodicExportStatus.PeriodicExportStatusEtags statusEtags = PeriodicExportStatus.PeriodicExportStatusEtags.All)
         {
             PeriodicExportStatus currentStatus = null;
@@ -668,15 +668,15 @@ namespace Raven.Tests.Helpers
 
             var failureMessages = new[]
             {
-                                      "Esent Restore: Failure! Could not restore database!", 
-                                      "Error: Restore Canceled", 
+                                      "Esent Restore: Failure! Could not restore database!",
+                                      "Error: Restore Canceled",
                                       "Restore Operation: Failure! Could not restore database!"
                                   };
 
             var restoreFinishMessages = new[]
                 {
                     "The new database was created",
-                    "Esent Restore: Restore Complete", 
+                    "Esent Restore: Restore Complete",
                     "Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
                 };
 
@@ -711,7 +711,7 @@ namespace Raven.Tests.Helpers
                 // We expect to get the doc from the <system> database
                 var doc = databaseCommands.Get(id);
                 if (afterEtag == null)
-                return doc != null;
+                    return doc != null;
                 return EtagUtil.IsGreaterThan(doc.Etag, afterEtag);
             }, timeout);
 
@@ -789,11 +789,11 @@ namespace Raven.Tests.Helpers
             documentDatabase.DatabaseCommands.Put("Raven/StudioConfig", null, doc, metadata);
         }
 
-    /*    private void isServerExsist(string url)
-        {
-            checkPorts.CompareTo(url);
+        /*    private void isServerExsist(string url)
+            {
+                checkPorts.CompareTo(url);
 
-        }*/
+            }*/
 
         protected void WaitForUserToContinueTheTest(bool debug = true, string url = null, string startPage = null)
         {
@@ -816,8 +816,8 @@ namespace Raven.Tests.Helpers
                 }
                 catch (WebException ex)
                 {
-                    
-                    throw new NotSupportedException("when using a local store WaitForUserToContinueTheTest must be called with store parameter",ex);
+
+                    throw new NotSupportedException("when using a local store WaitForUserToContinueTheTest must be called with store parameter", ex);
                 }
 
                 Process.Start(documentsPage); // start the server
@@ -1086,8 +1086,8 @@ namespace Raven.Tests.Helpers
                 yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
                 yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
                 yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
-    }
-}
+            }
+        }
 
         protected RavenDbServer CreateServerWithWindowsCredentials(int port, string username, string password, string domain, out NodeConnectionInfo nodeConnectionInfo)
         {
@@ -1116,7 +1116,7 @@ namespace Raven.Tests.Helpers
             {
                 Databases = new List<ResourceAccess>
                                     {
-                                        new ResourceAccess { TenantId = "*", Admin = true }, 
+                                        new ResourceAccess { TenantId = "*", Admin = true },
                                         new ResourceAccess { TenantId = "<system>", Admin = true },
                                     },
                 Enabled = true,

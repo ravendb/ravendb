@@ -124,10 +124,10 @@ namespace Raven.Tests.Core.Configuration
             else
             {
                 Assert.True(inMemoryConfiguration.Core.DataDirectory.StartsWith(@"\\"));
-                Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+            Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
                 Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"\\"));
                 Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"\\"));
-            }
+        }
         }
 
         [Fact]
@@ -196,7 +196,7 @@ namespace Raven.Tests.Core.Configuration
                         continue;
 
                     Assert.True((int?)item.Value >= minValue);
-                }
+        }
                 else if (item.PropertyInfo.PropertyType == typeof(Size))
                 {
                     Assert.True((Size)item.Value >= new Size(minValue, item.PropertyInfo.GetCustomAttribute<SizeUnitAttribute>().Unit), "Default smaller than min value. Property name:" + item.PropertyInfo.Name);
@@ -234,7 +234,7 @@ namespace Raven.Tests.Core.Configuration
                 if (item.PropertyInfo.PropertyType == typeof(int))
                 {
                     Assert.True((int)item.Value >= minValue);
-                }
+            }
                 else if (item.PropertyInfo.PropertyType == typeof(int?))
                 {
                     if (item.Value == null)
@@ -243,9 +243,9 @@ namespace Raven.Tests.Core.Configuration
                     Assert.True((int?)item.Value >= minValue);
                 }
                 else if (item.PropertyInfo.PropertyType == typeof(Size))
-                {
+            {
                     Assert.True((Size)item.Value >= new Size(minValue, item.PropertyInfo.GetCustomAttribute<SizeUnitAttribute>().Unit), "Specified value is smaller than min value. Property name: " + item.PropertyInfo.Name);
-                }
+            }
                 else
                 {
                     Assert.True(false, "Unknown min configuration value type:" + item.PropertyInfo.PropertyType);
@@ -255,7 +255,7 @@ namespace Raven.Tests.Core.Configuration
 
         [Fact]
         public void SettingNonDefaultEnumSettings()
-        {
+            {
             var fake = new RavenConfiguration();
             fake.Initialize();
 
@@ -274,7 +274,7 @@ namespace Raven.Tests.Core.Configuration
 
                 sut.SetSetting(enumItems[i].Key, expectedEnumValues[i].ToString());
             }
-            
+
             sut.Initialize();
 
             var actual = GetConfigurationItems(sut).Where(x => x.PropertyInfo.PropertyType.IsEnum).ToArray();
@@ -284,7 +284,7 @@ namespace Raven.Tests.Core.Configuration
                 Assert.Equal(expectedEnumValues[i], actual[i].Value);
             }
         }
-        
+
         [Fact]
         public void DefaultConfigurationHasDefaultValues()
         {
@@ -294,7 +294,7 @@ namespace Raven.Tests.Core.Configuration
             var configurations = GetConfigurationItems(sut).ToList();
 
             foreach (var configuration in configurations)
-            {
+                {
                 var expected = configuration.PropertyInfo.GetCustomAttribute<DefaultValueAttribute>().Value;
 
                 if (ConfigurationCategory.DefaultValueSetInConstructor.Equals(expected))
@@ -341,7 +341,7 @@ namespace Raven.Tests.Core.Configuration
         [InlineData(true)]
         [InlineData(false)]
         public void BooleanSettingsTest(bool expected)
-        {
+            {
             var fake = new RavenConfiguration();
             fake.Initialize();
 
@@ -352,11 +352,11 @@ namespace Raven.Tests.Core.Configuration
             var r = new Random();
 
             foreach (var item in booleanConfigurations)
-            {
+                {
                 var stringValue = expected.ToString();
 
                 switch (r.Next() % 3)
-                {
+                    {
                     // make sure size of letters doesn't matter
                     case 0:
                         break;
@@ -369,21 +369,21 @@ namespace Raven.Tests.Core.Configuration
                 }
 
                 sut.SetSetting(item.Key, stringValue);
-            }
+                    }
 
             sut.Initialize();
 
             var actual = GetConfigurationItems(sut).Where(x => x.PropertyInfo.PropertyType == typeof (bool));
 
             foreach (var item in actual)
-            {
+                    {
                 Assert.Equal(expected, (bool) item.Value);
-            }
+                    }
         }
 
         [Fact]
         public void AllConfigurationClassesHaveToBeInitialized()
-        {
+                    {
             var sut = new RavenConfiguration();
             sut.Initialize();
 
@@ -392,8 +392,8 @@ namespace Raven.Tests.Core.Configuration
             foreach (var configuration in configurations)
             {
                 Assert.True(configuration.Initialized);
-            }
-        }
+                    }
+                }
 
         [Fact]
         public void InitialNumberOfItemsToProcessTest()
@@ -406,7 +406,7 @@ namespace Raven.Tests.Core.Configuration
 
             Assert.Equal(10, sut.Core.InitialNumberOfItemsToProcessInSingleBatch);
             Assert.Equal(3, sut.Core.InitialNumberOfItemsToReduceInSingleBatch);
-        }
+            }
 
         private List<ConfigurationItem> GetConfigurationItems(RavenConfiguration ravenConfiguration)
         {
@@ -422,12 +422,12 @@ namespace Raven.Tests.Core.Configuration
                         Value = configuration.GetValue(configurationClassInstance),
                         Key = configuration.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key
                     });
-                }
+        }
 
-            }
+    }
 
             return result;
-        }
+}
 
         private List<ConfigurationCategory> GetConfigurationClasses(RavenConfiguration configuration)
         {
