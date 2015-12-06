@@ -1492,12 +1492,12 @@ namespace Raven.Abstractions.Smuggler
 
         protected static void SetDatabaseNameIfEmpty(RavenConnectionStringOptions connection)
         {
-            if (string.IsNullOrWhiteSpace(connection.DefaultResource) == false)
+            if (string.IsNullOrWhiteSpace(connection.DefaultDatabase) == false)
                 return;
             var index = connection.Url.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
             if (index != -1)
             {
-                connection.DefaultResource = connection.Url.Substring(index + "/databases/".Length).Trim(new[] { '/' });
+                connection.DefaultDatabase = connection.Url.Substring(index + "/databases/".Length).Trim(new[] { '/' });
     }
 }
     }

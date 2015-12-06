@@ -105,7 +105,7 @@ namespace Raven.SlowTests.Issues
                             From = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8079",
-                                DefaultResource = store.DefaultDatabase,
+                                DefaultDatabase = store.DefaultDatabase,
                             }
                         });
                 }
@@ -183,7 +183,7 @@ namespace Raven.SlowTests.Issues
                     await dumper.ExportData(
                         new SmugglerExportOptions<RavenConnectionStringOptions>
                         {
-                            From = new RavenConnectionStringOptions {DefaultResource = store.DefaultDatabase, Url = "http://localhost:8079"},
+                            From = new RavenConnectionStringOptions {DefaultDatabase = store.DefaultDatabase, Url = "http://localhost:8079"},
                             ToFile = backupPath
                         });
                 }
@@ -285,7 +285,7 @@ namespace Raven.SlowTests.Issues
                             From = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8079",
-                                DefaultResource = store.DefaultDatabase,
+                                DefaultDatabase = store.DefaultDatabase,
                             }
                         });
                 }
@@ -422,7 +422,7 @@ namespace Raven.SlowTests.Issues
                                 From = new RavenConnectionStringOptions
                                 {
                                     Url = "http://localhost:8079",
-                                    DefaultResource = store.DefaultDatabase,
+                                    DefaultDatabase = store.DefaultDatabase,
                                 }
                             });
                     }
@@ -485,7 +485,7 @@ namespace Raven.SlowTests.Issues
                             From = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8079",
-                                DefaultResource = store.DefaultDatabase,
+                                DefaultDatabase = store.DefaultDatabase,
                             }
                         });
                 }
@@ -558,7 +558,7 @@ namespace Raven.SlowTests.Issues
                                 From = new RavenConnectionStringOptions
                                 {
                                     Url = "http://localhost:8079",
-                                    DefaultResource = store.DefaultDatabase,
+                                    DefaultDatabase = store.DefaultDatabase,
                                 }
                             });
                     }
@@ -629,7 +629,7 @@ namespace Raven.SlowTests.Issues
                             From = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8079",
-                                DefaultResource = store.DefaultDatabase,
+                                DefaultDatabase = store.DefaultDatabase,
                             }
                         });
                 }
@@ -682,7 +682,7 @@ namespace Raven.SlowTests.Issues
                             From = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8079",
-                                DefaultResource = store.DefaultDatabase,
+                                DefaultDatabase = store.DefaultDatabase,
                             }
                         });
                 }
@@ -731,7 +731,7 @@ namespace Raven.SlowTests.Issues
                             From = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8079",
-                                DefaultResource = store.DefaultDatabase,
+                                DefaultDatabase = store.DefaultDatabase,
                             }
                         });
                 }
@@ -805,7 +805,7 @@ namespace Raven.SlowTests.Issues
                         From = new RavenConnectionStringOptions
                         {
                             Url = "http://localhost:" + port,
-                            DefaultResource = databaseName,
+                            DefaultDatabase = databaseName,
                         }
                     });
                     Assert.False(true, "Previous op should throw.");
@@ -832,7 +832,7 @@ namespace Raven.SlowTests.Issues
                     From = new RavenConnectionStringOptions
                     {
                         Url = "http://localhost:8070",
-                        DefaultResource = databaseName,
+                        DefaultDatabase = databaseName,
                     }
                 });
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
@@ -897,7 +897,7 @@ namespace Raven.SlowTests.Issues
                         From = new RavenConnectionStringOptions
                         {
                             Url = "http://localhost:" + port,
-                            DefaultResource = databaseName,
+                            DefaultDatabase = databaseName,
                         }
                     }).Result;
                     Assert.False(true, "Previous op should throw.");
@@ -929,7 +929,7 @@ namespace Raven.SlowTests.Issues
                     From = new RavenConnectionStringOptions
                     {
                         Url = "http://localhost:8070",
-                        DefaultResource = databaseName,
+                        DefaultDatabase = databaseName,
                     }
                 });
                 using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))

@@ -123,7 +123,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 var ravenConnectionStringOptions = new RavenConnectionStringOptions
                 {
                     ApiKey = replicationDestination.ApiKey,
-                    DefaultResource = replicationDestination.Database,
+                    DefaultDatabase = replicationDestination.Database,
                 };
                 if (string.IsNullOrEmpty(replicationDestination.Username) == false)
                 {

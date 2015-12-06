@@ -47,8 +47,8 @@ namespace Raven.Tests.Smuggler
                         var smugglerApi = new SmugglerDatabaseApi();
                         await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
                         {
-                            From = new RavenConnectionStringOptions {Url = "http://localhost:8079", DefaultResource = "Database1"},
-                            To = new RavenConnectionStringOptions {Url = "http://localhost:8078", DefaultResource = "Database2"}
+                            From = new RavenConnectionStringOptions {Url = "http://localhost:8079", DefaultDatabase = "Database1"},
+                            To = new RavenConnectionStringOptions {Url = "http://localhost:8078", DefaultDatabase = "Database2"}
                         });
                     
                         await AssertDatabaseHasIndex<UsersIndex>(store2);
@@ -94,8 +94,8 @@ namespace Raven.Tests.Smuggler
 
                         await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
                         {
-                            From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultResource = "Database1" },
-                            To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultResource = "Database2" }
+                            From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+                            To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
                         });
 
                         using (var session = store1.OpenAsyncSession("Database1"))
@@ -118,8 +118,8 @@ namespace Raven.Tests.Smuggler
 
                         await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
                         {
-                            From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultResource = "Database1" },
-                            To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultResource = "Database2" }
+                            From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+                            To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
                         });
                         WaitForIndexing(store2);
                         using (var session2 = store2.OpenAsyncSession("Database2"))
@@ -173,14 +173,14 @@ namespace Raven.Tests.Smuggler
 
                             await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
                             {
-                                From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultResource = "Database1" },
-                                To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultResource = "Database3" }
+                                From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+                                To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
                             });
 
                             await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
                             {
-                                From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultResource = "Database2" },
-                                To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultResource = "Database3" }
+                                From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" },
+                                To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
                             });  
                         
                             using (var session3 = store3.OpenAsyncSession("Database3"))

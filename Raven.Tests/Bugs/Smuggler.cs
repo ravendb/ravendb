@@ -12,9 +12,9 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void should_respect_defaultdb_properly()
         {
-            var connectionStringOptions = new RavenConnectionStringOptions {Url = "http://localhost:8080", DefaultResource = "test"};
+            var connectionStringOptions = new RavenConnectionStringOptions {Url = "http://localhost:8080", DefaultDatabase = "test"};
             var rootDatabaseUrl = GetRootDatabaseUrl(connectionStringOptions.Url);
-            var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + connectionStringOptions.DefaultResource;
+            var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + connectionStringOptions.DefaultDatabase;
             Console.WriteLine(docUrl);
         }
 

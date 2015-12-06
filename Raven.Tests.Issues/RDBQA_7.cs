@@ -56,13 +56,13 @@ namespace Raven.Tests.Issues
                     Initialize(store);
 
                     var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 
@@ -110,13 +110,13 @@ namespace Raven.Tests.Issues
                     Initialize(store);
 
                     var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     var smuggler = new SmugglerDatabaseApi(options);
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     Assert.NotNull(store.DatabaseCommands.Get("key/1"));
 

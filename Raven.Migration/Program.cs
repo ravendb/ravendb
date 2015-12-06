@@ -30,7 +30,7 @@ namespace Raven.Migration
                 use2NdConnection = true;
                 fsConnectionStringOptions.Url = value;
             });
-            optionSet.Add("d|database:", OptionCategory.None, "The database to operate on. If no specified, the operations will be on the default database.", value => dbConnectionStringOptions.DefaultResource = value);
+            optionSet.Add("d|database:", OptionCategory.None, "The database to operate on. If no specified, the operations will be on the default database.", value => dbConnectionStringOptions.DefaultDatabase = value);
             optionSet.Add("fs|filesystem:", OptionCategory.None, "The file system to export to.", value => fileSystemName = value);
             optionSet.Add("u|user|username:", OptionCategory.None, "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential)dbConnectionStringOptions.Credentials).UserName = value);
             optionSet.Add("u2|user2|username2:", OptionCategory.None, "The username to use when the file system requires the client to authenticate.", value =>

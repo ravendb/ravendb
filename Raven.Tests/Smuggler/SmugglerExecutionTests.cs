@@ -44,7 +44,7 @@ namespace Raven.Tests.Smuggler
                         new RavenConnectionStringOptions
                         {
                             Url = store.Url,
-                            DefaultResource = "DoesNotExist"
+                            DefaultDatabase = "DoesNotExist"
                         };
                     var smuggler = new SmugglerDatabaseApi();
 
@@ -76,7 +76,7 @@ namespace Raven.Tests.Smuggler
                 {
                     store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("DoesNotExist");
 
-                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = "DoesNotExist" };
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = "DoesNotExist" };
                     var smuggler = new SmugglerDatabaseApi();
 
                     await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = connectionStringOptions });
@@ -98,7 +98,7 @@ namespace Raven.Tests.Smuggler
             {
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase };
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
                     var smuggler = new SmugglerDatabaseApi();
 
                     await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = connectionStringOptions });
@@ -118,7 +118,7 @@ namespace Raven.Tests.Smuggler
 
             try
             {
-                var connectionStringOptions = new RavenConnectionStringOptions { Url = "http://localhost:8078/", DefaultResource = "DoesNotExist" };
+                var connectionStringOptions = new RavenConnectionStringOptions { Url = "http://localhost:8078/", DefaultDatabase = "DoesNotExist" };
                 var smuggler = new SmugglerDatabaseApi();
 
                 var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ImportData(
@@ -1034,7 +1034,7 @@ namespace Raven.Tests.Smuggler
                         From = new RavenConnectionStringOptions
                         {
                             Url = "http://localhost:" + serverPort,
-                            DefaultResource = store.DefaultDatabase,
+                            DefaultDatabase = store.DefaultDatabase,
                         }
                     });
 
@@ -1051,7 +1051,7 @@ namespace Raven.Tests.Smuggler
                             To = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:" + serverPort,
-                                DefaultResource = newDatabase,
+                                DefaultDatabase = newDatabase,
                             }
                         });
 
@@ -1090,7 +1090,7 @@ namespace Raven.Tests.Smuggler
                         From = new RavenConnectionStringOptions
                         {
                             Url = "http://localhost:" + serverPort,
-                            DefaultResource = store.DefaultDatabase,
+                            DefaultDatabase = store.DefaultDatabase,
                         }
                     });
 
@@ -1103,7 +1103,7 @@ namespace Raven.Tests.Smuggler
                             To = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:" + serverPort,
-                                DefaultResource = newDatabase,
+                                DefaultDatabase = newDatabase,
                             }
                         });
               
@@ -1228,7 +1228,7 @@ namespace Raven.Tests.Smuggler
             {
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase };
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
                     var smuggler = new SmugglerDatabaseApi();
 
                     // import one file:
@@ -1282,7 +1282,7 @@ namespace Raven.Tests.Smuggler
             {
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase };
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
                     var smuggler = new SmugglerDatabaseApi();
 
                     // import one file:

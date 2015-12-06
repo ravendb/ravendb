@@ -46,7 +46,7 @@ namespace Raven.Tests.Issues
                     {
                         From = new EmbeddedRavenConnectionStringOptions
                                 {
-                                    DefaultResource = store.DefaultDatabase
+                                    DefaultDatabase = store.DefaultDatabase
                                 },
                         ToStream = stream
                     });
@@ -66,7 +66,7 @@ namespace Raven.Tests.Issues
                         FromStream = stream,
                         To = new EmbeddedRavenConnectionStringOptions
                         {
-                            DefaultResource = store.DefaultDatabase
+                            DefaultDatabase = store.DefaultDatabase
                         }
                     });
 

@@ -56,10 +56,8 @@ namespace Raven.Abstractions.Data
         public Guid ResourceManagerId { get; set; }
 
         public bool EnlistInDistributedTransactions { get; set; }
-        /// <summary>
-        /// For databases its database name, for counters its counter storage name etc.
-        /// </summary>
-        public string DefaultResource { get; set; }
+
+        public string DefaultDatabase { get; set; }
 
         
         public FailoverServers FailoverServers { get; set; }
@@ -67,7 +65,7 @@ namespace Raven.Abstractions.Data
         public override string ToString()
         {
             var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
-            return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultResource, ResourceManagerId, Url, ApiKey);
+            return string.Format("Url: {4}, User: {0}, EnlistInDistributedTransactions: {1}, DefaultDatabase: {2}, ResourceManagerId: {3}, Api Key: {5}", user, EnlistInDistributedTransactions, DefaultDatabase, ResourceManagerId, Url, ApiKey);
         }
     }
 
@@ -186,7 +184,7 @@ namespace Raven.Abstractions.Data
             {
                 case "database":
                 case "defaultdatabase":
-                    options.DefaultResource = value;
+                    options.DefaultDatabase = value;
                     break;
 
                case "enlist":

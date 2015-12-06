@@ -126,7 +126,7 @@ namespace Raven.Bundles.Replication.Tasks
             return string.Join(" ", new[]
             {
                 ConnectionStringOptions.Url,
-                ConnectionStringOptions.DefaultResource,
+                ConnectionStringOptions.DefaultDatabase,
                 ConnectionStringOptions.ApiKey
             }.Where(x => x != null));
         }

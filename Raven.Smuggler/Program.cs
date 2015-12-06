@@ -183,8 +183,8 @@ namespace Raven.Smuggler
             databaseOptionSet.Add("max-steps-for-transform-script:", OptionCategory.SmugglerDatabase, "Maximum number of steps that transform script can have (import only)", s => databaseOptions.MaxStepsForTransformScript = int.Parse(s));
             databaseOptionSet.Add("batch-size:", OptionCategory.SmugglerDatabase, "The batch size for requests", s => databaseOptions.BatchSize = int.Parse(s));
             databaseOptionSet.Add("chunk-size:", OptionCategory.SmugglerDatabase, "The number of documents to import before new connection will be opened", s => databaseOptions.ChunkSize = int.Parse(s));
-            databaseOptionSet.Add("d|database:", OptionCategory.SmugglerDatabase, "The database to operate on. If no specified, the operations will be on the default database.", value => databaseOptions.Source.DefaultResource = value);
-            databaseOptionSet.Add("d2|database2:", OptionCategory.SmugglerDatabase, "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultResource = value);
+            databaseOptionSet.Add("d|database:", OptionCategory.SmugglerDatabase, "The database to operate on. If no specified, the operations will be on the default database.", value => databaseOptions.Source.DefaultDatabase = value);
+            databaseOptionSet.Add("d2|database2:", OptionCategory.SmugglerDatabase, "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value);
             databaseOptionSet.Add("wait-for-indexing", OptionCategory.SmugglerDatabase, "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true);
             databaseOptionSet.Add("excludeexpired", OptionCategory.SmugglerDatabase, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldExcludeExpired = true);
             databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerDatabase, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
@@ -400,12 +400,12 @@ namespace Raven.Smuggler
             if (allowImplicitDatabase)
                 return;
 
-                if (string.IsNullOrEmpty(api.Options.Source.DefaultResource))
+                if (string.IsNullOrEmpty(api.Options.Source.DefaultDatabase))
                 {
                     throw new OptionException("--database parameter must be specified or pass --allow-implicit-database", "database");
                 }
 
-                if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultResource))
+                if (action == SmugglerAction.Between && string.IsNullOrEmpty(api.Options.Destination.DefaultDatabase))
                 {
                     throw new OptionException("--database2 parameter must be specified or pass --allow-implicit-database", "database2");
                 }

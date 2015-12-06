@@ -89,7 +89,7 @@ namespace Raven.Tests.Issues
                         From = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = "Source"
+                            DefaultDatabase = "Source"
                         }
                     });
 
@@ -104,7 +104,7 @@ namespace Raven.Tests.Issues
                         To = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = "Dest"
+                            DefaultDatabase = "Dest"
                         }
                     }));
 
@@ -189,7 +189,7 @@ namespace Raven.Tests.Issues
                         From = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = "Source"
+                            DefaultDatabase = "Source"
                         }
                     });
                     var smuggler2 = new SmugglerDatabaseApi(new SmugglerDatabaseOptions()
@@ -202,7 +202,7 @@ namespace Raven.Tests.Issues
                         To = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = "Dest"
+                            DefaultDatabase = "Dest"
                         }
                     }));
 

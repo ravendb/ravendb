@@ -64,7 +64,7 @@ namespace Raven.Tests.Issues
                             From = new RavenConnectionStringOptions
                             {
                                 Url = documentStore.Url,
-                                DefaultResource = documentStore.DefaultDatabase
+                                DefaultDatabase = documentStore.DefaultDatabase
                             }
                         }).Wait(TimeSpan.FromSeconds(15));
                 }
@@ -80,7 +80,7 @@ namespace Raven.Tests.Issues
                             To = new RavenConnectionStringOptions
                             {
                                 Url = documentStore.Url,
-                                DefaultResource = documentStore.DefaultDatabase
+                                DefaultDatabase = documentStore.DefaultDatabase
                             }
                         }).Wait(TimeSpan.FromSeconds(15));
 

@@ -107,7 +107,7 @@ namespace Raven.Tests.Issues
 
                 var replicateRequest = httpRavenRequestFactory.Create(url, HttpMethod.Post, new RavenConnectionStringOptions
                 {
-                    DefaultResource = TestDatabaseName,
+                    DefaultDatabase = TestDatabaseName,
                     Url = url
                 });
                 replicateRequest.Write(initialReplicationRequestBody);
@@ -121,7 +121,7 @@ namespace Raven.Tests.Issues
 
                 replicateRequest = httpRavenRequestFactory.Create(url, HttpMethod.Post, new RavenConnectionStringOptions
                 {
-                    DefaultResource = TestDatabaseName,
+                    DefaultDatabase = TestDatabaseName,
                     Url = url
                 });
 
@@ -140,7 +140,7 @@ namespace Raven.Tests.Issues
 
                 replicateRequest = httpRavenRequestFactory.Create(url, HttpMethod.Post, new RavenConnectionStringOptions
                 {
-                    DefaultResource = TestDatabaseName,
+                    DefaultDatabase = TestDatabaseName,
                     Url = url
                 });
 

@@ -48,7 +48,7 @@ namespace Raven.Tests.Smuggler
                         From = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = store.DefaultDatabase
+                            DefaultDatabase = store.DefaultDatabase
                         }
                     });
                 }
@@ -80,7 +80,7 @@ namespace Raven.Tests.Smuggler
                         To = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = store.DefaultDatabase
+                            DefaultDatabase = store.DefaultDatabase
                         }
                     });
 
@@ -135,7 +135,7 @@ namespace Raven.Tests.Smuggler
                         ToStream = stream,
                         From = new RavenConnectionStringOptions()
                         {
-                            DefaultResource = store.DefaultDatabase
+                            DefaultDatabase = store.DefaultDatabase
                         }
                     });
                 }
@@ -166,7 +166,7 @@ namespace Raven.Tests.Smuggler
                         FromStream = stream,
                         To = new RavenConnectionStringOptions()
                         {
-                            DefaultResource = store.DefaultDatabase
+                            DefaultDatabase = store.DefaultDatabase
                         }
                     });
 
@@ -243,12 +243,12 @@ namespace Raven.Tests.Smuggler
                         From = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = store.DefaultDatabase
+                            DefaultDatabase = store.DefaultDatabase
                         },
                         To = new RavenConnectionStringOptions()
                         {
                             Url = store.Url,
-                            DefaultResource = "Import"
+                            DefaultDatabase = "Import"
                         }
                     });
 

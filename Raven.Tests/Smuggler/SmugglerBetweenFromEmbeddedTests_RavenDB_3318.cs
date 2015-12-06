@@ -44,7 +44,7 @@ namespace Raven.Tests.Smuggler
                         {
                             To = new RavenConnectionStringOptions
                             {
-                                Url = "http://localhost:8078", DefaultResource = "TargetDB"
+                                Url = "http://localhost:8078", DefaultDatabase = "TargetDB"
                             }
                         });
 
@@ -98,7 +98,7 @@ namespace Raven.Tests.Smuggler
                             To = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8078",
-                                DefaultResource = "TargetDB"
+                                DefaultDatabase = "TargetDB"
                             }
                         });
 
@@ -120,7 +120,7 @@ namespace Raven.Tests.Smuggler
                             To = new RavenConnectionStringOptions
                             {
                                 Url = "http://localhost:8078",
-                                DefaultResource = "TargetDB"
+                                DefaultDatabase = "TargetDB"
                             }
                         });
 

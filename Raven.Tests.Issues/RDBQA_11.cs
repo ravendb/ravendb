@@ -45,14 +45,14 @@ namespace Raven.Tests.Issues
 
                     var smuggler = new SmugglerDatabaseApi();
 
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     var smuggler = new SmugglerDatabaseApi();
 
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -84,13 +84,13 @@ namespace Raven.Tests.Issues
                     Initialize(store);
 
                     var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -122,7 +122,7 @@ namespace Raven.Tests.Issues
                     Initialize(store);
 
                     var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
@@ -130,7 +130,7 @@ namespace Raven.Tests.Issues
                     SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
                     var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultResource = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {

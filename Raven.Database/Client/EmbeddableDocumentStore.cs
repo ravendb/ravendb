@@ -54,8 +54,8 @@ namespace Raven.Client.Embedded
                 Credentials = options.Credentials;
             if (string.IsNullOrEmpty(options.Url) == false)
                 Url = options.Url;
-            if (string.IsNullOrEmpty(options.DefaultResource) == false)
-                DefaultDatabase = options.DefaultResource;
+            if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
+                DefaultDatabase = options.DefaultDatabase;
             if (string.IsNullOrEmpty(options.ApiKey) == false)
                 ApiKey = options.ApiKey;
 
