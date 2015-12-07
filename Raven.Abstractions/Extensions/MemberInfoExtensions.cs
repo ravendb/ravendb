@@ -104,12 +104,12 @@ namespace Raven.Abstractions.Extensions
 
         public static bool IsProperty(this MemberInfo memberInfo)
         {
-            return memberInfo.MemberType == MemberTypes.Property;
+            return memberInfo is PropertyInfo;
         }
 
         public static bool IsField(this MemberInfo memberInfo)
         {
-            return memberInfo.MemberType == MemberTypes.Field;
+            return memberInfo is FieldInfo;
         }
     }
 }

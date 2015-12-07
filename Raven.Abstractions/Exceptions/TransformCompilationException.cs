@@ -26,10 +26,12 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
+#if !DNXCORE50
         protected TransformCompilationException(
             SerializationInfo info,
             StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

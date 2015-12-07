@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 
 using Raven.Abstractions.Util;
@@ -24,9 +25,9 @@ namespace Raven.Tests.Core
                 reference = new WeakReference(bytes, true);
             })();
 
-            RavenGC.CollectGarbage(true, () => { },true);
+            RavenGC.CollectGarbage(true, () => { }, true);
 
-            Assert.True(RavenGC.MemoryBeforeLastForcedGC > RavenGC.MemoryAfterLastForcedGC);	
+            Assert.True(RavenGC.MemoryBeforeLastForcedGC > RavenGC.MemoryAfterLastForcedGC);
         }
 
         public void Dispose()
@@ -34,3 +35,4 @@ namespace Raven.Tests.Core
         }
     }
 }
+#endif

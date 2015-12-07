@@ -8,6 +8,8 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Helpers;
+
 using Sparrow.Collections;
 
 namespace Raven.Client.Util
@@ -66,8 +68,8 @@ namespace Raven.Client.Util
 #else
                 try
                 {
-                    var availablePhysicalMemoryInMb = (int)(new Microsoft.VisualBasic.Devices.ComputerInfo().AvailablePhysicalMemory / 1024 / 1024);
-                    if (Environment.Is64BitProcess)
+                    var availablePhysicalMemoryInMb = (int)(EnvironmentHelper.AvailablePhysicalMemory / 1024 / 1024);
+                    if (EnvironmentHelper.Is64BitProcess)
                     {
                         return availablePhysicalMemoryInMb;
                     }

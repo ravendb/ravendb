@@ -17,6 +17,14 @@ namespace Raven.Tests.Core.Querying
 {
     public class Searching : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Searching(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanSearchByMultipleTerms()
         {
@@ -233,7 +241,7 @@ namespace Raven.Tests.Core.Querying
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User 
+                    session.Store(new User
                     {
                         Name = "Bob",
                         LastName = "LastName"
@@ -271,7 +279,8 @@ namespace Raven.Tests.Core.Querying
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { 
+                    session.Store(new User
+                    {
                         Name = "John Smith"
                     });
                     session.Store(new User
@@ -324,7 +333,7 @@ namespace Raven.Tests.Core.Querying
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        session.Store(new Camera 
+                        session.Store(new Camera
                         {
                             Id = "cameras/" + i,
                             Manufacturer = i % 2 == 0 ? "Manufacturer1" : "Manufacturer2",
@@ -335,15 +344,15 @@ namespace Raven.Tests.Core.Querying
 
                     var facets = new List<Facet>
                     {
-                        new Facet 
+                        new Facet
                         {
                             Name = "Manufacturer"
                         },
-                        new Facet 
+                        new Facet
                         {
                             Name = "Cost_Range",
                             Mode = FacetMode.Ranges,
-                            Ranges = 
+                            Ranges =
                             {
                                 "[NULL TO Dx200.0]",
                                 "[Dx300.0 TO Dx400.0]",
@@ -352,11 +361,11 @@ namespace Raven.Tests.Core.Querying
                                 "[Dx900.0 TO NULL]"
                             }
                         },
-                        new Facet 
+                        new Facet
                         {
                             Name = "Megapixels_Range",
                             Mode = FacetMode.Ranges,
-                            Ranges = 
+                            Ranges =
                             {
                                 "[NULL TO Dx3.0]",
                                 "[Dx4.0 TO Dx7.0]",

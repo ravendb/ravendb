@@ -4,23 +4,24 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
+
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
+
 using Xunit;
-using System.Collections.Generic;
-using Raven.Client.Connection;
-using Raven.Database.Server.Security;
-using System.Net;
-using Raven.Database.Server;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
 
 namespace Raven.Tests.Core.Commands
 {
     public class Other : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Other(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public async Task CanGetBuildNumber()
         {
@@ -111,12 +112,12 @@ namespace Raven.Tests.Core.Commands
                 store.DatabaseCommands.Put(
                     "items/1",
                     null,
-                    RavenJObject.FromObject(new Company 
+                    RavenJObject.FromObject(new Company
                     {
                         Name = "Name"
                     }),
                     new RavenJObject());
-                Assert.Equal(store.Url + "/databases/"+store.DefaultDatabase+"/docs/items/1", store.DatabaseCommands.UrlFor("items/1"));
+                Assert.Equal(store.Url + "/databases/" + store.DefaultDatabase + "/docs/items/1", store.DatabaseCommands.UrlFor("items/1"));
             }
         }
 

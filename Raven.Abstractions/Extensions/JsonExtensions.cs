@@ -353,10 +353,12 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
+#if !DNXCORE50
         public override void Close()
         {
             if (inner != null)
                 inner.Close();
         }
+#endif
     }
 }

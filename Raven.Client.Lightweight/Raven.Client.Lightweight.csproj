@@ -1,5 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <CopyNuGetImplementations>true</CopyNuGetImplementations>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -172,6 +176,7 @@
     <Compile Include="FileSystem\Shard\IShardAccessStrategy.cs" />
     <Compile Include="FileSystem\Shard\IShardResolutionStrategy.cs" />
     <Compile Include="FileSystem\SynchronizationServerClient.cs" />
+    <Compile Include="Helpers\EnvironmentHelper.cs" />
     <Compile Include="Indexes\AbstractScriptedIndexCreationTask.cs" />
     <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />
@@ -304,7 +309,6 @@
     <Compile Include="Linq\Indexing\IndexingLinqExtensions.cs" />
     <Compile Include="Linq\LinqPathProvider.cs" />
     <Compile Include="Linq\RavenQueryableExtensions.cs" />
-    <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Listeners\IDocumentConflictListener.cs" />
     <Compile Include="PublicExtensions\SearchOptions.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
@@ -369,7 +373,7 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="app.config" />
-    <None Include="packages.config" />
+    <None Include="Raven.Client.Lightweight.project.json" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

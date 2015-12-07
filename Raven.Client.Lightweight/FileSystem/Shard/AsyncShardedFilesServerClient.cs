@@ -397,7 +397,7 @@ namespace Raven.Client.FileSystem.Shard
 
                 var current = applyAsync[i][pos];
                 if (smallest == null ||
-                    string.Compare(current.FullPath, smallest.FullPath, StringComparison.InvariantCultureIgnoreCase) < 0)
+                    string.Compare(current.FullPath, smallest.FullPath, StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     smallest = current;
                     smallestIndex = i;
@@ -443,7 +443,7 @@ namespace Raven.Client.FileSystem.Shard
         {
             if (sortFields == null || sortFields.Length == 0)
             {
-                return string.Compare(current.FullPath, smallest.FullPath, StringComparison.InvariantCultureIgnoreCase);
+                return string.Compare(current.FullPath, smallest.FullPath, StringComparison.OrdinalIgnoreCase);
             }
             foreach (var sortField in sortFields)
             {
@@ -455,7 +455,7 @@ namespace Raven.Client.FileSystem.Shard
                     multiplay = -1;
                 }
 
-                if (field.Equals("__size", StringComparison.InvariantCultureIgnoreCase))
+                if (field.Equals("__size", StringComparison.OrdinalIgnoreCase))
                 {
                     var currentItem = current.TotalSize;
                     var smallestItem = smallest.TotalSize;
@@ -479,7 +479,7 @@ namespace Raven.Client.FileSystem.Shard
                     var currentItem = current.Metadata.Value<string>(field);
                     var smallestItem = smallest.Metadata.Value<string>(field);
                     
-                    var compare = string.Compare(currentItem, smallestItem, StringComparison.InvariantCultureIgnoreCase);
+                    var compare = string.Compare(currentItem, smallestItem, StringComparison.OrdinalIgnoreCase);
                     if (compare != 0)
                         return compare * multiplay;
                 }
@@ -500,7 +500,7 @@ namespace Raven.Client.FileSystem.Shard
                     continue;
 
                 var current = applyAsync[i][pos];
-                if (smallest != null && string.Compare(current, smallest, StringComparison.InvariantCultureIgnoreCase) >= 0)
+                if (smallest != null && string.Compare(current, smallest, StringComparison.OrdinalIgnoreCase) >= 0)
                     continue;
 
                 smallest = current;
