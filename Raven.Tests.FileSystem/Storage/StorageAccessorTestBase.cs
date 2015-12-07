@@ -50,7 +50,7 @@ namespace Raven.Tests.FileSystem.Storage
             return newDataDir;
         }
 
-        protected ITransactionalStorage NewTransactionalStorage(string requestedStorage, bool runInMemory = true, string path = null)
+        protected ITransactionalStorage NewTransactionalStorage(string requestedStorage, bool runInMemory = true, string path = null, UuidGenerator uuidGenerator = null)
         {
             path = path ?? NewDataPath();
 
@@ -78,7 +78,7 @@ namespace Raven.Tests.FileSystem.Storage
             }
 
             storages.Add(storage);
-            storage.Initialize(new UuidGenerator(), new OrderedPartCollection<AbstractFileCodec>());
+            storage.Initialize(uuidGenerator ?? new UuidGenerator(), new OrderedPartCollection<AbstractFileCodec>());
 
             return storage;
         }
