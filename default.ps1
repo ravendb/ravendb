@@ -131,7 +131,7 @@ task FullStorageTest {
     $global:full_storage_test = $true
 }
 
-task Test -depends Compile {
+task Test -depends TestDnx {
     Clear-Host
 
     $test_prjs = @( `
