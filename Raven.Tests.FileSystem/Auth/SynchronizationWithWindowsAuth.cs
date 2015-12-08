@@ -15,15 +15,20 @@ using Raven.Tests.FileSystem.Synchronization;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Raven.Abstractions.FileSystem;
+using Raven.Client.FileSystem;
 using Raven.Tests.Common.Attributes;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.FileSystem.Auth
 {
     public class SynchronizationWithWindowsAuth : RavenFilesTestWithLogs
     {
-        public SynchronizationWithWindowsAuth()
+        protected override void ModifyStore(FilesStore store)
         {
             FactIfWindowsAuthenticationIsAvailable.LoadCredentials();
+            ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
+
+            base.ModifyStore(store);
         }
 
         protected override void ConfigureServer(RavenDbServer server, string fileSystemName)
@@ -53,7 +58,7 @@ namespace Raven.Tests.FileSystem.Auth
         [Fact]
         public async Task CanSynchronizeFileContent()
         {
-            var source = NewAsyncClient(0);
+            var source = NewAsyncClient(0, customConfig: ConfigurationHelper.ApplySettingsToConfiguration);
             var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             var ms = new MemoryStream(new byte[] { 3, 2, 1 });
@@ -71,7 +76,7 @@ namespace Raven.Tests.FileSystem.Auth
         {
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
-            var sourceClient = NewAsyncClient(0);
+            var sourceClient = NewAsyncClient(0, customConfig: ConfigurationHelper.ApplySettingsToConfiguration);
             var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             await sourceClient.UploadAsync("test.bin", content, new RavenJObject { { "difference", "metadata" } });
@@ -93,7 +98,7 @@ namespace Raven.Tests.FileSystem.Auth
         {
             var content = new MemoryStream(new byte[] { 1, 2, 3, 4 });
 
-            var sourceClient = NewAsyncClient(0);
+            var sourceClient = NewAsyncClient(0, customConfig: ConfigurationHelper.ApplySettingsToConfiguration);
             var destinationClient = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             await sourceClient.UploadAsync("test.bin", content);
@@ -118,7 +123,7 @@ namespace Raven.Tests.FileSystem.Auth
         [Fact]
         public async Task CanSynchronizeFileDelete()
         {
-            var source = NewAsyncClient(0);
+            var source = NewAsyncClient(0, customConfig: ConfigurationHelper.ApplySettingsToConfiguration);
             var destination = NewAsyncClient(1, enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
 
             await source.UploadAsync("test.bin", new RandomStream(1));

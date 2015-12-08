@@ -31,7 +31,7 @@ namespace Raven.Client.FileSystem
         private readonly AtomicDictionary<IFilesChanges> fileSystemChanges = new AtomicDictionary<IFilesChanges>(StringComparer.OrdinalIgnoreCase);
         private readonly AtomicDictionary<IAsyncFilesCommandsImpl> fileSystemCommands = new AtomicDictionary<IAsyncFilesCommandsImpl>(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, IFilesReplicationInformer> replicationInformers = new ConcurrentDictionary<string, IFilesReplicationInformer>(StringComparer.OrdinalIgnoreCase);
-        
+
         private bool initialized;
         private FilesSessionListeners listeners = new FilesSessionListeners();
 
@@ -54,7 +54,7 @@ namespace Raven.Client.FileSystem
             set
             {
                 credentials = value ?? CredentialCache.DefaultNetworkCredentials;
-        }
+            }
         }
         private ICredentials credentials;
 
@@ -215,7 +215,7 @@ namespace Raven.Client.FileSystem
             if (initialized)
                 return this;
             disableReplicationInformerGeneration = true;
-            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory);
+            jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, authenticationScheme: conventions.AuthenticationScheme);
 
             try
             {
@@ -260,8 +260,8 @@ namespace Raven.Client.FileSystem
                     DefaultFileSystem, 
                     Conventions, 
                     new OperationCredentials(ApiKey, Credentials),
-                    jsonRequestFactory, 
-                    currentSessionId, 
+                    jsonRequestFactory,
+                    currentSessionId,
                     GetReplicationInformerForFileSystem,
                     Listeners.ConflictListeners);
         }
@@ -377,19 +377,19 @@ namespace Raven.Client.FileSystem
         {
             if (!String.IsNullOrWhiteSpace(ConnectionStringName))
             {
-            var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
-            parser.Parse();
+                var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionStringName(ConnectionStringName);
+                parser.Parse();
 
-            var options = parser.ConnectionStringOptions;
-            if (options.Credentials != null)
+                var options = parser.ConnectionStringOptions;
+                if (options.Credentials != null)
                     Credentials = options.Credentials;
-            if (string.IsNullOrEmpty(options.Url) == false)
+                if (string.IsNullOrEmpty(options.Url) == false)
                     Url = options.Url;
-            if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
+                if (string.IsNullOrEmpty(options.DefaultFileSystem) == false)
                     DefaultFileSystem = options.DefaultFileSystem;
-            if (string.IsNullOrEmpty(options.ApiKey) == false)
+                if (string.IsNullOrEmpty(options.ApiKey) == false)
                     ApiKey = options.ApiKey;
-        }
+            }
         }
 
         protected void EnsureNotClosed()

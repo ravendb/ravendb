@@ -13,8 +13,6 @@ using System.Runtime.ConstrainedExecution;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Lucene.Net.Store;
-
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -26,12 +24,10 @@ using Raven.Abstractions.Util;
 using Raven.Database;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using System.Linq;
-using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Esent;
 using Raven.Database.Storage.Esent.Backup;
@@ -40,8 +36,6 @@ using Raven.Database.Storage.Esent.StorageActions;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.SchemaUpdates;
-using Raven.Storage.Esent.StorageActions;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Storage.Esent
 {
@@ -474,7 +468,7 @@ namespace Raven.Storage.Esent
         }
 
         [CLSCompliant(false)]
-        public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+        public InFlightTransactionalState InitializeInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
         {
             var txMode = configuration.TransactionMode == TransactionMode.Lazy
                ? CommitTransactionGrbit.LazyFlush
@@ -837,7 +831,10 @@ namespace Raven.Storage.Esent
             {
                 using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, transactionContext, this))
                 {
-                    var storageActionsAccessor = new StorageActionsAccessor(pht);
+                    var dtcSnapshot = inFlightTransactionalState != null ? // might be not already initialized yet, during database creation
+                                        inFlightTransactionalState.GetSnapshot() : EmptyInFlightStateSnapshot.Instance;
+
+                    var storageActionsAccessor = new StorageActionsAccessor(pht, dtcSnapshot);
                     if (disableBatchNesting.Value == null)
                         current.Value = storageActionsAccessor;
                     action(storageActionsAccessor);
@@ -874,7 +871,7 @@ namespace Raven.Storage.Esent
             var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator,
                 documentCacher, null, this);
 
-            var accessor = new StorageActionsAccessor(pht);
+            var accessor = new StorageActionsAccessor(pht, inFlightTransactionalState.GetSnapshot());
 
             accessor.OnDispose += pht.Dispose;
 

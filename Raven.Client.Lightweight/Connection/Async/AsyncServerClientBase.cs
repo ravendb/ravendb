@@ -24,7 +24,7 @@ namespace Raven.Client.Connection.Async
             ServerUrl = serverUrl.TrimEnd('/'); 
             Conventions = convention ?? new TConvention();
             CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication = credentials;
-            RequestFactory = jsonRequestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+            RequestFactory = jsonRequestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests, authenticationScheme: Conventions.AuthenticationScheme);
 
             if (jsonRequestFactory == null)
                 SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl);

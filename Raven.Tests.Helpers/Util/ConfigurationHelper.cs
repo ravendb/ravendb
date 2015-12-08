@@ -9,7 +9,10 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Net;
+using System.Reflection;
 
+using Raven.Client;
+using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 
@@ -68,42 +71,83 @@ namespace Raven.Tests.Helpers.Util
             }
         }
 
-        private static Dictionary<string, string> _settings;
-        private static Dictionary<string, string> Settings
+        private static Dictionary<string, string> _serverSettings;
+        private static Dictionary<string, string> ServerSettings
         {
             get
             {
-                if (_settings != null)
-                    return _settings;
+                if (_serverSettings != null)
+                    return _serverSettings;
 
                 lock (Locker)
                 {
-                    if (_settings != null)
-                        return _settings;
+                    if (_serverSettings != null)
+                        return _serverSettings;
 
-                    return _settings = ReadSettings();
+                    return _serverSettings = ReadSettings("server");
+                }
+            }
+        }
+
+        private static Dictionary<string, string> _clientSettings;
+        private static Dictionary<string, string> ClientSettings
+        {
+            get
+            {
+                if (_clientSettings != null)
+                    return _clientSettings;
+
+                lock (Locker)
+                {
+                    if (_clientSettings != null)
+                        return _clientSettings;
+
+                    return _clientSettings = ReadSettings("client");
                 }
             }
         }
 
         public static void ApplySettingsToConfiguration(InMemoryRavenConfiguration configuration)
         {
-            var settings = Settings;
+            var settings = ServerSettings;
             foreach (var setting in settings)
             {
+                Console.WriteLine("Applying external server setting: " + setting.Key);
+
                 configuration.Settings[setting.Key] = setting.Value;
             }
 
             configuration.Initialize();
         }
 
-        private static Dictionary<string, string> ReadSettings()
+        public static void ApplySettingsToConventions(ConventionBase conventions)
+        {
+            var settings = ClientSettings;
+
+            if (settings.Count == 0)
+                return;
+
+            var type = conventions.GetType();
+
+            foreach (var setting in settings)
+            {
+                Console.WriteLine("Applying external client setting: " + setting.Key);
+
+                var property = type.GetProperty(setting.Key, BindingFlags.Public | BindingFlags.Instance);
+                if (property == null)
+                    continue;
+
+                property.SetValue(conventions, setting.Value);
+            }
+        }
+
+        private static Dictionary<string, string> ReadSettings(string sectionName)
         {
             var configuration = Configuration;
             var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (configuration.ContainsKey("settings"))
+            if (configuration.ContainsKey(sectionName))
             {
-                var settingsJson = configuration.Value<RavenJObject>("settings");
+                var settingsJson = configuration.Value<RavenJObject>(sectionName);
                 foreach (var settingKey in settingsJson.Keys)
                 {
                     settings[settingKey] = settingsJson.Value<string>(settingKey);

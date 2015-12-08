@@ -131,8 +131,7 @@ namespace Raven.Database.Counters.Controllers
             var inputStream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var task = Task.Factory.StartNew(() =>
             {
-                var timeout = timeoutTokenSource.TimeoutAfter(TimeSpan.FromSeconds(360)); //TODO : make this configurable
-
+                var timeout = timeoutTokenSource.TimeoutAfter(SystemConfiguration.Counter.BatchTimeout); 
                 var changeBatches = YieldChangeBatches(inputStream, timeout, countOfChanges => counterChanges += countOfChanges);
                 try
                 {
@@ -207,11 +206,10 @@ namespace Raven.Database.Counters.Controllers
                 Payload = operationId.ToString()
             }, out id, timeoutTokenSource);
 
-			//TODO: do not forget to add task Id
-			AddRequestTraceInfo(log => 
-				log.AppendFormat("\tCounters batch operation received {0:#,#;;0} changes in {1}, long running task Id : {2}", counterChanges, sp.Elapsed, id));
+            AddRequestTraceInfo(log => 
+                log.AppendFormat("\tCounters batch operation received {0:#,#;;0} changes in {1}, long running task Id : {2}", counterChanges, sp.Elapsed, id));
 
-			task.Wait(timeoutTokenSource.Token);
+            task.Wait(timeoutTokenSource.Token);
 
             return GetMessageWithObject(new
             {
@@ -395,7 +393,7 @@ namespace Raven.Database.Counters.Controllers
             return GetMessageWithObject(deletedCount);
         }	
 
-		[RavenRoute("cs/{counterStorageName}/counters")]
+        [RavenRoute("cs/{counterStorageName}/counters")]
         [HttpGet]
         public HttpResponseMessage GetCounterSummariesByGroup(int skip, int take, string group)
         {

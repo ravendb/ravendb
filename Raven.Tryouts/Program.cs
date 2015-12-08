@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Raven.Client.Embedded;
 
 namespace Raven.Tryouts
 {
@@ -7,19 +8,17 @@ namespace Raven.Tryouts
     {
         public static void Main()
         {
-            using (var testClass = new Tests.Raft.Client.Documents())
+            using (var store = new EmbeddableDocumentStore
             {
-                try
-                {
-                    testClass.DeleteShouldBePropagated(5);
-                    Console.WriteLine("Test is done");
-                }
-                catch (Exception e)
-                {
-                    Debugger.Break();
-                }
-                Console.WriteLine("Dispose is done");
+                UseEmbeddedHttpServer = true,
+                DefaultDatabase = "FooBar"
+            })
+            {
+                store.Initialize();
+
+                store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FooBar");
+                Console.ReadLine();
             }
         }
-    }
 }
+    }

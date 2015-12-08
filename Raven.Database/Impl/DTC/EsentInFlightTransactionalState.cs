@@ -55,7 +55,7 @@ namespace Raven.Database.Impl.DTC
 
         private void CleanupOldTransactions(object state)
         {
-            using (LogContext.WithDatabase(_database.Name ?? Constants.SystemDatabase))
+            using (LogContext.WithResource(_database.Name ?? Constants.SystemDatabase))
             {
                 var now = SystemTime.UtcNow;
                 log.Info("Performing Transactions Cleanup Sequence for db {0}", _database.Name ?? Constants.SystemDatabase);
@@ -259,7 +259,11 @@ namespace Raven.Database.Impl.DTC
             return results;
         }
 
-
+        public override IInFlightStateSnapshot GetSnapshot()
+        {
+            return new InFlightStateSnapshot(changedInTransaction, transactionStates);
+        }
+        
         public void Dispose()
         {
             _database.TimerManager.ReleaseTimer(timer);

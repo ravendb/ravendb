@@ -83,7 +83,7 @@ namespace Raven.Database.Bundles.PeriodicExports
 
         private void ReadSetupValuesFromDocument()
         {
-            using (LogContext.WithDatabase(Database.Name))
+            using (LogContext.WithResource(Database.Name))
             {
                 try
                 {
@@ -272,7 +272,7 @@ namespace Raven.Database.Bundles.PeriodicExports
                     var documentDatabase = Database;
                     if (documentDatabase == null)
                         return;
-                    using (LogContext.WithDatabase(documentDatabase.Name))
+                    using (LogContext.WithResource(documentDatabase.Name))
                     {
                         try
                         {

@@ -617,7 +617,7 @@ namespace Raven.Storage.Voron
         }
 
         [CLSCompliant(false)]
-        public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+        public InFlightTransactionalState InitializeInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
         {            
             return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
         }

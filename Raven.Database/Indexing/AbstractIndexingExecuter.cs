@@ -41,7 +41,7 @@ namespace Raven.Database.Indexing
 
         public void Execute()
         {
-            using (LogContext.WithDatabase(context.DatabaseName))
+            using (LogContext.WithResource(context.DatabaseName))
             {
                 Init();
 

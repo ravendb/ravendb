@@ -41,7 +41,7 @@ namespace Raven.Client.Connection
         internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequestResult)
         {
             var handler = LogRequest;
-            if (handler != null) 
+            if (handler != null)
                 handler(sender, generateRequestResult());
         }
 
@@ -56,6 +56,8 @@ namespace Raven.Client.Connection
         internal readonly Func<HttpMessageHandler> httpMessageHandler;
 
         internal readonly bool acceptGzipContent;
+
+        internal readonly string authenticationScheme;
 
         private SimpleCache cache;
 
@@ -75,7 +77,7 @@ namespace Raven.Client.Connection
             var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
             {
                 ShouldCacheRequest =
-                    createHttpJsonRequestParams.AvoidCachingRequest == false && 
+                    createHttpJsonRequestParams.AvoidCachingRequest == false &&
                     createHttpJsonRequestParams.ShouldCacheRequest(createHttpJsonRequestParams.Url)
             };
 
@@ -91,7 +93,7 @@ namespace Raven.Client.Connection
         }
 
         internal CachedRequestOp ConfigureCaching(string url, Action<string, string> setHeader)
-         {
+        {
             var cachedRequest = cache.Get(url);
             if (cachedRequest == null)
                 return new CachedRequestOp { SkipServerCheck = false };
@@ -177,11 +179,13 @@ namespace Raven.Client.Connection
         /// <param name="maxNumberOfCachedRequests"></param>
         /// <param name="httpMessageHandler"></param>
         /// <param name="acceptGzipContent"></param>
-        public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true)
+        /// <param name="authenticationScheme"></param>
+        public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true, string authenticationScheme = null)
         {
             this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
             this.httpMessageHandler = httpMessageHandler;
             this.acceptGzipContent = acceptGzipContent;
+            this.authenticationScheme = authenticationScheme;
             httpClientCache = new HttpClientCache(ServicePointManager.MaxServicePointIdleTime);
 
             ResetCache();
@@ -217,7 +221,7 @@ namespace Raven.Client.Connection
                     return false;
 
                 return (bool)value;
-        }
+            }
             set { CallContext.LogicalSetData("Raven/Client/DisableHttpCaching", value); }
         }
 
@@ -282,12 +286,12 @@ namespace Raven.Client.Connection
 
         internal void IncrementCachedRequests()
         {
-             Interlocked.Increment(ref NumOfCachedRequests);
+            Interlocked.Increment(ref NumOfCachedRequests);
         }
 
         internal void CacheResponse(string url, RavenJToken data, NameValueCollection headers)
         {
-            if (string.IsNullOrEmpty(headers[Constants.MetadataEtagField])) 
+            if (string.IsNullOrEmpty(headers[Constants.MetadataEtagField]))
                 return;
 
             RavenJToken clone;

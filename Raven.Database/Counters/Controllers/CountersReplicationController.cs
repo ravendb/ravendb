@@ -117,8 +117,7 @@ namespace Raven.Database.Counters.Controllers
             return GetEmptyMessage();
         }
 
-        //TODO: refactor the endpoints
-        [RavenRoute("cs/{counterStorageName}/replications/get")]
+        [RavenRoute("cs/{counterStorageName}/replication/config")]
         [HttpGet]
         public HttpResponseMessage ReplicationsGet()
         {
@@ -134,7 +133,7 @@ namespace Raven.Database.Counters.Controllers
             }
         }
 
-        [RavenRoute("cs/{counterStorageName}/replications/save")]
+        [RavenRoute("cs/{counterStorageName}/replication/config")]
         [HttpPost]
         public async Task<HttpResponseMessage> ReplicationsSave()
         {
