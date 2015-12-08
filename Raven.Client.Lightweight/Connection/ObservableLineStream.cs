@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using Raven.Abstractions.Extensions;
-using Raven.Database.Util;
+
 using Sparrow.Collections;
 using System;
 using System.IO;
@@ -36,7 +36,7 @@ namespace Raven.Client.Connection
                 .ContinueWith(task =>
                                 {
                                     var read = task.Result;
-                                    if(read == 0)// will force reopening of the connection
+                                    if (read == 0)// will force reopening of the connection
                                         throw new EndOfStreamException();
                                     // find \r\n in newly read range
 
@@ -79,7 +79,7 @@ namespace Raven.Client.Connection
                                         prev = buffer[i];
                                     }
                                     posInBuffer += read;
-                                    if(startPos >= posInBuffer) // read to end
+                                    if (startPos >= posInBuffer) // read to end
                                     {
                                         posInBuffer = 0;
                                         return;
@@ -93,7 +93,7 @@ namespace Raven.Client.Connection
                                 })
                                 .ContinueWith(task =>
                                 {
-                                    if(task.IsFaulted)
+                                    if (task.IsFaulted)
                                     {
                                         try
                                         {
@@ -107,9 +107,12 @@ namespace Raven.Client.Connection
                                         var exception = aggregateException.ExtractSingleInnerException();
                                         if (exception is ObjectDisposedException)
                                             return; // this isn't an error
+
+#if !DNXCORE50
                                         var we = exception as WebException;
                                         if (we != null && we.Status == WebExceptionStatus.RequestCanceled)
                                             return; // not an error, actually
+#endif
 
                                         foreach (var subscriber in subscribers)
                                         {
@@ -124,10 +127,16 @@ namespace Raven.Client.Connection
 
         private async Task<int> ReadAsync()
         {
+#if !DNXCORE50
             return await Task.Factory.FromAsync<int>(
                 (callback, state) => stream.BeginRead(buffer, posInBuffer, buffer.Length - posInBuffer, callback, state),
                 stream.EndRead,
                 null).ConfigureAwait(false);
+#else
+            return await stream
+                .ReadAsync(buffer, posInBuffer, buffer.Length - posInBuffer)
+                .ConfigureAwait(false);
+#endif
         }
 
         public IDisposable Subscribe(IObserver<string> observer)

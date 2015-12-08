@@ -9,7 +9,6 @@
         "FileSystemEntityModel.Designer.cs"
     ],
     "dependencies": {
-        "Xunit.KRunner": "1.0.0-*",
         "Newtonsoft.Json": "6.0.6"
     },
     "commands": {

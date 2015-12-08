@@ -25,8 +25,8 @@ namespace Raven.Client.UniqueConstraints
         {
             var attrType = typeof(UniqueConstraintAttribute);
             return ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(p => Attribute.IsDefined(p, attrType))
-                .Select(pi => new ReflectedConstraintInfo(pi, (UniqueConstraintAttribute)Attribute.GetCustomAttribute(pi, attrType)))
+                .Where(p => p.IsDefined(attrType))
+                .Select(pi => new ReflectedConstraintInfo(pi, (UniqueConstraintAttribute)pi.GetCustomAttribute(attrType)))
                 .ToArray();
         }
 

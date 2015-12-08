@@ -195,8 +195,12 @@ namespace Raven.Abstractions.Indexing
             bool mapsReduceEquals;
             if (ignoreFormatting)
             {
+#if !DNXCORE50
                 var comparer = new IndexPrettyPrinterEqualityComparer();
                 mapsReduceEquals = Maps.SequenceEqual(other.Maps, comparer) && comparer.Equals(Reduce, other.Reduce);
+#else
+                mapsReduceEquals = Maps.SequenceEqual(other.Maps) && Reduce.Equals(other.Reduce);
+#endif
             }
             else
             {

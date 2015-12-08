@@ -28,8 +28,8 @@ namespace Raven.Abstractions.Connection
             if (data != null)
             {
                 Headers.ContentType = string.IsNullOrEmpty(Jsonp) ?
-                    new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"} :
-                    new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
+                    new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" } :
+                    new MediaTypeHeaderValue("application/javascript") { CharSet = "utf-8" };
             }
         }
 
@@ -44,10 +44,17 @@ namespace Raven.Abstractions.Connection
             if (HasNoData())
                 return new CompletedTask<bool>(true);
 
-            using ( var undisposableStream = new UndisposableStream(stream) )
-            using ( var bufferedStream = new BufferedStream(undisposableStream))
+            using (var undisposableStream = new UndisposableStream(stream))
+#if !DNXCORE50
+            using (var bufferedStream = new BufferedStream(undisposableStream))
+#endif
             {
-                var writer = new StreamWriter(bufferedStream, DefaultEncoding);
+#if !DNXCORE50
+                var streamToUse = bufferedStream;
+#else
+                var streamToUse = undisposableStream;
+#endif
+                var writer = new StreamWriter(streamToUse, DefaultEncoding);
                 if (string.IsNullOrEmpty(Jsonp) == false)
                 {
                     writer.Write(Jsonp);

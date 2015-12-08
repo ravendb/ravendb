@@ -18,13 +18,21 @@ namespace Raven.Tests.Core.Replication
 {
     public class RavenReplicationCoreTest : RavenCoreTestBase
     {
+#if DNXCORE50
+        public RavenReplicationCoreTest(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         protected int RetriesCount = 500;
 
-        protected override DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, 
+        protected override DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null,
                                                             string dbSuffixIdentifier = null,
                                                             Action<DatabaseDocument> modifyDatabaseDocument = null)
         {
-            return base.GetDocumentStore(databaseName, dbSuffixIdentifier ?? createdStores.Count.ToString(CultureInfo.InvariantCulture), 
+            return base.GetDocumentStore(databaseName, dbSuffixIdentifier ?? createdStores.Count.ToString(CultureInfo.InvariantCulture),
                                             modifyDatabaseDocument: doc => doc.Settings.Add("Raven/ActiveBundles", "replication"));
         }
 
@@ -35,7 +43,7 @@ namespace Raven.Tests.Core.Replication
                                                                         {
                                                                             { "Url", destination.Url },
                                                                             { "Database", databaseName ?? destination.DefaultDatabase }
-                                                                        }),databaseName);
+                                                                        }), databaseName);
         }
 
 

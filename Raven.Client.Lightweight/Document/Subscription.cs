@@ -33,9 +33,13 @@ namespace Raven.Client.Document
 
     public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
 
-    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
+    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog logger = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog logger = LogManager.GetLogger(typeof(Subscription<T>));
+#endif
 
         private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
         private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
@@ -72,7 +76,7 @@ namespace Raven.Client.Document
             this.conventions = conventions;
             this.ensureOpenSubscription = ensureOpenSubscription;
 
-            if (typeof (T) != typeof (RavenJObject))
+            if (typeof(T) != typeof(RavenJObject))
             {
                 isStronglyTyped = true;
                 generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
@@ -205,7 +209,7 @@ namespace Raven.Client.Document
                                         }
                                         else
                                         {
-                                            queue.Add((T) (object) jsonDoc);
+                                            queue.Add((T)(object)jsonDoc);
                                         }
 
                                         if (IsErroredBecauseOfSubscriber)
@@ -249,10 +253,10 @@ namespace Raven.Client.Document
                                     AcknowledgeBatchToServer(lastProcessedEtagOnServer);
 
                                     lastProcessedEtagOnClient = lastProcessedEtagOnServer;
-                                    
+
                                     continue; // try to pull more documents from subscription
                                 }
-                            }							
+                            }
                         }
 
                         while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
@@ -439,7 +443,7 @@ namespace Raven.Client.Document
                     }
 
                     // succeeded in opening the subscription
-                    
+
                     // no longer need to be notified about subscription status changes
                     dataSubscriptionReleasedObserver.Dispose();
                     dataSubscriptionReleasedObserver = null;
@@ -460,7 +464,7 @@ namespace Raven.Client.Document
                 return;
             }
 
-            var changesApi = (RemoteDatabaseChanges) sender;
+            var changesApi = (RemoteDatabaseChanges)sender;
 
             if (changesApi.Connected)
                 newDocuments.Set();
@@ -468,7 +472,7 @@ namespace Raven.Client.Document
 
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if(IsErroredBecauseOfSubscriber)
+            if (IsErroredBecauseOfSubscriber)
                 throw new InvalidOperationException("Subscription encountered errors and stopped. Cannot add any subscriber.");
 
             if (subscribers.TryAdd(observer))
@@ -507,7 +511,7 @@ namespace Raven.Client.Document
 
         private void OnCompletedNotification()
         {
-            if(completed)
+            if (completed)
                 return;
 
             foreach (var subscriber in subscribers)
@@ -540,10 +544,10 @@ namespace Raven.Client.Document
             if (putDocumentsObserver != null)
                 putDocumentsObserver.Dispose();
 
-            if(endedBulkInsertsObserver != null)
+            if (endedBulkInsertsObserver != null)
                 endedBulkInsertsObserver.Dispose();
 
-            if(dataSubscriptionReleasedObserver != null)
+            if (dataSubscriptionReleasedObserver != null)
                 dataSubscriptionReleasedObserver.Dispose();
 
             cts.Cancel();
@@ -553,11 +557,11 @@ namespace Raven.Client.Document
 
             changes.ConnectionStatusChanged -= ChangesApiConnectionChanged;
 
-            foreach (var task in new []{pullingTask, startPullingTask})
+            foreach (var task in new[] { pullingTask, startPullingTask })
             {
-                if (task == null) 
+                if (task == null)
                     continue;
-                
+
                 switch (task.Status)
                 {
                     case TaskStatus.RanToCompletion:

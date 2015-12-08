@@ -18,6 +18,7 @@ namespace Raven.Abstractions.Connection
     /// </summary>
     public static class WebResponseExtensions
     {
+#if !DNXCORE50
         /// <summary>
         /// Gets the response stream with HTTP decompression.
         /// </summary>
@@ -36,6 +37,7 @@ namespace Raven.Abstractions.Connection
                 stream = new DeflateStream(stream, CompressionMode.Decompress);
             return stream;
         }
+#endif
 
         /// <summary>
         /// Gets the response stream with HTTP decompression.
@@ -43,9 +45,11 @@ namespace Raven.Abstractions.Connection
         /// <param name="response">The response.</param>
         /// <returns></returns>
         public static async Task<Stream> GetResponseStreamWithHttpDecompression(this HttpResponseMessage response)
-        {			
+        {
             var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+#if !DNXCORE50
             stream = new BufferedStream(stream);
+#endif
 
             var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault();
             if (encoding != null && encoding.Contains("gzip"))

@@ -239,8 +239,7 @@ namespace Raven.Database.FileSystem.Search
                         {
                             foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
                             {
-                                if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
-                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata, file.Etag, recreateSearcher: false);
+                                Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata, file.Etag, recreateSearcher: false);
                             }
                         });
 

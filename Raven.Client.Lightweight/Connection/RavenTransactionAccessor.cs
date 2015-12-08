@@ -1,3 +1,4 @@
+#if !DNXCORE50
 //-----------------------------------------------------------------------
 // <copyright file="RavenTransactionAccessor.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -6,7 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.Transactions;
+
 using Raven.Abstractions.Extensions;
+
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Client.Connection
@@ -85,3 +88,4 @@ namespace Raven.Client.Connection
         }
     }
 }
+#endif

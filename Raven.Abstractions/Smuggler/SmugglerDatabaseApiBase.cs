@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -1452,3 +1453,4 @@ namespace Raven.Abstractions.Smuggler
         public bool IsIdentitiesSmugglingSupported { get; private set; }
     }
 }
+#endif

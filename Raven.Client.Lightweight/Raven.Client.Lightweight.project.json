@@ -1,0 +1,18 @@
+﻿{
+  "frameworks": {
+    "net45": {
+      "dependencies": {
+        "Rx-Core": "2.2.5",
+        "Rx-Interfaces": "2.2.5"
+      },
+      "frameworkAssemblies": {
+        "System.Transactions": "4.0.0.0",
+        "Microsoft.VisualBasic": "10.0.0.0"
+      }
+    }
+  },
+  "runtimes": {
+    "win": {
+    }
+  }
+}

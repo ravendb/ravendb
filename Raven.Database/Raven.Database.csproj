@@ -271,6 +271,7 @@
     <Compile Include="FileSystem\Plugins\AbstractFileMetadataUpdateTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\Builtins\HideDownloadingFileTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="FileSystem\Smuggler\SmugglerEmbeddedFilesOperations.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From04To05.cs" />
@@ -1247,7 +1248,6 @@
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="BeforeBuild">
   </Target>
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>
