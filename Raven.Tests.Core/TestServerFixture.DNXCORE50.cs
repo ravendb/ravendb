@@ -91,7 +91,13 @@ namespace Raven.Tests.Core
             if (File.Exists(path) == false)
                 throw new InvalidOperationException(string.Format("Could not locate 'Raven.Tests.Server.Runner' in '{0}'.", path));
 
-            process = Process.Start(path);
+            var startInfo = new ProcessStartInfo(path)
+            {
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
+
+            process = Process.Start(startInfo);
         }
 
         public void Dispose()
