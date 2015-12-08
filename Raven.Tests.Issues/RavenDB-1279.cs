@@ -1,10 +1,8 @@
 // -----------------------------------------------------------------------
-//  <copyright file="RaveDB-1279.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RavenDB-1279.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Linq;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -12,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RaveDB_1279 : RavenTest
+    public class RavenDB_1279 : RavenTest
     {
         public class Order
         {

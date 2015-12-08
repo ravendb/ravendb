@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -11,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RaqvenDB_3222 : RavenTest
+    public class RavenDB_3222 : RavenTest
     {
         public class MySpatialEntity
         {
