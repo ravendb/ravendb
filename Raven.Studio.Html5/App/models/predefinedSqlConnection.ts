@@ -35,9 +35,9 @@ class predefinedSqlConnection {
         }
     }
 
-    testConnection(db: database) {
+    testConnection(dbObservable: KnockoutObservable<database>) {
         this.connectionTestState(this.CONNECTION_STATE_CONNECTING);
-        new testSqlConnectionCommand(db, this.factoryName(), this.connectionString())
+        new testSqlConnectionCommand(dbObservable(), this.factoryName(), this.connectionString())
             .execute()
             .done(() => {
                 this.connectionTestState(this.CONNECTION_STATE_CONNECTED);
