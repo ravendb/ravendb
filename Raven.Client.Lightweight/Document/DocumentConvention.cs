@@ -598,12 +598,12 @@ namespace Raven.Client.Document
 
             CustomizeJsonSerializer(jsonSerializer);
             if (jsonSerializer.Converters.IsFrozen)  // if the user froze the collection, we don't need to do anything
-            return jsonSerializer;
+                return jsonSerializer;
             var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             if (jsonSerializer.Converters.Count == 0)
             {
                 jsonSerializer.Converters = convertersToUse;
-        }
+            }
             else
             {
                 for (int i = convertersToUse.Count - 1; i >= 0; i--)
@@ -810,7 +810,7 @@ namespace Raven.Client.Document
             {
                 var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
                 identityProperty = propertyInfo ?? identityProperty;
-            }
+    }
 
             idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
             {

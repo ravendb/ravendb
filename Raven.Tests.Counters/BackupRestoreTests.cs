@@ -44,7 +44,7 @@ namespace Raven.Tests.Counters
                     Port = 8090,
                     AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 },
-                Encryption = { UseFips = SettingsHelper.UseFipsEncryptionAlgorithms },
+                Encryption = { UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms },
             };
 
             config.Counter.DataDirectory = BackupSourceDirectory;

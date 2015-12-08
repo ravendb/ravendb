@@ -75,7 +75,7 @@ namespace Raven.Database.FileSystem.Smuggler
 
             filesystem.Storage.Batch(accessor =>
             {
-                enumerable = accessor.GetFilesAfter(lastEtag, take);
+                enumerable = accessor.GetFilesAfter(lastEtag, take).ToList();
             });
 
             return new CompletedTask<IAsyncEnumerator<FileHeader>>(new AsyncEnumeratorBridge<FileHeader>(enumerable.GetEnumerator()));

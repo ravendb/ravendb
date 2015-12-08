@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -125,6 +125,7 @@
   <ItemGroup>
     <Compile Include="Auth\ClientOAuthAuthentication.cs" />
     <Compile Include="Auth\ClientWindowsAuth.cs" />
+    <Compile Include="Auth\ClientWindowsAuth2.cs" />
     <Compile Include="Auth\ClientWithoutAuthenticationSetup.cs" />
     <Compile Include="Auth\SynchronizationWithOAuth.cs" />
     <Compile Include="Auth\SynchronizationWithWindowsAuth.cs" />
@@ -162,6 +163,9 @@
     <Compile Include="Issues\RavenDB_3887.cs" />
     <Compile Include="Issues\RavenDB_3920.cs" />
     <Compile Include="Issues\RavenDB_3955.cs" />
+    <Compile Include="Issues\RavenDB_4059.cs" />
+    <Compile Include="Issues\RavenDB_4069.cs" />
+    <Compile Include="Issues\RavenDB_4092.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />
     <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />

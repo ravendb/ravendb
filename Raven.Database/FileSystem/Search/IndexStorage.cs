@@ -238,8 +238,7 @@ namespace Raven.Database.FileSystem.Search
                         {
                             foreach (var file in accessor.GetFilesAfter(Etag.Empty, int.MaxValue))
                             {
-                                if (!file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
-                                    Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata, file.Etag);
+                                Index(indexWriter, FileHeader.Canonize(file.FullPath), file.Metadata, file.Etag, recreateSearcher: false);
                             }
                         });
 
@@ -421,7 +420,7 @@ namespace Raven.Database.FileSystem.Search
             return topDocs;
         }
 
-        private void Index(IndexWriter writer, string key, RavenJObject metadata, Etag etag)
+        private void Index(IndexWriter writer, string key, RavenJObject metadata, Etag etag, bool recreateSearcher)
         {
             if (filesystem.ReadTriggers.CanReadFile(key, metadata, ReadOperation.Index) == false)
                 return;
@@ -468,7 +467,9 @@ namespace Raven.Database.FileSystem.Search
 
                 var customCommitData = new Dictionary<string, string> { { "LastETag", etag.ToString() } };
                 writer.Commit(customCommitData);
-                ReplaceSearcher(writer);
+
+                if (recreateSearcher)
+                    ReplaceSearcher(writer);
             }
         }
 
@@ -495,11 +496,9 @@ namespace Raven.Database.FileSystem.Search
 
         public virtual void Index(string key, RavenJObject metadata, Etag etag)
         {
-            Index(writer, key, metadata, etag);
+            Index(writer, key, metadata, etag, recreateSearcher: true);
         }
-
-
-
+        
         private static Document CreateDocument(string lowerKey, RavenJObject metadata)
         {
             var doc = new Document();

@@ -35,6 +35,8 @@ namespace Raven.Abstractions.FileSystem
 
         public string ApiKey { get; set; }
 
+        public string AuthenticationScheme { get; set; }
+
         public bool Enabled { get; set; }
 
         public SynchronizationDestination ()
