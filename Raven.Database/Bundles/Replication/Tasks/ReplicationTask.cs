@@ -95,14 +95,29 @@ namespace Raven.Bundles.Replication.Tasks
         public void Execute(DocumentDatabase database)
         {
             docDb = database;
-
-            var replicationRequestTimeoutInMs = (int)docDb.Configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
+            docDb.Notifications.OnIndexChange += (_, indexChangeNotification) =>
+            {
+                if (indexChangeNotification.Type == IndexChangeTypes.MapCompleted ||
+                    indexChangeNotification.Type == IndexChangeTypes.ReduceCompleted ||
+                    indexChangeNotification.Type == IndexChangeTypes.RemoveFromIndex
+                    )
+                    return;
+                docDb.WorkContext.ReplicationResetEvent.Set();
+            };
+            docDb.Notifications.OnTransformerChange += (_, __) => { docDb.WorkContext.ReplicationResetEvent.Set(); };
+            docDb.Notifications.OnDocumentChange += (_, dcn, ___) =>
+            {
+                if (dcn.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // ignore sys docs
+                                                                                       // but we do update for replication destination
+                    string.Equals(dcn.Id, Constants.RavenReplicationDestinations, StringComparison.OrdinalIgnoreCase) == false &&
+                    dcn.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilo documents
+                    return;
+                docDb.WorkContext.ReplicationResetEvent.Set();
+            };
+            var replicationRequestTimeoutInMs = (int) docDb.Configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
 
             autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext, PrefetchingUser.Replicator);
-            httpRavenRequestFactory = new HttpRavenRequestFactory
-            {
-                RequestTimeoutInMs = replicationRequestTimeoutInMs
-            };
+            httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
             var disposableAction = new DisposableAction(task.Wait);
