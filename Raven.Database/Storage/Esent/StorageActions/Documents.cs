@@ -93,7 +93,11 @@ namespace Raven.Storage.Esent.StorageActions
 			if (existingCachedDocument != null)
 				return existingCachedDocument.Document;
 
-
+		    Stopwatch sp = null;
+		    if (logger.IsDebugEnabled)
+		    {
+                sp = Stopwatch.StartNew();
+            }
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
 				var size = stream.Length;
@@ -103,9 +107,15 @@ namespace Raven.Storage.Esent.StorageActions
 
 					cacher.SetCachedDocument(key, existingEtag, data, metadata, (int)size);
 
-					return data;
+                    if (logger.IsDebugEnabled && sp != null)
+                    {
+                        logger.Debug("Loading document {0} from disk took {1:#,#;;0} ms", key, sp.ElapsedMilliseconds);
+                    }
+
+                    return data;
 				}
 			}
+		  
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)

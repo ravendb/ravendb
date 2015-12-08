@@ -1,9 +1,10 @@
 //-----------------------------------------------------------------------
-// <copyright file="VirtualDeleteTrigger.cs" company="Hibernating Rhinos LTD">
+// <copyright file="VirtualDeleteAndRemoveConflictsTrigger.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
+using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -24,7 +25,7 @@ namespace Raven.Bundles.Replication.Triggers
 	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
 	[InheritedExport(typeof(AbstractDeleteTrigger))]
-	public class VirtualDeleteTrigger : AbstractDeleteTrigger
+	public class VirtualDeleteAndRemoveConflictsTrigger : AbstractDeleteTrigger
 	{
 		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
 
@@ -43,14 +44,16 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Get(key, transactionInformation);
+				var document = Database.GetDocumentMetadata(key, transactionInformation);
 
 				if (document == null)
 					return;
 
-				if (document.IsConflictDocument() == false && HasConflict(document))
+                JsonDocument docWithBody;
+				if (IsConflictDocument(document, transactionInformation, out docWithBody))
 				{
-					HandleConflictedDocument(document, transactionInformation);
+
+					HandleConflictedDocument(docWithBody, transactionInformation);
 					return;
 				}
 
@@ -58,7 +61,27 @@ namespace Raven.Bundles.Replication.Triggers
 			}
 		}
 
-		public override void AfterDelete(string key, TransactionInformation transactionInformation)
+
+        private bool IsConflictDocument(JsonDocumentMetadata document, TransactionInformation transactionInformation, out JsonDocument docWithBody)
+        {
+            docWithBody = null;
+            var conflict = document.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
+            if (conflict == null || conflict.Value<bool>() == false)
+            {
+                return false;
+            }
+
+            docWithBody = Database.Get(document.Key, transactionInformation);
+
+            var conflicts = docWithBody.DataAsJson.Value<RavenJArray>("Conflicts");
+            if (conflicts != null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+        public override void AfterDelete(string key, TransactionInformation transactionInformation)
 		{
 			var metadata = new RavenJObject
 			{
@@ -80,8 +103,10 @@ namespace Raven.Bundles.Replication.Triggers
 
 			foreach (var c in conflicts)
 			{
-				var conflict = Database.Get(c.Value<string>(), transactionInformation);
-				var conflictSource = conflict.Metadata.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
+                RavenJObject conflict;
+                Database.Delete(c.Value<string>(), null, transactionInformation, out conflict);
+
+				var conflictSource = conflict.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
 				if (conflictSource != currentSource)
 					continue;
@@ -90,8 +115,8 @@ namespace Raven.Bundles.Replication.Triggers
 				{
 					new RavenJObject
 					{
-						{ Constants.RavenReplicationVersion, conflict.Metadata[Constants.RavenReplicationVersion] },
-						{ Constants.RavenReplicationSource, conflict.Metadata[Constants.RavenReplicationSource] }
+						{ Constants.RavenReplicationVersion, conflict[Constants.RavenReplicationVersion] },
+						{ Constants.RavenReplicationSource, conflict[Constants.RavenReplicationSource] }
 					}
 				};
 
@@ -99,7 +124,7 @@ namespace Raven.Bundles.Replication.Triggers
 			}
 		}
 
-		private void HandleDocument(JsonDocument document)
+		private void HandleDocument(JsonDocumentMetadata document)
 		{
 			deletedHistory.Value = new RavenJArray(ReplicationData.GetHistory(document.Metadata))
 			{
@@ -111,11 +136,5 @@ namespace Raven.Bundles.Replication.Triggers
 			};
 		}
 
-		private bool HasConflict(JsonDocument document)
-		{
-			var conflict = document.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
-
-			return conflict != null && conflict.Value<bool>() && document.DataAsJson.Value<RavenJArray>("Conflicts") != null;
-		}
 	}
 }
