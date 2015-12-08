@@ -95,7 +95,25 @@ namespace Raven.Bundles.Replication.Tasks
         public void Execute(DocumentDatabase database)
         {
             docDb = database;
-
+            docDb.Notifications.OnIndexChange += (_, indexChangeNotification) =>
+            {
+                if (indexChangeNotification.Type == IndexChangeTypes.MapCompleted ||
+                    indexChangeNotification.Type == IndexChangeTypes.ReduceCompleted ||
+                    indexChangeNotification.Type == IndexChangeTypes.RemoveFromIndex
+                    )
+                    return;
+                docDb.WorkContext.ReplicationResetEvent.Set();
+            };
+            docDb.Notifications.OnTransformerChange += (_, __) => { docDb.WorkContext.ReplicationResetEvent.Set(); };
+            docDb.Notifications.OnDocumentChange += (_, dcn, ___) =>
+            {
+                if (dcn.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) && // ignore sys docs
+                                                                                       // but we do update for replication destination
+                    string.Equals(dcn.Id, Constants.RavenReplicationDestinations, StringComparison.OrdinalIgnoreCase) == false &&
+                    dcn.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilo documents
+                    return;
+                docDb.WorkContext.ReplicationResetEvent.Set();
+            };
             var replicationRequestTimeoutInMs = (int) docDb.Configuration.Replication.ReplicationRequestTimeout.AsTimeSpan.TotalMilliseconds;
 
             autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext, PrefetchingUser.Replicator);
@@ -167,8 +185,6 @@ namespace Raven.Bundles.Replication.Tasks
                 if (log.IsDebugEnabled)
                     log.Debug("Replication task started.");
 
-                var name = GetType().Name;
-
                 var timeToWait = TimeSpan.FromMinutes(5);
                 bool runningBecauseOfDataModifications = false;
                 var context = docDb.WorkContext;
@@ -191,7 +207,9 @@ namespace Raven.Bundles.Replication.Tasks
                         }
                     }
 
-                    runningBecauseOfDataModifications = context.WaitForWork(timeToWait, ref workCounter, name);
+                    runningBecauseOfDataModifications = docDb.WorkContext.ReplicationResetEvent.Wait(timeToWait);
+                    if (runningBecauseOfDataModifications)
+                        docDb.WorkContext.ReplicationResetEvent.Reset();
 
                     timeToWait = runningBecauseOfDataModifications
                         ? TimeSpan.FromSeconds(30)

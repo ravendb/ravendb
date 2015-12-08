@@ -288,8 +288,9 @@ namespace Raven.Database.Indexing
             {
                 Monitor.PulseAll(waitForWork);
             }
+            ReplicationResetEvent.Set();
         }
-
+        public ManualResetEventSlim ReplicationResetEvent = new ManualResetEventSlim(false);
         public void AddError(int index, string indexName, string key, Exception exception)
         {
             AddError(index, indexName, key, exception, "Unknown");
@@ -365,6 +366,7 @@ namespace Raven.Database.Indexing
 
             MetricsCounters.Dispose();
             cancellationTokenSource.Dispose();
+            ReplicationResetEvent.Dispose();
         }
 
         public void ClearErrorsFor(string indexName)

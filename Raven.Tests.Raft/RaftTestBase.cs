@@ -91,7 +91,7 @@ namespace Raven.Tests.Raft
 
             leader.Options.ClusterManager.Value.InitializeTopology();
 
-            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
+            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(), "Leader was not elected by himself in time");
 
             leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
             {
@@ -112,14 +112,14 @@ namespace Raven.Tests.Raft
                                                                         {
                                                                             Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
                                                                             Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
-                                                                        }).Wait(3000));
+                                                                        }).Wait(3000),"Failed to add node to cluster");
             }
 
             if (numberOfNodes == 1)
                 allNodesFinishedJoining.Set();
 
             Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes), "Not all nodes become voters. " + leader.Options.ClusterManager.Value.Engine.CurrentTopology);
-            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
+            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(), "Wait for leader timedout");
 
             WaitForClusterToBecomeNonStale(nodes);
 
@@ -158,7 +158,7 @@ namespace Raven.Tests.Raft
                     Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
                     Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
                 }).Wait(10000));
-                Assert.True(allNodesFinishedJoining.Wait(10000));
+                Assert.True(allNodesFinishedJoining.Wait(10000), "Not all nodes finished joining");
                 allNodesFinishedJoining.Reset();
             }
 
@@ -197,7 +197,7 @@ namespace Raven.Tests.Raft
             {
                 var topology = server.Options.ClusterManager.Value.Engine.CurrentTopology;
                 return topology.AllVotingNodes.Count() == numberOfNodes;
-            }, TimeSpan.FromSeconds(15))));
+            }, TimeSpan.FromSeconds(15)), $"Node didn't become unstale in time, {server}"));
         }
 
         protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true)
