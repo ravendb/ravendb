@@ -9,11 +9,15 @@ namespace Raven.Client.Connection
 {
     public static class ReplicationInformerLocalCache
     {
+#if !DNXCORE50
         private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
+#endif
 
         public static IsolatedStorageFile GetIsolatedStorageFileForReplicationInformation()
         {
-#if MONO
+#if MONO || DNXCORE50
             return IsolatedStorageFile.GetUserStoreForApplication();
 #else
             return IsolatedStorageFile.GetMachineStoreForDomain();
@@ -22,6 +26,7 @@ namespace Raven.Client.Connection
 
         public static void ClearReplicationInformationFromLocalCache(string serverHash)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
@@ -38,10 +43,12 @@ namespace Raven.Client.Connection
             {
                 log.ErrorException("Could not clear the persisted replication information", e);
             }
+#endif
         }
 
         public static JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
@@ -62,10 +69,14 @@ namespace Raven.Client.Connection
                 log.ErrorException("Could not understand the persisted replication information", e);
                 return null;
             }
+#else
+            return null;
+#endif
         }
 
         public static void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
@@ -81,6 +92,7 @@ namespace Raven.Client.Connection
             {
                 log.ErrorException("Could not persist the replication information", e);
             }
+#endif
         }
     }
 }

@@ -1,4 +1,4 @@
-using System.Linq;
+Ôªøusing System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Indexing;
@@ -23,10 +23,10 @@ namespace Raven.Tests.MailingList
 
             using (IDocumentSession session = documentStore.OpenSession())
             {
-                session.Store(new Customer() { Name = "RogÈrio" });
+                session.Store(new Customer() { Name = "Rog√©rio" });
                 session.Store(new Customer() { Name = "Rogerio" });
                 session.Store(new Customer() { Name = "Paulo Rogerio" });
-                session.Store(new Customer() { Name = "Paulo RogÈrio" });
+                session.Store(new Customer() { Name = "Paulo Rog√©rio" });
                 session.SaveChanges();
             }
         }
@@ -37,10 +37,10 @@ namespace Raven.Tests.MailingList
             using (IDocumentSession session = documentStore.OpenSession())
             {
                 // Test 1
-                // Using "== RogÈrio" works fine
+                // Using "== Rog√©rio" works fine
                 var results1 = session.Query<Customer, CustomerByName>()
                     .Customize(x => x.WaitForNonStaleResults())
-                    .Where(x => x.Name == "RogÈrio");
+                    .Where(x => x.Name == "Rog√©rio");
 
                 Assert.Equal(results1.Count<Customer>(), 4);
             }
@@ -54,10 +54,10 @@ namespace Raven.Tests.MailingList
 
                 WaitForUserToContinueTheTest(documentStore);
                 // Test 2
-                // Using ".StartsWith("RogÈrio")" is expected to bring same result from test1, but fails
+                // Using ".StartsWith("Rog√©rio")" is expected to bring same result from test1, but fails
                 var results2 = session.Query<Customer, CustomerByName>()
                     .Customize(x => x.WaitForNonStaleResults())
-                    .Where(x => x.Name.StartsWith("RogÈrio"));
+                    .Where(x => x.Name.StartsWith("Rog√©rio"));
 
                 Assert.Equal(results2.Count<Customer>(), 4);
             }

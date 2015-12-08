@@ -17,6 +17,11 @@ namespace Raven.Client.FileSystem.Extensions
                 ServerUrl = selfImpl.ServerUrl,               
             };
 
+            if (selfImpl.Conventions != null)
+            {
+                result.AuthenticationScheme = self.Conventions.AuthenticationScheme;
+            }
+
             if (self.PrimaryCredentials != null)
             {                
                 var networkCredential = self.PrimaryCredentials.Credentials as NetworkCredential;

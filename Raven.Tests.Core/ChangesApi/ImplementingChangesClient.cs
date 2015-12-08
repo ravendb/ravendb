@@ -17,6 +17,14 @@ namespace Raven.Tests.Core.ChangesApi
 {
     public class ImplementingChangesClient : RavenCoreTestBase
     {
+#if DNXCORE50
+        public ImplementingChangesClient(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         private interface IUntypedConnectable : IConnectableChanges
         { }
 

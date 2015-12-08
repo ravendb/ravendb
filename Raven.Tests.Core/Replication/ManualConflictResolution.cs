@@ -12,6 +12,14 @@ namespace Raven.Tests.Core.Replication
 {
     public class ManualConflictResolution : RavenReplicationCoreTest
     {
+#if DNXCORE50
+        public ManualConflictResolution(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanManuallyResolveConflict()
         {

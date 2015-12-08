@@ -7,15 +7,21 @@ namespace Raven.Abstractions.FileSystem
     [Serializable]
     public class SynchronizationException : Exception
     {
+        public SynchronizationException()
+        {
+        }
+
         public SynchronizationException(string message)
             : base(message)
-        {}
+        { }
 
         public SynchronizationException(string message, Exception inner)
             : base(message, inner)
-        {}
+        { }
 
-        protected SynchronizationException( SerializationInfo info, StreamingContext context) : base(info, context)
-        {}
+#if !DNXCORE50
+        protected SynchronizationException(SerializationInfo info, StreamingContext context) : base(info, context)
+        { }
+#endif
     }
 }

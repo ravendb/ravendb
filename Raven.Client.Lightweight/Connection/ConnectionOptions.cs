@@ -13,9 +13,14 @@ namespace Raven.Client.Connection
     {
         public static IDisposable Expect100Continue(Uri uri)
         {
+#if !DNXCORE50
             var servicePoint = ServicePointManager.FindServicePoint(uri);
             servicePoint.Expect100Continue = true;
             return new DisposableAction(() => servicePoint.Expect100Continue = false);
+#else
+            // TODO [ppekrol] How to do it now?
+            return new DisposableAction(() => { });
+#endif
         }
 
         public static IDisposable Expect100Continue(string url)

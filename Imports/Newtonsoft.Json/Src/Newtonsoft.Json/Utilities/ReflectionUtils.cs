@@ -54,7 +54,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     }
 #endif
 
-#if NETFX_CORE || PORTABLE
+#if (NETFX_CORE || PORTABLE) && !DNXCORE50
     [Flags]
     internal enum BindingFlags
     {
@@ -378,7 +378,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
             {
                 return null;
             }
-            
+
             throw new Exception("Type {0} is not a collection.".FormatWith(CultureInfo.InvariantCulture, type));
         }
 

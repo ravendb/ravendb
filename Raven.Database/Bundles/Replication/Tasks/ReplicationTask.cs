@@ -112,7 +112,10 @@ namespace Raven.Bundles.Replication.Tasks
             var replicationRequestTimeoutInMs = docDb.Configuration.Replication.ReplicationRequestTimeoutInMilliseconds;
 
             autoTuner = new IndependentBatchSizeAutoTuner(docDb.WorkContext, PrefetchingUser.Replicator);
-            httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
+            httpRavenRequestFactory = new HttpRavenRequestFactory
+            {
+                RequestTimeoutInMs = replicationRequestTimeoutInMs
+            };
 
             var task = new Task(Execute, TaskCreationOptions.LongRunning);
             var disposableAction = new DisposableAction(task.Wait);
@@ -1757,6 +1760,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 Url = url,
                 ApiKey = x.ApiKey,
+                AuthenticationScheme = x.AuthenticationScheme
             };
             if (string.IsNullOrEmpty(x.Username) == false)
             {
