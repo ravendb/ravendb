@@ -42,6 +42,8 @@ namespace Raven.Database.FileSystem.Synchronization
         private int failedAttemptsToGetDestinationsConfig;
         private long workCounter;
 
+        private Task task;
+
         public SynchronizationTask(ITransactionalStorage storage, SigGenerator sigGenerator, NotificationPublisher publisher, RavenConfiguration systemConfiguration)
         {
             this.storage = storage;
@@ -192,7 +194,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
         public void Start()
         {
-            var task = new Task(() =>
+            task = new Task(() =>
             {
                 Log.Debug("Starting the synchronization task");
 
@@ -392,6 +394,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
             foreach (var fileHeader in filteredFilesToSynchronization)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 var file = fileHeader.FullPath;
                 var localMetadata = GetLocalMetadata(file);
 
@@ -454,6 +458,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
             while (AvailableSynchronizationRequestsTo(destinationUrl) > 0)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 SynchronizationWorkItem work;
                 if (synchronizationQueue.TryDequePending(destinationUrl, out work) == false)
                     break;
@@ -772,6 +778,20 @@ namespace Raven.Database.FileSystem.Synchronization
 
         public void Dispose()
         {
+            context.StopWork();
+
+            try
+            {
+                task.Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (AggregateException aggregate)
+            {
+                if (aggregate.InnerException is TaskCanceledException == false)
+                {
+                    Log.Warn("Synchronization task stopped with the following exception", aggregate.InnerException);
+                }
+            }
+
             context.Dispose();
         }
     }
