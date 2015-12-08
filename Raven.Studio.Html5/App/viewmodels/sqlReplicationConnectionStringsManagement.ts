@@ -35,11 +35,6 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
             });
     }
 
-
-    getActiveDatabase() {
-        return this.getActiveDatabase();
-    }
-
     canActivate() {
         var def = $.Deferred();
         this.loadConnections()
