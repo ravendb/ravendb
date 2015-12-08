@@ -154,7 +154,6 @@
       </Properties>
     </MonoDevelop>
   </ProjectExtensions>
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="AfterBuild">
   </Target>
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
