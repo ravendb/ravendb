@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Controllers
             {
                 return GetMessageWithObject(new
                 {
-                    Error = BundleName + " bundle not activated"
+                    Error = BundleName + " bundle not activated in database named: " + DatabaseName
                 }, HttpStatusCode.BadRequest);
             }
 
