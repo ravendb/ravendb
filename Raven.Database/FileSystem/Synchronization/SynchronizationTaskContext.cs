@@ -14,6 +14,8 @@ namespace Raven.Database.FileSystem.Synchronization
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
+        private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
         private volatile bool doWork = true;
         private readonly object waitForWork = new object();
         private long workCounter;
@@ -23,7 +25,15 @@ namespace Raven.Database.FileSystem.Synchronization
             LastSuccessfulSynchronizationTime = DateTime.MinValue;
         }
 
-        public bool DoWork { get { return doWork; } }
+        public bool DoWork
+        {
+            get { return doWork; }
+        }
+
+        public CancellationToken CancellationToken
+        {
+            get { return cancellationTokenSource.Token; }
+        }
 
         public DateTime LastSuccessfulSynchronizationTime { get; private set; }
 
@@ -79,13 +89,20 @@ namespace Raven.Database.FileSystem.Synchronization
             }
         }
 
-        public void Dispose()
+        public void StopWork()
         {
             doWork = false;
             lock (waitForWork)
             {
                 Monitor.PulseAll(waitForWork);
             }
+
+            cancellationTokenSource.Cancel();
+        }
+
+        public void Dispose()
+        {
+            cancellationTokenSource.Dispose();
         }
     }
 }

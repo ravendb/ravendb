@@ -1,0 +1,26 @@
+﻿{
+  "frameworks": {
+    "net45": {
+      "dependencies": {
+        "ICSharpCode.NRefactory": "5.3.0",
+        "Microsoft.Net.Http": "2.2.29"
+      },
+      "frameworkAssemblies": {
+        "System.ComponentModel.Composition": "4.0.0.0",
+        "System.Configuration": "4.0.0.0",
+        "System.Data": "4.0.0.0",
+        "System.Data.DataSetExtensions": "4.0.0.0",
+        "System.IO.Compression": "4.0.0.0",
+        "System.Numerics": "4.0.0.0",
+        "System.Runtime.Serialization": "4.0.0.0",
+        "System.ServiceModel": "4.0.0.0",
+        "System.Xml": "4.0.0.0",
+        "System.Xml.Linq": "4.0.0.0"
+      }
+    }
+  },
+  "runtimes": {
+    "win": {
+    }
+  }
+}

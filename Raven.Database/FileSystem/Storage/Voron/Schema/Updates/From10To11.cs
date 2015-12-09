@@ -36,6 +36,13 @@ namespace Raven.Database.FileSystem.Storage.Voron.Schema.Updates
                 value["etag"] = fileEtag.ToByteArray();
             });
 
+            Migrate(tableStorage.Environment, tableStorage.Files.GetIndexKey(Tables.Files.Indices.ByEtag), output, modifyIndexRecord: (key, reader) =>
+            {
+                var newKey = Etag.Parse(Guid.Parse(key.ToString()).ToByteArray()).ToString();
+
+                return new Tuple<Slice, Stream>(newKey,  reader.AsStream());
+            });
+
             Migrate(tableStorage.Environment, Tables.Config.TableName, output, (key, value) =>
             {
                 var actualKey = key.ToString();
@@ -64,7 +71,7 @@ namespace Raven.Database.FileSystem.Storage.Voron.Schema.Updates
         }
 
 
-        private static void Migrate(StorageEnvironment env, string tableName, Action<string> output, Action<Slice, RavenJObject> modifyRecord)
+        private static void Migrate(StorageEnvironment env, string tableName, Action<string> output, Action<Slice, RavenJObject> modifyTableRecord = null, Func<Slice, ValueReader, Tuple<Slice, Stream>> modifyIndexRecord = null)
         {
             long entriesCount;
 
@@ -120,23 +127,38 @@ namespace Raven.Database.FileSystem.Storage.Voron.Schema.Updates
                         if (itemsInBatch != 0 && itemsInBatch % 100 == 0)
                             break;
 
-                        using (var stream = iterator.CreateReaderForCurrent().AsStream())
+                        if (modifyTableRecord != null)
                         {
-                            var value = stream.ToJObject();
-
-                            modifyRecord(iterator.CurrentKey, value);
-
-                            using (var streamValue = new MemoryStream())
+                            using (var stream = iterator.CreateReaderForCurrent().AsStream())
                             {
-                                value.WriteTo(streamValue);
-                                streamValue.Position = 0;
+                                var value = stream.ToJObject();
 
-                                destTree.Add(iterator.CurrentKey, streamValue);
+                                modifyTableRecord(iterator.CurrentKey, value);
+
+                                using (var streamValue = new MemoryStream())
+                                {
+                                    value.WriteTo(streamValue);
+                                    streamValue.Position = 0;
+
+                                    destTree.Add(iterator.CurrentKey, streamValue);
+                                }
                             }
-
-                            migrated++;
-                            itemsInBatch++;
                         }
+                        else if (modifyIndexRecord != null)
+                        {
+                            var reader = iterator.CreateReaderForCurrent();
+
+                            var newValue = modifyIndexRecord(iterator.CurrentKey, reader);
+
+                            destTree.Add(newValue.Item1, newValue.Item2);
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("You need to specify either 'modifyTableRecord' or 'modifyIndexRecord' action");
+                        }
+
+                        migrated++;
+                        itemsInBatch++;
                     } while (iterator.MoveNext());
 
                     txw.Commit();

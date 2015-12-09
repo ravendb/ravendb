@@ -10,6 +10,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Linq
 {
@@ -168,7 +170,7 @@ namespace Raven.Client.Linq
                     return value;
 
                 var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
-                if (value is Enum || nonNullableType.IsEnum)
+                if (value is Enum || nonNullableType.IsEnum())
                 {
                     if (value == null)
                         return null;

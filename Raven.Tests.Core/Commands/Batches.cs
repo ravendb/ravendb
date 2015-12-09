@@ -7,8 +7,16 @@ using Xunit;
 
 namespace Raven.Tests.Core.Commands
 {
-    class Batches : RavenCoreTestBase
+    public class Batches : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Batches(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public async Task CanDoBatchOperations()
         {

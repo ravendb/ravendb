@@ -9,6 +9,14 @@ namespace Raven.Tests.Core.Querying
 {
     public class Intersection : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Intersection(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanPerformIntersectQuery()
         {
@@ -23,7 +31,7 @@ namespace Raven.Tests.Core.Querying
                         Id = "tshirts/1",
                         Manufacturer = "Raven",
                         ReleaseYear = 2010,
-                        Types = new List<TShirtType> 
+                        Types = new List<TShirtType>
                         {
                             new TShirtType {Color = "Blue", Size = "Small"},
                             new TShirtType {Color = "Black", Size = "Small"},
@@ -36,9 +44,9 @@ namespace Raven.Tests.Core.Querying
                         Id = "tshirts/2",
                         Manufacturer = "Wolf",
                         ReleaseYear = 2011,
-                        Types = new List<TShirtType> 
+                        Types = new List<TShirtType>
                         {
-                            new TShirtType { Color = "Blue",  Size = "Small" },                                   
+                            new TShirtType { Color = "Blue",  Size = "Small" },
                             new TShirtType { Color = "Black", Size = "Large" },
                             new TShirtType { Color = "Gray",  Size = "Large" }
                         }

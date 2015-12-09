@@ -14,6 +14,14 @@ namespace Raven.Tests.Core.Replication
 {
     public class AttachmentReplication : RavenReplicationCoreTest
     {
+#if DNXCORE50
+        public AttachmentReplication(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanReplicateAttachments()
         {
@@ -76,7 +84,7 @@ namespace Raven.Tests.Core.Replication
 
                 SetupReplication(source, destinations: destination);
 
-                source.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(new byte[]{}), new RavenJObject());
+                source.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(new byte[] { }), new RavenJObject());
 
                 var marker = WaitForAttachment(destination, "marker");
 
@@ -95,7 +103,7 @@ namespace Raven.Tests.Core.Replication
 
                 destination.DatabaseCommands.PutAttachment("attach/1", null, resolution.Data(), resolution.Metadata);
 
-                Assert.DoesNotThrow(() => destination.DatabaseCommands.GetAttachment("attach/1"));
+                destination.DatabaseCommands.GetAttachment("attach/1");
             }
         }
     }

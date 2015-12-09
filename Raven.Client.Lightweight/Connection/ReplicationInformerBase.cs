@@ -31,7 +31,11 @@ namespace Raven.Client.Connection
     /// </summary>
     public abstract class ReplicationInformerBase<TClient> : IReplicationInformerBase<TClient>
     {
-        protected readonly ILog Log = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        protected readonly ILog log = LogManager.GetCurrentClassLogger();
+#else
+        protected readonly ILog log = LogManager.GetLogger(typeof(ReplicationInformerBase<TClient>));
+#endif
 
         protected readonly QueryConvention Conventions;
 
@@ -133,7 +137,7 @@ namespace Raven.Client.Connection
                                     tcs.TrySetCanceled();
                                     break;
                                 case TaskStatus.Faulted:
-                                    if(task.Exception != null)
+                                    if (task.Exception != null)
                                         tcs.TrySetException(task.Exception);
                                     else
                                         goto default;
@@ -150,34 +154,34 @@ namespace Raven.Client.Connection
         }
 
         private async Task CheckIfServerIsUpNow(OperationMetadata operationMetadata, OperationMetadata primaryOperation, CancellationToken token)
-                {
+        {
             for (int i = 0; i < 5; i++)
+            {
+                token.ThrowCancellationIfNotDefault();
+                try
+                {
+                    var r = await TryOperationAsync<object>(async metadata =>
                     {
-                        token.ThrowCancellationIfNotDefault();
-                        try
-                        {
-                            var r = await TryOperationAsync<object>(async metadata =>
-                            {
                                 var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethods.Get, metadata.Credentials, Conventions);
-                                using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
-                                {
-                                    await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                                }
-                                return null;
-                            }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
-                            if (r.Success)
-                            {
-                                FailureCounters.ResetFailureCount(operationMetadata.Url);
-                                return;
-                            }
-                        }
-                        catch (ObjectDisposedException)
+                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
                         {
-                    return;
+                            await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                         }
-                        await Task.Delay(DelayTimeInMiliSec, token).ConfigureAwait(false);
+                        return null;
+                    }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
+                    if (r.Success)
+                    {
+                                FailureCounters.ResetFailureCount(operationMetadata.Url);
+                        return;
                     }
                 }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
+                await Task.Delay(DelayTimeInMiliSec, token).ConfigureAwait(false);
+            }
+        }
 
         protected abstract string GetServerCheckUrl(string baseUrl);
 
@@ -217,12 +221,12 @@ namespace Raven.Client.Connection
         }
 
         public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,
-            string primaryUrl, 
-            OperationCredentials primaryCredentials, 
+            string primaryUrl,
+            OperationCredentials primaryCredentials,
             RequestTimeMetric primaryRequestTimeMetric,
-            int currentRequest, 
-            int currentReadStripingBase, 
-            Func<OperationMetadata, Task<T>> operation, 
+            int currentRequest,
+            int currentReadStripingBase,
+            Func<OperationMetadata, Task<T>> operation,
             CancellationToken token = default(CancellationToken))
         {
             Debug.Assert(typeof(T).FullName.Contains("Task") == false);

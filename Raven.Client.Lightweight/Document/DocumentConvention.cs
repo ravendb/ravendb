@@ -26,6 +26,7 @@ using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -64,7 +65,9 @@ namespace Raven.Client.Document
                 new Int64Converter(),
             };
             PreserveDocumentPropertiesNotFoundOnModel = true;
+#if !DNXCORE50
             PrettifyGeneratedLinqExpressions = true;
+#endif
             DisableProfiling = true;
             EnlistInDistributedTransactions = true;
             UseParallelMultiGet = true;
@@ -265,7 +268,7 @@ namespace Raven.Client.Document
 
             if (t.Name.Contains("<>"))
                 return null;
-            if (t.IsGenericType)
+            if (t.IsGenericType())
             {
                 var name = t.GetGenericTypeDefinition().Name;
                 if (name.Contains('`'))
@@ -599,12 +602,12 @@ namespace Raven.Client.Document
 
             CustomizeJsonSerializer(jsonSerializer);
             if (jsonSerializer.Converters.IsFrozen)  // if the user froze the collection, we don't need to do anything
-            return jsonSerializer;
+                return jsonSerializer;
             var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             if (jsonSerializer.Converters.Count == 0)
             {
                 jsonSerializer.Converters = convertersToUse;
-        }
+            }
             else
             {
                 for (int i = convertersToUse.Count - 1; i >= 0; i--)
@@ -669,10 +672,12 @@ namespace Raven.Client.Document
         /// </summary>
         public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
+#if !DNXCORE50
         /// <summary>
         ///  Attempts to prettify the generated linq expressions for indexes and transformers
         /// </summary>
         public bool PrettifyGeneratedLinqExpressions { get; set; }
+#endif
 
         /// <summary>
         /// How index and transformer updates should be handled in replicated setup.
@@ -783,8 +788,8 @@ namespace Raven.Client.Document
             if (nonNullable != null)
                 type = nonNullable;
 
-            if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
-                type == typeof (decimal) || type == typeof (TimeSpan) || type == typeof(short))
+            if (type == typeof(int) || type == typeof(long) || type == typeof(double) || type == typeof(float) ||
+                type == typeof(decimal) || type == typeof(TimeSpan) || type == typeof(short))
                 return true;
 
             return customRangeTypes.Contains(type);
@@ -816,7 +821,7 @@ namespace Raven.Client.Document
             {
                 var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
                 identityProperty = propertyInfo ?? identityProperty;
-            }
+    }
 
             idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
             {

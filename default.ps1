@@ -22,6 +22,14 @@ properties {
     $global:configuration = "Release"
     $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
     $nowarn = "1591 1573 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
+
+    $dnxVersion = "1.0.0-rc1-update1"
+    $dnxArchitecture = "x64"
+    $dnxToolsDir = "$base_dir\Tools\DNX"
+    $dnvm = "$dnxToolsDir\dnvm.cmd"
+    $dnxRuntimeDir = "$env:USERPROFILE\.dnx\runtimes\dnx-coreclr-win-$dnxArchitecture.$dnxVersion\bin";
+    $dnu = "$dnxRuntimeDir\dnu.cmd"
+    $dnx = "$dnxRuntimeDir\dnx.exe"
 }
 
 task default -depends Test, DoReleasePart1
@@ -94,11 +102,36 @@ task CompileHtml5 {
     Set-Location $base_dir
 }
 
+task CompileDnx -depends Compile  {
+
+    &"$dnvm" install $dnxVersion -r coreclr -arch $dnxArchitecture
+
+    &"$dnvm" use -r coreclr -arch $dnxArchitecture $dnxVersion
+
+    &"$dnu" restore --quiet .
+    
+    &"$dnu" build --quiet --configuration "$global:configuration" --out "$build_dir\DNX\Raven.Client\" Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight
+    
+    &"$dnu" build --quiet --configuration "$global:configuration" --out "$build_dir\DNX\Raven.Client.Authorization" Bundles\Raven.Client.Authorization
+    
+    &"$dnu" build --quiet --configuration "$global:configuration" --out "$build_dir\DNX\Raven.Client.UniqueConstraints" Bundles\Raven.Client.UniqueConstraints
+}
+
+task TestDnx -depends CompileDnx {
+    Clear-Host
+
+    Push-Location "$base_dir\Raven.Tests.Core"
+    
+    &"$dnx" --configuration "$global:configuration" test
+
+    Pop-Location
+}
+
 task FullStorageTest {
     $global:full_storage_test = $true
 }
 
-task Test -depends Compile {
+task Test -depends TestDnx {
     Clear-Host
 
     $test_prjs = @( `
@@ -406,6 +439,7 @@ task ZipOutput {
 
 
 task DoReleasePart1 -depends Compile, `
+    CompileDnx, `
     CleanOutputDirectory, `
     CreateOutpuDirectories, `
     CopySmuggler, `
@@ -603,7 +637,7 @@ task PushNugetPackages {
     }
 }
 
-task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
+task CreateNugetPackages -depends Compile, CompileDnx, CompileHtml5, InitNuget {
 
     Remove-Item $base_dir\RavenDB*.nupkg
     
@@ -612,10 +646,22 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
     New-Item $nuget_dir -Type directory | Out-Null
     
     New-Item $nuget_dir\RavenDB.Client\lib\net45 -Type directory | Out-Null
-    Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
-    
     @("Raven.Client.Lightweight.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\net45 }
     
+    $nuspecPath = "$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec"
+    Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec "$nuspecPath"
+    
+    if ($global:uploadMode -eq "Unstable") 
+    {
+        [xml] $xmlNuspec = Get-Content("$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec")
+    
+        New-Item $nuget_dir\RavenDB.Client\lib\dnxcore50 -Type directory | Out-Null
+        @("Raven.Client.Lightweight.???", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DNX\Raven.Client\$global:configuration\dnxcore50\$_" $nuget_dir\RavenDB.Client\lib\dnxcore50 }
+        
+        $projects = "$base_dir\Raven.Sparrow\Sparrow", "$base_dir\Raven.Client.Lightweight", "$base_dir\Raven.Abstractions"
+        AddDependenciesToNuspec $projects "$nuspecPath" "dnxcore50"
+    }
+
     New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 -Type directory | Out-Null
     Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
     @("Raven.Client.MvcIntegration.???") |% { Copy-Item "$base_dir\Raven.Client.MvcIntegration\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 }
@@ -646,8 +692,19 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
     @("Authorization", "UniqueConstraints") | Foreach-Object { 
         $name = $_;
         New-Item $nuget_dir\RavenDB.Client.$name\lib\net45 -Type directory | Out-Null
-        Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec $nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec
         @("$base_dir\Bundles\Raven.Client.$_\bin\$global:configuration\Raven.Client.$_.???") |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\net45 }
+        
+        $nuspecPath = "$nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec"
+        Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec "$nuspecPath"
+        
+        if ($global:uploadMode -eq "Unstable") 
+        {
+            New-Item $nuget_dir\RavenDB.Client.$name\lib\dnxcore50 -Type directory | Out-Null
+            @("$build_dir\DNX\Raven.Client.$name\$global:configuration\dnxcore50\Raven.Client.$_.???") |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\dnxcore50 }
+            
+            $projects = "$base_dir\Bundles\Raven.Client.$name"
+            AddDependenciesToNuspec $projects "$nuspecPath" "dnxcore50"
+    }
     }
     
     New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 -Type directory | Out-Null
@@ -875,4 +932,43 @@ TaskTearDown {
         # throw "TaskTearDown detected an error. Build failed."
         exit 1
     }
+}
+
+function AddDependenciesToNuspec($projects, $nuspecPath, $framework)
+{
+    [xml] $xmlNuspec = Get-Content("$nuspecPath")
+    
+    $dnxDependencies = New-Object 'System.Collections.Generic.Dictionary[String,String]'
+
+    $xmlDependencies = $xmlNuspec.SelectSingleNode('//package/metadata/dependencies')
+    $xmlFrameworkDependency = $xmlNuspec.CreateElement("group")
+    $xmlFrameworkDependency.SetAttribute("targetFramework", $framework)
+    
+    $xmlDependencies.AppendChild($xmlFrameworkDependency)
+    
+    foreach ($project in $projects)
+    {
+        $projectJson = Get-Content "$project\project.json" | ConvertFrom-Json
+        $frameworks = $projectJson.frameworks
+        $dependencies = $frameworks."$framework".dependencies
+
+        foreach ($dependency in $dependencies.psobject.properties)
+        {
+            $dependencyName = $dependency.name;
+            $dependencyVersion = $dependency.value;
+
+            $dnxDependencies[$dependencyName] = $dependencyVersion
+        }
+    }
+
+    foreach ($dependency in $dnxDependencies.Keys)
+    {
+        $xmlDependency = $xmlNuspec.CreateElement("dependency")
+        $xmlDependency.SetAttribute("id", $dependency)
+        $xmlDependency.SetAttribute("version", $dnxDependencies[$dependency])
+
+        $xmlFrameworkDependency.AppendChild($xmlDependency)
+    }
+    
+    $xmlNuspec.Save("$nuspecPath")
 }

@@ -5,7 +5,10 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using System.Threading;
+#if !DNXCORE50
 using System.Transactions;
+#endif
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;
@@ -67,8 +70,10 @@ namespace Raven.Client.Document
 
         private RangeValue GetNextRange(IDatabaseCommands databaseCommands)
         {
+#if !DNXCORE50
             using (new TransactionScope(TransactionScopeOption.Suppress))
             using (RavenTransactionAccessor.SupressExplicitRavenTransaction())
+#endif
             using (databaseCommands.ForceReadFromMaster())
             {
                 ModifyCapacityIfRequired();

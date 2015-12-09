@@ -14,6 +14,14 @@ namespace Raven.Tests.Core.Replication
 {
     public class DocumentReplication : RavenReplicationCoreTest
     {
+#if DNXCORE50
+        public DocumentReplication(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public async Task CanReplicateDocument()
         {
@@ -100,7 +108,7 @@ namespace Raven.Tests.Core.Replication
 
                 destination.DatabaseCommands.Put("docs/1", null, resolution.DataAsJson, resolution.Metadata);
 
-                Assert.DoesNotThrow(() => destination.DatabaseCommands.GetAttachment("docs/1"));
+                destination.DatabaseCommands.GetAttachment("docs/1");
             }
         }
     }

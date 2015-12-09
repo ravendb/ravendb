@@ -18,7 +18,11 @@ namespace Raven.Client.FileSystem.Changes
 
     public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState, FilesConvention>, IFilesChanges
     {
-        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog Logger = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog Logger = LogManager.GetLogger(typeof(FilesChangesClient));
+#endif
 
         private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -89,7 +93,7 @@ namespace Raven.Client.FileSystem.Changes
 
             var taskedObservable = new TaskedObservable<FileChangeNotification, FilesConnectionState>(
                 counter,
-                notification => notification.File.StartsWith(folder, StringComparison.InvariantCultureIgnoreCase));
+                notification => notification.File.StartsWith(folder, StringComparison.OrdinalIgnoreCase));
 
             counter.OnFileChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -223,5 +227,5 @@ namespace Raven.Client.FileSystem.Changes
                     counter.Value.Send(conflictNotification);
             }
         }
+        }
     }
-}

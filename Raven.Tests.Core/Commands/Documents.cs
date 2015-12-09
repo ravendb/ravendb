@@ -19,11 +19,19 @@ namespace Raven.Tests.Core.Commands
 {
     public class Documents : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Documents(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanCancelPutDocument()
         {
             var random = new Random();
-            var largeArray = new byte[1024*1024*2]; 
+            var largeArray = new byte[1024 * 1024 * 2];
             //2mb - document large enough for PUT to take a while, so
             //we will be able to cancel the operation BEFORE the PUT completes
             random.NextBytes(largeArray);
@@ -34,11 +42,11 @@ namespace Raven.Tests.Core.Commands
             {
                 var ravenJObject = RavenJObject.FromObject(largeDocument);
                 cts.Cancel();
-                var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);								
+                var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);
                 Assert.True(putTask.IsCanceled);
             }
         }
-        
+
         [Fact]
         public async Task CanPutGetUpdateAndDeleteDocument()
         {
@@ -55,7 +63,7 @@ namespace Raven.Tests.Core.Commands
                         Address1 = "To be removed.",
                         Address2 = "Address2"
                     }),
-                    RavenJObject.FromObject(new 
+                    RavenJObject.FromObject(new
                     {
                         SomeMetadataKey = "SomeMetadataValue"
                     }));
@@ -99,9 +107,9 @@ namespace Raven.Tests.Core.Commands
                 }), new RavenJObject());
                 WaitForIndexing(store);
 
-                store.DatabaseCommands.UpdateByIndex("MyIndex", new IndexQuery { Query = "" }, new[] 
+                store.DatabaseCommands.UpdateByIndex("MyIndex", new IndexQuery { Query = "" }, new[]
                 {
-                    new PatchRequest 
+                    new PatchRequest
                     {
                         Type = PatchCommandType.Set,
                         Name = "NewName",

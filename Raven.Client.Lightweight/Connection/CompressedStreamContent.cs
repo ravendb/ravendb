@@ -34,14 +34,20 @@ namespace Raven.Client.Connection
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             using (var uncloseableStream = new UndisposableStream(stream))
+#if !DNXCORE50
             using (var bufferedStream = new BufferedStream(uncloseableStream))
+#endif
             {
+#if !DNXCORE50
                 Stream innerStream = bufferedStream;
+#else
+                Stream innerStream = uncloseableStream;
+#endif
                 try
                 {
 
                     if (disableRequestCompression == false)
-                        innerStream = new GZipStream(innerStream, CompressionMode.Compress, leaveOpen: true);                
+                        innerStream = new GZipStream(innerStream, CompressionMode.Compress, leaveOpen: true);
 
                     await data.CopyToAsync(innerStream).ConfigureAwait(false);
                     await innerStream.FlushAsync().ConfigureAwait(false);

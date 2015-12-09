@@ -10,7 +10,11 @@ namespace Raven.Client.Document.SessionOperations
 {
     public class MultiLoadOperation
     {
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(MultiLoadOperation));
+#endif
 
         private readonly InMemoryDocumentSessionOperations sessionOperations;
         internal Func<IDisposable> disableAllCaching { get; set; }
@@ -67,8 +71,8 @@ namespace Raven.Client.Document.SessionOperations
                 sessionOperations.TrackIncludedDocument(include);
             }
 
-            var finalResults = ids != null ? 
-                ReturnResultsById<T>() : 
+            var finalResults = ids != null ?
+                ReturnResultsById<T>() :
                 ReturnResults<T>();
             for (var i = 0; i < finalResults.Length; i++)
             {

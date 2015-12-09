@@ -740,8 +740,13 @@ namespace Raven.Tests.Smuggler
                 return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
-            public override Task ExportDeletions(SmugglerJsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtags)
+            public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, Etag lastDocDeleteEtag, Etag lastAttachmentsDeleteEtag)
             {
+                var maxEtags = new LastEtagsInfo
+                {
+                    LastDocDeleteEtag = lastDocDeleteEtag,
+                    LastAttachmentsDeleteEtag = lastAttachmentsDeleteEtag
+                };
                 return base.ExportDeletions(jsonWriter, result, maxEtags);
             }
         }
@@ -889,16 +894,13 @@ namespace Raven.Tests.Smuggler
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     writer.WriteStartObject();
-                    var lastEtags = new LastEtagsInfo();
                     var exportResult = new OperationState
                     {
                         LastDocDeleteEtag = user6DeletionEtag,
                         LastAttachmentsDeleteEtag = attach5DeletionEtag
                     };
 
-                    lastEtags.LastDocDeleteEtag = user9DeletionEtag;
-                    lastEtags.LastAttachmentsDeleteEtag = attach7DeletionEtag;
-                    dumper.ExportDeletions(writer, exportResult, lastEtags).Wait();
+                    dumper.ExportDeletions(writer, exportResult, user9DeletionEtag, attach7DeletionEtag).Wait();
                     writer.WriteEndObject();
                     writer.Flush();
 
@@ -1121,7 +1123,7 @@ namespace Raven.Tests.Smuggler
                 }
             }
         }
-
+  
         private string CreateTestExportFile(int docFirstId, int numberOfDocs)
         {
             string exportString1 = @"
@@ -1168,7 +1170,7 @@ namespace Raven.Tests.Smuggler
         ""DisableInMemoryIndexing"": true,
         ""IsTestIndex"": false,
         ""IsSideBySideIndex"": false
-      }
+    }
 }
   ],            
   ""Docs"": [";

@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+#if !DNXCORE50
 using System.Runtime.Remoting;
+#endif
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -98,6 +100,7 @@ namespace Raven.Client.Util
             }
         }
 
+#if !DNXCORE50
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {
             return innerStream.BeginRead(buffer, offset, count, callback, state);
@@ -112,12 +115,14 @@ namespace Raven.Client.Util
         {
             innerStream.Close();
         }
+#endif
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
             return innerStream.CopyToAsync(destination, bufferSize, cancellationToken);
         }
 
+#if !DNXCORE50
         public override ObjRef CreateObjRef(Type requestedType)
         {
             return innerStream.CreateObjRef(requestedType);
@@ -132,6 +137,7 @@ namespace Raven.Client.Util
         {
             innerStream.EndWrite(asyncResult);
         }
+#endif
 
         public override bool Equals(object obj)
         {
@@ -153,10 +159,12 @@ namespace Raven.Client.Util
             return innerStream.GetHashCode();
         }
 
+#if !DNXCORE50
         public override object InitializeLifetimeService()
         {
             return innerStream.InitializeLifetimeService();
         }
+#endif
 
         public override int Read(byte[] buffer, int offset, int count)
         {
