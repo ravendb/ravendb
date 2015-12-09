@@ -11,146 +11,150 @@ using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Streaming
 {
-	public class ExcelOutputWriter : IOutputWriter
-	{
-		private const string CsvContentType = "text/csv";
+    public class ExcelOutputWriter : IOutputWriter
+    {
+        private const string CsvContentType = "text/csv";
 
-		private readonly Stream stream;
-		private StreamWriter writer;
-		private bool doIncludeId;
+        private readonly Stream stream;
+        private StreamWriter writer;
+        private bool doIncludeId;
 
-		public ExcelOutputWriter(Stream stream)
-		{
-			this.stream = stream;
-		}
+        public ExcelOutputWriter(Stream stream)
+        {
+            this.stream = stream;
+        }
 
-		public string ContentType => CsvContentType;
+        public string ContentType => CsvContentType;
 
-		public void Dispose()
-		{
-			if (writer == null)
-				return;
+        public void Dispose()
+        {
+            if (writer == null)
+                return;
 
-			writer.Flush();
-			stream.Flush();
-			writer.Close();
-		}
+            writer.Flush();
+            stream.Flush();
+#if !DNXCORE50
+            writer.Close();
+#else
+            writer.Dispose();
+#endif
+        }
 
-		public void WriteHeader()
-		{
-			writer = new StreamWriter(stream, Encoding.UTF8);
-		}
+        public void WriteHeader()
+        {
+            writer = new StreamWriter(stream, Encoding.UTF8);
+        }
 
-		public void Write(RavenJObject result)
-		{
-			if (properties == null)
-			{
-				GetPropertiesAndWriteCsvHeader(result, out doIncludeId);
-				Debug.Assert(properties != null);
-			}
+        public void Write(RavenJObject result)
+        {
+            if (properties == null)
+            {
+                GetPropertiesAndWriteCsvHeader(result, out doIncludeId);
+                Debug.Assert(properties != null);
+            }
 
-			if (doIncludeId)
-			{
-				RavenJToken token;
-				if (result.TryGetValue("@metadata", out token))
-				{
-					var metadata = token as RavenJObject;
-					if (metadata != null)
-					{
-						if (metadata.TryGetValue("@id", out token))
-						{
-							OutputCsvValue(token.Value<string>());
-						}
-						writer.Write(',');
-					}
-				}
-			}
+            if (doIncludeId)
+            {
+                RavenJToken token;
+                if (result.TryGetValue("@metadata", out token))
+                {
+                    var metadata = token as RavenJObject;
+                    if (metadata != null)
+                    {
+                        if (metadata.TryGetValue("@id", out token))
+                        {
+                            OutputCsvValue(token.Value<string>());
+                        }
+                        writer.Write(',');
+                    }
+                }
+            }
 
-			foreach (var property in properties)
-			{
-				var token = result.SelectToken(property);
-				if (token != null)
-				{
-					switch (token.Type)
-					{
-						case JTokenType.Null:
-							break;
+            foreach (var property in properties)
+            {
+                var token = result.SelectToken(property);
+                if (token != null)
+                {
+                    switch (token.Type)
+                    {
+                        case JTokenType.Null:
+                            break;
 
-						case JTokenType.Array:
-						case JTokenType.Object:
-							OutputCsvValue(token.ToString(Formatting.None));
-							break;
+                        case JTokenType.Array:
+                        case JTokenType.Object:
+                            OutputCsvValue(token.ToString(Formatting.None));
+                            break;
 
-						default:
-							OutputCsvValue(token.Value<string>());
-							break;
-					}
-				}
+                        default:
+                            OutputCsvValue(token.Value<string>());
+                            break;
+                    }
+                }
 
-				writer.Write(',');
-			}
+                writer.Write(',');
+            }
 
-			writer.WriteLine();
-		}
+            writer.WriteLine();
+        }
 
-		public void WriteError(Exception exception)
-		{
-			writer.WriteLine();
-			writer.WriteLine();
-			writer.WriteLine(exception.ToString());
-		}
+        public void WriteError(Exception exception)
+        {
+            writer.WriteLine();
+            writer.WriteLine();
+            writer.WriteLine(exception.ToString());
+        }
 
-		public void Flush()
-		{
-			writer.Flush();
-		}
+        public void Flush()
+        {
+            writer.Flush();
+        }
 
-		private void GetPropertiesAndWriteCsvHeader(RavenJObject result, out bool includeId)
-		{
-			includeId = false;
-			properties = DocumentHelpers.GetPropertiesFromJObject(result,
-				parentPropertyPath: "",
-				includeNestedProperties: true,
-				includeMetadata: false,
-				excludeParentPropertyNames: true).ToList();
+        private void GetPropertiesAndWriteCsvHeader(RavenJObject result, out bool includeId)
+        {
+            includeId = false;
+            properties = DocumentHelpers.GetPropertiesFromJObject(result,
+                parentPropertyPath: "",
+                includeNestedProperties: true,
+                includeMetadata: false,
+                excludeParentPropertyNames: true).ToList();
 
-			RavenJToken token;
-			if (result.TryGetValue("@metadata", out token))
-			{
-				var metadata = token as RavenJObject;
-				if (metadata != null)
-				{
-					if (metadata.TryGetValue("@id", out token))
-					{
-						OutputCsvValue("@id");
-						writer.Write(',');
+            RavenJToken token;
+            if (result.TryGetValue("@metadata", out token))
+            {
+                var metadata = token as RavenJObject;
+                if (metadata != null)
+                {
+                    if (metadata.TryGetValue("@id", out token))
+                    {
+                        OutputCsvValue("@id");
+                        writer.Write(',');
 
-						includeId = true;
-					}
-				}
-			}
+                        includeId = true;
+                    }
+                }
+            }
 
-			foreach (var property in properties)
-			{
-				OutputCsvValue(property);
-				writer.Write(',');
-			}
-			writer.WriteLine();
-		}
+            foreach (var property in properties)
+            {
+                OutputCsvValue(property);
+                writer.Write(',');
+            }
+            writer.WriteLine();
+        }
 
-		private static readonly char[] RequireQuotesChars = { ',', '\r', '\n', '"' };
-		private IEnumerable<string> properties;
+        private static readonly char[] RequireQuotesChars = { ',', '\r', '\n', '"' };
+        private IEnumerable<string> properties;
 
-		private void OutputCsvValue(string val)
-		{
-			var needsQuoutes = val.IndexOfAny(RequireQuotesChars) != -1;
-			if (needsQuoutes)
-				writer.Write('"');
+        private void OutputCsvValue(string val)
+        {
+            var needsQuoutes = val.IndexOfAny(RequireQuotesChars) != -1;
+            if (needsQuoutes)
+                writer.Write('"');
 
-			writer.Write(needsQuoutes ? val.Replace("\"", "\"\"") : val);
-			if (needsQuoutes)
-				writer.Write('"');
-		}
+            writer.Write(needsQuoutes ? val.Replace("\"", "\"\"") : val);
+            if (needsQuoutes)
+                writer.Write('"');
+        }
 
-	}
+    }
 }

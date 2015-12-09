@@ -18,7 +18,6 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
-using Raven.Abstractions.Threading;
 
 namespace Raven.Client.Connection
 {

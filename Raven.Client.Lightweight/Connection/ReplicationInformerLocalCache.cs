@@ -12,9 +12,9 @@ namespace Raven.Client.Connection
     public static class ReplicationInformerLocalCache
     {
 #if !DNXCORE50
-        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+        private readonly static ILog Log = LogManager.GetCurrentClassLogger();
 #else
-        private readonly static ILog log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
+        private readonly static ILog Log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
 #endif
 
         public static IsolatedStorageFile GetIsolatedStorageFile()
@@ -94,10 +94,12 @@ namespace Raven.Client.Connection
             {
                 Log.ErrorException("Could not persist the replication information", e);
             }
+#endif
         }
 
         public static List<OperationMetadata> TryLoadClusterNodesFromLocalCache(string serverHash)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -109,22 +111,23 @@ namespace Raven.Client.Connection
 
                     using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
                     {
-                        return RavenJToken
-                            .TryLoad(stream)
-                            .JsonDeserialization<List<OperationMetadata>>();
+                        return RavenJToken.TryLoad(stream).JsonDeserialization<List<OperationMetadata>>();
+                    }
+                }
             }
-#endif
-        }
-    }
             catch (Exception e)
             {
                 Log.ErrorException("Could not understand the persisted cluster nodes", e);
                 return null;
-}
+            }
+#else
+            return null;
+#endif
         }
 
         public static void TrySavingClusterNodesToLocalCache(string serverHash, List<OperationMetadata> nodes)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -140,6 +143,7 @@ namespace Raven.Client.Connection
             {
                 Log.ErrorException("Could not persist the cluster nodes", e);
             }
+#endif
         }
     }
 }

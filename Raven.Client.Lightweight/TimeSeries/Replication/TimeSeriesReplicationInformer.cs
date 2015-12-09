@@ -24,6 +24,12 @@ namespace Raven.Client.TimeSeries.Replication
 {
     public class TimeSeriesReplicationInformer
     {
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(TimeSeriesReplicationInformer));
+#endif
+
         private readonly HttpJsonRequestFactory requestFactory;
         private readonly TimeSeriesStore timeSeriesStore;
         private readonly TimeSeriesConvention timeSeriesConvention;
@@ -34,7 +40,6 @@ namespace Raven.Client.TimeSeries.Replication
         private readonly object updateReplicationInformationSyncObj = new object();
         private Task refreshReplicationInformationTask;
         private DateTime lastReplicationUpdate;
-        private readonly ILog log = LogManager.GetCurrentClassLogger();
         private readonly FailureTimeSeries failureTimeSeries;
         private int currentReadStripingBase;
 

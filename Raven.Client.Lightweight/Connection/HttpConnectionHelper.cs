@@ -29,6 +29,8 @@ namespace Raven.Client.Connection
             {
                 return httpStatusCode.Contains(ere.StatusCode);
             }
+
+#if !DNXCORE50
             var webException = (e as WebException) ?? (e.InnerException as WebException);
             if (webException != null)
             {
@@ -36,6 +38,7 @@ namespace Raven.Client.Connection
                 if (httpWebResponse != null && httpStatusCode.Contains(httpWebResponse.StatusCode))
                     return true;
             }
+#endif
 
             return false;
         }
@@ -57,6 +60,7 @@ namespace Raven.Client.Connection
                     return true;
             }
 
+#if !DNXCORE50
             var webException = (e as WebException) ?? (e.InnerException as WebException);
             if (webException != null)
             {
@@ -81,6 +85,8 @@ namespace Raven.Client.Connection
                         return true;
                 }
             }
+#endif
+
             return e.InnerException is SocketException || e.InnerException is IOException;
         }
 

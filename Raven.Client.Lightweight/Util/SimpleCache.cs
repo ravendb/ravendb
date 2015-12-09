@@ -5,7 +5,6 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Client.Helpers;
 
 using Sparrow.Collections;

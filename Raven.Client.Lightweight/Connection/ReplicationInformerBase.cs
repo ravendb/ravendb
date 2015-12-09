@@ -32,9 +32,9 @@ namespace Raven.Client.Connection
     public abstract class ReplicationInformerBase<TClient> : IReplicationInformerBase<TClient>
     {
 #if !DNXCORE50
-        protected readonly ILog log = LogManager.GetCurrentClassLogger();
+        protected readonly ILog Log = LogManager.GetCurrentClassLogger();
 #else
-        protected readonly ILog log = LogManager.GetLogger(typeof(ReplicationInformerBase<TClient>));
+        protected readonly ILog Log = LogManager.GetLogger(typeof(ReplicationInformerBase<TClient>));
 #endif
 
         protected readonly QueryConvention Conventions;

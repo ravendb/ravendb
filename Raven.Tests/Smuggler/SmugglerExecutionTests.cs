@@ -739,16 +739,6 @@ namespace Raven.Tests.Smuggler
 
                 return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
-
-            public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, Etag lastDocDeleteEtag, Etag lastAttachmentsDeleteEtag)
-            {
-                var maxEtags = new LastEtagsInfo
-                {
-                    LastDocDeleteEtag = lastDocDeleteEtag,
-                    LastAttachmentsDeleteEtag = lastAttachmentsDeleteEtag
-                };
-                return base.ExportDeletions(jsonWriter, result, maxEtags);
-            }
         }
 
         [Fact]
@@ -900,7 +890,7 @@ namespace Raven.Tests.Smuggler
                         LastAttachmentsDeleteEtag = attach5DeletionEtag
                     };
 
-                    dumper.ExportDeletions(writer, exportResult, user9DeletionEtag, attach7DeletionEtag).Wait();
+                    dumper.ExportDeletions(writer, exportResult, new LastEtagsInfo { LastDocDeleteEtag = user9DeletionEtag, LastAttachmentsDeleteEtag = attach7DeletionEtag }).Wait();
                     writer.WriteEndObject();
                     writer.Flush();
 

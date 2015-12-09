@@ -24,6 +24,12 @@ namespace Raven.Client.Counters.Replication
 {
     public class CounterReplicationInformer
     {
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(CounterReplicationInformer));
+#endif
+
         private readonly HttpJsonRequestFactory requestFactory;
         private readonly CounterStore counterStore;
         private readonly CountersConvention countersConvention;
@@ -34,7 +40,6 @@ namespace Raven.Client.Counters.Replication
         private readonly object updateReplicationInformationSyncObj = new object();
         private Task refreshReplicationInformationTask;
         private DateTime lastReplicationUpdate;
-        private readonly ILog log = LogManager.GetCurrentClassLogger();
         private readonly FailureCounters failureCounters;
         private int currentReadStripingBase;
 

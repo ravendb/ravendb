@@ -379,7 +379,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
                 Assert.Equal(EtagUtil.Increment(Etag.Empty, 1), etag);
-                
+
                 storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject()));
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
                 Assert.Equal(EtagUtil.Increment(Etag.Empty, 2), etag);
@@ -682,6 +682,8 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.Equal(1, fileMetadata.Count);
                     Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
                 });
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]
@@ -739,8 +741,8 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.Equal("file7", files[1].Name);
                     Assert.Equal("file8", files[2].Name);
                 });
-    }
-}
+            }
+        }
 
         [Theory]
         [PropertyData("Storages")]

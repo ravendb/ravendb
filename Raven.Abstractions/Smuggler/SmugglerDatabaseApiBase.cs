@@ -148,7 +148,7 @@ namespace Raven.Abstractions.Smuggler
                         {
                             result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, 
                                 result.LastDocsEtag, 
-                                updateLastDocDeleteEtag: () => lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag());
+                                updateLastDocDeleteEtag: () => lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag()).ConfigureAwait(false);
                         }
                         catch (SmugglerExportException e)
                         {
@@ -168,7 +168,7 @@ namespace Raven.Abstractions.Smuggler
                         {
                             result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, 
                                 result.LastAttachmentsEtag,
-                                updateLastAttachmentsDeleteEtag: () => lastAttachmentsDeleteEtag = Operations.FetchLastAttachmentsDeleteEtag());
+                                updateLastAttachmentsDeleteEtag: () => lastAttachmentsDeleteEtag = Operations.FetchLastAttachmentsDeleteEtag()).ConfigureAwait(false);
                         }
                         catch (SmugglerExportException e)
                         {
@@ -194,7 +194,7 @@ namespace Raven.Abstractions.Smuggler
                             LastDocDeleteEtag = lastDocDeleteEtag,
                             LastAttachmentsDeleteEtag = lastAttachmentsDeleteEtag
                         };
-                        await ExportDeletions(jsonWriter, result, maxEtagsToFetch);
+                        await ExportDeletions(jsonWriter, result, maxEtagsToFetch).ConfigureAwait(false);
                     }
 
                     await ExportIdentities(jsonWriter, Options.OperateOnTypes).ConfigureAwait(false);
@@ -440,7 +440,7 @@ namespace Raven.Abstractions.Smuggler
                         if (Options.ExportDeletions && updateLastAttachmentsDeleteEtag != null)
                             updateLastAttachmentsDeleteEtag();
 
-                        attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
+                        attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {

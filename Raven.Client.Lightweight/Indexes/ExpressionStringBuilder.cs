@@ -1057,20 +1057,20 @@ namespace Raven.Client.Indexes
 
         private bool TypeExistsOnServer(Type type)
         {
-            if (type.Assembly == typeof(object).Assembly) // mscorlib
+            if (type.Assembly() == typeof(object).Assembly()) // mscorlib
                 return true;
 
             if (type.Assembly() == typeof(Uri).Assembly()) // System assembly
                 return true;
 
-            if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
+            if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core
                 return true;
 
-            if (type.Assembly == typeof(RavenJObject).Assembly)
+            if (type.Assembly() == typeof(RavenJObject).Assembly())
                 return true;
 
-            if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
-                type.Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
+            if (type.Assembly().FullName.StartsWith("Lucene.Net") &&
+                type.Assembly().FullName.Contains("PublicKeyToken=85089178b9ac3181"))
                 return true;
 
             return false;
