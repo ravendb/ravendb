@@ -23,7 +23,7 @@ properties {
     $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
     $nowarn = "1591 1573 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
 
-    $dnxVersion = "1.0.0-rc1-final"
+    $dnxVersion = "1.0.0-rc1-update1"
     $dnxArchitecture = "x64"
     $dnxToolsDir = "$base_dir\Tools\DNX"
     $dnvm = "$dnxToolsDir\dnvm.cmd"
