@@ -24,6 +24,7 @@ namespace Raven.Database.Actions
         public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
         public event Action<DocumentDatabase, IndexChangeNotification> OnIndexChange;
         public event Action<DocumentDatabase, TransformerChangeNotification> OnTransformerChange;
+        public event Action<DocumentDatabase, AttachmentChangeNotification, RavenJObject> OnAttachmentChange;
 
         public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
         {
@@ -31,6 +32,15 @@ namespace Raven.Database.Actions
             var onDocumentChange = OnDocumentChange;
             if (onDocumentChange != null)
                 onDocumentChange(Database, obj, metadata);
+        }
+
+        //This is not raising notification through the transport because this is intended 
+		//to be used internaly only (server side).
+        public void RaiseNotifications(AttachmentChangeNotification obj, RavenJObject metadata)
+        {
+            var onDocumentChange = OnAttachmentChange;
+            if (onDocumentChange != null)
+                onDocumentChange.Invoke(Database, obj, metadata);
         }
 
         public void RaiseNotifications(IndexChangeNotification obj)

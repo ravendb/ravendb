@@ -83,10 +83,10 @@ namespace Rachis.Behaviors
         }
         
         private void Heartbeat()
-        {
-            var startTime = SystemTime.UtcNow;
+        {            
             while (_stopHeartbeatCancellationTokenSource.IsCancellationRequested == false)
             {
+                var startTime = SystemTime.UtcNow;
                 foreach (var peer in Engine.CurrentTopology.AllNodes)
                 {
                     if (peer.Name.Equals(Engine.Name, StringComparison.OrdinalIgnoreCase))
@@ -99,7 +99,7 @@ namespace Rachis.Behaviors
 
                 OnHeartbeatSent();
                 //sending the heartbeats may take some time we don't want to add this time to the heartbeat
-                var wait = Math.Max(0, Engine.Options.HeartbeatTimeout - (int)(SystemTime.UtcNow - startTime).Milliseconds);
+                var wait = Math.Max(0, Engine.Options.HeartbeatTimeout - (int)(SystemTime.UtcNow - startTime).TotalMilliseconds);
                 if (_log.IsDebugEnabled)
                     _log.Debug("HeartBeat going to sleep for {0}", wait);
                 Thread.Sleep(wait);

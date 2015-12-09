@@ -235,4 +235,41 @@ namespace Raven.Abstractions.Data
         SubscriptionOpened = 1,
         SubscriptionReleased = 2
     }
+
+    public class AttachmentChangeNotification : EventArgs
+    {
+        /// <summary>
+        /// Type of change that occurred on an attachment.
+        /// </summary>
+        public AttachmentChangeTypes Type { get; set; }
+
+        /// <summary>
+        /// Identifier of an attachment for which notification was created.
+        /// </summary>
+        public string Id { get; set; }
+
+        /// <summary>
+        /// Document etag.
+        /// </summary>
+        public Etag Etag { get; set; }
+
+        /// <summary>
+        /// Notification message.
+        /// </summary>
+        public string Message { get; set; }
+
+        public override string ToString()
+        {
+            return string.Format("{0} on {1}", Type, Id);
+        }
+    }
+    [Flags]
+    public enum AttachmentChangeTypes
+    {
+        None = 0,
+
+        Put = 1,
+        Delete = 2,
+        Common = Put | Delete
+    }
 }
