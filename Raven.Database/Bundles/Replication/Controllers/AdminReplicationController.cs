@@ -161,8 +161,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
             {
                 case HttpStatusCode.BadRequest:
                     string error = GetErrorStringFromException(e, response);
-                    replicationInfoStatus.Status = error.Contains("Could not figure out what to do")
-                                                           ? "Replication Bundle not activated."
+                    replicationInfoStatus.Status = error.Contains("replication bundle not activated")
+                                                           ? "Replication bundle not activated."
                                                            : error;
                     replicationInfoStatus.Code = (int)response.StatusCode;
                     break;

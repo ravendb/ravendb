@@ -35,11 +35,11 @@ namespace Raven.Database.Server.Controllers
                 }, HttpStatusCode.ServiceUnavailable);
             }
             if (db.Configuration == null || db.Configuration.ActiveBundles == null ||
-                !db.Configuration.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName,StringComparison.InvariantCultureIgnoreCase)))
+                !db.Configuration.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not figure out what to do"
+                    Error = BundleName + " bundle not activated"
                 }, HttpStatusCode.BadRequest);
             }
 
