@@ -21,7 +21,7 @@ properties {
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     
-    $dnxVersion = "1.0.0-rc1-final"
+    $dnxVersion = "1.0.0-rc1-update1"
     $dnxArchitecture = "x64"
     $dnxToolsDir = "$base_dir\Tools\DNX"
     $dnvm = "$dnxToolsDir\dnvm.cmd"
