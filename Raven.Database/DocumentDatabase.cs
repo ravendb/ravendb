@@ -575,6 +575,7 @@ namespace Raven.Database
                             index.IsTestIndex = indexDefinition.IsTestIndex;
                             index.IsOnRam = IndexStorage.IndexOnRam(index.Id);
                             index.LockMode = indexDefinition.LockMode;
+                            index.IsMapReduce = indexDefinition.IsMapReduce;
 
                             index.ForEntityName = IndexDefinitionStorage.GetViewGenerator(index.Id).ForEntityNames.ToArray();
                             IndexSearcher searcher;

@@ -5,7 +5,6 @@ import appUrl = require("common/appUrl");
 import documentClass = require("models/database/documents/document");
 import serverBuildReminder = require("common/serverBuildReminder");
 import eventSourceSettingStorage = require("common/eventSourceSettingStorage");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 
@@ -17,6 +16,8 @@ class studioConfig extends viewModelBase {
     disableEventSource = ko.observable<boolean>(false);
     timeUntilRemindToUpgrade = ko.observable<string>();
     mute: KnockoutComputed<boolean>;
+    isForbidden = ko.observable<boolean>();
+    isReadOnly: KnockoutComputed<boolean>;
 
     environmentColors: environmentColor[] = [
         new environmentColor("Default", "#f8f8f8"),
@@ -56,21 +57,28 @@ class studioConfig extends viewModelBase {
         
         var self = this;
         this.selectedColor.subscribe((newValue) => self.setEnviromentColor(newValue));
+
+        this.isForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
+        this.isReadOnly = ko.computed(() => shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings());
     }
 
     canActivate(args): any {
-        var deffered = $.Deferred();
+        var deferred = $.Deferred();
 
-        new getDocumentWithMetadataCommand(this.documentId, this.systemDatabase)
-            .execute()
-            .done((doc: documentClass) => {
-                this.configDocument(doc);
-                this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
-            })
-            .fail(() => this.configDocument(documentClass.empty()))
-            .always(() => deffered.resolve({ can: true }));
+        if (this.isForbidden() === false) {
+            new getDocumentWithMetadataCommand(this.documentId, this.systemDatabase)
+                .execute()
+                .done((doc: documentClass) => {
+                    this.configDocument(doc);
+                    this.warnWhenUsingSystemDatabase(doc["WarnWhenUsingSystemDatabase"]);
+                })
+                .fail(() => this.configDocument(documentClass.empty()))
+                .always(() => deferred.resolve({ can: true }));
+        } else {
+            deferred.resolve({ can: true });
+        }
 
-        return deffered;
+        return deferred;
     }
 
     activate(args) {

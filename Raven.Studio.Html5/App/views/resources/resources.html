@@ -7,8 +7,15 @@
                     <br />
                     <br />
                     No databases, file systems, counter storages or time series are available. <br />
-                    <small>
-                        <span data-bind="visible: isGlobalAdmin">Go ahead and <a href="#" data-bind="click: newResource">create one now</a> or <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
+                    <small data-bind="visible: isGlobalAdmin() || canNavigateToAdminSettings()">
+                        <span data-bind="visible: isGlobalAdmin">
+                            Go ahead and
+                            <a href="#" data-bind="click: newResource">>create one now</a>
+                        </span>
+                        <span data-bind="visible: canNavigateToAdminSettings">
+                            or
+                            <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a>
+                        </span>
                     </small>
                 </h2>
             </div>
@@ -75,7 +82,7 @@
             <select data-bind="options: visibleOptions, optionsText: 'name', optionsValue: 'value', value: visibleResource" class="form-control"></select>
         </div>
         <div class="btn-group pull-right">
-            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: isGlobalAdmin">Manage Your Server</button>
+            <button class="btn btn-warning" data-bind="click: navigateToAdminSettings, visible: canNavigateToAdminSettings">Manage Your Server</button>
         </div>
     </div>
 

@@ -124,7 +124,7 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(result);
                 Assert.Equal(1, result.Length);
-                Assert.Equal("Replication Bundle not activated.", result[0].Value<string>("Status"));
+                Assert.Equal("Replication bundle not activated.", result[0].Value<string>("Status"));
                 Assert.Equal(400, result[0].Value<int>("Code"));
             }
         }

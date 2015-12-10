@@ -1,18 +1,17 @@
 import shell = require("viewmodels/shell");
-import database = require("models/resources/database");
+import resource = require("models/resources/resource");
 
 class databaseAccess {
 
     admin = ko.observable<boolean>();
     tenantId = ko.observable<string>();
     readOnly = ko.observable<boolean>();
-    resourceNames: KnockoutComputed<string[]>;
     searchResults: KnockoutComputed<string[]>;
     tenantCustomValidityError: KnockoutComputed<string>;
 
-    static adminAccessType = 'Admin';
-    static readWriteAccessType = 'Read, Write';
-    static readOnlyAccessType = 'Read Only';
+    static adminAccessType = "Admin";
+    static readWriteAccessType = "Read, Write";
+    static readOnlyAccessType = "Read Only";
     static databaseAccessTypes =
         ko.observableArray<string>([databaseAccess.adminAccessType, databaseAccess.readWriteAccessType, databaseAccess.readOnlyAccessType]);
 
@@ -50,20 +49,28 @@ class databaseAccess {
         this.readOnly(dto.ReadOnly);
         this.tenantId(dto.TenantId != null ? dto.TenantId : '');
 
-        this.resourceNames = ko.computed(() => {
-            var allResourceNames = shell.resourcesNamesComputed()().concat("*");
-            return allResourceNames.filter((x, i, c) => c.indexOf(x) === i);
-        });
-
         this.searchResults = ko.computed(() => {
+            var readOnly = shell.isGlobalAdmin() === false && shell.canReadWriteSettings() === false && shell.canReadSettings();
+            if (readOnly)
+                return [];
+
             var newResourceName: string = this.tenantId();
-            return this.resourceNames().filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
+            var resourceNames = shell.resources()
+                            .map((rs: resource) => rs.name)
+                            .concat("*")
+                            .filter((x, i, c) => c.indexOf(x) == i);
+
+            return resourceNames.filter((name) => name.toLowerCase().indexOf(newResourceName.toLowerCase()) > -1);
         });
 
         this.tenantCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newTenantId = this.tenantId();
-            var foundResource = this.resourceNames().first(name => newTenantId === name);
+            var resourceNames = shell.resources()
+                            .map((rs: resource) => rs.name)
+                            .concat("*")
+                            .filter((x, i, c) => c.indexOf(x) == i);
+            var foundResource = resourceNames.first(name => newTenantId === name);
 
             if (!foundResource && newTenantId.length > 0) {
                 errorMessage = "There is no database nor file system with such a name!";

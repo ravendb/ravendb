@@ -8,6 +8,7 @@ import ioTestCommand = require("commands/database/debug/ioTestCommand");
 import killRunningTaskCommand = require("commands/operations/killRunningTaskCommand");
 import d3 = require('d3/d3');
 import nv = require('nvd3');
+import shell = require("viewmodels/shell");
 
 class ioTest extends viewModelBase {
 
@@ -35,6 +36,7 @@ class ioTest extends viewModelBase {
 
     overTimeLatencyChart: any = null;
     overTimeLatencyChartData = [];
+    isForbidden = ko.observable<boolean>();
 
     constructor() {
         super();
@@ -48,18 +50,24 @@ class ioTest extends viewModelBase {
             }
             return errorMessage;
         });
+
+        this.isForbidden(shell.isGlobalAdmin() === false);
     }
 
     canActivate(args): any {
-        var deffered = $.Deferred();
+        var deferred = $.Deferred();
 
-        new getStatusDebugConfigCommand(appUrl.getSystemDatabase())
-            .execute()
-            .done((results: any) =>
-                this.ioTestRequest.threadCount(results.MaxNumberOfParallelProcessingTasks))
-            .always(() => deffered.resolve({ can: true }));
-
-        return deffered;
+        if (this.isForbidden() === false) {
+            new getStatusDebugConfigCommand(appUrl.getSystemDatabase())
+                .execute()
+                .done((results: any) =>
+                    this.ioTestRequest.threadCount(results.MaxNumberOfParallelProcessingTasks))
+                .always(() => deferred.resolve({ can: true }));
+        } else {
+            deferred.resolve({ can: true });
+        }
+        
+        return deferred;
     }
 
     activate(args) {

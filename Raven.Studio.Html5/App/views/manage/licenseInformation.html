@@ -1,4 +1,8 @@
-<div class="panel panel-default form-horizontal" role="form">
+<div data-bind="visible: isForbidden" class="text-center">
+    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+</div>
+
+<div class="panel panel-default form-horizontal" role="form" data-bind="visible: isForbidden() == false">
     <div class="panel-heading">
         License information
         <div class="clearfix"></div>
@@ -10,7 +14,7 @@
                 <span data-bind="visible: connectivityStatus() === 'pending'"><i class="fa fa-spin fa-spinner"></i> Checking...</span>
                 <span class="text-success" data-bind="visible: connectivityStatus() === 'success'"><i class="fa fa-check fa-fw"></i> Success</span>
                 <span class="text-success" data-bind="visible: connectivityStatus() === 'failure'"><i class="fa fa-bolt fa-fw"></i> Can't connect to licensing server</span>
-                
+
             </div>
         </div>
         <div class="form-group">

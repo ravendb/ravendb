@@ -61,10 +61,11 @@ class resourceCompact {
 class compact extends viewModelBase {
     private dbCompactOptions = new resourceCompact(this, database.type, shell.databases);
     private fsCompactOptions = new resourceCompact(this, filesystem.type, shell.fileSystems);
-
+    isForbidden = ko.observable<boolean>();
     isBusy = ko.observable<boolean>();
 
     canActivate(args): any {
+        this.isForbidden(shell.isGlobalAdmin() === false);
         return true;
     }
 
