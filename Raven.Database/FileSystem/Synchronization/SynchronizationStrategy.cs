@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 
 using Raven.Database.Config;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Storage;
-using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;

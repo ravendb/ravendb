@@ -422,6 +422,7 @@
     <Compile Include="FileSystem\Plugins\AbstractFileMetadataUpdateTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFileReadTrigger.cs" />
     <Compile Include="FileSystem\Plugins\AbstractFilePutTrigger.cs" />
+    <Compile Include="FileSystem\Plugins\Builtins\HideDownloadingFileTrigger.cs" />
     <Compile Include="FileSystem\Plugins\TriggerExtensions.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Impl\BackgroundTaskExecuter\IBackgroundTaskExecuter.cs" />
@@ -1500,10 +1501,8 @@
     <None Include="Indexing\LuceneQuery.parser" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <!--  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />-->
   <Target Name="BeforeBuild" DependsOnTargets="YltBuildGen">
   </Target>
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <Target Name="YltBuildGen" DependsOnTargets="GenerateLuceneQuery-Raven-Database-Indexing" />

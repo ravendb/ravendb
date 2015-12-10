@@ -1,4 +1,3 @@
-using Sparrow;
 // -----------------------------------------------------------------------
 //  <copyright file="DefaultEncryptor.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -7,6 +6,8 @@ using Sparrow;
 using System;
 using System.IO;
 using System.Security.Cryptography;
+
+using Sparrow;
 
 namespace Raven.Abstractions.Util.Encryptors
 {
@@ -40,6 +41,7 @@ namespace Raven.Abstractions.Util.Encryptors
                 get { return 32; }
             }
 
+            #if !DNXCORE50
             private MD5 md5;
 
             public void TransformBlock(byte[] bytes, int offset, int length)
@@ -62,11 +64,14 @@ namespace Raven.Abstractions.Util.Encryptors
                 md5.TransformFinalBlock(new byte[0], 0, 0);
                 return md5.Hash;
             }
+#endif
 
             public void Dispose()
             {
+                #if !DNXCORE50
                 if (md5 != null)
                     md5.Dispose();
+#endif
             }
 
             public byte[] ComputeForStorage(byte[] bytes)

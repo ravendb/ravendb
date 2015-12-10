@@ -739,11 +739,6 @@ namespace Raven.Tests.Smuggler
 
                 return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
-
-            public override Task ExportDeletions(SmugglerJsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtags)
-            {
-                return base.ExportDeletions(jsonWriter, result, maxEtags);
-            }
         }
 
         [Fact]
@@ -889,16 +884,13 @@ namespace Raven.Tests.Smuggler
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     writer.WriteStartObject();
-                    var lastEtags = new LastEtagsInfo();
                     var exportResult = new OperationState
                     {
                         LastDocDeleteEtag = user6DeletionEtag,
                         LastAttachmentsDeleteEtag = attach5DeletionEtag
                     };
 
-                    lastEtags.LastDocDeleteEtag = user9DeletionEtag;
-                    lastEtags.LastAttachmentsDeleteEtag = attach7DeletionEtag;
-                    dumper.ExportDeletions(writer, exportResult, lastEtags).Wait();
+                    dumper.ExportDeletions(writer, exportResult, new LastEtagsInfo { LastDocDeleteEtag = user9DeletionEtag, LastAttachmentsDeleteEtag = attach7DeletionEtag }).Wait();
                     writer.WriteEndObject();
                     writer.Flush();
 
@@ -1121,7 +1113,7 @@ namespace Raven.Tests.Smuggler
                 }
             }
         }
-
+  
         private string CreateTestExportFile(int docFirstId, int numberOfDocs)
         {
             string exportString1 = @"
@@ -1168,7 +1160,7 @@ namespace Raven.Tests.Smuggler
         ""DisableInMemoryIndexing"": true,
         ""IsTestIndex"": false,
         ""IsSideBySideIndex"": false
-      }
+    }
 }
   ],            
   ""Docs"": [";

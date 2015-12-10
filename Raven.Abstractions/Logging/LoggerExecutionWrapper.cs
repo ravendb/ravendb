@@ -79,9 +79,13 @@ namespace Raven.Abstractions.Logging
                 // nothing to be done here
                 return;
             }
+#if !DNXCORE50
             string databaseName = LogContext.ResourceName;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
+#else
+            var databaseName = Constants.SystemDatabase;
+#endif
 
             foreach (var target in targets)
             {
@@ -131,6 +135,6 @@ namespace Raven.Abstractions.Logging
             return logger.ShouldLog(logLevel);
         }
 
-        #endregion
+#endregion
     }
 }

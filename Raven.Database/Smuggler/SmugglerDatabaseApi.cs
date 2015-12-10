@@ -68,12 +68,12 @@ namespace Raven.Smuggler
         }
 
         [Obsolete("Use RavenFS instead.")]
-        protected override Task<Etag> ExportAttachments(RavenConnectionStringOptions src, SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+        protected override Task<Etag> ExportAttachments(RavenConnectionStringOptions src, SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag = null, Action updateLastAttachmentsDeleteEtag = null)
         {
             if (maxEtag != null)
                 throw new ArgumentException("We don't support maxEtag in SmugglerDatabaseApi", maxEtag);
 
-            return base.ExportAttachments(src, jsonWriter, lastEtag, null);
+            return base.ExportAttachments(src, jsonWriter, lastEtag, null, updateLastAttachmentsDeleteEtag);
         }
 
         public override Task ExportDeletions(SmugglerJsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch)

@@ -137,6 +137,7 @@
     <Compile Include="RavenDB-3736_2.cs" />
     <Compile Include="RavenDB-3973.cs" />
     <Compile Include="RavenDB-3979.cs" />
+    <Compile Include="RavenDB-4085.cs" />
     <Compile Include="RavenDB-4041.cs" />
     <Compile Include="RavenDB-4011.cs" />
     <Compile Include="RavenDB-3931.cs" />
@@ -186,7 +187,7 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
-    <Compile Include="RaqvenDB_3222.cs" />
+    <Compile Include="RavenDB_3222.cs" />
     <Compile Include="RavenDB-3136.cs" />
     <Compile Include="RavenDB-3150.cs" />
     <Compile Include="RavenDB-3277.cs" />
@@ -218,7 +219,7 @@
     <Compile Include="IndexResestWithReplication.cs" />
     <Compile Include="LongIndexAndTransformerNames.cs" />
     <Compile Include="NestedPropertiesIndex_1182.cs" />
-    <Compile Include="RaveDB-1279.cs" />
+    <Compile Include="RavenDB-1279.cs" />
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
     <Compile Include="RavenDB-2036.cs" />
@@ -629,13 +630,6 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
-  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

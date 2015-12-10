@@ -871,7 +871,7 @@ namespace Raven.Database.Bundles.SqlReplication
             }
             else if (string.IsNullOrWhiteSpace(cfg.ConnectionStringName) == false)
             {
-                var connectionString = ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];
+                var connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];
                 if (connectionString == null)
                 {
                     if (writeToLog)

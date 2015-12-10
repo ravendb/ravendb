@@ -331,6 +331,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.BatchAsync(commandDatas.ToArray()));
         }
 
+#if !DNXCORE50
         public void Commit(string txId)
         {
             AsyncHelpers.RunSync(() => asyncServerClient.CommitAsync(txId));
@@ -345,6 +346,7 @@ namespace Raven.Client.Connection
         {
             AsyncHelpers.RunSync(() => asyncServerClient.PrepareTransactionAsync(txId));
         }
+#endif
 
         public BuildNumber GetBuildNumber()
         {
@@ -555,7 +557,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.DirectGetReplicationDestinationsAsync(operationMetadata));
         }
 
-        #endregion
+#endregion
 
         public ProfilingInformation ProfilingInformation
         {

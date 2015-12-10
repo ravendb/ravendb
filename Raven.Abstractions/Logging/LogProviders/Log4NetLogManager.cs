@@ -58,7 +58,11 @@ namespace Raven.Abstractions.Logging.LogProviders
         {
             try
             {
+#if !DNXCORE50
                 return Assembly.Load("log4net");
+#else
+                return Assembly.Load(new AssemblyName("log4net"));
+#endif
             }
             catch (Exception)
             {
@@ -122,7 +126,7 @@ namespace Raven.Abstractions.Logging.LogProviders
                         if (logger.IsDebugEnabled)
                         {
                             logger.Debug(messageFunc());
-                                // Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
+                            // Log4Net doesn't have a 'Trace' level, so all Trace messages are written as 'Debug'
                         }
                         break;
                 }

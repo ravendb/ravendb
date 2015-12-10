@@ -69,34 +69,50 @@ namespace Raven.Database.FileSystem
             ResourceName = string.Concat(Constants.FileSystem.UrlPrefix, "/", name);
             this.systemConfiguration = systemConfiguration;
 
-            systemConfiguration.Container.SatisfyImportsOnce(this);
+            try
+            {
+                systemConfiguration.Container.SatisfyImportsOnce(this);
 
-            transportState = receivedTransportState ?? new TransportState();
+                transportState = receivedTransportState ?? new TransportState();
 
-            storage = CreateTransactionalStorage(systemConfiguration);
+                storage = CreateTransactionalStorage(systemConfiguration);
 
-            sigGenerator = new SigGenerator();
-            fileLockManager = new FileLockManager();			        
+                sigGenerator = new SigGenerator();
+                fileLockManager = new FileLockManager();			        
    
-            BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
-            conflictDetector = new ConflictDetector();
-            conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
+                BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
+                conflictDetector = new ConflictDetector();
+                conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
 
-            notificationPublisher = new NotificationPublisher(transportState);
-            synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
+                notificationPublisher = new NotificationPublisher(transportState);
+                synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
 
-            metricsCounters = new MetricsCountersManager();
+                metricsCounters = new MetricsCountersManager();
 
-            search = new IndexStorage(name, systemConfiguration);
+                search = new IndexStorage(name, systemConfiguration);
 
-            conflictArtifactManager = new ConflictArtifactManager(storage, search);
+                conflictArtifactManager = new ConflictArtifactManager(storage, search);
 
-            Tasks = new TaskActions(this, Log);
-            Files = new FileActions(this, Log);
-            Synchronizations = new SynchronizationActions(this, Log);
+                Tasks = new TaskActions(this, Log);
+                Files = new FileActions(this, Log);
+                Synchronizations = new SynchronizationActions(this, Log);
 
-            AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
-            AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
+                AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
+                AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
+            }
+            catch (Exception e)
+            {
+                Log.ErrorException(string.Format("Could not create file system '{0}'", Name ?? "unknown name"), e);
+                try
+                {
+                    Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Log.FatalException("Failed to dispose when already getting an error in file system ctor", ex);
+                }
+                throw;
+            }
         }
 
         public TaskActions Tasks { get; private set; }
@@ -107,19 +123,35 @@ namespace Raven.Database.FileSystem
 
         public void Initialize()
         {
-            var generator = new UuidGenerator();
-            storage.Initialize(generator, FileCodecs);
-            generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
+            try
+            {
+                var generator = new UuidGenerator();
+                storage.Initialize(generator, FileCodecs);
+                generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
 
-            historian = new Historian(storage, new SynchronizationHiLo(storage));
+                historian = new Historian(storage, new SynchronizationHiLo(storage));
 
-            InitializeTriggersExceptIndexCodecs();
+                InitializeTriggersExceptIndexCodecs();
 
-            search.Initialize(this);
+                search.Initialize(this);
 
-            SecondStageInitialization();
+                SecondStageInitialization();
 
-            synchronizationTask.Start();
+                synchronizationTask.Start();
+            }
+            catch (Exception e)
+            {
+                Log.ErrorException(string.Format("Could not create file system '{0}'", Name ?? "unknown name"), e);
+                try
+                {
+                    Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Log.FatalException("Failed to dispose when already getting an error during file system initialization", ex);
+                }
+                throw;
+            }
         }
 
         public static bool IsRemoteDifferentialCompressionInstalled

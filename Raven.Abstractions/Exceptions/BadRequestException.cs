@@ -40,6 +40,7 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Initializes a new instance of the <see cref="BadRequestException"/> class.
         /// </summary>
@@ -53,5 +54,6 @@ namespace Raven.Abstractions.Exceptions
             : base(info, context)
         {
         }
+#endif
     }
 }

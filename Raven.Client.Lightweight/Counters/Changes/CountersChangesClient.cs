@@ -127,8 +127,8 @@ namespace Raven.Client.Counters.Changes
 
             var taskedObservable = new TaskedObservable<ChangeNotification, CountersConnectionState>(
                                 counter,
-                                notification => string.Equals(notification.GroupName, groupName, StringComparison.InvariantCulture) &&
-                                                string.Equals(notification.CounterName, counterName, StringComparison.InvariantCulture));
+                                notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
+                                                string.Equals(notification.CounterName, counterName, StringComparison.OrdinalIgnoreCase));
             counter.OnChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
 
@@ -154,8 +154,8 @@ namespace Raven.Client.Counters.Changes
                 counter,
                 notification =>
                 {
-                    var t = string.Equals(notification.GroupName, groupName, StringComparison.InvariantCulture) &&
-                            notification.CounterName.StartsWith(prefixForName, StringComparison.InvariantCulture);
+                    var t = string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
+                            notification.CounterName.StartsWith(prefixForName, StringComparison.OrdinalIgnoreCase);
                     return t;
                 });
             counter.OnCountersStartingWithNotification += taskedObservable.Send;
@@ -177,7 +177,7 @@ namespace Raven.Client.Counters.Changes
 
             var taskedObservable = new TaskedObservable<InGroupNotification, CountersConnectionState>(
                                 counter,
-                                notification => string.Equals(notification.GroupName, groupName, StringComparison.InvariantCulture));
+                                notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
             counter.OnCountersInGroupNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
 

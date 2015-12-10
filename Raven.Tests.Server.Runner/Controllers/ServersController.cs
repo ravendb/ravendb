@@ -70,7 +70,7 @@ namespace Raven.Tests.Server.Runner.Controllers
                 }), new RavenJObject(), null);
             }
 
-            return Ok();
+            return Json(new { ServerUrl = configuration.ServerUrl });
         }
 
         [HttpGet]
