@@ -50,6 +50,7 @@ class resources extends viewModelBase {
     appUrls: computedAppUrls;
     alerts = ko.observable<alert[]>([]);
     isGlobalAdmin = shell.isGlobalAdmin;
+    canNavigateToAdminSettings: KnockoutComputed<boolean>;
     clusterMode = ko.computed(() => shell.clusterMode());
     showCreateCluster = ko.computed(() => shell.has40Features() && !shell.clusterMode());
 
@@ -68,6 +69,8 @@ class resources extends viewModelBase {
 
     constructor() {
         super();
+
+        this.canNavigateToAdminSettings = ko.computed(() => shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings());
 
         this.databases = shell.databases;
         this.fileSystems = shell.fileSystems;

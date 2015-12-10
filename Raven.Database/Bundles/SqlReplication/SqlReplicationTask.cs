@@ -348,7 +348,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
                                         int countOfReplicatedItems = 0;
                                         if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-                                                                                            ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList, out countOfReplicatedItems))
+                                            ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList, out countOfReplicatedItems))
                                         {
                                             if (deletedDocs.Count > 0)
                                             {

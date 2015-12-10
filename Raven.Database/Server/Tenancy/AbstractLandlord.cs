@@ -59,53 +59,6 @@ namespace Raven.Database.Server.Tenancy
 
         public TimeSpan MaxTimeForTaskToWaitForDatabaseToLoad => systemConfiguration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 
-        public IEnumerable<TransportState> GetUserAllowedTransportStates(IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
-        {
-            foreach (var resourceName in GetUserAllowedResourcesByPrefix(user, systemDatabase, annonymouseUserAccessMode, mixedModeRequestAuthorizer, authHeader))
-            {
-                TransportState curTransportState;
-                if (ResourseTransportStates.TryGetValue(resourceName, out curTransportState))
-                    yield return curTransportState;
-            }
-        }
-
-        public string[] GetUserAllowedResourcesByPrefix( IPrincipal user, DocumentDatabase systemDatabase, AnonymousUserAccessMode annonymouseUserAccessMode, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, string authHeader)
-        {
-            List<string> approvedResources = null;
-            var nextPageStart = 0;
-            var resources = systemDatabase.Documents
-                .GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
-                systemDatabase.Configuration.Core.MaxPageSize, CancellationToken.None, ref nextPageStart);
-
-            var reourcesNames = resources
-                .Select(database =>
-                    database.Value<RavenJObject>("@metadata").Value<string>("@id").Replace(ResourcePrefix, string.Empty)).ToArray();
-
-            if (annonymouseUserAccessMode == AnonymousUserAccessMode.None)
-            {
-                if (user == null)
-                    return null;
-
-                var oneTimePrincipal = user as MixedModeRequestAuthorizer.OneTimetokenPrincipal;
-                bool isAdministrator = oneTimePrincipal != null ?
-                    oneTimePrincipal.IsAdministratorInAnonymouseMode :
-                    user.IsAdministrator(annonymouseUserAccessMode);
-
-                if (isAdministrator == false)
-                {
-                    var authorizer = mixedModeRequestAuthorizer;
-                    approvedResources = authorizer.GetApprovedResources(user, authHeader, reourcesNames);
-                }
-            }
-
-            if (approvedResources != null)
-            {
-                reourcesNames = reourcesNames.Where(resourceName => approvedResources.Contains(resourceName)).ToArray();
-            }
-
-            return reourcesNames;
-        }
-
         public void Unprotect(DatabaseDocument databaseDocument)
         {
             if (databaseDocument.SecuredSettings == null)

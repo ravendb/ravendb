@@ -607,6 +607,8 @@ namespace Raven.Client.Connection.Async
             var method = String.IsNullOrEmpty(key) ? HttpMethod.Post : HttpMethod.Put;
             if (etag != null)
                 metadata[Constants.MetadataEtagField] = new RavenJValue((string)etag);
+            else
+                metadata.Remove(Constants.MetadataEtagField);
 
             if (key != null)
                 key = Uri.EscapeDataString(key);

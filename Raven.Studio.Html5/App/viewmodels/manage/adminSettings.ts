@@ -4,16 +4,19 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import license = require("models/auth/license");
+
 class adminSettings extends viewModelBase {
 
     router: DurandalRootRouter = null;
     static adminSettingsRouter: DurandalRouter; //TODO: is it better way of exposing this router to child router?
     activeSubViewTitle: KnockoutComputed<string>;
     docsForSystemUrl: string;
+    isSystemDatabaseForbidden = ko.observable<boolean>();
 
     constructor() {
         super();
 
+        this.isSystemDatabaseForbidden((shell.isGlobalAdmin() || shell.canReadWriteSettings() || shell.canReadSettings()) === false);
         this.docsForSystemUrl = appUrl.forDocuments(null, appUrl.getSystemDatabase());
 
         var licenseInformation = { route: 'admin/settings/licenseInformation', moduleId: 'viewmodels/manage/licenseInformation', title: 'License Information', nav: true, hash: appUrl.forLicenseInformation() };

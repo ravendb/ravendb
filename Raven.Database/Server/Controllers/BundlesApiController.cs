@@ -24,22 +24,22 @@ namespace Raven.Database.Server.Controllers
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not open database named: " + DatabaseName + ", " + e.Message
+                    Error = $"Could not open database named: {DatabaseName}, {e.Message}"
                 }, HttpStatusCode.ServiceUnavailable);
             }
             if (db == null)
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not open database named: " + DatabaseName + ", database does not exists" 
+                    Error = $"Could not open database named: {DatabaseName}, database does not exists"
                 }, HttpStatusCode.ServiceUnavailable);
             }
             if (db.Configuration == null || db.Configuration.Core.ActiveBundles == null ||
-                !db.Configuration.Core.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName,StringComparison.InvariantCultureIgnoreCase)))
+                !db.Configuration.Core.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not figure out what to do"
+                    Error = $"{BundleName} bundle not activated in database named: {DatabaseName}"
                 }, HttpStatusCode.BadRequest);
             }
 
