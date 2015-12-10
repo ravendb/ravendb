@@ -975,18 +975,7 @@ namespace Raven.Database.Server
 				hasSemaphore = resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout);
 				if (hasSemaphore == false)
 				{
-					ctx.SetStatusToNotAvailable();
-					var msg = string.Format(
-						"The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
-						tenantId,
-						resourceCreationSemaphore.CurrentCount,
-						concurrentDatabaseLoadTimeout);
-					logger.Warn(msg);
-					ctx.WriteJson(new
-					{
-						Error =
-							msg,
-					});
+					HandleTooMuchDatabasesAtOnce(ctx, tenantId);
 					return false;
 				}
 				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
@@ -1099,6 +1088,22 @@ namespace Raven.Database.Server
 			}
 
 			return true;
+		}
+
+		private void HandleTooMuchDatabasesAtOnce(IHttpContext ctx, string tenantId)
+		{
+			ctx.SetStatusToNotAvailable();
+			var msg = string.Format(
+				"The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
+				tenantId,
+				resourceCreationSemaphore.CurrentCount,
+				concurrentDatabaseLoadTimeout);
+			logger.Warn(msg);
+			ctx.WriteJson(new
+			{
+				Error =
+					msg,
+			});
 		}
 
 		private static void OutputDatabaseOpenFailure(IHttpContext ctx, string tenantId, Exception e)
@@ -1433,18 +1438,30 @@ namespace Raven.Database.Server
 			if (string.Equals("System", name, StringComparison.OrdinalIgnoreCase))
 				return new CompletedTask<DocumentDatabase>(SystemDatabase);
 
+			var hasAcquired = false;
 			try
 			{
-				if (!resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout))
+				hasAcquired = resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout);
+				if (!hasAcquired)
+				{
+					var msg = string.Format(
+									"The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
+									name,
+									resourceCreationSemaphore.CurrentCount,
+									concurrentDatabaseLoadTimeout);
+					logger.Warn(msg);
 					return null;
-                Task<DocumentDatabase> db;
+				}
+
+				Task<DocumentDatabase> db;
 				if (TryGetOrCreateResourceStore(name, out db))
 					return db;
 				return null;
 			}
 			finally
 			{
-				resourceCreationSemaphore.Release();
+				if(hasAcquired)
+					resourceCreationSemaphore.Release();
 			}
 		}
 

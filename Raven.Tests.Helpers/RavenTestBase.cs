@@ -163,7 +163,8 @@ namespace Raven.Tests.Helpers
 			string dataDirectory = null,
 			bool runInMemory = true,
 			string requestedStorage = null,
-			bool enableAuthentication = false)
+			bool enableAuthentication = false,
+            Action<InMemoryRavenConfiguration> configureConfig = null)
 		{
 			if (dataDirectory != null)
 				pathsToDelete.Add(dataDirectory);
@@ -178,6 +179,8 @@ namespace Raven.Tests.Helpers
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
 			};
 
+            if (configureConfig != null)
+                configureConfig(ravenConfiguration);
 			ModifyConfiguration(ravenConfiguration);
 
 			ravenConfiguration.PostInit();
