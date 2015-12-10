@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.IO.Compression;
-using System.Runtime.CompilerServices;
-using System.Text;
+
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Smuggler

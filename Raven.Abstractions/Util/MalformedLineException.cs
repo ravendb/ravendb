@@ -1,12 +1,9 @@
-using System.ComponentModel;
-using System.Security.Permissions;
-using System.Runtime.Serialization;
 using System;
 
-namespace Raven.Abstractions.Util 
+namespace Raven.Abstractions.Util
 {
     [Serializable]
-    public class MalformedLineException : Exception 
+    public class MalformedLineException : Exception
     {
         public MalformedLineException()
         {
@@ -16,7 +13,7 @@ namespace Raven.Abstractions.Util
         {
         }
 
-        public MalformedLineException(string message, Exception inner)
+        public MalformedLineException(string message, Exception inner) : base(message, inner)
         {
         }
     }

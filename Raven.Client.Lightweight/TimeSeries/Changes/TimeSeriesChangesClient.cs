@@ -98,8 +98,8 @@ namespace Raven.Client.TimeSeries.Changes
 
             var taskedObservable = new TaskedObservable<TimeSeriesChangeNotification, TimeSeriesConnectionState>(
                 timeSeries,
-                notification => string.Equals(notification.Type, type, StringComparison.InvariantCulture) &&
-                                string.Equals(notification.Key, key, StringComparison.InvariantCulture));
+                notification => string.Equals(notification.Type, type, StringComparison.OrdinalIgnoreCase) &&
+                                string.Equals(notification.Key, key, StringComparison.OrdinalIgnoreCase));
             timeSeries.OnChangeNotification += taskedObservable.Send;
             timeSeries.OnError += taskedObservable.Error;
 

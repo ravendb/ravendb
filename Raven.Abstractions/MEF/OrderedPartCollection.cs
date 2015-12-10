@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -120,3 +121,4 @@ namespace Raven.Abstractions.MEF
 
     }
 }
+#endif

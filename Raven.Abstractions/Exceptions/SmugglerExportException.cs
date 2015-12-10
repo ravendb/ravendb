@@ -32,15 +32,16 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
-        
+
         public Etag LastEtag { get; set; }
 
         public string File { get; set; }
 
-
+#if !DNXCORE50
         protected SmugglerExportException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 
     [Serializable]
@@ -60,8 +61,10 @@ namespace Raven.Abstractions.Exceptions
 
         public Etag LastEtag { get; set; }
 
-        protected SmugglerImportException( SerializationInfo info, StreamingContext context) : base(info, context)
+#if !DNXCORE50
+        protected SmugglerImportException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

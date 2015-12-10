@@ -1,3 +1,4 @@
+#if !DNXCORE50
 // -----------------------------------------------------------------------
 //  <copyright file="ITransactionRecoveryStorage.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -10,3 +11,4 @@ namespace Raven.Client.Document.DTC
         ITransactionRecoveryStorageContext Create();
     }
 }
+#endif

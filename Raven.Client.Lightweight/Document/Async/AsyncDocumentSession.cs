@@ -929,6 +929,7 @@ namespace Raven.Client.Document.Async
             throw new NotSupportedException("Cannot get a document in a synchronous manner using async document session");
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Commits the specified tx id.
         /// </summary>
@@ -954,6 +955,7 @@ namespace Raven.Client.Document.Async
             await AsyncDatabaseCommands.PrepareTransactionAsync(txId, resourceManagerId, recoveryInformation).ConfigureAwait(false);
             ClearEnlistment();
         }
+#endif
 
         /// <summary>
         /// Dynamically queries RavenDB using LINQ

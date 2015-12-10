@@ -13,8 +13,12 @@
         <requireLicenseAcceptance>true</requireLicenseAcceptance>
         <tags>nosql ravendb raven document database client</tags>
         <frameworkAssemblies>
-            <frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
+            <frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net45" />
         </frameworkAssemblies>
+        <dependencies> 
+           <group targetFramework="net45">
+           </group>
+        </dependencies> 
         <iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
     </metadata>
 </package>

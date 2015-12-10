@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using ICSharpCode.SharpZipLib.BZip2;
 using ICSharpCode.SharpZipLib.Tar;
 using Raven.Abstractions.Data;
@@ -324,3 +325,4 @@ namespace Raven.Tryouts
         }
     }	
 }
+#endif

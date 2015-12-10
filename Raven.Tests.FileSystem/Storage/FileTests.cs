@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Json.Linq;
 using Xunit;
 using Xunit.Extensions;
@@ -680,6 +681,65 @@ namespace Raven.Tests.FileSystem.Storage
                     Assert.NotNull(fileMetadata);
                     Assert.Equal(1, fileMetadata.Count);
                     Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetFilesAfterWhereFileEtagsHaveDifferentRestartValues(string requestedStorage)
+        {
+            var etagGenerator = new UuidGenerator();
+
+            using (var storage = NewTransactionalStorage(requestedStorage, uuidGenerator: etagGenerator))
+            {
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 7;
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject()));
+
+                etagGenerator.EtagBase = 12;
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 300;
+                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject()));
+
+                etagGenerator.EtagBase = 450;
+                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 1024;
+                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject()));
+
+                etagGenerator.EtagBase = 3333;
+                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 10000;
+                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject()));
+
+                storage.Batch(accessor =>
+                {
+                    var files = accessor
+                        .GetFilesAfter(Etag.Empty, 10)
+                        .ToList();
+
+                    Assert.Equal(8, files.Count);
+                    Assert.Equal("file1", files[0].Name);
+                    Assert.Equal("file2", files[1].Name);
+                    Assert.Equal("file3", files[2].Name);
+                    Assert.Equal("file4", files[3].Name);
+                    Assert.Equal("file5", files[4].Name);
+                    Assert.Equal("file6", files[5].Name);
+                    Assert.Equal("file7", files[6].Name);
+                    Assert.Equal("file8", files[7].Name);
+
+                    files = accessor
+                        .GetFilesAfter(files[4].Etag, 100)
+                        .ToList();
+
+                    Assert.Equal(3, files.Count);
+                    Assert.Equal("file6", files[0].Name);
+                    Assert.Equal("file7", files[1].Name);
+                    Assert.Equal("file8", files[2].Name);
                 });
             }
         }
