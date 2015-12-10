@@ -5,9 +5,12 @@
             <small data-bind="visible: isGlobalAdmin() || canNavigateToAdminSettings()">
                 <span data-bind="visible: isGlobalAdmin">
                     Go ahead and
-                    <a href="#" data-bind="click: newResource">create a database or a distributed file system</a> or
+                    <a href="#" data-bind="click: newResource">create a database or a distributed file system</a> 
                 </span>
-                <span data-bind="visible: canNavigateToAdminSettings"><a href="#" data-bind="click: navigateToAdminSettings">manage your server</a></span>
+                <span data-bind="visible: canNavigateToAdminSettings">
+                    or
+                    <a href="#" data-bind="click: navigateToAdminSettings">manage your server</a>
+                </span>
             </small>
         </h2>
     </div>
