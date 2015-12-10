@@ -948,7 +948,7 @@ function AddDependenciesToNuspec($projects, $nuspecPath, $framework)
     
     foreach ($project in $projects)
     {
-        $projectJson = Get-Content "$project\project.json" | ConvertFrom-Json
+        $projectJson = Get-Content "$project\project.json" -Raw | ConvertFrom-Json
         $frameworks = $projectJson.frameworks
         $dependencies = $frameworks."$framework".dependencies
 
