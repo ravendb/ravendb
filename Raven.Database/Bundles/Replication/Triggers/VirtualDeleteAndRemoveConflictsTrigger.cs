@@ -64,6 +64,7 @@ namespace Raven.Bundles.Replication.Triggers
 
         private bool IsConflictDocument(JsonDocumentMetadata document, TransactionInformation transactionInformation, out JsonDocument docWithBody)
         {
+	        var IsConflictsPositive = true;
             docWithBody = null;
             var conflict = document.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
             if (conflict == null || conflict.Value<bool>() == false)
@@ -73,13 +74,7 @@ namespace Raven.Bundles.Replication.Triggers
 
             docWithBody = Database.Get(document.Key, transactionInformation);
 
-            var conflicts = docWithBody.DataAsJson.Value<RavenJArray>("Conflicts");
-            if (conflicts != null)
-            {
-                return false;
-            }
-
-            return true;
+	        return true;
         }
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
 		{
@@ -100,7 +95,8 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			var conflicts = document.DataAsJson.Value<RavenJArray>("Conflicts");
 			var currentSource = Database.TransactionalStorage.Id.ToString();
-
+			var historySet = false;
+			
 			foreach (var c in conflicts)
 			{
                 RavenJObject conflict;
@@ -111,16 +107,18 @@ namespace Raven.Bundles.Replication.Triggers
 				if (conflictSource != currentSource)
 					continue;
 
-				this.deletedHistory.Value = new RavenJArray
+				if (!historySet)
 				{
-					new RavenJObject
+					this.deletedHistory.Value = new RavenJArray
 					{
-						{ Constants.RavenReplicationVersion, conflict[Constants.RavenReplicationVersion] },
-						{ Constants.RavenReplicationSource, conflict[Constants.RavenReplicationSource] }
-					}
-				};
-
-				return;
+						new RavenJObject
+						{
+							{Constants.RavenReplicationVersion, conflict[Constants.RavenReplicationVersion]},
+							{Constants.RavenReplicationSource, conflict[Constants.RavenReplicationSource]}
+						}
+					};
+					historySet = true;
+				}
 			}
 		}
 
