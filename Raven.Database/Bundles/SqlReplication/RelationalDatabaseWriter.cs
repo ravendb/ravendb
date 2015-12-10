@@ -315,6 +315,12 @@ namespace Raven.Database.Bundles.SqlReplication
                     finally
                     {
                         sp.Stop();
+
+                        if (log.IsDebugEnabled)
+                        {
+                            log.Debug(string.Format("Insert took: {0}ms, statement: {1}", sp.ElapsedMilliseconds, sb));
+                        }
+
                         var elapsedMicroseconds = (long)(sp.ElapsedTicks*SystemTime.MicroSecPerTick);
                         replicationInsertDurationHistogram.Update(elapsedMicroseconds);
                         replicationInsertActionsMetrics.Mark(1);
@@ -322,11 +328,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     }
                 }
             }
-            
-            
         }
-
-
 
         public void DeleteItems(string tableName, string pkName, bool doNotParameterize, List<string> identifiers, Action<DbCommand> commandCallback = null)
         {
@@ -397,6 +399,12 @@ namespace Raven.Database.Bundles.SqlReplication
                     finally
                     {
                         sp.Stop();
+
+                        if (log.IsDebugEnabled)
+                        {
+                            log.Debug(string.Format("Delete took: {0}ms, statement: {1}", sp.ElapsedMilliseconds, sb));
+                        }
+
                         var elapsedMicroseconds = (long)(sp.ElapsedTicks * SystemTime.MicroSecPerTick);
                         replicationDeleteDurationHistogram.Update(elapsedMicroseconds);
                         replicationDeletesActionsHistogram.Update(1);
