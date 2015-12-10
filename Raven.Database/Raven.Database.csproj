@@ -220,6 +220,7 @@
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
+    <Compile Include="Server\Responders\Admin\AdminOAuthCertificateResponder.cs" />
     <Compile Include="Server\Responders\TransactionsList.cs" />
     <Compile Include="Server\Responders\Debugging\DebugDocumentsCount.cs" />
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />

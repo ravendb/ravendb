@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Security.Principal;
 using Raven.Database.Config;
-using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Security
 {
@@ -37,8 +34,19 @@ namespace Raven.Database.Server.Security
 
 		public static bool IsGetRequest(string httpMethod, string requestPath)
 		{
-			return (httpMethod == "GET" || httpMethod == "HEAD") ||
-				   httpMethod == "POST" && (requestPath == "/multi_get/" || requestPath == "/multi_get");
+            switch (httpMethod)
+            {
+                case "GET":
+                case "HEAD":
+                    return true;
+                case "POST":
+                    return requestPath.EndsWith("/queries", StringComparison.Ordinal) ||
+                           requestPath.EndsWith("/queries/", StringComparison.Ordinal) ||
+                           requestPath.EndsWith("/multi_get", StringComparison.Ordinal) ||
+                           requestPath.EndsWith("/multi_get/", StringComparison.Ordinal);
+                default:
+                    return false;
+            }
 		}
 
 		public abstract void Dispose();
