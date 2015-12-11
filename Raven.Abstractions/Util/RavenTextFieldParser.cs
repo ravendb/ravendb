@@ -1,8 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.ComponentModel;
 using System.IO;
 using System.Text;
@@ -40,30 +37,36 @@ namespace Raven.Abstractions.Util
             this.reader = reader;
         }
 
+#if !DNXCORE50
         public TextFieldParser(string path)
         {
             reader = new StreamReader(path);
         }
+#endif
 
         public TextFieldParser(Stream stream, Encoding defaultEncoding)
         {
             reader = new StreamReader(stream, defaultEncoding);
         }
 
+#if !DNXCORE50
         public TextFieldParser(string path, Encoding defaultEncoding)
         {
             reader = new StreamReader(path, defaultEncoding);
         }
+#endif
 
         public TextFieldParser(Stream stream, Encoding defaultEncoding, bool detectEncoding)
         {
             reader = new StreamReader(stream, defaultEncoding, detectEncoding);
         }
 
+#if !DNXCORE50
         public TextFieldParser(string path, Encoding defaultEncoding, bool detectEncoding)
         {
             reader = new StreamReader(path, defaultEncoding, detectEncoding);
         }
+#endif
 
         public TextFieldParser(Stream stream, Encoding defaultEncoding, bool detectEncoding, bool leaveOpen)
         {
@@ -73,7 +76,8 @@ namespace Raven.Abstractions.Util
 
         private string[] GetDelimitedFields()
         {
-            if (delimiters == null || delimiters.Length == 0) {
+            if (delimiters == null || delimiters.Length == 0)
+            {
                 throw new InvalidOperationException("Unable to read delimited fields because Delimiters is Nothing or empty.");
             }
 
@@ -87,7 +91,8 @@ namespace Raven.Abstractions.Util
             if (line == null)
                 return null;
 
-            while (!(nextIndex >= line.Length)) {
+            while (!(nextIndex >= line.Length))
+            {
                 result.Add(GetNextField(line, currentIndex, ref nextIndex));
                 currentIndex = nextIndex;
             }
@@ -100,12 +105,14 @@ namespace Raven.Abstractions.Util
             bool inQuote = false;
             int currentindex = 0;
 
-            if (nextIndex == int.MinValue) {
+            if (nextIndex == int.MinValue)
+            {
                 nextIndex = int.MaxValue;
                 return string.Empty;
             }
 
-            if (hasFieldsEnclosedInQuotes && line[currentindex] == '"') {
+            if (hasFieldsEnclosedInQuotes && line[currentindex] == '"')
+            {
                 inQuote = true;
                 startIndex += 1;
             }
@@ -113,42 +120,54 @@ namespace Raven.Abstractions.Util
             currentindex = startIndex;
 
             bool mustMatch = false;
-            for (int j = startIndex; j <= line.Length - 1; j++) {
-                if (inQuote) {
-                    if (line[j] == '"') {
+            for (int j = startIndex; j <= line.Length - 1; j++)
+            {
+                if (inQuote)
+                {
+                    if (line[j] == '"')
+                    {
                         inQuote = false;
                         mustMatch = true;
                     }
                     continue;
                 }
 
-                for (int i = 0; i <= delimiters.Length - 1; i++) {
-                    if (string.Compare(line, j, delimiters[i], 0, delimiters[i].Length) == 0) {
+                for (int i = 0; i <= delimiters.Length - 1; i++)
+                {
+                    if (string.Compare(line, j, delimiters[i], 0, delimiters[i].Length) == 0)
+                    {
                         nextIndex = j + delimiters[i].Length;
-                        if (nextIndex == line.Length) {
+                        if (nextIndex == line.Length)
+                        {
                             nextIndex = int.MinValue;
                         }
-                        if (mustMatch) {
+                        if (mustMatch)
+                        {
                             return line.Substring(startIndex, j - startIndex - 1);
-                        } else {
+                        }
+                        else {
                             return line.Substring(startIndex, j - startIndex);
                         }
                     }
                 }
 
-                if (mustMatch) {
+                if (mustMatch)
+                {
                     RaiseDelimiterEx(line);
                 }
             }
 
-            if (inQuote) {
+            if (inQuote)
+            {
                 RaiseDelimiterEx(line);
             }
 
             nextIndex = line.Length;
-            if (mustMatch) {
+            if (mustMatch)
+            {
                 return line.Substring(startIndex, nextIndex - startIndex - 1);
-            } else {
+            }
+            else {
                 return line.Substring(startIndex);
             }
         }
@@ -169,7 +188,8 @@ namespace Raven.Abstractions.Util
 
         private string[] GetWidthFields()
         {
-            if (fieldWidths == null || fieldWidths.Length == 0) {
+            if (fieldWidths == null || fieldWidths.Length == 0)
+            {
                 throw new InvalidOperationException("Unable to read fixed width fields because FieldWidths is Nothing or empty.");
             }
 
@@ -179,14 +199,18 @@ namespace Raven.Abstractions.Util
 
             line = GetNextLine();
 
-            if (line.Length < minFieldLength) {
+            if (line.Length < minFieldLength)
+            {
                 RaiseFieldWidthEx(line);
             }
 
-            for (int i = 0; i <= result.Length - 1; i++) {
-                if (trimWhiteSpace) {
+            for (int i = 0; i <= result.Length - 1; i++)
+            {
+                if (trimWhiteSpace)
+                {
                     result[i] = line.Substring(currentIndex, fieldWidths[i]).Trim();
-                } else {
+                }
+                else {
                     result[i] = line.Substring(currentIndex, fieldWidths[i]);
                 }
                 currentIndex += fieldWidths[i];
@@ -213,7 +237,8 @@ namespace Raven.Abstractions.Util
         {
             string nextLine = null;
 
-            do {
+            do
+            {
                 nextLine = ReadLine();
             } while (!(nextLine == null || IsCommentLine(nextLine) == false));
 
@@ -222,9 +247,11 @@ namespace Raven.Abstractions.Util
 
         private string GetNextLine()
         {
-            if (peekedLine.Count > 0) {
+            if (peekedLine.Count > 0)
+            {
                 return peekedLine.Dequeue();
-            } else {
+            }
+            else {
                 return GetNextRealLine();
             }
         }
@@ -233,8 +260,13 @@ namespace Raven.Abstractions.Util
 
         public void Close()
         {
-            if (reader != null && leaveOpen == false) {
+            if (reader != null && leaveOpen == false)
+            {
+#if !DNXCORE50
                 reader.Close();
+#else
+                reader.Dispose();
+#endif
             }
             reader = null;
         }
@@ -252,55 +284,68 @@ namespace Raven.Abstractions.Util
 
             string[] peekedLines = null;
             string theLine = null;
-            if (peekedLine.Count > 0) {
+            if (peekedLine.Count > 0)
+            {
                 peekedLines = peekedLine.ToArray();
-                for (int i = 0; i <= peekedLine.Count - 1; i++) {
-                    if (IsCommentLine(peekedLines[i]) == false) {
+                for (int i = 0; i <= peekedLine.Count - 1; i++)
+                {
+                    if (IsCommentLine(peekedLines[i]) == false)
+                    {
                         theLine = peekedLines[i];
                         break; // TODO: might not be correct. Was : Exit For
                     }
                 }
             }
 
-            if (theLine == null) {
-                do {
+            if (theLine == null)
+            {
+                do
+                {
                     theLine = reader.ReadLine();
                     peekedLine.Enqueue(theLine);
                 } while (!(theLine == null || IsCommentLine(theLine) == false));
             }
 
-            if (theLine != null) {
-                if (theLine.Length <= numberOfChars) {
+            if (theLine != null)
+            {
+                if (theLine.Length <= numberOfChars)
+                {
                     return theLine;
-                } else {
+                }
+                else {
                     return theLine.Substring(0, numberOfChars);
                 }
-            } else {
+            }
+            else {
                 return null;
             }
         }
 
         public string[] ReadFields()
         {
-            switch (textFieldType) {
-            case FieldType.Delimited:
-                return GetDelimitedFields();
-            case FieldType.FixedWidth:
-                return GetWidthFields();
-            default:
-                return GetDelimitedFields();
+            switch (textFieldType)
+            {
+                case FieldType.Delimited:
+                    return GetDelimitedFields();
+                case FieldType.FixedWidth:
+                    return GetWidthFields();
+                default:
+                    return GetDelimitedFields();
             }
         }
 
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         public string ReadLine()
         {
-            if (peekedLine.Count > 0) {
+            if (peekedLine.Count > 0)
+            {
                 return peekedLine.Dequeue();
             }
-            if (lineNumber == -1) {
+            if (lineNumber == -1)
+            {
                 lineNumber = 1;
-            } else {
+            }
+            else {
                 lineNumber += 1;
             }
             return reader.ReadLine();
@@ -323,37 +368,45 @@ namespace Raven.Abstractions.Util
             this.FieldWidths = fieldWidths;
             //m_TextFieldType = FieldType.FixedWidth
         }
-/*
-        [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public string[] CommentTokens {
-            get { return commentTokens; }
-            set { commentTokens = value; }
-        }
-*/
-        public string[] Delimiters {
+        /*
+                [EditorBrowsable(EditorBrowsableState.Advanced)]
+                public string[] CommentTokens {
+                    get { return commentTokens; }
+                    set { commentTokens = value; }
+                }
+        */
+        public string[] Delimiters
+        {
             get { return delimiters; }
             set { delimiters = value; }
         }
 
-        public bool EndOfData {
+        public bool EndOfData
+        {
             get { return PeekChars(1) == null; }
         }
 
-        public string ErrorLine {
+        public string ErrorLine
+        {
             get { return errorLine; }
         }
 
-        public long ErrorLineNumber {
+        public long ErrorLineNumber
+        {
             get { return errorLineNumber; }
         }
 
-        public int[] FieldWidths {
+        public int[] FieldWidths
+        {
             get { return fieldWidths; }
-            set {
+            set
+            {
                 fieldWidths = value;
-                if (fieldWidths != null) {
+                if (fieldWidths != null)
+                {
                     minFieldLength = 0;
-                    for (int i = 0; i <= fieldWidths.Length - 1; i++) {
+                    for (int i = 0; i <= fieldWidths.Length - 1; i++)
+                    {
                         minFieldLength += value[i];
                     }
                 }
@@ -361,22 +414,26 @@ namespace Raven.Abstractions.Util
         }
 
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public bool HasFieldsEnclosedInQuotes {
+        public bool HasFieldsEnclosedInQuotes
+        {
             get { return hasFieldsEnclosedInQuotes; }
             set { hasFieldsEnclosedInQuotes = value; }
         }
 
         [EditorBrowsable(EditorBrowsableState.Advanced)]
-        public long LineNumber {
+        public long LineNumber
+        {
             get { return lineNumber; }
         }
 
-        public FieldType TextFieldType {
+        public FieldType TextFieldType
+        {
             get { return textFieldType; }
             set { textFieldType = value; }
         }
 
-        public bool TrimWhiteSpace {
+        public bool TrimWhiteSpace
+        {
             get { return trimWhiteSpace; }
             set { trimWhiteSpace = value; }
         }
@@ -387,7 +444,8 @@ namespace Raven.Abstractions.Util
         // IDisposable
         protected virtual void Dispose(bool disposing)
         {
-            if (!this.disposedValue) {
+            if (!this.disposedValue)
+            {
                 Close();
             }
             this.disposedValue = true;

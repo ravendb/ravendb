@@ -6,7 +6,11 @@ namespace Raven.Abstractions.Extensions
     {
         public static string CharToString(this char c)
         {
+#if !DNXCORE50
             return c.ToString(CultureInfo.InvariantCulture);
+#else
+            return c.ToString();
+#endif
         }
 
         public static string ToInvariantString(this object obj)

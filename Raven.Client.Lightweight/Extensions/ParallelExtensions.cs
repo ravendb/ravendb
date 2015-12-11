@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using Raven.Abstractions.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,8 +37,13 @@ namespace Raven.Client.Extensions
 
         private static Exception PreserveStackTrace(Exception exception)
         {
-            typeof (Exception).InvokeMember("InternalPreserveStackTrace", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod, null,
-                                            exception, null);
+#if !DNXCORE50
+            const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.InvokeMethod;
+#else
+            const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
+#endif
+
+            typeof(Exception).InvokeMember("InternalPreserveStackTrace", Flags, exception);
             return exception;
         }
     }

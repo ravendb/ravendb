@@ -116,7 +116,9 @@ namespace Raven.Abstractions.Data
 
         public const int DefaultIndexFileBlockSize = 12 * 1024;
 
+#if !DNXCORE50
         public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesCryptoServiceProvider);
+#endif
 
         //Replications
         public const string RavenReplicationSource = "Raven-Replication-Source";

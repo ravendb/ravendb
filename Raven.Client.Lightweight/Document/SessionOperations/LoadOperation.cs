@@ -7,7 +7,12 @@ namespace Raven.Client.Document.SessionOperations
 {
     public class LoadOperation
     {
-        private static readonly ILog log = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(LoadOperation));
+#endif
+
         protected readonly InMemoryDocumentSessionOperations sessionOperations;
         private readonly Func<IDisposable> disableAllCaching;
         private readonly string id;
@@ -16,7 +21,7 @@ namespace Raven.Client.Document.SessionOperations
 
         public LoadOperation(InMemoryDocumentSessionOperations sessionOperations, Func<IDisposable> disableAllCaching, string id)
         {
-            if (id == null) throw new ArgumentNullException("id","The document id cannot be null");
+            if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
             this.sessionOperations = sessionOperations;
             this.disableAllCaching = disableAllCaching;
             this.id = id;
@@ -25,8 +30,8 @@ namespace Raven.Client.Document.SessionOperations
         public void LogOperation()
         {
             if (log.IsDebugEnabled)
-            log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
-        }
+                log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
+            }			
 
         public IDisposable EnterLoadContext()
         {
@@ -41,7 +46,7 @@ namespace Raven.Client.Document.SessionOperations
             firstRequest = false;
             documentFound = document;
 
-            return false;
+                return false;
         }
 
         public virtual T Complete<T>()

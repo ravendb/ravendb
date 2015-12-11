@@ -5,7 +5,10 @@
 //-----------------------------------------------------------------------
 using System.Linq;
 using System.Threading;
+#if !DNXCORE50
 using System.Transactions;
+#endif
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Connection;

@@ -31,7 +31,11 @@ namespace Raven.Client.Connection
     /// </summary>
     public abstract class ReplicationInformerBase<TClient> : IReplicationInformerBase<TClient>
     {
+#if !DNXCORE50
         protected readonly ILog Log = LogManager.GetCurrentClassLogger();
+#else
+        protected readonly ILog Log = LogManager.GetLogger(typeof(ReplicationInformerBase<TClient>));
+#endif
 
         protected readonly QueryConvention Conventions;
 
@@ -119,38 +123,38 @@ namespace Raven.Client.Connection
                 var checkDestination = new Task(async delegate
                 {
                     for (int i = 0; i < 3; i++)
+                        {
+                token.ThrowCancellationIfNotDefault();
+                try
+                {
+                    var r = await TryOperationAsync<object>(async metadata =>
                     {
-                        token.ThrowCancellationIfNotDefault();
-                        try
-                        {
-                            var r = await TryOperationAsync<object>(async metadata =>
-                            {
                                 var requestParams = new CreateHttpJsonRequestParams(null, GetServerCheckUrl(metadata.Url), HttpMethods.Get, metadata.Credentials, Conventions);
-                                using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
-                                {
-                                    await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                                }
-                                return null;
-                            }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
-                            if (r.Success)
-                            {
-                                FailureCounters.ResetFailureCount(operationMetadata.Url);
-                                return;
-                            }
-                        }
-                        catch (ObjectDisposedException)
+                        using (var request = requestFactory.CreateHttpJsonRequest(requestParams))
                         {
-                            return; // disposed, nothing to do here
+                            await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                         }
-                        await Task.Delay(DelayTimeInMiliSec, token).ConfigureAwait(false);
+                        return null;
+                    }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
+                    if (r.Success)
+                    {
+                                FailureCounters.ResetFailureCount(operationMetadata.Url);
+                        return;
                     }
+                }
+                catch (ObjectDisposedException)
+                {
+                            return; // disposed, nothing to do here
+                }
+                await Task.Delay(DelayTimeInMiliSec, token).ConfigureAwait(false);
+            }
                 });
 
                 var old = Interlocked.CompareExchange(ref failureCounter.CheckDestination, checkDestination, currentTask);
                 if (old == currentTask)
                 {
                       checkDestination.Start(TaskScheduler.Default);
-                }
+        }
             }
 
             return false;
@@ -194,12 +198,12 @@ namespace Raven.Client.Connection
         }
 
         public async Task<T> ExecuteWithReplicationAsync<T>(HttpMethod method,
-            string primaryUrl, 
-            OperationCredentials primaryCredentials, 
+            string primaryUrl,
+            OperationCredentials primaryCredentials,
             RequestTimeMetric primaryRequestTimeMetric,
-            int currentRequest, 
-            int currentReadStripingBase, 
-            Func<OperationMetadata, Task<T>> operation, 
+            int currentRequest,
+            int currentReadStripingBase,
+            Func<OperationMetadata, Task<T>> operation,
             CancellationToken token = default (CancellationToken))
         {
             Debug.Assert(typeof(T).FullName.Contains("Task") == false);
@@ -237,7 +241,7 @@ namespace Raven.Client.Connection
             if (ShouldExecuteUsing(primaryOperation,primaryOperation, method, true, null,token))
             {
                 operationResult = await TryOperationAsync(operation, primaryOperation, null, !operationResult.WasTimeout && localReplicationDestinations.Count > 0, token)
-                                                .ConfigureAwait(false);
+                    .ConfigureAwait(false);
 
                 if (operationResult.Success)
                     return operationResult.Result;
@@ -294,7 +298,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
         protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, bool avoidThrowing, CancellationToken cancellationToken)
         {
             var tryWithPrimaryCredentials = FailureCounters.IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
-            
+
             bool shouldTryAgain = false;
             try
             {

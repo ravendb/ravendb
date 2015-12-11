@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 using System.Collections.Concurrent;
 using System.Net;
@@ -110,3 +111,4 @@ namespace Raven.Abstractions.Connection
         }
     }
 }
+#endif

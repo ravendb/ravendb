@@ -11,6 +11,14 @@ namespace Raven.Tests.Core.Session
 {
     public class Includes : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Includes(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void BasicInclude()
         {
@@ -19,19 +27,19 @@ namespace Raven.Tests.Core.Session
                 using (var session = store.OpenSession())
                 {
                     var user = new User
-                               {
-                                   Id = "users/1",
-                                   AddressId = "addresses/1",
-                                   Name = "John"
-                               };
+                    {
+                        Id = "users/1",
+                        AddressId = "addresses/1",
+                        Name = "John"
+                    };
 
                     var address = new Address
-                                  {
-                                      Id = "addresses/1",
-                                      City = "New York",
-                                      Country = "USA",
-                                      Street = "Wall Street"
-                                  };
+                    {
+                        Id = "addresses/1",
+                        City = "New York",
+                        Country = "USA",
+                        Street = "Wall Street"
+                    };
 
                     session.Store(user);
                     session.Store(address);

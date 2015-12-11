@@ -20,7 +20,11 @@ namespace Raven.Client.Changes
                                 where TChangesApi : class, IConnectableChanges
                                 where TConventions : ConventionBase
     {
+#if !DNXCORE50
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+#else
+        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteChangesClientBase<TChangesApi, TConnectionState, TConventions>));
+#endif
 
         private Timer clientSideHeartbeatTimer;
 
@@ -36,8 +40,8 @@ namespace Raven.Client.Changes
         private readonly string id;
 
         // This is the StateCounters, it is not related to the counters database
-        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
-        
+        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);        
+
         protected RemoteChangesClientBase(
             string url,
             string apiKey,
@@ -58,7 +62,7 @@ namespace Raven.Client.Changes
             this.url = url;
             this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
-            this.onDispose = onDispose;
+            this.onDispose = onDispose;            
             Conventions = conventions;
             Task = EstablishConnection()
                         .ObserveException()
@@ -146,7 +150,7 @@ namespace Raven.Client.Changes
             {
                 Connected = false;
                 ConnectionStatusChanged(this, EventArgs.Empty);
-                throw new ObjectDisposedException( this.GetType().Name );
+                throw new ObjectDisposedException(this.GetType().Name);
             }
 
             Connected = true;
@@ -283,7 +287,7 @@ namespace Raven.Client.Changes
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
             if (logger.IsDebugEnabled)
-                logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
+            logger.Debug("Got notification from {0} id {1} of type {2}", url, id, dataFromConnection);
 
             switch (type)
             {
@@ -352,11 +356,11 @@ namespace Raven.Client.Changes
             });
 
             return counter;
-        }
+    }
 
         private static TConnectionState CreateTConnectionState(params object[] args)
         {
             return (TConnectionState)Activator.CreateInstance(typeof(TConnectionState), args);
-        }
+}
     }
 }

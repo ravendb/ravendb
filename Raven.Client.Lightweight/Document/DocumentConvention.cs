@@ -26,6 +26,7 @@ using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -64,7 +65,9 @@ namespace Raven.Client.Document
                 new Int64Converter(),
             };
             PreserveDocumentPropertiesNotFoundOnModel = true;
+#if !DNXCORE50
             PrettifyGeneratedLinqExpressions = true;
+#endif
             DisableProfiling = true;
             UseParallelMultiGet = true;
             DefaultQueryingConsistency = ConsistencyOptions.None;
@@ -264,7 +267,7 @@ namespace Raven.Client.Document
 
             if (t.Name.Contains("<>"))
                 return null;
-            if (t.IsGenericType)
+            if (t.IsGenericType())
             {
                 var name = t.GetGenericTypeDefinition().Name;
                 if (name.Contains('`'))
@@ -663,10 +666,12 @@ namespace Raven.Client.Document
         /// </summary>
         public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
+#if !DNXCORE50
         /// <summary>
         ///  Attempts to prettify the generated linq expressions for indexes and transformers
         /// </summary>
         public bool PrettifyGeneratedLinqExpressions { get; set; }
+#endif
 
         /// <summary>
         /// How index and transformer updates should be handled in replicated setup.
@@ -777,8 +782,8 @@ namespace Raven.Client.Document
             if (nonNullable != null)
                 type = nonNullable;
 
-            if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
-                type == typeof (decimal) || type == typeof (TimeSpan) || type == typeof(short))
+            if (type == typeof(int) || type == typeof(long) || type == typeof(double) || type == typeof(float) ||
+                type == typeof(decimal) || type == typeof(TimeSpan) || type == typeof(short))
                 return true;
 
             return customRangeTypes.Contains(type);

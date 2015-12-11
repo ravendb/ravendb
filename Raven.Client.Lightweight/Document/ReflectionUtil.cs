@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -32,8 +33,8 @@ namespace Raven.Client.Document
             if (localFullName.TryGetValue(entityType, out result))
                 return result;
 
-            var asmName = new AssemblyName(entityType.Assembly.FullName).Name;
-            if (entityType.IsGenericType)
+            var asmName = new AssemblyName(entityType.Assembly().FullName).Name;
+            if (entityType.IsGenericType())
             {
                 var genericTypeDefinition = entityType.GetGenericTypeDefinition();
                 var sb = new StringBuilder(genericTypeDefinition.FullName);
@@ -67,12 +68,12 @@ namespace Raven.Client.Document
             return result;
         }
 
-        public static IEnumerable<MemberInfo> GetPropertiesAndFieldsFor<TType>(BindingFlags bindingFlags = BindingFlags.Default)
+        public static IEnumerable<MemberInfo> GetPropertiesAndFieldsFor<TType>(BindingFlags bindingFlags)
         {
             return GetPropertiesAndFieldsFor(typeof(TType), bindingFlags);
         }
 
-        public static IEnumerable<MemberInfo> GetPropertiesAndFieldsFor(Type type, BindingFlags bindingFlags = BindingFlags.Default)
+        public static IEnumerable<MemberInfo> GetPropertiesAndFieldsFor(Type type, BindingFlags bindingFlags)
         {
             foreach (var field in type.GetFields(bindingFlags))
             {

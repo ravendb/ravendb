@@ -7,39 +7,68 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;using Raven.Abstractions.Data;using Raven.Abstractions.Extensions;
+using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+#if !DNXCORE50
 using Raven.Client.Embedded;
+#endif
 using Raven.Client.Extensions;
 using System.Linq;
+
+using Raven.Client;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Auth;
 using Xunit;
+#if !DNXCORE50
 using Raven.Server;
 using Raven.Database;
 using Raven.Database.Server;
 using Authentication = Raven.Database.Server.Security.Authentication;
+#endif
 
 namespace Raven.Tests.Core
 {
-    public class RavenCoreTestBase : IUseFixture<TestServerFixture>, IDisposable
+#if DNXCORE50
+    [CollectionDefinition("Core")]
+    public class CoreCollection : ICollectionFixture<TestServerFixture>
+    {
+    }
+
+    [Collection("Core")]
+#endif
+    public abstract class RavenCoreTestBase
+#if !DNXCORE50
+        : IUseFixture<TestServerFixture>, IDisposable
+#else
+        : IDisposable
+#endif
     {
         private readonly List<string> createdDbs = new List<string>();
         protected readonly List<DocumentStore> createdStores = new List<DocumentStore>();
 
+        private readonly IDocumentStore serverDocumentStore;
+
+#if !DNXCORE50
         protected RavenDbServer Server { get; private set; }
 
-        public void SetFixture(TestServerFixture coreTestFixture)
+        public void SetFixture(TestServerFixture fixture)
         {
-            Server = coreTestFixture.Server;
+            Server = fixture.Server;
         }
+#else
+        protected RavenCoreTestBase(TestServerFixture fixture)
+        {
+            serverDocumentStore = fixture.DocumentStore;
+        }
+#endif
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null, 
+        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null,
             Action<DatabaseDocument> modifyDatabaseDocument = null)
         {
-            var serverClient = (ServerClient)Server.DocumentStore.DatabaseCommands.ForSystemDatabase();
+            var serverClient = (ServerClient)GetServerCommands().ForSystemDatabase();
 
             serverClient.ForceReadFromMaster();
 
@@ -58,13 +87,7 @@ namespace Raven.Tests.Core
 
             createdDbs.Add(databaseName);
 
-            var documentStore = new DocumentStore
-            {
-                HttpMessageHandlerFactory = Server.DocumentStore.HttpMessageHandlerFactory,
-                Url = Server.SystemDatabase.ServerUrl,
-                DefaultDatabase = databaseName
-            };
-            documentStore.Initialize();
+            var documentStore = CreateDocumentStore(databaseName);
 
             createdStores.Add(documentStore);
 
@@ -76,22 +99,18 @@ namespace Raven.Tests.Core
             if (debug && Debugger.IsAttached == false)
                 return;
 
-            OwinHttpServer server = null;
             string url = documentStore.Url;
-            using (server)
+
+            var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
+            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+
+            Process.Start(documentsPage); // start the server
+
+            do
             {
-                var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
-                var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
-
-                Process.Start(documentsPage); // start the server
-
-                do
-                {
-                    Thread.Sleep(100);
-                } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
-            }
+                Thread.Sleep(100);
+            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
         }
-
 
         public static void WaitForIndexing(DocumentStore store, string db = null, TimeSpan? timeout = null)
         {
@@ -99,7 +118,7 @@ namespace Raven.Tests.Core
             if (db != null)
                 databaseCommands = databaseCommands.ForDatabase(db);
             var to = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(20));
-            var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0,to);
+            var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, to);
 
             if (spinUntil == false)
             {
@@ -147,15 +166,15 @@ namespace Raven.Tests.Core
 
             var failureMessages = new[]
                                   {
-                                      "Esent Restore: Failure! Could not restore database!", 
-                                      "Error: Restore Canceled", 
+                                      "Esent Restore: Failure! Could not restore database!",
+                                      "Error: Restore Canceled",
                                       "Restore Operation: Failure! Could not restore database!"
                                   };
 
             var restoreFinishMessages = new[]
                                         {
-                                            "The new database was created", 
-                                            "Esent Restore: Restore Complete", 
+                                            "The new database was created",
+                                            "Esent Restore: Restore Complete",
                                             "Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
                                         };
 
@@ -190,7 +209,9 @@ namespace Raven.Tests.Core
 
         public virtual void Dispose()
         {
+#if !DNXCORE50
             Authentication.Disable();
+#endif
             foreach (var store in createdStores)
             {
                 store.Dispose();
@@ -198,7 +219,7 @@ namespace Raven.Tests.Core
 
             foreach (var db in createdDbs)
             {
-                Server.DocumentStore.DatabaseCommands.GlobalAdmin.DeleteDatabase(db, hardDelete: true);
+                GetServerCommands().GlobalAdmin.DeleteDatabase(db, hardDelete: true);
             }
         }
 
@@ -210,6 +231,37 @@ namespace Raven.Tests.Core
                 yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
                 yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
             }
+        }
+
+        private DocumentStore CreateDocumentStore(string databaseName)
+        {
+#if !DNXCORE50
+            var documentStore = new DocumentStore
+            {
+                HttpMessageHandlerFactory = Server.DocumentStore.HttpMessageHandlerFactory,
+                Url = Server.SystemDatabase.ServerUrl,
+                DefaultDatabase = databaseName
+            };
+#else
+            var documentStore = new DocumentStore
+            {
+                Url = serverDocumentStore.Url,
+                DefaultDatabase = databaseName
+            };
+#endif
+
+            documentStore.Initialize();
+
+            return documentStore;
+        }
+
+        private IDatabaseCommands GetServerCommands()
+        {
+#if !DNXCORE50
+            return Server.DocumentStore.DatabaseCommands;
+#else
+            return serverDocumentStore.DatabaseCommands;
+#endif
         }
     }
 }

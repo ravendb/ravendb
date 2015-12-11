@@ -24,7 +24,12 @@ namespace Raven.Client.Document
     public class ReplicationBehavior
     {
         private readonly DocumentStore documentStore;
+
+#if !DNXCORE50
         private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(ReplicationBehavior));
+#endif
 
         public ReplicationBehavior(DocumentStore documentStore)
         {

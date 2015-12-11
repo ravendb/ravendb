@@ -11,6 +11,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions.Data;
 using System.Text;
+using System.Reflection;
 
 namespace Raven.Json.Linq
 {
@@ -204,7 +205,7 @@ namespace Raven.Json.Linq
                 return (U)(object)System.Convert.FromBase64String((string)value.Value);
             }
 
-            if (value.Value == null && typeof(U).IsValueType)
+            if (value.Value == null && typeof(U).IsValueType())
                 throw new InvalidOperationException("value.Value == null and conversion target type is not nullable");
 
             try

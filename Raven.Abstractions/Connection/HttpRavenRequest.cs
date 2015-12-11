@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -305,3 +306,4 @@ namespace Raven.Abstractions.Connection
 
     }
 }
+#endif

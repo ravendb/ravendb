@@ -13,13 +13,21 @@ namespace Raven.Tests.Core.ChangesApi
 {
     public class ImplementingChangesClient : RavenCoreTestBase
     {
+#if DNXCORE50
+        public ImplementingChangesClient(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         private interface ITypedConnectable : IConnectableChanges<ITypedConnectable>
         {
-        }
+            }
 
         private interface IUntypedConnectable : IConnectableChanges
-        {
-        }
+            {
+            }
 
         [Fact]
         public void ClientImplementationShouldWorkWithTypedInterface()
@@ -27,7 +35,7 @@ namespace Raven.Tests.Core.ChangesApi
             Task task;
 
             using (var x = new TypedInterfaceInheritanceChangesClient())
-            {
+        {
                 task = x.Task;
             }
 
@@ -44,20 +52,20 @@ namespace Raven.Tests.Core.ChangesApi
         public void ClientImplementationShouldWorkWithUntypedInterface()
         {
             Task task;
-
+                    
             using (var x = new UntypedInterfaceInheritanceChangesClient())
-            {
+        {
                 task = x.Task;
-            }
+        }
 
             try
-            {
+        {
                 task.Wait();
             }
             catch (Exception)
             {
             }
-        }
+            }
 
         [Fact]
         public void ShouldFailWhenClientBaseDoesNotImplementConnectableTypeParameterInterface()
@@ -70,9 +78,9 @@ namespace Raven.Tests.Core.ChangesApi
             public Task Task
             {
                 get
-                {
-                    throw new NotImplementedException();
-                }
+            {
+                throw new NotImplementedException();
+            }
             }
 
             public void Dec()
@@ -86,13 +94,13 @@ namespace Raven.Tests.Core.ChangesApi
             }
 
             public void Inc()
-            {
-                throw new NotImplementedException();
-            }
-        }
+        {
+                    throw new NotImplementedException();
+                }
+                }
 
         private class NoInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState, DocumentConvention>
-        {
+            {
             public NoInterfaceInheritanceChangesClient()
                 : base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
             {
@@ -110,7 +118,7 @@ namespace Raven.Tests.Core.ChangesApi
         }
 
         private class TypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<ITypedConnectable, MockConnectionState, DocumentConvention>, ITypedConnectable
-        {
+            {
             public TypedInterfaceInheritanceChangesClient()
                 : base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
             {
@@ -128,7 +136,7 @@ namespace Raven.Tests.Core.ChangesApi
         }
 
         private class UntypedInterfaceInheritanceChangesClient : RemoteChangesClientBase<IUntypedConnectable, MockConnectionState, DocumentConvention>, IUntypedConnectable
-        {
+            {
             public UntypedInterfaceInheritanceChangesClient()
                 : base("http://test", "apiKey", null, new HttpJsonRequestFactory(1024), new DocumentConvention(), () => { })
             {

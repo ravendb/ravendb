@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using Sparrow.Binary;
 using System;
 using System.Collections;
@@ -878,3 +879,4 @@ namespace Sparrow.Collections
 
 
 }
+#endif
