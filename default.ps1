@@ -122,7 +122,7 @@ task TestDnx -depends CompileDnx {
 
     Push-Location "$base_dir\Raven.Tests.Core"
     
-    &"$dnx" --configuration "$global:configuration" test
+    Start-Process -FilePath "$dnx" -ArgumentList "--configuration $global:configuration test" -NoNewWindow -Wait -ErrorAction SilentlyContinue
 
     Pop-Location
 }
