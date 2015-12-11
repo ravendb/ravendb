@@ -94,10 +94,12 @@ namespace Raven.Client.Connection
             {
                 Log.ErrorException("Could not persist the replication information", e);
             }
+#endif
         }
 
         public static List<OperationMetadata> TryLoadClusterNodesFromLocalCache(string serverHash)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -112,18 +114,22 @@ namespace Raven.Client.Connection
                         return RavenJToken
                             .TryLoad(stream)
                             .JsonDeserialization<List<OperationMetadata>>();
+                    }
+                }
             }
-        }
-    }
             catch (Exception e)
             {
                 Log.ErrorException("Could not understand the persisted cluster nodes", e);
                 return null;
-}
+            }
+#else
+            return null;
+#endif
         }
 
         public static void TrySavingClusterNodesToLocalCache(string serverHash, List<OperationMetadata> nodes)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())

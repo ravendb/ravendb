@@ -65,7 +65,7 @@ namespace Raven.Tests.Core
         }
 #endif
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null, 
+        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null,
             Action<DatabaseDocument> modifyDatabaseDocument = null)
         {
             var serverClient = (ServerClient)GetServerCommands().ForSystemDatabase();
@@ -101,16 +101,16 @@ namespace Raven.Tests.Core
 
             string url = documentStore.Url;
 
-                var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
-                var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+            var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase ?? Constants.SystemDatabase);
+            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
-                Process.Start(documentsPage); // start the server
+            Process.Start(documentsPage); // start the server
 
-                do
-                {
-                    Thread.Sleep(100);
-                } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
-            }
+            do
+            {
+                Thread.Sleep(100);
+            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+        }
 
         public static void WaitForIndexing(DocumentStore store, string db = null, TimeSpan? timeout = null)
         {
@@ -166,15 +166,15 @@ namespace Raven.Tests.Core
 
             var failureMessages = new[]
                                   {
-                                      "Esent Restore: Failure! Could not restore database!", 
-                                      "Error: Restore Canceled", 
+                                      "Esent Restore: Failure! Could not restore database!",
+                                      "Error: Restore Canceled",
                                       "Restore Operation: Failure! Could not restore database!"
                                   };
 
             var restoreFinishMessages = new[]
                                         {
-                                            "The new database was created", 
-                                            "Esent Restore: Restore Complete", 
+                                            "The new database was created",
+                                            "Esent Restore: Restore Complete",
                                             "Restore ended but could not create the datebase document, in order to access the data create a database with the appropriate name",
                                         };
 
@@ -230,9 +230,9 @@ namespace Raven.Tests.Core
                 yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Bson, Compression = BulkInsertCompression.GZip } };
                 yield return new[] { new BulkInsertOptions { Format = BulkInsertFormat.Json } };
                 yield return new[] { new BulkInsertOptions { Compression = BulkInsertCompression.None } };
-			}
-		}
-		
+            }
+        }
+
         private DocumentStore CreateDocumentStore(string databaseName)
         {
 #if !DNXCORE50
@@ -253,7 +253,7 @@ namespace Raven.Tests.Core
             documentStore.Initialize();
 
             return documentStore;
-    }
+        }
 
         private IDatabaseCommands GetServerCommands()
         {
@@ -262,6 +262,6 @@ namespace Raven.Tests.Core
 #else
             return serverDocumentStore.DatabaseCommands;
 #endif
-}
+        }
     }
 }

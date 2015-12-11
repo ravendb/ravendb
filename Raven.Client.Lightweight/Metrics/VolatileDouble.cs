@@ -46,12 +46,20 @@ namespace Raven.Client.Metrics
 
         public void Set(double value)
         {
+#if !DNXCORE50
             Thread.VolatileWrite(ref _value, value);
+#else
+            Volatile.Write(ref _value, value);
+#endif
         }
 
         public double Get()
         {
+#if !DNXCORE50
             return Thread.VolatileRead(ref _value);
+#else
+            return Volatile.Read(ref _value);
+#endif
         }
 
         public static implicit operator VolatileDouble(double value)

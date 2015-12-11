@@ -19,8 +19,6 @@ namespace Raven.Tests.Server.Runner.Data
 
         public bool RunInMemory { get; set; }
 
-        public string DefaultStorageTypeName { get; set; }
-
         public bool UseCommercialLicense { get; set; }
 
         public string ApiKeyName { get; set; }
@@ -31,13 +29,13 @@ namespace Raven.Tests.Server.Runner.Data
 
         public bool HasApiKey { get { return !string.IsNullOrEmpty(ApiKeyName) && !string.IsNullOrEmpty(ApiKeySecret); } }
 
-        public InMemoryRavenConfiguration ConvertToRavenConfiguration()
+        public RavenConfiguration ConvertToRavenConfiguration()
         {
-            var configuration = new InMemoryRavenConfiguration();
+            var configuration = new RavenConfiguration();
 
             foreach (var p in ConfigurationManager.AppSettings.AllKeys.Select(k => Tuple.Create(k, ConfigurationManager.AppSettings[k])))
-                                {
-                configuration.Settings.Add(p.Item1, p.Item2);
+            {
+                configuration.SetSetting(p.Item1, p.Item2);
             }
 
             foreach (var key in Settings.Keys)
@@ -47,9 +45,8 @@ namespace Raven.Tests.Server.Runner.Data
 
             configuration.Initialize();
 
-            configuration.Port = Port;
-            configuration.RunInMemory = RunInMemory;
-            configuration.DefaultStorageTypeName = DefaultStorageTypeName;
+            configuration.Core.Port = Port;
+            configuration.Core.RunInMemory = RunInMemory;
 
             return configuration;
         }

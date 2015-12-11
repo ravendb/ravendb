@@ -24,7 +24,11 @@ namespace Raven.Tests.Core.BulkInsert
 #endif
 
         [Theory]
+#if !DNXCORE50
         [PropertyData("InsertOptions")]
+#else
+        [MemberData("InsertOptions")]
+#endif
         public void BasicBulkInsert(BulkInsertOptions options)
         {
             using (var store = GetDocumentStore())
@@ -46,7 +50,11 @@ namespace Raven.Tests.Core.BulkInsert
         }
 
         [Theory]
+#if !DNXCORE50
         [PropertyData("InsertOptions")]
+#else
+        [MemberData("InsertOptions")]
+#endif
         public void BulkInsertShouldNotOverwriteWithOverwriteExistingSetToFalse(BulkInsertOptions options)
         {
             using (var store = GetDocumentStore())
@@ -91,7 +99,11 @@ namespace Raven.Tests.Core.BulkInsert
         }
 
         [Theory]
+#if !DNXCORE50
         [PropertyData("InsertOptions")]
+#else
+        [MemberData("InsertOptions")]
+#endif
         public void BulkInsertShouldOverwriteWithOverwriteExistingSetToTrue(BulkInsertOptions options)
         {
             using (var store = GetDocumentStore())

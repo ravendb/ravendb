@@ -14,14 +14,14 @@ properties {
     $build_dir = "$base_dir\build"
     $sln_file_name = "zzz_RavenDB_Release.sln"
     $sln_file = "$base_dir\$sln_file_name"
-    $version = "3.5"
+    $version = "4.0"
     $tools_dir = "$base_dir\Tools"
     $release_dir = "$base_dir\Release"
     $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
-    $nowarn = "1591 1573 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
+    $nowarn = "1591 1573 1591 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
 
     $dnxVersion = "1.0.0-rc1-update1"
     $dnxArchitecture = "x64"
@@ -65,7 +65,7 @@ task Compile -depends Init, CompileHtml5 {
     
     Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=12.0 /maxcpucount /verbosity:minimal
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
  
     Write-Host "msbuild exit code:  $LastExitCode"
 
@@ -85,7 +85,7 @@ task CompileHtml5 {
     "{ ""BuildVersion"": $env:buildlabel }" | Out-File "Raven.Studio.Html5\version.json" -Encoding UTF8
     
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
-    exec { &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="$nowarn" /verbosity:minimal }
+    exec { &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=14.0 /p:Configuration=$global:configuration /p:nowarn="$nowarn" /verbosity:minimal }
     
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null

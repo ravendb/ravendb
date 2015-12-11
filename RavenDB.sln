@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 EndProject
@@ -100,6 +100,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.TimeSeries", "R
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{380DAFCC-64ED-417B-BC95-C514901C2427}"
 	ProjectSection(SolutionItems) = preProject
+		global.json = global.json
 		WebEssentials-Settings.json = WebEssentials-Settings.json
 	EndProjectSection
 EndProject
@@ -124,18 +125,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Smuggler", "Raven.Tests.Smuggler\Raven.Tests.Smuggler.csproj", "{44A7D299-5AE6-4E2E-9E32-18CB9FD82264}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.MiniDumper", "Raven.MiniDumper\Raven.MiniDumper.csproj", "{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}"
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DNX", "DNX", "{CC4E6BEE-6993-40E0-9FCC-EC5528530A7B}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Raven.Abstractions", "Raven.Abstractions\Raven.Abstractions.xproj", "{B47725E6-ABB2-411F-9487-004D05FF3581}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EB12E1F7-87B6-4098-9D4C-C27D3F798F06}"
-	ProjectSection(SolutionItems) = preProject
-		global.json = global.json
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DNX", "DNX", "{4574632D-B57B-4C76-B72E-8ED85A12C08D}"
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Raven.Abstractions", "Raven.Abstractions\Raven.Abstractions.xproj", "{B47725E6-ABB2-411F-9487-004D05FF3581}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Raven.Client.Lightweight", "Raven.Client.Lightweight\Raven.Client.Lightweight.xproj", "{E4B2F12E-402A-424C-AB95-8CCA10913337}"
 EndProject
@@ -438,13 +431,11 @@ Global
 		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B47725E6-ABB2-411F-9487-004D05FF3581}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B47725E6-ABB2-411F-9487-004D05FF3581}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B47725E6-ABB2-411F-9487-004D05FF3581}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B47725E6-ABB2-411F-9487-004D05FF3581}.Profiling|Any CPU.ActiveCfg = Debug|Any CPU
 		{B47725E6-ABB2-411F-9487-004D05FF3581}.Profiling|Any CPU.Build.0 = Debug|Any CPU
 		{B47725E6-ABB2-411F-9487-004D05FF3581}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B47725E6-ABB2-411F-9487-004D05FF3581}.Release|Any CPU.Build.0 = Release|Any CPU
-		{74281EB6-A5B8-4377-A20D-A845195328ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E4B2F12E-402A-424C-AB95-8CCA10913337}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E4B2F12E-402A-424C-AB95-8CCA10913337}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E4B2F12E-402A-424C-AB95-8CCA10913337}.Profiling|Any CPU.ActiveCfg = Debug|Any CPU
@@ -524,8 +515,6 @@ Global
 		{5BB7F2B6-CE06-4F1F-9D12-8E25E60FF06F} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
 		{44A7D299-5AE6-4E2E-9E32-18CB9FD82264} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 		{FE28B46B-D2D6-4051-9C20-8F41D17E4A31} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
-		{B47725E6-ABB2-411F-9487-004D05FF3581} = {CC4E6BEE-6993-40E0-9FCC-EC5528530A7B}
-		{74281EB6-A5B8-4377-A20D-A845195328ED} = {CC4E6BEE-6993-40E0-9FCC-EC5528530A7B}
 		{B47725E6-ABB2-411F-9487-004D05FF3581} = {4574632D-B57B-4C76-B72E-8ED85A12C08D}
 		{E4B2F12E-402A-424C-AB95-8CCA10913337} = {4574632D-B57B-4C76-B72E-8ED85A12C08D}
 		{8FB9F3E5-9041-4708-ADF5-63684927E57A} = {CD94079A-3906-4ABE-83D6-40B05EAABCA7}

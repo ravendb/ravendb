@@ -23,7 +23,7 @@ namespace Raven.Client.Changes
 #if !DNXCORE50
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 #else
-        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteChangesClientBase<TChangesApi, TConnectionState>));
+        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteChangesClientBase<TChangesApi, TConnectionState, TConventions>));
 #endif
 
         private Timer clientSideHeartbeatTimer;
@@ -48,7 +48,6 @@ namespace Raven.Client.Changes
             ICredentials credentials,
             HttpJsonRequestFactory jsonRequestFactory,
             TConventions conventions,
-            IReplicationInformerBase replicationInformer,
             Action onDispose)
         {
             // Precondition

@@ -41,7 +41,7 @@ namespace Raven.Client.Changes
                                        HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
                                        Action onDispose,                                
                                        Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }

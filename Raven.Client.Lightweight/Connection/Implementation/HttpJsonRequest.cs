@@ -8,7 +8,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -178,12 +177,6 @@ namespace Raven.Client.Connection.Implementation
             headers.Add("Raven-Client-Version", ClientVersion);
             WriteMetadata(requestParams.Metadata);
             requestParams.UpdateHeaders(headers);
-        }
-
-        [ContractInvariantMethod]
-        private void ObjectInvariant()
-        {
-            Contract.Invariant(Url != null);
         }
 
         public void RemoveAuthorizationHeader()

@@ -10,9 +10,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
+using Raven.Client.Document;
 
 namespace Raven.Client
 {

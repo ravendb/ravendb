@@ -3,26 +3,21 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using Raven.Client.Document.Batches;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-#if !DNXCORE50
-using System.Transactions;
-#endif
-
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Linq;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
+using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -37,6 +32,12 @@ namespace Raven.Client.Document
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
+#endif
+
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
         protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
         private static int counter;
@@ -58,12 +59,6 @@ namespace Raven.Client.Document
             internal set { _databaseName = value; }
         }
 
-#if !DNXCORE50
-        protected static readonly ILog log = LogManager.GetCurrentClassLogger();
-#else
-        protected static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
-#endif
-
         /// <summary>
         /// The entities waiting to be deleted
         /// </summary>
@@ -78,9 +73,9 @@ namespace Raven.Client.Document
 
         public IDictionary<string, object> ExternalState
         {
-        private bool hasEnlisted;
-            get { return (_registeredStoresInTransaction ?? (_registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
+            get { return externalState ?? (externalState = new Dictionary<string, object>()); }
         }
+
 
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -149,13 +144,13 @@ namespace Raven.Client.Document
             Id = id;
             this.dbName = dbName;
             this.documentStore = documentStore;
+            this.theListeners = listeners;
+            ResourceManagerId = documentStore.ResourceManagerId;
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
-            AllowNonAuthoritativeInformation = true;
-            NonAuthoritativeInformationTimeout = TimeSpan.FromSeconds(15);
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
             EntityToJson = new EntityToJson(documentStore, listeners);
-        public TimeSpan NonAuthoritativeInformationTimeout { get; set; }
+        }
 
         /// <summary>
         /// Gets the store identifier for this session.
@@ -389,9 +384,9 @@ more responsive application.
         /// </summary>
         /// <param name="entityType"></param>
         /// <param name="documentFound">The document found.</param>
-                throw new NonAuthoritativeInformationException("Document " + documentFound.Key +
-                " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
-            }
+        /// <returns></returns>
+        public object TrackEntity(Type entityType, JsonDocument documentFound)
+        {
             if (documentFound.Metadata.Value<bool?>(Constants.RavenDocumentDoesNotExists) == true)
             {
                 return GetDefaultValue(entityType); // document is not really there.
@@ -433,9 +428,9 @@ more responsive application.
             {
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
-                throw new NonAuthoritativeInformationException("Document " + key +
-                    " returned Non Authoritative Information (probably modified by a transaction in progress) and AllowNonAuthoritativeInformation  is set to false");
+                return entity;
             }
+            var etag = metadata.Value<string>("@etag");
 
             if (noTracking == false)
             {
@@ -563,7 +558,7 @@ more responsive application.
         static object GetDefaultValue(Type type)
         {
             return type.IsValueType() ? Activator.CreateInstance(type) : null;
-        public bool AllowNonAuthoritativeInformation { get; set; }
+        }
 
         /// <summary>
         /// Marks the specified entity for deletion. The entity will be deleted when SaveChanges is called.
@@ -916,9 +911,8 @@ more responsive application.
                 Entities = new List<object>(),
                 Commands = new List<ICommandData>(deferedCommands),
                 DeferredCommandsCount = deferedCommands.Count
-
-            if (documentStore.EnlistInDistributedTransactions)
-                TryEnlistInAmbientTransaction();
+            };
+            deferedCommands.Clear();
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
@@ -1003,9 +997,9 @@ more responsive application.
 
                     docChanges.Add(change);
                     changes[key] = docChanges.ToArray();
+                }
+                else
                 {
-
-
                     Etag etag = null;
                     object existingEntity;
                     DocumentMetadata metadata = null;
@@ -1084,9 +1078,9 @@ more responsive application.
                 documentMetadata.Metadata.ContainsKey(Constants.RavenReadOnly) &&
                 documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
                 return false;
+
+            var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
             var changedData = changes != null ? new List<DocumentsChanges>() : null;
-            var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false)
-                || (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
 
             var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
             var isMetadataEquals = RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData);
@@ -1231,9 +1225,9 @@ more responsive application.
 
         }
 
+        protected void LogBatch(SaveChangesData data)
         {
             if (log.IsDebugEnabled)
-            {
                 log.Debug(() =>
                 {
                     var sb = new StringBuilder()
@@ -1243,8 +1237,8 @@ more responsive application.
                     {
                         sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
                     }
+                    return sb.ToString();
                 });
-            }
         }
 
         public void RegisterMissing(string id)

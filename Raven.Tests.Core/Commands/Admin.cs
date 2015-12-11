@@ -5,12 +5,12 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 #if !DNXCORE50
 using Raven.Database.Extensions;
+using Raven.Database.Config;
 #endif
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using System.IO;
 using System.Linq;
-using Raven.Database.Config;
 using Xunit;
 
 namespace Raven.Tests.Core.Commands

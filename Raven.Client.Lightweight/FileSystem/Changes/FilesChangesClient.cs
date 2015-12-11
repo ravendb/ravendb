@@ -24,7 +24,7 @@ namespace Raven.Client.FileSystem.Changes
         private readonly static ILog Logger = LogManager.GetLogger(typeof(FilesChangesClient));
 #endif
 
-        private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private bool watchAllConfigurations;
         private bool watchAllConflicts;

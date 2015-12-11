@@ -165,7 +165,7 @@ namespace Raven.Client.FileSystem.Shard
 
             var results = new List<FileHeader>();
 
-            var applyAsync = await Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(), 
+            var applyAsync = await Strategy.ShardAccessStrategy.ApplyAsync(Clients.Values.ToList(),
                                                                                 new ShardRequestData(),
                                                                                 (client, i) => client.BrowseAsync(indexes[i], pageSize))
                                                                                 .ConfigureAwait(false);
@@ -180,7 +180,7 @@ namespace Raven.Client.FileSystem.Shard
             }
 
             pagingInfo.SetPagingInfo(indexes);
-            
+
             return results.ToArray();
         }
 
@@ -390,12 +390,13 @@ namespace Raven.Client.FileSystem.Shard
                     continue;
 
                 var current = applyAsync[i][pos];
-                if (smallest == null ||
-                    string.Compare(current.FullPath, smallest.FullPath, StringComparison.OrdinalIgnoreCase) < 0)
-                {
-                    smallest = current;
-                    smallestIndex = i;
-                }
+                if (smallest != null &&
+                        string.Compare(current.FullPath, smallest.FullPath, StringComparison.OrdinalIgnoreCase) >= 0)
+                    continue;
+
+                smallest = current;
+                smallestIndex = i;
+            }
 
             if (smallestIndex != -1)
                 indexes[smallestIndex]++;
@@ -467,7 +468,7 @@ namespace Raven.Client.FileSystem.Shard
                 {
                     var currentItem = current.Metadata.Value<string>(field);
                     var smallestItem = smallest.Metadata.Value<string>(field);
-                    
+
                     var compare = string.Compare(currentItem, smallestItem, StringComparison.OrdinalIgnoreCase);
                     if (compare != 0)
                         return compare * multiplay;

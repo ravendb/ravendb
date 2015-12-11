@@ -2,8 +2,24 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{3E6401AC-3E33-4B61-A460-49953654A207}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Smuggler</RootNamespace>
+    <AssemblyName>Raven.Smuggler</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+    <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <NuGetPackageImportStamp>3fbcc18a</NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
@@ -79,10 +95,6 @@
     <NoWarn>618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Jint, Version=2.4.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\Jint.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
@@ -95,14 +107,15 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
-    <Compile Include="Database\Remote\DatabaseSmugglerRemoteBase.cs" />
-    <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentDeletionActions.cs" />
-    <Compile Include="Helpers\ServerValidation.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Database\AttachmentDeletionsSmuggler.cs" />
     <Compile Include="Database\AttachmentSmuggler.cs" />
+    <Compile Include="Database\DatabaseSmuggler.cs" />
+    <Compile Include="Database\DatabaseSmugglerNotifications.cs" />
     <Compile Include="Database\DocumentDeletionsSmuggler.cs" />
     <Compile Include="Database\DocumentSmuggler.cs" />
+    <Compile Include="Database\Files\DatabaseSmugglerFileDestination.cs" />
+    <Compile Include="Database\Files\DatabaseSmugglerFileDestinationOptions.cs" />
+    <Compile Include="Database\Files\DatabaseSmugglerFileSource.cs" />
     <Compile Include="Database\IDatabaseSmugglerDestination.cs" />
     <Compile Include="Database\IDatabaseSmugglerDocumentActions.cs" />
     <Compile Include="Database\IDatabaseSmugglerDocumentDeletionActions.cs" />
@@ -111,9 +124,8 @@
     <Compile Include="Database\IDatabaseSmugglerSource.cs" />
     <Compile Include="Database\IDatabaseSmugglerTransformerActions.cs" />
     <Compile Include="Database\IdentitySmuggler.cs" />
-    <Compile Include="Database\Files\DatabaseSmugglerFileDestination.cs" />
-    <Compile Include="Database\Files\DatabaseSmugglerFileDestinationOptions.cs" />
-    <Compile Include="Database\Files\DatabaseSmugglerFileSource.cs" />
+    <Compile Include="Database\IndexSmuggler.cs" />
+    <Compile Include="Database\Remote\DatabaseSmugglerRemoteBase.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteConnectionOptions.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteDestination.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteDestinationOptions.cs" />
@@ -123,21 +135,21 @@
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteIndexActions.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteSource.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteTransformerActions.cs" />
+    <Compile Include="Database\SmugglerBase.cs" />
+    <Compile Include="Database\SmuggleType.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamActionsBase.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDestination.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentActions.cs" />
+    <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentDeletionActions.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamIdentityActions.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamIndexActions.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamSource.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamTransformerActions.cs" />
-    <Compile Include="Database\IndexSmuggler.cs" />
-    <Compile Include="Database\DatabaseSmugglerNotifications.cs" />
-    <Compile Include="Database\SmugglerBase.cs" />
-    <Compile Include="Database\SmuggleType.cs" />
     <Compile Include="Database\TransformerSmuggler.cs" />
     <Compile Include="Helpers\ConsoleHelper.cs" />
-    <Compile Include="Database\DatabaseSmuggler.cs" />
+    <Compile Include="Helpers\ServerValidation.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">
@@ -165,7 +177,7 @@
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
-      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
   </ItemGroup>
@@ -174,11 +186,6 @@
     <Analyzer Include="..\SharedLibs\Raven.CodeAnalysis.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <!--<Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />-->
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Target Name="AfterBuild">
-  </Target>
   <Import Project="..\Imports\Fody\Fody.targets" Condition="$(Configuration) == 'Release'" />
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>
