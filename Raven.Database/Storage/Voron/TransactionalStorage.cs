@@ -77,7 +77,8 @@ namespace Raven.Storage.Voron
 
             RecoverFromFailedCompact(configuration.DataDirectory);
 
-            documentCacher = new DocumentCacher(configuration);
+            documentCacher = CreateDocumentCacher(configuration);
+
             exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
             bufferPool = new BufferPool(
                 configuration.Storage.Voron.MaxBufferPoolSize * 1024L * 1024L * 1024L, 
@@ -596,7 +597,7 @@ namespace Raven.Storage.Voron
         public void ClearCaches()
         {
             var oldDocumentCacher = documentCacher;
-            documentCacher = new DocumentCacher(configuration);
+            documentCacher = CreateDocumentCacher(configuration);
             oldDocumentCacher.Dispose();
         }
 
@@ -749,6 +750,14 @@ namespace Raven.Storage.Voron
             Log.Info(message);
             Console.Write(message);
             Console.WriteLine();
+        }
+
+        private IDocumentCacher CreateDocumentCacher(InMemoryRavenConfiguration configuration)
+        {
+            if (configuration.CacheDocumentsInMemory == false)
+                return new NullDocumentCacher();
+
+            return new DocumentCacher(configuration);
         }
     }
 }

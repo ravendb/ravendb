@@ -478,6 +478,7 @@
     <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
+    <Compile Include="Impl\NullDocumentCacher.cs" />
     <Compile Include="Impl\PutSerialLock.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
