@@ -241,10 +241,16 @@ namespace Raven.Database.Config
 			FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
 			MaximumSizeAllowedToFetchFromStorageInMb = ravenSettings.MaximumSizeAllowedToFetchFromStorageInMb.Value;
 
-			PostInit();
+			MaxConcurrentDatabaseLoads = ravenSettings.MaxConcurrentDatabaseLoads.Value;
+			ConcurrentDatabaseLoadTimeout = ravenSettings.ConcurrentDatabaseLoadTimeout.Value;
+            PostInit();
 		}
 
-	    public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
+		public TimeSpan ConcurrentDatabaseLoadTimeout { get; private set; }
+
+		public int MaxConcurrentDatabaseLoads { get; private set; }
+
+		public int MaxSecondsForTaskToWaitForDatabaseToLoad { get; set; }
 
 	    public int MaxConcurrentServerRequests { get; set; }
 

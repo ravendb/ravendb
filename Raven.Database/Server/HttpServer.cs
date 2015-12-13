@@ -4,14 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
-using System.Data.Services.Common;
 using System.Diagnostics;
-using System.DirectoryServices.ActiveDirectory;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -50,7 +47,8 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private readonly ConcurrentDictionary<string, DatabaseIdleTracking> lastWriteRequest = new ConcurrentDictionary<string, DatabaseIdleTracking>();
-
+		private readonly SemaphoreSlim resourceCreationSemaphore;
+		private readonly TimeSpan concurrentDatabaseLoadTimeout;
 		private class DatabaseIdleTracking
 		{
 			public DateTime LastWrite;
@@ -131,7 +129,9 @@ namespace Raven.Database.Server
 
 		public HttpServer(InMemoryRavenConfiguration configuration, DocumentDatabase resourceStore)
 		{
-			_maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
+			resourceCreationSemaphore = new SemaphoreSlim(configuration.MaxConcurrentDatabaseLoads);
+			concurrentDatabaseLoadTimeout = configuration.ConcurrentDatabaseLoadTimeout;
+            _maxNumberOfThreadsForDatabaseToLoad = new SemaphoreSlim(configuration.MaxConcurrentRequestsForDatabaseDuringLoad);
 		    _maxSecondsForTaskToWaitForDatabaseToLoad = configuration.MaxSecondsForTaskToWaitForDatabaseToLoad;
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
@@ -294,8 +294,9 @@ namespace Raven.Database.Server
 			}
 			try
 			{
-				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
+                TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+				exceptionAggregator.Execute(resourceCreationSemaphore.Dispose);
 				exceptionAggregator.Execute(() =>
 				{
 					foreach (var databaseTransportState in databaseTransportStates)
@@ -966,10 +967,17 @@ namespace Raven.Database.Server
 				return true;
 			}
 			var tenantId = match.Groups[1].Value;
-			Task<DocumentDatabase> resourceStoreTask;
+			Task<DocumentDatabase> resourceStoreTask = null;
+			bool hasSemaphore = false;
 			bool hasDb;
 			try
 			{
+				hasSemaphore = resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout);
+				if (hasSemaphore == false)
+				{
+					HandleTooMuchDatabasesAtOnce(ctx, tenantId);
+					return false;
+				}
 				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
 			}
 			catch (Exception e)
@@ -977,11 +985,29 @@ namespace Raven.Database.Server
 				OutputDatabaseOpenFailure(ctx, tenantId, e);
 				return false;
 			}
+			finally
+			{
+				if (hasSemaphore)
+					resourceCreationSemaphore.Release();
+			}
 
 			if (hasDb)
 			{
 				try
 				{
+					if (resourceStoreTask == null) //precaution, should never happen
+					{
+						ctx.SetStatusToBadRequest();
+						ctx.WriteJson(new
+						{
+							Error =
+								string.Format(
+									"The database {0} failed to load. Something bad has happened, this error should be reported as it is probably a bug.",
+									tenantId),
+						});
+						return false;
+					}
+
 					if (resourceStoreTask.IsCompleted == false && resourceStoreTask.IsFaulted == false)
 					{
 						if (_maxNumberOfThreadsForDatabaseToLoad.Wait(0) == false)
@@ -1062,6 +1088,22 @@ namespace Raven.Database.Server
 			}
 
 			return true;
+		}
+
+		private void HandleTooMuchDatabasesAtOnce(IHttpContext ctx, string tenantId)
+		{
+			ctx.SetStatusToNotAvailable();
+			var msg = string.Format(
+				"The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
+				tenantId,
+				resourceCreationSemaphore.CurrentCount,
+				concurrentDatabaseLoadTimeout);
+			logger.Warn(msg);
+			ctx.WriteJson(new
+			{
+				Error =
+					msg,
+			});
 		}
 
 		private static void OutputDatabaseOpenFailure(IHttpContext ctx, string tenantId, Exception e)
@@ -1396,10 +1438,31 @@ namespace Raven.Database.Server
 			if (string.Equals("System", name, StringComparison.OrdinalIgnoreCase))
 				return new CompletedTask<DocumentDatabase>(SystemDatabase);
 
-			Task<DocumentDatabase> db;
-			if (TryGetOrCreateResourceStore(name, out db))
-				return db;
-			return null;
+			var hasAcquired = false;
+			try
+			{
+				hasAcquired = resourceCreationSemaphore.Wait(concurrentDatabaseLoadTimeout);
+				if (!hasAcquired)
+				{
+					var msg = string.Format(
+									"The database {0} cannot be loaded, there are currently {1} databases being loaded and we already waited for {2} for them to finish. Try again later",
+									name,
+									resourceCreationSemaphore.CurrentCount,
+									concurrentDatabaseLoadTimeout);
+					logger.Warn(msg);
+					return null;
+				}
+
+				Task<DocumentDatabase> db;
+				if (TryGetOrCreateResourceStore(name, out db))
+					return db;
+				return null;
+			}
+			finally
+			{
+				if(hasAcquired)
+					resourceCreationSemaphore.Release();
+			}
 		}
 
 		public void Protect(DatabaseDocument databaseDocument)
