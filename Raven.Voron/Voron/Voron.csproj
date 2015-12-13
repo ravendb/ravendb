@@ -180,7 +180,6 @@
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
-    <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Platform\Win32\Win32NativeFileMethods.cs" />
     <Compile Include="Platform\Posix\PosixTempMemoryMapPager.cs" />
   </ItemGroup>

@@ -7,8 +7,10 @@ using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
+using Raven.Unix.Native;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Trees;
@@ -26,6 +28,7 @@ namespace Voron.Platform.Win32
         private readonly SafeFileHandle _handle;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
+        private static int counter;
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -46,6 +49,9 @@ namespace Voron.Platform.Win32
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
             :base(pageSize)
         {
+            var instanceId = Interlocked.Increment(ref counter);
+            var filename = $"{Path.GetFullPath(file)}ravendb-{Process.GetCurrentProcess().Id}-{instanceId}-{Path.GetFileName(file)}";
+
             Win32NativeMethods.SYSTEM_INFO systemInfo;
             Win32NativeMethods.GetSystemInfo(out systemInfo);
 
@@ -56,7 +62,7 @@ namespace Voron.Platform.Win32
                 ? MemoryMappedFileAccess.Read
                 : MemoryMappedFileAccess.ReadWrite;
 
-            _handle = Win32NativeFileMethods.CreateFile(file, access,
+            _handle = Win32NativeFileMethods.CreateFile(filename, access,
                                                         Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
                                                         Win32NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
             if (_handle.IsInvalid)
@@ -66,7 +72,7 @@ namespace Voron.Platform.Win32
                     new Win32Exception(lastWin32ErrorCode));
             }
 
-            _fileInfo = new FileInfo(file);
+            _fileInfo = new FileInfo(filename);
 
             var streamAccessType = _access == Win32NativeFileAccess.GenericRead
                 ? FileAccess.Read

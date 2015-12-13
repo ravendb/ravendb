@@ -117,7 +117,7 @@ namespace Raven.Database.TimeSeries
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
-                return StorageEnvironmentOptions.CreateMemoryOnly();
+                return StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.TempPath);
 
             var directoryPath = configuration.TimeSeries.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);
