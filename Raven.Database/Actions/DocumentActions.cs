@@ -350,12 +350,8 @@ namespace Raven.Database.Actions
                             }
 
                             if (options.CheckReferencesInIndexes)
-                            {
                                 foreach (var key in keys)
-                                {
                                     Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(key, accessor);
-                                }
-                            }
 
                             accessor.Documents.IncrementDocumentCount(inserts);
                         });
@@ -746,7 +742,6 @@ namespace Raven.Database.Actions
                                         CollectionName = metadata.Value<string>(Constants.RavenEntityName),
                                         Etag = newEtag
                                     };
-                                
                                 Database.Notifications.RaiseNotifications(newDocumentChangeNotification, metadata);
                             });
 

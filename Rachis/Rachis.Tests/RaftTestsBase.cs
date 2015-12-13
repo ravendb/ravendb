@@ -57,7 +57,7 @@ namespace Rachis.Tests
 
         public IEnumerable<RaftEngine> Nodes { get { return _nodes; } }
 
-        protected ManualResetEventSlim WaitForStateChange(RaftEngine node, RaftEngineState requestedState)
+        protected ManualResetEventSlim CreateWaitForStateChangeEvent(RaftEngine node, RaftEngineState requestedState)
         {
             var mre = new ManualResetEventSlim();
             node.StateChanged += state =>

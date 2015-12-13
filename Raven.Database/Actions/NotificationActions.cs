@@ -25,6 +25,7 @@ namespace Raven.Database.Actions
         public event Action<DocumentDatabase, IndexChangeNotification> OnIndexChange;
         public event Action<DocumentDatabase, TransformerChangeNotification> OnTransformerChange;
         public event Action<DocumentDatabase, AttachmentChangeNotification, RavenJObject> OnAttachmentChange;
+        public event Action<DocumentDatabase, BulkInsertChangeNotification> OnBulkInsertChange;
 
         public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
         {
@@ -35,7 +36,7 @@ namespace Raven.Database.Actions
         }
 
         //This is not raising notification through the transport because this is intended 
-		//to be used internaly only (server side).
+        //to be used internaly only (server side).
         public void RaiseNotifications(AttachmentChangeNotification obj, RavenJObject metadata)
         {
             var onDocumentChange = OnAttachmentChange;
@@ -66,6 +67,9 @@ namespace Raven.Database.Actions
         public void RaiseNotifications(BulkInsertChangeNotification obj)
         {
             Database.TransportState.Send(obj);
+            var handler = OnBulkInsertChange;
+            if (handler != null)
+                handler(Database, obj);
         }
 
         public void RaiseNotifications(DataSubscriptionChangeNotification obj)
