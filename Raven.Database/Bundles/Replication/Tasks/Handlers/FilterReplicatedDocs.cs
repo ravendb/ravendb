@@ -15,7 +15,7 @@ namespace Raven.Database.Bundles.Replication.Tasks.Handlers
 {
     public class FilterReplicatedDocs : IReplicatedDocsHandler
     {
-        private readonly static ILog Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly DocumentActions docActions;
         private readonly ReplicationStrategy strategy;

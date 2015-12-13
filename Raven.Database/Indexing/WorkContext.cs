@@ -69,24 +69,13 @@ namespace Raven.Database.Indexing
         public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
         public string DatabaseName { get; set; }
 
-        public DateTime LastWorkTime
-        {
-            get { return new DateTime(lastWorkTimeTicks); }
-        }
+        public DateTime LastWorkTime => new DateTime(lastWorkTimeTicks);
         public DateTime LastIdleTime { get; set; }
-        public bool DoWork
-        {
-            get { return doWork; }
-        }
 
-        public bool RunIndexing
-        {
-            get { return doWork && doIndexing; }
-        }
-        public bool RunReducing
-        {
-            get { return doWork && doReducing; }
-        }
+        public bool DoWork => doWork;
+        public bool RunIndexing => doWork && doIndexing;
+        public bool RunReducing => doWork && doReducing;
+
         public void UpdateFoundWork()
         {
             var now = SystemTime.UtcNow;
@@ -114,10 +103,7 @@ namespace Raven.Database.Indexing
         [CLSCompliant(false)]
         public ITransactionalStorage TransactionalStorage { get; set; }
 
-        public IndexingError[] Errors
-        {
-            get { return indexingErrors.ToArray(); }
-        }
+        public IndexingError[] Errors => indexingErrors.ToArray();
 
         public int CurrentNumberOfParallelTasks
         {
@@ -133,10 +119,7 @@ namespace Raven.Database.Indexing
 
         public int CurrentNumberOfItemsToReduceInSingleBatch { get; set; }
 
-        public int NumberOfItemsToExecuteReduceInSingleStep
-        {
-            get { return Configuration.NumberOfItemsToExecuteReduceInSingleStep; }
-        }
+        public int NumberOfItemsToExecuteReduceInSingleStep => Configuration.NumberOfItemsToExecuteReduceInSingleStep;
 
         public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)
         {
@@ -194,6 +177,7 @@ namespace Raven.Database.Indexing
                 workerWorkCounter = currentWorkCounter;
                 return true;
             }
+
             if (beforeWait != null)
                 beforeWait();
             lock (waitForWork)
@@ -291,7 +275,7 @@ namespace Raven.Database.Indexing
             }
             ReplicationResetEvent.Set();
         }       
-        public ManualResetEventSlim ReplicationResetEvent = new ManualResetEventSlim(false);
+        public AutoResetEvent ReplicationResetEvent = new AutoResetEvent(false);
         public void AddError(int index, string indexName, string key, Exception exception)
         {
             AddError(index, indexName, key, exception, "Unknown");
@@ -303,7 +287,7 @@ namespace Raven.Database.Indexing
             if (aggregateException != null)
                 exception = aggregateException.ExtractSingleInnerException();
 
-            AddError(index, indexName, key, exception != null ? exception.Message : "Unknown message", component);
+            AddError(index, indexName, key, exception?.Message ?? "Unknown message", component);
         }
 
         public void AddError(int index, string indexName, string key, string error)

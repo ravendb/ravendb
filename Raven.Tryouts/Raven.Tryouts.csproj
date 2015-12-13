@@ -131,8 +131,8 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\xunit\xunit.dll</HintPath>
+      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -184,6 +184,10 @@
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.SlowTests\Raven.SlowTests.csproj">
+      <Project>{46152256-7443-426c-a20d-b2f354b51810}</Project>
+      <Name>Raven.SlowTests</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>

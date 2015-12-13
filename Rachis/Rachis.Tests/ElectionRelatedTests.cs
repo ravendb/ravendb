@@ -91,7 +91,7 @@ namespace Rachis.Tests
         [InlineData(5)]
         [InlineData(7)]
         public void Network_partition_for_more_time_than_timeout_can_be_healed(int nodeCount)
-        {
+        {			
             const int CommandCount = 5;
             var commands = Builder<DictionaryCommand.Set>.CreateListOfSize(CommandCount)
                 .All()
@@ -112,31 +112,40 @@ namespace Rachis.Tests
 
             commands.Take(3).ToList().ForEach(leader.AppendCommand);
             var waitForCommitsOnCluster = WaitForCommitsOnCluster(machine => machine.LastAppliedIndex == commands[2].AssignedIndex);
-            Assert.True(commitsAppliedEvent.Wait(5000)); //with in-memory transport it shouldn't take more than 5 sec
+            
+            //with in-memory transport in use, it shouldn't take more than 5 sec
+            Assert.True(commitsAppliedEvent.Wait(5000),"Took too much time to commit the initial commands"); 
 
-            var steppedDown = WaitForStateChange(leader, RaftEngineState.FollowerAfterStepDown);
-            var candidancies = Nodes.Where(x=>x!=leader).Select(node => WaitForStateChange(node, RaftEngineState.Candidate)).ToArray();
+            var steppedDownMre = CreateWaitForStateChangeEvent(leader, RaftEngineState.FollowerAfterStepDown);
+            var candidanciesMreCollection = Nodes.Where(x=>x!=leader).Select(node => CreateWaitForStateChangeEvent(node, RaftEngineState.Candidate)).ToArray();
 
             WriteLine("<Disconnecting leader!> (" + leader.Name + ")");
             DisconnectNode(leader.Name);
 
             commands.Skip(3).ToList().ForEach(leader.AppendCommand);
             var formerLeader = leader;
+            
 
-            Assert.True(steppedDown.Wait(leader.Options.ElectionTimeout * 2));
-            Assert.True(WaitHandle.WaitAny(candidancies.Select(x => x.WaitHandle).ToArray(), leader.Options.ElectionTimeout*2) != WaitHandle.WaitTimeout);
+            Assert.True(steppedDownMre.Wait(leader.Options.ElectionTimeout * 2), 
+                "The leader didn't step down after being disconnected from the cluster even after leader.Options.ElectionTimeout*2");
+            Assert.True(WaitHandle.WaitAny(candidanciesMreCollection.Select(x => x.WaitHandle).ToArray(),
+                                            Nodes.Select(x => x.Options.ElectionTimeout).Min() * 2) != WaitHandle.WaitTimeout,
+                        "In the specified timeout there was no state change on any of the non-leader nodes in the cluster");
+
             WriteLine("<Reconnecting leader!> (" + leader.Name + ")");
             ReconnectNode(leader.Name);
 
             foreach (var raftEngine in Nodes)
             {
-                Assert.True(raftEngine.WaitForLeader());
+                Assert.True(raftEngine.WaitForLeader(),$"raftEngine.WaitForLeader() timed out for node {raftEngine.Name}");
             }
             
             leader = Nodes.FirstOrDefault(x => x.State == RaftEngineState.Leader);
+
+            //after leader reconnection, and waiting for leader selection for all nodes at least _one_ node should be in leader state
             Assert.NotNull(leader);
 
-            Assert.True(waitForCommitsOnCluster.Wait(3000));
+            Assert.True(waitForCommitsOnCluster.Wait(3000),"Failed waiting for initial commits of the commands in the cluster");
             var committedCommands = formerLeader.PersistentState.LogEntriesAfter(0).Select(x => nonLeaderNode.PersistentState.CommandSerializer.Deserialize(x.Data))
                                                                                     .OfType<DictionaryCommand.Set>()
                                                                                     .ToList();

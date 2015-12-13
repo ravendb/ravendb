@@ -293,7 +293,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                 lastEtag = metadata.Value<string>("@etag");
                                 var id = metadata.Value<string>("@id");
                                 document.Remove("@metadata");
-
                                 ReplicateDocument(actions, id, metadata, document, src, conflictResolvers);
                             }
 
