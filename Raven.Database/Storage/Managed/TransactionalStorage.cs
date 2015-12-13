@@ -59,7 +59,16 @@ namespace Raven.Storage.Managed
 		{
 			this.configuration = configuration;
 			this.onCommit = onCommit;
-			documentCacher = new DocumentCacher(configuration);
+		//	IDocumentCacher documentCacher = null;
+			if (configuration.UseNullDocumentCacher)
+			{
+				documentCacher = new NullDocumentCacher();
+			}
+			else
+			{
+				documentCacher = new DocumentCacher(configuration);
+			}
+			
 		}
 
 		public void Dispose()
