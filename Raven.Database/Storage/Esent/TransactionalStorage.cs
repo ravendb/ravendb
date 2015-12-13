@@ -82,7 +82,16 @@ namespace Raven.Storage.Esent
         public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
         {
             configuration.Container.SatisfyImportsOnce(this);
-            documentCacher = new DocumentCacher(configuration);
+
+	        if (configuration.UseNullDocumentCacher)
+	        {
+				documentCacher = new NullDocumentCacher();
+	        }
+	        else
+	        {
+				documentCacher = new DocumentCacher(configuration);    
+	        }
+            
             database = configuration.DataDirectory;
             this.configuration = configuration;
             this.onCommit = onCommit;
