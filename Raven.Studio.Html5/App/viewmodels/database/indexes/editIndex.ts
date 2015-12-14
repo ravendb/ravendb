@@ -221,8 +221,15 @@ class editIndex extends viewModelBase {
     }
 
     save() {
-        if (this.editedIndex().name()) {
-            var index = this.editedIndex().toDto();
+        var editedIndex = this.editedIndex();
+        if (editedIndex.lockMode === "LockedIgnore") {
+            messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
+                                            "Any changes to the index will be ignored.");
+            return;
+        }
+
+        if (editedIndex.name()) {
+            var index = editedIndex.toDto();
             this.saveIndex(index);
         }
     }

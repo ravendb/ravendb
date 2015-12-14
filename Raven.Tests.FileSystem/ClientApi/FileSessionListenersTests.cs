@@ -5,10 +5,12 @@ using Raven.Client.FileSystem.Extensions;
 using Raven.Client.FileSystem.Listeners;
 using Raven.Json.Linq;
 using System;
+using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
+using System.Threading;
 using System.Threading.Tasks;
-using Raven.Tests.Helpers;
+
 using Xunit;
 
 namespace Raven.Tests.FileSystem.ClientApi
@@ -161,36 +163,34 @@ namespace Raven.Tests.FileSystem.ClientApi
             using (var sessionDestination1 = store.OpenAsyncSession())
             using (var sessionDestination2 = anotherStore.OpenAsyncSession())
             {
-
                 sessionDestination2.RegisterUpload(filename, CreateUniformFileStream(firstStreamSize));
                 await sessionDestination2.SaveChangesAsync();
 
-                await sessionDestination1.Commands.Synchronization.StartAsync();
-                
                 sessionDestination1.RegisterUpload(filename, CreateUniformFileStream(secondStreamSize));
                 await sessionDestination1.SaveChangesAsync();
 
-                var file = await sessionDestination1.LoadFileAsync(filename);
-                var file2 = await sessionDestination2.LoadFileAsync(filename);
-                Assert.Equal(secondStreamSize, file.TotalSize);
-                Assert.Equal(firstStreamSize, file2.TotalSize);
-
-                var notificationTask = await WaitForConflictResolved(anotherStore, 1, 10);
+                var notificationTask = await WaitForConflictResolved(anotherStore, 1, 30);
 
                 var syncDestinations = new SynchronizationDestination[] { sessionDestination2.Commands.ToSynchronizationDestination() };
                 await sessionDestination1.Commands.Synchronization.SetDestinationsAsync(syncDestinations);
-                await sessionDestination1.Commands.Synchronization.StartAsync();
+                var syncResult = await sessionDestination1.Commands.Synchronization.StartAsync();
 
-                //We need to sync again after conflict resolution because strategy was to resolve with remote
+                Assert.Equal(string.Format("File {0} is conflicted", filename), syncResult[0].Reports.ToList()[0].Exception.Message);
+
+                // conflict should be resolved by the registered listener
+                Assert.True(SpinWait.SpinUntil(() => conflictsListener.DetectedCount == 1 && conflictsListener.ResolvedCount == 1, TimeSpan.FromMinutes(1)), 
+                    string.Format("DetectedCount: {0}, ResolvedCount: {1}", conflictsListener.DetectedCount, conflictsListener.ResolvedCount));
+
+                // We need to sync again after conflict resolution because the strategy was to resolve with remote
                 await sessionDestination1.Commands.Synchronization.StartAsync();
 
                 await notificationTask;
 
                 Assert.Equal(1, conflictsListener.DetectedCount);
                 Assert.Equal(1, conflictsListener.ResolvedCount);
-
-                file = await sessionDestination1.LoadFileAsync(filename);
-                file2 = await sessionDestination2.LoadFileAsync(filename);
+                
+                var file = await sessionDestination1.LoadFileAsync(filename);
+                var file2 = await sessionDestination2.LoadFileAsync(filename);
 
                 Assert.Equal(secondStreamSize, file.TotalSize);
                 Assert.Equal(secondStreamSize, file2.TotalSize);
