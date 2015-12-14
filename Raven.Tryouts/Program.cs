@@ -19,9 +19,9 @@ namespace Raven.Tryouts
 
                     test.ConflictListeners_RemoteVersion().Wait();
 
-        }
-    }
+                }
+            }
 #endif
-}
+        }
     }
 }
