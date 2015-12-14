@@ -5,6 +5,7 @@
     }
   },
   "runtimes": {
+    "win": {},
     "win-x64": {}
   },
   "dependencies": {
