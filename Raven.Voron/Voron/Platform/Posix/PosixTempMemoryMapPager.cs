@@ -29,13 +29,11 @@ namespace Voron.Platform.Posix
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
-        private static int _counter;
 
         public PosixTempMemoryMapPager(int pageSize, string file, long? initialFileSize = null)
             : base(pageSize)
         {
-            var instanceId = Interlocked.Increment(ref _counter);
-            _file = "/var/tmp/ravendb-" + Syscall.getpid() + "-" + instanceId + "-" + file;
+            _file = file;
             _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)

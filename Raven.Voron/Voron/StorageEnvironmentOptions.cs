@@ -345,11 +345,17 @@ namespace Voron
             {
                 tempPath = configTempPath;
                 _instanceId = Interlocked.Increment(ref _counter);
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager";
+
                 if (RunningOnPosix)
-                    _dataPager = new PosixTempMemoryMapPager(PageSize, "data.pager", InitialFileSize);
+                {
+                    _dataPager = new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);
+                }
                 else
-                    _dataPager = new Win32MemoryMapPager(PageSize, Path.Combine(tempPath, "data.pager"), InitialFileSize,
+                {
+                    _dataPager = new Win32MemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                }
             }
 
             public override IVirtualPager DataPager
@@ -431,10 +437,13 @@ namespace Voron
 
             public override IVirtualPager CreateScratchPager(string name)
             {
-                if (RunningOnPosix)
-                    return new PosixTempMemoryMapPager(PageSize, name, InitialFileSize);
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}";
 
-                return new Win32MemoryMapPager(PageSize, Path.Combine(tempPath, name), InitialFileSize,
+                if (RunningOnPosix)
+                    return new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);
+
+
+                return new Win32MemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
