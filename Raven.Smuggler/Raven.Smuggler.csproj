@@ -132,7 +132,6 @@
       <DependentUpon>DatabaseSmugglerMessages.resx</DependentUpon>
     </Compile>
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteBase.cs" />
-    <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentDeletionActions.cs" />
     <Compile Include="FileSystem\ConfigurationSmuggler.cs" />
     <Compile Include="FileSystem\FileSmuggler.cs" />
     <Compile Include="FileSystem\FileSystemSmuggler.cs" />
@@ -157,7 +156,6 @@
     <Compile Include="FileSystem\Streams\StreamSmugglingDestination.cs" />
     <Compile Include="FileSystem\Streams\SmuggleFilesToStream.cs" />
     <Compile Include="FileSystem\Streams\StreamSmugglingSource.cs" />
-    <Compile Include="Helpers\ServerValidation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Database\AttachmentDeletionsSmuggler.cs" />
     <Compile Include="Database\AttachmentSmuggler.cs" />
@@ -177,7 +175,6 @@
     <Compile Include="Database\IDatabaseSmugglerTransformerActions.cs" />
     <Compile Include="Database\IdentitySmuggler.cs" />
     <Compile Include="Database\IndexSmuggler.cs" />
-    <Compile Include="Database\Remote\DatabaseSmugglerRemoteBase.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteConnectionOptions.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteDestination.cs" />
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteDestinationOptions.cs" />
@@ -189,7 +186,6 @@
     <Compile Include="Database\Remote\DatabaseSmugglerRemoteTransformerActions.cs" />
     <Compile Include="Database\SmugglerBase.cs" />
     <Compile Include="Database\SmuggleType.cs" />
-    <Compile Include="Database\Streams\DatabaseSmugglerStreamActionsBase.cs" />
     <Compile Include="Common\SmugglerStreamActionsBase.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDestination.cs" />
     <Compile Include="Database\Streams\DatabaseSmugglerStreamDocumentActions.cs" />
@@ -202,7 +198,6 @@
     <Compile Include="Helpers\ConsoleHelper.cs" />
     <Compile Include="Helpers\ServerValidation.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SmugglerConstants.cs" />
   </ItemGroup>
   <ItemGroup>

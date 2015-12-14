@@ -9,8 +9,12 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.FileSystem;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Smuggler;
+using Raven.Database.FileSystem.Smuggler.Embedded;
+using Raven.Smuggler.FileSystem;
+using Raven.Smuggler.FileSystem.Streams;
 using Raven.Tests.Helpers;
 
 using Xunit;
@@ -107,23 +111,20 @@ namespace Raven.Tests.FileSystem.Issues
 
                 var fs = GetFileSystem();
 
-                var exporter = new FilesystemDataDumper(fs);
-
-                await exporter.ExportData(
-                       new SmugglerExportOptions<FilesConnectionStringOptions>
-                       {
-                           ToStream = exportStream
-                       }).ConfigureAwait(false);
-
+                var exporter = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                await exporter
+                    .ExecuteAsync(new EmbeddedSmugglingSource(fs), new StreamSmugglingDestination(exportStream, leaveOpen: true))
+                    .ConfigureAwait(false);
 
                 using (var import = NewStore(1))
                 {
                     exportStream.Position = 0;
 
                     var importedFs = GetFileSystem(1);
-                    var importer = new FilesystemDataDumper(importedFs);
-
-                    await importer.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromStream = exportStream });
+                    var importer = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                    await importer
+                        .ExecuteAsync(new StreamSmugglingSource(exportStream), new EmbeddedSmugglingDestination(importedFs))
+                        .ConfigureAwait(false);
 
                     importedFs.Storage.Batch(accessor =>
                     {
