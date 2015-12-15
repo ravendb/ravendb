@@ -297,6 +297,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
             configurationComparer.Assert(expected => expected.Counter.TombstoneRetentionTime.Value, actual => actual.Counter.TombstoneRetentionTime);
             configurationComparer.Assert(expected => expected.Counter.DeletedTombstonesInBatch.Value, actual => actual.Counter.DeletedTombstonesInBatch);
+            configurationComparer.Assert(expected => expected.Counter.BatchTimeout.Value, actual => actual.Counter.BatchTimeout);
             configurationComparer.Assert(expected => expected.TimeSeries.TombstoneRetentionTime.Value, actual => actual.TimeSeries.TombstoneRetentionTime);
             configurationComparer.Assert(expected => expected.TimeSeries.DeletedTombstonesInBatch.Value, actual => actual.TimeSeries.DeletedTombstonesInBatch);
             configurationComparer.Assert(expected => expected.TimeSeries.ReplicationLatencyInMs.Value, actual => actual.TimeSeries.ReplicationLatencyInMs);
