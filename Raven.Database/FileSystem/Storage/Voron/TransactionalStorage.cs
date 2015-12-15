@@ -129,7 +129,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             bool runInMemory;
             bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
 
-            var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
+            var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly(settings[Constants.Voron.TempPath]) :
                 CreateStorageOptionsFromConfiguration(path, settings);
 
             tableStorage = new TableStorage(persistenceSource, bufferPool);

@@ -33,8 +33,7 @@ namespace Voron.Platform.Posix
 
         public PosixTempMemoryMapPager(string file, long? initialFileSize = null)
         {
-            var instanceId = Interlocked.Increment(ref _counter);
-            _file = "/var/tmp/ravendb-" + Syscall.getpid() + "-" + instanceId + "-" + file;
+            _file = file;
             _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL, 
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
