@@ -11,6 +11,14 @@ namespace Raven.Tests.Core.Streaming
 {
     public class DocumentStreaming : RavenCoreTestBase
     {
+#if DNXCORE50
+        public DocumentStreaming(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanStreamDocumentsStartingWith()
         {

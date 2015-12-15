@@ -110,7 +110,7 @@ namespace Raven.Client.TimeSeries.Operations
                         {
                             var result = RavenJToken.TryLoad(stream); 
                             if (result == null) //precaution - should prevent NRE in case the crap hits the fan
-                                throw new ApplicationException("Invalid response from server... maybe its not json?");
+                                throw new InvalidOperationException("Invalid response from server... maybe its not json?");
 
                             serverOperationId = result.Value<long>("OperationId");
                         }

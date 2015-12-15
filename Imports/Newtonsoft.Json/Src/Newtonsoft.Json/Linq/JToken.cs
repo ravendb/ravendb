@@ -43,6 +43,7 @@ using System.Collections;
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
+using System.Reflection;
 
 #endif
 

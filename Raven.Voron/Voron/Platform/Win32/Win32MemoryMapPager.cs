@@ -7,13 +7,11 @@ using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
-using Sparrow;
 
 namespace Voron.Platform.Win32
 {
@@ -26,6 +24,7 @@ namespace Voron.Platform.Win32
         private readonly SafeFileHandle _handle;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
+        private static int counter;
 
         [StructLayout(LayoutKind.Explicit)]
         private struct SplitValue
@@ -46,6 +45,7 @@ namespace Voron.Platform.Win32
                                    Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite)
             :base(pageSize)
         {
+           
             Win32NativeMethods.SYSTEM_INFO systemInfo;
             Win32NativeMethods.GetSystemInfo(out systemInfo);
 

@@ -35,7 +35,7 @@ namespace Raven.Client.FileSystem.Shard
             var shardId = (
                              from kvp in ShardIds
                              where filename.StartsWith(kvp + shardStrategy.Conventions.IdentityPartsSeparator,
-                                                     StringComparison.InvariantCultureIgnoreCase)
+                                                     StringComparison.OrdinalIgnoreCase)
                              select kvp
                          ).FirstOrDefault();
 

@@ -258,6 +258,7 @@ namespace Voron.Impl.Paging
 
         public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetMaxKeySize()
         {
             // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
@@ -267,7 +268,7 @@ namespace Voron.Impl.Paging
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsKeySizeValid(int keySize)
         {
-            if (keySize + RequiredSpaceForNewNode > 2000)
+            if (keySize  > GetMaxKeySize())
                 return false;
 
             return true;

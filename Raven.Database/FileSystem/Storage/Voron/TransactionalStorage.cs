@@ -100,7 +100,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(string path, RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
-                return StorageEnvironmentOptions.CreateMemoryOnly();
+                return StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.TempPath);
 
             var directoryPath = path ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);

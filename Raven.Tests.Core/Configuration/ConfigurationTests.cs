@@ -1,3 +1,4 @@
+#if !DNXCORE50
 // -----------------------------------------------------------------------
 //  <copyright file="ConfigurationTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -452,3 +453,4 @@ namespace Raven.Tests.Core.Configuration
         }
     }
 }
+#endif

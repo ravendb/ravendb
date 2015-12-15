@@ -276,10 +276,17 @@ namespace Raven.Client.Document
             if (afterDispose != null)
                 afterDispose(this, EventArgs.Empty);
         }
+
+#if !DNXCORE50
         private ServicePoint rootServicePoint;
+#endif
 
 #if DEBUG
+#if !DNXCORE50
         private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
+#else
+        private readonly string e = Environment.StackTrace;
+#endif
 
 
         ~DocumentStore()
@@ -453,11 +460,14 @@ namespace Raven.Client.Document
         {
             var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
 
+#if !DNXCORE50
+            // TODO [ppekrol] how to set this?
             rootServicePoint = ServicePointManager.FindServicePoint(new Uri(rootDatabaseUrl));
             rootServicePoint.UseNagleAlgorithm = false;
             rootServicePoint.Expect100Continue = false;
             rootServicePoint.ConnectionLimit = 256;
             rootServicePoint.MaxIdleTime = Timeout.Infinite;
+#endif
 
             databaseCommandsGenerator = () =>
             {
@@ -717,7 +727,7 @@ namespace Raven.Client.Document
             {
                 maxNumberOfCachedRequests = value;
                 if (initialized == true)
-                    jsonRequestFactory.ResetCache(maxNumberOfCachedRequests);
+                jsonRequestFactory.ResetCache(maxNumberOfCachedRequests);
             }
         }
 
@@ -733,7 +743,7 @@ namespace Raven.Client.Document
             if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
             {
                 var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
-                observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName ,
+                observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName,
                     _ => new EvictItemsFromCacheBasedOnChanges(databaseName,
                         Changes(databaseName),
                         jsonRequestFactory.ExpireItemsFromCache));

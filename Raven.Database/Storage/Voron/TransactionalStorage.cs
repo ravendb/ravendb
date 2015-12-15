@@ -363,7 +363,7 @@ namespace Raven.Storage.Voron
 
         private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
-            var options = StorageEnvironmentOptions.CreateMemoryOnly();
+            var options = StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.TempPath);
             options.InitialFileSize = configuration.Storage.InitialFileSize?.GetValue(SizeUnit.Bytes);
             options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.GetValue(SizeUnit.Bytes);
 

@@ -211,7 +211,11 @@ namespace Raven.Abstractions.Extensions
                 else if (IsDirectorySeparator(path[0]))
                 {
                     // path starts with '\' or '/'
-                    return String.Copy(DirectorySeparatorStr);
+#if !DNXCORE50
+                    return string.Copy(DirectorySeparatorStr);
+#else
+                    return DirectorySeparatorStr;
+#endif
                 }
                 else if (path[1] == VolumeSeparatorChar)
                 {

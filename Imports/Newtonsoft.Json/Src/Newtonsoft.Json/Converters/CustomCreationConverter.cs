@@ -25,6 +25,7 @@
 
 using System;
 using Raven.Imports.Newtonsoft.Json.Utilities;
+using System.Reflection;
 
 namespace Raven.Imports.Newtonsoft.Json.Converters
 {

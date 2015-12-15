@@ -24,9 +24,14 @@ namespace Raven.Abstractions.Exceptions
         public SmugglerException(string message, Exception inner) : base(message, inner)
         {
         }
-        protected SmugglerException(SerializationInfo info, StreamingContext context) : base(info, context)
+
+#if !DNXCORE50
+        protected SmugglerException(
+            SerializationInfo info,
+            StreamingContext context) : base(info, context)
         {
         }
+#endif
 
         public Etag LastEtag { get; set; }
 

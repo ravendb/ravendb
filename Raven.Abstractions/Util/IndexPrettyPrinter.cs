@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -806,3 +807,4 @@ namespace Raven.Abstractions.Util
         #endregion
     }
 }
+#endif

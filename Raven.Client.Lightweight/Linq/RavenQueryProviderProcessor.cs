@@ -578,12 +578,16 @@ namespace Raven.Client.Linq
                 switch ((StringComparison)comparisonType)
                 {
                     case StringComparison.CurrentCulture:
+#if !DNXCORE50
                     case StringComparison.InvariantCulture:
+#endif
                     case StringComparison.Ordinal:
                         throw new NotSupportedException(
                             "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
                     case StringComparison.CurrentCultureIgnoreCase:
+#if !DNXCORE50
                     case StringComparison.InvariantCultureIgnoreCase:
+#endif
                     case StringComparison.OrdinalIgnoreCase:
                         break;
                     default:
@@ -845,7 +849,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 VisitEnumerableMethodCall(expression, negated);
                 return;
             }
-            if (declaringType.IsGenericType &&
+            if (declaringType.IsGenericType() &&
                 declaringType.GetGenericTypeDefinition() == typeof(List<>))
             {
                 VisitListMethodCall(expression);
@@ -1139,7 +1143,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
                 case "Select":
                 {
-                    if (expression.Arguments[0].Type.IsGenericType &&
+                    if (expression.Arguments[0].Type.IsGenericType() &&
                             expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IQueryable<>) &&
                         expression.Arguments[0].Type != expression.Arguments[1].Type)
                     {
@@ -1753,7 +1757,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        #region Nested type: SpecialQueryType
+#region Nested type: SpecialQueryType
 
         /// <summary>
         /// Different query types 
@@ -1794,7 +1798,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             SingleOrDefault,
         }
 
-        #endregion
+#endregion
     }
 
     public class RenamedField

@@ -11,11 +11,15 @@ namespace Raven.Client.Connection
 {
     public static class ReplicationInformerLocalCache
     {
+#if !DNXCORE50
         private readonly static ILog Log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog Log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
+#endif
 
         public static IsolatedStorageFile GetIsolatedStorageFile()
         {
-#if MONO
+#if MONO || DNXCORE50
             return IsolatedStorageFile.GetUserStoreForApplication();
 #else
             return IsolatedStorageFile.GetMachineStoreForDomain();
@@ -24,6 +28,7 @@ namespace Raven.Client.Connection
 
         public static void ClearReplicationInformationFromLocalCache(string serverHash)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -40,10 +45,12 @@ namespace Raven.Client.Connection
             {
                 Log.ErrorException("Could not clear the persisted replication information", e);
             }
+#endif
         }
 
         public static JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -64,10 +71,14 @@ namespace Raven.Client.Connection
                 Log.ErrorException("Could not understand the persisted replication information", e);
                 return null;
             }
+#else
+            return null;
+#endif
         }
 
         public static void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -83,10 +94,12 @@ namespace Raven.Client.Connection
             {
                 Log.ErrorException("Could not persist the replication information", e);
             }
+#endif
         }
 
         public static List<OperationMetadata> TryLoadClusterNodesFromLocalCache(string serverHash)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -109,10 +122,14 @@ namespace Raven.Client.Connection
                 Log.ErrorException("Could not understand the persisted cluster nodes", e);
                 return null;
             }
+#else
+            return null;
+#endif
         }
 
         public static void TrySavingClusterNodesToLocalCache(string serverHash, List<OperationMetadata> nodes)
         {
+#if !DNXCORE50
             try
             {
                 using (var machineStoreForApplication = GetIsolatedStorageFile())
@@ -128,6 +145,7 @@ namespace Raven.Client.Connection
             {
                 Log.ErrorException("Could not persist the cluster nodes", e);
             }
+#endif
         }
     }
 }

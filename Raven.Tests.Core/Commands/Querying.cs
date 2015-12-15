@@ -16,6 +16,14 @@ namespace Raven.Tests.Core.Commands
 {
     public class Querying : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Querying(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanDoSimpleQueryOnDatabase()
         {
@@ -51,9 +59,9 @@ namespace Raven.Tests.Core.Commands
             {
                 using (var session = store.OpenSession())
                 {
-                    var entity1 = new Company {Name = "Async Company #1", Id = "companies/1"};
+                    var entity1 = new Company { Name = "Async Company #1", Id = "companies/1" };
                     session.Store(entity1);
-                    var entity2 = new Company {Name = "Async Company #2", Id = "companies/2"};
+                    var entity2 = new Company { Name = "Async Company #2", Id = "companies/2" };
                     session.Store(entity2);
 
                     session.SaveChanges();
@@ -87,7 +95,7 @@ namespace Raven.Tests.Core.Commands
                 Assert.NotInRange(stringBuilder.Length, 0, store.Conventions.MaxLengthOfQueryUsingGetUrl);
                 using (var session = store.OpenSession())
                 {
-                    var indexQuery = new IndexQuery {Start = 0, PageSize = 50, Query = stringBuilder.ToString()};
+                    var indexQuery = new IndexQuery { Start = 0, PageSize = 50, Query = stringBuilder.ToString() };
                     var queryResult = session.Advanced.DocumentStore.DatabaseCommands.Query("Test", indexQuery);
                     Assert.Equal(2, queryResult.TotalResults);
                 }
@@ -104,7 +112,7 @@ namespace Raven.Tests.Core.Commands
 
                 for (int i = 0; i < 30; i++)
                 {
-                    store.DatabaseCommands.Put("users/" + i, null, RavenJObject.FromObject(new User { Name = "Name"+i }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                    store.DatabaseCommands.Put("users/" + i, null, RavenJObject.FromObject(new User { Name = "Name" + i }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
                 }
                 WaitForIndexing(store);
 
@@ -131,8 +139,8 @@ namespace Raven.Tests.Core.Commands
                 for (int i = 0; i < 10; i++)
                 {
                     store.DatabaseCommands.Put(
-                        "cameras/"+i, 
-                        null, 
+                        "cameras/" + i,
+                        null,
                         RavenJObject.FromObject(new Camera
                         {
                             Id = "cameras/" + i,
@@ -146,15 +154,15 @@ namespace Raven.Tests.Core.Commands
 
                 var facets = new List<Facet>
                 {
-                    new Facet 
+                    new Facet
                     {
                         Name = "Manufacturer"
                     },
-                    new Facet 
+                    new Facet
                     {
                         Name = "Cost_Range",
                         Mode = FacetMode.Ranges,
-                        Ranges = 
+                        Ranges =
                         {
                             "[NULL TO Dx200.0]",
                             "[Dx300.0 TO Dx400.0]",
@@ -163,11 +171,11 @@ namespace Raven.Tests.Core.Commands
                             "[Dx900.0 TO NULL]"
                         }
                     },
-                    new Facet 
+                    new Facet
                     {
                         Name = "Megapixels_Range",
                         Mode = FacetMode.Ranges,
-                        Ranges = 
+                        Ranges =
                         {
                             "[NULL TO Dx3.0]",
                             "[Dx4.0 TO Dx7.0]",
@@ -177,13 +185,13 @@ namespace Raven.Tests.Core.Commands
                     }
                 };
                 store.DatabaseCommands.Put(
-                    "facets/CameraFacets", 
-                    null, 
-                    RavenJObject.FromObject(new FacetSetup { Id = "facets/CameraFacets", Facets = facets }), 
+                    "facets/CameraFacets",
+                    null,
+                    RavenJObject.FromObject(new FacetSetup { Id = "facets/CameraFacets", Facets = facets }),
                     new RavenJObject());
                 WaitForIndexing(store);
 
-                var facetResults = store.DatabaseCommands.GetFacets(index.IndexName, new IndexQuery{Query=""}, "facets/CameraFacets");
+                var facetResults = store.DatabaseCommands.GetFacets(index.IndexName, new IndexQuery { Query = "" }, "facets/CameraFacets");
 
                 Assert.Equal(3, facetResults.Results.Count);
 
@@ -216,25 +224,25 @@ namespace Raven.Tests.Core.Commands
                 Assert.Equal(0, facetResults.Results["Megapixels_Range"].Values[3].Hits);
 
 
-                var multiFacetResults = store.DatabaseCommands.GetMultiFacets(new FacetQuery[] 
+                var multiFacetResults = store.DatabaseCommands.GetMultiFacets(new FacetQuery[]
                 {
-                    new FacetQuery 
-                    { 
-                        IndexName = index.IndexName, 
-                        Query = new IndexQuery 
-                        { 
-                            Query = "Cost:{NULL TO 200}" 
-                        }, 
-                        FacetSetupDoc = "facets/CameraFacets" 
+                    new FacetQuery
+                    {
+                        IndexName = index.IndexName,
+                        Query = new IndexQuery
+                        {
+                            Query = "Cost:{NULL TO 200}"
+                        },
+                        FacetSetupDoc = "facets/CameraFacets"
                     },
-                    new FacetQuery 
-                    { 
-                        IndexName = index.IndexName, 
-                        Query = new IndexQuery 
-                        { 
-                            Query = "Megapixels:{NULL TO 3}" 
-                        }, 
-                        FacetSetupDoc = "facets/CameraFacets" 
+                    new FacetQuery
+                    {
+                        IndexName = index.IndexName,
+                        Query = new IndexQuery
+                        {
+                            Query = "Megapixels:{NULL TO 3}"
+                        },
+                        FacetSetupDoc = "facets/CameraFacets"
                     }
                 });
 
