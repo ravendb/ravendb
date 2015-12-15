@@ -32,7 +32,7 @@ namespace Raven.Tests.Core.BulkInsert
             var bulkInsertStartsCounter = 0;
             using (var store = GetDocumentStore())
             {
-                using (var bulkInsert = store.BulkInsert(options:new Abstractions.Data.BulkInsertOptions{
+                using (var bulkInsert = store.BulkInsert(options:new BulkInsertOptions{
                 ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions{
                     MaxChunkVolumeInBytes = 5
                 }

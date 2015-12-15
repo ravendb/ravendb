@@ -122,7 +122,7 @@ task TestDnx -depends CompileDnx {
 
     Push-Location "$base_dir\Raven.Tests.Core"
     
-    &"$dnx" --configuration "$global:configuration" test
+    Start-Process -FilePath "$dnx" -ArgumentList "--configuration $global:configuration test" -NoNewWindow -Wait -ErrorAction SilentlyContinue
 
     Pop-Location
 }
@@ -948,7 +948,7 @@ function AddDependenciesToNuspec($projects, $nuspecPath, $framework)
     
     foreach ($project in $projects)
     {
-        $projectJson = Get-Content "$project\project.json" | ConvertFrom-Json
+        $projectJson = Get-Content "$project\project.json" -Raw | ConvertFrom-Json
         $frameworks = $projectJson.frameworks
         $dependencies = $frameworks."$framework".dependencies
 

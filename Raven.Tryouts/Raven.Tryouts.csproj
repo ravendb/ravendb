@@ -121,10 +121,6 @@
     <Reference Include="Jint">
       <HintPath>..\SharedLibs\Jint.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Owin.Host.HttpListener, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.1\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
       <Private>True</Private>
@@ -198,6 +194,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Core\Raven.Tests.Core.csproj">
+      <Project>{93287fba-732a-4603-9bbe-9cfdc82fc8be}</Project>
+      <Name>Raven.Tests.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.FileSystem\Raven.Tests.FileSystem.csproj">
       <Project>{01CA67F3-1E46-455C-8713-86FCCF2EFBC7}</Project>
