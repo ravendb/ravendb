@@ -89,7 +89,7 @@ namespace Raven.Tests.Raft
 
             Console.WriteLine("Leader: " + leader.Options.ClusterManager.Value.Engine.Options.SelfConnection.Uri);
 
-            leader.Options.ClusterManager.Value.InitializeTopology();
+            leader.Options.ClusterManager.Value.InitializeTopology(forceCandidateState:true);
 
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(), "Leader was not elected by himself in time");
 
