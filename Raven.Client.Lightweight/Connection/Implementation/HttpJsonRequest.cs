@@ -573,6 +573,7 @@ namespace Raven.Client.Connection.Implementation
 
         internal void AddReplicationStatusChangeBehavior(string thePrimaryUrl, string currentUrl, Action<NameValueCollection, string, string> handler)
         {
+            HandleReplicationStatusChanges = handler;
             primaryUrl = thePrimaryUrl;
             operationUrl = currentUrl;
         }

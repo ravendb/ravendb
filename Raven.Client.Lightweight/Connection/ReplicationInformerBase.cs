@@ -171,7 +171,7 @@ namespace Raven.Client.Connection
                     }, operationMetadata, primaryOperation, true, token).ConfigureAwait(false);
                     if (r.Success)
                     {
-                                FailureCounters.ResetFailureCount(operationMetadata.Url);
+                        FailureCounters.ResetFailureCount(operationMetadata.Url);
                         return;
                     }
                 }
@@ -312,13 +312,13 @@ There is a high probability of a network problem preventing access to all the re
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
         }
 
-        protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
+        protected virtual async Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
             OperationMetadata primaryOperationMetadata, bool avoidThrowing)
         {
             return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, default(CancellationToken)).ConfigureAwait(false);
         }
 
-        protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
+        protected virtual async Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata,
             OperationMetadata primaryOperationMetadata, bool avoidThrowing, CancellationToken cancellationToken)
         {
             var tryWithPrimaryCredentials = FailureCounters.IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;

@@ -86,10 +86,8 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetAsync(key));
         }
 
-        public IGlobalAdminDatabaseCommands GlobalAdmin
-        {
-            get { return new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient)); }
-        }
+        public IGlobalAdminDatabaseCommands GlobalAdmin => 
+            new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient));
 
         public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,
                                          RavenPagingInformation pagingInformation = null, bool metadataOnly = false,
