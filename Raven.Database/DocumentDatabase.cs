@@ -1249,12 +1249,18 @@ namespace Raven.Database
 
             public void ValidateStorage()
             {
-                var storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+                var storageEngineTypeName = configuration.SelectDatabaseStorageEngineAndFetchTypeName();
                 if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
                     && configuration.Storage.Voron.AllowOn32Bits == false && 
                     Environment.Is64BitProcess == false)
                 {
                     throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+                }
+
+                if (string.IsNullOrEmpty(configuration.DefaultStorageTypeName) == false && 
+                    configuration.DefaultStorageTypeName.Equals(storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    throw new Exception(string.Format("The database is configured to use '{0}' storage engine, but it points to '{1}' data", configuration.DefaultStorageTypeName, storageEngineTypeName));
                 }
             }
 
@@ -1323,7 +1329,7 @@ namespace Raven.Database
 
             public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
             {
-                string storageEngineTypeName = configuration.SelectStorageEngineAndFetchTypeName();
+                string storageEngineTypeName = configuration.SelectDatabaseStorageEngineAndFetchTypeName();
                 database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
                             {
                                 if (database.StorageInaccessible != null)
