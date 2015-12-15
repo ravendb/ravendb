@@ -33,7 +33,7 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo leaderNci;
             var leader = CreateServerWithOAuth(8079, "Ayende/abc", out leaderNci);
 
-            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci);
+            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci,forceCandidateState:true);
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
             NodeConnectionInfo secondConnectionInfo;
@@ -71,7 +71,7 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo leaderNci;
             var leader = CreateServerWithWindowsCredentials(8079, username, password, domain, out leaderNci);
 
-            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci);
+            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci,forceCandidateState: true);
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
             NodeConnectionInfo secondConnectionInfo;
@@ -108,7 +108,7 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo leaderNci;
             var leader = CreateServerWithOAuth(8079, "Ayende/abc", out leaderNci);
 
-            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci);
+            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci, forceCandidateState: true);
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
             NodeConnectionInfo secondConnectionInfo;
@@ -148,7 +148,7 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo leaderNci;
             var leader = CreateServerWithWindowsCredentials(8079, username, password, domain, out leaderNci);
 
-            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci);
+            leader.Options.ClusterManager.Value.InitializeTopology(leaderNci, forceCandidateState: true);
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader());
 
             NodeConnectionInfo secondConnectionInfo;
