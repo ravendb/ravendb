@@ -45,7 +45,7 @@ namespace Raven.Database.Raft
                    };
         }
 
-        public void InitializeTopology(NodeConnectionInfo nodeConnection = null, bool isPartOfExistingCluster = false)
+        public void InitializeTopology(NodeConnectionInfo nodeConnection = null, bool isPartOfExistingCluster = false,bool forceCandidateState = false)
         {
             var topologyId = Guid.NewGuid();
             var topology = new Topology(topologyId, new List<NodeConnectionInfo> { nodeConnection ?? Engine.Options.SelfConnection }, Enumerable.Empty<NodeConnectionInfo>(), Enumerable.Empty<NodeConnectionInfo>());
@@ -60,7 +60,7 @@ namespace Raven.Database.Raft
             Engine.StartTopologyChange(tcc);
             Engine.CommitTopologyChange(tcc);
 
-            if (isPartOfExistingCluster)
+            if (isPartOfExistingCluster || forceCandidateState)
                 Engine.ForceCandidateState();
             else
                 Engine.CurrentLeader = null;
