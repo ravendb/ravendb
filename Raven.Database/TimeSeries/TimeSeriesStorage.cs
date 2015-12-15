@@ -71,7 +71,7 @@ namespace Raven.Database.TimeSeries
 
             metricsTimeSeries = new TimeSeriesMetricsManager();
 
-            var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly()
+            var options = configuration.RunInMemory ? StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.Voron.TempPath)
                 : CreateStorageOptionsFromConfiguration(configuration.TimeSeries.DataDirectory, configuration.Settings);
 
             storageEnvironment = new StorageEnvironment(options);
@@ -118,7 +118,7 @@ namespace Raven.Database.TimeSeries
         {
             bool result;
             if (bool.TryParse(settings[Constants.RunInMemory] ?? "false", out result) && result)
-                return StorageEnvironmentOptions.CreateMemoryOnly();
+                return StorageEnvironmentOptions.CreateMemoryOnly(settings[Constants.Voron.TempPath]);
 
             bool allowIncrementalBackupsSetting;
             if (bool.TryParse(settings[Constants.Voron.AllowIncrementalBackups] ?? "false", out allowIncrementalBackupsSetting) == false)

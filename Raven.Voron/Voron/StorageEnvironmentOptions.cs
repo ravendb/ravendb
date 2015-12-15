@@ -111,9 +111,12 @@ namespace Voron
 
         public int ScratchBufferOverflowTimeout { get; set; }
 
-        public static StorageEnvironmentOptions CreateMemoryOnly()
+        public static StorageEnvironmentOptions CreateMemoryOnly(string configTempPath = null)
         {
-            return new PureMemoryStorageEnvironmentOptions();
+            if (configTempPath == null)
+                configTempPath = Path.GetTempPath();
+
+            return new PureMemoryStorageEnvironmentOptions(configTempPath);
         }
 
         public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
@@ -318,14 +321,24 @@ namespace Voron
             private readonly Dictionary<string, IntPtr> _headers =
                 new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
             private int _instanceId;
+            private string tempPath { get; set; }
 
-            public PureMemoryStorageEnvironmentOptions()
+            public PureMemoryStorageEnvironmentOptions(string configTempPath)
             {
+                tempPath = configTempPath;
                 _instanceId = Interlocked.Increment(ref _counter);
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager";
+
+                string path = Path.Combine(tempPath, filename);
                 if (RunningOnPosix)
-                    _dataPager = new PosixTempMemoryMapPager("_data.pager", InitialFileSize);
+                {
+                    _dataPager = new PosixTempMemoryMapPager(path, InitialFileSize);
+                }
                 else
-                    _dataPager = new Win32PageFileBackedMemoryMappedPager("data.pager", InitialFileSize);
+                {
+                    _dataPager = new Win32MemoryMapPager(Path.Combine(tempPath, filename), InitialFileSize,
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                }
             }
 
             public override IVirtualPager DataPager
@@ -407,9 +420,11 @@ namespace Voron
 
             public override IVirtualPager CreateScratchPager(string name)
             {
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}";
                 if (RunningOnPosix)
-                    return new PosixTempMemoryMapPager(name, InitialFileSize);
-                return new Win32PageFileBackedMemoryMappedPager(name, InitialFileSize);
+                    return new PosixTempMemoryMapPager(filename, InitialFileSize);
+                return new Win32MemoryMapPager(filename, InitialFileSize,
+                    Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
             public override IVirtualPager OpenPager(string filename)
