@@ -202,6 +202,14 @@ namespace Raven.Storage.Voron
             return accessor;
         }
 
+        public bool SkipConsistencyCheck
+        {
+            get
+            {
+                return configuration.Storage.SkipConsistencyCheck;
+            }
+        }
+
         public void Batch(Action<IStorageActionsAccessor> action)
         {
             if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches

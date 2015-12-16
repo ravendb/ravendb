@@ -27,6 +27,7 @@ namespace Raven.StorageExporter
             var ravenConfiguration = new RavenConfiguration();
             ravenConfiguration.DataDirectory = databaseBaseDirectory;
             ravenConfiguration.Storage.PreventSchemaUpdate = true;
+            ravenConfiguration.Storage.SkipConsistencyCheck = true;
             CreateTransactionalStorage(ravenConfiguration);
             BatchSize = batchSize;
         }

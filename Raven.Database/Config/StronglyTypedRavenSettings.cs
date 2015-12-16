@@ -531,6 +531,8 @@ namespace Raven.Database.Config
             public StringSetting DefaultStorageTypeName { get; set; }
 
             public BooleanSetting PreventSchemaUpdate { get; set; }
+
+            public BooleanSetting IgnoreDataCorruption { get; set; }
         }
 
         public class EncryptionConfiguration
