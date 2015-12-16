@@ -7,6 +7,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 
 namespace Raven.StorageExporter
 {
@@ -83,6 +84,16 @@ namespace Raven.StorageExporter
                             ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "BatchSize should be an integer number greater than 0 (BatchSize={0}).\n", args[currArgPos + 1]);
                             return false;
                         }
+                        break;
+                    case "-DocumentsStartEtag":
+                        Etag etag;
+                        if (!Etag.TryParse(args[currArgPos + 1], out etag))
+                        {
+                            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "DocumentsStartEtag should be in a valid Etag format, we got {0}.\n", args[currArgPos + 1]);
+                            return false;
+                        }
+                        configuration.DocumentsStartEtag = etag;
+                        currArgPos += 2;
                         break;
                     default:
                         ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Unidentified argument {0}.\n");

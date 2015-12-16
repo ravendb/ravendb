@@ -293,7 +293,14 @@ namespace Raven.Abstractions.Data
                 changes = changes + amount
             };
         }
-
+        public Etag DecrementBy(int amount)
+        {
+            return new Etag
+            {
+                restarts = restarts,
+                changes = changes - amount
+            };
+        }
         public static implicit operator string(Etag etag)
         {
             if (etag == null)
