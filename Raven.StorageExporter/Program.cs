@@ -121,6 +121,7 @@ Usage:
 Parameters:
  -T <TableName> : The name of the table to be exported.
  -BatchSize <integer number> : The size of the export batch (defualt size is 1024). 
+ -DocumentsStartEtag <Etag> : The document etag to start the export from (defualt is Etag.Empty).
  ");
             Console.WriteLine();
         }
