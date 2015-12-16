@@ -209,6 +209,8 @@ namespace Raven.Abstractions.Data
         public const string IncrementalBackupState = "IncrementalBackupState.Document";
 
         // General
+
+        public const string ResourceMarkerPrefix = ".resource.";
         public static class Database
         {
             public const string Prefix = "Raven/Databases/";
@@ -216,6 +218,7 @@ namespace Raven.Abstractions.Data
             public const string DataDirectory = "Raven/Databases/DataDir";
 
             public const string UrlPrefix = "databases";
+            public const string DbResourceMarker = ResourceMarkerPrefix + "database";
         }
         
         //File System
@@ -226,6 +229,7 @@ namespace Raven.Abstractions.Data
             public const string UrlPrefix = "fs";
 
             public const string RavenFsSize = "RavenFS-Size";
+            public const string FsResourceMarker = ResourceMarkerPrefix + "file-system";
         }
 
         //Counters

@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -71,6 +72,8 @@ namespace Raven.Database.FileSystem
 
             try
             {
+                ValidateStorage();
+
                 systemConfiguration.Container.SatisfyImportsOnce(this);
 
                 transportState = receivedTransportState ?? new TransportState();
@@ -126,7 +129,16 @@ namespace Raven.Database.FileSystem
             try
             {
                 var generator = new UuidGenerator();
-                storage.Initialize(generator, FileCodecs);
+                storage.Initialize(generator, FileCodecs, storagePath =>
+                {
+                    if (Configuration.Core.RunInMemory)
+                        return;
+
+                    var resourceTypeFile = Path.Combine(storagePath, Constants.FileSystem.FsResourceMarker);
+
+                    if (File.Exists(resourceTypeFile) == false)
+                        using (File.Create(resourceTypeFile)) { }
+                });
                 generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
 
                 historian = new Historian(storage, new SynchronizationHiLo(storage));
@@ -174,12 +186,37 @@ namespace Raven.Database.FileSystem
             }
         }
 
-        internal static ITransactionalStorage CreateTransactionalStorage(RavenConfiguration configuration)
+        private void ValidateStorage()
         {
-            if (Environment.Is64BitProcess == false && configuration.Storage.AllowOn32Bits == false)
+            if (Configuration.Storage.AllowOn32Bits == false &&
+                    Environment.Is64BitProcess == false)
             {
                 throw new Exception("Voron is prone to failure in 32-bits mode. Use " + RavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
             }
+
+            if (Configuration.Core.RunInMemory == false && string.IsNullOrEmpty(Configuration.FileSystem.DataDirectory) == false && Directory.Exists(Configuration.FileSystem.DataDirectory))
+            {
+                var resourceTypeFiles = Directory.EnumerateFiles(Configuration.FileSystem.DataDirectory, Constants.ResourceMarkerPrefix + "*").Select(Path.GetFileName).ToArray();
+                
+                if (resourceTypeFiles.Length == 0)
+                    return;
+
+                if (resourceTypeFiles.Length > 1)
+                {
+                    throw new Exception(string.Format("The file system directory cannot contain more than one resource file marker, but it contains: {0}", string.Join(", ", resourceTypeFiles)));
+                }
+
+                var resourceType = resourceTypeFiles[0];
+
+                if (resourceType.Equals(Constants.FileSystem.FsResourceMarker) == false)
+                {
+                    throw new Exception(string.Format("The file system data directory contains data of a different resource kind: {0}", resourceType.Substring(Constants.ResourceMarkerPrefix.Length)));
+                }
+            }
+        }
+
+        internal static ITransactionalStorage CreateTransactionalStorage(RavenConfiguration configuration)
+        {
             return new TransactionalStorage(configuration);
         }
 
