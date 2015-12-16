@@ -1212,7 +1212,7 @@ namespace Raven.Database.Config
             return typeName;
         }
 
-        public string SelectStorageEngineAndFetchTypeName()
+        public string SelectDatabaseStorageEngineAndFetchTypeName()
         {
             if (RunInMemory)
             {
@@ -1222,18 +1222,18 @@ namespace Raven.Database.Config
                 return VoronTypeName;
             }
 
-            if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+            if (string.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
             {
                 if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                {
                     return VoronTypeName;
-                }
+
                 if (File.Exists(Path.Combine(DataDirectory, "Data")))
                     return EsentTypeName;
             }
 
             if (string.IsNullOrEmpty(DefaultStorageTypeName))
                 return EsentTypeName;
+
             return DefaultStorageTypeName;
         }
 
@@ -1428,6 +1428,7 @@ namespace Raven.Database.Config
             public void InitializeFrom(InMemoryRavenConfiguration configuration)
             {
                 workingDirectory = configuration.WorkingDirectory;
+                defaultSystemStorageTypeName = configuration.DefaultStorageTypeName;
             }
 
             private string fileSystemDataDirectory;
@@ -1437,6 +1438,8 @@ namespace Raven.Database.Config
             private string defaultFileSystemStorageTypeName;
 
             private string workingDirectory;
+
+            private string defaultSystemStorageTypeName;
 
             public TimeSpan MaximumSynchronizationInterval { get; set; }
 
@@ -1470,6 +1473,26 @@ namespace Raven.Database.Config
             {
                 get { return defaultFileSystemStorageTypeName; }
                 set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
+            }
+
+            public string SelectFileSystemStorageEngineAndFetchTypeName()
+            {
+                if (string.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+                {
+                    if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
+                        return VoronTypeName;
+
+                    if (File.Exists(Path.Combine(DataDirectory, "Data.ravenfs")))
+                        return EsentTypeName;
+                }
+
+                if (string.IsNullOrEmpty(DefaultStorageTypeName) == false)
+                    return DefaultStorageTypeName; // We select the most specific
+
+                if (string.IsNullOrEmpty(defaultSystemStorageTypeName) == false)
+                    return defaultSystemStorageTypeName; // We choose the system wide if not defined
+
+                return EsentTypeName; // We choose esent by default
             }
         }
 
