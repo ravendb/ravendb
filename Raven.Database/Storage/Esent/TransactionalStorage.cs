@@ -487,7 +487,7 @@ namespace Raven.Storage.Esent
             SystemParameters.CacheSizeMax = cacheSizeMax;
         }
 
-        public void Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public void Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null)
         {
             try
             {
@@ -512,6 +512,9 @@ namespace Raven.Storage.Esent
                 SetIdFromDb();
 
                 tableColumnsCache.InitColumDictionaries(instance, database);
+
+                if (putResourceMarker != null)
+                    putResourceMarker(path);
             }
             catch (Exception e)
             {

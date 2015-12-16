@@ -215,11 +215,15 @@ namespace Raven.Abstractions.Data
         public const string MaxClauseCount = "Raven/MaxClauseCount";
 
         // General
+
+        public const string ResourceMarkerPrefix = ".resource.";
+
         public static partial class Database
         {
             public const string Prefix = "Raven/Databases/";
             public const string DataDirectory = "Raven/Databases/DataDir";
             public const string UrlPrefix = "databases";
+            public const string DbResourceMarker = ResourceMarkerPrefix + "database";
         }
 
         public static partial class FileSystem
@@ -232,6 +236,7 @@ namespace Raven.Abstractions.Data
             public const string UrlPrefix = "fs";
             public const string RavenFsSize = "RavenFS-Size";
             public const string PreventSchemaUpdate = "Raven/PreventSchemaUpdate";
+            public const string FsResourceMarker = ResourceMarkerPrefix + "file-system";
 
             public static class Versioning
             {

@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Extensions;
@@ -125,7 +126,16 @@ namespace Raven.Database.FileSystem
             try
             {
                 var generator = new UuidGenerator();
-                storage.Initialize(generator, FileCodecs);
+                storage.Initialize(generator, FileCodecs, storagePath =>
+                {
+                    if (configuration.RunInMemory)
+                        return;
+
+                    var resourceTypeFile = Path.Combine(storagePath, Constants.FileSystem.FsResourceMarker);
+
+                    if (File.Exists(resourceTypeFile) == false)
+                        using (File.Create(resourceTypeFile)) { }
+                });
                 generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
 
                 historian = new Historian(storage, new SynchronizationHiLo(storage));
@@ -185,6 +195,26 @@ namespace Raven.Database.FileSystem
                 configuration.FileSystem.DefaultStorageTypeName.Equals(storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
             {
                 throw new Exception(string.Format("The file system is configured to use '{0}' storage engine, but it points to '{1}' data", configuration.FileSystem.DefaultStorageTypeName, storageEngineTypeName));
+            }
+
+            if (configuration.RunInMemory == false && string.IsNullOrEmpty(configuration.FileSystem.DataDirectory) == false && Directory.Exists(configuration.FileSystem.DataDirectory))
+            {
+                var resourceTypeFiles = Directory.EnumerateFiles(configuration.FileSystem.DataDirectory, Constants.ResourceMarkerPrefix + "*").Select(Path.GetFileName).ToArray();
+                
+                if (resourceTypeFiles.Length == 0)
+                    return;
+
+                if (resourceTypeFiles.Length > 1)
+                {
+                    throw new Exception(string.Format("The file system directory cannot contain more than one resource file marker, but it contains: {0}", string.Join(", ", resourceTypeFiles)));
+                }
+
+                var resourceType = resourceTypeFiles[0];
+
+                if (resourceType.Equals(Constants.FileSystem.FsResourceMarker) == false)
+                {
+                    throw new Exception(string.Format("The file system data directory contains data of a different resource kind: {0}", resourceType.Substring(Constants.ResourceMarkerPrefix.Length)));
+                }
             }
         }
 

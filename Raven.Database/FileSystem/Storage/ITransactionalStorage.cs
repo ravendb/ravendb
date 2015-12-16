@@ -14,7 +14,7 @@ namespace Raven.Database.FileSystem.Storage
     {
         Guid Id { get; }
 
-        void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> fileCodecs);
+        void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> fileCodecs, Action<string> putResourceMarker = null);
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         void Batch(Action<IStorageActionsAccessor> action);

@@ -1262,6 +1262,26 @@ namespace Raven.Database
                 {
                     throw new Exception(string.Format("The database is configured to use '{0}' storage engine, but it points to '{1}' data", configuration.DefaultStorageTypeName, storageEngineTypeName));
                 }
+
+                if (configuration.RunInMemory == false && string.IsNullOrEmpty(configuration.DataDirectory) == false && Directory.Exists(configuration.DataDirectory))
+                {
+                    var resourceTypeFiles = Directory.EnumerateFiles(configuration.DataDirectory, Constants.ResourceMarkerPrefix + "*").Select(Path.GetFileName).ToArray();
+
+                    if (resourceTypeFiles.Length == 0)
+                        return;
+
+                    if (resourceTypeFiles.Length > 1)
+                    {
+                        throw new Exception(string.Format("The database directory cannot contain more than one resource file marker, but it contains: {0}", string.Join(", ", resourceTypeFiles)));
+                    }
+
+                    var resourceType = resourceTypeFiles[0];
+
+                    if (resourceType.Equals(Constants.Database.DbResourceMarker) == false)
+                    {
+                        throw new Exception(string.Format("The database data directory contains data of a different resource kind: {0}", resourceType.Substring(Constants.ResourceMarkerPrefix.Length)));
+                    }
+                }
             }
 
             public void ValidateLicense()
@@ -1336,7 +1356,17 @@ namespace Raven.Database
                                     database.StorageInaccessible(database, EventArgs.Empty);
 
                             }, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
-                database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
+
+                database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs, storagePath =>
+                {
+                    if (configuration.RunInMemory)
+                        return;
+
+                    var resourceTypeFile = Path.Combine(storagePath, Constants.Database.DbResourceMarker);
+
+                    if (File.Exists(resourceTypeFile) == false)
+                        using (File.Create(resourceTypeFile)) { }
+                });
             }
 
             public void InitializeIndexDefinitionStorage()
