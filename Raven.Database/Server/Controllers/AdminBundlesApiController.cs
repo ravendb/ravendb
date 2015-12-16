@@ -17,11 +17,12 @@ namespace Raven.Database.Server.Controllers
         {
             InnerInitialization(controllerContext);
             var config = DatabasesLandlord.CreateTenantConfiguration(DatabaseName);
-            if (!config.Core.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
+            if (config == null || config.Core.ActiveBundles == null ||
+                !config.Core.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not figure out what to do"
+                    Error = $"{BundleName} bundle not activated in database named: {DatabaseName}"
                 }, HttpStatusCode.BadRequest);
             }
 

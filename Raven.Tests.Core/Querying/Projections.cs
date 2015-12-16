@@ -15,6 +15,14 @@ namespace Raven.Tests.Core.Querying
 {
     public class Projections : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Projections(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void BasicProjections()
         {
@@ -28,8 +36,8 @@ namespace Raven.Tests.Core.Querying
                     session.SaveChanges();
 
                     var anonymousCompanyNames = (from company in session.Query<Company>()
-                                       where company.Name.StartsWith("Some")
-                                       select new { company.Name })
+                                                 where company.Name.StartsWith("Some")
+                                                 select new { company.Name })
                                        .ToArray();
 
                     Assert.Equal(2, anonymousCompanyNames.Length);
@@ -37,8 +45,8 @@ namespace Raven.Tests.Core.Querying
                     Assert.Equal("Some Company 2", anonymousCompanyNames[1].Name);
 
                     Company[] companyNames = (from company in session.Query<Company>()
-                                                 where company.Name.StartsWith("Some")
-                                                 select new Company { Name = company.Name })
+                                              where company.Name.StartsWith("Some")
+                                              select new Company { Name = company.Name })
                                                  .ToArray();
 
                     Assert.Equal(2, companyNames.Length);

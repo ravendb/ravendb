@@ -60,17 +60,25 @@ namespace Raven.Abstractions.Connection
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             using (var uncloseableStream = new UndisposableStream(stream))
+#if !DNXCORE50
             using (var bufferedStream = new BufferedStream(uncloseableStream))
+#endif
             {
+
+#if !DNXCORE50
+                var streamToUse = bufferedStream;
+#else
+                var streamToUse = uncloseableStream;
+#endif
                 Stream compressedStream = null;
 
                 if (encodingType == "gzip")
                 {
-                    compressedStream = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true);
+                    compressedStream = new GZipStream(streamToUse, CompressionMode.Compress, leaveOpen: true);
                 }
                 else if (encodingType == "deflate")
                 {
-                    compressedStream = new DeflateStream(bufferedStream, CompressionMode.Compress, leaveOpen: true);
+                    compressedStream = new DeflateStream(streamToUse, CompressionMode.Compress, leaveOpen: true);
                 }
                 else throw new InvalidOperationException("This shouldn't happen, ever.");
 

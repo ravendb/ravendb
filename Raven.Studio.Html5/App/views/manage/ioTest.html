@@ -1,4 +1,8 @@
-<form class="form-horizontal" role="form" data-bind="submit: startPerformanceTest">
+<div data-bind="visible: isForbidden" class="text-center">
+    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+</div>
+
+<form class="form-horizontal" role="form" data-bind="submit: startPerformanceTest, visible: isForbidden() == false">
     <div class="panel panel-default">
         <div class="panel-heading panel-info">
             <a target="_blank" data-bind="attr: { href: $root.currentHelpLink }, visible: $root.currentHelpLink" class="global_help_link"><i class="fa fa-question-circle fa-2x"></i></a>
@@ -130,7 +134,7 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="numberOfDocumentsInBatch" class="col-sm-2 control-label">Number of documents<br/>in batch</label>
+                        <label for="numberOfDocumentsInBatch" class="col-sm-2 control-label">Number of documents<br />in batch</label>
                         <div class="col-sm-5 input-group">
                             <input data-bind="value: ioTestRequest.numberOfDocumentsInBatch, disable: isBusy" type="number" required class="form-control" id="numberOfDocumentsInBatch">
                         </div>
@@ -145,9 +149,9 @@
             </div>
         </div>
     </div>
-    
+
     <div data-bind="with: testResult">
-        <div class="panel panel-default" >
+        <div class="panel panel-default">
             <div class="panel-heading panel-info">
                 Disk Performance Test Results
             </div>
@@ -209,7 +213,7 @@
                 </table>
                 <!-- /ko -->
                 <!-- ko if:hasReads -->
-                <table  class="table-condensed table-striped table-hover table">
+                <table class="table-condensed table-striped table-hover table">
                     <tr>
                         <th data-bind="attr: { colspan: readPercentiles().length } ">Read latency percentiles</th>
                     </tr>
@@ -222,7 +226,7 @@
                 </table>
                 <!-- /ko -->
                 <!-- ko if:hasWrites -->
-                <table  class="table-condensed table-striped table-hover table">
+                <table class="table-condensed table-striped table-hover table">
                     <tr>
                         <th data-bind="attr: { colspan: writePercentiles().length } ">Write latency percentiles</th>
                     </tr>
@@ -234,17 +238,17 @@
                     </tr>
                 </table>
                 <!-- /ko -->
-                
+
                 <h4>Disk throughput</h4>
                 <div id="overTimeThroughputContainer" class="with-3d-shadow with-transitions">
                     <svg height="400"></svg>
                 </div>
-                
+
                 <h4>Disk latency</h4>
                 <div id="overTimeLatencyContainer" class="with-3d-shadow with-transitions">
                     <svg height="400"></svg>
                 </div>
-            </div> 
+            </div>
         </div>
     </div>
 </form>

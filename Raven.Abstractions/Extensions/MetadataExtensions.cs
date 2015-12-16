@@ -120,7 +120,6 @@ namespace Raven.Abstractions.Extensions
 
         private static readonly HashSet<string> HeadersToIgnoreForClient = HeadersToIgnoreClient.Except(new[]
         {
-            Constants.MetadataEtagField,
             Constants.LastModified,
             Constants.RavenLastModified
         }).ToHashSet();

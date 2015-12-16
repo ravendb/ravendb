@@ -64,6 +64,9 @@
   <ItemGroup>
     <Compile Include="Binary\Bits.cs" />
     <Compile Include="Binary\BitVector.cs" />
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Collections\ConcurrentLruSet.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
     <Compile Include="Collections\ZFastNodesTable.cs" />
@@ -75,10 +78,11 @@
     <Compile Include="Memory.cs" />
     <Compile Include="ObjectPool.cs" />
     <Compile Include="Platform\Posix\PosixUnmanagedMemory.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Platform\Win32\Win32UnmanagedMemory.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Sparrow.project.json" />
     <None Include="RavenDB.snk" />
     <None Include="readme.md" />
   </ItemGroup>

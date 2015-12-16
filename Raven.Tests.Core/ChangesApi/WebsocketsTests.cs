@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -149,3 +150,4 @@ namespace Raven.Tests.Core.ChangesApi
         }
     }
 }
+#endif

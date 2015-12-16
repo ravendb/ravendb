@@ -4,13 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Document.Batches;
-using System.Transactions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +16,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
@@ -35,6 +32,12 @@ namespace Raven.Client.Document
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
+#if !DNXCORE50
+        private readonly static ILog log = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
+#endif
+
         protected readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
         protected readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
         private static int counter;
@@ -55,8 +58,6 @@ namespace Raven.Client.Document
             get { return _databaseName ?? MultiDatabase.GetDatabaseName(DocumentStore.Url); }
             internal set { _databaseName = value; }
         }
-
-        protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// The entities waiting to be deleted
@@ -556,7 +557,7 @@ more responsive application.
         /// <returns></returns>
         static object GetDefaultValue(Type type)
         {
-            return type.IsValueType ? Activator.CreateInstance(type) : null;
+            return type.IsValueType() ? Activator.CreateInstance(type) : null;
         }
 
         /// <summary>
@@ -607,7 +608,7 @@ more responsive application.
             }
             includedDocumentsByKey.Remove(id);
             knownMissingIds.Add(id);
-            
+
             Defer(new DeleteCommandData { Key = id });
         }
 
@@ -709,7 +710,7 @@ more responsive application.
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
         }
 
-        public Task StoreAsync(object entity, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
         {
             string id;
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
@@ -717,22 +718,22 @@ more responsive application.
             return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false, token: token);
         }
 
-        public Task StoreAsync(object entity, Etag etag, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, Etag etag, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true, token: token);
         }
 
-        public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true, token: token);
         }
 
-        public Task StoreAsync(object entity, string id, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, string id, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false, token: token);
         }
 
-        private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default (CancellationToken))
+        private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
         {
             if (null == entity)
                 throw new ArgumentNullException("entity");
@@ -777,7 +778,7 @@ more responsive application.
         protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
         {
             deletedEntities.Remove(entity);
-            if(id !=null)
+            if (id != null)
                 knownMissingIds.Remove(id);
 
             entitiesAndMetadata.Add(entity, new DocumentMetadata
@@ -1227,17 +1228,17 @@ more responsive application.
         protected void LogBatch(SaveChangesData data)
         {
             if (log.IsDebugEnabled)
-            log.Debug(() =>
-            {
-                var sb = new StringBuilder()
-                    .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
-                    .AppendLine();
-                foreach (var commandData in data.Commands)
+                log.Debug(() =>
                 {
-                    sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
-                }
-                return sb.ToString();
-            });
+                    var sb = new StringBuilder()
+                        .AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+                        .AppendLine();
+                    foreach (var commandData in data.Commands)
+                    {
+                        sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+                    }
+                    return sb.ToString();
+                });
         }
 
         public void RegisterMissing(string id)
@@ -1363,7 +1364,7 @@ more responsive application.
                 conversionListener.BeforeConversionToEntity(null, y, null);
             }
             var instance = y.Deserialize(type, Conventions);
-            
+
             foreach (var conversionListener in theListeners.ConversionListeners)
             {
                 conversionListener.AfterConversionToEntity(null, y, null, instance);

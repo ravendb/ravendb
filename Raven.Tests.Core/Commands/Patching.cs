@@ -12,6 +12,14 @@ namespace Raven.Tests.Core.Commands
 {
     public class Patching : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Patching(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public async Task CanSkipPatchIfEtagMismatch()
         {
@@ -31,13 +39,13 @@ namespace Raven.Tests.Core.Commands
                     new RavenJObject());
                 Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
 
-                var result=await store.AsyncDatabaseCommands.BatchAsync(
+                var result = await store.AsyncDatabaseCommands.BatchAsync(
                     new ICommandData[]
                     {
                         new PatchCommandData
                         {
                             Key = "companies/1",
-                            Patches = new PatchRequest[]{ new PatchRequest 
+                            Patches = new PatchRequest[]{ new PatchRequest
                                 {
                                     Type = PatchCommandType.Add,
                                     Name = "NewArray",
@@ -49,7 +57,7 @@ namespace Raven.Tests.Core.Commands
                     });
 
 
-                Assert.Equal(PatchResult.Skipped,result[0].PatchResult);
+                Assert.Equal(PatchResult.Skipped, result[0].PatchResult);
             }
         }
 
@@ -76,7 +84,7 @@ namespace Raven.Tests.Core.Commands
                     "companies/1",
                     new[]
                         {
-                            new PatchRequest 
+                            new PatchRequest
                                 {
                                     Type = PatchCommandType.Add,
                                     Name = "NewArray",
@@ -154,7 +162,7 @@ namespace Raven.Tests.Core.Commands
                     RavenJObject.FromObject(new Post
                     {
                         Title = "Post 1",
-                        Comments = new Post[]{}
+                        Comments = new Post[] { }
                     }),
                     new RavenJObject());
 
@@ -182,7 +190,7 @@ namespace Raven.Tests.Core.Commands
                     RavenJObject.FromObject(new Post
                     {
                         Title = "Post 2",
-                        AttachmentIds = new string[] {"id1", "id2"}
+                        AttachmentIds = new string[] { "id1", "id2" }
                     }),
                     new RavenJObject());
 
@@ -229,7 +237,7 @@ namespace Raven.Tests.Core.Commands
                     RavenJObject.FromObject(new Post
                     {
                         Title = "Post 3",
-                        Comments = new Post[] {comment1, comment2}
+                        Comments = new Post[] { comment1, comment2 }
                     }),
                     new RavenJObject());
                 store.DatabaseCommands.Patch(
@@ -259,7 +267,7 @@ namespace Raven.Tests.Core.Commands
                     RavenJObject.FromObject(new Post
                     {
                         Title = "Post 4",
-                        AttachmentIds = new string[] {"posts/5"}
+                        AttachmentIds = new string[] { "posts/5" }
                     }),
                     new RavenJObject());
                 store.DatabaseCommands.Put(
@@ -337,7 +345,7 @@ namespace Raven.Tests.Core.Commands
                             output(postId);"
 
 
-                    });                
+                    });
                 using (var session = store.OpenSession())
                 {
                     var debugInfo = output.Value<RavenJArray>("Debug");

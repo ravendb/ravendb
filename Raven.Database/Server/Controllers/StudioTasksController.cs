@@ -65,9 +65,16 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("studio-tasks/server-configs")]
         public HttpResponseMessage GerServerConfigs()
         {
+            var userInfo = GetUserInfo();
             var serverConfigs = new ServerConfigs
             {
-                IsGlobalAdmin = GetUserInfo().IsAdminGlobal,
+                IsGlobalAdmin = userInfo.IsAdminGlobal,
+                CanReadWriteSettings = userInfo.IsAdminGlobal ||
+                                       (userInfo.ReadWriteDatabases != null &&
+                                        userInfo.ReadWriteDatabases.Any(x => x.Equals(Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))),
+                CanReadSettings = userInfo.IsAdminGlobal ||
+                                  (userInfo.ReadOnlyDatabases != null &&
+                                   userInfo.ReadOnlyDatabases.Any(x => x.Equals(Constants.SystemDatabase, StringComparison.InvariantCultureIgnoreCase))),
                 CanExposeConfigOverTheWire = CanExposeConfigOverTheWire()
             };
 
@@ -77,6 +84,8 @@ namespace Raven.Database.Server.Controllers
         private class ServerConfigs
         {
             public bool IsGlobalAdmin { get; set; }
+            public bool CanReadWriteSettings { get; set; }
+            public bool CanReadSettings { get; set; }
             public bool CanExposeConfigOverTheWire { get; set; }
         }
 

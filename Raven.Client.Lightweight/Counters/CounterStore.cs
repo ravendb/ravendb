@@ -53,7 +53,7 @@ namespace Raven.Client.Counters
                     throw new InvalidOperationException("Name is null or empty and ensureDefaultCounterExists = true --> cannot create default counter storage with empty name");
 
                 var existingCounterStorageNames = AsyncHelpers.RunSync(() => Admin.GetCounterStoragesNamesAsync());
-                if (!existingCounterStorageNames.Contains(Name, StringComparer.InvariantCultureIgnoreCase)) 
+                if (!existingCounterStorageNames.Contains(Name, StringComparer.OrdinalIgnoreCase)) 
                 {
                     //this statement will essentially overwrite the counter storage, therefore it should not be called if the storage is already there
                     Admin.CreateCounterStorageAsync(new CounterStorageDocument

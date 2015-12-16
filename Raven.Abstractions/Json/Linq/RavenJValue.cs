@@ -184,8 +184,10 @@ namespace Raven.Json.Linq
         {
             if (value == null)
                 return JTokenType.Null;
+#if !DNXCORE50
             else if (value == DBNull.Value)
                 return JTokenType.Null;
+#endif
             else if (value is string)
                 return GetStringValueType(current);
             else if (value is long || value is int || value is short || value is sbyte
@@ -283,7 +285,7 @@ namespace Raven.Json.Linq
 
                 // If we are using the default converters we will try to avoid repeatedly check the same types as 
                 // GetMatchingConverter is a costly call with a very low probability to hit (less than 1% in real scenarios).
-                JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, typeToFind);                
+                JsonConverter matchingConverter = JsonConverterCache.GetMatchingConverter(converters, typeToFind);
                 if (matchingConverter != null)
                 {
                     matchingConverter.WriteJson(writer, _value, JsonExtensions.CreateDefaultJsonSerializer());
@@ -587,7 +589,7 @@ namespace Raven.Json.Linq
             var other = node as RavenJValue;
             if (other == null)
                 return false;
-            if (ReferenceEquals(other,this))
+            if (ReferenceEquals(other, this))
                 return true;
 
             return ValuesEquals(this, other);

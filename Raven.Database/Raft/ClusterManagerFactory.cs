@@ -64,7 +64,7 @@ namespace Raven.Database.Raft
             }
             else
             {
-                options = StorageEnvironmentOptions.CreateMemoryOnly();
+                options = StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.TempPath);
             }
 
             var transport = new HttpTransport(nodeConnectionInfo.Name, systemDatabase.WorkContext.CancellationToken);

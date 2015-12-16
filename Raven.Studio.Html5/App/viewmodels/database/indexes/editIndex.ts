@@ -2,11 +2,9 @@ import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import indexDefinition = require("models/database/index/indexDefinition");
-import indexPriority = require("models/database/index/indexPriority");
 import luceneField = require("models/database/index/luceneField");
 import spatialIndexField = require("models/database/index/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import jsonUtil = require("common/jsonUtil");
@@ -221,8 +219,15 @@ class editIndex extends viewModelBase {
     }
 
     save() {
-        if (this.editedIndex().name()) {
-            var index = this.editedIndex().toDto();
+        var editedIndex = this.editedIndex();
+        if (editedIndex.lockMode === "LockedIgnore") {
+            messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
+                                            "Any changes to the index will be ignored.");
+            return;
+        }
+
+        if (editedIndex.name()) {
+            var index = editedIndex.toDto();
             this.saveIndex(index);
         }
     }

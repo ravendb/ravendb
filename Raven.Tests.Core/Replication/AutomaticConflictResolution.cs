@@ -17,6 +17,14 @@ namespace Raven.Tests.Core.Replication
 {
     public class AutomaticConflictResolution : RavenReplicationCoreTest
     {
+#if DNXCORE50
+        public AutomaticConflictResolution(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void ShouldResolveDocumentConflictInFavorOfLocalVersion()
         {
@@ -95,11 +103,8 @@ namespace Raven.Tests.Core.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    User user1 = null;
-                    User user2 = null;
-
-                    Assert.DoesNotThrow(() => { user1 = session.Load<User>("users/1"); });
-                    Assert.DoesNotThrow(() => { user2 = session.Load<User>("users/2"); });
+                    var user1 = session.Load<User>("users/1");
+                    var user2 = session.Load<User>("users/2");
 
                     Assert.Equal("2nd", user1.Name);
                     Assert.Equal("2nd", user2.Name);
@@ -150,9 +155,7 @@ namespace Raven.Tests.Core.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    User item = null;
-
-                    Assert.DoesNotThrow(() => { item = session.Load<User>("users/1"); });
+                    User item = session.Load<User>("users/1");
 
                     switch (docConflictResolution)
                     {
@@ -168,5 +171,5 @@ namespace Raven.Tests.Core.Replication
                 }
             }
         }
-    }
-}
+                }
+                }

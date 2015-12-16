@@ -123,6 +123,7 @@ interface indexStatisticsDto {
     LastIndexingTime: string;
     IsOnRam: string; // Yep, it's really a string. Example values: "false", "true (3 KBytes)"
     LockMode: string;
+    IsMapReduce: boolean;
     ForEntityName: string[];
     Performance: indexPerformanceDto[];
     DocsCount: number;
@@ -303,6 +304,8 @@ interface userInfoDto {
 
 interface serverConfigsDto {
     IsGlobalAdmin: boolean;
+    CanReadWriteSettings: boolean;
+    CanReadSettings: boolean;
     CanExposeConfigOverTheWire: boolean;
 }
 

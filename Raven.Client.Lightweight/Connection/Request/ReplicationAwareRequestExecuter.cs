@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Implementation;
+using Raven.Client.Helpers;
 using Raven.Client.Metrics;
 
 namespace Raven.Client.Connection.Request
@@ -86,7 +87,7 @@ namespace Raven.Client.Connection.Request
         {
             var uriBuilder = new UriBuilder(primaryUrl);
             if (uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
-                uriBuilder.Host = Environment.MachineName;
+                uriBuilder.Host = EnvironmentHelper.MachineName;
             return uriBuilder.Uri.ToString();
         }
 

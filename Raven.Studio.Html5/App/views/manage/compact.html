@@ -1,5 +1,8 @@
-<div role="tabpanel">
+<div data-bind="visible: isForbidden" class="text-center">
+    <h4 class="page-header text-info">You are not authorized to view this page!</h4>
+</div>
 
+<div role="tabpanel" data-bind="visible: isForbidden() == false">
     <ul class="nav nav-tabs" role="tablist">
         <li role="presentation" class="active"><a href="#compactDb" aria-controls="compactDb" role="tab" data-toggle="tab">Database</a></li>
         <li role="presentation"><a href="#compactFs" aria-controls="compactFs" role="tab" data-toggle="tab">File system</a></li>
@@ -43,7 +46,7 @@
                 <div id="databaseCompactLog" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
                     <pre data-bind="visible: dbCompactOptions.compactStatusMessages().length > 0" id="databaseCompactLogPre" style="word-wrap: normal; overflow: auto; height: 97%">
 <!-- ko foreach: dbCompactOptions.compactStatusMessages --><div data-bind="text: $data"></div><!-- /ko -->
-                        <div data-bind="text: 'Last Progress Message: ' + dbCompactOptions.compactStatusLastUpdate(), visible:isBusy()"></div>
+                    <div data-bind="text: 'Last Progress Message: ' + dbCompactOptions.compactStatusLastUpdate(), visible:isBusy()"></div>
                     </pre>
                 </div>
             </form>

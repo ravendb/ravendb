@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -238,3 +239,4 @@ namespace Raven.Tests.Core.Smuggler
         }
     }
 }
+#endif

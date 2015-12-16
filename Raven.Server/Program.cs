@@ -692,7 +692,7 @@ namespace Raven.Server
             if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
                 file = Path.GetFileNameWithoutExtension(file);
 
-            var configuration = ConfigurationManager.OpenExeConfiguration(file);
+            var configuration = System.Configuration.ConfigurationManager.OpenExeConfiguration(file);
             var names = new[] { "appSettings", "connectionStrings" };
 
             foreach (var section in names.Select(configuration.GetSection))
@@ -709,7 +709,7 @@ namespace Raven.Server
             if (string.Equals(Path.GetExtension(file), ".config", StringComparison.OrdinalIgnoreCase))
                 file = Path.GetFileNameWithoutExtension(file);
 
-            var configuration = ConfigurationManager.OpenExeConfiguration(file);
+            var configuration = System.Configuration.ConfigurationManager.OpenExeConfiguration(file);
             var names = new[] { "appSettings", "connectionStrings" };
 
             foreach (var section in names.Select(configuration.GetSection))

@@ -8,18 +8,23 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
+
+#if !DNXCORE50
+using System.Runtime.Remoting.Messaging;
+#endif
+
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
+using Raven.Client.Helpers;
 using Raven.Client.Extensions;
 using Raven.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json;
@@ -72,7 +77,7 @@ namespace Raven.Client.Connection.Implementation
         internal bool ShouldCacheRequest;
         private Stream postedStream;
         private bool writeCalled;
-        public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
+        public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly().GetName().Version.ToString();
 
         private string primaryUrl;
 
@@ -133,20 +138,26 @@ namespace Raven.Client.Connection.Implementation
 
                             credentialsToUse = credentialCache;
                         }
-                        else
-                        {
+            else
+            {
                             credentialsToUse = _credentials.Credentials;
-                        }
-                    }
-
+                }
+                    }      
+#if !DNXCORE50
                     var handler = new WebRequestHandler
-                    {
+                {
                         AllowAutoRedirect = false,
                         UseDefaultCredentials = useDefaultCredentials,
                         Credentials = credentialsToUse
+                };
+#else
+                    var handler = new WinHttpHandler
+                    {
+                        ServerCredentials = useDefaultCredentials ? CredentialCache.DefaultCredentials : credentialsToUse
                     };
+#endif
                     return handler;
-                }
+            }
             );
 
             httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
@@ -166,12 +177,6 @@ namespace Raven.Client.Connection.Implementation
             headers.Add("Raven-Client-Version", ClientVersion);
             WriteMetadata(requestParams.Metadata);
             requestParams.UpdateHeaders(headers);
-        }
-
-        [ContractInvariantMethod]
-        private void ObjectInvariant()
-        {
-            Contract.Invariant(Url != null);
         }
 
         public void RemoveAuthorizationHeader()
@@ -252,8 +257,10 @@ namespace Raven.Client.Connection.Implementation
 
         private void AssertServerVersionSupported()
         {
+#if !DNXCORE50
             if ((CallContext.GetData(Constants.Smuggler.CallContext) as bool?) == true) // allow Raven.Smuggler to work against old servers
                 return;
+#endif
 
             var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
             int serverBuild;
@@ -563,7 +570,7 @@ namespace Raven.Client.Connection.Implementation
             string currentUrl)
         {
             serverClient.RequestExecuter.AddHeaders(this, serverClient, currentUrl);
-            return this;
+                return this;
         }
 
         internal void AddReplicationStatusChangeBehavior(string thePrimaryUrl, string currentUrl, Action<NameValueCollection, string, string> handler)
@@ -628,7 +635,12 @@ namespace Raven.Client.Connection.Implementation
                 bool isRestricted;
                 try
                 {
+#if !DNXCORE50
                     isRestricted = WebHeaderCollection.IsRestricted(headerName);
+#else
+                    // TODO [ppekrol] Check if this is OK
+                    isRestricted = false;
+#endif
                 }
                 catch (Exception e)
                 {

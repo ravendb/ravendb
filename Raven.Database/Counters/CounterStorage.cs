@@ -255,7 +255,7 @@ namespace Raven.Database.Counters
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(RavenConfiguration configuration)
         {
             if (configuration.Core.RunInMemory)
-                return StorageEnvironmentOptions.CreateMemoryOnly();
+                return StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.TempPath);
 
             var directoryPath = configuration.Counter.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
             var filePathFolder = new DirectoryInfo(directoryPath);

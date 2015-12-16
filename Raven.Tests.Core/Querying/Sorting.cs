@@ -15,6 +15,14 @@ namespace Raven.Tests.Core.Querying
 {
     public class Sorting : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Sorting(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void BasicSorting()
         {

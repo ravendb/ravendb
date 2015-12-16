@@ -1,3 +1,4 @@
+#if !DNXCORE50
 // -----------------------------------------------------------------------
 //  <copyright file="AssemblyHelper.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -36,3 +37,4 @@ namespace Raven.Abstractions.Util
         }
     }
 }
+#endif
