@@ -1186,6 +1186,26 @@ namespace Raven.Database
                 {
                     throw new Exception("Voron is prone to failure in 32-bits mode. Use " + RavenConfiguration.GetKey(x => x.Storage.AllowOn32Bits) + " to force voron in 32-bit process.");
                 }
+
+                if (configuration.Core.RunInMemory == false && string.IsNullOrEmpty(configuration.Core.DataDirectory) == false && Directory.Exists(configuration.Core.DataDirectory))
+                {
+                    var resourceTypeFiles = Directory.EnumerateFiles(configuration.Core.DataDirectory, Constants.ResourceMarkerPrefix + "*").Select(Path.GetFileName).ToArray();
+
+                    if (resourceTypeFiles.Length == 0)
+                        return;
+
+                    if (resourceTypeFiles.Length > 1)
+                    {
+                        throw new Exception(string.Format("The database directory cannot contain more than one resource file marker, but it contains: {0}", string.Join(", ", resourceTypeFiles)));
+                    }
+
+                    var resourceType = resourceTypeFiles[0];
+
+                    if (resourceType.Equals(Constants.Database.DbResourceMarker) == false)
+                    {
+                        throw new Exception(string.Format("The database data directory contains data of a different resource kind: {0}", resourceType.Substring(Constants.ResourceMarkerPrefix.Length)));
+                    }
+                }
             }
 
             public void ValidateLicense()
@@ -1271,7 +1291,16 @@ namespace Raven.Database
 
                 }, database.WorkContext.NestedTransactionEnter, database.WorkContext.NestedTransactionExit);
 
-                database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs);
+                database.TransactionalStorage.Initialize(uuidGenerator, database.DocumentCodecs, storagePath =>
+                {
+                    if (configuration.Core.RunInMemory)
+                        return;
+
+                    var resourceTypeFile = Path.Combine(storagePath, Constants.Database.DbResourceMarker);
+
+                    if (File.Exists(resourceTypeFile) == false)
+                        using (File.Create(resourceTypeFile)) { }
+                });
             }
 
             public Dictionary<int, IndexFailDetails> InitializeIndexDefinitionStorage()
