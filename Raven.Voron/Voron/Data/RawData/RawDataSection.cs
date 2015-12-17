@@ -182,6 +182,7 @@ namespace Voron.Data.RawData
             {
                 // this is in another section, cannot delete it directly, so we'll forward to the right section
                 new RawDataSection(_tx, sectionPageNumber).DeleteSection(sectionPageNumber);
+                return;
             }
 
             for (int i = 0; i < _sectionHeader->NumberOfPages; i++)

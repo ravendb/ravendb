@@ -170,7 +170,7 @@ namespace Voron.Data.Tables
             SharedPool<T>.Reader.Free(readerOfT);
 
             DeleteValueFromIndex(previousId, value);
-            DeleteValueFromIndex(newId, value);
+            InsertIndexValuesFor(newId, value);
         }
 
         public Table(TableSchema<T> schema, Transaction tx)
