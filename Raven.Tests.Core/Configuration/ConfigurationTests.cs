@@ -266,7 +266,6 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
             configurationComparer.Assert(expected => expected.AllowScriptsToAdjustNumberOfSteps.Value, actual => actual.AllowScriptsToAdjustNumberOfSteps);
             configurationComparer.Assert(expected => expected.FileSystem.PreventSchemaUpdate.Value, actual => actual.Storage.PreventSchemaUpdate);
-            configurationComparer.Assert(expected => expected.FileSystem.IgnoreDataCorruption.Value, actual => actual.Storage.SkipConsistencyCheck);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
             configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
             configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
@@ -274,6 +273,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
             configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
             configurationComparer.Ignore(x => x.TransactionMode);
+            configurationComparer.Ignore(x => x.Storage.SkipConsistencyCheck);
 
             Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
             Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);
@@ -329,8 +329,25 @@ namespace Raven.Tests.Core.Configuration
                 if (propertyPathsToCheck.Contains(propertyPath) == false)
                     throw new InvalidOperationException("Cannot assert property that is not on a list of properties to assert. Path: " + propertyPath);
 
-                var e = expected.Compile();
-                var expectedValue = e(stronglyTypedConfiguration);
+                Func<StronglyTypedRavenSettings, T> e;
+                try
+                {
+                    e = expected.Compile();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failure when compiling " + expected, ex);
+                }
+                T expectedValue;
+                try
+                {
+                    expectedValue = e(stronglyTypedConfiguration);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failure when running " + expected, ex);
+
+                }
 
                 var a = actual.Compile();
                 var actualValue = a(inMemoryConfiguration);

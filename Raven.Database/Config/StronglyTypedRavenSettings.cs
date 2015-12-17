@@ -257,6 +257,7 @@ namespace Raven.Database.Config
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate],false);
+            FileSystem.IgnoreDataCorruption = new BooleanSetting(settings[Constants.FileSystem.Ign]);
             Encryption.UseFips = new BooleanSetting(settings["Raven/Encryption/FIPS"], false);
             Encryption.EncryptionKeyBitsPreference = new IntegerSetting(settings[Constants.EncryptionKeyBitsPreferenceSetting], Constants.DefaultKeySizeToUseInActualEncryptionInBits);
             Encryption.UseSsl = new BooleanSetting(settings["Raven/UseSsl"], false);
@@ -531,8 +532,6 @@ namespace Raven.Database.Config
             public StringSetting DefaultStorageTypeName { get; set; }
 
             public BooleanSetting PreventSchemaUpdate { get; set; }
-
-            public BooleanSetting IgnoreDataCorruption { get; set; }
         }
 
         public class EncryptionConfiguration
