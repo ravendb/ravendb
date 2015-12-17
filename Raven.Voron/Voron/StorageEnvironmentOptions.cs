@@ -131,8 +131,9 @@ namespace Voron
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string configTempPath = null)
         {
-            if (string.IsNullOrEmpty(configTempPath))
+            if (configTempPath == null)
                 configTempPath = Path.GetTempPath();
+
             return new PureMemoryStorageEnvironmentOptions(configTempPath);
         }
 
