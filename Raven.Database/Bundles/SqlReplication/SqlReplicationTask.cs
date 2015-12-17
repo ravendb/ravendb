@@ -167,6 +167,9 @@ namespace Raven.Database.Bundles.SqlReplication
 				}
 				var localReplicationStatus = GetReplicationStatus();
 
+                // remove all last replicated statuses which are not in the config
+                UpdateLastReplicatedStatus(localReplicationStatus, config);
+
 				var relevantConfigs = config.Where(x =>
 				{
 					if (x.Disabled)
@@ -348,8 +351,10 @@ namespace Raven.Database.Bundles.SqlReplication
 							});
 						}
 					});
+
 					if (successes.Count == 0)
 						continue;
+
 					foreach (var t in successes)
 					{
 						var cfg = t.Item1;
@@ -389,6 +394,28 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 		}
 
+        private void UpdateLastReplicatedStatus(SqlReplicationStatus localReplicationStatus, List<SqlReplicationConfig> config)
+        {
+            var lastReplicatedToDelete = new List<LastReplicatedEtag>();
+            foreach (var lastReplicated in localReplicationStatus.LastReplicatedEtags)
+            {
+                if (config.Exists(x => x.Name.Equals(lastReplicated.Name, StringComparison.InvariantCultureIgnoreCase)) == false)
+                {
+                    lastReplicatedToDelete.Add(lastReplicated);
+                }
+            }
+
+            if (lastReplicatedToDelete.Count == 0)
+                return; // nothing to do
+
+            foreach (var status in lastReplicatedToDelete)
+            {
+                localReplicationStatus.LastReplicatedEtags.Remove(status);
+            }
+
+            SaveNewReplicationStatus(localReplicationStatus);
+        }
+
 		private Etag _lastStoredSqlReplicationStatusDocumentEtag;
 	    private int _deleteCounter;
 
@@ -405,6 +432,11 @@ namespace Raven.Database.Bundles.SqlReplication
 					_lastStoredSqlReplicationStatusDocumentEtag = putResult.ETag;
 					break;
 				}
+                catch (SynchronizationLockException)
+                {
+                    // just ignore it, we'll save that next time
+                    break;
+                }
 				catch (ConcurrencyException)
 				{
 					Thread.Sleep(50);
