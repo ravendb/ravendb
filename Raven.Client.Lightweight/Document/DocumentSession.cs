@@ -685,6 +685,24 @@ namespace Raven.Client.Document
             return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter);
         }
 
+        public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            return DeleteByIndex<T>(indexCreator.IndexName, expression);
+        }
+
+        public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            return Advanced
+                .DocumentStore
+                .DatabaseCommands.DeleteByIndex(indexName, indexQuery);
+        }
+
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] facetQueries)
         {
             IncrementRequestCount();
@@ -732,24 +750,6 @@ namespace Raven.Client.Document
                     throw new InvalidOperationException("Cannot call Save Changes after the document store was disposed.");
                 UpdateBatchResults(batchResults, data);
             }
-        }
-
-        /// <summary>
-        /// Delete objects using Linq query
-        /// </summary>
-        public void DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            var indexCreator = new TIndexCreator();
-
-            var query = Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce).Where(expression);
-            var indexQuery = new IndexQuery()
-            {
-                Query = query.ToString()
-            };
-            var operation = this
-                .Advanced
-                .DocumentStore
-                .DatabaseCommands.DeleteByIndex(indexCreator.IndexName, indexQuery);
         }
 
         /// <summary>

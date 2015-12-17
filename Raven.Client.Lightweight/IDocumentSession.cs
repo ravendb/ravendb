@@ -226,10 +226,5 @@ namespace Raven.Client
         /// <param name="entity">entity to store.</param>
         /// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overwritten.</param>
         void Store(object entity, string id);
-
-        /// <summary>
-        ///     Delete by index using linq expression
-        /// </summary>
-        void DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new();
     }
 }
