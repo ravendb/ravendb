@@ -11,7 +11,9 @@ namespace Raven.Abstractions.Connection
     [Serializable]
     public class ErrorResponseException : Exception
     {
+#if !DNXCORE50
         [NonSerialized]
+#endif
         private readonly HttpResponseMessage response;
 
         public HttpResponseMessage Response
