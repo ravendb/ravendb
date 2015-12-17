@@ -735,6 +735,24 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Delete objects using Linq query
+        /// </summary>
+        public void DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+
+            var query = Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            var operation = this
+                .Advanced
+                .DocumentStore
+                .DatabaseCommands.DeleteByIndex(indexCreator.IndexName, indexQuery);
+        }
+
+        /// <summary>
         /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
         /// </summary>
         /// <typeparam name="T">The result of the query</typeparam>

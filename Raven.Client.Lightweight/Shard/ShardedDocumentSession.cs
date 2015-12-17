@@ -966,6 +966,12 @@ namespace Raven.Client.Shard
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
         {
             throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
+        }
+
+        public void DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            // TODO : Is it ?
+            throw new NotSupportedException("DeleteByIndex is currently not supported by sharded document store");
+        }
     }
-}
 }
