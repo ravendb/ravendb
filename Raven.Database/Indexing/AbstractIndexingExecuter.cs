@@ -129,7 +129,16 @@ namespace Raven.Database.Indexing
                             {
                                 Log.WarnException("Could not cleanup prefetchers properly", e);
                             }
-                            
+
+                            try
+                            {
+                                CleanupScheduledReductions();
+                            }
+                            catch (Exception e)
+                            {
+                                Log.WarnException("Could not cleanup scheduled reductions properly", e);
+                            }
+
                         }, name);
                     }
                     else // notify the tasks executer that it has work to do
@@ -206,6 +215,23 @@ namespace Raven.Database.Indexing
                 return;
             lastFlushedWorkCounter = workCounter;
             FlushAllIndexes();
+        }
+
+        private void CleanupScheduledReductions()
+        {
+            transactionalStorage.Batch(actions =>
+            {
+                var allIndexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
+                var obsolateScheduledReductions = actions.MapReduce.DeleteObsolateScheduledReductions(allIndexIds);
+
+                foreach (var indexIdWithCount in obsolateScheduledReductions)
+                {
+                    Log.Warn(
+                        "Found an obsolate scheduled reductions of index id: " + indexIdWithCount.Key +
+                        " (probably the index was already deleted). " +
+                        indexIdWithCount.Value + " scheduled reductions were deleted.");
+                }
+            });
         }
 
         protected abstract void FlushAllIndexes();

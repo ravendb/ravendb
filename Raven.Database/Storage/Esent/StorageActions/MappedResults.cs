@@ -245,6 +245,30 @@ namespace Raven.Database.Storage.Esent.StorageActions
             } while (Api.TryMoveNext(Session, ScheduledReductions));
         }
 
+        public Dictionary<int, int> DeleteObsolateScheduledReductions(List<int> allIndexIds)
+        {
+            var obsolateScheduledReductions = new Dictionary<int, int>();
+            Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
+            Api.MakeKey(session, ScheduledReductions, 0, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
+                return obsolateScheduledReductions;
+
+            var count = 0;
+            do
+            {
+                var indexIdFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
+                if (indexIdFromDb == null || allIndexIds.Exists(x => x == indexIdFromDb))
+                    continue; // index id exists, no need to delete the scheduled reduction
+
+                Api.JetDelete(Session, ScheduledReductions);
+
+                var currentCount = 0;
+                obsolateScheduledReductions.TryGetValue(indexIdFromDb.Value, out currentCount);
+                obsolateScheduledReductions.Add(indexIdFromDb.Value, currentCount + 1);
+            } while (Api.TryMoveNext(Session, ScheduledReductions) && ++count < 1000);
+
+            return obsolateScheduledReductions;
+        }
 
         public IList<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
         {
