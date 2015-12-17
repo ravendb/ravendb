@@ -876,6 +876,14 @@ namespace Raven.Storage.Esent
             return accessor;
         }
 
+        public bool SkipConsistencyCheck
+        {
+            get
+            {
+                return configuration.Storage.SkipConsistencyCheck;
+            }
+        } 
+
         public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
         {
             if (current.Value == null)

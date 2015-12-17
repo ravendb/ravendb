@@ -1321,6 +1321,8 @@ namespace Raven.Database.Config
             }
             public bool PreventSchemaUpdate { get; set; }
 
+            public bool SkipConsistencyCheck { get; set; }
+
             public VoronConfiguration Voron { get; private set; }
 
             public EsentConfiguration Esent { get; private set; }

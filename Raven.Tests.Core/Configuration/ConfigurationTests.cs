@@ -266,6 +266,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.ImplicitFetchFieldsFromDocumentMode.Value, actual => actual.ImplicitFetchFieldsFromDocumentMode);
             configurationComparer.Assert(expected => expected.AllowScriptsToAdjustNumberOfSteps.Value, actual => actual.AllowScriptsToAdjustNumberOfSteps);
             configurationComparer.Assert(expected => expected.FileSystem.PreventSchemaUpdate.Value, actual => actual.Storage.PreventSchemaUpdate);
+            configurationComparer.Assert(expected => expected.FileSystem.IgnoreDataCorruption.Value, actual => actual.Storage.SkipConsistencyCheck);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
             configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
             configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
