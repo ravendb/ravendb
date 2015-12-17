@@ -84,11 +84,12 @@ namespace Raven.StorageExporter
             long totalDocsCount = 0;
             long currentDocsCount = 0;
             long previesDocsCount = 0;
-            Etag currLastEtag = DocumentsStartEtag.IncrementBy(1);
+            Etag currLastEtag = DocumentsStartEtag;
             if (DocumentsStartEtag != Etag.Empty)
             {
                 ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Yellow, "Starting to export documents as of etag={0}\n" +
                 "TotalDocCount doesn't substract skipped items\n", DocumentsStartEtag);
+                currLastEtag.DecrementBy(1);
             }
             storage.Batch(accsesor => totalDocsCount = accsesor.Documents.GetDocumentsCount());
             try

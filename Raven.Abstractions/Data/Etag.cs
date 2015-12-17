@@ -295,6 +295,8 @@ namespace Raven.Abstractions.Data
         }
         public Etag DecrementBy(int amount)
         {
+            if(changes< amount)
+                throw new ArgumentOutOfRangeException("The etag changes is lower than the given amount");
             return new Etag
             {
                 restarts = restarts,
