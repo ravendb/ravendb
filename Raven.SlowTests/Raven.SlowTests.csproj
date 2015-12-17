@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -146,10 +146,7 @@
     <Content Include="NLog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Migration\Backups\northwind.2380.zip" />
-    <None Include="Migration\Backups\northwind.2952.zip" />
-    <None Include="Migration\Backups\northwind.esent.3528.zip" />
-    <None Include="Migration\Backups\northwind.voron.3528.zip" />
+    <None Include="Migration\Backups\readme.md" />
     <None Include="Migration\Data\productSales.csv" />
     <None Include="Migration\Data\ordersByCompany.csv" />
     <None Include="packages.config" />
