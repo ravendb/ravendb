@@ -18,6 +18,7 @@ using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -804,6 +805,19 @@ namespace Raven.Client.Shard
 
             throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
              
+        }
+
+        // TODO: ADIADI sharding..
+        public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            var operation = await DeleteByIndexAsync<T>(indexCreator.IndexName, expression).ConfigureAwait(false);
+            return operation;
+        }
+
+        public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            throw new NotImplementedException();
         }
     }
 }

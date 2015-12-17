@@ -963,15 +963,27 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }
 
+        // TODO: ADIADI sharding
+        public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            return DeleteByIndex<T>(indexCreator.IndexName, expression);
+        }
+        // TODO: ADIADI
+        public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            return DocumentStore
+                .DatabaseCommands.DeleteByIndex(indexName, indexQuery);
+        }
+
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
         {
             throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
-        }
-
-        public void DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            // TODO : Is it ?
-            throw new NotSupportedException("DeleteByIndex is currently not supported by sharded document store");
         }
     }
 }
