@@ -264,7 +264,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                 var currentCount = 0;
                 obsolateScheduledReductions.TryGetValue(indexIdFromDb.Value, out currentCount);
-                obsolateScheduledReductions.Add(indexIdFromDb.Value, currentCount + 1);
+                obsolateScheduledReductions[indexIdFromDb.Value] = currentCount + 1;
             } while (Api.TryMoveNext(Session, ScheduledReductions) && ++count < 1000);
 
             return obsolateScheduledReductions;

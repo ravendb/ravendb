@@ -227,9 +227,8 @@ namespace Raven.Database.Indexing
                 foreach (var indexIdWithCount in obsolateScheduledReductions)
                 {
                     Log.Warn(
-                        "Found an obsolate scheduled reductions of index id: " + indexIdWithCount.Key +
-                        " (probably the index was already deleted). " +
-                        indexIdWithCount.Value + " scheduled reductions were deleted.");
+                        "Deleted " + indexIdWithCount.Value + " obsolate scheduled reductions of index id: " + 
+                        indexIdWithCount.Key + " (probably the index was already deleted).");
                 }
             });
         }

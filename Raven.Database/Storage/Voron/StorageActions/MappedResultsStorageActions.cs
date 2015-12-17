@@ -1154,7 +1154,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     var currentCount = 0;
                     obsolateScheduledReductions.TryGetValue(view, out currentCount);
-                    obsolateScheduledReductions.Add(view, currentCount + 1);
+                    obsolateScheduledReductions[view] = currentCount + 1;
                 }
                 while (iterator.MoveNext() && ++count < 1000);
             }
