@@ -35,7 +35,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Occurs when a json request is completed
         /// </summary>
-        public event EventHandler<RequestResultArgs> LogRequest = delegate { };
+        public event EventHandler<RequestResultArgs> LogRequest;
 
         /// <summary>
         /// Invoke the LogRequest event
