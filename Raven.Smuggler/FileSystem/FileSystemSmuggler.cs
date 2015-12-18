@@ -26,12 +26,12 @@ namespace Raven.Smuggler.FileSystem
 
         public FileSystemSmugglerNotifications Notifications { get; }
 
-        public FileSystemSmugglingResult Execute(IFileSystemSmugglerSource source, IFileSystemSmugglerDestination destination)
+        public FileSystemSmugglerOperationState Execute(IFileSystemSmugglerSource source, IFileSystemSmugglerDestination destination)
         {
             return AsyncHelpers.RunSync(() => ExecuteAsync(source, destination, CancellationToken.None));
         }
 
-        public async Task<FileSystemSmugglingResult> ExecuteAsync(IFileSystemSmugglerSource source, IFileSystemSmugglerDestination destination, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<FileSystemSmugglerOperationState> ExecuteAsync(IFileSystemSmugglerSource source, IFileSystemSmugglerDestination destination, CancellationToken cancellationToken = default(CancellationToken))
         {
             using (source) // TODO arek
             using (destination)
@@ -58,12 +58,10 @@ namespace Raven.Smuggler.FileSystem
                     Debug.Assert(state.LastDeletedFileEtag != null);
 
                     await ProcessAsync(source, destination, state, cancellationToken).ConfigureAwait(false);
+                    
+                    await destination.AfterExecuteAsync(state).ConfigureAwait(false);
 
-                    return new FileSystemSmugglingResult
-                    {
-                        LastFileEtag = state.LastFileEtag,
-                        LastDeletedFileEtag = state.LastDeletedFileEtag
-                    };
+                    return state;
                 }
                 catch (Exception e)//TODO arek (SmugglerException e)
                 {
@@ -73,10 +71,6 @@ namespace Raven.Smuggler.FileSystem
                     //destination.OnException(e);
 
                     throw;
-                }
-                finally
-                {
-                    await destination.AfterExecuteAsync(state).ConfigureAwait(false);
                 }
             }
         }

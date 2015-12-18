@@ -7,6 +7,6 @@ namespace Raven.Abstractions.Database.Smuggler.FileSystem
 {
     public class FileSystemSmugglerOperationState : LastFilesEtagsInfo
     {
-         
+        public string OutputPath { get; set; }
     }
 }

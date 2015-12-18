@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.FileSystem;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;
 using Raven.Json.Linq;

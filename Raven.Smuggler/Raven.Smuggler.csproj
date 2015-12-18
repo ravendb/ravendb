@@ -146,7 +146,6 @@
     <Compile Include="FileSystem\Remote\SmuggleFilesToRemote.cs" />
     <Compile Include="FileSystem\SmugglerBase.cs" />
     <Compile Include="FileSystem\FileSystemSmugglerNotifications.cs" />
-    <Compile Include="FileSystem\FileSystemSmugglingResult.cs" />
     <Compile Include="FileSystem\IFileSystemSmugglerDestination.cs" />
     <Compile Include="FileSystem\IFileSystemSmugglerSource.cs" />
     <Compile Include="FileSystem\SmuggleType.cs" />

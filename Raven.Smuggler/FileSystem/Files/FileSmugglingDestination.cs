@@ -97,10 +97,10 @@ namespace Raven.Smuggler.FileSystem.Files
 
         public Task AfterExecuteAsync(FileSystemSmugglerOperationState state)
         {
-            if (incremental && state != null)
-            {
+            if (incremental)
                 WriteLastEtagsToFile(state, Path.GetDirectoryName(path));
-            }
+
+            state.OutputPath = path;
 
             return new CompletedTask();
         }
