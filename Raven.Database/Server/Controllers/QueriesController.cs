@@ -152,7 +152,7 @@ namespace Raven.Database.Server.Controllers
             var msg = GetMessageWithObject(result);
             WriteETag(computedEtag, msg);
 
-            AddRequestTraceInfo(sb => sb.Append("Results count: {0}, includes count: {1}", result.Results.Count, result.Includes.Count).AppendLine());
+            AddRequestTraceInfo(sb => sb.AppendFormat("Results count: {0}, includes count: {1}", result.Results.Count, result.Includes.Count).AppendLine());
 
             return msg;
         }

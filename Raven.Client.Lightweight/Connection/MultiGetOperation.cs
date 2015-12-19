@@ -70,17 +70,21 @@ namespace Raven.Client.Connection
         {
             if (allRequestsCanBeServedFromAggressiveCache) // can be fully served from aggressive cache
             {
-                jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, () => new RequestResultArgs
+                if (jsonRequestFactory.CanLogRequest)
                 {
-                    DurationMilliseconds = httpJsonRequest.CalculateDuration(),
-                    Method = httpJsonRequest.Method,
-                    HttpResult = 0,
-                    Status = RequestStatus.AggressivelyCached,
-                    Result = "",
-                    Url = httpJsonRequest.Url.ToString(),
-                    //TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
-                    PostedData = postedData
-                });
+
+                    jsonRequestFactory.OnLogRequest(holdProfilingInformation, new RequestResultArgs
+                    {
+                        DurationMilliseconds = httpJsonRequest.CalculateDuration(),
+                        Method = httpJsonRequest.Method,
+                        HttpResult = 0,
+                        Status = RequestStatus.AggressivelyCached,
+                        Result = "",
+                        Url = httpJsonRequest.Url.ToString(),
+                        //TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
+                        PostedData = postedData
+                    });
+                }
                 return true;
             }
             return false;

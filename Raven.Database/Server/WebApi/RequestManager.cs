@@ -405,7 +405,14 @@ namespace Raven.Database.Server.WebApi
                     sb = new StringBuilder();
                     foreach (var action in controller.CustomRequestTraceInfo)
                     {
-                        action(sb);
+                        try
+                        {
+                            action(sb);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.WarnException("Could not gather information to log request stats custom info, so far got " + sb, e);
+                        }
                         sb.AppendLine();
                     }
                     while (sb.Length > 0)

@@ -132,7 +132,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
-        public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs)
+        public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs, Action<string> putResourceMarker = null)
         {
             if(codecs == null)
                 throw new ArgumentException("codecs");
@@ -151,6 +151,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
                 SetIdFromDb();
 
                 tableColumnsCache.InitColumDictionaries(instance, database);
+
+                if (putResourceMarker != null)
+                    putResourceMarker(path);
             }
             catch (Exception e)
             {

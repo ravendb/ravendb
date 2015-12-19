@@ -118,7 +118,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return options;
         }
 
-        public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs)
+        public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs, Action<string> putResourceMarker = null)
         {
             if (codecs == null)
                 throw new ArgumentNullException("codecs");
@@ -140,6 +140,9 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             SetupDatabaseId();
             idGenerator = new IdGenerator(tableStorage);
+
+            if (putResourceMarker != null)
+                putResourceMarker(path);
         }
 
         private void SetupDatabaseId()
