@@ -29,9 +29,9 @@ namespace Raven.Client
         }
 
         /// <summary>
-        /// Enable multipule async operations
+        /// Enable multiple async operations
         /// </summary>
-        public bool AllowMultipuleAsyncOperations { get; set; }
+        public bool AllowMultipleAsyncOperations { get; set; }
 
         /// <summary>
         /// Gets or sets the function to find the identity property.
