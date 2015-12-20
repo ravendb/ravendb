@@ -63,12 +63,11 @@ namespace Raven.Smuggler.FileSystem
 
                     return state;
                 }
-                catch (Exception e)//TODO arek (SmugglerException e)
+                catch (SmugglerException e)
                 {
-                    Console.WriteLine(e);
                     // TODO arek
                     //source.OnException(e);
-                    //destination.OnException(e);
+                    destination.OnException(e);
 
                     throw;
                 }

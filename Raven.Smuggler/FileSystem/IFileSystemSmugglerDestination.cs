@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.FileSystem;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Smuggler.FileSystem
 {
@@ -20,5 +21,7 @@ namespace Raven.Smuggler.FileSystem
         ISmuggleConfigurationsToDestination WriteConfigurations();
 
         Task AfterExecuteAsync(FileSystemSmugglerOperationState state);
+
+        void OnException(SmugglerException exception);
     }
 }

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.FileSystem;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Smuggler.FileSystem;
 
@@ -43,6 +44,10 @@ namespace Raven.Database.FileSystem.Smuggler.Embedded
         public Task AfterExecuteAsync(FileSystemSmugglerOperationState state)
         {
             return new CompletedTask();
+        }
+
+        public void OnException(SmugglerException exception)
+        {
         }
     }
 }

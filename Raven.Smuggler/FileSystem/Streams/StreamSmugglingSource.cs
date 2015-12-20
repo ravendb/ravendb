@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -47,7 +48,15 @@ namespace Raven.Smuggler.FileSystem.Streams
         {
             this.options = options; // TODO arek - verify if options are really necessary in smuggling source
 
-            archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            try
+            {
+                archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            }
+            catch (InvalidDataException e)
+            {
+                throw new InvalidDataException("Invalid file system export file", e);
+            }
+
             zipEntries = archive.Entries.ToDictionary(x => x.FullName);
 
             return new CompletedTask();

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.FileSystem;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -103,6 +104,11 @@ namespace Raven.Smuggler.FileSystem.Files
             state.OutputPath = path;
 
             return new CompletedTask();
+        }
+
+        public void OnException(SmugglerException exception)
+        {
+            exception.File = path;
         }
 
         private static LastFilesEtagsInfo ReadLastEtagsFromIncrementalExportFile(string path)

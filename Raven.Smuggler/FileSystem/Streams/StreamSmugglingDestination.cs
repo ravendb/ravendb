@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler.FileSystem;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 
 namespace Raven.Smuggler.FileSystem.Streams
@@ -52,6 +53,10 @@ namespace Raven.Smuggler.FileSystem.Streams
         public Task AfterExecuteAsync(FileSystemSmugglerOperationState state)
         {
             return new CompletedTask();
+        }
+
+        public void OnException(SmugglerException exception)
+        {
         }
 
         public void Dispose()
