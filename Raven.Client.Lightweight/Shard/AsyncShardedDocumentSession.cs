@@ -811,13 +811,25 @@ namespace Raven.Client.Shard
         public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            var operation = await DeleteByIndexAsync<T>(indexCreator.IndexName, expression).ConfigureAwait(false);
-            return operation;
+            return await DeleteByIndexAsync(indexCreator.IndexName, expression).ConfigureAwait(false);
         }
 
         public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
         {
-            throw new NotImplementedException();
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            var shardRequestData = new ShardRequestData
+            {
+                EntityType = typeof (T),
+                Keys = {indexName}
+            };
+            var dbCommands = GetCommandsToOperateOn(shardRequestData);
+            var operations = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, (commands, i) => commands.DeleteByIndexAsync(indexName, indexQuery)).ConfigureAwait(false);
+
+            return operations[0]; // ADIADI ??.. return what?
         }
     }
 }

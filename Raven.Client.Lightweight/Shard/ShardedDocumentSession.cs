@@ -969,6 +969,7 @@ namespace Raven.Client.Shard
             var indexCreator = new TIndexCreator();
             return DeleteByIndex<T>(indexCreator.IndexName, expression);
         }
+
         // TODO: ADIADI
         public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
         {
@@ -977,8 +978,19 @@ namespace Raven.Client.Shard
             {
                 Query = query.ToString()
             };
-            return DocumentStore
-                .DatabaseCommands.DeleteByIndex(indexName, indexQuery);
+
+            var shards = GetCommandsToOperateOn(new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { indexName }
+            });
+            var operations = shardStrategy.ShardAccessStrategy.Apply(shards, new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { indexName }
+            }, (dbCmd, i) => dbCmd.DeleteByIndex(indexName, indexQuery));
+
+            return operations[0]; // ADIADI ?? restore many results?.. how?
         }
 
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
