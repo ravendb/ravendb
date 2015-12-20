@@ -202,6 +202,14 @@ namespace Raven.Storage.Voron
             return accessor;
         }
 
+        public bool SkipConsistencyCheck
+        {
+            get
+            {
+                return configuration.Storage.SkipConsistencyCheck;
+            }
+        }
+
         public void Batch(Action<IStorageActionsAccessor> action)
         {
             if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
@@ -315,7 +323,7 @@ namespace Raven.Storage.Voron
             current.Value.OnStorageCommit += action;
         }
 
-        public void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null)
         {
             if (generator == null) throw new ArgumentNullException("generator");
             if (documentCodecs == null) throw new ArgumentNullException("documentCodecs");
@@ -346,6 +354,9 @@ namespace Raven.Storage.Voron
                 schemaCreator.UpdateSchemaIfNecessary();
 
             SetupDatabaseId();
+
+            if (putResourceMarker != null)
+                putResourceMarker(configuration.DataDirectory);
         }
 
         private void SetupDatabaseId()

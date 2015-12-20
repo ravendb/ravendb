@@ -45,7 +45,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
             Reference<WriteBatch> writeBatch,
             Reference<SnapshotReader> snapshot,
             TableStorage tableStorage,
-            IBufferPool bufferPool)
+            IBufferPool bufferPool,
+            bool SkipConsistencyCheck = false)
             : base(snapshot, bufferPool)
         {
             this.uuidGenerator = uuidGenerator;
@@ -53,9 +54,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
             this.documentCacher = documentCacher;
             this.writeBatch = writeBatch;
             this.tableStorage = tableStorage;
-
+            this.SkipConsistencyCheck = SkipConsistencyCheck;
             metadataIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.Metadata);
         }
+
+        public bool SkipConsistencyCheck { get; set; }
 
         public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
         {
@@ -84,6 +87,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var document = DocumentByKey(key);
                     if (document == null) //precaution - should never be true
                     {
+                        if (SkipConsistencyCheck) continue;
                         throw new InvalidDataException(string.Format("Possible data corruption - the key = '{0}' was found in the documents index, but matching document was not found.", key));
                     }
 
@@ -213,10 +217,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var document = DocumentByKey(key);
                     if (document == null) //precaution - should never be true
                     {
+                        if (SkipConsistencyCheck) continue;
                         throw new InvalidDataException(string.Format("Data corruption - the key = '{0}' was found in the documents index, but matching document was not found", key));
                     }
 
-                    if (!document.Etag.Equals(docEtag))
+                    if (!document.Etag.Equals(docEtag) && !SkipConsistencyCheck)
                     {
                         throw new InvalidDataException(string.Format("Data corruption - the etag for key ='{0}' is different between document and its index", key));
                     }

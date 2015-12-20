@@ -1,6 +1,8 @@
 using System;
 
+#if !DNXCORE50
 using Raven.Tests.FileSystem.ClientApi;
+#endif
 
 namespace Raven.Tryouts
 {
@@ -8,6 +10,7 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
+#if !DNXCORE50
             for (int i = 0; i < 100; i++)
             {
                 using (var test = new FileSessionListenersTests())
@@ -18,6 +21,7 @@ namespace Raven.Tryouts
 
                 }
             }
+#endif
         }
     }
 }

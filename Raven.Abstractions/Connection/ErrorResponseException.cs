@@ -11,7 +11,15 @@ namespace Raven.Abstractions.Connection
     [Serializable]
     public class ErrorResponseException : Exception
     {
-        public HttpResponseMessage Response { get; private set; }
+#if !DNXCORE50
+        [NonSerialized]
+#endif
+        private readonly HttpResponseMessage response;
+
+        public HttpResponseMessage Response
+        {
+            get { return response; }
+        }
 
         public HttpStatusCode StatusCode
         {
@@ -21,20 +29,20 @@ namespace Raven.Abstractions.Connection
         public ErrorResponseException(ErrorResponseException e, string message)
             :base(message)
         {
-            Response = e.Response;
+            response = e.Response;
             ResponseString = e.ResponseString;
         }
 
         public ErrorResponseException(HttpResponseMessage response, string msg, Exception exception)
             : base(msg, exception)
         {
-            Response = response;
+            this.response = response;
         }
 
         public ErrorResponseException(HttpResponseMessage response, string msg, string responseString= null)
             : base(msg)
         {
-            Response = response;
+            this.response = response;
             ResponseString = responseString;
         }
 
