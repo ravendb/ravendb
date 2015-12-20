@@ -512,9 +512,9 @@ namespace Raven.Client.Shard
                                                             });
         }
 
-        public bool WaitForNonStaleIndexesOnAllShards(ShardedDocumentStore shardedDocStore, TimeSpan? timeout = null)
+        public bool WaitForNonStaleIndexesOnAllShards(TimeSpan? timeout = null)
         {
-            foreach (var kvp in shardedDocStore.ShardStrategy.Shards)
+            foreach (var kvp in ShardStrategy.Shards)
             {
                 var docStore = kvp.Value;
                 TimeSpan? spinTimeout = timeout ?? (Debugger.IsAttached
