@@ -270,7 +270,8 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 try
                                 {
-                                    if (ReplicateTo(destination))
+                                    int filtered;
+                                    if (ReplicateTo(destination, out filtered) || filtered > 0)
                                     {
                                         hasMoreWorkToDo = true;
                                         docDb.WorkContext.NotifyAboutWork();
@@ -483,10 +484,11 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool ReplicateTo(ReplicationStrategy destination)
+        private bool ReplicateTo(ReplicationStrategy destination, out int filteredDocuments)
         {
             try
             {
+                filteredDocuments = 0;
                 if (docDb.Disposed)
                     return false;
 
@@ -565,7 +567,8 @@ namespace Raven.Bundles.Replication.Tasks
                         switch (ReplicateDocuments(destination, 
                             destinationsReplicationInformationForSource, 
                             scope, 
-                            out replicatedDocuments))
+                            out replicatedDocuments,
+                            out filteredDocuments))
                         {
                             case true:
                                 replicated = true;
@@ -673,9 +676,10 @@ namespace Raven.Bundles.Replication.Tasks
         private bool? ReplicateDocuments(ReplicationStrategy destination, 
             SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, 
             ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, 
-            out int replicatedDocuments)
+            out int replicatedDocuments, out int filteredDocuments)
         {
             replicatedDocuments = 0;
+            filteredDocuments = 0;
             JsonDocumentsToReplicate documentsToReplicate = null;
             var sp = Stopwatch.StartNew();
             IDisposable removeBatch = null;
@@ -690,6 +694,8 @@ namespace Raven.Bundles.Replication.Tasks
                 using (var scope = recorder.StartRecording("Get"))
                 {
                     documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, prefetchingBehavior, scope);
+                    filteredDocuments = documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments +
+                        documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination;
                     if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
                     {
                         if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)
