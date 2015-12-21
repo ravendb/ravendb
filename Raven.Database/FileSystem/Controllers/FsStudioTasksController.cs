@@ -71,11 +71,11 @@ namespace Raven.Database.FileSystem.Controllers
                     {
                         var options = new FileSystemSmugglerOptions
                                       {
-                                          BatchSize = batchSize
+                                          BatchSize = batchSize,
+                                          // TODO arek
+                                          //StripReplicationInformation = ,
+                                          //ShouldDisableVersioningBundle = 
                                       };
-
-                        // TODO arek smugglerOptions.StripReplicationInformation = stripReplicationInformation;
-                        // TODO arek smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
 
                         var smuggler = new FileSystemSmuggler(options);
 

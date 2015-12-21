@@ -16,6 +16,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.FileSystem;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 //using Raven.Database.Smuggler;
@@ -100,23 +101,24 @@ namespace Raven.Smuggler
             counterOptionSet.Add("c2|counter2:", OptionCategory.SmugglerCounter, "The counter storage to export to. If no specified, the operations will be on the default counter storage. This parameter is used only in the between operation.", value => counterStorageName2 = value);
         }
 
-        private void DefineFilesystemOptionSet(SmugglerFilesOptions filesOptions)
-        {
-            filesystemOptionSet = new OptionSet();
-            filesystemOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
-            filesystemOptionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
-            filesystemOptionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => filesOptions.Incremental = true);
-            filesystemOptionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).UserName = value);
-            filesystemOptionSet.Add("u2|user2|username2:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).UserName = value);
-            filesystemOptionSet.Add("p|pass|password:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Password = value);
-            filesystemOptionSet.Add("p2|pass2|password2:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Password = value);
-            filesystemOptionSet.Add("domain:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Domain = value);
-            filesystemOptionSet.Add("domain2:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Domain = value);
-            filesystemOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth.", value => filesOptions.Source.ApiKey = value);
-            filesystemOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => filesOptions.Destination.ApiKey = value);
-            filesystemOptionSet.Add("f|filesystem:", OptionCategory.SmugglerFileSystem, "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => filesOptions.Source.DefaultFileSystem = value);
-            filesystemOptionSet.Add("f2|filesystem2:", OptionCategory.SmugglerFileSystem, "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value);
-        }
+        //TODO arek
+        //private void DefineFilesystemOptionSet(FileSystemSmugglerOptions filesOptions)
+        //{
+        //    filesystemOptionSet = new OptionSet();
+        //    filesystemOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
+        //    filesystemOptionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
+        //    filesystemOptionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => filesOptions.Incremental = true);
+        //    filesystemOptionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).UserName = value);
+        //    filesystemOptionSet.Add("u2|user2|username2:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).UserName = value);
+        //    filesystemOptionSet.Add("p|pass|password:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Password = value);
+        //    filesystemOptionSet.Add("p2|pass2|password2:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Password = value);
+        //    filesystemOptionSet.Add("domain:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Domain = value);
+        //    filesystemOptionSet.Add("domain2:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Domain = value);
+        //    filesystemOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth.", value => filesOptions.Source.ApiKey = value);
+        //    filesystemOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => filesOptions.Destination.ApiKey = value);
+        //    filesystemOptionSet.Add("f|filesystem:", OptionCategory.SmugglerFileSystem, "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => filesOptions.Source.DefaultFileSystem = value);
+        //    filesystemOptionSet.Add("f2|filesystem2:", OptionCategory.SmugglerFileSystem, "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value);
+        //}
 
         //private void DefineDatabaseOptionsSet(DatabaseSmugglerOptions databaseOptions)
         //{

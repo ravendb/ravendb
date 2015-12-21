@@ -558,10 +558,8 @@
     <Compile Include="Smuggler\SmugglerAbstractOperation.cs" />
     <Compile Include="Smuggler\SmugglerCounterApi.cs" />
     <Compile Include="Smuggler\SmugglerCounterOperationDispatcher.cs" />
-    <Compile Include="Smuggler\SmugglerFilesApi.cs" />
     <Compile Include="Smuggler\SmugglerFilesOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
-    <Compile Include="Smuggler\SmugglerRemoteFilesOperations.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\RemainingReductionPerLevel.cs" />
     <Compile Include="Storage\TransactionalStorageHelper.cs" />
