@@ -152,26 +152,19 @@ namespace Raven.Tests.Shard.Async
 
             using (var session = shardedDocumentStore.OpenAsyncSession())
             {
-                await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
-                await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
+                var operation1 = await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
+                operation1.WaitForCompletion();
+
+                var operation2 = await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
+                operation2.WaitForCompletion();
+
                 await session.SaveChangesAsync();
             }
              
-            shardedDocumentStore.WaitForNonStaleIndexesOnAllShards();
-
             using (var session = shardedDocumentStore.OpenAsyncSession())
             {
-                int cnt = 0;
-                IList<Person> persons = null;
-                while (cnt < 3)
-                {
-                    SpinWait.SpinUntil(() => false, TimeSpan.FromSeconds(1));
-                    persons = await session.Advanced.AsyncDocumentQuery<Person>().ToListAsync();
-                    if (persons.Count != 1)
-                        ++cnt;
-                    else
-                        break;
-                }
+                var persons = await session.Advanced.AsyncDocumentQuery<Person>().ToListAsync();
+
                 Assert.Equal(1, persons.Count);
                 Assert.Equal("Adi", persons[0].Name);
             }

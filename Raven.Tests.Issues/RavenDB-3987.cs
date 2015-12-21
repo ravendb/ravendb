@@ -117,26 +117,19 @@ namespace Raven.Tests.Issues
 
                 using (var session = server.DocumentStore.OpenAsyncSession())
                 {
-                    await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
-                    await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
+                    var operation1 = await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
+                    await operation1.WaitForCompletionAsync();
+
+                    var operation2 = await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
+                    await operation2.WaitForCompletionAsync();
+
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(server.DocumentStore);
-
                 using (var session = server.DocumentStore.OpenAsyncSession())
                 {
-                    int cnt = 0;
-                    IList<Person> persons = null;
-                    while (cnt < 3)
-                    {
-                        SpinWait.SpinUntil(() => false, TimeSpan.FromSeconds(1));
-                        persons = await session.Advanced.AsyncDocumentQuery<Person>().ToListAsync();
-                        if (persons.Count != 1)
-                            ++cnt;
-                        else
-                            break;
-                    }
+                    var persons = await session.Advanced.AsyncDocumentQuery<Person>().ToListAsync();
+
                     Assert.Equal(1, persons.Count);
                     Assert.Equal("Adi", persons[0].Name);
                 }
@@ -162,18 +155,20 @@ namespace Raven.Tests.Issues
 
                 using (var session = server.DocumentStore.OpenSession())
                 {
-                    session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
-                    session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
+                    var operation1 = session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
+                    operation1.WaitForCompletion();
+
+                    var operation2 = session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
+                    operation2.WaitForCompletion();
+
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(server.DocumentStore);
-
                 using (var session = server.DocumentStore.OpenSession())
                 {
-                    var spin = SpinWait.SpinUntil(() => session.Query<Person>().ToList().Count == 1, TimeSpan.FromSeconds(3));
-
                     var persons = session.Query<Person>().ToList();
+
+                    Assert.Equal(1, persons.Count);
                     Assert.Equal(persons[0].Name, "Adi");
                 }
             }

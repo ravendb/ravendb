@@ -153,17 +153,19 @@ namespace Raven.Tests.Shard
 
             using (var session = shardedDocumentStore.OpenSession())
             {
-                session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
-                session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
+                var operation1 = session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
+                operation1.WaitForCompletion();
+
+                var operation2 = session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
+                operation2.WaitForCompletion();
 
                 session.SaveChanges();
             }
 
-            Assert.True(shardedDocumentStore.WaitForNonStaleIndexesOnAllShards());
-
             using (var session = shardedDocumentStore.OpenSession())
             {
                 var persons = session.Query<Person>().ToList();
+
                 Assert.Equal(persons.Count, 1);
                 Assert.Equal(persons[0].Name, "Adi");
             }
