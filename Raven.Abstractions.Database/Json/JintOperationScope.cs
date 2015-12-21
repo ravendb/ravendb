@@ -19,8 +19,7 @@ namespace Raven.Abstractions.Database.Json
             "Map",
             "Where",
             "RemoveWhere",
-            "Remove",
-            "Where"
+            "Remove"
         };
 
         public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
