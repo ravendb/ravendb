@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-
 using Jint;
 using Jint.Native;
 using Jint.Runtime;
-
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -14,6 +12,16 @@ namespace Raven.Abstractions.Database.Json
     public abstract class JintOperationScope : IDisposable
     {
         private Dictionary<string, KeyValuePair<RavenJValue, JsValue>> propertiesByValue = new Dictionary<string, KeyValuePair<RavenJValue, JsValue>>();
+
+        private static readonly List<string> InheritedProperties = new List<string>
+        {
+            "length",
+            "Map",
+            "Where",
+            "RemoveWhere",
+            "Remove",
+            "Where"
+        };
 
         public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
         {
@@ -95,7 +103,7 @@ namespace Raven.Abstractions.Database.Json
 
                 foreach (var property in jsArray.GetOwnProperties())
                 {
-                    if (property.Key == "length")
+                    if (InheritedProperties.Contains(property.Key))
                         continue;
 
                     var jsInstance = property.Value.Value;

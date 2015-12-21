@@ -136,6 +136,7 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-4144.cs" />
     <Compile Include="RavenDB-4041.cs" />
     <Compile Include="RavenDB-3931.cs" />
     <Compile Include="RavenDB-3973.cs" />
@@ -185,7 +186,7 @@
     <Compile Include="BulkInsertClient.cs" />
     <Compile Include="BulkInsertDatabaseUrl.cs" />
     <Compile Include="BulkInsertTests.cs" />
-    <Compile Include="RaqvenDB_3222.cs" />
+    <Compile Include="RavenDB_3222.cs" />
     <Compile Include="RavenDB-3136.cs" />
     <Compile Include="RavenDB-3150.cs" />
     <Compile Include="RavenDB-3277.cs" />
@@ -216,7 +217,7 @@
     <Compile Include="IndexResestWithReplication.cs" />
     <Compile Include="LongIndexAndTransformerNames.cs" />
     <Compile Include="NestedPropertiesIndex_1182.cs" />
-    <Compile Include="RaveDB-1279.cs" />
+    <Compile Include="RavenDB-1279.cs" />
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
     <Compile Include="RavenDB-2036.cs" />
