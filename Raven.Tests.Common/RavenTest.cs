@@ -10,6 +10,8 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Request;
 using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Util;
@@ -133,6 +135,12 @@ namespace Raven.Tests.Common
                     new object[] {"esent"}
                 };
             }
+        }
+
+        protected IDocumentStoreReplicationInformer GetReplicationInformer(ServerClient client)
+        {
+            var replicationExecutor = client.RequestExecuter as ReplicationAwareRequestExecuter;
+            return replicationExecutor == null ? null : replicationExecutor.ReplicationInformer;
         }
     }
 }

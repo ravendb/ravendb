@@ -22,7 +22,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class DocumentsBatchController : RavenDbApiController
+    public class DocumentsBatchController : ClusterAwareRavenDbApiController
     {
         [HttpPost]
         [RavenRoute("bulk_docs")]
@@ -36,11 +36,12 @@ namespace Raven.Database.Server.Controllers
 
                 try
                 {
-                    jsonCommandArray = await ReadJsonArrayAsync();
+                    jsonCommandArray = await ReadJsonArrayAsync().ConfigureAwait(false);
                 }
                 catch (InvalidOperationException e)
                 {
-                    Log.DebugException("Failed to deserialize document batch request." , e);
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Failed to deserialize document batch request." , e);
                     return GetMessageWithObject(new
                     {
                         Message = "Could not understand json, please check its validity."
@@ -49,7 +50,8 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (InvalidDataException e)
                 {
-                    Log.DebugException("Failed to deserialize document batch request." , e);
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Failed to deserialize document batch request." , e);
                     return GetMessageWithObject(new
                     {
                         e.Message
@@ -62,7 +64,8 @@ namespace Raven.Database.Server.Controllers
                 var commands =
                     (from RavenJObject jsonCommand in jsonCommandArray select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation)).ToArray();
 
-                Log.Debug(
+                if (Log.IsDebugEnabled)
+                    Log.Debug(
                     () =>
                     {
                         if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
@@ -113,11 +116,12 @@ namespace Raven.Database.Server.Controllers
             RavenJArray patchRequestJson;
             try
             {
-                patchRequestJson = await ReadJsonArrayAsync();
+                patchRequestJson = await ReadJsonArrayAsync().ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize document batch request." , e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize document batch request." , e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -126,7 +130,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize document batch request." , e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize document batch request." , e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -152,11 +157,12 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
+                advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>().ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize document batch request." , e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize document batch request." , e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -165,7 +171,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize document batch request." , e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize document batch request." , e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -228,7 +235,7 @@ namespace Raven.Database.Server.Controllers
                                                      Payload = index
                                                  }, out id, timeout.CancellationTokenSource);
 
-            return GetMessageWithObject(new { OperationId = id });
+            return GetMessageWithObject(new { OperationId = id }, HttpStatusCode.Accepted);
         }
 
         public class BulkOperationStatus : IOperationState

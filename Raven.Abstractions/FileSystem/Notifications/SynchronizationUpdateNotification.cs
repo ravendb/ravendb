@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Abstractions.FileSystem.Notifications
 {
-    public class SynchronizationUpdateNotification : Notification
+    public class SynchronizationUpdateNotification : FileSystemNotification
     {
         public string FileName { get; set; }
         public string DestinationFileSystemUrl { get; set; }

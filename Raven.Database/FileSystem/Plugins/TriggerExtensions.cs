@@ -26,10 +26,12 @@ namespace Raven.Database.FileSystem.Plugins
                     case ReadVetoResult.ReadAllow.Allow:
                         break;
                     case ReadVetoResult.ReadAllow.Ignore:
-                        Log.Debug("Trigger {0} asked us to ignore {1}", trigger.Value, name);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Trigger {0} asked us to ignore {1}", trigger.Value, name);
                         return false;
                     case ReadVetoResult.ReadAllow.Deny:
-                        Log.Debug("Trigger {0} denied to read {1} because {2}", trigger.Value, name, result.Reason);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Trigger {0} denied to read {1} because {2}", trigger.Value, name, result.Reason);
                         return false;
                     default:
                         throw new ArgumentOutOfRangeException(result.Veto.ToString());

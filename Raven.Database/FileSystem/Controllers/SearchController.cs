@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -17,7 +18,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class SearchController : RavenFsApiController
+    public class SearchController : BaseFileSystemApiController
     {
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/search/Terms")]
@@ -29,7 +30,7 @@ namespace Raven.Database.FileSystem.Controllers
                 string[] result = searcher.IndexReader.GetFieldNames(IndexReader.FieldOption.ALL)
                                     .Where(x => x.IndexOf(query, 0, StringComparison.InvariantCultureIgnoreCase) != -1).ToArray();
 
-                return this.GetMessageWithObject(result);
+                return GetMessageWithObject(result);
             }
         }
 
@@ -38,7 +39,8 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage Get(string query, [FromUri] string[] sort)
         {
             int results;
-            var keys = Search.Query(query, sort, Paging.Start, Paging.PageSize, out results);
+            long durationInMs;
+            var keys = Search.Query(query, sort, Paging.Start, Paging.PageSize, out results, out durationInMs);
 
             var list = new List<FileHeader>();
 
@@ -49,10 +51,11 @@ namespace Raven.Database.FileSystem.Controllers
                 Start = Paging.Start,
                 PageSize = Paging.PageSize,
                 Files = list,
-                FileCount = results
+                FileCount = results,
+                DurationMilliseconds = durationInMs
             };
 
-            return this.GetMessageWithObject(result);
+            return GetMessageWithObject(result);
         }
 
         [HttpDelete]
@@ -67,9 +70,10 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     int totalResults;
+                    long durationInMs;
                     status.LastProgress = "Searching for files matching the query...";
-                    var keys = Search.Query(query, null, 0, int.MaxValue, out totalResults);
-                    status.LastProgress = string.Format("Deleting {0} files...", totalResults);
+                    var keys = Search.Query(query, null, 0, int.MaxValue, out totalResults, out durationInMs);
+                    status.LastProgress = $"Deleting {totalResults} files...";
                     Action<string> progress = s => status.LastProgress = s;
 
                     DeleteFiles(keys, totalResults, progress);
@@ -111,7 +115,7 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         private void DeleteFiles(IEnumerable<string> keys, int totalResults, Action<string> progress)

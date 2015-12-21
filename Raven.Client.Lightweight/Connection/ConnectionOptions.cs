@@ -9,9 +9,9 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {
-    public class ConnectionOptions
+    public static class ConnectionOptions
     {
-        public static IDisposable Expect100Continue(Uri uri)
+        private static IDisposable Expect100Continue(Uri uri)
         {
 #if !DNXCORE50
             var servicePoint = ServicePointManager.FindServicePoint(uri);

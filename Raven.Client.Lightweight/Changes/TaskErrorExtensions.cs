@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Changes

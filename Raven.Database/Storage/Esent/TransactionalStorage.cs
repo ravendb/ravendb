@@ -37,15 +37,14 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Storage.Esent.SchemaUpdates;
 
-
 namespace Raven.Storage.Esent
 {
     public class TransactionalStorage : CriticalFinalizerObject, ITransactionalStorage
     {
         private static int instanceCounter;
-        private readonly ThreadLocal<StorageActionsAccessor> current = new ThreadLocal<StorageActionsAccessor>();
-        private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
-        private readonly ThreadLocal<EsentTransactionContext> dtcTransactionContext = new ThreadLocal<EsentTransactionContext>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<StorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<StorageActionsAccessor>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<EsentTransactionContext> dtcTransactionContext = new Raven.Abstractions.Threading.ThreadLocal<EsentTransactionContext>();
         private readonly string database;
         private readonly InMemoryRavenConfiguration configuration;
         private readonly Action onCommit;
@@ -663,6 +662,7 @@ namespace Raven.Storage.Esent
                         }
                         return false;
                     case JET_err.DatabaseDirtyShutdown:
+                        Output("Dirty shutdown detected, attempting to recover...");
                         try
                         {
                             Api.JetTerm2(instance, TermGrbit.Complete);
@@ -856,6 +856,11 @@ namespace Raven.Storage.Esent
                         pht.ExecuteAfterStorageCommit();
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                log.Error("Failed to execute transaction. Most likely something is really wrong here. Exception: " + e);
+                throw;
             }
             finally
             {

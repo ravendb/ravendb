@@ -13,7 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Shard;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 

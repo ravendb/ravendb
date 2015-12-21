@@ -55,7 +55,7 @@ namespace Raven.Database.Impl.DTC
 
         private void CleanupOldTransactions(object state)
         {
-            using (LogContext.WithDatabase(_database.Name ?? Constants.SystemDatabase))
+            using (LogContext.WithResource(_database.Name ?? Constants.SystemDatabase))
             {
                 var now = SystemTime.UtcNow;
                 log.Info("Performing Transactions Cleanup Sequence for db {0}", _database.Name ?? Constants.SystemDatabase);

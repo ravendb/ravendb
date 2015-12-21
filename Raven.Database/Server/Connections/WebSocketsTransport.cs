@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
+using Raven.Database.Common;
 using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Util;
@@ -147,7 +148,7 @@ namespace Raven.Database.Server.Connections
 
         protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-            return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WebsocketValidateSuffix);
+            return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WebsocketValidateSuffix);
         }
 
         public override async Task Run(IDictionary<string, object> websocketContext)
@@ -162,7 +163,7 @@ namespace Raven.Database.Server.Connections
             try
             {
                 var parser = WebSocketsRequestParser;
-                await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
+                await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]).ConfigureAwait(false);
             }
             catch (WebSocketsRequestParser.WebSocketRequestValidationException e)
             {
@@ -174,14 +175,14 @@ namespace Raven.Database.Server.Connections
             {
                 var serializer = JsonExtensions.CreateDefaultJsonSerializer();
 
-                await SendMessage(memoryStream, serializer, new { StatusCode = statusCode, StatusMessage = statusMessage, Time = SystemTime.UtcNow }, sendAsync, callCancelled);
+                await SendMessage(memoryStream, serializer, new { StatusCode = statusCode, StatusMessage = statusMessage, Time = SystemTime.UtcNow }, sendAsync, callCancelled).ConfigureAwait(false);
             }
 
             try
             {
                 var buffer = new ArraySegment<byte>(new byte[1024]);
                 var receiveAsync = (WebSocketReceiveAsync)websocketContext["websocket.ReceiveAsync"];
-                var receiveResult = await receiveAsync(buffer, callCancelled);
+                var receiveResult = await receiveAsync(buffer, callCancelled).ConfigureAwait(false);
 
                 if (receiveResult.Item1 == WebSocketCloseMessageType)
                 {
@@ -190,7 +191,7 @@ namespace Raven.Database.Server.Connections
 
                     if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
                     {
-                        await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled);
+                        await closeAsync(clientCloseStatus, clientCloseDescription, callCancelled).ConfigureAwait(false);
                     }
                 }
             }
@@ -257,7 +258,7 @@ namespace Raven.Database.Server.Connections
 
         protected virtual WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-            return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.ChangesApiWebsocketSuffix);
+            return new WebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.ChangesApiWebsocketSuffix);
         }
 
         public WebSocketsRequestParser WebSocketsRequestParser
@@ -293,10 +294,26 @@ namespace Raven.Database.Server.Connections
 
         public virtual async Task Run(IDictionary<string, object> websocketContext)
         {
+            Exception captured = null;
+            try
+            {
+                await RunInternal(websocketContext).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                captured = e;
+            }
+            await CloseConnection(websocketContext).ConfigureAwait(false);
+            if (captured != null)
+                throw new InvalidOperationException("Failure when running web sockets", captured);
+        }
+
+        private async Task RunInternal(IDictionary<string, object> websocketContext)
+        {
             try
             {
                 var sendAsync = (WebSocketSendAsync) websocketContext["websocket.SendAsync"];
-                cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken)websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
+                cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource((CancellationToken) websocketContext["websocket.CallCancelled"], disconnectBecauseOfGcToken);
 
                 var memoryStream = new MemoryStream();
                 var serializer = JsonExtensions.CreateDefaultJsonSerializer();
@@ -305,7 +322,7 @@ namespace Raven.Database.Server.Connections
 
                 while (cancellationTokenSource.IsCancellationRequested == false)
                 {
-                    var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token);
+                    var result = await manualResetEvent.WaitAsync(5000, cancellationTokenSource.Token).ConfigureAwait(false);
                     if (cancellationTokenSource.IsCancellationRequested)
                         break;
 
@@ -313,11 +330,11 @@ namespace Raven.Database.Server.Connections
                     {
                         await SendMessage(memoryStream, serializer,
                             new {Type = "Heartbeat", Time = SystemTime.UtcNow},
-                            sendAsync, cancellationTokenSource.Token);
+                            sendAsync, cancellationTokenSource.Token).ConfigureAwait(false);
 
                         if (lastMessageEnqueuedAndNotSent != null)
                         {
-                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token);
+                            await SendMessage(memoryStream, serializer, lastMessageEnqueuedAndNotSent, sendAsync, cancellationTokenSource.Token).ConfigureAwait(false);
                             lastMessageEnqueuedAndNotSent = null;
                             lastMessageSentTick = Environment.TickCount;
                         }
@@ -338,7 +355,7 @@ namespace Raven.Database.Server.Connections
                             continue;
                         }
 
-                        await SendMessage(memoryStream, serializer, message, sendAsync, cancellationTokenSource.Token);
+                        await SendMessage(memoryStream, serializer, message, sendAsync, cancellationTokenSource.Token).ConfigureAwait(false);
                         lastMessageEnqueuedAndNotSent = null;
                         lastMessageSentTick = Environment.TickCount;
                     }
@@ -353,6 +370,26 @@ namespace Raven.Database.Server.Connections
             finally
             {
                 OnDisconnection();
+            }
+        }
+
+        private async Task CloseConnection(IDictionary<string, object> websocketContext)
+        {
+            if (EnvironmentUtils.RunningOnPosix)
+            {
+                var closeAsync = (WebSocketCloseAsync) websocketContext["websocket.CloseAsync"];
+                WebSocketCloseStatus status = WebSocketCloseStatus.EndpointUnavailable;
+                var token =
+                    CancellationTokenSource.CreateLinkedTokenSource((CancellationToken) websocketContext["websocket.CallCancelled"],
+                        disconnectBecauseOfGcToken).Token;
+                try
+                {
+                    await closeAsync((int) status, "Heartbeat bad response", token).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // nothing to do if we can't catch the error
+                }
             }
         }
 
@@ -372,7 +409,7 @@ namespace Raven.Database.Server.Connections
                         WebSocketReceiveResult receiveResult = null;
                         try
                         {
-                            receiveResult = await receiveAsync(buffer, cancellationTokenSource.Token);
+                            receiveResult = await receiveAsync(buffer, cancellationTokenSource.Token).ConfigureAwait(false);
                         }
                         catch (OperationCanceledException)
                         {
@@ -382,7 +419,7 @@ namespace Raven.Database.Server.Connections
                         {
                             try
                             {
-                                await closeAsync((int)WebSocketCloseStatus.NormalClosure, "Closed for GC release", CancellationToken.None);
+                                await closeAsync((int)WebSocketCloseStatus.NormalClosure, "Closed for GC release", CancellationToken.None).ConfigureAwait(false);
                                 manualResetEvent.Set();
                             }
                             catch (Exception e)
@@ -399,7 +436,7 @@ namespace Raven.Database.Server.Connections
 
                             if (clientCloseStatus == NormalClosureCode && clientCloseDescription == NormalClosureMessage)
                             {
-                                await closeAsync(clientCloseStatus, clientCloseDescription, cancellationTokenSource.Token);
+                                await closeAsync(clientCloseStatus, clientCloseDescription, cancellationTokenSource.Token).ConfigureAwait(false);
                                 manualResetEvent.Set();
                             }
 
@@ -424,7 +461,7 @@ namespace Raven.Database.Server.Connections
             jsonTextWriter.Flush();
 
             var arraySegment = new ArraySegment<byte>(memoryStream.GetBuffer(), 0, (int)memoryStream.Position);
-            await sendAsync(arraySegment, 1, true, callCancelled);
+            await sendAsync(arraySegment, 1, true, callCancelled).ConfigureAwait(false);
         }
 
         private void OnDisconnection()
@@ -447,7 +484,7 @@ namespace Raven.Database.Server.Connections
             try
             {
                 var parser = WebSocketsRequestParser;
-                var request = await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]);
+                var request = await parser.ParseWebSocketRequestAsync(_context.Request.Uri, _context.Request.Query["singleUseAuthToken"]).ConfigureAwait(false);
 
                 Id = request.Id;
                 ActiveTenant = request.ActiveResource;
@@ -481,7 +518,7 @@ namespace Raven.Database.Server.Connections
 
         protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-            return new WatchTrafficWebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WatchTrafficWebsocketSuffix);
+            return new WatchTrafficWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.WatchTrafficWebsocketSuffix);
         }
 
         protected override void RegisterTransportState()
@@ -506,7 +543,7 @@ namespace Raven.Database.Server.Connections
 
         protected override WebSocketsRequestParser CreateWebSocketsRequestParser()
         {
-            return new AdminLogsWebSocketsRequestParser(_options.DatabaseLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.AdminLogsWebsocketSuffix);
+            return new AdminLogsWebSocketsRequestParser(_options.DatabaseLandlord, _options.TimeSeriesLandlord, _options.CountersLandlord, _options.FileSystemLandlord, _options.MixedModeRequestAuthorizer, WebSocketTransportFactory.AdminLogsWebsocketSuffix);
         }
 
         protected override Task SendMessage(MemoryStream memoryStream, JsonSerializer serializer, object message, WebSocketSendAsync sendAsync, CancellationToken callCancelled)

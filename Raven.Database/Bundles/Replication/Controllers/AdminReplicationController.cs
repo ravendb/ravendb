@@ -7,6 +7,7 @@ using System.Web.Http;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Database.Bundles.Replication.Impl;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
@@ -70,7 +71,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         [RavenRoute("databases/{databaseName}/admin/replicationInfo")]
         public async Task<HttpResponseMessage> ReplicationInfo()
         {
-            var replicationDocument = await ReadJsonObjectAsync<ReplicationDocument>();
+            var replicationDocument = await ReadJsonObjectAsync<ReplicationDocument>().ConfigureAwait(false);
 
             if (replicationDocument == null || replicationDocument.Destinations == null || replicationDocument.Destinations.Count == 0)
             {
@@ -130,7 +131,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                                                                                      replicationDestination.Password,
                                                                                      replicationDestination.Domain ?? string.Empty);
                 }
-                var request = requestFactory.Create(url + "/replication/info", "POST", ravenConnectionStringOptions);
+                var request = requestFactory.Create(url + "/replication/info", HttpMethods.Post, ravenConnectionStringOptions);
                 try
                 {
                     request.ExecuteRequest();

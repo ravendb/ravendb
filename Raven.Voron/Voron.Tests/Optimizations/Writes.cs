@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using Voron.Debugging;
 using Xunit;
 
 namespace Voron.Tests.Optimizations
@@ -18,25 +19,25 @@ namespace Voron.Tests.Optimizations
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 tx.Root.Add(new string('9', keySize), new MemoryStream(new byte[3]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('1', keySize), new MemoryStream(new byte[3]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('4', 1000), new MemoryStream(new byte[2]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('5', keySize), new MemoryStream(new byte[2]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('8', keySize), new MemoryStream(new byte[3]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('2', keySize), new MemoryStream(new byte[2]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('6', keySize), new MemoryStream(new byte[2]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('0', keySize), new MemoryStream(new byte[4]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('3', 1000), new MemoryStream(new byte[1]));
-                RenderAndShow(tx, tx.Root);
+                DebugStuff.RenderAndShow(tx.Root);
                 tx.Root.Add(new string('7', keySize), new MemoryStream(new byte[1]));
-
+                
                 tx.Commit();
             }
 

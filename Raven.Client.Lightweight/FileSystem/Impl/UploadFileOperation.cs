@@ -63,7 +63,7 @@ namespace Raven.Client.FileSystem.Impl
             if (Stream != null)
             {
                 await commands.UploadAsync(FileName, Stream, Metadata, Etag)
-                    .ConfigureAwait(false);
+                          .ConfigureAwait(false);
             }
             else if (StreamWriter != null)
             {
@@ -74,7 +74,7 @@ namespace Raven.Client.FileSystem.Impl
             {
                 throw new InvalidOperationException("Neither stream not stream writer was specified");
             }
-            
+
             var metadata = await commands.GetMetadataForAsync(FileName).ConfigureAwait(false);
             if (metadata == null)
                 return null;

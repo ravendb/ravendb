@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using Raven.Database.Config;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
@@ -14,12 +16,16 @@ namespace Raven.Database.FileSystem.Synchronization
     public class SynchronizationStrategy
     {
         private readonly SigGenerator sigGenerator;
+
+        private readonly InMemoryRavenConfiguration configuration;
+
         private readonly ITransactionalStorage storage;
 
-        public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator)
+        public SynchronizationStrategy(ITransactionalStorage storage, SigGenerator sigGenerator, InMemoryRavenConfiguration configuration)
         {
             this.storage = storage;
             this.sigGenerator = sigGenerator;
+            this.configuration = configuration;
         }
 
         public bool Filter(FileHeader file, Guid destinationId, IEnumerable<FileHeader> candidatesToSynchronization)
@@ -86,7 +92,7 @@ namespace Raven.Database.FileSystem.Synchronization
                     if (destinationMetadata != null)
                         return new RenameWorkItem(file, rename, localServerUrl, storage);
 
-                    return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator);
+                    return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator, configuration);
                     // we have a rename tombstone but file does not exists on destination
                 }
                 return new DeleteWorkItem(file, localServerUrl, storage);
@@ -113,7 +119,7 @@ namespace Raven.Database.FileSystem.Synchronization
                 return null; // the same content and metadata - no need to synchronize
             }
 
-            return new ContentUpdateWorkItem(file, localServerUrl, storage, sigGenerator);
+            return new ContentUpdateWorkItem(file, localServerUrl, storage, sigGenerator, configuration);
         }
     }
 }

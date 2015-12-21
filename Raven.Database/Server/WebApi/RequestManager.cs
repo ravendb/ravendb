@@ -8,21 +8,28 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Common;
+using Raven.Database.Counters;
+using Raven.Database.FileSystem;
 using Raven.Database.Impl;
+using Raven.Database.Plugins.Builtins;
 using Raven.Database.Queries;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Util;
+using Raven.Json.Linq;
 using Sparrow.Collections;
 
 namespace Raven.Database.Server.WebApi
@@ -59,9 +66,16 @@ namespace Raven.Database.Server.WebApi
             get { return Thread.VolatileRead(ref physicalRequestsCount); }
         }
 
+        public long NumberOfConcurrentRequests
+        {
+            get { return Thread.VolatileRead(ref concurrentRequests); }
+        }
+        public HotSpareReplicationBehavior HotSpareValidator { get; set; }
 
         public event EventHandler<RequestWebApiEventArgs> BeforeRequest;
         public event EventHandler<RequestWebApiEventArgs> AfterRequest;
+
+        public DateTime? LastRequestTime { get; private set; }
 
         public virtual void OnBeforeRequest(RequestWebApiEventArgs e)
         {
@@ -81,7 +95,7 @@ namespace Raven.Database.Server.WebApi
             AfterRequest += OnAfterRequest;
             cancellationTokenSource = new CancellationTokenSource();
             this.landlord = landlord;
-            
+
             maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(landlord.MaxIdleTimeForTenantDatabaseInSec);
             frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(landlord.FrequencyToCheckForIdleDatabasesInSec);
 
@@ -92,27 +106,27 @@ namespace Raven.Database.Server.WebApi
 
         private void OnBeforeRequest(object sender, RequestWebApiEventArgs args)
         {
-            var documentDatabase = args.Database;
-            if (documentDatabase != null)
+            if (args.ResourceType == ResourceType.Database)
             {
+                var documentDatabase = (DocumentDatabase)args.Resource;
                 documentDatabase.WorkContext.MetricsCounters.ConcurrentRequests.Mark();
                 documentDatabase.WorkContext.MetricsCounters.RequestsPerSecondCounter.Mark();
                 Interlocked.Increment(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
                 return;
             }
 
-            var fileSystem = args.FileSystem;
-            if (fileSystem != null)
+            if (args.ResourceType == ResourceType.FileSystem)
             {
+                var fileSystem = (RavenFileSystem)args.Resource;
                 fileSystem.MetricsCounters.ConcurrentRequests.Mark();
                 fileSystem.MetricsCounters.RequestsPerSecondCounter.Mark();
                 Interlocked.Increment(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
                 return;
             }
 
-            var counters = args.Counters;
-            if (counters != null)
+            if (args.ResourceType == ResourceType.Counter)
             {
+                var counters = (CounterStorage)args.Resource;
                 counters.MetricsCounters.RequestsPerSecondCounter.Mark();
                 Interlocked.Increment(ref counters.MetricsCounters.ConcurrentRequestsCount);
             }
@@ -120,27 +134,26 @@ namespace Raven.Database.Server.WebApi
 
         private void OnAfterRequest(object sender, RequestWebApiEventArgs args)
         {
-            var documentDatabase = args.Database;
-            if (documentDatabase != null)
+            if (args.ResourceType == ResourceType.Database)
             {
+                var documentDatabase = (DocumentDatabase)args.Resource;
                 Interlocked.Decrement(ref documentDatabase.WorkContext.MetricsCounters.ConcurrentRequestsCount);
                 return;
             }
 
-            var fileSystem = args.FileSystem;
-            if (fileSystem != null)
+            if (args.ResourceType == ResourceType.FileSystem)
             {
+                var fileSystem = (RavenFileSystem)args.Resource;
                 Interlocked.Decrement(ref fileSystem.MetricsCounters.ConcurrentRequestsCount);
                 return;
             }
 
-            var counters = args.Counters;
-            if (counters != null)
+            if (args.ResourceType == ResourceType.Counter)
             {
+                var counters = (CounterStorage)args.Resource;
                 Interlocked.Decrement(ref counters.MetricsCounters.ConcurrentRequestsCount);
             }
         }
-
 
         public void Init()
         {
@@ -174,7 +187,7 @@ namespace Raven.Database.Server.WebApi
 
 
 
-        public async Task<HttpResponseMessage> HandleActualRequest(RavenBaseApiController controller,
+        public async Task<HttpResponseMessage> HandleActualRequest(IResourceApiController controller,
                                                                    HttpControllerContext controllerContext,
                                                                    Func<Task<HttpResponseMessage>> action,
                                                                    Func<HttpException, HttpResponseMessage> onHttpException)
@@ -187,25 +200,42 @@ namespace Raven.Database.Server.WebApi
 
             try
             {
+                LastRequestTime = SystemTime.UtcNow;
                 Interlocked.Increment(ref concurrentRequests);
 
-                RequestWebApiEventArgs args;
-                if (controller.TrySetupRequestToProperResource(out args))
+                RequestWebApiEventArgs args = await controller.TrySetupRequestToProperResource().ConfigureAwait(false);
+                if (args != null)
                 {
                     OnBeforeRequest(args);
 
                     try
                     {
-                        if (controller.ResourceConfiguration.RejectClientsMode && controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
+                        if (controllerContext.Request.Headers.Contains(Constants.RavenClientVersion))
                         {
-                            response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                            if (controller.RejectClientRequests)
                             {
-                                Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
-                            };
+                                response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                                {
+                                    Content = new MultiGetSafeStringContent("This service is not accepting clients calls")
+                                };
+                            }
+                            else if (IsInHotSpareMode)
+                            {
+                                response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                                {
+                                    Content = new MultiGetSafeStringContent("This service is not accepting clients calls because this is a 'Hot Spare' server")
+                                };
+                            }
+                            else
+                            {
+                                IncreamentRequestNumberAndLog(controller, controllerContext);
+                                response = await action().ConfigureAwait(false);
+                            }
                         }
                         else
                         {
-                            response = await action();
+                            IncreamentRequestNumberAndLog(controller, controllerContext);
+                            response = await action().ConfigureAwait(false);
                         }
                     }
                     finally
@@ -241,6 +271,31 @@ namespace Raven.Database.Server.WebApi
             }
             return response;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void IncreamentRequestNumberAndLog(IResourceApiController controller, HttpControllerContext controllerContext)
+        {
+            var curReq = Interlocked.Increment(ref reqNum);
+            controllerContext.Request.Properties["requestNum"] = curReq;
+
+            if (Logger.IsDebugEnabled == true)
+            {
+                Logger.Debug(string.Format(CultureInfo.InvariantCulture,
+                    "Receive Request #{0,4:#,0}: {1,-7} - {2} - {3}",
+                    curReq,
+                    controller.InnerRequest.Method.Method,
+                    controller.ResourceName,
+                    controller.InnerRequest.RequestUri));
+            }
+        }
+
+        /// <summary>
+        /// If set all client request to the server will be rejected with 
+        /// the http 503 response.
+        /// And no replication can be done from this database.
+        /// </summary>
+
+        public bool IsInHotSpareMode { get; set; }
 
 
         // Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
@@ -290,15 +345,15 @@ namespace Raven.Database.Server.WebApi
                 var nameValueCollection = new NameValueCollection();
                 foreach (var innerHeader in innerHeaders)
                 {
-                    nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();                   
+                    nameValueCollection[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
                 }
-                
+
                 return nameValueCollection;
             });
-          
+
             CurrentOperationContext.User.Value = null;
 
-            LogContext.DatabaseName.Value = databaseName;
+            LogContext.ResourceName = databaseName;
             var disposable = LogManager.OpenMappedContext("database", databaseName ?? Constants.SystemDatabase);
 
             CurrentOperationContext.RequestDisposables.Value.Add(disposable);
@@ -310,7 +365,7 @@ namespace Raven.Database.Server.WebApi
             {
                 CurrentOperationContext.Headers.Value = null;
                 CurrentOperationContext.User.Value = null;
-                LogContext.DatabaseName.Value = null;
+                LogContext.ResourceName = null;
                 foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
                 {
 
@@ -338,7 +393,7 @@ namespace Raven.Database.Server.WebApi
         }
 
 
-        private void FinalizeRequestProcessing(RavenBaseApiController controller, HttpResponseMessage response, Stopwatch sw)
+        private void FinalizeRequestProcessing(IResourceApiController controller, HttpResponseMessage response, Stopwatch sw)
         {
             LogHttpRequestStatsParams logHttpRequestStatsParam = null;
             try
@@ -392,23 +447,38 @@ namespace Raven.Database.Server.WebApi
 
             sw.Stop();
 
-            if (landlord.IsDatabaseLoaded(controller.TenantName ?? Constants.SystemDatabase))
-            {
-                controller.MarkRequestDuration(sw.ElapsedMilliseconds);
-            }
+            MarkRequestDuration(controller, sw.ElapsedMilliseconds);
 
-            var curReq = Interlocked.Increment(ref reqNum);
+            long curReq = controller.InnerRequest.Properties["requestNum"] as long? ?? 0;
 
-            LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.TenantName, curReq);
+            LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, curReq);
 
             if (controller.IsInternalRequest == false)
             {
-                TraceTraffic(controller, logHttpRequestStatsParam, controller.TenantName);    
+                TraceTraffic(controller, logHttpRequestStatsParam, controller.ResourceName, response);
             }
 
-            RememberRecentRequests(logHttpRequestStatsParam, controller.TenantName);
+            RememberRecentRequests(logHttpRequestStatsParam, controller.ResourceName);
         }
 
+        private void MarkRequestDuration(IResourceApiController controller, long elapsedMilliseconds)
+        {
+            switch (controller.ResourceType)
+            {
+                case ResourceType.Database:
+                    if (landlord.IsDatabaseLoaded(controller.ResourceName ?? Constants.SystemDatabase))
+                        controller.MarkRequestDuration(elapsedMilliseconds);
+                    break;
+                case ResourceType.FileSystem:
+                    break;
+                case ResourceType.TimeSeries:
+                    break;
+                case ResourceType.Counter:
+                    break;
+                default:
+                    throw new NotSupportedException(controller.ResourceType.ToString());
+            }
+        }
 
         private void RememberRecentRequests(LogHttpRequestStatsParams requestLog, string databaseName)
         {
@@ -438,10 +508,21 @@ namespace Raven.Database.Server.WebApi
             return queue.ToArray().Reverse();
         }
 
-        private void TraceTraffic(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
+        private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
         {
             if (HasAnyHttpTraceEventTransport() == false)
                 return;
+
+            RavenJObject timingsJson = null;
+
+            if (controller is IndexController)
+            {
+                var jsonContent = response.Content as JsonContent;
+                if (jsonContent != null && jsonContent.Data != null)
+                {
+                    timingsJson = jsonContent.Data.Value<RavenJObject>("TimingsInMilliseconds");
+                }
+            }
 
             NotifyTrafficWatch(
             new TrafficWatchNotification()
@@ -453,7 +534,8 @@ namespace Raven.Database.Server.WebApi
                 ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
                 TenantName = NormalizeTennantName(databaseName),
                 TimeStamp = SystemTime.UtcNow,
-                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount
+                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
+                QueryTimings = timingsJson
             }
             );
         }
@@ -466,19 +548,16 @@ namespace Raven.Database.Server.WebApi
                 return "<system>";
             }
 
-            if (resourceName.IndexOf("counters/") == 0)
-            {
-                return resourceName.Substring(9);
-            }
-
-            if (resourceName.IndexOf("fs/") == 0)
+            if (resourceName.StartsWith("fs/", StringComparison.OrdinalIgnoreCase) ||
+                resourceName.StartsWith("cs/", StringComparison.OrdinalIgnoreCase) ||
+                resourceName.StartsWith("ts/", StringComparison.OrdinalIgnoreCase))
             {
                 return resourceName.Substring(3);
             }
 
             return resourceName;
         }
-        private void LogHttpRequestStats(RavenBaseApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
+        private void LogHttpRequestStats(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, long curReq)
         {
             if (Logger.IsDebugEnabled == false)
                 return;
@@ -493,8 +572,9 @@ namespace Raven.Database.Server.WebApi
                 logHttpRequestStatsParams.ResponseStatusCode,
                 logHttpRequestStatsParams.RequestUri,
                 databaseName);
-            Logger.Debug(message);
-            if (string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
+            if (Logger.IsDebugEnabled)
+                Logger.Debug(message);
+            if (Logger.IsDebugEnabled && string.IsNullOrWhiteSpace(logHttpRequestStatsParams.CustomInfo) == false)
             {
                 Logger.Debug(logHttpRequestStatsParams.CustomInfo);
             }

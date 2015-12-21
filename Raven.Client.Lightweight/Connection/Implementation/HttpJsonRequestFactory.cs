@@ -85,7 +85,7 @@ namespace Raven.Client.Connection
             {
                 ShouldCacheRequest =
                     createHttpJsonRequestParams.AvoidCachingRequest == false &&
-                    createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
+                    createHttpJsonRequestParams.ShouldCacheRequest(createHttpJsonRequestParams.Url)
             };
 
             if (request.ShouldCacheRequest && !DisableHttpCaching)
@@ -191,6 +191,9 @@ namespace Raven.Client.Connection
         /// default ctor
         /// </summary>
         /// <param name="maxNumberOfCachedRequests"></param>
+        /// <param name="httpMessageHandler"></param>
+        /// <param name="acceptGzipContent"></param>
+        /// <param name="authenticationScheme"></param>
         public HttpJsonRequestFactory(int maxNumberOfCachedRequests, Func<HttpMessageHandler> httpMessageHandler = null, bool acceptGzipContent = true, string authenticationScheme = null)
         {
             this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;

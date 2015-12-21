@@ -1,4 +1,3 @@
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -47,9 +46,14 @@ namespace Raven.Client.FileSystem
         protected bool isDistinct;
         
         /// <summary>
-        /// Whatever to negate the next operation
+        ///   Whatever to negate the next operation
         /// </summary>
         protected bool negate;
+
+        /// <summary>
+        ///   Holds the query stats
+        /// </summary>
+        protected FilesQueryStatistics queryStats = new FilesQueryStatistics();
 
         protected KeyValuePair<string, string> lastEquality;
 
@@ -81,6 +85,14 @@ namespace Raven.Client.FileSystem
         ///   The fields to order the results by
         /// </summary>
         protected string[] orderByFields = new string[0];
+
+        /// <summary>
+        ///   Provide statistics about the query, such as total count of matching records
+        /// </summary>
+        public void Statistics(out FilesQueryStatistics stats)
+        {
+            stats = queryStats;
+        }
 
         /// <summary>
         ///   Simplified method for opening a new clause within the query
@@ -124,7 +136,7 @@ namespace Raven.Client.FileSystem
                 FieldName = fieldName,
                 Value = value
             });
-        }       
+        }
 
         private void WhereEquals(WhereParams whereParams, bool isReversed)        
         {
@@ -736,12 +748,12 @@ namespace Raven.Client.FileSystem
         {
             Session.IncrementRequestCount();
 
-            if ( log.IsDebugEnabled )
-            {
+            if (log.IsDebugEnabled)
                 log.Debug("Executing query on file system '{0}' in '{1}'", this.Session.FileSystemName, this.Session.StoreIdentifier);
-            }
-            
-            var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize);
+
+            var result = await Commands.SearchAsync(this.ToString(), this.orderByFields, start, pageSize).ConfigureAwait(false);
+
+            queryStats.UpdateQueryStats(result);
 
             return result.Files.Select(x => x as T);
         }
@@ -770,7 +782,7 @@ namespace Raven.Client.FileSystem
         {
             Take(1);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.FirstOrDefault();
         }
 
@@ -778,7 +790,7 @@ namespace Raven.Client.FileSystem
         {
             Take(1);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.First();
         }
 
@@ -786,7 +798,7 @@ namespace Raven.Client.FileSystem
         {
             Take(2);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.SingleOrDefault();
         }
 
@@ -794,13 +806,13 @@ namespace Raven.Client.FileSystem
         {
             Take(2);
 
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.Single();
         }
 
         public async Task<List<T>> ToListAsync()
         {
-            var collection = await ExecuteActualQueryAsync();
+            var collection = await ExecuteActualQueryAsync().ConfigureAwait(false);
             return collection.ToList();
         }
     }

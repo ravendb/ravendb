@@ -1,6 +1,7 @@
 using System;
 using System.Security.Principal;
 
+using Raven.Database.Common;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Connections

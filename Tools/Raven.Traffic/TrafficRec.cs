@@ -174,7 +174,7 @@ namespace Raven.Traffic
                                 curCount, trafficLogs.Length, sp.ElapsedMilliseconds, totalSp.ElapsedMilliseconds));
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         Interlocked.Increment(ref skippedRequestsCounter);
                         if (queue != null)

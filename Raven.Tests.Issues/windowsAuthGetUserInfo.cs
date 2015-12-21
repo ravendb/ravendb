@@ -19,7 +19,7 @@ namespace Raven.Tests.Core.Auth
         }
 
         [Fact]
-        public void	GetUserInfoAndPermissionsWindowsAuthentication()
+        public void GetUserInfoAndPermissionsWindowsAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
             this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
@@ -32,7 +32,7 @@ namespace Raven.Tests.Core.Auth
                     {
                         new WindowsAuthData()
                         {
-                            Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Domain, FactIfWindowsAuthenticationIsAvailable.Username),
+                            Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Admin.Domain, FactIfWindowsAuthenticationIsAvailable.Admin.UserName),
                             Enabled = true,
                             Databases = new List<ResourceAccess>
                             {
@@ -47,7 +47,7 @@ namespace Raven.Tests.Core.Auth
             using (var store = new DocumentStore
             {
 
-                Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Username,FactIfWindowsAuthenticationIsAvailable.Password,FactIfWindowsAuthenticationIsAvailable.Domain),
+                Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain),
                 Url = this.Server.SystemDatabase.ServerUrl
             }.Initialize())
             {

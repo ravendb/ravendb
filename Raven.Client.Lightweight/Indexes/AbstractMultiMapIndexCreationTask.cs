@@ -2,7 +2,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
-using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 using System;
 using System.Collections;
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+
 
 namespace Raven.Client.Indexes
 {
@@ -73,7 +74,7 @@ namespace Raven.Client.Indexes
                 Stores = Stores,
                 TermVectors = TermVectors,
                 SpatialIndexes = SpatialIndexes,
-                Suggestions = IndexSuggestions,
+                SuggestionsOptions = IndexSuggestions,
                 AnalyzersStrings = AnalyzersStrings,
                 IndexesStrings = IndexesStrings,
                 StoresStrings = StoresStrings,

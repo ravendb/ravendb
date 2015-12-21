@@ -123,7 +123,7 @@ namespace Raven.Tests.FileSystem.Auth
             var client = (IAsyncFilesCommandsImpl)NewAsyncClient(enableAuthentication: true, credentials: new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain));
             var adminClient = client.Admin;
 
-            await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"), "testName");
+            await adminClient.CreateFileSystemAsync(MultiDatabase.CreateFileSystemDocument("testName"));
 
             using (var createdFsClient = new AsyncFilesServerClient(client.ServerUrl, "testName", conventions: client.Conventions, credentials: new OperationCredentials(null, new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain))))
             {

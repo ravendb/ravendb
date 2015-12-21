@@ -46,7 +46,8 @@ namespace Raven.Tests.Issues
                 {
                     RunInMemory = false,
                     DataDirectory = path
-                }))
+                },
+                null))
                 {
 
                 }

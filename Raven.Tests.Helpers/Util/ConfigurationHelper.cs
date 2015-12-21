@@ -120,7 +120,7 @@ namespace Raven.Tests.Helpers.Util
             configuration.Initialize();
         }
 
-        public static void ApplySettingsToConventions(Convention conventions)
+        public static void ApplySettingsToConventions(ConventionBase conventions)
         {
             var settings = ClientSettings;
 

@@ -439,15 +439,16 @@ namespace Raven.Client.Document
         /// <param name = "radius">The radius.</param>
         /// <param name = "latitude">The latitude.</param>
         /// <param name = "longitude">The longitude.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude)
+        /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is.</param>
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
+            GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent);
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
+            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent);
             return this;
         }
 
@@ -458,21 +459,29 @@ namespace Raven.Client.Document
         /// <param name = "latitude">The latitude.</param>
         /// <param name = "longitude">The longitude.</param>
         /// <param name = "radiusUnits">The units of the <paramref name="radius"/></param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+        /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is</param>
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+            GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits)
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
         {
-            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude,distErrorPercent, radiusUnits);
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel)
+        public IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent = 0.025)
         {
-            GenerateSpatialQueryData(fieldName, shapeWKT, rel);
+            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent);
+            return this;
+        }
+
+
+        IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent)
+        {
+            GenerateSpatialQueryData(fieldName, shapeWKT, rel,distErrorPercent);
             return this;
         }
 
@@ -502,7 +511,7 @@ namespace Raven.Client.Document
             return (TSelf)this;
         }
 
-        protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria, double distanceErrorPct = 0.025)
+        protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria)
         {
             var wkt = criteria.Shape as string;
             if (wkt == null && criteria.Shape != null)
@@ -525,7 +534,7 @@ namespace Raven.Client.Document
             spatialFieldName = fieldName;
             queryShape = new WktSanitizer().Sanitize(wkt);
             spatialRelation = criteria.Relation;
-            this.distanceErrorPct = distanceErrorPct;
+            this.distanceErrorPct = criteria.DistanceErrorPct;
             return (TSelf)this;
         }
 
@@ -781,7 +790,7 @@ namespace Raven.Client.Document
         /// <value>The query result.</value>
         public async Task<QueryResult> QueryResultAsync(CancellationToken token = default(CancellationToken))
         {
-            var result = await InitAsync().WithCancellation(token);
+            var result = await InitAsync().WithCancellation(token).ConfigureAwait(false);
             return result.CurrentQueryResults.CreateSnapshot();
         }
 
@@ -793,7 +802,7 @@ namespace Raven.Client.Document
             ExecuteBeforeQueryListeners();
 
             queryOperation = InitializeQueryOperation();
-            return await ExecuteActualQueryAsync();
+            return await ExecuteActualQueryAsync().ConfigureAwait(false);
         }
 
         protected void ExecuteBeforeQueryListeners()
@@ -814,21 +823,19 @@ namespace Raven.Client.Document
         }
 
         /// <summary>
+        /// Order the search results in alphanumeric order
+        /// </summary>
+        public void AlphaNumericOrdering(string fieldName, bool descending)
+        {
+            AddOrder(Constants.AlphaNumericFieldName + ";" + fieldName, descending);
+        }
+
+        /// <summary>
         /// Order the search results randomly
         /// </summary>
         public void RandomOrdering()
         {
             AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
-        }
-
-        public void CustomSortUsing(string typeName)
-        {
-            CustomSortUsing(typeName, false);
-        }
-
-        public void CustomSortUsing(string typeName, bool descending)
-        {
-            AddOrder(Constants.CustomSortFieldName + (descending ? "-" : "") + ";" + typeName, false);
         }
 
         /// <summary>
@@ -838,6 +845,11 @@ namespace Raven.Client.Document
         public void RandomOrdering(string seed)
         {
             AddOrder(Constants.RandomFieldName + ";" + seed, false);
+        }
+
+        public void CustomSortUsing(string typeName, bool descending)
+        {
+            AddOrder(Constants.CustomSortFieldName + ";" + typeName, descending);
         }
 
         public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
@@ -1000,8 +1012,8 @@ namespace Raven.Client.Document
                     throw;
             }
 
-            var result = await ExecuteActualQueryAsync();
-            return await ProcessEnumerator(result);
+            var result = await ExecuteActualQueryAsync().ConfigureAwait(false);
+            return await ProcessEnumerator(result).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1316,7 +1328,7 @@ If you really want to do in memory filtering on the data returned from the query
                 }
                 if (first == false)
                 {
-                    queryText.Append(",");
+                    queryText.Append(" , ");
                 }
                 first = false;
                 var nestedWhereParams = new WhereParams
@@ -1864,11 +1876,11 @@ If you really want to do in memory filtering on the data returned from the query
                 using (queryOperation.EnterQueryContext())
                 {
                     queryOperation.LogQuery();
-                    var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+                    var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray()).ConfigureAwait(false);
 
                     if (queryOperation.IsAcceptable(result) == false)
                     {
-                        await Task.Delay(100);
+                        await Task.Delay(100).ConfigureAwait(false);
                         continue;
                     }
                     InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
@@ -2258,12 +2270,52 @@ If you really want to do in memory filtering on the data returned from the query
             rootTypes.Add(type);
         }
 
+        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending)
+        {
+            AddOrder(fieldName, descending);
+            return this;
+        }
+
+        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
+        {
+            AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
+            return this;
+        }
+
+        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending, Type fieldType)
+        {
+            AddOrder(fieldName, descending, fieldType);
+            return this;
+        }
+
+        IDocumentQueryCustomization IDocumentQueryCustomization.AlphaNumericOrdering(string fieldName, bool descending)
+        {
+            AlphaNumericOrdering(fieldName, descending);
+            return this;
+        }
+
+        IDocumentQueryCustomization IDocumentQueryCustomization.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
+        {
+            AlphaNumericOrdering(GetMemberQueryPath(propertySelector.Body), descending);
+            return this;
+        }
+
         /// <summary>
         /// Order the search results randomly
         /// </summary>
         IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
         {
             RandomOrdering();
+            return this;
+        }
+
+        /// <summary>
+        /// Order the search results randomly using the specified seed
+        /// this is useful if you want to have repeatable random queries
+        /// </summary>
+        IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
+        {
+            RandomOrdering(seed);
             return this;
         }
 
@@ -2280,22 +2332,12 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        /// Order the search results randomly using the specified seed
-        /// this is useful if you want to have repeatable random queries
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
-        {
-            RandomOrdering(seed);
-            return this;
-        }
-
-        /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
         public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
         {
-            var currentQueryOperation = await InitAsync().WithCancellation(token);
-            var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token);
+            var currentQueryOperation = await InitAsync().WithCancellation(token).ConfigureAwait(false);
+            var tuple = await ProcessEnumerator(currentQueryOperation).WithCancellation(token).ConfigureAwait(false);
             return tuple.Item2;
         }
 
@@ -2305,7 +2347,7 @@ If you really want to do in memory filtering on the data returned from the query
         public async Task<int> CountAsync(CancellationToken token = default(CancellationToken))
         {
             Take(0);
-            var result = await QueryResultAsync(token);
+            var result = await QueryResultAsync(token).ConfigureAwait(false);
             return result.TotalResults;
         }
 

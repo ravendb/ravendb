@@ -18,6 +18,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using System.Linq;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Impl.DTC
 {
@@ -127,7 +128,7 @@ namespace Raven.Database.Impl.DTC
             }
         }
 
-        protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
+        protected readonly Raven.Abstractions.Threading.ThreadLocal<string> currentlyCommittingTransaction = new Raven.Abstractions.Threading.ThreadLocal<string>();
 
         public abstract void Commit(string id);
 
@@ -319,7 +320,8 @@ namespace Raven.Database.Impl.DTC
                             Key = change.Key
                         };
 
-                        log.Debug("Prepare of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
+                        if (log.IsDebugEnabled)
+                            log.Debug("Prepare of txId {0}: {1} {2}", id, doc.Delete ? "DEL" : "PUT", doc.Key);
 
                         // doc.Etag - represent the _modified_ document etag, and we already
                         // checked etags on previous PUT/DELETE, so we don't pass it here

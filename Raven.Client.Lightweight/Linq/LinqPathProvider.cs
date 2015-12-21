@@ -9,7 +9,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions.Extensions;
@@ -26,9 +25,9 @@ namespace Raven.Client.Linq
             public PropertyInfo MaybeProperty;
         }
 
-        private readonly Convention conventions;
+        private readonly QueryConvention conventions;
 
-        public LinqPathProvider(Convention conventions)
+        public LinqPathProvider(QueryConvention conventions)
         {
             this.conventions = conventions;
         }
@@ -248,6 +247,15 @@ namespace Raven.Client.Linq
                     if (expressions.Where((t, i) => !GetValueFromExpressionWithoutConversion(t, out values[i])).Any())
                         return false;
                     value = values;
+                    return true;
+                case ExpressionType.NewArrayBounds:
+                    value = null;
+                    expressions = ((NewArrayExpression)expression).Expressions;
+                    var constantExpression = (ConstantExpression)expressions.FirstOrDefault();
+                    if (constantExpression == null) return false;
+                    if (constantExpression.Value.GetType() != typeof (int)) return false;
+                    var length = (int)constantExpression.Value;
+                    value = new object[length];
                     return true;
                 default:
                     value = null;

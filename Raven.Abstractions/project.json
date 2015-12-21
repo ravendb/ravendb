@@ -1,12 +1,12 @@
 {
-  "version": "3.0.0",
+  "version": "3.5.0",
 
   "compilationOptions": { "allowUnsafe": true },
   "compile": [ "../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs", "**/*.cs", "../CommonAssemblyInfo.cs" ],
   "compileExclude": [ "../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ],
 
   "dependencies": {
-    "Sparrow": "3.0.0"
+    "Sparrow": "3.5.0"
   },
 
   "frameworks": {

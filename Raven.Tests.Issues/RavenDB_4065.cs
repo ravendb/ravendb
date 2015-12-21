@@ -28,10 +28,11 @@ namespace Raven.Tests.Issues
             var exception = Assert.Throws<Exception>(() =>
             {
                 using (new DocumentDatabase(new InMemoryRavenConfiguration()
-                                            {
-                                                DefaultStorageTypeName = "voron",
-                                                DataDirectory = path
-                                            }))
+                {
+                    DefaultStorageTypeName = "voron",
+                    DataDirectory = path
+                },
+                null))
                 {
 
                 }
@@ -56,7 +57,8 @@ namespace Raven.Tests.Issues
                 {
                     DefaultStorageTypeName = "esent",
                     DataDirectory = path
-                }))
+                },
+                null))
                 {
 
                 }

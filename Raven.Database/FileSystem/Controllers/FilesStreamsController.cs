@@ -24,7 +24,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class FilesStreamsController : RavenFsApiController
+    public class FilesStreamsController : BaseFileSystemApiController
     {
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 

@@ -17,7 +17,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class DocumentsController : RavenDbApiController
+    public class DocumentsController : ClusterAwareRavenDbApiController
     {
         [HttpGet]
         [RavenRoute("docs")]
@@ -47,17 +47,9 @@ namespace Raven.Database.Server.Controllers
             using (var cts = new CancellationTokenSource())
             using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
             {
-                long documentsCount = 0;
-                var lastDocEtag = Etag.Empty;
-                Database.TransactionalStorage.Batch(
-                    accessor =>
-                    {
-                        lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-                        documentsCount = accessor.Documents.GetDocumentsCount();
-                    });
-
-                lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
-                if (MatchEtag(lastDocEtag)) return GetEmptyMessage(HttpStatusCode.NotModified);
+                var lastDocEtag = GetLastDocEtag();
+                if (MatchEtag(lastDocEtag))
+                    return GetEmptyMessage(HttpStatusCode.NotModified);
 
                 var startsWith = GetQueryStringValue("startsWith");
                 HttpResponseMessage msg;
@@ -101,11 +93,12 @@ namespace Raven.Database.Server.Controllers
             RavenJObject json;
             try
             {
-                json = await ReadJsonAsync();
+                json = await ReadJsonAsync().ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize document request." , e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize document request." , e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -114,7 +107,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize document request." , e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize document request." , e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -212,11 +206,12 @@ namespace Raven.Database.Server.Controllers
             RavenJObject json;
             try
             {
-                json = await ReadJsonAsync();
+                json = await ReadJsonAsync().ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
-                Log.Debug("Failed to deserialize document request." + e);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Failed to deserialize document request." + e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -225,7 +220,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.Debug("Failed to deserialize document request." + e);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Failed to deserialize document request." + e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -241,7 +237,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/docs/{*docId}")]
         public async Task<HttpResponseMessage> DocPatch(string docId)
         {
-            var patchRequestJson = await ReadJsonArrayAsync();
+            var patchRequestJson = await ReadJsonArrayAsync().ConfigureAwait(false);
             var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
             var patchResult = Database.Patches.ApplyPatch(docId, GetEtag(), patchRequests, GetRequestTransaction());
             return ProcessPatchResult(docId, patchResult.PatchResult, null, null);
@@ -252,7 +248,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/docs/{*docId}")]
         public async Task<HttpResponseMessage> DocEval(string docId)
         {
-            var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
+            var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>().ConfigureAwait(false);
             var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
             bool testOnly;
             bool.TryParse(GetQueryStringValue("test"), out testOnly);

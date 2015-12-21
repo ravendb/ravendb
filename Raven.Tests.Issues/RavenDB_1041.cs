@@ -3,12 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
+
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -122,7 +126,7 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public async Task ShouldThrowTimeoutException()
+        public void ShouldThrowTimeoutException()
         {
             var store1 = CreateStore(requestedStorageType: "esent");
             var store2 = CreateStore(requestedStorageType: "esent");
@@ -135,19 +139,9 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            TimeoutException timeoutException = null;
-
-            try
-            {
-                await ((DocumentStore)store1).Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2);
-            }
-            catch (TimeoutException ex)
-            {
-                timeoutException = ex;
-            }
-
-            Assert.NotNull(timeoutException);
-            Assert.Contains("was replicated to 1 of 2 servers", timeoutException.Message);
+            Assert.Throws<TimeoutException>(() => 
+                // ReSharper disable once RedundantArgumentDefaultValue
+                AsyncHelpers.RunSync(() => store1.Replication.WaitAsync(timeout: TimeSpan.FromSeconds(1), replicas: 2)));
         }
 
         [Fact]

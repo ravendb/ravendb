@@ -37,6 +37,7 @@ namespace Raven.Client.Shard
         /// <param name="shardStrategy">The shard strategy.</param>
         /// <param name="shardDbCommands">The shard IDatabaseCommands.</param>
         /// <param name="id"></param>
+        /// <param name="dbName">The db name.</param>
         /// <param name="documentStore"></param>
         /// <param name="listeners"></param>
         public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,

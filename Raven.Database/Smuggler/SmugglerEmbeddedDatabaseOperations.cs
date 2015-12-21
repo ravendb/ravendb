@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -28,7 +28,7 @@ namespace Raven.Database.Smuggler
 
         private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
-        private SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
+        private readonly SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
         private readonly Etag etagEmpty = Etag.Empty;
 
         public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
@@ -38,7 +38,7 @@ namespace Raven.Database.Smuggler
 
         public Action<string> Progress { get; set; }
 
-        public Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount)
+        public Task<RavenJArray> GetIndexes(int totalCount)
         {
             return new CompletedTask<RavenJArray>(database.Indexes.GetIndexes(totalCount, 128));
         }
@@ -48,7 +48,7 @@ namespace Raven.Database.Smuggler
             return database.Documents.Get(key, null);
         }
 
-        public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take)
+        public Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take)
         {
             const int dummy = 0;
             var enumerator = database.Documents.GetDocumentsAsJson(dummy, Math.Min(Options.BatchSize, take), lastEtag, CancellationToken.None)
@@ -60,7 +60,7 @@ namespace Raven.Database.Smuggler
         }
 
         [Obsolete("Use RavenFS instead.")]
-        public Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
+        public Task<Etag> ExportAttachmentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag)
         {
             var lastEtag = startAttachmentsDeletionEtag;
             database.TransactionalStorage.Batch(accessor =>
@@ -71,30 +71,32 @@ namespace Raven.Database.Smuggler
                     {
                         {"Key", listItem.Key}
                     };
-                    o.WriteTo(jsonWriter);
+                    jsonWriter.Write(o);
+
                     lastEtag = listItem.Etag;
                 }
             });
             return new CompletedTask<Etag>(lastEtag);
         }
 
-        public Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start)
+        public Task<RavenJArray> GetTransformers(int start)
         {
             return new CompletedTask<RavenJArray>(database.Transformers.GetTransformers(start, Options.BatchSize));
         }
 
-        public Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
+        public Task<Etag> ExportDocumentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag)
         {
             var lastEtag = startDocsEtag;
             database.TransactionalStorage.Batch(accessor =>
             {
                 foreach (var listItem in accessor.Lists.Read(Constants.RavenPeriodicExportsDocsTombstones, startDocsEtag, maxEtag, int.MaxValue))
                 {
-                    var o = new RavenJObject
+                    var ravenJObj = new RavenJObject
                     {
                         {"Key", listItem.Key}
                     };
-                    o.WriteTo(jsonWriter);
+                    jsonWriter.Write(ravenJObj);
+
                     lastEtag = listItem.Etag;
                 }
             });
@@ -172,7 +174,7 @@ namespace Raven.Database.Smuggler
         }
 
         [Obsolete("Use RavenFS instead.")]
-        public Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo)
+        public Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
         {
             if (attachmentExportInfo != null)
             {
@@ -366,5 +368,10 @@ namespace Raven.Database.Smuggler
 
             return new CompletedTask<byte[]>(attachment.Data().ReadData());
         }
+
+        public string GetIdentifier()
+        {
+            return string.Format("embedded: {0}/{1}", database.Name ?? Constants.SystemDatabase, database.TransactionalStorage.Id);
     }
+}
 }

@@ -1,7 +1,9 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
-
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -12,7 +14,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Replication.Issues
 {
-    using Raven.Abstractions.Connection;
+    using Abstractions.Connection;
 
     public class RavenDB_677 : ReplicationBase
     {
@@ -32,11 +34,18 @@ namespace Raven.Tests.Bundles.Replication.Issues
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                               servers[0].SystemDatabase.ServerUrl +
                                                                               "admin/replication/purge-tombstones?docEtag=" + last,
-                                                                              "POST",
+                                                                              HttpMethods.Post,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store1.Conventions);
-            store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
-
+            try
+            {
+                store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Debugger.Break();
+            }
 
             servers[0].SystemDatabase.TransactionalStorage.Batch(accessor =>
             {
@@ -64,7 +73,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
             var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                               servers[0].SystemDatabase.ServerUrl +
                                                                               "admin/replication/purge-tombstones?docEtag=" + last,
-                                                                              "POST",
+                                                                              HttpMethods.Post,
                                                                               new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                               store1.Conventions);
             store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();

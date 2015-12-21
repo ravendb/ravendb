@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.IsolatedStorage;
 using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;

@@ -238,8 +238,7 @@ namespace Raven.Tests.Bundles.Replication
             {
                 session.Delete(session.Load<Company>("companies/1"));
                 session.SaveChanges();
-            }
-
+            }			
 
             Company deletedCompany = null;
             for (int i = 0; i < RetriesCount; i++)

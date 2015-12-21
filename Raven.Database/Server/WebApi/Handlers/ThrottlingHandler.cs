@@ -34,7 +34,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 
                 try
                 {
-                    waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                    waiting = await concurrentRequestSemaphore.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException e)
                 {
@@ -44,7 +44,7 @@ namespace Raven.Database.Server.WebApi.Handlers
                 if (tce != null)
                 {
                     Logger.InfoException("Got task canceled exception.", tce);
-                    return await base.SendAsync(request, cancellationToken);
+                    return await base.SendAsync(request, cancellationToken).ConfigureAwait(false); ;
                 }
 
                 if (waiting == false)
@@ -52,14 +52,14 @@ namespace Raven.Database.Server.WebApi.Handlers
                     try
                     {
                         Logger.Info("Too many concurrent requests, throttling!");
-                        return await HandleTooBusyError(request);
+                        return await HandleTooBusyError(request).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
                         Logger.WarnException("Could not send a too busy error to the client", e);
                     }
                 }
-                return await base.SendAsync(request, cancellationToken);
+                return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
             }
             finally
             {

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -222,7 +223,7 @@ namespace Raven.Client.Document
                         queue.CompleteAdding();
 
                         if (processingTask != null)
-                            await processingTask;
+                            await processingTask.ConfigureAwait(false);
 
                         if (IsErroredBecauseOfSubscriber)
                             break;
@@ -335,11 +336,14 @@ namespace Raven.Client.Document
 
                 if (TryHandleRejectedConnection(ex, reopenTried: false))
                 {
-                    logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
+                    if (logger.IsDebugEnabled)
+                        logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
                     return;
                 }
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 RestartPullingTask().ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
             if (IsErroredBecauseOfSubscriber)
@@ -368,7 +372,9 @@ namespace Raven.Client.Document
                 if (TryHandleRejectedConnection(ex, reopenTried: true))
                     return;
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 RestartPullingTask().ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 return;
             }
 
@@ -491,22 +497,22 @@ namespace Raven.Client.Document
 
         private HttpJsonRequest CreateAcknowledgmentRequest(Etag lastProcessedEtag)
         {
-            return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), "POST");
+            return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), HttpMethods.Post);
         }
 
         private HttpJsonRequest CreatePullingRequest()
         {
-            return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), "GET", timeout: options.PullingRequestTimeout);
+            return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethod.Get, timeout: options.PullingRequestTimeout);
         }
 
         private HttpJsonRequest CreateClientAliveRequest()
         {
-            return commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, options.ConnectionId), "PATCH");
+            return commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Patch);
         }
 
         private HttpJsonRequest CreateCloseRequest()
         {
-            return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), "POST");
+            return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Post);
         }
 
         private void OnCompletedNotification()

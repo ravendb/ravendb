@@ -15,7 +15,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class QueriesController : RavenDbApiController
+    public class QueriesController : ClusterAwareRavenDbApiController
     {
         [HttpGet]
         [RavenRoute("queries")]
@@ -40,11 +40,12 @@ namespace Raven.Database.Server.Controllers
             {
                 try
                 {
-                    itemsToLoad = await ReadJsonArrayAsync();
+                    itemsToLoad = await ReadJsonArrayAsync().ConfigureAwait(false);
                 }
                 catch (InvalidOperationException e)
                 {
-                    Log.DebugException("Failed to deserialize query request." , e);
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Failed to deserialize query request." , e);
                     return GetMessageWithObject(new
                     {
                         Message = "Could not understand json, please check its validity."
@@ -53,7 +54,8 @@ namespace Raven.Database.Server.Controllers
                 }
                 catch (InvalidDataException e)
                 {
-                    Log.DebugException("Failed to deserialize query request." , e);
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException("Failed to deserialize query request." , e);
                     return GetMessageWithObject(new
                     {
                         e.Message
@@ -103,7 +105,7 @@ namespace Raven.Database.Server.Controllers
                                         : Database.Documents.GetWithTransformer(value, transformer, transactionInformation, transformerParameters, out includedIds);
                     if (documentByKey == null)
                     {
-                        if(ClientIsV3OrHigher)
+                        if(ClientIsV3OrHigher(Request))
                             result.Results.Add(null); 
                         continue;
                     }

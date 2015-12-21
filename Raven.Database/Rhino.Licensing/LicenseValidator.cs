@@ -92,6 +92,6 @@ namespace Rhino.Licensing
         {
             return fullPath == licensePath &&
                    lastModified == File.GetLastWriteTimeUtc(licensePath);
-        }
     }
+}
 }

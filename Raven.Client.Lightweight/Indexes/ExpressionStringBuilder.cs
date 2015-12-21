@@ -15,7 +15,6 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -1727,7 +1726,10 @@ namespace Raven.Client.Indexes
 
         private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
         {
-            if (node.Method.DeclaringType.Name == "Enumerable")
+            var declaringType = node.Method.DeclaringType;
+            if (declaringType == null)
+                return false;
+            if (declaringType.Name == "Enumerable")
             {
                 switch (node.Method.Name)
                 {
@@ -1888,24 +1890,41 @@ namespace Raven.Client.Indexes
             {
                 case ExpressionType.NewArrayInit:
                     Out("new ");
-                    if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
-                    {
-                        Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
-                    }
-                    else if (node.Expressions.Count == 0)
-                    {
-                        Out("object");
-                    }
+                    OutputAppropriateArrayType(node);
                     Out("[]");
                     VisitExpressions('{', node.Expressions, '}');
                     return node;
 
                 case ExpressionType.NewArrayBounds:
-                    Out("new " + node.Type.GetElementType());
+                    Out("new ");
+                    OutputAppropriateArrayType(node);
                     VisitExpressions('[', node.Expressions, ']');
                     return node;
             }
             return node;
+        }
+
+        private void OutputAppropriateArrayType(NewArrayExpression node)
+        {
+                    if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
+                    {
+                        Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
+                    }
+            else
+                    {
+                switch (node.NodeType)
+                {
+                    case ExpressionType.NewArrayInit:
+                        if (node.Expressions.Count == 0)
+                        {
+                        Out("object");
+                    }
+                        break;
+                case ExpressionType.NewArrayBounds:
+                        Out("object");
+                        break;
+            }
+        }
         }
 
         private static bool CheckIfAnonymousType(Type type)

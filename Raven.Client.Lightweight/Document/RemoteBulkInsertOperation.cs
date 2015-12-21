@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Net;
+
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 
 using System;
@@ -25,6 +27,7 @@ using Raven.Json.Linq;
 using System.IO.Compression;
 using System.Net.Http;
 using Raven.Client.Extensions;
+using System.Text;
 
 namespace Raven.Client.Document
 {
@@ -63,7 +66,7 @@ namespace Raven.Client.Document
         private readonly Stopwatch _timing = Stopwatch.StartNew();
         private const int BigDocumentSize = 64 * 1024;
 
-        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes,
+        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, 
             Task<int> previousTask = null, Guid? existingOperationId = null)
         {
             this.options = options;
@@ -129,7 +132,7 @@ namespace Raven.Client.Document
                             if (cancellationToken.IsCancellationRequested)
                                 source.TrySetResult(null);
                             else
-                                source.TrySetException(e);
+                            source.TrySetException(e);
                         }
                         finally
                         {
@@ -137,7 +140,7 @@ namespace Raven.Client.Document
                         }
                     }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
 
-                    await response.AssertNotFailingResponse();
+                    await response.AssertNotFailingResponse().ConfigureAwait(false);
 
                     long operationId;
 
@@ -171,7 +174,7 @@ namespace Raven.Client.Document
 
         private async Task<RavenJToken> GetAuthToken()
         {
-            using (var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true))
+            using (var request = operationClient.CreateRequest("/singleAuthToken", HttpMethods.Get, disableRequestCompression: true))
             {
                 return await request.ReadResponseJsonAsync().ConfigureAwait(false);
             }
@@ -179,7 +182,7 @@ namespace Raven.Client.Document
 
         private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
-            using (var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true, disableAuthentication: true))
+            using (var request = operationClient.CreateRequest("/singleAuthToken", HttpMethods.Get, disableRequestCompression: true, disableAuthentication: true))
             {
                 request.AddOperationHeader("Single-Use-Auth-Token", token);
                 var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
@@ -190,7 +193,7 @@ namespace Raven.Client.Document
         private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
         {
             // the request may take a long time to process, so we need to set a large timeout value
-            var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true, disableAuthentication: true, timeout: TimeSpan.FromHours(6));
+            var request = operationClient.CreateRequest(operationUrl, HttpMethods.Post, disableRequestCompression: true, disableAuthentication: true, timeout: TimeSpan.FromHours(6));
             request.AddOperationHeader("Single-Use-Auth-Token", token);
 
             return request;
@@ -198,17 +201,31 @@ namespace Raven.Client.Document
 
         private string CreateOperationUrl(BulkInsertOptions options)
         {
-            string requestUrl = "/bulkInsert?";
+            var requestUrl = new StringBuilder();
+
+            requestUrl.Append("/bulkInsert?");
             if (options.OverwriteExisting)
-                requestUrl += "overwriteExisting=true";
+                requestUrl.Append("overwriteExisting=true");
             if (options.CheckReferencesInIndexes)
-                requestUrl += "&checkReferencesInIndexes=true";
+                requestUrl.Append("&checkReferencesInIndexes=true");
             if (options.SkipOverwriteIfUnchanged)
-                requestUrl += "&skipOverwriteIfUnchanged=true";
+                requestUrl.Append("&skipOverwriteIfUnchanged=true");
 
-            requestUrl += "&operationId=" + OperationId;
+            switch(options.Format)
+            {
+                case BulkInsertFormat.Bson: requestUrl.Append("&format=bson"); break;
+                case BulkInsertFormat.Json: requestUrl.Append("&format=json"); break;                    
+            }
 
-            return requestUrl;
+            switch(options.Compression)
+            {
+                case BulkInsertCompression.None: requestUrl.Append("&compression=none"); break;
+                case BulkInsertCompression.GZip: requestUrl.Append("&compression=gzip"); break;                
+        }
+
+            requestUrl.Append("&operationId=" + OperationId);
+
+            return requestUrl.ToString();
         }
 
         private void WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
@@ -295,7 +312,7 @@ namespace Raven.Client.Document
 
             try
             {
-                var status = await GetOperationStatus(operationId);
+                var status = await GetOperationStatus(operationId).ConfigureAwait(false);
 
                 if (status == null)
                     return true;
@@ -336,7 +353,7 @@ namespace Raven.Client.Document
 
             try
             {
-                queue.Add(null);
+            queue.Add(null);
             }
             catch (InvalidOperationException e)
             {
@@ -355,17 +372,19 @@ namespace Raven.Client.Document
             try
             {
                 await operationTask.ConfigureAwait(false);
+#pragma warning disable 4014
                 operationTask.AssertNotFailed();
+#pragma warning restore 4014
 
                 if (previousTask == null)
                     ReportInternal("Finished writing all results to server");
 
                 while (true)
                 {
-                    if (await IsOperationCompleted(responseOperationId))
+                    if (await IsOperationCompleted(responseOperationId).ConfigureAwait(false))
                         break;
 
-                    await Task.Delay(100);
+                    await Task.Delay(100).ConfigureAwait(false);
                 }
                 if (previousTask == null)
                 {
@@ -378,7 +397,7 @@ namespace Raven.Client.Document
                        bufferedStream.Position / 1024d,
                        Total,
                        size / 1024d,
-                       _timing.Elapsed.TotalSeconds);
+                       _timing.Elapsed.TotalSeconds);   
                 }
             }
             catch (Exception e)
@@ -387,6 +406,8 @@ namespace Raven.Client.Document
                 if (e.Message.Contains("Raven.Abstractions.Exceptions.ConcurrencyException"))
                     throw new ConcurrencyException("ConcurrencyException while writing bulk insert items in the server. Did you run bulk insert operation with OverwriteExisting == false?. Exception returned from server: " + e.Message, e);
 
+                if (e.Message.Contains("Raven.Abstractions.Exceptions.OperationVetoedException"))
+                    throw new OperationVetoedException(e.Message, e);
                 throw;
             }
             return Total;
@@ -416,19 +437,20 @@ namespace Raven.Client.Document
                 waitedForPreviousTask = true;
             }
 
+            var sp = Stopwatch.StartNew();
+
             bufferedStream.SetLength(0);
-            long bytesWrittenToServer;
-            WriteToBuffer(localBatch, out bytesWrittenToServer);
+            long bytesWrittenToServer = WriteToBuffer(options, bufferedStream, localBatch);
 
             var requestBinaryWriter = new BinaryWriter(requestStream);
             requestBinaryWriter.Write((int)bufferedStream.Position);
-            var sp = Stopwatch.StartNew();
             bufferedStream.WriteTo(requestStream);
             requestStream.Flush();
 
             Total += localBatch.Count;
             localCount += localBatch.Count;
             size += bytesWrittenToServer;
+            
             if (previousTask == null)
             {
                 ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
@@ -440,28 +462,86 @@ namespace Raven.Client.Document
             }
         }
 
-        private void WriteToBuffer(ICollection<RavenJObject> localBatch, out long bytesWritten)
+        private static long WriteToBuffer(BulkInsertOptions options, Stream stream, ICollection<RavenJObject> batch)
         {
-            using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
-            using (var stream = new CountingStream(gzip))
+            switch ( options.Compression )
             {
-                var binaryWriter = new BinaryWriter(stream);
-                binaryWriter.Write(localBatch.Count);
-                var bsonWriter = new BsonWriter(binaryWriter)
-                {
-                    DateTimeKindHandling = DateTimeKind.Unspecified
-                };
+                case BulkInsertCompression.GZip:
+                    {
+                        using (var gzip = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
+                        {
+                            return WriteBatchToBuffer(options, gzip, batch);
+                        }
+                    }
+                case BulkInsertCompression.None:
+        {
+                        return WriteBatchToBuffer(options, stream, batch);
+                    }
+                default: throw new NotSupportedException(string.Format("The compression algorithm '{0}' is not supported", options.Compression.ToString()));
+            }
+        }
 
-                foreach (var doc in localBatch)
+        private static long WriteBatchToBuffer(BulkInsertOptions options, Stream stream, ICollection<RavenJObject> batch)
+            {
+            using (var countingStream = new CountingStream(stream))
+            {
+                switch(options.Format )
+                {
+                    case BulkInsertFormat.Bson:
+                        {
+                            WriteBsonBatchToBuffer(options, countingStream, batch);
+                            break;
+                        }
+                    case BulkInsertFormat.Json:
+                        {
+                            WriteJsonBatchToBuffer(options, countingStream, batch);
+                            break;
+                        }
+                    default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", options.Format.ToString()));
+                }                
+
+                countingStream.Flush();
+                return countingStream.NumberOfWrittenBytes;
+            }
+        }
+
+        private static void WriteBsonBatchToBuffer(BulkInsertOptions options, CountingStream stream, ICollection<RavenJObject> batch)
+        {
+                var binaryWriter = new BinaryWriter(stream);
+            binaryWriter.Write(batch.Count);
+            binaryWriter.Flush();
+
+                var bsonWriter = new BsonWriter(binaryWriter)
+                                 {
+                                     DateTimeKindHandling = DateTimeKind.Unspecified
+                                 };
+
+            foreach (var doc in batch)
                 {
                     doc.WriteTo(bsonWriter);
                 }
 
                 bsonWriter.Flush();
+            
+        }
+
+        private static void WriteJsonBatchToBuffer(BulkInsertOptions options, CountingStream stream, ICollection<RavenJObject> batch)
+        {
+            var binaryWriter = new BinaryWriter(stream);
+            binaryWriter.Write(batch.Count);
                 binaryWriter.Flush();
-                stream.Flush();
-                bytesWritten = stream.NumberOfWrittenBytes;
+
+            var jsonWriter = new JsonTextWriter(new StreamWriter(stream))
+            {
+                DateFormatHandling = DateFormatHandling.IsoDateFormat
+            };
+
+            foreach (var doc in batch)
+            {
+                doc.WriteTo(jsonWriter);
             }
+            jsonWriter.Flush();
+           
         }
 
         private void ReportInternal(string format, params object[] args)

@@ -85,14 +85,16 @@ namespace Raven.Database.Indexing
 
             if (doc == null)
             {
-                log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
+                if (log.IsDebugEnabled)
+                    log.Debug("Loaded document {0} by document {1} for index {2} could not be found", key, id, index);
 
                 ReferencesEtags.Add(key, Etag.Empty);
                 value = new DynamicNullObject();
             }
             else
             {
-                log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
+                if (log.IsDebugEnabled)
+                    log.Debug("Loaded document {0} with etag {3} by document {1} for index {2}\r\n{4}", key, id, index, doc.Etag, doc.ToJson());
 
                 ReferencesEtags.Add(key, doc.Etag);
                 value = new DynamicJsonObject(doc.ToJson());

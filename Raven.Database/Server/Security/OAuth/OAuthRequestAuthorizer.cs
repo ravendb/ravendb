@@ -63,7 +63,7 @@ namespace Raven.Database.Server.Security.OAuth
             }
 
             var writeAccess = isGetRequest == false;
-            if (!tokenBody.IsAuthorized(controller.TenantName, writeAccess))
+            if (!tokenBody.IsAuthorized(controller.ResourceName, writeAccess))
             {
                 if (allowUnauthenticatedUsers || ignoreDbAccess)
                 {
@@ -73,13 +73,13 @@ namespace Raven.Database.Server.Security.OAuth
 
                 msg = WriteAuthorizationChallenge(controller, 403, "insufficient_scope",
                     writeAccess ?
-                    "Not authorized for read/write access for tenant " + controller.TenantName :
-                    "Not authorized for tenant " + controller.TenantName);
+                    "Not authorized for read/write access for tenant " + controller.ResourceName :
+                    "Not authorized for tenant " + controller.ResourceName);
 
                 return false;
             }
-
-            controller.User = new OAuthPrincipal(tokenBody, controller.TenantName);
+            
+            controller.User = new OAuthPrincipal(tokenBody, controller.ResourceName);
             CurrentOperationContext.User.Value = controller.User;
             msg = controller.GetEmptyMessage();
 
@@ -146,7 +146,7 @@ namespace Raven.Database.Server.Security.OAuth
             return msg;
         }
 
-        public IPrincipal GetUser(RavenDbApiController controller, bool hasApiKey)
+        public IPrincipal GetUser(RavenBaseApiController controller, bool hasApiKey)
         {
             var token = GetToken(controller);
 
@@ -179,6 +179,9 @@ public class OAuthPrincipal : IPrincipal, IIdentity
     {
         this.tokenBody = tokenBody;
         this.tenantId = tenantId;
+        AdminDatabases = new HashSet<string>(this.tokenBody.AuthorizedDatabases.Where(db => db.Admin).Select(db => db.TenantId));
+        ReadOnlyDatabases = new HashSet<string>(this.tokenBody.AuthorizedDatabases.Where(db => db.ReadOnly).Select(db => db.TenantId));
+        ReadWriteDatabases = new HashSet<string>(this.tokenBody.AuthorizedDatabases.Where(db => db.ReadOnly == false).Select(db => db.TenantId));
     }
 
     public bool IsInRole(string role)
@@ -218,7 +221,6 @@ public class OAuthPrincipal : IPrincipal, IIdentity
     {
         return tokenBody.AuthorizedDatabases.Select(access => access.TenantId).ToList();
     }
-
     public AccessTokenBody TokenBody
     {
         get { return tokenBody; }
@@ -231,4 +233,7 @@ public class OAuthPrincipal : IPrincipal, IIdentity
 
         return databaseAccess.Any(access => access.Admin);
     }
+    public HashSet<string> AdminDatabases { get; private set; }
+    public HashSet<string> ReadOnlyDatabases { get; private set; }
+    public HashSet<string> ReadWriteDatabases { get; private set; }
 }

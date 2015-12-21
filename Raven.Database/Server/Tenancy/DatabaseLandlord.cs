@@ -16,15 +16,17 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Raven.Database.Server.Security;
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Tenancy
 {
     public class DatabasesLandlord : AbstractLandlord<DocumentDatabase>
     {
-
         public event Action<InMemoryRavenConfiguration> SetupTenantConfiguration = delegate { };
+
+        public event Action<string> OnDatabaseLoaded = delegate { };
 
         private bool initialized;
         private const string DATABASES_PREFIX = "Raven/Databases/";
@@ -47,7 +49,7 @@ namespace Raven.Database.Server.Tenancy
 
             FrequencyToCheckForIdleDatabasesInSec = val;
 
-            string tempPath = Path.GetTempPath();
+            string tempPath = SystemConfiguration.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
             {
@@ -96,14 +98,14 @@ namespace Raven.Database.Server.Tenancy
             if (document == null)
                 return null;
 
-            return CreateConfiguration(tenantId, document, "Raven/DataDir", systemConfiguration);
+            return CreateConfiguration(tenantId, document, Constants.RavenDataDir, systemConfiguration);
         }
 
         private DatabaseDocument GetTenantDatabaseDocument(string tenantId, bool ignoreDisabledDatabase = false)
         {
             JsonDocument jsonDocument;
             using (systemDatabase.DisableAllTriggersForCurrentThread())
-                jsonDocument = systemDatabase.Documents.Get("Raven/Databases/" + tenantId, null);
+                jsonDocument = systemDatabase.Documents.Get(Constants.Database.Prefix + tenantId, null);
             if (jsonDocument == null ||
                 jsonDocument.Metadata == null ||
                 jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
@@ -111,8 +113,8 @@ namespace Raven.Database.Server.Tenancy
                 return null;
 
             var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-            if (document.Settings["Raven/DataDir"] == null)
-                throw new InvalidOperationException("Could not find Raven/DataDir");
+            if (document.Settings[Constants.RavenDataDir] == null)
+                throw new InvalidOperationException("Could not find " + Constants.RavenDataDir);
 
             if (document.Disabled && !ignoreDisabledDatabase)
                 throw new InvalidOperationException("The database has been disabled.");
@@ -120,17 +122,17 @@ namespace Raven.Database.Server.Tenancy
             return document;
         }
 
-        public async Task<DocumentDatabase> GetDatabaseInternal(string name)
+        public override async Task<DocumentDatabase> GetResourceInternal(string resourceName)
         {
-            if (string.Equals("<system>", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
+            if (string.Equals("<system>", resourceName, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(resourceName))
                 return systemDatabase;
             Task<DocumentDatabase> db;
-            if (TryGetOrCreateResourceStore(name, out db))
-                return await db;
+            if (TryGetOrCreateResourceStore(resourceName, out db))
+                return await db.ConfigureAwait(false);
             return null;
         }
 
-        public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
+        public override bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
         {
             if (Locks.Contains(DisposingLock))
                 throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
@@ -170,23 +172,27 @@ namespace Raven.Database.Server.Tenancy
                 hasAcquired = true;
                 database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
                 {
-                var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+                    var transportState = ResourseTransportStates.GetOrAdd(tenantId, s => new TransportState());
 
                     AssertLicenseParameters(config);
-                    var documentDatabase = new DocumentDatabase(config, transportState);
+                    var documentDatabase = new DocumentDatabase(config, systemDatabase, transportState);
 
-                documentDatabase.SpinBackgroundWorkers(false);
-                documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
-                documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
-                documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
-                // register only DB that has incremental backup set.
+                    documentDatabase.SpinBackgroundWorkers(false);
+                    documentDatabase.Disposing += DocumentDatabaseDisposingStarted;
+                    documentDatabase.DisposingEnded += DocumentDatabaseDisposingEnded;
+                    documentDatabase.StorageInaccessible += UnloadDatabaseOnStorageInaccessible;
+                    // register only DB that has incremental backup set.
                     documentDatabase.OnBackupComplete += OnDatabaseBackupCompleted;
 
                     // if we have a very long init process, make sure that we reset the last idle time for this db.
                     LastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+                    documentDatabase.RequestManager = SystemDatabase.RequestManager;
                     return documentDatabase;
                 }).ContinueWith(task =>
                 {
+                    if (task.Status == TaskStatus.RanToCompletion)
+                        OnDatabaseLoaded(tenantId);
+
                     if (task.Status == TaskStatus.Faulted) // this observes the task exception
                     {
                         Logger.WarnException("Failed to create database " + tenantId, task.Exception);
@@ -232,6 +238,9 @@ namespace Raven.Database.Server.Tenancy
                 config.Settings["Raven/CompiledIndexCacheDirectory"] = compiledIndexCacheDirectory;
             }
 
+            if (config.Settings[Constants.TempPath] == null)
+                config.Settings[Constants.TempPath] = parentConfiguration.TempPath;
+
             SetupTenantConfiguration(config);
 
             config.CustomizeValuesForDatabaseTenant(tenantId);
@@ -262,33 +271,6 @@ namespace Raven.Database.Server.Tenancy
             config.Initialize();
             config.CopyParentSettings(parentConfiguration);
             return config;
-        }
-
-        public void Unprotect(DatabaseDocument databaseDocument)
-        {
-            if (databaseDocument.SecuredSettings == null)
-            {
-                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in databaseDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Convert.FromBase64String(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                try
-                {
-                    var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
-                }
-                catch (Exception e)
-                {
-                    Logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    databaseDocument.SecuredSettings[prop.Key] = Constants.DataCouldNotBeDecrypted;
-                }
-            }
         }
 
         public void Protect(DatabaseDocument databaseDocument)
@@ -347,17 +329,8 @@ namespace Raven.Database.Server.Tenancy
                 }
             }
 
-            foreach (var bundle in config.ActiveBundles.Where(bundle => bundle != "PeriodicExport"))
-            {
-                string value;
-                if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
-                {
-                    bool active;
-                    if (bool.TryParse(value, out active) && active == false)
-                        throw new InvalidOperationException("Your license does not allow the use of the " + bundle + " bundle.");
+            Authentication.AssertLicensedBundles(config.ActiveBundles);
                 }
-            }
-        }
 
         public void ForAllDatabases(Action<DocumentDatabase> action, bool excludeSystemDatabase = false)
         {

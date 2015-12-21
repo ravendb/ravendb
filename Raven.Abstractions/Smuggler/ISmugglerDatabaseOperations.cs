@@ -27,9 +27,9 @@ namespace Raven.Abstractions.Smuggler
         Task DeleteDocument(string key);
 
         [Obsolete("Use RavenFS instead.")]
-        Task<Etag> ExportAttachmentsDeletion(JsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag);
+        Task<Etag> ExportAttachmentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startAttachmentsDeletionEtag, Etag maxAttachmentEtag);
 
-        Task<Etag> ExportDocumentsDeletion(JsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag);
+        Task<Etag> ExportDocumentsDeletion(SmugglerJsonTextWriter jsonWriter, Etag startDocsEtag, Etag maxEtag);
 
         LastEtagsInfo FetchCurrentMaxEtags();
 
@@ -45,20 +45,20 @@ namespace Raven.Abstractions.Smuggler
 
         JsonDocument GetDocument(string key);
 
-        Task<IAsyncEnumerator<RavenJObject>> GetDocuments(RavenConnectionStringOptions src, Etag lastEtag, int take);
+        Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int take);
 
-        Task<RavenJArray> GetIndexes(RavenConnectionStringOptions src, int totalCount);
+        Task<RavenJArray> GetIndexes(int totalCount);
 
         Task<DatabaseStatistics> GetStats();
 
-        Task<RavenJArray> GetTransformers(RavenConnectionStringOptions src, int start);
+        Task<RavenJArray> GetTransformers(int start);
 
         Task<string> GetVersion(RavenConnectionStringOptions server);
 
         void PurgeTombstones(OperationState result);
 
         [Obsolete("Use RavenFS instead.")]
-        Task PutAttachment(RavenConnectionStringOptions dst, AttachmentExportInfo attachmentExportInfo);
+        Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
 
         Task PutDocument(RavenJObject document, int size);
 
@@ -79,5 +79,7 @@ namespace Raven.Abstractions.Smuggler
         Task<List<KeyValuePair<string, long>>> GetIdentities();
 
         Task SeedIdentityFor(string identityName, long identityValue);
+
+        string GetIdentifier();
     }
 }

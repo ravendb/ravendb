@@ -662,7 +662,7 @@ more responsive application.
             }
             includedDocumentsByKey.Remove(id);
             knownMissingIds.Add(id);
-
+            
             Defer(new DeleteCommandData { Key = id });
         }
 
@@ -794,7 +794,7 @@ more responsive application.
 
             if (id == null)
             {
-                id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token);
+                id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
             }
 
             StoreInternal(entity, etag, id, forceConcurrencyCheck);
@@ -815,14 +815,14 @@ more responsive application.
                 if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
                     return id;
 
-                var key = await GenerateKeyAsync(entity);
+                var key = await GenerateKeyAsync(entity).ConfigureAwait(false);
                 // If we generated a new id, store it back into the Id field so the client has access to to it                    
                 if (key != null)
                     GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
                 return key;
             }
 
-            var result = await GetOrGenerateDocumentKeyAsync(entity);
+            var result = await GetOrGenerateDocumentKeyAsync(entity).ConfigureAwait(false);
             GenerateEntityIdOnTheClient.TrySetIdentity(entity, result);
             return result;
         }
@@ -868,7 +868,7 @@ more responsive application.
                 ? CompletedTask.With(id)
                 : GenerateKeyAsync(entity);
 
-            var result = await generator;
+            var result = await generator.ConfigureAwait(false);
             if (result != null && result.StartsWith("/"))
                 throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 
@@ -1181,8 +1181,11 @@ more responsive application.
 
             var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
             var changedData = changes != null ? new List<DocumentsChanges>() : null;
-            var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false)
-                || (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
+
+            var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
+            var isMetadataEquals = RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData);
+
+            var changed = (isObjectEquals == false) || (isMetadataEquals == false);
 
             if (changes != null && changedData.Count > 0)
                 changes[documentMetadata.Key] = changedData.ToArray();
@@ -1346,7 +1349,6 @@ more responsive application.
         protected void LogBatch(SaveChangesData data)
         {
             if (log.IsDebugEnabled)
-            {
                 log.Debug(() =>
                 {
                     var sb = new StringBuilder()
@@ -1359,7 +1361,6 @@ more responsive application.
                     return sb.ToString();
                 });
             }
-        }
 
         public void RegisterMissing(string id)
         {
@@ -1484,7 +1485,7 @@ more responsive application.
                 conversionListener.BeforeConversionToEntity(null, y, null);
             }
             var instance = y.Deserialize(type, Conventions);
-
+            
             foreach (var conversionListener in theListeners.ConversionListeners)
             {
                 conversionListener.AfterConversionToEntity(null, y, null, instance);

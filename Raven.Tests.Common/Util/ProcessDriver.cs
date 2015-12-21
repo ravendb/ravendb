@@ -64,8 +64,9 @@ namespace Raven.Tests.Common.Util
                     {
                         _process.StandardInput.WriteLine(input.Take());
                     }
-                    catch (ObjectDisposedException)
+                    catch (Exception)
                     {
+                        break;
                     }
                 }
             });

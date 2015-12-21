@@ -2,11 +2,9 @@
 
 import alertType = require("common/alertType");
 import messagePublisher = require("common/messagePublisher");
-import database = require("models/database");
-import filesystem = require("models/filesystem/filesystem");
-import resource = require("models/resource");
+import database = require("models/resources/database");
+import resource = require("models/resources/resource");
 import appUrl = require("common/appUrl");
-import shell = require("viewmodels/shell");
 import oauthContext = require("common/oauthContext");
 import forge = require("forge/forge_custom.min");
 import router = require("plugins/router");
@@ -20,9 +18,6 @@ class commandBase {
     static alertTimeout = 0;
     static loadingCounter = 0;
     static biggestTimeToAlert = 0;
-
-    constructor() {
-    }
 
     execute<T>(): JQueryPromise<T> {
         throw new Error("Execute must be overridden.");
@@ -48,8 +43,8 @@ class commandBase {
         return longWait ? 60000 : 9000;
     }
 
-    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, timeToAlert: number = 9000): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "GET", resource, null, timeToAlert);
+    query<T>(relativeUrl: string, args: any, resource?: resource, resultsSelector?: (results: any) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+        var ajax = this.ajax(relativeUrl, args, "GET", resource, options, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
@@ -178,14 +173,16 @@ class commandBase {
 
         if (oauthContext.apiKey()) {
             if (!defaultOptions.headers) {
-                defaultOptions.headers = {}
+                var newHeaders: any = {};
+                defaultOptions.headers = newHeaders;
             }
             defaultOptions.headers["Has-Api-Key"] = "True";
         }
 
         if (oauthContext.authHeader()) {
             if (!defaultOptions.headers) {
-                defaultOptions.headers = {}
+                var newHeaders: any = {};
+                defaultOptions.headers = newHeaders;
             }
             defaultOptions.headers["Authorization"] = oauthContext.authHeader();
         }

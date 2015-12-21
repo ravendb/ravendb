@@ -20,9 +20,6 @@ namespace Raven.Database.Server.Connections
         private readonly ConcurrentSet<string> matchingBulkInserts = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
         private readonly ConcurrentSet<string> matchingFolders = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-        private readonly ConcurrentSet<long> matchingDataSubscriptions =
-            new ConcurrentSet<long>();
-
         private IEventsTransport eventsTransport;
 
         private int watchAllDocuments;
@@ -32,12 +29,20 @@ namespace Raven.Database.Server.Connections
         private int watchConfig;
         private int watchConflicts;
         private int watchSync;
-        private int watchAllDataSubscriptions;
 
         public ConnectionState(IEventsTransport eventsTransport)
         {
             this.eventsTransport = eventsTransport;
+            DocumentStore = new DocumentsConnectionState(Enqueue);
+            FileSystem = new FileSystemConnectionState(Enqueue);
+            CounterStorage = new CounterStorageConnectionState(Enqueue);
+            TimeSeries = new TimeSeriesConnectionState(Enqueue);
         }
+
+        public DocumentsConnectionState DocumentStore { get; private set; }
+        public FileSystemConnectionState FileSystem { get; private set; }
+        public CounterStorageConnectionState CounterStorage { get; private set; }
+        public TimeSeriesConnectionState TimeSeries { get; private set; }
 
         public object DebugStatus
         {
@@ -58,7 +63,10 @@ namespace Raven.Database.Server.Connections
                     WatchDocumentsInCollection = matchingDocumentsInCollection.ToArray(),
                     WatchIndexes = matchingIndexes.ToArray(),
                     WatchDocuments = matchingDocuments.ToArray(),
-                    WatchedFolders = matchingFolders.ToArray()
+                    WatchedFolders = matchingFolders.ToArray(),
+                    DocumentStore = DocumentStore.DebugStatus,
+                    FileSystem = FileSystem.DebugStatus,
+                    CounterStorage = CounterStorage.DebugStatus
                 };
             }
         }
@@ -233,57 +241,6 @@ namespace Raven.Database.Server.Connections
             Enqueue(new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" });
         }
 
-        public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
-        {
-            if (watchAllDataSubscriptions > 0)
-            {
-                Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
-                return;
-            }
-
-            if (matchingDataSubscriptions.Contains(dataSubscriptionChangeNotification.Id) == false)
-                return;
-
-            Enqueue(new { Value = dataSubscriptionChangeNotification, Type = "DataSubscriptionChangeNotification" });
-        }
-
-        public void Send(Notification notification)
-        {
-            if (ShouldSend(notification))
-            {
-                var value = new { Value = notification, Type = notification.GetType().Name };
-
-                Enqueue(value);
-            }
-        }
-
-        private bool ShouldSend(Notification notification)
-        {
-            if (notification is FileChangeNotification &&
-                matchingFolders.Any(
-                    f => ((FileChangeNotification)notification).File.StartsWith(f, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                return true;
-            }
-
-            if (notification is ConfigurationChangeNotification && watchConfig > 0)
-            {
-                return true;
-            }
-
-            if (notification is ConflictNotification && watchConflicts > 0)
-            {
-                return true;
-            }
-
-            if (notification is SynchronizationUpdateNotification && watchSync > 0)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
         private void Enqueue(object msg)
         {
             if (eventsTransport == null || eventsTransport.Connected == false)
@@ -352,26 +309,6 @@ namespace Raven.Database.Server.Connections
         public void UnwatchAllReplicationConflicts()
         {
             Interlocked.Decrement(ref watchAllReplicationConflicts);
-        }
-
-        public void WatchAllDataSubscriptions()
-        {
-            Interlocked.Increment(ref watchAllDataSubscriptions);
-        }
-
-        public void UnwatchAllDataSubscriptions()
-        {
-            Interlocked.Decrement(ref watchAllDataSubscriptions);
-        }
-
-        public void WatchDataSubscription(long id)
-        {
-            matchingDataSubscriptions.TryAdd(id);
-        }
-
-        public void UnwatchDataSubscription(long id)
-        {
-            matchingDataSubscriptions.TryRemove(id);
         }
 
         public void Reconnect(IEventsTransport transport)

@@ -7,7 +7,7 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
-using Mono.Unix.Native;
+using Raven.Unix.Native;
 using Voron.Impl.FileHeaders;
 using Voron.Platform.Win32;
 
@@ -42,7 +42,7 @@ namespace Voron.Platform.Posix
         public static unsafe void WriteFileHeader(FileHeader* header, string path)
         {
             var fd = Syscall.open(path, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
-                                  FilePermissions.ALLPERMS);
+                                  FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             try
             {
                 if (fd == -1)

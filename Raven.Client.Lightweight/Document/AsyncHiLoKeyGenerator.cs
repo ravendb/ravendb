@@ -11,7 +11,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
@@ -36,6 +35,7 @@ namespace Raven.Client.Document
         /// <summary>
         /// Generates the document key.
         /// </summary>
+        /// <param name="databaseCommands">The commands.</param>
         /// <param name="convention">The convention.</param>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>

@@ -13,9 +13,11 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Bundles.Replication.Tasks;
 using Raven.Client;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Listeners;
@@ -36,6 +38,7 @@ namespace Raven.Tests.Common
     {
         protected int PortRangeStart = 9000;
         protected int RetriesCount = 500;
+        private volatile bool hasWaitEnded;
 
         protected ReplicationBase()
         {
@@ -90,6 +93,7 @@ namespace Raven.Tests.Common
 
             return documentStore;
         }
+
 
         protected bool CheckIfConflictDocumentsIsThere(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
         {
@@ -227,6 +231,8 @@ namespace Raven.Tests.Common
             string password = null,
             string domain = null,
             ReplicationClientConfiguration clientConfiguration = null,
+            Dictionary<string, string> specifiedCollections = null,
+            bool skipIndexReplication = false,
             string authenticationScheme = null)
         {
             db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
@@ -242,8 +248,9 @@ namespace Raven.Tests.Common
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
                     IgnoredClient = ignoredClient,
-                    SkipIndexReplication = false, //precaution
-                    AuthenticationScheme = authenticationScheme
+                    AuthenticationScheme = authenticationScheme,
+                    SpecifiedCollections = specifiedCollections,
+                    SkipIndexReplication = skipIndexReplication
                 };
                 if (db != null)
                     replicationDestination.Database = db;
@@ -287,15 +294,50 @@ namespace Raven.Tests.Common
 
         }
 
+
+        protected void SetupReplication(IDatabaseCommands source, Dictionary<string, string> specifiedCollections, params DocumentStore[] destinations)
+        {
+            Assert.NotEmpty(destinations);
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
+                {
+                    { "Url", destination.Url },
+                    { "Database", destination.DefaultDatabase },
+                    { "SpecifiedCollections", RavenJObject.FromObject(specifiedCollections) }
+                }).ToList();			
+
+            SetupReplication(source, destinationDocs);
+        }
+
+
         protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
         {
             Assert.NotEmpty(destinations);
-            SetupReplication(source, destinations.Select(destination => new RavenJObject
+
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
                                                                         {
                                                                             { "Url", destination.Url },
                                                                             { "Database", destination.DefaultDatabase }
-                                                                        }));
+                }).ToList();
+
+            SetupReplication(source, destinationDocs);
         }
+
+        protected void UpdateReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+                                                                        {
+            Assert.NotEmpty(destinations);
+
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
+                {
+                                                                            { "Url", destination.Url },
+                                                                            { "Database", destination.DefaultDatabase }
+                }).ToList();
+
+            UpdateReplication(source, destinationDocs);
+        }
+
 
         protected void SetupReplication(IDatabaseCommands source, params string[] urls)
         {
@@ -313,6 +355,22 @@ namespace Raven.Tests.Common
                                "Destinations", new RavenJArray(destinations)
                            }
                        }, new RavenJObject());
+        }
+
+        protected void UpdateReplication(IDatabaseCommands source, IEnumerable<RavenJObject> destinations)
+        {
+            Assert.NotEmpty(destinations);
+            var patches = new List<PatchRequest>();
+            foreach (var dest in destinations)
+            {
+                patches.Add(new PatchRequest
+                {
+                    Type = PatchCommandType.Insert,
+                    Name = "Destinations",
+                    Value = dest
+                });
+            }
+            source.Patch(Constants.RavenReplicationDestinations, patches.ToArray());
         }
 
         protected void RemoveReplication(IDatabaseCommands source)
@@ -392,10 +450,16 @@ namespace Raven.Tests.Common
             return attachment;
         }
 
-        protected override void WaitForDocument(IDatabaseCommands commands, string expectedId)
+        protected void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null, CancellationToken? token = null)
         {
+            if (afterEtag != null)
+                throw new NotImplementedException();
+
             for (int i = 0; i < RetriesCount; i++)
             {
+                if (token.HasValue)
+                    token.Value.ThrowIfCancellationRequested();
+
                 if (commands.Head(expectedId) != null)
                     break;
                 Thread.Sleep(100);
@@ -404,6 +468,17 @@ namespace Raven.Tests.Common
             var jsonDocumentMetadata = commands.Head(expectedId);
 
             Assert.NotNull(jsonDocumentMetadata);
+        }
+
+        protected bool WaitForDocument(IDatabaseCommands commands, string expectedId, int timeoutInMs)
+        {
+            var cts = new CancellationTokenSource();
+            var waitingTask = Task.Run(() => WaitForDocument(commands, expectedId, null, cts.Token), cts.Token);
+
+            Task.WaitAny(waitingTask, Task.Delay(timeoutInMs, cts.Token));
+
+            cts.Cancel();
+            return AsyncHelpers.RunSync(() => waitingTask.ContinueWith(t => commands.Head(expectedId) != null));
         }
 
         protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
@@ -489,6 +564,75 @@ namespace Raven.Tests.Common
 
             if (waitToStart)
                 SpinWait.SpinUntil(() => replicationTask.IsRunning, TimeSpan.FromSeconds(10));
+        }
+
+        protected bool WaitForIndexToReplicate(IDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+        {
+            var mre = new ManualResetEventSlim();
+            hasWaitEnded = false;
+            Task.Run(() =>
+            {
+                while (hasWaitEnded == false)
+                {
+                    var stats = commands.GetStatistics();
+                    if (stats.Indexes.Any(x => x.Name == indexName))
+                    {
+                        mre.Set();
+                        break;
+    }
+                    Thread.Sleep(25);
+}
+            });
+
+            var success = mre.Wait(timeoutInMilliseconds);
+            hasWaitEnded = true;
+            return success;
+        }
+
+        protected bool WaitForIndexDeletionToReplicate(IDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+        {
+            var mre = new ManualResetEventSlim();
+            hasWaitEnded = false;
+            Task.Run(() =>
+            {
+                while (hasWaitEnded == false)
+                {
+                    var stats = commands.GetStatistics();
+                    if (stats.Indexes.Any(x => x.Name == indexName) == false)
+                    {
+                        mre.Set();
+                        break;
+                    }
+                    Thread.Sleep(25);
+                }
+            });
+
+            var success = mre.Wait(timeoutInMilliseconds);
+            hasWaitEnded = true;
+            return success;
+        }
+
+        protected bool WaitForIndexToReplicate(IAsyncDatabaseCommands commands, string indexName, int timeoutInMilliseconds = 1500)
+        {
+            var mre = new ManualResetEventSlim();
+            hasWaitEnded = false;
+            Task.Run(async () =>
+            {
+                while (hasWaitEnded == false)
+                {
+                    var stats = await commands.GetStatisticsAsync().ConfigureAwait(false);
+                    if (stats.Indexes.Any(x => x.Name == indexName))
+                    {
+                        mre.Set();
+                        break;
+                    }
+                    Thread.Sleep(25);
+                }
+            });
+
+            var success = mre.Wait(timeoutInMilliseconds);
+            hasWaitEnded = true;
+            return success;
         }
     }
 }

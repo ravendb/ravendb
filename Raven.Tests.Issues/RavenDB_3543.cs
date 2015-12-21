@@ -56,7 +56,6 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
                     var result = session.Query<Lead, Leads_Index>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
                         .Where(x => x.Status.Value != 0)

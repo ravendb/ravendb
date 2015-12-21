@@ -1,3 +1,4 @@
+#if !DNXCORE50
 //-----------------------------------------------------------------------
 // <copyright file="CurrentOperationContext.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -5,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -14,20 +14,47 @@ namespace Raven.Abstractions.Logging
 {
     public static class LogContext
     {
-        public static readonly ThreadLocal<string> DatabaseName = new ThreadLocal<string>();
+        private static readonly Raven.Abstractions.Threading.ThreadLocal<string> resourceName = new Raven.Abstractions.Threading.ThreadLocal<string>();
 
-        public static IDisposable WithDatabase(string database)
+        public static IDisposable WithResource(string resourceName)
         {
-            var old = DatabaseName.Value;
-            var db = database ?? Constants.SystemDatabase;
-            var disposable = LogManager.OpenMappedContext("database", db);
-            DatabaseName.Value = db;
+            var old = LogContext.resourceName.Value;
+            var name = resourceName ?? Constants.SystemDatabase;
+            var disposable = LogManager.OpenMappedContext("resource", name);
+            LogContext.resourceName.Value = name;
 
             return new DisposableAction(()=>
             {
-                DatabaseName.Value = old;
+                LogContext.resourceName.Value = old;
                 disposable.Dispose();
             });
         }
+
+        public static string ResourceName
+        {
+            get
+            {
+                try
+                {
+                    return resourceName.Value;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // can happen when logging from finalizers under crash scenario
+                    return "unknown";
+                }
+            }
+            set
+            {
+                try
+                {
+                    resourceName.Value = value;
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
+        }
     }
 }
+#endif

@@ -36,6 +36,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing.Analyzers;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
@@ -53,7 +54,7 @@ namespace Raven.Database.Indexing
     /// <summary>
     /// 	This is a thread safe, single instance for a particular index.
     /// </summary>
-    public abstract class Index : IDisposable,ILowMemoryHandler
+    public abstract class Index : IDisposable, ILowMemoryHandler
     {
         protected static readonly ILog logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
         protected static readonly ILog logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
@@ -114,7 +115,8 @@ namespace Raven.Database.Indexing
             this.indexDefinition = indexDefinition;
             this.viewGenerator = viewGenerator;
             this.context = context;
-            logIndexing.Debug("Creating index for {0}", PublicName);
+            if (logIndexing.IsDebugEnabled)
+                logIndexing.Debug("Creating index for {0}", PublicName);
             this.directory = directory;
             flushSize = context.Configuration.FlushIndexToDiskSizeInMb * 1024 * 1024;
             _indexCreationTime = SystemTime.UtcNow;
@@ -122,6 +124,7 @@ namespace Raven.Database.Indexing
 
             MemoryStatistics.RegisterLowMemoryHandler(this);
         }
+        public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
         [ImportMany]
         public OrderedPartCollection<AbstractAnalyzerGenerator> AnalyzerGenerators { get; set; }
@@ -315,10 +318,10 @@ namespace Raven.Database.Indexing
                 if (indexWriter == null)
                     CreateIndexWriter();
             }
-            catch ( IOException e )
+            catch (IOException e)
             {
                 string msg = string.Format("Error when trying to create the index writer for index '{0}'.", this.PublicName);
-                throw new IOException( msg, e );
+                throw new IOException(msg, e);
             }
         }
 
@@ -335,10 +338,18 @@ namespace Raven.Database.Indexing
                     if (context.IndexStorage == null)
                         return;
 
+                    waitReason = "Flush";
                     try
                     {
-                        waitReason = "Flush";
+                        try
+                        {
                         indexWriter.Commit(highestETag);
+                        }
+                        catch (Exception e)
+                        {
+                            HandleWriteError(e);
+                            throw;
+                        }
 
                         ResetWriteErrors();
                     }
@@ -350,7 +361,7 @@ namespace Raven.Database.Indexing
             }
             catch (Exception e)
             {
-                IncrementWriteErrors(e);
+                HandleWriteError(e);
                 throw new IOException("Error during flush for " + PublicName, e);
             }
         }
@@ -367,15 +378,19 @@ namespace Raven.Database.Indexing
                     
                     EnsureIndexWriter();
 
+                    try
+                    {
                     indexWriter.Optimize();
-                    logIndexing.Info("Done merging {0} - took {1}", PublicName, sp.Elapsed);
-
-                    ResetWriteErrors();
                 }
                 catch (Exception e)
                 {
-                    IncrementWriteErrors(e);
+                        HandleWriteError(e);
                     throw;
+                }
+
+                    logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
+
+                    ResetWriteErrors();
                 }
                 finally
                 {
@@ -593,8 +608,6 @@ namespace Raven.Database.Indexing
                 }
                 catch (Exception e)
                 {
-                    IncrementWriteErrors(e);
-
                     throw new InvalidOperationException("Could not properly write to index " + PublicName, e);
                 }
                 finally
@@ -716,7 +729,7 @@ namespace Raven.Database.Indexing
             }
             catch (Exception e)
             {
-                IncrementWriteErrors(e);
+                HandleWriteError(e);
                 throw new IOException("Failure to create index writer for " + PublicName, e);
             }
         }
@@ -798,7 +811,8 @@ namespace Raven.Database.Indexing
                             continue;
                         if (standardAnalyzer == null)
                         {
-                            standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+                            standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
+                            //standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
                             toDispose.Add(standardAnalyzer.Close);
                         }
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, standardAnalyzer);
@@ -835,7 +849,7 @@ namespace Raven.Database.Indexing
             return new RobustEnumerator(context.CancellationToken, context.Configuration.MaxNumberOfItemsToProcessInSingleBatch,
                 beforeMoveNext: () => Interlocked.Increment(ref stats.IndexingAttempts),
                 cancelMoveNext: () => Interlocked.Decrement(ref stats.IndexingAttempts),
-                onError: onErrorFunc )
+                onError: onErrorFunc)
                 {
                     MoveNextDuration = linqExecutionDuration
                 }
@@ -954,7 +968,7 @@ namespace Raven.Database.Indexing
         {
             if (indexWriter == null)
             {
-                currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), PublicName,wait: false);
+                currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true), PublicName, wait: false);
             }
             else
             {
@@ -1110,7 +1124,8 @@ namespace Raven.Database.Indexing
                     .AppendLine();
             }
 
-            logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, PublicName,
+            if (logIndexing.IsDebugEnabled)
+                logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, PublicName,
                 sb.ToString());
         }
 
@@ -1134,25 +1149,32 @@ namespace Raven.Database.Indexing
             }
             if (indexQuery.SortedFields != null)
             {
-                foreach (SortedField field in indexQuery.SortedFields)
+                foreach (SortedField sortedField in indexQuery.SortedFields)
                 {
-                    string f = field.Field;
-                    if (f == Constants.TemporaryScoreValue)
+                    string field = sortedField.Field;
+                    if (field == Constants.TemporaryScoreValue)
                         continue;
-                    if (f.EndsWith("_Range"))
+                    if (field.EndsWith("_Range"))
                     {
-                        f = f.Substring(0, f.Length - "_Range".Length);
+                        field = field.Substring(0, field.Length - "_Range".Length);
                     }
-                    if (f.StartsWith(Constants.RandomFieldName) || f.StartsWith(Constants.CustomSortFieldName))
+
+                    if (field.StartsWith(Constants.RandomFieldName) || field.StartsWith(Constants.CustomSortFieldName))
                         continue;
-                    if (viewGenerator.ContainsField(f) == false && !f.StartsWith(Constants.DistanceFieldName)
+
+                    if (field.StartsWith(Constants.AlphaNumericFieldName))
+                    {
+                        field = SortFieldHelper.CustomField(field).Name;
+                        if (string.IsNullOrEmpty(field))
+                            throw new ArgumentException("Alpha numeric sorting requires a field name");
+                    }
+
+                    if (viewGenerator.ContainsField(field) == false && !field.StartsWith(Constants.DistanceFieldName)
                             && viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
-                        throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+                        throw new ArgumentException("The field '" + field + "' is not indexed, cannot sort on fields that are not indexed");
                 }
             }
         }
-
-
 
         #region Nested type: IndexQueryOperation
 
@@ -1858,6 +1880,7 @@ namespace Raven.Database.Indexing
                     HashSet<string> set;
                     if (merged.TryGetValue(kvp.Key, out set))
                     {
+                        if (logIndexing.IsDebugEnabled)
                         logIndexing.Debug("Merging references for key = {0}, references = {1}", kvp.Key, String.Join(",", set));
                         set.UnionWith(kvp.Value);
                     }
@@ -1894,8 +1917,8 @@ namespace Raven.Database.Indexing
                         continue;
                     task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
                 }
-                if (task.ReferencesToCheck.Count > 0)
-                    logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
+                if (logIndexing.IsDebugEnabled && task.ReferencesToCheck.Count > 0)
+                    logIndexing.Debug("Scheduled to touch documents: {0}", string.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
             }
             if (task.ReferencesToCheck.Count == 0)
                 return;
@@ -1951,16 +1974,41 @@ namespace Raven.Database.Indexing
             return false;
         }
 
-        public void IncrementWriteErrors(Exception e)
+        private void HandleWriteError(Exception e)
         {
-            if (e is SystemException) // Don't count transient errors
+            if (disposed)
                 return;
 
-            writeErrors = Interlocked.Increment(ref writeErrors);
-
-            if (Interlocked.Read(ref writeErrors) < WriteErrorsLimit || Priority == IndexingPriority.Error)
+            if (e.GetType() == typeof(SystemException)) // ignore transient errors
                 return;
 
+            bool indexCorrupted = false;
+            string errorMessage = null;
+
+            if (e is IOException)
+            {
+                errorMessage = string.Format("Index '{0}' got corrupted because it failed in writing to a disk with the following exception message: {1}." +
+                                             " The index priority was set to Error.", PublicName, e.Message);
+                indexCorrupted = true;
+            }
+            else
+            {
+                var errorCount = Interlocked.Increment(ref writeErrors);
+
+                if (errorCount >= WriteErrorsLimit)
+                {
+                    errorMessage = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, errorCount);
+                    indexCorrupted = true;
+                }
+            }
+
+            if (indexCorrupted == false || (Priority & IndexingPriority.Error) == IndexingPriority.Error)
+                return;
+
+            using (context.TransactionalStorage.DisableBatchNesting())
+            {
+                try
+                {
             context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error));
             Priority = IndexingPriority.Error;
 
@@ -1970,20 +2018,26 @@ namespace Raven.Database.Indexing
                 Type = IndexChangeTypes.IndexMarkedAsErrored
             });
 
-            var msg = string.Format("Index '{0}' failed {1} times to write data to a disk. The index priority was set to Error.", PublicName, WriteErrorsLimit);
+                    if (string.IsNullOrEmpty(errorMessage))
+                        throw new ArgumentException("Error message has to be set");
 
-            logIndexing.Warn(msg);
-
-            context.AddError(indexId, PublicName, null, msg);
+                    logIndexing.WarnException(errorMessage, e);
+                    context.AddError(indexId, PublicName, null, e, errorMessage);
 
             context.Database.AddAlert(new Alert
             {
                 AlertLevel = AlertLevel.Error,
                 CreatedAt = SystemTime.UtcNow,
-                Message = msg,
-                Title = string.Format("Index '{0}' marked as errored due to write errors", PublicName),
+                        Message = errorMessage,
+                        Title = string.Format("Index '{0}' marked as errored due to corruption", PublicName),
                 UniqueKey = string.Format("Index '{0}' errored, dbid: {1}", PublicName, context.Database.TransactionalStorage.Id),
             });
+        }
+                catch (Exception ex)
+                {
+                    logIndexing.WarnException(string.Format("Failed to handle corrupted {0} index", PublicName), ex);
+                }
+            }
         }
 
         private void ResetWriteErrors()
@@ -2031,7 +2085,7 @@ namespace Raven.Database.Indexing
             }
             finally
             {
-                if(tryEnter)
+                if (tryEnter)
                 Monitor.Exit(writeLock);
             }
         }

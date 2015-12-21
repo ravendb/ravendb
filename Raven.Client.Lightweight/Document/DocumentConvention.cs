@@ -13,12 +13,13 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
+
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection.Async;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
-using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
@@ -33,7 +34,7 @@ namespace Raven.Client.Document
     /// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
     /// the way the Raven client API behaves
     /// </summary>
-    public class DocumentConvention : Convention
+    public class DocumentConvention : QueryConvention
     {
         public delegate IEnumerable<object> ApplyReduceFunctionFunc(
             Type indexType,
@@ -49,7 +50,7 @@ namespace Raven.Client.Document
         private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
             new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions =
+        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions = 
             new List<Tuple<Type, Func<ValueType, string>>>();
 
         /// <summary>
@@ -98,6 +99,7 @@ namespace Raven.Client.Document
             ShouldSaveChangesForceAggressiveCacheCheck = true;
             IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
             AcceptGzipContent = true;
+            RequestTimeThresholdInMilliseconds = 100;
         }
 
         private IEnumerable<object> DefaultApplyReduceFunction(
@@ -152,7 +154,7 @@ namespace Raven.Client.Document
                 if (outputId != null)
                     return outputId;
             }
-
+            
 
             var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
             var tag = GetTypeTagName(type);
@@ -301,31 +303,31 @@ namespace Raven.Client.Document
             return FindTypeTagName(type) ?? DefaultTypeTagName(type);
         }
 
-        /// <summary>
-        /// If object is dynamic, try to load a tag name.
-        /// </summary>
-        /// <param name="entity">Current entity.</param>
-        /// <returns>Dynamic tag name if available.</returns>
-        public string GetDynamicTagName(object entity)
-        {
-            if (entity == null)
-            {
-                return null;
-            }
+       /// <summary>
+       /// If object is dynamic, try to load a tag name.
+       /// </summary>
+       /// <param name="entity">Current entity.</param>
+       /// <returns>Dynamic tag name if available.</returns>
+       public string GetDynamicTagName(object entity)
+       {
+          if (entity == null)
+          {
+             return null;
+          }
 
-            if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
-            {
-                try
-                {
-                    return FindDynamicTagName(entity);
-                }
-                catch (RuntimeBinderException)
-                {
-                }
-            }
+          if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+          {
+             try
+             {
+                return FindDynamicTagName(entity);
+             }
+             catch (RuntimeBinderException)
+             {
+             }
+          }
 
-            return GetTypeTagName(entity.GetType());
-        }
+          return GetTypeTagName(entity.GetType());
+       }
 
         /// <summary>
         /// Generates the document key.
@@ -396,11 +398,11 @@ namespace Raven.Client.Document
         /// <value>The name of the find type tag.</value>
         public Func<Type, string> FindTypeTagName { get; set; }
 
-        /// <summary>
-        /// Gets or sets the function to find the tag name if the object is dynamic.
-        /// </summary>
-        /// <value>The tag name.</value>
-        public Func<dynamic, string> FindDynamicTagName { get; set; }
+      /// <summary>
+      /// Gets or sets the function to find the tag name if the object is dynamic.
+      /// </summary>
+      /// <value>The tag name.</value>
+      public Func<dynamic, string> FindDynamicTagName { get; set; }
 
         /// <summary>
         /// Gets or sets the function to find the indexed property name
@@ -536,6 +538,7 @@ namespace Raven.Client.Document
             return this;
         }
 
+
         private static Lazy<JsonConverterCollection> defaultConverters = new Lazy<JsonConverterCollection>(() =>
         {
             var converters = new JsonConverterCollection(Default.Converters);
@@ -571,11 +574,13 @@ namespace Raven.Client.Document
         {
             get { return defaultConverters.Value; }
         }
-
+        
         private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
         {
             get { return defaultConvertersEnumsAsIntegers.Value; }
         }
+        
+
 
         /// <summary>
         /// Creates the serializer.
@@ -591,7 +596,7 @@ namespace Raven.Client.Document
                 TypeNameHandling = TypeNameHandling.Auto,
                 TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                FloatParseHandling = FloatParseHandling.PreferDecimalFallbackToDouble,
+                FloatParseHandling = FloatParseHandling.Double,
                 Converters = new JsonConverterCollection()
             };
 
@@ -688,6 +693,8 @@ namespace Raven.Client.Document
         public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; }
 
         public bool AcceptGzipContent { get; set; }
+
+        public ClusterBehavior ClusterBehavior { get; set; }
 
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
 
@@ -786,6 +793,58 @@ namespace Raven.Client.Document
                 return true;
 
             return customRangeTypes.Contains(type);
+        }
+
+        protected Dictionary<Type, MemberInfo> idPropertyCache = new Dictionary<Type, MemberInfo>();
+
+        /// <summary>
+        /// Gets or sets the function to find the identity property.
+        /// </summary>
+        /// <value>The find identity property.</value>
+        public Func<MemberInfo, bool> FindIdentityProperty { get; set; }
+
+        /// <summary>
+        /// Gets the identity property.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns></returns>
+        public MemberInfo GetIdentityProperty(Type type)
+        {
+            MemberInfo info;
+            var currentIdPropertyCache = idPropertyCache;
+            if (currentIdPropertyCache.TryGetValue(type, out info))
+                return info;
+
+            var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
+
+            if (identityProperty != null && identityProperty.DeclaringType != type)
+            {
+                var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
+                identityProperty = propertyInfo ?? identityProperty;
+    }
+
+            idPropertyCache = new Dictionary<Type, MemberInfo>(currentIdPropertyCache)
+            {
+                {type, identityProperty}
+            };
+
+            return identityProperty;
+        }
+
+        private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)
+        {
+            foreach (var propertyInfo in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+            {
+                yield return propertyInfo;
+            }
+
+            foreach (var @interface in type.GetInterfaces())
+            {
+                foreach (var propertyInfo in GetPropertiesForType(@interface))
+                {
+                    yield return propertyInfo;
+                }
+            }
         }
 
     }

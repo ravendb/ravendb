@@ -76,7 +76,7 @@ namespace Raven.Database.FileSystem.Synchronization
                         ExecuteMetadataUpdate();
                         break;
                     case SynchronizationType.ContentUpdate:
-                        await ExecuteContentUpdate(localMetadata, report);
+                        await ExecuteContentUpdate(localMetadata, report).ConfigureAwait(false);
                         
                         afterSynchronizationTriggerData = new
                         {
@@ -202,7 +202,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 switch (strategy)
                 {
                     case ConflictResolutionStrategy.RemoteVersion:
-                        Log.Debug("Conflict automatically resolved by choosing remote version of the file {0}", fileName);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Conflict automatically resolved by choosing remote version of the file {0}", fileName);
                         return;
                     case ConflictResolutionStrategy.CurrentVersion:
 
@@ -212,8 +213,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
                             fs.ConflictArtifactManager.Delete(fileName, accessor);
                         });
-
-                        Log.Debug("Conflict automatically resolved by choosing current version of the file {0}", fileName);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Conflict automatically resolved by choosing current version of the file {0}", fileName);
 
                         throw new ConflictResolvedInFavourOfCurrentVersionException();
                 }
@@ -228,8 +229,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 Status = ConflictStatus.Detected,
                 RemoteFileHeader = new FileHeader(fileName, localMetadata)
             });
-
-            Log.Debug("File '{0}' is in conflict with synchronized version from {1} ({2}). File marked as conflicted, conflict configuration item created",
+            if (Log.IsDebugEnabled)
+                Log.Debug("File '{0}' is in conflict with synchronized version from {1} ({2}). File marked as conflicted, conflict configuration item created",
                 fileName, sourceFs.Url, sourceFs.Id);
 
             throw new SynchronizationException(string.Format("File {0} is conflicted", fileName));
@@ -280,11 +281,13 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 var provider = new MultipartSyncStreamProvider(synchronizingFile, localFile);
 
-                Log.Debug("Starting to process/read multipart content of a file '{0}'", fileName);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Starting to process/read multipart content of a file '{0}'", fileName);
 
-                await MultipartContent.ReadAsMultipartAsync(provider);
+                await MultipartContent.ReadAsMultipartAsync(provider).ConfigureAwait(false);
 
-                Log.Debug("Multipart content of a file '{0}' was processed/read", fileName);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Multipart content of a file '{0}' was processed/read", fileName);
 
                 report.BytesCopied = provider.BytesCopied;
                 report.BytesTransfered = provider.BytesTransfered;
@@ -311,10 +314,14 @@ namespace Raven.Database.FileSystem.Synchronization
                     fs.Search.Index(fileName, sourceMetadata, updateResult.Etag);
                 });
 
-                if (localFile == null)
-                    Log.Debug("Temporary downloading file '{0}' was renamed to '{1}'. Indexes were updated.", tempFileName, fileName);
-                else
-                    Log.Debug("Old file '{0}' was deleted. Indexes were updated.", fileName);
+                if (Log.IsDebugEnabled)
+                {
+                    var message = localFile == null 
+                        ? string.Format("Temporary downloading file '{0}' was renamed to '{1}'. Indexes were updated.", tempFileName, fileName) 
+                        : string.Format("Old file '{0}' was deleted. Indexes were updated.", fileName);
+
+                    Log.Debug(message);
+                }
 
                 fs.Publisher.Publish(new FileChangeNotification { File = fileName, Action = localFile == null ? FileChangeAction.Add : FileChangeAction.Update });
             }

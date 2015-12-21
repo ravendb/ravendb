@@ -12,6 +12,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Trees;
+using Voron.Trees.Fixed;
 
 namespace Voron.Debugging
 {
@@ -168,7 +169,15 @@ namespace Voron.Debugging
                 }
                 else
                 {
-                    densities.Add(((double) page.SizeUsed)/AbstractPager.PageSize);
+                    if (page.IsFixedSize)
+                    {
+                        var sizeUsed = Constants.PageHeaderSize + (page.FixedSize_NumberOfEntries*(page.IsLeaf ? page.FixedSize_ValueSize : FixedSizeTree.BranchEntrySize));
+                        densities.Add(((double) sizeUsed)/AbstractPager.PageSize);
+                    }
+                    else
+                    {
+                        densities.Add(((double) page.SizeUsed)/AbstractPager.PageSize);
+                    }
                 }
             }
             return densities;

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -10,6 +11,7 @@ using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
 {
+    [Obsolete]
     public class HttpRavenRequestFactory
     {
         public int? RequestTimeoutInMs { get; set; }
@@ -67,9 +69,9 @@ namespace Raven.Abstractions.Connection
             return Tuple.Create(options.Url, options.ApiKey);
         }
 
-        public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering = null)
+                public HttpRavenRequest Create(string url, HttpMethod httpMethod, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering = null)
         {
-            return new HttpRavenRequest(url, method, ConfigureRequest, HandleUnauthorizedResponse, connectionStringOptions, allowWriteStreamBuffering);
+                        return new HttpRavenRequest(url, httpMethod, ConfigureRequest, HandleUnauthorizedResponse, connectionStringOptions, allowWriteStreamBuffering);
         }
 
         private Action<HttpWebRequest> HandleUnauthorizedResponse(RavenConnectionStringOptions options, WebResponse webResponse)

@@ -101,10 +101,9 @@ namespace Raven.Client.Document.SessionOperations
         public void LogQuery()
         {
             if (log.IsDebugEnabled)
-            {
-                log.Debug("Executing query '{0}' on index '{1}' in '{2}'", indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
+            log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
+                                          indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
             }
-        }
 
         public IDisposable EnterQueryContext()
         {
@@ -177,9 +176,9 @@ namespace Raven.Client.Document.SessionOperations
             var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
 
             if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
-                                                                                    // We are projecting one field only (although that could be derived from the
-                                                                                    // previous check, one could never be too careful
-                projectionFields != null && projectionFields.Length == 1 &&
+                // We are projecting one field only (although that could be derived from the
+                // previous check, one could never be too careful
+                projectionFields != null && projectionFields.Length == 1 && 
                 HasSingleValidProperty(result, metadata) // there are no more props in the result object
                 )
             {
@@ -281,13 +280,12 @@ namespace Raven.Client.Document.SessionOperations
                 }
 
                 if (log.IsDebugEnabled)
-                {
-                    log.Debug("Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                log.Debug(
+                        "Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
                             indexQuery.Query,
                             indexName,
                             sessionOperations.StoreIdentifier,
                             result.IndexEtag);
-                }
                 return false;
             }
             if (waitForNonStaleResults && result.IsStale)
@@ -300,22 +298,19 @@ namespace Raven.Client.Document.SessionOperations
                 }
 
                 if (log.IsDebugEnabled)
-                {
-                    log.Debug("Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+                log.Debug(
+                        "Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
                             indexQuery.Query,
                             indexName,
                             sessionOperations.StoreIdentifier,
                             result.IndexEtag);
-                }
                 return false;
             }
             currentQueryResults = result;
             currentQueryResults.EnsureSnapshot();
-
             if (log.IsDebugEnabled)
-            {
-                log.Debug("Query returned {0}/{1} {2}results", result.Results.Count, result.TotalResults, result.IsStale ? "stale " : "");
-            }
+            log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
+                                              result.TotalResults, result.IsStale ? "stale " : "");
             return true;
         }
     }

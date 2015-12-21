@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.FileSystem;
 using Raven.Tests.Common;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.ClientApi
 {
@@ -24,13 +26,86 @@ namespace Raven.Tests.FileSystem.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(10));
                 await session.SaveChangesAsync();
 
+                FilesQueryStatistics stats;
                 var query = await session.Query()
+                                       .Statistics(out stats)
                                        .WhereEquals(x => x.Name, "test.fil")
                                        .ToListAsync();
 
+                Assert.Equal(1, stats.TotalResults);
                 Assert.True(query.Any());
                 Assert.Equal(1, query.Count());
                 Assert.Equal("test.fil", query.First().Name);
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryByStartingWith()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.RegisterUpload("test.file", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fil", CreateUniformFileStream(10));
+                session.RegisterUpload("test.fi", CreateUniformFileStream(10));
+                session.RegisterUpload("test.f", CreateUniformFileStream(10));
+                await session.SaveChangesAsync();
+
+                FilesQueryStatistics stats;
+                var query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereStartsWith(x => x.Name, "test.fil")
+                                       .ToListAsync();
+
+                Assert.Equal(2, stats.TotalResults);
+                Assert.Equal(2, query.Count);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereStartsWith(x => x.Name, "test.")
+                                       .ToListAsync();
+
+                Assert.Equal(4, stats.TotalResults);
+                Assert.Equal(4, query.Count);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereStartsWith(x => x.Name, "test.fi")
+                                       .ToListAsync();
+
+                Assert.Equal(3, stats.TotalResults);
+                Assert.Equal(3, query.Count);
+            }
+        }
+
+        [Theory]
+        [InlineData(150)]
+        [InlineData(1500)]
+        [InlineData(2000)]
+        [InlineData(3000)]
+        public async Task CanGetFullStats(int total)
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.MaxNumberOfRequestsPerSession = total;
+                for (var i = 0; i < total; i++)
+                    session.RegisterUpload("test.file" + i, CreateUniformFileStream(1));
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                FilesQueryStatistics stats;
+                var query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereStartsWith(x => x.Name, "test.file")
+                                       .ToListAsync();
+
+                Assert.Equal(total, stats.TotalResults);
+                Assert.Equal(Math.Min(total, 1024), query.Count);
             }
         }
 
@@ -190,7 +265,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 await session.SaveChangesAsync();
 
                 var query = await session.Query()
-                                         .WhereEquals(x => x.Name, "test.fi")                                         
+                                         .WhereEquals(x => x.Name, "test.fi")
                                          .OrElse()
                                          .WhereIn(x => x.Name, new[] { "test.fil", "test.file" })
                                          .ToListAsync();
@@ -242,7 +317,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 await session.SaveChangesAsync();
 
                 var query = await session.Query()
-                                         .WhereEquals(x => x.Name, "test.fil")                                         
+                                         .WhereEquals(x => x.Name, "test.fil")
                                          .AndAlso()
                                          .WhereIn(x => x.Name, new[] { "test.fil", "test.file" })
                                          .ToListAsync();
@@ -294,7 +369,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 var query = await session.Query()
                                          .WhereStartsWith(x => x.Name, "test")
                                          .OrElse()
-                                         .WhereIn(x => x.Name, new[] { "file.test.fil", "file.test" })                                         
+                                         .WhereIn(x => x.Name, new[] { "file.test.fil", "file.test" })
                                          .ToListAsync();
 
                 Assert.True(query.Any());
@@ -465,16 +540,27 @@ namespace Raven.Tests.FileSystem.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
+                FilesQueryStatistics stats;
                 var value = await session.Query()
+                                         .Statistics(out stats)
                                          .WhereGreaterThan(x => x.TotalSize, 150)
                                          .FirstAsync();
+                Assert.Equal(2, stats.TotalResults);
 
                 var query = await session.Query()
                                          .WhereGreaterThan(x => x.TotalSize, 150)
                                          .ToListAsync();
 
+
                 Assert.True(query.Any());
                 Assert.Equal(value.Name, query[0].Name);
+
+                await AssertAsync.Throws<InvalidOperationException>(async () =>
+                    await session.Query()
+                        .Statistics(out stats)
+                        .WhereGreaterThan(x => x.TotalSize, 800)
+                        .FirstAsync());
+                Assert.Equal(0, stats.TotalResults);
             }
         }
 
@@ -491,8 +577,21 @@ namespace Raven.Tests.FileSystem.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 10).FirstOrDefaultAsync().Result);
-                Assert.Null(session.Query().WhereGreaterThan(x => x.TotalSize, 700).FirstOrDefaultAsync().Result);
+                FilesQueryStatistics stats;
+                var fileHeader = session.Query()
+                    .Statistics(out stats)
+                    .WhereGreaterThan(x => x.TotalSize, 10)
+                    .FirstOrDefaultAsync()
+                    .Result;
+                Assert.Equal(4, stats.TotalResults);
+                Assert.NotNull(fileHeader);
+
+                Assert.Null(session.Query()
+                    .Statistics(out stats)
+                    .WhereGreaterThan(x => x.TotalSize, 700)
+                    .FirstOrDefaultAsync()
+                    .Result);
+                Assert.Equal(0, stats.TotalResults);
             }
         }
 
@@ -509,9 +608,28 @@ namespace Raven.Tests.FileSystem.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 550).SingleAsync().Result);
-                await AssertAsync.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 150).SingleAsync());
-                await AssertAsync.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 700).SingleAsync());
+                FilesQueryStatistics stats;
+                var fileHeader = session.Query()
+                    .Statistics(out stats)
+                    .WhereGreaterThan(x => x.TotalSize, 550)
+                    .SingleAsync()
+                    .Result;
+
+                Assert.NotNull(fileHeader);
+                Assert.Equal(1, stats.TotalResults);
+                await AssertAsync.Throws<InvalidOperationException>(async () =>
+                    await session.Query()
+                        .Statistics(out stats)
+                        .WhereGreaterThan(x => x.TotalSize, 150)
+                        .SingleAsync());
+                Assert.Equal(2, stats.TotalResults);
+
+                await AssertAsync.Throws<InvalidOperationException>(async () =>
+                    await session.Query()
+                        .Statistics(out stats)
+                        .WhereGreaterThan(x => x.TotalSize, 700)
+                        .SingleAsync());
+                Assert.Equal(0, stats.TotalResults);
             }
         }
 
@@ -528,10 +646,30 @@ namespace Raven.Tests.FileSystem.ClientApi
                 session.RegisterUpload("test.f", CreateUniformFileStream(330));
                 await session.SaveChangesAsync();
 
-                Assert.NotNull(session.Query().WhereGreaterThan(x => x.TotalSize, 550).SingleOrDefaultAsync().Result);
-                Assert.Null(session.Query().WhereGreaterThan(x => x.TotalSize, 700).SingleOrDefaultAsync().Result);
-                await AssertAsync.Throws<InvalidOperationException>(() => session.Query().WhereGreaterThan(x => x.TotalSize, 150).SingleOrDefaultAsync());
-                
+                FilesQueryStatistics stats;
+                var fileHeader = session.Query()
+                    .Statistics(out stats)
+                    .WhereGreaterThan(x => x.TotalSize, 550)
+                    .SingleOrDefaultAsync()
+                    .Result;
+
+                Assert.NotNull(fileHeader);
+                Assert.Equal(1, stats.TotalResults);
+
+                Assert.Null(
+                    session.Query()
+                        .Statistics(out stats)
+                        .WhereGreaterThan(x => x.TotalSize, 700)
+                        .SingleOrDefaultAsync()
+                        .Result);
+                Assert.Equal(0, stats.TotalResults);
+
+                await AssertAsync.Throws<InvalidOperationException>(async () =>
+                    await session.Query()
+                        .Statistics(out stats)
+                        .WhereGreaterThan(x => x.TotalSize, 150)
+                        .SingleOrDefaultAsync());
+                Assert.Equal(2, stats.TotalResults);
             }
         }
 
@@ -834,7 +972,7 @@ namespace Raven.Tests.FileSystem.ClientApi
             {
                 for (int i = 0; i < 4; i++)
                 {
-                    var results = await session.Query().WhereEndsWith(x => x.Name, ".file").Skip(i*pageSize).Take(pageSize).ToListAsync();
+                    var results = await session.Query().WhereEndsWith(x => x.Name, ".file").Skip(i * pageSize).Take(pageSize).ToListAsync();
                     files.AddRange(results);
                 }
 
@@ -859,8 +997,8 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                     metadata.Add("uint", 5u);
                     metadata.Add("ulong", 5UL);
-                    metadata.Add("short", (short) 5);
-                    metadata.Add("ushort", (ushort) 5);
+                    metadata.Add("short", (short)5);
+                    metadata.Add("ushort", (ushort)5);
                     metadata.Add("decimal", 5m);
 
                     session.RegisterUpload("test-1.file", CreateRandomFileStream(10), metadata);
@@ -874,8 +1012,8 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                     metadata2.Add("uint", 10u);
                     metadata2.Add("ulong", 10UL);
-                    metadata2.Add("short", (short) 10);
-                    metadata2.Add("ushort", (ushort) 10);
+                    metadata2.Add("short", (short)10);
+                    metadata2.Add("ushort", (ushort)10);
                     metadata2.Add("decimal", 10m);
 
                     session.RegisterUpload("test-2.file", CreateRandomFileStream(10), metadata2);
@@ -903,6 +1041,97 @@ namespace Raven.Tests.FileSystem.ClientApi
                         Assert.Equal(2, (await session.Query().WhereBetweenOrEqual(key, 5, 10).ToListAsync()).Count);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanSearchInMetadataArrayFields1()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var metadata = new RavenJObject
+                {
+                    {"test", new RavenJArray { 1, 2 } }
+                };
+                session.RegisterUpload("test.file", CreateUniformFileStream(10), metadata);
+                await session.SaveChangesAsync();
+
+                FilesQueryStatistics stats;
+                var query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 1)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test.file", query.First().Name);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 2)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test.file", query.First().Name);
+            }
+        }
+
+        [Fact]
+        public async Task CanSearchInMetadataArrayFields2()
+        {
+            var store = this.NewStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var metadata1 = new RavenJObject
+                {
+                    {"test", new RavenJArray { 1, 2 } }
+                };
+                session.RegisterUpload("test1.file", CreateUniformFileStream(10), metadata1);
+
+                var metadata2 = new RavenJObject
+                {
+                    {"test", new RavenJArray { 1, 3 } }
+                };
+                session.RegisterUpload("test2.file", CreateUniformFileStream(10), metadata2);
+                await session.SaveChangesAsync();
+
+                FilesQueryStatistics stats;
+                var query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 1)
+                                       .ToListAsync();
+
+                Assert.Equal(2, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(2, query.Count());
+                Assert.Equal("test1.file", query[0].Name);
+                Assert.Equal("test2.file", query[1].Name);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 2)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test1.file", query.First().Name);
+
+                query = await session.Query()
+                                       .Statistics(out stats)
+                                       .WhereEquals("test", 3)
+                                       .ToListAsync();
+
+                Assert.Equal(1, stats.TotalResults);
+                Assert.True(query.Any());
+                Assert.Equal(1, query.Count());
+                Assert.Equal("test2.file", query.First().Name);
             }
         }
     }

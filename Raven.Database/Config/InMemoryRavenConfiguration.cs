@@ -26,6 +26,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Enum = System.Enum;
+using Raven.Abstractions;
 
 namespace Raven.Database.Config
 {
@@ -47,11 +48,19 @@ namespace Raven.Database.Config
 
         public FileSystemConfiguration FileSystem { get; private set; }
 
+        public CounterConfiguration Counter { get; private set; }
+        
+        public TimeSeriesConfiguration TimeSeries { get; private set; }
+
         public EncryptionConfiguration Encryption { get; private set; }
 
         public IndexingConfiguration Indexing { get; set; }
 
-        public WebSocketsConfiguration WebSockets { get; set; }
+        public ClusterConfiguration Cluster { get; private set; }
+
+        public MonitoringConfiguration Monitoring { get; private set; }
+
+        public WebSocketsConfiguration WebSockets { get; private set; }
 
         public InMemoryRavenConfiguration()
         {
@@ -59,9 +68,13 @@ namespace Raven.Database.Config
             Prefetcher = new PrefetcherConfiguration();
             Storage = new StorageConfiguration();
             FileSystem = new FileSystemConfiguration();
+            Counter = new CounterConfiguration();
+            TimeSeries = new TimeSeriesConfiguration();
             Encryption = new EncryptionConfiguration();
             Indexing = new IndexingConfiguration();
             WebSockets = new WebSocketsConfiguration();
+            Cluster = new ClusterConfiguration();
+            Monitoring = new MonitoringConfiguration();
 
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
@@ -81,10 +94,14 @@ namespace Raven.Database.Config
 
         public string FileSystemName { get; set; }
 
-        public string CountersDatabaseName { get; set; }
+        public string CounterStorageName { get; set; }
+
+        public string TimeSeriesName { get; set; }
 
         public void PostInit()
         {
+            CheckDirectoryPermissions();
+
             FilterActiveBundles();
 
             SetupOAuth();
@@ -101,7 +118,10 @@ namespace Raven.Database.Config
             ravenSettings.Setup(defaultMaxNumberOfItemsToIndexInSingleBatch, defaultInitialNumberOfItemsToIndexInSingleBatch);
 
             WorkingDirectory = CalculateWorkingDirectory(ravenSettings.WorkingDir.Value);
+            DataDirectory = ravenSettings.DataDir.Value;
             FileSystem.InitializeFrom(this);
+            Counter.InitializeFrom(this);
+            TimeSeries.InitializeFrom(this);
 
             MaxClauseCount = ravenSettings.MaxClauseCount.Value;
 
@@ -125,6 +145,7 @@ namespace Raven.Database.Config
 
             MemoryLimitForProcessingInMb = ravenSettings.MemoryLimitForProcessing.Value;
 
+            LowMemoryForLinuxDetectionInMB = ravenSettings.LowMemoryLimitForLinuxDetectionInMB.Value;
             PrefetchingDurationLimit = ravenSettings.PrefetchingDurationLimit.Value;
 
             // Core settings
@@ -222,9 +243,6 @@ namespace Raven.Database.Config
 
             SetupTransactionMode();
 
-            DataDirectory = ravenSettings.DataDir.Value;
-            CountersDataDirectory = ravenSettings.CountersDataDir.Value;
-
             var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
             if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
             {
@@ -315,15 +333,33 @@ namespace Raven.Database.Config
             FileSystem.MaximumSynchronizationInterval = ravenSettings.FileSystem.MaximumSynchronizationInterval.Value;
             FileSystem.DataDirectory = ravenSettings.FileSystem.DataDir.Value;
             FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
-
             if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
                 FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+
+            Counter.DataDirectory = ravenSettings.Counter.DataDir.Value;
+            Counter.TombstoneRetentionTime = ravenSettings.Counter.TombstoneRetentionTime.Value;
+            Counter.DeletedTombstonesInBatch = ravenSettings.Counter.DeletedTombstonesInBatch.Value;
+            Counter.ReplicationLatencyInMs = ravenSettings.Counter.ReplicationLatencyInMs.Value;
+            Counter.BatchTimeout = ravenSettings.Counter.BatchTimeout.Value;
+
+            TimeSeries.DataDirectory = ravenSettings.TimeSeries.DataDir.Value;
+            TimeSeries.TombstoneRetentionTime = ravenSettings.TimeSeries.TombstoneRetentionTime.Value;
+            TimeSeries.DeletedTombstonesInBatch = ravenSettings.TimeSeries.DeletedTombstonesInBatch.Value;
+            TimeSeries.ReplicationLatencyInMs = ravenSettings.TimeSeries.ReplicationLatencyInMs.Value;
 
             Encryption.EncryptionKeyBitsPreference = ravenSettings.Encryption.EncryptionKeyBitsPreference.Value;
 
             Indexing.MaxNumberOfItemsToProcessInTestIndexes = ravenSettings.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value;
+            Indexing.MaxNumberOfStoredIndexingBatchInfoElements = ravenSettings.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value;
+            Indexing.UseLuceneASTParser = ravenSettings.Indexing.UseLuceneASTParser.Value;
             Indexing.DisableIndexingFreeSpaceThreshold = ravenSettings.Indexing.DisableIndexingFreeSpaceThreshold.Value;
             Indexing.DisableMapReduceInMemoryTracking = ravenSettings.Indexing.DisableMapReduceInMemoryTracking.Value;
+
+            Cluster.ElectionTimeout = ravenSettings.Cluster.ElectionTimeout.Value;
+            Cluster.HeartbeatTimeout = ravenSettings.Cluster.HeartbeatTimeout.Value;
+            Cluster.MaxLogLengthBeforeCompaction = ravenSettings.Cluster.MaxLogLengthBeforeCompaction.Value;
+            Cluster.MaxEntriesPerRequest = ravenSettings.Cluster.MaxEntriesPerRequest.Value;
+            Cluster.MaxStepDownDrainTime = ravenSettings.Cluster.MaxStepDownDrainTime.Value;
 
             TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
 
@@ -335,10 +371,20 @@ namespace Raven.Database.Config
 
             MaxConcurrentResourceLoads = ravenSettings.MaxConcurrentResourceLoads.Value;
             ConcurrentResourceLoadTimeout = ravenSettings.ConcurrentResourceLoadTimeout.Value;
+            TempPath = ravenSettings.TempPath.Value;
+
+            FillMonitoringSettings(ravenSettings);
 
             PostInit();
 
             return this;
+        }
+
+        private void FillMonitoringSettings(StronglyTypedRavenSettings settings)
+        {
+            Monitoring.Snmp.Enabled = settings.Monitoring.Snmp.Enabled.Value;
+            Monitoring.Snmp.Community = settings.Monitoring.Snmp.Community.Value;
+            Monitoring.Snmp.Port = settings.Monitoring.Snmp.Port.Value;
         }
 
         private static string CalculateWorkingDirectory(string workingDirectory)
@@ -396,7 +442,7 @@ namespace Raven.Database.Config
         /// <summary>
         /// The time to wait before canceling a database operation such as load (many) or query
         /// </summary>
-        public TimeSpan DatabaseOperationTimeout { get; private set; }
+        public TimeSpan DatabaseOperationTimeout { get; set; }
 
         public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; internal set; }
 
@@ -405,6 +451,24 @@ namespace Raven.Database.Config
         public TimeSpan TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
 
         public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
+
+        private void CheckDirectoryPermissions()
+        {
+            var tempPath = TempPath;
+            var tempFileName = Guid.NewGuid().ToString("N");
+            var tempFilePath = Path.Combine(tempPath, tempFileName);
+
+            try
+            {
+                IOExtensions.CreateDirectoryIfNotExists(tempPath);
+                File.WriteAllText(tempFilePath, string.Empty);
+                File.Delete(tempFilePath);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(string.Format("Could not access temp path '{0}'. Please check if you have sufficient privileges to access this path or change 'Raven/TempPath' value.", tempPath), e);
+            }
+        }
 
         private void FilterActiveBundles()
         {
@@ -775,16 +839,6 @@ namespace Raven.Database.Config
         /// </summary>
         public string DataDirectory
         {
-            get { return dataDirectory; }
-            set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
-        }
-
-        /// <summary>
-        /// The directory for the RavenDB counters. 
-        /// You can use the ~\ prefix to refer to RavenDB's base directory. 
-        /// </summary>
-        public string CountersDataDirectory
-        {
             get { return countersDataDirectory; }
             set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
         }
@@ -947,7 +1001,6 @@ namespace Raven.Database.Config
 
         [JsonIgnore]
         public AggregateCatalog Catalog { get; set; }
-
         public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
         private string indexStoragePath;
@@ -1013,6 +1066,11 @@ namespace Raven.Database.Config
 
             }
         }
+
+        // <summary>
+        /// Limit for low mem detection in linux
+        /// </summary>
+        public int LowMemoryForLinuxDetectionInMB { get; set; }
 
         public string IndexStoragePath
         {
@@ -1118,6 +1176,11 @@ namespace Raven.Database.Config
         /// </summary>
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
 
+        /// <summary>
+        /// Path to temporary directory used by server.
+        /// Default: Current user's temporary directory
+        /// </summary>
+        public string TempPath { get; set; }
 
         [Browsable(false)]
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -1185,6 +1248,8 @@ namespace Raven.Database.Config
         [CLSCompliant(false)]
         public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork, Action handleStorageInaccessible, Action onNestedTransactionEnter = null, Action onNestedTransactionExit = null)
         {
+            if (EnvironmentUtils.RunningOnPosix)
+                storageEngine = "voron";
             storageEngine = StorageEngineAssemblyNameByTypeName(storageEngine);
             var type = Type.GetType(storageEngine);
 
@@ -1290,6 +1355,18 @@ namespace Raven.Database.Config
         {
             if (string.IsNullOrEmpty(Settings[Constants.FileSystem.DataDirectory]) == false)
                 Settings[Constants.FileSystem.DataDirectory] = Path.Combine(Settings[Constants.FileSystem.DataDirectory], "FileSystems", tenantId);
+        }
+
+        public void CustomizeValuesForCounterStorageTenant(string tenantId)
+        {
+            if (string.IsNullOrEmpty(Settings[Constants.Counter.DataDirectory]) == false)
+                Settings[Constants.Counter.DataDirectory] = Path.Combine(Settings[Constants.Counter.DataDirectory], "Counters", tenantId);
+        }
+
+        public void CustomizeValuesForTimeSeriesTenant(string tenantId)
+        {
+            if (string.IsNullOrEmpty(Settings[Constants.TimeSeries.DataDirectory]) == false)
+                Settings[Constants.TimeSeries.DataDirectory] = Path.Combine(Settings[Constants.TimeSeries.DataDirectory], "TimeSeries", tenantId);
         }
 
         public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
@@ -1498,6 +1575,72 @@ namespace Raven.Database.Config
             }
         }
 
+        public class CounterConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                workingDirectory = configuration.WorkingDirectory;
+            }
+
+            private string workingDirectory;
+
+            private string countersDataDirectory;
+
+            /// <summary>
+            /// The directory for the RavenDB counters. 
+            /// You can use the ~\ prefix to refer to RavenDB's base directory. 
+            /// </summary>
+            public string DataDirectory
+            {
+                get { return countersDataDirectory; }
+                set { countersDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+            }
+
+            /// <summary>
+            /// Determines how long tombstones will be kept by a counter storage. After the specified time they will be automatically
+            /// Purged on next counter storage startup. Default: 14 days.
+            /// </summary>
+            public TimeSpan TombstoneRetentionTime { get; set; }
+
+            public int DeletedTombstonesInBatch { get; set; }
+
+            public int ReplicationLatencyInMs { get; set; }
+
+            public TimeSpan BatchTimeout { get; set; }
+        }
+
+        public class TimeSeriesConfiguration
+        {
+            public void InitializeFrom(InMemoryRavenConfiguration configuration)
+            {
+                workingDirectory = configuration.WorkingDirectory;
+            }
+
+            private string workingDirectory;
+
+            private string timeSeriesDataDirectory;
+
+            /// <summary>
+            /// The directory for the RavenDB time series. 
+            /// You can use the ~\ prefix to refer to RavenDB's base directory. 
+            /// </summary>
+            public string DataDirectory
+            {
+                get { return timeSeriesDataDirectory; }
+                set { timeSeriesDataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(workingDirectory, value); }
+            }
+
+            /// <summary>
+            /// Determines how long tombstones will be kept by a time series. After the specified time they will be automatically
+            /// Purged on next time series startup. Default: 14 days.
+            /// </summary>
+            public TimeSpan TombstoneRetentionTime { get; set; }
+
+            public int DeletedTombstonesInBatch { get; set; }
+
+            public int ReplicationLatencyInMs { get; set; }
+        }
+
         public class EncryptionConfiguration
         {
             /// <summary>
@@ -1520,6 +1663,46 @@ namespace Raven.Database.Config
             public int DisableIndexingFreeSpaceThreshold { get; set; }
 
             public bool DisableMapReduceInMemoryTracking { get; set; }
+            public int MaxNumberOfStoredIndexingBatchInfoElements { get; set; }
+            public bool UseLuceneASTParser
+            {
+                get { return useLuceneASTParser; }
+                set
+                {
+                    if (value == useLuceneASTParser)
+                        return;
+                    QueryBuilder.UseLuceneASTParser = useLuceneASTParser = value;
+        }
+            }
+            private bool useLuceneASTParser = true;
+        }
+
+        public class ClusterConfiguration
+        {
+            public int ElectionTimeout { get; set; }
+            public int HeartbeatTimeout { get; set; }
+            public int MaxLogLengthBeforeCompaction { get; set; }
+            public TimeSpan MaxStepDownDrainTime { get; set; }
+            public int MaxEntriesPerRequest { get; set; }
+        }
+
+        public class MonitoringConfiguration
+        {
+            public MonitoringConfiguration()
+            {
+                Snmp = new SnmpConfiguration();
+            }
+
+            public SnmpConfiguration Snmp { get; private set; }
+
+            public class SnmpConfiguration
+            {
+                public bool Enabled { get; set; }
+
+                public int Port { get; set; }
+
+                public string Community { get; set; }
+            }
         }
 
         public class WebSocketsConfiguration

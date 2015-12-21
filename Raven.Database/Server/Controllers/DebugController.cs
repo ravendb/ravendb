@@ -11,12 +11,13 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using ICSharpCode.NRefactory.CSharp;
+
 using Raven.Abstractions;
+using Raven.Abstractions.Counters;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -33,8 +34,81 @@ using IOExtensions = Raven.Database.Extensions.IOExtensions;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class DebugController : RavenDbApiController
+    public class DebugController : BaseDatabaseApiController
     {
+
+        public class CounterDebugInfo
+        {
+            public int ReplicationActiveTasksCount { get; set; }
+
+            public IDictionary<string,CounterDestinationStats> ReplicationDestinationStats { get; set; }
+
+            public CounterStorageStats Summary { get; set; }
+
+            public DateTime LastWrite { get; set; }
+
+            public Guid ServerId { get; set; }
+
+            public AtomicDictionary<object> ExtensionsState { get; set; }
+        }
+
+        [HttpGet]
+        [RavenRoute("cs/debug/counter-storages")]
+        public HttpResponseMessage GetCounterStoragesInfo()
+        {
+            var infos = new List<CounterDebugInfo>();
+
+            CountersLandlord.ForAllCounters(counterStorage => 
+                infos.Add(new CounterDebugInfo
+                {
+                    ReplicationActiveTasksCount = counterStorage.ReplicationTask.GetActiveTasksCount(),
+                    ReplicationDestinationStats = counterStorage.ReplicationTask.DestinationStats,
+                    LastWrite = counterStorage.LastWrite,
+                    ServerId = counterStorage.ServerId,
+                    Summary = counterStorage.CreateStats(),
+                    ExtensionsState = counterStorage.ExtensionsState
+                }));
+
+            return GetMessageWithObject(infos);
+        }
+
+        [HttpGet]
+        [RavenRoute("cs/{counterStorageName}/debug/")]
+        public async Task<HttpResponseMessage> GetCounterNames(string counterStorageName,int skip, int take)
+        {
+            var counter = await CountersLandlord.GetResourceInternal(counterStorageName).ConfigureAwait(false);
+            if (counter == null)
+                return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName),HttpStatusCode.NotFound);
+
+            using (var reader = counter.CreateReader())
+            {
+                var groupsAndNames = reader.GetCounterGroups(0, int.MaxValue)
+                    .SelectMany(group => reader.GetCounterSummariesByGroup(group.Name, 0, int.MaxValue)
+                        .Select(x => new CounterNameGroupPair
+                        {
+                            Name = x.CounterName,
+                            Group = group.Name
+                        }));
+
+                return GetMessageWithObject(new
+                {
+                    Stats = counter.CreateStats(),
+                    HasMore = groupsAndNames.Count() > skip + take,
+                    GroupsAndNames = groupsAndNames.Skip(skip).Take(take)
+                });
+            }
+        }
+
+        [HttpGet]
+        [RavenRoute("cs/{counterStorageName}/debug/metrics")]
+        public async Task<HttpResponseMessage> GetCounterMetrics(string counterStorageName)
+        {
+            var counter = await CountersLandlord.GetResourceInternal(counterStorageName).ConfigureAwait(false);
+            if (counter == null)
+                return GetMessageWithString(string.Format("Counter storage with name {0} not found.", counterStorageName), HttpStatusCode.NotFound);
+
+            return GetMessageWithObject(counter.CreateMetrics());
+        }
 
         [HttpGet]
         [RavenRoute("debug/cache-details")]
@@ -50,7 +124,14 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage EnableQueryTiming()
         {
             var time = SystemTime.UtcNow + TimeSpan.FromMinutes(5);
-            Database.WorkContext.ShowTimingByDefaultUntil = time;
+            if (Database.IsSystemDatabase())
+            {
+                DatabasesLandlord.ForAllDatabases(database => database.WorkContext.ShowTimingByDefaultUntil = time);
+            }
+            else
+            {
+                Database.WorkContext.ShowTimingByDefaultUntil = time;
+            }
             return GetMessageWithObject(new { Enabled = true, Until = time });
         }
 
@@ -59,7 +140,14 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/debug/disable-query-timing")]
         public HttpResponseMessage DisableQueryTiming()
         {
-            Database.WorkContext.ShowTimingByDefaultUntil = null;
+            if (Database.IsSystemDatabase())
+            {
+                DatabasesLandlord.ForAllDatabases(database => database.WorkContext.ShowTimingByDefaultUntil = null);
+            }
+            else
+            {
+                Database.WorkContext.ShowTimingByDefaultUntil = null;
+            }
             return GetMessageWithObject(new { Enabled = false });
         }
 
@@ -80,11 +168,12 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                array = await ReadJsonArrayAsync();
+                array = await ReadJsonArrayAsync().ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize debug request.", e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize debug request.", e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity."
@@ -93,7 +182,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize debug request." , e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize debug request." , e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -204,32 +294,32 @@ namespace Raven.Database.Server.Controllers
         /// <param name="format"></param>
         /// <returns></returns>
         [HttpGet]
-        [RavenRoute("debug/indexing-perf-stats")]
-        [RavenRoute("databases/{databaseName}/debug/indexing-perf-stats")]
-        public HttpResponseMessage IndexingPerfStats(string format = "json")
+        [RavenRoute("debug/indexing-perf-stats-with-timings")]
+        [RavenRoute("databases/{databaseName}/debug/indexing-perf-stats-with-timings")]
+        public HttpResponseMessage IndexingPerfStatsWthTimings(string format = "json")
         {
             var now = SystemTime.UtcNow;
             var nowTruncToSeconds = new DateTime(now.Ticks / TimeSpan.TicksPerSecond * TimeSpan.TicksPerSecond, now.Kind);
 
-            var databaseStatistics = Database.Statistics;
-            var stats = from index in databaseStatistics.Indexes
-                        from perf in index.Performance
+            var stats = from pair in Database.IndexDefinitionStorage.IndexDefinitions
+                        let performance = Database.IndexStorage.GetIndexingPerformance(pair.Key)
+                        from perf in performance
                         where (perf.Operation == "Map" || perf.Operation == "Index") && perf.Started < nowTruncToSeconds
-                        let k = new { index, perf }
-                        group k by k.perf.Started.Ticks / TimeSpan.TicksPerSecond into g
+                        let k = new { IndexDefinition = pair.Value, Performance = perf }
+                        group k by k.Performance.Started.Ticks / TimeSpan.TicksPerSecond into g
                         orderby g.Key
                         select new
                         {
                             Started = new DateTime(g.Key * TimeSpan.TicksPerSecond, DateTimeKind.Utc),
                             Stats = from k in g
-                                    group k by k.index.Name into gg
+                                    group k by k.IndexDefinition.Name into gg
                                     select new
                                     {
                                         Index = gg.Key,
-                                        DurationMilliseconds = gg.Sum(x => x.perf.DurationMilliseconds),
-                                        InputCount = gg.Sum(x => x.perf.InputCount),
-                                        OutputCount = gg.Sum(x => x.perf.OutputCount),
-                                        ItemsCount = gg.Sum(x => x.perf.ItemsCount)
+                                        DurationMilliseconds = gg.Sum(x => x.Performance.DurationMilliseconds),
+                                        InputCount = gg.Sum(x => x.Performance.InputCount),
+                                        OutputCount = gg.Sum(x => x.Performance.OutputCount),
+                                        ItemsCount = gg.Sum(x => x.Performance.ItemsCount)
                                     }
                         };
 
@@ -268,25 +358,33 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
+        [HttpGet]
+        [RavenRoute("debug/filtered-out-indexes")]
+        [RavenRoute("databases/{databaseName}/debug/filtered-out-indexes")]
+        public HttpResponseMessage FilteredOutIndexes()
+        {
+            return GetMessageWithObject(Database.WorkContext.RecentlyFilteredOutIndexes.ToArray());
+        }
 
         [HttpGet]
         [RavenRoute("debug/indexing-batch-stats")]
         [RavenRoute("databases/{databaseName}/debug/indexing-batch-stats")]
-        public HttpResponseMessage IndexingBatchStats()
+        public HttpResponseMessage IndexingBatchStats(int lastId = 0)
         {
+            
             var indexingBatches = Database.WorkContext.LastActualIndexingBatchInfo.ToArray();
-
-            return GetMessageWithObject(indexingBatches);
+            var indexingBatchesTrimmed = indexingBatches.SkipWhile(x => x.Id < lastId).ToArray();
+            return GetMessageWithObject(indexingBatchesTrimmed);
         }
 
         [HttpGet]
         [RavenRoute("debug/reducing-batch-stats")]
         [RavenRoute("databases/{databaseName}/debug/reducing-batch-stats")]
-        public HttpResponseMessage ReducingBatchStats()
+        public HttpResponseMessage ReducingBatchStats(int lastId = 0)
         {
             var reducingBatches = Database.WorkContext.LastActualReducingBatchInfo.ToArray();
-
-            return GetMessageWithObject(reducingBatches);
+            var reducingBatchesTrimmed = reducingBatches.SkipWhile(x => x.Id < lastId).ToArray();
+            return GetMessageWithObject(reducingBatchesTrimmed);
         }
 
         [HttpGet]
@@ -391,7 +489,7 @@ namespace Raven.Database.Server.Controllers
             {
                 Content = new PushStreamContent((stream, content, transportContext) => Database.TransactionalStorage.Batch(accessor =>
                 {
-                    using(stream)
+                    using (stream)
                     using (var docContent = accessor.Documents.RawDocumentByKey(docId))
                     {
                         docContent.CopyTo(stream);
@@ -404,7 +502,7 @@ namespace Raven.Database.Server.Controllers
                         ContentType = new MediaTypeHeaderValue("application/octet-stream"),
                         ContentDisposition = new ContentDispositionHeaderValue("attachment")
                         {
-                            FileName = docId +".raw-doc"
+                            FileName = docId + ".raw-doc"
                         }
                     }
                 }
@@ -498,7 +596,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/debug/index-fields")]
         public async Task<HttpResponseMessage> IndexFields()
         {
-            var indexStr = await ReadStringAsync();
+            var indexStr = await ReadStringAsync().ConfigureAwait(false);
             bool querySyntax = indexStr.Trim().StartsWith("from");
             var mapDefinition = querySyntax
                 ? QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexStr, true)
@@ -591,6 +689,77 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(userInfo);
         }
 
+
+        [HttpGet]
+        [RavenRoute("debug/user-info")]
+        [RavenRoute("databases/{databaseName}/debug/user-info")]
+        public HttpResponseMessage GetUserPermission(string database, string method)
+        {
+            if (string.IsNullOrEmpty(database))
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "The database paramater is mandatory"
+                }, HttpStatusCode.BadGateway);
+            }
+
+            var info = GetUserInfo();
+            var databases = info.Databases;
+            
+
+            var db = databases.Find(d => d.Database.Equals(database));
+            if (db == null)
+            {
+                return GetMessageWithObject(new
+                {
+                    Error = "The database "+  database+ " was not found on the server"
+                }, HttpStatusCode.NotFound);
+            }
+
+            if (db.IsAdmin)
+            {
+                return GetMessageWithObject(new UserPermission
+                {
+                    User = info.User,
+                    Database = db,
+                    Method = method,
+                    IsGranted = true,
+                    Reason = method + " allowed on " + database + " because user " + info.User + " has admin permissions"
+                });
+            }
+            if (!db.IsReadOnly)
+            {
+                return GetMessageWithObject(new UserPermission
+                {
+                    User = info.User,
+                    Database = db,
+                    Method = method,
+                    IsGranted = true,
+                    Reason = method + " allowed on " + database + " because user " + info.User + "has ReadWrite permissions"
+                });
+            }
+
+            if (method != "HEAD" && method != "GET")
+            {
+                return GetMessageWithObject(new UserPermission
+                {
+                    User = info.User,
+                    Database = db,
+                    Method = method,
+                    IsGranted = false,
+                    Reason = method + " rejected on" + database + "because user" + info.User + "has ReadOnly permissions"
+                });
+            }
+            return GetMessageWithObject(new UserPermission
+            {
+                User = info.User,
+                Database = db,
+                Method = method,
+                IsGranted = false,
+                Reason = method + " allowed on" + database + "because user" + info.User + "has ReadOnly permissions"
+            });
+        }
+
         [HttpGet]
         [RavenRoute("debug/tasks")]
         [RavenRoute("databases/{databaseName}/debug/tasks")]
@@ -638,10 +807,10 @@ namespace Raven.Database.Server.Controllers
                                 continue;
 
                             string description = null;
-                            var descriptionAttibute =
+                            var descriptionAttribute =
                                 reflectedHttpActionDescriptor.MethodInfo.CustomAttributes.FirstOrDefault(attributeData => attributeData.AttributeType == typeof(DescriptionAttribute));
-                            if (descriptionAttibute != null)
-                                description = descriptionAttibute.ConstructorArguments[0].Value.ToString();
+                            if (descriptionAttribute != null)
+                                description = descriptionAttribute.ConstructorArguments[0].Value.ToString();
 
                             data.Methods.Add(new Method
                             {
@@ -725,13 +894,13 @@ namespace Raven.Database.Server.Controllers
                 return GetEmptyMessage(HttpStatusCode.Forbidden);
             }
 
-            var tempFileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            var tempFileName = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
             try
             {
                 using (var file = new FileStream(tempFileName, FileMode.Create))
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create))
                 {
-                    DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager);
+                    DebugInfoProvider.CreateInfoPackageForDatabase(package, Database, RequestManager, ClusterManager);
                 }
 
                 var response = new HttpResponseMessage();
@@ -773,6 +942,38 @@ namespace Raven.Database.Server.Controllers
         public HttpResponseMessage Subscriptions()
         {
             return GetMessageWithObject(Database.Subscriptions.GetDebugInfo());
+}
+
+        [HttpGet]
+        [RavenRoute("databases/{databaseName}/debug/thread-pool")]
+        [RavenRoute("debug/thread-pool")]
+        public HttpResponseMessage ThreadPool()
+        {
+            return GetMessageWithObject(new[]
+            {
+                new
+                {
+                    Database.MappingThreadPool.Name,
+                    WaitingTasks = Database.MappingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
+                    RunningTasks = Database.MappingThreadPool.GetRunningTasks().Select(x => x.Description),
+                    ThreadPoolStats = Database.MappingThreadPool.GetThreadPoolStats()
+                },
+                new
+                {
+                    Database.ReducingThreadPool.Name,
+                    WaitingTasks = Database.ReducingThreadPool.GetAllWaitingTasks().Select(x => x.Description),
+                    RunningTasks = Database.ReducingThreadPool.GetRunningTasks().Select(x => x.Description),
+                    ThreadPoolStats = Database.ReducingThreadPool.GetThreadPoolStats()
+    }
+            });
+        }
+
+        [HttpGet]
+        [RavenRoute("debug/indexing-perf-stats")]
+        [RavenRoute("databases/{databaseName}/debug/indexing-perf-stats")]
+        public HttpResponseMessage IndexingPerfStats()
+        {
+            return GetMessageWithObject(Database.IndexingPerformanceStatistics);
         }
 
         [HttpGet]

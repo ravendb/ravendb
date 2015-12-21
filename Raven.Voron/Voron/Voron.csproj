@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -66,6 +66,9 @@
     <Compile Include="Exceptions\InvalidJournalFlushRequest.cs" />
     <Compile Include="Exceptions\ScratchBufferSizeLimitException.cs" />
     <Compile Include="Exceptions\VoronUnrecoverableErrorException.cs" />
+    <Compile Include="Impl\FileHeaders\FixedSizeTreeHeader.cs" />
+    <Compile Include="Trees\Fixed\FixedSizeTree.cs" />
+    <Compile Include="Trees\Fixed\Iterators.cs" />
     <Compile Include="Impl\Backup\MinimalIncrementalBackup.cs" />
     <Compile Include="Impl\Compaction\StorageCompaction.cs" />
     <Compile Include="Impl\PagePosition.cs" />
@@ -173,11 +176,11 @@
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
+    <Compile Include="Util\SliceExtensions.cs" />
     <Compile Include="Util\Utils.cs" />
     <Compile Include="Util\PageTable.cs" />
     <Compile Include="ValueReader.cs" />
     <Compile Include="Platform\Win32\Win32MemoryMapPager.cs" />
-    <Compile Include="Platform\Win32\Win32PageFileBackedMemoryMappedPager.cs" />
     <Compile Include="Platform\Win32\Win32NativeFileMethods.cs" />
     <Compile Include="Platform\Posix\PosixTempMemoryMapPager.cs" />
   </ItemGroup>
@@ -201,5 +204,8 @@
       <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
       <Name>Sparrow</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Analyzer Include="..\..\SharedLibs\ClrHeapAllocationAnalyzer.dll" />
   </ItemGroup>
 </Project>

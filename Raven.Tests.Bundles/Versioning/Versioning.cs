@@ -486,7 +486,10 @@ namespace Raven.Tests.Bundles.Versioning
 
                 using (var documentStore2 = CreateDocumentStore(port: 8078))
                 {
-                    var importSmuggler = new SmugglerDatabaseApi();
+                    var importSmuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions()
+                    {
+                        ShouldDisableVersioningBundle = true
+                    });
                     importSmuggler.ImportData(
                         new SmugglerImportOptions<RavenConnectionStringOptions>
                         {

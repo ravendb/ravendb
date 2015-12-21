@@ -14,13 +14,15 @@ properties {
     $build_dir = "$base_dir\build"
     $sln_file_name = "zzz_RavenDB_Release.sln"
     $sln_file = "$base_dir\$sln_file_name"
-    $version = "3.0"
+    $version = "3.5"
     $tools_dir = "$base_dir\Tools"
     $release_dir = "$base_dir\Release"
     $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
-    
+    $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
+    $nowarn = "1591 1573 1591 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
+
     $dnxVersion = "1.0.0-rc1-update1"
     $dnxArchitecture = "x64"
     $dnxToolsDir = "$base_dir\Tools\DNX"
@@ -28,6 +30,8 @@ properties {
     $dnxRuntimeDir = "$env:USERPROFILE\.dnx\runtimes\dnx-coreclr-win-$dnxArchitecture.$dnxVersion\bin";
     $dnu = "$dnxRuntimeDir\dnu.cmd"
     $dnx = "$dnxRuntimeDir\dnx.exe"
+    
+    $nuget = "$base_dir\.nuget\NuGet.exe"
 }
 
 task default -depends Test, DoReleasePart1
@@ -38,13 +42,16 @@ task Verify40 {
     }
 }
 
-
 task Clean {
     Remove-Item -force -recurse $build_dir -ErrorAction SilentlyContinue
     Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
-task Init -depends Verify40, Clean {
+task NuGet {
+    &"$nuget" restore "$sln_file"
+}
+
+task Init -depends Verify40, Clean, NuGet {
 
     $commit = Get-Git-Commit
     (Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
@@ -60,13 +67,12 @@ task Init -depends Verify40, Clean {
 task Compile -depends Init, CompileHtml5 {
     
     $commit = Get-Git-Commit-Full
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
-    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount
+    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
     
-    Write-Host "msbuild exit code:  $LastExitCode"
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    
+    Write-Host "msbuild exit code: $LastExitCode"
 
     if( $LastExitCode -ne 0){
         throw "Failed to build"
@@ -83,10 +89,9 @@ task CompileHtml5 {
     
     "{ ""BuildVersion"": $env:buildlabel }" | Out-File "Raven.Studio.Html5\version.json" -Encoding UTF8
     
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
-    exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+
+    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
     
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -95,13 +100,15 @@ task CompileHtml5 {
     exec { & $tools_dir\Pvc\pvc.exe optimized-build }
     
     Copy-Item $base_dir\Raven.Studio.Html5\optimized-build $build_dir\Html5 -Recurse
-
+    Copy-Item $base_dir\Raven.Studio.Html5\fonts $build_dir\Html5 -Recurse -Force
+    Copy-Item $base_dir\Raven.Studio.Html5\Content $build_dir\Html5 -Recurse -Force
+    
     Set-Location $build_dir\Html5
     exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
     Set-Location $base_dir
 }
 
-task CompileDnx -depends Compile  {
+task CompileDnx -depends Compile {
 
     &"$dnvm" install $dnxVersion -r coreclr -arch $dnxArchitecture
 
@@ -134,16 +141,21 @@ task Test -depends TestDnx {
     Clear-Host
 
     $test_prjs = @( `
-        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
-        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
-        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
-        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
-        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
-        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
-        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+        "$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.Tests.dll", `
         "$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
-        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll")
+        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
+        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
+        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
+        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
+        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
+        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
+        "$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll", `
+        "$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll", `
+        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
+        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
+        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+        "$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
+        
     Write-Host $test_prjs
     
     $xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -235,17 +247,21 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Migration -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\Traffic -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
+    New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
     Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+task CopyMonitor {
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\amd64 $build_dir\Output\Monitor\amd64 -recurse
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\x86 $build_dir\Output\Monitor\x86 -recurse
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.exe $build_dir\Output\Monitor
+}
+
 task CopySmuggler {
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Client.Lightweight.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Jint.Raven.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\System.Reactive.Core.??? $build_dir\Output\Smuggler
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
@@ -317,17 +333,17 @@ function SignFile($filePath){
     if (!(Test-Path $signTool)) 
     {
         
-        $signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+    $signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+    
+    if (!(Test-Path $signTool)) 
+    {
+        $signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
     
         if (!(Test-Path $signTool)) 
         {
-            $signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
-
-            if (!(Test-Path $signTool)) 
-            {
-                throw "Could not find SignTool.exe under the specified path $signTool"
-            }
+            throw "Could not find SignTool.exe under the specified path $signTool"
         }
+    }
     }
   
     $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.pfx"
@@ -394,7 +410,7 @@ task CopyRootFiles {
     
     (Get-Content "$build_dir\Output\Start.cmd") | 
         Foreach-Object { $_ -replace "{build}", "$($env:buildlabel)" } |
-        Set-Content "$build_dir\Output\Start.cmd" -Encoding Default
+        Set-Content "$build_dir\Output\Start.cmd" -Encoding ASCII
 }
 
 task ZipOutput {
@@ -433,6 +449,7 @@ task DoReleasePart1 -depends Compile, `
     CleanOutputDirectory, `
     CreateOutpuDirectories, `
     CopySmuggler, `
+    CopyMonitor, `
     CopyBackup, `
     CopyMigration, `
     CopyClient, `
@@ -443,7 +460,7 @@ task DoReleasePart1 -depends Compile, `
     CopyRootFiles, `
     CopyRavenTraffic, `
     CopyStorageExporter, `
-    ZipOutput {	
+    ZipOutput { 
     
     Write-Host "Done building RavenDB"
 }
@@ -612,7 +629,7 @@ task PushNugetPackages {
             $tries = 0
             while ($tries -lt 10) {
                 try {
-                    &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
+                    &"$nuget" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
                     $tries = 100
                 } catch {
                     $tries++
@@ -634,7 +651,7 @@ task CreateNugetPackages -depends Compile, CompileDnx, CompileHtml5, InitNuget {
     Remove-Item $nuget_dir -Force -Recurse -ErrorAction SilentlyContinue
     New-Item $nuget_dir -Type directory | Out-Null
     
-    New-Item $nuget_dir\RavenDB.Client\lib\net45 -Type directory | Out-Null  
+    New-Item $nuget_dir\RavenDB.Client\lib\net45 -Type directory | Out-Null
     @("Raven.Client.Lightweight.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\net45 }
     
     $nuspecPath = "$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec"
@@ -693,7 +710,7 @@ task CreateNugetPackages -depends Compile, CompileDnx, CompileHtml5, InitNuget {
             
             $projects = "$base_dir\Bundles\Raven.Client.$name"
             AddDependenciesToNuspec $projects "$nuspecPath" "dnxcore50"
-        }
+    }
     }
     
     New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 -Type directory | Out-Null
@@ -723,7 +740,7 @@ task CreateNugetPackages -depends Compile, CompileDnx, CompileHtml5, InitNuget {
             }
         }
         $nuspec.Save($_.FullName);
-        Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
+        Exec { &"$nuget" pack $_.FullName }
     }
 }
 
@@ -754,7 +771,7 @@ task PushSymbolSources -depends InitNuget {
         $packages | ForEach-Object {
             try {
                 Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
-                &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
+                &"$nuget" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
             } catch {
                 Write-Host $error[0]
                 $LastExitCode = 0
@@ -909,7 +926,7 @@ task CreateSymbolSources -depends CreateNugetPackages {
         Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
         Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
         
-        Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
+        Exec { &"$nuget" pack $_.FullName -Symbols }
     }
 }
 

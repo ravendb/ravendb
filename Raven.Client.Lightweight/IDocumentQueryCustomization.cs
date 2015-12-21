@@ -99,6 +99,44 @@ namespace Raven.Client
         IDocumentQueryCustomization NoTracking();
 
         /// <summary>
+        ///     Adds an ordering for a specific field to the query
+        ///		<param name="fieldName">Name of the field.</param>
+        ///		<param name="descending">if set to <c>true</c> [descending].</param>
+        /// </summary>
+        IDocumentQueryCustomization AddOrder(string fieldName, bool descending = false);
+
+        /// <summary>
+        ///     Adds an ordering for a specific field to the query
+        ///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
+        ///		<param name="propertySelector">Property selector for the field.</param>
+        ///		<param name="descending">if set to <c>true</c> [descending].</param>
+        /// </summary>
+        IDocumentQueryCustomization AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
+
+        /// <summary>
+        ///     Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
+        ///		<param name="fieldName">Name of the field.</param>
+        ///		<param name="descending">if set to <c>true</c> [descending].</param>
+        ///		<param name="fieldType">the type of the field to be sorted.</param>
+        /// </summary>
+        IDocumentQueryCustomization AddOrder(string fieldName, bool descending, Type fieldType);
+
+        /// <summary>
+        ///		Order the search results in alphanumeric order
+        ///		<param name="fieldName">The order by field name.</param>
+        ///		<param name="descending">Should be ordered by descending.</param>
+        /// </summary>
+        IDocumentQueryCustomization AlphaNumericOrdering(string fieldName, bool descending = false);
+
+        /// <summary>
+        ///		Order the search results in alphanumeric order
+        ///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
+        ///		<param name="propertySelector">Property selector for the field.</param>
+        ///		<param name="descending">if set to <c>true</c> [descending].</param>
+        /// </summary>
+        IDocumentQueryCustomization AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
+
+        /// <summary>
         ///     Order the search results randomly
         /// </summary>
         IDocumentQueryCustomization RandomOrdering();
@@ -110,13 +148,24 @@ namespace Raven.Client
         IDocumentQueryCustomization RandomOrdering(string seed);
 
         /// <summary>
+        /// Sort using custom sorter on the server
+        /// </summary>
+        IDocumentQueryCustomization CustomSortUsing(string typeName);
+
+        /// <summary>
+        /// Sort using custom sorter on the server
+        /// </summary>
+        IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
+
+        /// <summary>
         ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
         ///     have a relation rel with the given shapeWKT will be returned
         /// </summary>
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="shapeWKT">WKT formatted shape</param>
         /// <param name="rel">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel);
+        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+        IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent=0.025);
 
         /// <summary>
         ///     If set to true, this property will send multiple index entries from the same document (assuming the index project
@@ -168,16 +217,6 @@ namespace Raven.Client
         ///     This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
         IDocumentQueryCustomization WaitForNonStaleResults();
-
-        /// <summary>
-        /// Sort using custom sorter on the server
-        /// </summary>
-        IDocumentQueryCustomization CustomSortUsing(string typeName);
-
-        /// <summary>
-        /// Sort using custom sorter on the server
-        /// </summary>
-        IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 
         /// <summary>
         ///     EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
@@ -281,7 +320,8 @@ namespace Raven.Client
         /// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
         /// <param name="latitude">Latitude poiting to a circle center.</param>
         /// <param name="longitude">Longitude poiting to a circle center.</param>
-        IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
+        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+        IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent = 0.025);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
@@ -290,7 +330,8 @@ namespace Raven.Client
         /// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
         /// <param name="latitude">Latitude poiting to a circle center.</param>
         /// <param name="longitude">Longitude poiting to a circle center.</param>
-        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent=0.025);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
@@ -299,7 +340,8 @@ namespace Raven.Client
         /// <param name="latitude">Latitude poiting to a circle center.</param>
         /// <param name="longitude">Longitude poiting to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+        IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent = 0.025);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
@@ -309,7 +351,8 @@ namespace Raven.Client
         /// <param name="latitude">Latitude poiting to a circle center.</param>
         /// <param name="longitude">Longitude poiting to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits);
+        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
+        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent=0.025);
 
         /// <summary>
         /// When using spatial queries, instruct the query to sort by the distance from the origin point

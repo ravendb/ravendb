@@ -5,7 +5,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+
+using Raven.Abstractions.Cluster;
 
 namespace Raven.Abstractions.Replication
 {
@@ -89,6 +92,11 @@ namespace Raven.Abstractions.Replication
         /// </summary>
         public string ClientVisibleUrl { get; set; }
 
+        /// <summary>
+        /// If not null then only docs from specified collections are replicated and transformed / filtered according to an optional script.
+        /// </summary>
+        public Dictionary<string, string> SpecifiedCollections { get; set; } 
+
         public string Humane
         {
             get
@@ -97,6 +105,11 @@ namespace Raven.Abstractions.Replication
                     return null;
                 return url + " " + Database;
             }
+        }
+
+        public bool CanBeFailover()
+        {
+            return IgnoredClient == false && Disabled == false && (SpecifiedCollections == null || SpecifiedCollections.Count == 0);
         }
 
         protected bool Equals(ReplicationDestination other)
@@ -112,16 +125,16 @@ namespace Raven.Abstractions.Replication
                    TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&				   
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
-                   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase)));
+                   (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
+                   Extensions.DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
-
 
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ReplicationDestination) obj);
+            return Equals((ReplicationDestination)obj);
         }
 
         public override int GetHashCode()
@@ -129,15 +142,47 @@ namespace Raven.Abstractions.Replication
             unchecked
             {
                 var hashCode = (Username != null ? Username.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Password != null ? Password.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Domain != null ? Domain.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (ApiKey != null ? ApiKey.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Database != null ? Database.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (int) TransitiveReplicationBehavior;
-                hashCode = (hashCode*397) ^ IgnoredClient.GetHashCode();
-                hashCode = (hashCode*397) ^ Disabled.GetHashCode();
-                hashCode = (hashCode*397) ^ (ClientVisibleUrl != null ? ClientVisibleUrl.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Password != null ? Password.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Domain != null ? Domain.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ApiKey != null ? ApiKey.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Database != null ? Database.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (int)TransitiveReplicationBehavior;
+                hashCode = (hashCode * 397) ^ IgnoredClient.GetHashCode();
+                hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
+                hashCode = (hashCode * 397) ^ (ClientVisibleUrl != null ? ClientVisibleUrl.GetHashCode() : 0);
                 return hashCode;
+            }
+        }
+
+        public class ReplicationDestinationWithConfigurationOrigin : ReplicationDestination
+        {
+            public bool HasGlobal { get; set; }
+
+            public bool HasLocal { get; set; }
+    }
+
+        public class ReplicationDestinationWithClusterInformation : ReplicationDestination
+        {
+            public ClusterInformation ClusterInformation { get; set; }
+
+            public static ReplicationDestinationWithClusterInformation Create(ReplicationDestinationWithConfigurationOrigin source, bool isInCluster, bool isLeader)
+            {
+                return new ReplicationDestinationWithClusterInformation
+                       {
+                           ApiKey = source.ApiKey,
+                           ClientVisibleUrl = source.ClientVisibleUrl,
+                           Database = source.Database,
+                           Disabled = source.Disabled,
+                           Domain = source.Domain,
+                           IgnoredClient = source.IgnoredClient,
+                           ClusterInformation = new ClusterInformation(isInCluster, isLeader),
+                           Password = source.Password,
+                           SkipIndexReplication = source.SkipIndexReplication,
+                           TransitiveReplicationBehavior = source.TransitiveReplicationBehavior,
+                           Url = source.Url,
+                           Username = source.Username,
+                           SpecifiedCollections = source.SpecifiedCollections
+                       };
             }
         }
     }

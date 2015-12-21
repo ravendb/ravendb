@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Client.Util;
+using Raven.Abstractions;
 
 namespace Raven.Client.Indexes
 {
@@ -67,6 +68,12 @@ namespace Raven.Client.Indexes
                 // replace <>h_ in transparent identifiers
                 match => "__" + match.Groups[1].Value + "_");
             linqQuery = Regex.Replace(linqQuery, @"__h__TransparentIdentifier(\w+)", match => "this" + match.Groups[1].Value);
+
+            if (EnvironmentUtils.RunningOnPosix)
+            {
+                linqQuery = Regex.Replace(linqQuery, @"<>__TranspIdent(\w)+", "this$1");
+            }
+            
             linqQuery = JSBeautify.Apply(linqQuery);
             return linqQuery;
         }

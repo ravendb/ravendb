@@ -9,9 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
@@ -66,6 +64,7 @@ namespace Raven.Client.FileSystem
 
         Task DeleteAsync(string filename, Etag etag = null);
         Task RenameAsync(string currentName, string newName, Etag etag = null);
+        Task CopyAsync(string sourceName, string targetNAme, Etag etag = null);
         
         Task<RavenJObject> GetMetadataForAsync(string filename);
 
@@ -90,6 +89,7 @@ namespace Raven.Client.FileSystem
         Task<FileHeader[]> StartsWithAsync(string prefix, string matches, int start, int pageSize);
 
         Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue);
+        IDisposable ForceReadFromMaster();
     }
 
     public interface IAsyncFilesAdminCommands : IDisposable, IHoldProfilingInformation
@@ -99,7 +99,7 @@ namespace Raven.Client.FileSystem
         Task<string[]> GetNamesAsync();
         Task<FileSystemStats[]> GetStatisticsAsync();
 
-        Task CreateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
+        Task CreateFileSystemAsync(FileSystemDocument filesystemDocument);
         Task CreateOrUpdateFileSystemAsync(FileSystemDocument filesystemDocument, string newFileSystemName = null);
         Task DeleteFileSystemAsync(string fileSystemName = null, bool hardDelete = false);
 
@@ -171,5 +171,6 @@ namespace Raven.Client.FileSystem
 
         Task CleanUpAsync();
         Task RetryRenamingAsync();
+        Task RetryCopyingAsync();
     }
 }

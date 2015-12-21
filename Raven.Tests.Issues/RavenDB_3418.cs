@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,7 +36,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
                 var ravenHtttpFactory = new HttpRavenRequestFactory();
-                var request = ravenHtttpFactory.Create("http://localhost:8079/admin/compact?database=Test","POST",new RavenConnectionStringOptions());
+                var request = ravenHtttpFactory.Create("http://localhost:8079/admin/compact?database=Test",HttpMethod.Post, new RavenConnectionStringOptions());
                 var response = request.ExecuteRequest<RavenJObject>();
                 using (var systemDocumentStore = new DocumentStore() { Url = "http://localhost:8079" }.Initialize())
                 {
@@ -46,7 +47,7 @@ namespace Raven.Tests.Issues
                         do
                         {
                             if (stopeWatch.Elapsed >= timeout) throw new TimeoutException("Waited to long for test to complete compaction.");
-                            var statusRequest = ravenHtttpFactory.Create("http://localhost:8079/operation/status?id=" + response.Value<string>("OperationId"), "GET", new RavenConnectionStringOptions());
+                            var statusRequest = ravenHtttpFactory.Create("http://localhost:8079/operation/status?id=" + response.Value<string>("OperationId"), HttpMethod.Get, new RavenConnectionStringOptions());
                             var status = statusRequest.ExecuteRequest<RavenJObject>();
                             if (status.Value<bool>("Completed"))
                             {

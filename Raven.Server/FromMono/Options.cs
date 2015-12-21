@@ -129,7 +129,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Text;
@@ -1262,8 +1261,14 @@ namespace NDesk.Options
         [Description("Import Database/FileSystem")]
         SmugglerImportDatabaseFileSystem = 1 << 13,
 
+        [Description("Import/Export Counter")]
+        SmugglerCounter = 1 << 16,
+
+        [Description("Disk IO Monitoring")]
+        DiskIOMonitoring = 1 << 14,
+
         [Description("Record/Replay Options")]
-        TrafficRecordReplay = 1 << 14,
+                TrafficRecordReplay = 1 << 15,
     }
 }
 

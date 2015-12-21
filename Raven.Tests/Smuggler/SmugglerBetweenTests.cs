@@ -212,14 +212,14 @@ namespace Raven.Tests.Smuggler
         }
 
 
-        private async Task AssertDatabaseHasIndex<TIndex>(IDocumentStore store) where TIndex : AbstractIndexCreationTask, new()
+        internal static async Task AssertDatabaseHasIndex<TIndex>(IDocumentStore store) where TIndex : AbstractIndexCreationTask, new()
         {
             var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 25);
             var indexName = new TIndex().IndexName;
             Assert.True(indexes.Any(definition => definition.Name == indexName), "Index " + indexName + " is missing");
         }
 
-        private async Task AssertDatabaseHasTransformer<TTransformer>(IDocumentStore store) where TTransformer : AbstractTransformerCreationTask, new()
+        internal static async Task AssertDatabaseHasTransformer<TTransformer>(IDocumentStore store) where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformers = await store.AsyncDatabaseCommands.GetTransformersAsync(0, 25);
             var transformerName = new TTransformer().TransformerName;

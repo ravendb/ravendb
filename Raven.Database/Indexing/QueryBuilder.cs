@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Indexing.LuceneIntegration;
 using Version = Lucene.Net.Util.Version;
 using System.Linq;
+using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
@@ -32,11 +33,13 @@ namespace Raven.Database.Indexing
         static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
         static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
         static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
-
         /* The reason that we use @emptyIn<PermittedUsers>:(no-results)
          * instead of using @in<PermittedUsers>:()
          * is that lucene does not access an empty () as a valid syntax.
          */
+        public static bool UseLuceneASTParser { get { return useLuceneASTParser; } set { useLuceneASTParser = value; } }
+        private static bool useLuceneASTParser = true;
+
         private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.OrdinalIgnoreCase)
         {
             {"in", (field, args) => new TermsMatchQuery(field, args)},
@@ -50,31 +53,56 @@ namespace Raven.Database.Indexing
 
         public static Query BuildQuery(string query, IndexQuery indexQuery, RavenPerFieldAnalyzerWrapper analyzer)
         {
-            var originalQuery = query;
-            try
+            using (CultureHelper.EnsureInvariantCulture())
             {
-                var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+                if (UseLuceneASTParser)
                 {
-                    DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
-                                        ? QueryParser.Operator.OR
-                                        : QueryParser.Operator.AND,
-                    AllowLeadingWildcard = true
-                };
-                query = PreProcessComments(query);
-                query = PreProcessMixedInclusiveExclusiveRangeQueries(query);
-                query = PreProcessUntokenizedTerms(query, queryParser);
-                query = PreProcessSearchTerms(query);
-                query = PreProcessDateTerms(query, queryParser);
-                var generatedQuery = queryParser.Parse(query);
-                generatedQuery = HandleMethods(generatedQuery, analyzer);
-                return generatedQuery;
-            }
-            catch (ParseException pe)
-            {
-                if (originalQuery == query)
-                    throw new ParseException("Could not parse: '" + query + "'", pe);
-                throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
+                    try
+                    {
+                        var parser = new LuceneQueryParser();
+                        parser.Parse(query);
+                        var res = parser.LuceneAST.ToQuery(
+                            new LuceneASTQueryConfiguration
+                            {
+                                Analayzer = analyzer,
+                                DefaultOperator = indexQuery.DefaultOperator,
+                                FieldName = indexQuery.DefaultField ?? string.Empty
+                            });
+                        // The parser should throw ParseException in this case.
+                        if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");
+                        return res;
+                    }
+                    catch (ParseException pe)
+                    {
+                        throw new ParseException("Could not parse: '" + query + "'", pe);
+                    }
+                }
+                var originalQuery = query;
+                try
+                {
+                    var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+                    {
+                        DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
+                            ? QueryParser.Operator.OR
+                            : QueryParser.Operator.AND,
+                        AllowLeadingWildcard = true
+                    };
+                    query = PreProcessComments(query);
+                    query = PreProcessMixedInclusiveExclusiveRangeQueries(query);
+                    query = PreProcessUntokenizedTerms(query, queryParser);
+                    query = PreProcessSearchTerms(query);
+                    query = PreProcessDateTerms(query, queryParser);
+                    var generatedQuery = queryParser.Parse(query);
+                    generatedQuery = HandleMethods(generatedQuery, analyzer);
+                    return generatedQuery;
+                }
+                catch (ParseException pe)
+                {
+                    if (originalQuery == query)
+                        throw new ParseException("Could not parse: '" + query + "'", pe);
+                    throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
 
+                }
             }
         }
 

@@ -5,7 +5,7 @@ using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class StatisticsController : RavenDbApiController
+    public class StatisticsController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("stats")]

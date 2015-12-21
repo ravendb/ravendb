@@ -1,11 +1,9 @@
-using Sparrow;
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Voron.Impl;
+using Sparrow;
 using Voron.Util;
-using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -29,7 +27,7 @@ namespace Voron
         {
             long position = stream.Position;
 
-            _len = (int) (stream.Length - stream.Position);
+            _len = (int)(stream.Length - stream.Position);
             _buffer = new byte[_len];
 
             int pos = 0;
@@ -92,6 +90,11 @@ namespace Voron
                 return Read(b + offset, count);
         }
 
+        public void Skip(int size)
+        {
+            _pos += size;
+        }
+
         public int Read(byte* buffer, int count)
         {
             count = Math.Min(count, _len - _pos);
@@ -147,7 +150,7 @@ namespace Voron
 
         public long ReadLittleEndianInt64()
         {
-            if (_len - _pos < sizeof (long))
+            if (_len - _pos < sizeof(long))
                 throw new EndOfStreamException();
 
             EnsureSmallTempBuffer();
@@ -212,12 +215,12 @@ namespace Voron
             ulong swapped = (0x00000000000000FF) & (uvalue >> 56) |
                             (0x000000000000FF00) & (uvalue >> 40) |
                             (0x0000000000FF0000) & (uvalue >> 24) |
-                            (0x00000000FF000000) & (uvalue >> 8)  |
-                            (0x000000FF00000000) & (uvalue << 8)  |
+                            (0x00000000FF000000) & (uvalue >> 8) |
+                            (0x000000FF00000000) & (uvalue << 8) |
                             (0x0000FF0000000000) & (uvalue << 24) |
                             (0x00FF000000000000) & (uvalue << 40) |
                             (0xFF00000000000000) & (uvalue << 56);
-            return (long) swapped;
+            return (long)swapped;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -225,8 +228,8 @@ namespace Voron
         {
             uint uvalue = (uint)value;
             uint swapped = (0x000000FF) & (uvalue << 24) |
-                           (0x0000FF00) & (uvalue << 8)  |
-                           (0x00FF0000) & (uvalue >> 8)  |
+                           (0x0000FF00) & (uvalue << 8) |
+                           (0x00FF0000) & (uvalue >> 8) |
                            (0xFF000000) & (uvalue >> 24);
             return (int)swapped;                             
         }
@@ -239,8 +242,6 @@ namespace Voron
                            (0x0000FF00) & (uvalue >> 8);
             return (short)swapped;
         }
-
-
 
         public long ReadBigEndianInt64()
         {
@@ -300,6 +301,26 @@ namespace Voron
             var stringValue = ToStringValue();
             _pos = old;
             return stringValue;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string ReadAllAsString()
+        {
+            return ReadAsString(Length);
+        }
+
+        public string ReadAsString(int length)
+        {
+            int used;
+            var stringBytes = ReadBytes(length, out used);
+            return Encoding.UTF8.GetString(stringBytes, 0, length);
+        }
+
+        public Slice ReadAsSlice(ushort sliceLength)
+        {
+            int used;
+            var sliceBytes = ReadBytes(sliceLength, out used);
+            return new Slice(sliceBytes, sliceLength);
         }
 
         public byte[] ReadBytes(int length, out int used)
@@ -366,9 +387,20 @@ namespace Voron
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
             
             if (_buffer != null)
-                return new Slice(_buffer, (ushort) _len);
+                return new Slice(_buffer, (ushort)_len);
 
-            return new Slice(_val, (ushort) _len);
+            return new Slice(_val, (ushort)_len);
         }
+
+        public Slice AsPartialSlice(int removeFromEnd)
+        {
+            if (_len >= ushort.MaxValue)
+                throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
+
+            if (_buffer != null)
+                return new Slice(_buffer, (ushort)(_len-removeFromEnd));
+
+            return new Slice(_val, (ushort)(_len - removeFromEnd));
     }
+}
 }

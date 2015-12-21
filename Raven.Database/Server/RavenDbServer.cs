@@ -102,8 +102,11 @@ namespace Raven.Server
             }
             BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
 
+            BooleanQuery.MaxClauseCount = configuration.MaxClauseCount;
+
             owinHttpServer = new OwinHttpServer(configuration, useHttpServer: UseEmbeddedHttpServer, configure: configure);
             options = owinHttpServer.Options;
+            
             serverThingsForTests = new ServerThingsForTests(options);
             Func<HttpMessageHandler> httpMessageHandlerFactory = ()=>new OwinClientHandler(owinHttpServer.Invoke, options.SystemDatabase.Configuration.EnableResponseLoggingForEmbeddedDatabases);
             documentStore.HttpMessageHandlerFactory = httpMessageHandlerFactory;
@@ -193,12 +196,12 @@ namespace Raven.Server
 
             public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
             {
-                return options.DatabaseLandlord.GetDatabaseInternal(databaseName);
+                return options.DatabaseLandlord.GetResourceInternal(databaseName);
             }
 
             public Task<RavenFileSystem> GetRavenFileSystemInternal(string fileSystemName)
             {
-                return options.FileSystemLandlord.GetFileSystemInternal(fileSystemName);
+                return options.FileSystemLandlord.GetResourceInternal(fileSystemName);
             }
 
             public RequestManager RequestManager { get { return options.RequestManager; } }

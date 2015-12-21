@@ -2,12 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Raven.Abstractions;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Client.Helpers;
 
 using Sparrow.Collections;

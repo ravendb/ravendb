@@ -33,7 +33,7 @@ namespace Raven.Tests.Common.Attributes
             }
         }
 
-
+    
         private static ConnectionStringSettings GetAppropriateConnectionStringNameInternal()
         {
             foreach (var settings in new[]
@@ -65,9 +65,9 @@ namespace Raven.Tests.Common.Attributes
                     }
                     return localSettings;
                 }
-                // ReSharper disable EmptyGeneralCatchClause
+                    // ReSharper disable EmptyGeneralCatchClause
                 catch
-                // ReSharper restore EmptyGeneralCatchClause
+                    // ReSharper restore EmptyGeneralCatchClause
                 {
                 }
             }

@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -89,7 +90,6 @@ namespace Raven.Client.FileSystem
                     Credentials,
                     jsonRequestFactory,
                     Conventions,
-                    commands.ReplicationInformer,
                     ((AsyncFilesServerClient) AsyncFilesCommands).TryResolveConflictByUsingRegisteredListenersAsync,
                     () =>
                     {
@@ -127,9 +127,12 @@ namespace Raven.Client.FileSystem
         }
 
         public string DefaultFileSystem { get; set; }
-
+        private bool disableReplicationInformerGeneration = false;
         public IFilesReplicationInformer GetReplicationInformerForFileSystem(string fsName = null)
         {
+            if (disableReplicationInformerGeneration)
+                return null;
+
             var key = Url;
             fsName = fsName ?? DefaultFileSystem;
             if (string.IsNullOrEmpty(fsName) == false)
@@ -211,7 +214,7 @@ namespace Raven.Client.FileSystem
         {
             if (initialized)
                 return this;
-
+            disableReplicationInformerGeneration = true;
             jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests, HttpMessageHandlerFactory, authenticationScheme: conventions.AuthenticationScheme);
 
             try
@@ -226,11 +229,11 @@ namespace Raven.Client.FileSystem
                 {
                     try
                     {
-                        AsyncFilesCommands.ForFileSystem(DefaultFileSystem)
-                            .EnsureFileSystemExistsAsync().ConfigureAwait(false)
-                            .GetAwaiter().GetResult();
+
+                        AsyncFilesCommands.ForFileSystem(DefaultFileSystem).EnsureFileSystemExistsAsync().GetAwaiter().GetResult();
+
                     }
-                    catch(Exception)
+                    catch (Exception)
                     {
                         if (failIfCannotCreate)
                             throw;
@@ -241,6 +244,10 @@ namespace Raven.Client.FileSystem
             {
                 Dispose();
                 throw;
+            }
+            finally
+            {
+                disableReplicationInformerGeneration = false;
             }
 
             return this;

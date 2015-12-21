@@ -417,7 +417,7 @@ namespace Raven.Client.Shard
                         new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
                         async (dbCmd, i) =>
                         {
-                            var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters);
+                            var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters).ConfigureAwait(false);
                             var items = new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 
                             if (items.Length > currentShardIds.Length)
@@ -661,7 +661,7 @@ namespace Raven.Client.Shard
         /// </summary>
         async Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
         {
-            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges();
+            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().ConfigureAwait(false);
             var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
             try
             {
@@ -676,7 +676,7 @@ namespace Raven.Client.Shard
                 LogBatch(data);
 
                 // split by shards
-                var saveChangesPerShard = await GetChangesToSavePerShardAsync(data);
+                var saveChangesPerShard = await GetChangesToSavePerShardAsync(data).ConfigureAwait(false);
 
                 var saveTasks = new Task<BatchResult[]>[saveChangesPerShard.Count];
                 var saveChanges = new List<SaveChangesData>();
@@ -695,10 +695,10 @@ namespace Raven.Client.Shard
                     saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray());
                     saveChanges.Add(localCopy);
                 }
-                await Task.WhenAll(saveTasks);
+                await Task.WhenAll(saveTasks).ConfigureAwait(false);
                 for (int index = 0; index < saveTasks.Length; index++)
                 {
-                    var results = await saveTasks[index];
+                    var results = await saveTasks[index].ConfigureAwait(false);
                     UpdateBatchResults(results, saveChanges[index]);
                 }
             }
@@ -718,7 +718,7 @@ namespace Raven.Client.Shard
             for (int index = 0; index < data.Entities.Count; index++)
             {
                 var entity = data.Entities[index];
-                var metadata = await GetMetadataForAsync(entity);
+                var metadata = await GetMetadataForAsync(entity).ConfigureAwait(false);
                 var shardId = metadata.Value<string>(Constants.RavenShardId);
                 if (shardId == null)
                     throw new InvalidOperationException("Cannot save a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");

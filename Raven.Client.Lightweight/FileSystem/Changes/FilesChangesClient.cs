@@ -1,33 +1,30 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net;
+using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
-using Raven.Database.Util;
 using Raven.Json.Linq;
+
 using Sparrow.Collections;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem.Changes
 {
 
-    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState>,
-                                        IFilesChanges,
-                                        IHoldProfilingInformation
+    public class FilesChangesClient : RemoteChangesClientBase<IFilesChanges, FilesConnectionState, FilesConvention>, IFilesChanges
     {
 #if !DNXCORE50
-        private readonly static ILog logger = LogManager.GetCurrentClassLogger();
+        private readonly static ILog Logger = LogManager.GetCurrentClassLogger();
 #else
-        private readonly static ILog logger = LogManager.GetLogger(typeof(FilesChangesClient));
+        private readonly static ILog Logger = LogManager.GetLogger(typeof(FilesChangesClient));
 #endif
 
-        private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>();
+        private readonly ConcurrentSet<string> watchedFolders = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private bool watchAllConfigurations;
         private bool watchAllConflicts;
@@ -35,37 +32,22 @@ namespace Raven.Client.FileSystem.Changes
 
         private readonly Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
-        public ProfilingInformation ProfilingInformation { get; private set; }
-
         public FilesChangesClient(string url, string apiKey,
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory, FilesConvention conventions,
-                                       IReplicationInformerBase replicationInformer,
                                        Func<string, FileHeader, string, Action, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync,
                                        Action onDispose)
-            : base(url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }
 
         public IObservableWithTask<ConfigurationChangeNotification> ForConfiguration()
         {
-            var counter = Counters.GetOrAdd("all-fs-config", s =>
-            {
-                var configurationSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllConfigurations = true;
-                    return Send("watch-config", null);
-                });
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchAllConfigurations = false;
-                        Send("unwatch-config", null);
-                        Counters.Remove("all-fs-config");
-                    },
-                    configurationSubscriptionTask);
-            });
+            var counter = GetOrAddConnectionState("all-fs-config", "watch-config", "unwatch-config",
+                () => watchAllConfigurations = true,
+                () => watchAllConfigurations = false,
+                null);
 
             var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FilesConnectionState>(
                 counter,
@@ -79,22 +61,11 @@ namespace Raven.Client.FileSystem.Changes
 
         public IObservableWithTask<ConflictNotification> ForConflicts()
         {
-            var counter = Counters.GetOrAdd("all-fs-conflicts", s =>
-            {
-                var conflictsSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllConflicts = true;
-                    return Send("watch-conflicts", null);
-                });
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchAllConflicts = false;
-                        Send("unwatch-conflicts", null);
-                        Counters.Remove("all-fs-conflicts");
-                    },
-                    conflictsSubscriptionTask);
-            });
+            var counter = GetOrAddConnectionState("all-fs-conflicts", "watch-conflicts", "unwatch-conflicts",
+                () => watchAllConflicts = true,
+                () => watchAllConflicts = false,
+                null);
+
             var taskedObservable = new TaskedObservable<ConflictNotification, FilesConnectionState>(
                 counter,
                 notification => true);
@@ -114,26 +85,11 @@ namespace Raven.Client.FileSystem.Changes
                 throw new ArgumentException("folder must start with /");
 
             var canonicalisedFolder = folder.TrimStart('/');
-
-            // watch-folder, unwatch-folder
-
-            var counter = Counters.GetOrAdd("fs-folder/" + canonicalisedFolder, s =>
-            {
-                var fileChangeSubscriptionTask = AfterConnection(() =>
-                {
-                    watchedFolders.TryAdd(folder);
-                    return Send("watch-folder", folder);
-                });
-
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchedFolders.TryRemove(folder);
-                        Send("unwatch-folder", folder);
-                        Counters.Remove("fs-folder/" + canonicalisedFolder);
-                    },
-                    fileChangeSubscriptionTask);
-            });
+            var key = "fs-folder/" + canonicalisedFolder;
+            var counter = GetOrAddConnectionState(key, "watch-folder", "unwatch-folder",
+                () => watchedFolders.TryAdd(folder),
+                () => watchedFolders.TryRemove(folder),
+                folder);
 
             var taskedObservable = new TaskedObservable<FileChangeNotification, FilesConnectionState>(
                 counter,
@@ -147,22 +103,11 @@ namespace Raven.Client.FileSystem.Changes
 
         public IObservableWithTask<SynchronizationUpdateNotification> ForSynchronization()
         {
-            var counter = Counters.GetOrAdd("all-fs-sync", s =>
-            {
-                var conflictsSubscriptionTask = AfterConnection(() =>
-                {
-                    watchAllSynchronizations = true;
-                    return Send("watch-sync", null);
-                });
-                return new FilesConnectionState(
-                    () =>
-                    {
-                        watchAllSynchronizations = false;
-                        Send("unwatch-sync", null);
-                        Counters.Remove("all-fs-sync");
-                    },
-                    conflictsSubscriptionTask);
-            });
+            var counter = GetOrAddConnectionState("all-fs-sync", "watch-sync", "unwatch-sync",
+                () => watchAllSynchronizations = true,
+                () => watchAllSynchronizations = false,
+                null);
+
             var taskedObservable = new TaskedObservable<SynchronizationUpdateNotification, FilesConnectionState>(
                 counter,
                 notification => true);
@@ -246,7 +191,8 @@ namespace Raven.Client.FileSystem.Changes
 
                                 if (t.Result)
                                 {
-                                    logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners", conflictNotification.FileName);
+                                    if (Logger.IsDebugEnabled)
+                                        Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners", conflictNotification.FileName);
                                 }
                             }).ConfigureAwait(false);
                     }
@@ -281,16 +227,5 @@ namespace Raven.Client.FileSystem.Changes
                     counter.Value.Send(conflictNotification);
             }
         }
-
-
-        private Task AfterConnection(Func<Task> action)
-        {
-            return Task.ContinueWith(task =>
-            {
-                task.AssertNotFailed();
-                return action();
-            })
-            .Unwrap();
         }
     }
-}

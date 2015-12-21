@@ -7,7 +7,7 @@ using Raven.Database.Server.WebApi.Attributes;
 namespace Raven.Database.Server.Controllers
 {
     [RoutePrefix("")]
-    public class LicensingController : RavenDbApiController
+    public class LicensingController : BaseDatabaseApiController
     {
         [HttpGet]
         [RavenRoute("license/status")]

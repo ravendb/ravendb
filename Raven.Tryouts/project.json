@@ -1,12 +1,12 @@
 ﻿{
-  "version": "3.0.0",
+  "version": "3.5.0",
 
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
 
   "dependencies": {
-    "Raven.Abstractions": "3.0.0",
-    "Raven.Client.Lightweight": "3.0.0",
-    "Sparrow": "3.0.0"
+    "Raven.Abstractions": "3.5.0",
+    "Raven.Client.Lightweight": "3.5.0",
+    "Sparrow": "3.5.0"
   },
 
   "commands": {
