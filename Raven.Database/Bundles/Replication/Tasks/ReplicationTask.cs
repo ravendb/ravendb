@@ -34,6 +34,8 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Linq.PrivateExtensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 using Raven.Database.Bundles.Replication;
 
@@ -249,6 +251,8 @@ namespace Raven.Bundles.Replication.Tasks
 
                 var startedTasks = new List<Task>();
 
+                var lastReplicatedDocumentEtags = new ConcurrentBag<Etag>();
+                var lastReplicatedAttachmentEtags = new ConcurrentBag<Etag>();
                 foreach (var dest in destinationForReplication)
                 {
                     var destination = dest;
@@ -270,10 +274,15 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 try
                                 {
-                                    if (ReplicateTo(destination))
+                                    Etag lastDocumentEtag;
+                                    Etag lastAttachmentEtag;
+                                    if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag))
+                                    {
                                     {
                                         hasMoreWorkToDo = true;
                                         docDb.WorkContext.NotifyAboutWork();
+                                        lastReplicatedDocumentEtags.Add(lastDocumentEtag);
+                                        lastReplicatedAttachmentEtags.Add(lastAttachmentEtag);
                                     }
                                 }
                                 catch (Exception e)
@@ -318,6 +327,20 @@ namespace Raven.Bundles.Replication.Tasks
                                 prefetchingBehavior.CleanupDocuments(stats.Value.LastReplicatedEtag);
                             }
                         }
+
+                        if (lastReplicatedDocumentEtags.Count > 0)
+                        {
+                            //purge tombstones that are not needed anymore
+                            docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
+                                lastReplicatedDocumentEtags.Max());
+                        }
+
+                        if (lastReplicatedAttachmentEtags.Count > 0)
+                        {
+                            docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones,
+                                lastReplicatedAttachmentEtags.Max());
+                        }
+
                     }).ContinueWith(t => OnReplicationExecuted()).AssertNotFailed();
             }
         }
@@ -483,8 +506,10 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool ReplicateTo(ReplicationStrategy destination)
+        private bool ReplicateTo(ReplicationStrategy destination, out Etag lastDocumentEtag,out Etag lastAttachmentEtag)
         {
+            lastDocumentEtag = Etag.InvalidEtag;
+            lastAttachmentEtag = Etag.InvalidEtag;
             try
             {
                 if (docDb.Disposed)
@@ -558,14 +583,14 @@ namespace Raven.Bundles.Replication.Tasks
 
                     bool? replicated = null;
 
-                    int replicatedDocuments;
-
+                    int replicatedDocuments;	                
                     using (var scope = stats.StartRecording("Documents"))
                     {
-                        switch (ReplicateDocuments(destination, 
+                        switch (ReplicateDocuments(destination,
                             destinationsReplicationInformationForSource, 
                             scope, 
-                            out replicatedDocuments))
+                            out replicatedDocuments,
+                            out lastDocumentEtag))
                         {
                             case true:
                                 replicated = true;
@@ -577,7 +602,10 @@ namespace Raven.Bundles.Replication.Tasks
 
                     using (var scope = stats.StartRecording("Attachments"))
                     {
-                        switch (ReplicateAttachments(destination, destinationsReplicationInformationForSource, scope))
+                        switch (ReplicateAttachments(destination, 
+                                    destinationsReplicationInformationForSource, 
+                                    scope,
+                                    out lastAttachmentEtag))
                         {
                             case true:
                                 replicated = true;
@@ -590,7 +618,7 @@ namespace Raven.Bundles.Replication.Tasks
                     var elapsedMicroseconds = (long)(stats.ElapsedTime.Ticks * SystemTime.MicroSecPerTick);
                     docDb.WorkContext.MetricsCounters.GetReplicationDurationHistogram(destination).Update(elapsedMicroseconds);
                     UpdateReplicationPerformance(destination, stats.Started, stats.ElapsedTime, replicatedDocuments);
-
+                    
                     return replicated ?? false;
                 }
             }
@@ -623,10 +651,14 @@ namespace Raven.Bundles.Replication.Tasks
 
 
         [Obsolete("Use RavenFS instead.")]
-        private bool? ReplicateAttachments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder)
+        private bool? ReplicateAttachments(ReplicationStrategy destination, 
+            SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, 
+            ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder,
+            out Etag lastAttachmentEtag)
         {
             Tuple<RavenJArray, Etag> tuple;
             RavenJArray attachments;
+            lastAttachmentEtag = Etag.InvalidEtag;
 
             using (var scope = recorder.StartRecording("Get"))
             {
@@ -654,6 +686,8 @@ namespace Raven.Bundles.Replication.Tasks
                         if (TryReplicationAttachments(destination, attachments, out lastError)) // success on second fail
                         {
                             RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2);
+                            lastAttachmentEtag = tuple.Item2;
+
                             return true;
                         }
                     }
@@ -666,19 +700,21 @@ namespace Raven.Bundles.Replication.Tasks
 
             RecordSuccess(destination.ConnectionStringOptions.Url,
                 lastReplicatedEtag: tuple.Item2);
+            lastAttachmentEtag = tuple.Item2;
 
             return true;
         }
 
-        private bool? ReplicateDocuments(ReplicationStrategy destination, 
+        private bool? ReplicateDocuments(ReplicationStrategy destination,
             SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, 
-            ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, 
-            out int replicatedDocuments)
+            ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder,
+            out int replicatedDocuments, out Etag lastReplicatedEtag)
         {
             replicatedDocuments = 0;
             JsonDocumentsToReplicate documentsToReplicate = null;
             var sp = Stopwatch.StartNew();
             IDisposable removeBatch = null;
+            lastReplicatedEtag = Etag.InvalidEtag;
 
             var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
                 x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, $"Replication for URL: {destination.ConnectionStringOptions.DefaultDatabase}"));
@@ -732,6 +768,8 @@ namespace Raven.Bundles.Replication.Tasks
                             if (TryReplicationDocuments(destination, documentsToReplicate.Documents, out lastError)) // success on second fail
                             {
                                 RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+                                lastReplicatedEtag = documentsToReplicate.LastEtag;
+
                                 return true;
                             }
                         }
@@ -757,6 +795,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
 
             RecordSuccess(destination.ConnectionStringOptions.Url, documentsToReplicate.LastEtag, documentsToReplicate.LastLastModified);
+            lastReplicatedEtag = documentsToReplicate.LastEtag;
             return true;
         }
 

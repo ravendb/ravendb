@@ -118,6 +118,11 @@ namespace Raven.Database.Actions
             TransactionalStorage.StartBackupOperation(Database, backupDestinationDirectory, incrementalBackup, databaseDocument);
         }
 
+        public void RemoveAllBefore(string listName,Etag etag)
+        {
+            TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllBefore(listName,etag));
+        }
+
         public void PurgeOutdatedTombstones()
         {
             var tomstoneLists = new[]

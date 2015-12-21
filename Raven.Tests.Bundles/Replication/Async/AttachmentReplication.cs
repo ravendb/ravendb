@@ -84,7 +84,6 @@ namespace Raven.Tests.Bundles.Replication.Async
             TellFirstInstanceToReplicateToSecondInstance();
 
             store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
-          
 
             for (int i = 0; i < RetriesCount; i++)
             {
@@ -96,7 +95,6 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             store1.DatabaseCommands.DeleteAttachment("ayende", null);
          
-
             for (int i = 0; i < RetriesCount; i++)
             {
                 if (store2.DatabaseCommands.GetAttachment("ayende") == null)

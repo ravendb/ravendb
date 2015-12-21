@@ -160,7 +160,6 @@ namespace Raven.Tests.Bundles.Replication.Async
                 await session.SaveChangesAsync();
             }
 
-
             Company deletedCompany = null;
             for (int i = 0; i < RetriesCount; i++)
             {
