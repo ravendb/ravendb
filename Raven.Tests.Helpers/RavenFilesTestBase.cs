@@ -80,7 +80,11 @@ namespace Raven.Tests.Helpers
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new AppSettingsBasedConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration(beforeInit: config =>
+            {
+                if (activeBundles != null)
+                    config.SetSetting(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), activeBundles);
+            })
             {
                 Core =
                 {
@@ -88,7 +92,6 @@ namespace Raven.Tests.Helpers
                     DataDirectory = directory,
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,

@@ -13,9 +13,11 @@ namespace Raven.Database.Config
 {
     public class AppSettingsBasedConfiguration : RavenConfiguration
     {
-        public AppSettingsBasedConfiguration(bool initialize = true)
+        public AppSettingsBasedConfiguration(bool initialize = true, Action<RavenConfiguration> beforeInit = null)
         {
             LoadConfiguration(ConfigurationManager.AppSettings.AllKeys.Select(k=> Tuple.Create(k,ConfigurationManager.AppSettings[k])));
+
+            beforeInit?.Invoke(this);
 
             if (initialize)
                 Initialize();

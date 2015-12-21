@@ -399,7 +399,11 @@ namespace Raven.Tests.Helpers
                 pathsToDelete.Add(dataDirectory);
 
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
-            var ravenConfiguration = new AppSettingsBasedConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration(beforeInit: config =>
+            {
+                if (activeBundles != null)
+                    config.SetSetting(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), activeBundles);
+            })
             {
                 Core =
                 {
@@ -407,7 +411,6 @@ namespace Raven.Tests.Helpers
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
