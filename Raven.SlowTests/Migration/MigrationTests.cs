@@ -85,7 +85,7 @@ namespace Raven.SlowTests.Migration
             {
                 Console.WriteLine("Processing: " + file.Name);
 
-                using (var store = NewRemoteDocumentStore(runInMemory: false))
+                using (var store = NewRemoteDocumentStore(runInMemory: false, requestedStorage: file.Name.Contains("esent") ? "esent" : "voron"))
                 {
                     store.DefaultDatabase = "Northwind";
 

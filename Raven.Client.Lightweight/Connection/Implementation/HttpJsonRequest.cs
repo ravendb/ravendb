@@ -195,16 +195,20 @@ namespace Raven.Client.Connection.Implementation
             if (SkipServerCheck)
             {
                 var cachedResult = factory.GetCachedResponse(this);
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)ResponseStatusCode,
-                    Status = RequestStatus.AggressivelyCached,
-                    Result = cachedResult.ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)ResponseStatusCode,
+                        Status = RequestStatus.AggressivelyCached,
+                        Result = cachedResult.ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
+               
                 return cachedResult;
             }
 
@@ -348,16 +352,20 @@ namespace Raven.Client.Connection.Implementation
                 Response.StatusCode == HttpStatusCode.NotFound ||
                 Response.StatusCode == HttpStatusCode.Conflict)
             {
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)Response.StatusCode,
-                    Status = RequestStatus.ErrorOnServer,
-                    Result = Response.StatusCode.ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner,new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)Response.StatusCode,
+                        Status = RequestStatus.ErrorOnServer,
+                        Result = Response.StatusCode.ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
+               
 
                 throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
             }
@@ -373,16 +381,20 @@ namespace Raven.Client.Connection.Implementation
                 // is still valid
                 HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)Response.StatusCode,
-                    Status = RequestStatus.Cached,
-                    Result = result.ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)Response.StatusCode,
+                        Status = RequestStatus.Cached,
+                        Result = result.ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
+               
 
                 return result;
             }
@@ -392,16 +404,19 @@ namespace Raven.Client.Connection.Implementation
             {
                 var readToEnd = sr.ReadToEnd();
 
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)Response.StatusCode,
-                    Status = RequestStatus.Cached,
-                    Result = readToEnd,
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)Response.StatusCode,
+                        Status = RequestStatus.Cached,
+                        Result = readToEnd,
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
 
                 if (string.IsNullOrWhiteSpace(readToEnd))
                     throw ErrorResponseException.FromResponseMessage(Response);
@@ -528,17 +543,20 @@ namespace Raven.Client.Connection.Implementation
                 {
                     factory.CacheResponse(Url, data, ResponseHeaders);
                 }
-
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)ResponseStatusCode,
-                    Status = RequestStatus.SentToServer,
-                    Result = (data ?? "").ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)ResponseStatusCode,
+                        Status = RequestStatus.SentToServer,
+                        Result = (data ?? "").ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
 
                 return data;
             }

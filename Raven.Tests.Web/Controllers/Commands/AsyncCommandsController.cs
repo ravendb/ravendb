@@ -455,7 +455,7 @@ namespace Raven.Tests.Web.Controllers.Commands
             }
             catch (Exception e)
             {
-                if (e.Message.Contains("Could not figure out what to do") == false)
+                if (e.Message.Contains("replication bundle not activated") == false)
                     throw;
             }
 

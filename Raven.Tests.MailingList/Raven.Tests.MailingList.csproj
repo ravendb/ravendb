@@ -161,6 +161,7 @@
     <Compile Include="AsyncShouldThrowConcurrencyException.cs" />
     <Compile Include="AsyncSpatial.cs" />
     <Compile Include="AsyncSpatialTest.cs" />
+    <Compile Include="AsyncWithToken.cs" />
     <Compile Include="AttachmentContentType.cs" />
     <Compile Include="AutoGenIndexLinqQuery.cs" />
     <Compile Include="BadTransformer.cs" />
