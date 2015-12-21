@@ -807,29 +807,52 @@ namespace Raven.Client.Shard
              
         }
 
-        // TODO: ADIADI sharding..
         public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
             return await DeleteByIndexAsync(indexCreator.IndexName, expression).ConfigureAwait(false);
         }
 
+        private IRavenQueryable<T> QueryInternal<T>(IAsyncDatabaseCommands assyncDatabaseCommands, string indexName, bool isMapReduce = false)
+        {
+            var ravenQueryStatistics = new RavenQueryStatistics();
+            var highlightings = new RavenQueryHighlightings();
+            var ravenQueryInspector = new RavenQueryInspector<T>();
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, assyncDatabaseCommands, isMapReduce);
+            ravenQueryInspector.Init(ravenQueryProvider,
+                ravenQueryStatistics,
+                highlightings,
+                indexName,
+                null,
+                this, null, assyncDatabaseCommands, isMapReduce);
+            return ravenQueryInspector;
+        }
+
         public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
         {
-            var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery()
+            var shards = GetCommandsToOperateOn(new ShardRequestData
             {
-                Query = query.ToString()
-            };
-            var shardRequestData = new ShardRequestData
-            {
-                EntityType = typeof (T),
-                Keys = {indexName}
-            };
-            var dbCommands = GetCommandsToOperateOn(shardRequestData);
-            var operations = await shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands, shardRequestData, (commands, i) => commands.DeleteByIndexAsync(indexName, indexQuery)).ConfigureAwait(false);
+                EntityType = typeof(T),
+                Keys = { indexName }
+            });
 
-            return operations[0]; // ADIADI ??.. return what?
+            var operations = shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { indexName }
+            }, (dbCmd, i) =>
+            {
+                var query = QueryInternal<T>(dbCmd, indexName).Where(expression);
+                var indexQuery = new IndexQuery()
+                {
+                    Query = query.ToString()
+                };
+
+                return dbCmd.DeleteByIndexAsync(indexName, indexQuery);
+            });
+
+            var result = await operations.ConfigureAwait(false);
+            return result[0]; // TODO: Return meaningful result
         }
     }
 }

@@ -243,9 +243,17 @@ namespace Raven.Client
         /// <param name="instance">The instance.</param>
         Task<RavenJObject> GetMetadataForAsync<T>(T instance);
 
-
-        // TODO: ADIADI xmldoc
+        /// <summary>
+        ///     DeleteByIndexAsync using linq expression
+        /// </summary>
+        /// <param name="expression">The linq expression</param>
         Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new();
+
+        /// <summary>
+        ///     DeleteByIndexAsync using linq expression
+        /// </summary>
+        /// <param name="indexName">Index string name</param>
+        /// <param name="expression">The linq expression</param>
         Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression);
     }
 }

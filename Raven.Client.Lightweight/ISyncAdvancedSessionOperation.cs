@@ -195,8 +195,17 @@ namespace Raven.Client
         /// </param>
         IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
-        // TODO: ADIADI xml doc
+        /// <summary>
+        ///     DeleteByIndex using linq expression
+        /// </summary>
+        /// <param name="expression">The linq expression</param>
         Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new();
+
+        /// <summary>
+        ///     DeleteByIndex using linq expression
+        /// </summary>
+        /// <param name="indexName">Index string name</param>
+        /// <param name="expression">The linq expression</param>
         Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression);
     }
 }
