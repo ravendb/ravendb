@@ -852,7 +852,11 @@ namespace Raven.Client.Shard
             });
 
             var result = await operations.ConfigureAwait(false);
-            return result[0]; // TODO: Return meaningful result
+
+            var shardOperation = new ShardsOperation(-1, null);
+            shardOperation.ShardsOperations = result;
+
+            return shardOperation;
         }
     }
 }

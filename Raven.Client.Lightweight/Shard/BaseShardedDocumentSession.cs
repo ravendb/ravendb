@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
@@ -303,6 +304,22 @@ namespace Raven.Client.Shard
 
             public readonly string Id;
             public readonly IList<TDatabaseCommands> Shards;
+        }
+
+        internal class ShardsOperation : Operation
+        {
+            internal Operation[] ShardsOperations { get; set; }
+            internal ShardsOperation(long id, RavenJToken state) : base(id, state)
+            {
+
+            }
+            public override RavenJToken WaitForCompletion()
+            {
+                RavenJToken rc = null;
+                foreach (var op in ShardsOperations)
+                    rc = op.WaitForCompletion();
+                return rc;
+            }
         }
     }
 }

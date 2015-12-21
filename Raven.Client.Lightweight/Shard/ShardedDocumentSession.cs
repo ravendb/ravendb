@@ -988,7 +988,10 @@ namespace Raven.Client.Shard
                 Keys = { indexName }
             }, (dbCmd, i) => dbCmd.DeleteByIndex(indexName, indexQuery));
 
-            return operations[0]; // TODO: Return meaningful result
+            var shardOperation = new ShardsOperation(-1, null);
+            shardOperation.ShardsOperations = operations;
+
+            return shardOperation;
         }
 
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
