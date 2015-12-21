@@ -64,7 +64,7 @@ namespace Raven.Client.Connection
             }
         }
 
-        public RavenJToken WaitForCompletion()
+        public virtual RavenJToken WaitForCompletion()
         {
             return AsyncHelpers.RunSync(WaitForCompletionAsync);
         }
