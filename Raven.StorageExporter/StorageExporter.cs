@@ -20,16 +20,20 @@ namespace Raven.StorageExporter
 {
     public class StorageExporter
     {
-        public StorageExporter(string databaseBaseDirectory, string databaseOutputFile,int batchSize)
+        public StorageExporter(string databaseBaseDirectory, string databaseOutputFile,int batchSize,Etag documentsStartEtag)
         {
             baseDirectory = databaseBaseDirectory;
             outputDirectory = databaseOutputFile;
             var ravenConfiguration = new RavenConfiguration();
             ravenConfiguration.DataDirectory = databaseBaseDirectory;
             ravenConfiguration.Storage.PreventSchemaUpdate = true;
+            ravenConfiguration.Storage.SkipConsistencyCheck = true;
             CreateTransactionalStorage(ravenConfiguration);
             BatchSize = batchSize;
+            DocumentsStartEtag = documentsStartEtag;
         }
+
+        public Etag DocumentsStartEtag { get; set; }
 
         public void ExportDatabase()
         {
@@ -77,16 +81,23 @@ namespace Raven.StorageExporter
 
         private void WriteDocuments(JsonTextWriter jsonWriter)
         {
-            long totalDococCount = 0;
+            long totalDocsCount = 0;
             long currentDocsCount = 0;
-            Etag currLastEtag = Etag.Empty;
-            storage.Batch(accsesor => totalDococCount = accsesor.Documents.GetDocumentsCount());
+            long previesDocsCount = 0;
+            Etag currLastEtag = DocumentsStartEtag;
+            if (DocumentsStartEtag != Etag.Empty)
+            {
+                ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Yellow, "Starting to export documents as of etag={0}\n" +
+                "TotalDocCount doesn't substract skipped items\n", DocumentsStartEtag);
+                currLastEtag.DecrementBy(1);
+            }
+            storage.Batch(accsesor => totalDocsCount = accsesor.Documents.GetDocumentsCount());
             try
             {
                 CancellationToken ct = new CancellationToken();
                 do
                 {
-
+                    previesDocsCount = currentDocsCount;
                     storage.Batch(accsesor =>
                     {
                         var docs = accsesor.Documents.GetDocumentsAfter(currLastEtag, BatchSize, ct);
@@ -94,11 +105,15 @@ namespace Raven.StorageExporter
                         {
                             doc.ToJson(true).WriteTo(jsonWriter);
                         }
-                        currLastEtag = docs.Last().Etag;
-                        currentDocsCount += docs.Count();
-                        ReportProgress("documents", currentDocsCount, totalDococCount);
+                        var last = docs.LastOrDefault();
+                        if (last != null)
+                        {
+                            currLastEtag = last.Etag;
+                            currentDocsCount += docs.Count();
+                            ReportProgress("documents", currentDocsCount, totalDocsCount);
+                        }
                     });
-                } while (totalDococCount > currentDocsCount);
+                } while (currentDocsCount > previesDocsCount);
             }
             catch (Exception e)
             {

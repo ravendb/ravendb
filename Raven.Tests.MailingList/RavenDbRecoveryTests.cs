@@ -81,7 +81,7 @@ namespace Raven.Tests.MailingList
             // the transaction timeout before we start the service again
             SystemTime.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
 
-            using (var store2 = NewRemoteDocumentStore(runInMemory: false, dataDirectory: dataDir)) //restart
+            using (var store2 = NewRemoteDocumentStore(runInMemory: false, dataDirectory: dataDir, requestedStorage: "esent")) //restart
             {
                 foreach (var id in documentIds)
                 {

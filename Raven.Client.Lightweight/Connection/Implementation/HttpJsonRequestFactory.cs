@@ -35,16 +35,21 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Occurs when a json request is completed
         /// </summary>
-        public event EventHandler<RequestResultArgs> LogRequest = delegate { };
+        public event EventHandler<RequestResultArgs> LogRequest;
 
+
+        public bool CanLogRequest
+        {
+            get { return LogRequest != null; }
+        }
         /// <summary>
         /// Invoke the LogRequest event
         /// </summary>
-        internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequestResult)
+        internal void OnLogRequest(IHoldProfilingInformation sender, RequestResultArgs args)
         {
             var handler = LogRequest;
             if (handler != null)
-                handler(sender, generateRequestResult());
+                handler(sender, args);
         }
 
         private int maxNumberOfCachedRequests;

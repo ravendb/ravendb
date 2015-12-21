@@ -117,14 +117,22 @@ namespace Raven.Database.Json
             if (documentKeyContext.TryGetValue(documentKey, out document) == false)
                 document = Database.Documents.Get(documentKey, null);
             
+            
+
+            RavenJObject loadedDoc = null;
+
             if (document != null)
             {
-                totalStatements += (MaxSteps/2 + (document.SerializedSizeOnDisk*AdditionalStepsPerSize));
+                totalStatements += (MaxSteps / 2 + (document.SerializedSizeOnDisk * AdditionalStepsPerSize));
                 engine.Options.MaxStatements(totalStatements);
+                loadedDoc = document.ToJson();
+
+                // we need to make sure that a previous Put document will not be marked
+                // as snapshot (and cannot be modified)
+
+                document.DataAsJson = (RavenJObject) document.DataAsJson.CreateSnapshot();
+                document.Metadata = (RavenJObject) document.Metadata.CreateSnapshot();
             }
-
-            var loadedDoc = document == null ? null : document.ToJson();
-
             if (loadedDoc == null)
                 return JsValue.Null;
 
