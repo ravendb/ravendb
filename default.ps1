@@ -30,6 +30,8 @@ properties {
     $dnxRuntimeDir = "$env:USERPROFILE\.dnx\runtimes\dnx-coreclr-win-$dnxArchitecture.$dnxVersion\bin";
     $dnu = "$dnxRuntimeDir\dnu.cmd"
     $dnx = "$dnxRuntimeDir\dnx.exe"
+    
+    $nuget = "$base_dir\.nuget\NuGet.exe"
 }
 
 task default -depends Test, DoReleasePart1
@@ -40,13 +42,16 @@ task Verify40 {
     }
 }
 
-
 task Clean {
     Remove-Item -force -recurse $build_dir -ErrorAction SilentlyContinue
     Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
-task Init -depends Verify40, Clean {
+task NuGet {
+    &"$nuget" restore "$sln_file"
+}
+
+task Init -depends Verify40, Clean, NuGet {
 
     $commit = Get-Git-Commit
     (Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
@@ -85,7 +90,8 @@ task CompileHtml5 {
     "{ ""BuildVersion"": $env:buildlabel }" | Out-File "Raven.Studio.Html5\version.json" -Encoding UTF8
     
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
-    exec { &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=14.0 /p:Configuration=$global:configuration /p:nowarn="$nowarn" /verbosity:minimal }
+
+    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
     
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -454,7 +460,7 @@ task DoReleasePart1 -depends Compile, `
     CopyRootFiles, `
     CopyRavenTraffic, `
     CopyStorageExporter, `
-    ZipOutput {	
+    ZipOutput { 
     
     Write-Host "Done building RavenDB"
 }
@@ -623,7 +629,7 @@ task PushNugetPackages {
             $tries = 0
             while ($tries -lt 10) {
                 try {
-                    &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
+                    &"$nuget" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
                     $tries = 100
                 } catch {
                     $tries++
@@ -734,7 +740,7 @@ task CreateNugetPackages -depends Compile, CompileDnx, CompileHtml5, InitNuget {
             }
         }
         $nuspec.Save($_.FullName);
-        Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
+        Exec { &"$nuget" pack $_.FullName }
     }
 }
 
@@ -765,7 +771,7 @@ task PushSymbolSources -depends InitNuget {
         $packages | ForEach-Object {
             try {
                 Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
-                &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
+                &"$nuget" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
             } catch {
                 Write-Host $error[0]
                 $LastExitCode = 0
@@ -920,7 +926,7 @@ task CreateSymbolSources -depends CreateNugetPackages {
         Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
         Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
         
-        Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
+        Exec { &"$nuget" pack $_.FullName -Symbols }
     }
 }
 
