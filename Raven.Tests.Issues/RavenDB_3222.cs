@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    public class RaqvenDB_3222 : RavenTest
+    public class RavenDB_3222 : RavenTest
     {
         public class MySpatialEntity
         {
