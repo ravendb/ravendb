@@ -742,6 +742,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
 
                 DeleteScheduledReduction(etag, etagAsString, CreateScheduleReductionKey(view, level, reduceKey), CreateViewKey(view), bucket);
+                generalStorageActions.MaybePulseTransaction();
+
                 if (scheduledReductionsPerViewAndLevel != null)
                     scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(level), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
             }
@@ -1121,45 +1123,80 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public Dictionary<int, int> DeleteObsolateScheduledReductions(List<int> allIndexIds)
+        public Dictionary<int, long> DeleteObsoleteScheduledReductions(List<int> mapReduceIndexIds, long delete)
         {
-            var obsolateScheduledReductions = new Dictionary<int, int>();
+            var results = new Dictionary<int, long>();
 
-            var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-            using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateViewKey(0)))
+            var reductionsToDelete = GetScheduledReductionsToDelete(mapReduceIndexIds, delete);
+            foreach (var data in reductionsToDelete)
             {
-                if (iterator.Seek(Slice.BeforeAllKeys) == false)
-                    return obsolateScheduledReductions;
+                var id = data.Id;
+                int _;
+                var idAsEtag = Etag.Parse(id.CreateReader().ReadBytes(16, out _));
+                var scheduleReductionKey = CreateScheduleReductionKey(data.View, data.Level, data.ReduceKey);
+                var viewKey = CreateViewKey(data.View);
+                DeleteScheduledReduction(idAsEtag, id, scheduleReductionKey, viewKey, data.Bucket);
+                generalStorageActions.MaybePulseTransaction();
 
-                var count = 0;
-                do
-                {
-                    var id = iterator.CurrentKey.Clone();
-                    ushort version;
-                    var value = LoadStruct(tableStorage.ScheduledReductions, id, writeBatch.Value, out version);
-                    if (value == null)
-                        continue;
-
-                    var view = value.ReadInt(ScheduledReductionFields.IndexId);
-                    if (allIndexIds.Exists(x => x == view))
-                        continue; // index id exists, no need to delete the scheduled reduction
-
-                    int _;
-                    var idAsEtag = Etag.Parse(id.CreateReader().ReadBytes(16, out _));
-                    var level = value.ReadInt(ScheduledReductionFields.Level);
-                    var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
-                    var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
-
-                    DeleteScheduledReduction(idAsEtag, id, CreateScheduleReductionKey(view, level, reduceKey), CreateViewKey(view), bucket);
-
-                    var currentCount = 0;
-                    obsolateScheduledReductions.TryGetValue(view, out currentCount);
-                    obsolateScheduledReductions[view] = currentCount + 1;
-                }
-                while (iterator.MoveNext() && ++count < 1000);
+                long currentCount = 0;
+                results.TryGetValue(data.View, out currentCount);
+                results[data.View] = currentCount + 1;
             }
 
-            return obsolateScheduledReductions;
+            return results;
+        }
+
+        private List<ScheduleReductionData> GetScheduledReductionsToDelete(List<int> mapReduceIndexIds, long delete)
+        {
+            var results = new List<ScheduleReductionData>();
+            var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
+            using (var outerIterator = scheduledReductionsByView.Iterate(Snapshot, writeBatch.Value))
+            {
+                if (outerIterator.Seek(Slice.BeforeAllKeys) == false)
+                    return results;
+
+                do
+                {
+                    var key = outerIterator.CurrentKey;
+                    using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, key))
+                    {
+                        if (iterator.Seek(Slice.BeforeAllKeys) == false)
+                            return results;
+
+                        long count = 0;
+                        do
+                        {
+                            var id = iterator.CurrentKey.Clone();
+                            ushort version;
+                            var value = LoadStruct(tableStorage.ScheduledReductions, id, writeBatch.Value, out version);
+                            if (value == null)
+                                continue;
+
+                            var view = value.ReadInt(ScheduledReductionFields.IndexId);
+                            if (mapReduceIndexIds.Exists(x => x == view))
+                                continue; // index id exists, no need to delete the scheduled reduction
+
+                            var level = value.ReadInt(ScheduledReductionFields.Level);
+                            var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
+                            var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
+
+                            results.Add(new ScheduleReductionData
+                            {
+                                Id = id,
+                                View = view,
+                                Level = level,
+                                ReduceKey = reduceKey,
+                                Bucket = bucket
+                            });
+
+                            count++;
+                        }
+                        while (iterator.MoveNext() && count < delete);
+                    }
+                } while (outerIterator.MoveNext());
+            }
+
+            return results;
         }
 
         public void DeleteScheduledReductionForView(int view, CancellationToken token)
@@ -1206,8 +1243,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     iterator.Dispose();
             }
         }
-
-
 
         public void RemoveReduceResultsForView(int view, CancellationToken token)
         {
@@ -1259,8 +1294,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 while (iterator.MoveNext());
             }
         }
-
-
 
         private void RemoveReduceResult(IIterator iterator, Action afterRecordDeleted, CancellationToken token)
         {
@@ -1314,6 +1347,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             return Convert.ToBase64String(Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(key)));
         }
+    }
+
+    internal class ScheduleReductionData
+    {
+        public Slice Id { get; set; }
+        public int View { get; set; }
+        public int Level { get; set; }
+        public string ReduceKey { get; set; }
+        public int Bucket { get; set; }
     }
 
     internal class ScheduledReductionDeleter

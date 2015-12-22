@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
-using Raven.Database.Server;
 using Raven.Database.Storage;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -153,10 +150,9 @@ namespace Raven.Database.Indexing
 
         public abstract bool ShouldRun { get; }
 
-        protected virtual void CleanupPrefetchers()
-        {
-            
-        }
+        protected virtual void CleanupPrefetchers() { }
+
+        protected virtual void CleanupScheduledReductions() { }
 
         protected virtual void Dispose() { }
 
@@ -215,22 +211,6 @@ namespace Raven.Database.Indexing
                 return;
             lastFlushedWorkCounter = workCounter;
             FlushAllIndexes();
-        }
-
-        private void CleanupScheduledReductions()
-        {
-            transactionalStorage.Batch(actions =>
-            {
-                var allIndexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
-                var obsolateScheduledReductions = actions.MapReduce.DeleteObsolateScheduledReductions(allIndexIds);
-
-                foreach (var indexIdWithCount in obsolateScheduledReductions)
-                {
-                    Log.Warn(
-                        "Deleted " + indexIdWithCount.Value + " obsolate scheduled reductions of index id: " + 
-                        indexIdWithCount.Key + " (probably the index was already deleted).");
-                }
-            });
         }
 
         protected abstract void FlushAllIndexes();

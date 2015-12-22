@@ -641,5 +641,24 @@ namespace Raven.Database.Indexing
             var indexDefinition = context.IndexDefinitionStorage.GetIndexDefinition(indexesStat.Id);
             return indexDefinition != null && indexDefinition.IsMapReduce;
         }
+
+        protected override void CleanupScheduledReductions()
+        {
+            transactionalStorage.Batch(actions =>
+            {
+                var mapReduceIndexIds = actions.Indexing.GetIndexesStats()
+                    .Where(IsValidIndex)
+                    .Select(x => x.Id)
+                    .ToList();
+
+                var obsoleteScheduledReductions = actions.MapReduce.DeleteObsoleteScheduledReductions(mapReduceIndexIds, 10000);
+                foreach (var indexIdWithCount in obsoleteScheduledReductions)
+                {
+                    Log.Warn(
+                        "Deleted " + indexIdWithCount.Value + " obsolete scheduled reductions of index id: " +
+                        indexIdWithCount.Key + " (probably the index was already deleted).");
+                }
+            });
+        }
     }
 }
