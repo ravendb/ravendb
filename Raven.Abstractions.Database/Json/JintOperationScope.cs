@@ -24,6 +24,14 @@ namespace Raven.Abstractions.Database.Json
 
         public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
         {
+            var objectInstance = jsObject.AsObject();
+            if (objectInstance.Class == "Function")
+            {
+                // getting a Function instance here,
+                // means that we couldn't evaulate it using Jint
+                return null;
+            }
+
             var rjo = new RavenJObject();
             foreach (var property in jsObject.AsObject().GetOwnProperties())
             {
