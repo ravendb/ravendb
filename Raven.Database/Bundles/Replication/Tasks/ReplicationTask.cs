@@ -274,9 +274,10 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 try
                                 {
+                                    int filtered;
                                     Etag lastDocumentEtag;
                                     Etag lastAttachmentEtag;
-                                    if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag))
+                                    if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag) || filtered > 0)
                                     {
                                         hasMoreWorkToDo = true;
                                         docDb.WorkContext.NotifyAboutWork();
@@ -505,12 +506,13 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool ReplicateTo(ReplicationStrategy destination, out Etag lastDocumentEtag,out Etag lastAttachmentEtag)
+        private bool ReplicateTo(ReplicationStrategy destination, out Etag lastDocumentEtag,out Etag lastAttachmentEtag, out int filteredDocuments)
         {
             lastDocumentEtag = Etag.InvalidEtag;
             lastAttachmentEtag = Etag.InvalidEtag;
             try
             {
+                filteredDocuments = 0;
                 if (docDb.Disposed)
                     return false;
 
@@ -589,7 +591,8 @@ namespace Raven.Bundles.Replication.Tasks
                             destinationsReplicationInformationForSource, 
                             scope, 
                             out replicatedDocuments,
-                            out lastDocumentEtag))
+                            out lastDocumentEtag,
+                            out filteredDocuments))
                         {
                             case true:
                                 replicated = true;
@@ -707,9 +710,10 @@ namespace Raven.Bundles.Replication.Tasks
         private bool? ReplicateDocuments(ReplicationStrategy destination,
             SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, 
             ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder,
-            out int replicatedDocuments, out Etag lastReplicatedEtag)
+            out int replicatedDocuments, out Etag lastReplicatedEtag, out int filteredDocuments)
         {
             replicatedDocuments = 0;
+            filteredDocuments = 0;
             JsonDocumentsToReplicate documentsToReplicate = null;
             var sp = Stopwatch.StartNew();
             IDisposable removeBatch = null;
@@ -725,6 +729,8 @@ namespace Raven.Bundles.Replication.Tasks
                 using (var scope = recorder.StartRecording("Get"))
                 {
                     documentsToReplicate = GetJsonDocuments(destinationsReplicationInformationForSource, destination, prefetchingBehavior, scope);
+                    filteredDocuments = documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments +
+                        documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination;
                     if (documentsToReplicate.Documents == null || documentsToReplicate.Documents.Length == 0)
                     {
                         if (documentsToReplicate.LastEtag != destinationsReplicationInformationForSource.LastDocumentEtag)

@@ -685,6 +685,24 @@ namespace Raven.Client.Document
             return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter);
         }
 
+        public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            return DeleteByIndex<T>(indexCreator.IndexName, expression);
+        }
+
+        public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            return Advanced
+                .DocumentStore
+                .DatabaseCommands.DeleteByIndex(indexName, indexQuery);
+        }
+
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] facetQueries)
         {
             IncrementRequestCount();
