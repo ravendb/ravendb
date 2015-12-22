@@ -8,6 +8,8 @@ class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
     hasFileSelected = ko.observable(false);
     importedFileName = ko.observable<string>();
+    stripReplicationInformation = ko.observable(false);
+    shouldDisableVersioningBundle = ko.observable(false);
     isUploading = false;
     private filePickerTag = "#importFilesystemFilePicker";
 
@@ -62,7 +64,7 @@ class importDatabase extends viewModelBase {
         var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
         formData.append("file", fileInput.files[0]);
                 
-        new importFilesystemCommand(formData, this.batchSize(), this.activeFilesystem())
+        new importFilesystemCommand(formData, this.batchSize(), this.stripReplicationInformation(), this.shouldDisableVersioningBundle(), this.activeFilesystem())
             .execute()
             .done((result: operationIdDto) => {
                 var operationId = result.OperationId;

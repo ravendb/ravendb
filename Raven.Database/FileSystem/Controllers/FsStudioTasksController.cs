@@ -35,7 +35,7 @@ namespace Raven.Database.FileSystem.Controllers
     {
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
-        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize)
+        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize, bool stripReplicationInformation, bool shouldDisableVersioningBundle)
         {
             if (!Request.Content.IsMimeMultipartContent())
             {
@@ -72,9 +72,8 @@ namespace Raven.Database.FileSystem.Controllers
                         var options = new FileSystemSmugglerOptions
                                       {
                                           BatchSize = batchSize,
-                                          // TODO arek
-                                          //StripReplicationInformation = ,
-                                          //ShouldDisableVersioningBundle = 
+                                          StripReplicationInformation = stripReplicationInformation,
+                                          ShouldDisableVersioningBundle = shouldDisableVersioningBundle
                                       };
 
                         var smuggler = new FileSystemSmuggler(options);

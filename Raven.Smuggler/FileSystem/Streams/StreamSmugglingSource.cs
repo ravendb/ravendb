@@ -156,7 +156,7 @@ namespace Raven.Smuggler.FileSystem.Streams
 
         public void Dispose()
         {
-            archive.Dispose();
+            archive?.Dispose();
 
             if (leaveOpen)
                 return;
