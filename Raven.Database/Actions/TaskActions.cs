@@ -198,7 +198,7 @@ namespace Raven.Database.Actions
 
             NewIndexPrecomputedBatch,
 
-            PurgeTombstones
+            PurgeTombstones,
 
             ServerSmuggling,
 

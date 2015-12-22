@@ -278,7 +278,6 @@ namespace Raven.Bundles.Replication.Tasks
                                     Etag lastAttachmentEtag;
                                     if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag))
                                     {
-                                    {
                                         hasMoreWorkToDo = true;
                                         docDb.WorkContext.NotifyAboutWork();
                                         lastReplicatedDocumentEtags.Add(lastDocumentEtag);
