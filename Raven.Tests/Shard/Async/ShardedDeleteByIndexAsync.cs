@@ -150,10 +150,10 @@ namespace Raven.Tests.Shard.Async
             using (var session = shardedDocumentStore.OpenAsyncSession())
             {
                 var operation1 = await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
-                operation1.WaitForCompletion();
+                await operation1.WaitForCompletionAsync();
 
                 var operation2 = await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
-                operation2.WaitForCompletion();
+                await operation2.WaitForCompletionAsync();
 
                 await session.SaveChangesAsync();
             }

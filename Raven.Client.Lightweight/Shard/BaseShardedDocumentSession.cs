@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -280,16 +281,27 @@ namespace Raven.Client.Shard
 
         internal class ShardsOperation : Operation
         {
-            internal Operation[] ShardsOperations { get; set; }
-            internal ShardsOperation(long id, RavenJToken state) : base(id, state)
+            private Operation[] shardsOperations;
+            internal ShardsOperation(Operation[] shardsOperations) : base(-1, null)
             {
-
+                this.shardsOperations = shardsOperations;
             }
+
             public override RavenJToken WaitForCompletion()
             {
                 RavenJToken rc = null;
-                foreach (var op in ShardsOperations)
+                foreach (var op in shardsOperations)
                     rc = op.WaitForCompletion();
+                return rc;
+            }
+
+            public override async Task<RavenJToken> WaitForCompletionAsync()
+            {
+                RavenJToken rc = null;
+                foreach (var op in shardsOperations)
+                {
+                    rc = await op.WaitForCompletionAsync().ConfigureAwait(false);
+                }
                 return rc;
             }
         }
