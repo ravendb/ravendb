@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Database.Json
             }
 
             var rjo = new RavenJObject();
-            foreach (var property in jsObject.AsObject().GetOwnProperties())
+            foreach (var property in objectInstance.GetOwnProperties())
             {
                 if (property.Key == Constants.ReduceKeyFieldName || property.Key == Constants.DocumentIdFieldName)
                     continue;
