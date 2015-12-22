@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Exceptions.Subscriptions
         }
 
         protected SubscriptionException(string message, HttpStatusCode httpResponseCode)
-            : base(message) 
+            : base(message)
         {
             ResponseStatusCode = httpResponseCode;
         }
@@ -29,12 +29,14 @@ namespace Raven.Abstractions.Exceptions.Subscriptions
             ResponseStatusCode = httpResponseCode;
         }
 
+#if !DNXCORE50
         protected SubscriptionException(
             SerializationInfo info,
             StreamingContext context)
             : base(info, context)
         {
         }
+#endif
 
         public HttpStatusCode ResponseStatusCode { get; private set; }
     }

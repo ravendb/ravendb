@@ -1,7 +1,8 @@
 using System.Diagnostics;
-using System.IO;
 using System.Net;
-using System.Text;
+
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Common.Attributes
@@ -24,11 +25,11 @@ namespace Raven.Tests.Common.Attributes
             if (triedLoading)
                 throw SkipException;
 
-            lock (typeof (FactIfWindowsAuthenticationIsAvailable))
+            lock (typeof(FactIfWindowsAuthenticationIsAvailable))
             {
                 triedLoading = true;
                 ActualLoad();
-                if (Admin == null || string.IsNullOrEmpty(Admin.UserName))
+                if (Admin == null)
                     throw SkipException;
             }
         }
@@ -47,42 +48,15 @@ namespace Raven.Tests.Common.Attributes
 
         private static void ActualLoad()
         {
-            var fileName = "WindowsAuthenticationCredentials.txt";
-            var path = Path.Combine(@"C:\Builds", fileName);
-            path = Path.GetFullPath(path);
+            var credentials = ConfigurationHelper.Credentials;
 
-            if (File.Exists(path) == false)
-            {
-                LoadDebugCredentials();
-                return;
-            }
+            NetworkCredential adminCredentials;
+            if (credentials.TryGetValue("Admin", out adminCredentials))
+                Admin = adminCredentials;
 
-            Admin = new NetworkCredential();
-            var lines = File.ReadAllLines(path, Encoding.UTF8);
-            var username = lines[0].Split('\\');
-            if (username.Length > 1)
-            {
-                Admin.Domain = username[0];
-                Admin.UserName = username[1];
-            }
-            else
-            {
-                Admin.UserName = username[0];
-            }
-            Admin.Password = lines[1];
-
-            User = new NetworkCredential();
-            username = lines[2].Split('\\');
-            if (username.Length > 1)
-            {
-                User.Domain = username[0];
-                User.UserName = username[1];
-            }
-            else
-            {
-                User.UserName = username[0];
-            }
-            User.Password = lines[3];
+            NetworkCredential userCredentials;
+            if (credentials.TryGetValue("User", out userCredentials))
+                User = userCredentials;
         }
     }
 }

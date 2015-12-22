@@ -7,6 +7,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 
 namespace Raven.StorageExporter
 {
@@ -84,6 +85,16 @@ namespace Raven.StorageExporter
                             return false;
                         }
                         break;
+                    case "-DocumentsStartEtag":
+                        Etag etag;
+                        if (!Etag.TryParse(args[currArgPos + 1], out etag))
+                        {
+                            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "DocumentsStartEtag should be in a valid Etag format, we got {0}.\n", args[currArgPos + 1]);
+                            return false;
+                        }
+                        configuration.DocumentsStartEtag = etag;
+                        currArgPos += 2;
+                        break;
                     default:
                         ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Unidentified argument {0}.\n");
                         break;
@@ -110,6 +121,7 @@ Usage:
 Parameters:
  -T <TableName> : The name of the table to be exported.
  -BatchSize <integer number> : The size of the export batch (defualt size is 1024). 
+ -DocumentsStartEtag <Etag> : The document etag to start the export from (defualt is Etag.Empty).
  ");
             Console.WriteLine();
         }

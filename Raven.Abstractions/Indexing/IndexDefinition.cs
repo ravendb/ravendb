@@ -37,6 +37,11 @@ namespace Raven.Abstractions.Indexing
         public IndexLockMode LockMode { get; set; }
 
         /// <summary>
+        /// Index version, used in index replication in order to identify if two indexes are indeed the same.
+        /// </summary>
+        public int? IndexVersion { get; set; }
+
+        /// <summary>
         /// Index map function, if there is only one
         /// </summary>
         /// <remarks>
@@ -133,10 +138,28 @@ namespace Raven.Abstractions.Indexing
         /// <summary>
         /// Index field suggestion settings.
         /// </summary>
-        public IDictionary<string, SuggestionOptions> Suggestions
+        [Obsolete("Use SuggestionsOptions")]
+        public IReadOnlyDictionary<string, SuggestionOptions> Suggestions
         {
-            get { return suggestions ?? (suggestions = new Dictionary<string, SuggestionOptions>()); }
-            set { suggestions = value; }
+            get
+            {
+                if (SuggestionsOptions == null || SuggestionsOptions.Count == 0)
+                    return null;
+
+                return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions());
+            }
+            set
+            {
+                if (value == null)
+                    return;
+                SuggestionsOptions = value.Keys.ToHashSet();
+            }
+        }
+
+        public ISet<string> SuggestionsOptions
+        {
+            get { return suggestionsOptions ?? (suggestionsOptions = new HashSet<string>()); }
+            set { suggestionsOptions = value; }
         }
 
         /// <summary>
@@ -180,6 +203,8 @@ namespace Raven.Abstractions.Indexing
         /// </summary>
         /// <param name="other">The other.</param>
         /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
+        /// <param name="ignoreFormatting">Comparision ignores formatting in both of the definitions</param>
+        /// <param name="ignoreMaxIndexOutput">Comparision ignores MaxIndexOutputsPerDocument</param>
         /// <returns></returns>
         public bool Equals(IndexDefinition other, bool compareIndexIds = true, bool ignoreFormatting = false, bool ignoreMaxIndexOutput = false)
         {
@@ -195,8 +220,12 @@ namespace Raven.Abstractions.Indexing
             bool mapsReduceEquals;
             if (ignoreFormatting)
             {
+#if !DNXCORE50
                 var comparer = new IndexPrettyPrinterEqualityComparer();
                 mapsReduceEquals = Maps.SequenceEqual(other.Maps, comparer) && comparer.Equals(Reduce, other.Reduce);
+#else
+                mapsReduceEquals = Maps.SequenceEqual(other.Maps) && Reduce.Equals(other.Reduce);
+#endif
             }
             else
             {
@@ -209,7 +238,7 @@ namespace Raven.Abstractions.Indexing
                     DictionaryExtensions.ContentEquals(other.Indexes, Indexes) &&
                     DictionaryExtensions.ContentEquals(other.Analyzers, Analyzers) &&
                     DictionaryExtensions.ContentEquals(other.SortOptions, SortOptions) &&
-                    DictionaryExtensions.ContentEquals(other.Suggestions, Suggestions) &&
+                    SetExtensions.ContentEquals(other.SuggestionsOptions, SuggestionsOptions) &&
                     DictionaryExtensions.ContentEquals(other.TermVectors, TermVectors) &&
                     DictionaryExtensions.ContentEquals(other.SpatialIndexes, SpatialIndexes);
         }
@@ -221,6 +250,16 @@ namespace Raven.Abstractions.Indexing
             {
                 result = (result * 397) ^ kvp.Key.GetHashCode();
                 result = (result * 397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
+            }
+            return result;
+        }
+
+        private static int SetHashCode<TKey>(IEnumerable<TKey> x)
+        {
+            int result = 0;
+            foreach (var kvp in x)
+            {
+                result = (result * 397) ^ kvp.GetHashCode();
             }
             return result;
         }
@@ -256,13 +295,13 @@ namespace Raven.Abstractions.Indexing
         [JsonIgnore]
         private IList<string> fields;
         [JsonIgnore]
-        private IDictionary<string, SuggestionOptions> suggestions;
-        [JsonIgnore]
         private IDictionary<string, FieldTermVector> termVectors;
         [JsonIgnore]
         private IDictionary<string, SpatialOptions> spatialIndexes;
         [JsonIgnore]
         private IDictionary<string, string> internalFieldsMapping;
+        [JsonIgnore]
+        private ISet<string> suggestionsOptions;
 
         /// <summary>
         /// Provide a cached version of the index hash code, which is used when generating
@@ -297,7 +336,7 @@ namespace Raven.Abstractions.Indexing
                 result = (result * 397) ^ DictionaryHashCode(Indexes);
                 result = (result * 397) ^ DictionaryHashCode(Analyzers);
                 result = (result * 397) ^ DictionaryHashCode(SortOptions);
-                result = (result * 397) ^ DictionaryHashCode(Suggestions);
+                result = (result * 397) ^ SetHashCode(SuggestionsOptions);
                 result = (result * 397) ^ DictionaryHashCode(TermVectors);
                 result = (result * 397) ^ DictionaryHashCode(SpatialIndexes);
                 return result;
@@ -355,10 +394,6 @@ namespace Raven.Abstractions.Indexing
             foreach (var toRemove in Analyzers.Where(x => string.IsNullOrEmpty(x.Value)).ToArray())
             {
                 Analyzers.Remove(toRemove);
-            }
-            foreach (var toRemove in Suggestions.Where(x => x.Value.Distance == StringDistanceTypes.None).ToArray())
-            {
-                Suggestions.Remove(toRemove);
             }
             foreach (var toRemove in TermVectors.Where(x => x.Value == FieldTermVector.No).ToArray())
             {

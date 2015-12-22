@@ -388,10 +388,12 @@ namespace Raven.Tests.Web.Controllers.Session
         [Route("api/mixed/session/advanced/luceneQuery")]
         public Task<HttpResponseMessage> LuceneQuery()
         {
+#pragma warning disable 618
             Session
                 .Advanced
                 .LuceneQuery<Person>()
                 .ToList();
+#pragma warning restore 618
 
             return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
         }

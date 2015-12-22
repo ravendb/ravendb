@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -70,7 +69,7 @@ namespace Raven.Client.FileSystem.Shard
 
             foreach (var active in applyAsync.Where(x => x.ActiveSyncs != null).Select(x => x.ActiveSyncs))
             {
-                if(active.Count > 0)
+                if (active.Count > 0)
                     activeSyncs.AddRange(active);
             }
 
@@ -254,7 +253,10 @@ namespace Raven.Client.FileSystem.Shard
                 indexes = pagingInfo.GetPagingInfo(pagingInfo.CurrentPage);
             }
 
-            var result = new SearchResults();
+            var result = new SearchResults
+            {
+                Files = new List<FileHeader>()
+            };
 
             var applyAsync = await Strategy.ShardAccessStrategy.ApplyAsync(
                                                             Clients.Values.ToList(), new ShardRequestData(),
@@ -268,22 +270,15 @@ namespace Raven.Client.FileSystem.Shard
                 if (item == null)
                     break;
 
-                var files = new List<FileHeader>();
-                if (result.Files != null)
-                    files.AddRange(result.Files);
-                if (item.Files != null)
-                    files.AddRange(item.Files);
-
+                result.Files.Add(item);
                 result.FileCount++;
-                result.Files = files;
                 result.PageSize = pageSize;
                 result.Start = 0; //TODO: update start
             }
 
             pagingInfo.SetPagingInfo(indexes);
 
-            result.Files = result.Files.Where(info => info != null).ToList();
-            result.FileCount = result.Files.Count;
+            result.DurationMilliseconds += applyAsync.Sum(x => x.DurationMilliseconds);
             return result;
         }
 
@@ -384,25 +379,24 @@ namespace Raven.Client.FileSystem.Shard
         }
 
         #region private Methods
-        private FileHeader GetSmallest(FileHeader[][] applyAsync, int[] indexes, int[] originalIndexes)
+        private static FileHeader GetSmallest(FileHeader[][] applyAsync, int[] indexes, int[] originalIndexes)
         {
             FileHeader smallest = null;
             var smallestIndex = -1;
             for (var i = 0; i < applyAsync.Length; i++)
             {
-
                 var pos = indexes[i] - originalIndexes[i];
                 if (pos >= applyAsync[i].Length)
                     continue;
 
                 var current = applyAsync[i][pos];
-                if (smallest == null ||
-                    string.Compare(current.FullPath, smallest.FullPath, StringComparison.InvariantCultureIgnoreCase) < 0)
-                {
+                if (smallest != null &&
+                        string.Compare(current.FullPath, smallest.FullPath, StringComparison.OrdinalIgnoreCase) >= 0)
+                    continue;
+
                     smallest = current;
                     smallestIndex = i;
                 }
-            }
 
             if (smallestIndex != -1)
                 indexes[smallestIndex]++;
@@ -410,13 +404,13 @@ namespace Raven.Client.FileSystem.Shard
             return smallest;
         }
 
-        private SearchResults GetSmallest(SearchResults[] searchResults, int[] indexes, int[] originalIndexes, string[] sortFields)
+        private static FileHeader GetSmallest(SearchResults[] searchResults, int[] indexes, int[] originalIndexes, string[] sortFields)
         {
             FileHeader smallest = null;
             var smallestIndex = -1;
+
             for (var i = 0; i < searchResults.Length; i++)
             {
-
                 var pos = indexes[i] - originalIndexes[i];
                 if (pos >= searchResults[i].FileCount)
                     continue;
@@ -432,18 +426,14 @@ namespace Raven.Client.FileSystem.Shard
             if (smallestIndex != -1)
                 indexes[smallestIndex]++;
 
-            return new SearchResults
-            {
-                FileCount = 1,
-                Files = new List<FileHeader> { smallest }
-            };
+            return smallest;
         }
 
-        private int CompareFileInfos(FileHeader current, FileHeader smallest, string[] sortFields)
+        private static int CompareFileInfos(FileHeader current, FileHeader smallest, string[] sortFields)
         {
             if (sortFields == null || sortFields.Length == 0)
             {
-                return string.Compare(current.FullPath, smallest.FullPath, StringComparison.InvariantCultureIgnoreCase);
+                return string.Compare(current.FullPath, smallest.FullPath, StringComparison.OrdinalIgnoreCase);
             }
             foreach (var sortField in sortFields)
             {
@@ -455,7 +445,7 @@ namespace Raven.Client.FileSystem.Shard
                     multiplay = -1;
                 }
 
-                if (field.Equals("__size", StringComparison.InvariantCultureIgnoreCase))
+                if (field.Equals("__size", StringComparison.OrdinalIgnoreCase))
                 {
                     var currentItem = current.TotalSize;
                     var smallestItem = smallest.TotalSize;
@@ -479,7 +469,7 @@ namespace Raven.Client.FileSystem.Shard
                     var currentItem = current.Metadata.Value<string>(field);
                     var smallestItem = smallest.Metadata.Value<string>(field);
                     
-                    var compare = string.Compare(currentItem, smallestItem, StringComparison.InvariantCultureIgnoreCase);
+                    var compare = string.Compare(currentItem, smallestItem, StringComparison.OrdinalIgnoreCase);
                     if (compare != 0)
                         return compare * multiplay;
                 }
@@ -488,19 +478,18 @@ namespace Raven.Client.FileSystem.Shard
             return 0;
         }
 
-        private string GetSmallest(string[][] applyAsync, int[] indexes, int[] originalIndexes)
+        private static string GetSmallest(string[][] applyAsync, int[] indexes, int[] originalIndexes)
         {
             string smallest = null;
             var smallestIndex = -1;
             for (var i = 0; i < applyAsync.Length; i++)
             {
-
                 var pos = indexes[i] - originalIndexes[i];
                 if (pos >= applyAsync[i].Length)
                     continue;
 
                 var current = applyAsync[i][pos];
-                if (smallest != null && string.Compare(current, smallest, StringComparison.InvariantCultureIgnoreCase) >= 0)
+                if (smallest != null && string.Compare(current, smallest, StringComparison.OrdinalIgnoreCase) >= 0)
                     continue;
 
                 smallest = current;

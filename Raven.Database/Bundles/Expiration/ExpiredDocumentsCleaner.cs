@@ -75,7 +75,8 @@ namespace Raven.Bundles.Expiration
 
                 DateTime currentTime = SystemTime.UtcNow;
                 string nowAsStr = currentTime.GetDefaultRavenFormat();
-                logger.Debug("Trying to find expired documents to delete");
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Trying to find expired documents to delete");
                 var query = "Expiry:[* TO " + nowAsStr + "]";
 
                 var list = new List<string>();
@@ -112,8 +113,8 @@ namespace Raven.Bundles.Expiration
 
                 if (list.Count == 0)
                     return true;
-
-                logger.Debug(
+                if (logger.IsDebugEnabled)
+                    logger.Debug(
                     () => string.Format("Deleting {0} expired documents: [{1}]", list.Count, string.Join(", ", list)));
 
                 foreach (var id in list)

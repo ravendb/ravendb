@@ -11,31 +11,53 @@ namespace Raven.Abstractions.Connection
     [Serializable]
     public class ErrorResponseException : Exception
     {
-        public HttpResponseMessage Response { get; private set; }
+#if !DNXCORE50
+        [NonSerialized]
+#endif
+        private readonly HttpResponseMessage response;
+
+        public HttpResponseMessage Response
+        {
+            get { return response; }
+        }
 
         public HttpStatusCode StatusCode
         {
             get { return Response.StatusCode; }
         }
 
-        public ErrorResponseException(ErrorResponseException e, string message)
-            :base(message)
+        public ErrorResponseException()
         {
-            Response = e.Response;
+        }
+
+        public ErrorResponseException(ErrorResponseException e, string message)
+            : base(message)
+        {
+            response = e.Response;
             ResponseString = e.ResponseString;
         }
 
         public ErrorResponseException(HttpResponseMessage response, string msg, Exception exception)
             : base(msg, exception)
         {
-            Response = response;
+            this.response = response;
         }
 
-        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString= null)
+        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString = null)
             : base(msg)
         {
-            Response = response;
+            this.response = response;
             ResponseString = responseString;
+        }
+
+        public static ErrorResponseException FromHttpRequestException(HttpRequestException exception)
+        {
+            var ex = new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), exception.Message, exception.Message);
+
+            foreach (var key in exception.Data.Keys)
+                ex.Data[key] = exception.Data[key];
+
+            return ex;
         }
 
         public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
@@ -78,11 +100,13 @@ namespace Raven.Abstractions.Connection
             }
         }
 
+#if !DNXCORE50
         protected ErrorResponseException(
             System.Runtime.Serialization.SerializationInfo info,
             System.Runtime.Serialization.StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 }

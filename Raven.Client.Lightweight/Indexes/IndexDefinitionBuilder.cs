@@ -6,8 +6,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
-using Raven.Abstractions.Data;
+
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -83,7 +84,14 @@ namespace Raven.Client.Indexes
         /// Gets or sets the suggestion options.
         /// </summary>
         /// <value>The suggestion options.</value>
-        public IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> Suggestions { get; set; }
+        [Obsolete("Use SuggestionsOptions")]
+        public IDictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions> Suggestions
+        {
+            get { return SuggestionsOptions.ToDictionary(x => x, x => new SuggestionOptions()); }
+            set { SuggestionsOptions = value.Keys.ToHashSet(); } 
+        }
+
+        public ISet<Expression<Func<TReduceResult, object>>> SuggestionsOptions { get; set; }
 
         /// <summary>
         /// Gets or sets the term vector options
@@ -136,7 +144,7 @@ namespace Raven.Client.Indexes
             IndexesStrings = new Dictionary<string, FieldIndexing>();
             SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
             SortOptionsStrings = new Dictionary<string, SortOptions>();
-            Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
+            SuggestionsOptions = new HashSet<Expression<Func<TReduceResult, object>>>();
             Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
             AnalyzersStrings = new Dictionary<string, string>();
             TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
@@ -168,7 +176,7 @@ namespace Raven.Client.Indexes
                     Stores = ConvertToStringDictionary(Stores),
                     SortOptions = ConvertToStringDictionary(SortOptions),
                     Analyzers = ConvertToStringDictionary(Analyzers),
-                    Suggestions = ConvertToStringDictionary(Suggestions),
+                    SuggestionsOptions = ConvertToStringSet(SuggestionsOptions),
                     TermVectors = ConvertToStringDictionary(TermVectors),
                     SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
                     DisableInMemoryIndexing = DisableInMemoryIndexing,
@@ -176,8 +184,10 @@ namespace Raven.Client.Indexes
                     LockMode = LockMode,
                 };
 
+#if !DNXCORE50
                 if (convention.PrettifyGeneratedLinqExpressions)
                     indexDefinition.Reduce = IndexPrettyPrinter.TryFormat(indexDefinition.Reduce);
+#endif
 
                 foreach (var indexesString in IndexesStrings)
                 {
@@ -226,8 +236,10 @@ namespace Raven.Client.Indexes
                     indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
                         Map, convention, querySource, translateIdentityProperty: true);
 
+#if !DNXCORE50
                     if (convention.PrettifyGeneratedLinqExpressions)
                         indexDefinition.Map = IndexPrettyPrinter.TryFormat(indexDefinition.Map);
+#endif
                 }
                 return indexDefinition;
             }
@@ -265,6 +277,17 @@ namespace Raven.Client.Indexes
                 var propertyPath = value.Key.ToPropertyPath('_');
                 result[propertyPath] = value.Value;
             }
+            return result;
+        }
+
+        private static ISet<string> ConvertToStringSet(IEnumerable<Expression<Func<TReduceResult, object>>> input)
+        {
+            var result = new HashSet<string>();
+            foreach (var value in input)
+            {
+                var propertyPath = value.ToPropertyPath('_');
+                result.Add(propertyPath);
+    }
             return result;
         }
     }

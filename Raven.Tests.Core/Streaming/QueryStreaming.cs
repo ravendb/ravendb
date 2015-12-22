@@ -11,12 +11,20 @@ namespace Raven.Tests.Core.Streaming
 {
     public class QueryStreaming : RavenCoreTestBase
     {
+#if DNXCORE50
+        public QueryStreaming(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanStreamQueryResults()
         {
             using (var store = GetDocumentStore())
             {
-            new Users_ByName().Execute(store);
+                new Users_ByName().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -50,9 +58,7 @@ namespace Raven.Tests.Core.Streaming
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<User, Users_ByName>();
-
                     var reader = session.Advanced.Stream(query);
-
                     while (reader.MoveNext())
                     {
                         count++;

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Bundles.Versioning;
 using Raven.Database.Bundles.Versioning.Data;
@@ -421,7 +422,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
                     session.RegisterUpload(revisions[0], StringToStream(Content2));
 
-                    var ex = await ThrowsAsync<ErrorResponseException>(() => session.SaveChangesAsync());
+                    var ex = await ThrowsAsync<OperationVetoedException>(() => session.SaveChangesAsync());
 
                     Assert.Contains("PUT vetoed on file /file.txt/revisions/1 by Raven.Database.FileSystem.Bundles.Versioning.Plugins.VersioningPutTrigger because: Modifying a historical revision is not allowed", ex.Message);
                 }

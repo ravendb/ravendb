@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -13,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Controllers;
 using Raven.Json.Linq;
 
@@ -32,7 +35,8 @@ namespace Raven.Database.Server.WebApi.Filters
                 {typeof (SynchronizationException), (ctx, e) => HandleSynchronizationException(ctx, e as SynchronizationException)},
                 {typeof (FileNotFoundException), (ctx, e) => HandleFileNotFoundException(ctx, e as FileNotFoundException)},
                 {typeof (SubscriptionException), (ctx, e) => HandleSubscriptionException(ctx, e as SubscriptionException)},
-                {typeof (BooleanQuery.TooManyClauses), (ctx, e) => HandleTooManyClausesException(ctx, e as BooleanQuery.TooManyClauses)}
+                {typeof (BooleanQuery.TooManyClauses), (ctx, e) => HandleTooManyClausesException(ctx, e as BooleanQuery.TooManyClauses)},
+                {typeof (OperationCanceledException), (ctx, e) => HandleOperationCanceledException(ctx, e as OperationCanceledException)}
             };
 
         public override void OnException(HttpActionExecutedContext ctx)
@@ -66,7 +70,7 @@ namespace Raven.Database.Server.WebApi.Filters
 
         public static void SerializeError(HttpActionExecutedContext ctx, object error)
         {
-            if (ctx.Request.Method == HttpMethod.Head) // head request must not return a message body in the response
+            if (ctx.Request.Method == HttpMethods.Head) // head request must not return a message body in the response
                 return;
 
             ctx.Response.Content = new JsonContent(RavenJObject.FromObject(error))
@@ -88,6 +92,25 @@ namespace Raven.Database.Server.WebApi.Filters
             });
         }
 
+        private static void HandleOperationCanceledException(HttpActionExecutedContext ctx, OperationCanceledException e)
+        {
+            ctx.Response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.RequestTimeout
+            };
+
+            Stopwatch sp = ctx.Request.Properties["timer"] as Stopwatch;
+
+            var elapsedMilliseconds = sp == null ? -1 : sp.ElapsedMilliseconds;
+            SerializeError(ctx, new
+            {
+                Url = ctx.Request.RequestUri.PathAndQuery,
+                Error = string.Format("Request was canceled by the server due to timeout after {0}ms", elapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture)),
+                e.Message
+            });
+        }
+
+
         private static void HandleTooManyClausesException(HttpActionExecutedContext ctx, BooleanQuery.TooManyClauses e)
         {
             ctx.Response = new HttpResponseMessage
@@ -102,6 +125,7 @@ namespace Raven.Database.Server.WebApi.Filters
                 e.Message
             });
         }
+
 
         private static void HandleBadRequest(HttpActionExecutedContext ctx, BadRequestException e)
         {
@@ -120,7 +144,7 @@ namespace Raven.Database.Server.WebApi.Filters
 
         private static void HandleConcurrencyException(HttpActionExecutedContext ctx, ConcurrencyException e)
         {
-            if (ctx.ActionContext.ControllerContext.Controller is RavenFsApiController)
+            if (ctx.ActionContext.ControllerContext.Controller is BaseFileSystemApiController)
             {
                 ctx.Response = new HttpResponseMessage
                 {

@@ -10,14 +10,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
-using System.Threading.Tasks;
 
 namespace Raven.Client.Linq
 {
@@ -202,9 +200,32 @@ namespace Raven.Client.Linq
             if (subClauseDepth > 0) documentQuery.OpenSubclause();
             subClauseDepth++;
 
+            // negate optimization : (RavenDB-3973).  in order to disable you may just set isNotEqualCheckBoundsToAndAlsoLeft & Right to "false" 
+            bool isNotEqualCheckBoundsToAndAlsoLeft = (andAlso.Left.NodeType == ExpressionType.NotEqual);
+            bool isNotEqualCheckBoundsToAndAlsoRight = (andAlso.Right.NodeType == ExpressionType.NotEqual);
+
+            if (isNotEqualCheckBoundsToAndAlsoRight && isNotEqualCheckBoundsToAndAlsoLeft)
+                // avoid empty group (i.e. : "a != 1 && a != 2"  should generate "((-a:1 AND a:*) AND -a:2)"
+                isNotEqualCheckBoundsToAndAlsoLeft = false;
+
+            if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
+            {
+                subClauseDepth++;
+                documentQuery.OpenSubclause();
+            }
+            isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoLeft;
             VisitExpression(andAlso.Left);
             documentQuery.AndAlso();
+            isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoRight;
             VisitExpression(andAlso.Right);
+            isNotEqualCheckBoundsToAndAlso = false;
+
+            if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
+            {
+                subClauseDepth--;
+                documentQuery.CloseSubclause();
+            }
+            
 
             subClauseDepth--;
             if (subClauseDepth > 0) documentQuery.CloseSubclause();
@@ -406,7 +427,8 @@ namespace Raven.Client.Linq
             }
 
             var memberInfo = GetMember(expression.Left);
-            documentQuery.OpenSubclause();
+            if (isNotEqualCheckBoundsToAndAlso == false)
+                documentQuery.OpenSubclause();
             documentQuery.NegateNext();
             documentQuery.WhereEquals(new WhereParams
             {
@@ -415,15 +437,18 @@ namespace Raven.Client.Linq
                 IsAnalyzed = true,
                 AllowWildcards = false
             });
-            documentQuery.AndAlso();
-            documentQuery.WhereEquals(new WhereParams
+            if (isNotEqualCheckBoundsToAndAlso == false)
             {
-                FieldName = memberInfo.Path,
-                Value = "*",
-                IsAnalyzed = true,
-                AllowWildcards = true
-            });
-            documentQuery.CloseSubclause();
+                documentQuery.AndAlso();
+                documentQuery.WhereEquals(new WhereParams
+                {
+                    FieldName = memberInfo.Path,
+                    Value = "*",
+                    IsAnalyzed = true,
+                    AllowWildcards = true
+                });
+                documentQuery.CloseSubclause();
+            }
         }
 
         private static Type GetMemberType(ExpressionInfo info)
@@ -553,12 +578,16 @@ namespace Raven.Client.Linq
                 switch ((StringComparison)comparisonType)
                 {
                     case StringComparison.CurrentCulture:
+#if !DNXCORE50
                     case StringComparison.InvariantCulture:
+#endif
                     case StringComparison.Ordinal:
                         throw new NotSupportedException(
                             "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
                     case StringComparison.CurrentCultureIgnoreCase:
+#if !DNXCORE50
                     case StringComparison.InvariantCultureIgnoreCase:
+#endif
                     case StringComparison.OrdinalIgnoreCase:
                         break;
                     default:
@@ -820,7 +849,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 VisitEnumerableMethodCall(expression, negated);
                 return;
             }
-            if (declaringType.IsGenericType &&
+            if (declaringType.IsGenericType() &&
                 declaringType.GetGenericTypeDefinition() == typeof(List<>))
             {
                 VisitListMethodCall(expression);
@@ -1114,7 +1143,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
                 case "Select":
                 {
-                    if (expression.Arguments[0].Type.IsGenericType &&
+                    if (expression.Arguments[0].Type.IsGenericType() &&
                             expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IQueryable<>) &&
                         expression.Arguments[0].Type != expression.Arguments[1].Type)
                     {
@@ -1269,6 +1298,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private bool insideSelect;
         private readonly bool isMapReduce;
+        private bool isNotEqualCheckBoundsToAndAlso;
 
         private void VisitSelect(Expression operand)
         {
@@ -1727,7 +1757,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        #region Nested type: SpecialQueryType
+#region Nested type: SpecialQueryType
 
         /// <summary>
         /// Different query types 
@@ -1768,7 +1798,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             SingleOrDefault,
         }
 
-        #endregion
+#endregion
     }
 
     public class RenamedField

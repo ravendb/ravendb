@@ -58,6 +58,8 @@ namespace Raven.Tests.Abstractions.Logging
             private string message;
             private Exception exception;
 
+            public bool IsInfoEnabled { get; set; }
+
             public bool IsDebugEnabled { get; set; }
 
             public bool IsWarnEnabled { get; set; }

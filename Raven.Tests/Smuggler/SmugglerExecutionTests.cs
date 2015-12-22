@@ -4,6 +4,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
+using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Embedded;
@@ -17,10 +18,12 @@ using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Server.Controllers;
 using Xunit;
 using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
@@ -334,12 +337,12 @@ namespace Raven.Tests.Smuggler
                 }
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus,PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag);
 
                 store.DatabaseCommands.Delete(userId, null);
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -437,11 +440,11 @@ namespace Raven.Tests.Smuggler
 
                 store.DatabaseCommands.PutAttachment("attach/1", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentsEtag);
 
                 store.DatabaseCommands.DeleteAttachment("attach/1", null);
 
-                WaitForPeriodicExport(store.SystemDatabase, backupStatus);
+                WaitForPeriodicExport(store.SystemDatabase, backupStatus, PeriodicExportStatus.PeriodicExportStatusEtags.LastAttachmentDeletionEtag);
 
             }
 
@@ -593,7 +596,7 @@ namespace Raven.Tests.Smuggler
                 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
                                                                     servers[0].SystemDatabase.ServerUrl +
                                                                     "admin/periodicExport/purge-tombstones?docEtag=" + documentEtagAfterFirstDelete + "&attachmentEtag=" + attachmentEtagAfterFirstDelete,
-                                                                    "POST",
+                                                                    HttpMethods.Post,
                                                                     new OperationCredentials(null, CredentialCache.DefaultCredentials),
                                                                     store.Conventions);
 
@@ -723,23 +726,18 @@ namespace Raven.Tests.Smuggler
             {
             }
 
-            public Task<Etag> ExportDocuments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportDocuments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 Operations.Initialize(Options);
 
                 return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
             }
 
-            public Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<Etag> ExportAttachments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
             {
                 Operations.Initialize(Options);
 
                 return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
-            }
-
-            public override Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtags)
-            {
-                return base.ExportDeletions(jsonWriter, result, maxEtags);
             }
         }
 
@@ -758,7 +756,7 @@ namespace Raven.Tests.Smuggler
                 }
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -781,7 +779,7 @@ namespace Raven.Tests.Smuggler
                 }
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -807,7 +805,7 @@ namespace Raven.Tests.Smuggler
                 }
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -830,7 +828,7 @@ namespace Raven.Tests.Smuggler
                 }
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
@@ -865,7 +863,7 @@ namespace Raven.Tests.Smuggler
 
                 Etag user6DeletionEtag = null, user9DeletionEtag = null, attach5DeletionEtag = null, attach7DeletionEtag = null;
 
-                WaitForUserToContinueTheTest(store);
+               //WaitForUserToContinueTheTest(url:store.Url);
 
                 store.SystemDatabase.TransactionalStorage.Batch(accessor =>
                 {
@@ -881,21 +879,18 @@ namespace Raven.Tests.Smuggler
                 });
 
                 using (var textStream = new StringWriter())
-                using (var writer = new JsonTextWriter(textStream))
+                using (var writer = new SmugglerJsonTextWriter(textStream))
                 {
                     var dumper = new CustomDataDumper(store.SystemDatabase);
 
                     writer.WriteStartObject();
-                    var lastEtags = new LastEtagsInfo();
                     var exportResult = new OperationState
                     {
                         LastDocDeleteEtag = user6DeletionEtag,
                         LastAttachmentsDeleteEtag = attach5DeletionEtag
                     };
 
-                    lastEtags.LastDocDeleteEtag = user9DeletionEtag;
-                    lastEtags.LastAttachmentsDeleteEtag = attach7DeletionEtag;
-                    dumper.ExportDeletions(writer, exportResult, lastEtags).Wait();
+                    dumper.ExportDeletions(writer, exportResult, new LastEtagsInfo { LastDocDeleteEtag = user9DeletionEtag, LastAttachmentsDeleteEtag = attach7DeletionEtag }).Wait();
                     writer.WriteEndObject();
                     writer.Flush();
 
@@ -993,7 +988,7 @@ namespace Raven.Tests.Smuggler
         public async Task CanSkipFilesWhenUsingContinuations()
         {
             var dataDir = NewDataPath(forceCreateDir: true);
-            var continuationToken = "Token";
+            const string continuationToken = "Token";
 
             using (var store = NewRemoteDocumentStore( dataDirectory: dataDir ))
             {
@@ -1119,5 +1114,220 @@ namespace Raven.Tests.Smuggler
             }
         }
   
+        private string CreateTestExportFile(int docFirstId, int numberOfDocs)
+        {
+            string exportString1 = @"
+{
+   ""Indexes"": [
+                  {
+      ""name"": ""Raven/DocumentsByEntityName"",
+                    ""definition"": {
+        ""IndexId"": 1,
+                      ""Name"": ""Raven/DocumentsByEntityName"",
+                      ""LockMode"": ""LockedIgnore"",
+                      ""IndexVersion"": 0,
+                      ""Map"": ""from doc in docs \r\nselect new \r\n{ \r\n    Tag = doc[\""@metadata\""][\""Raven-Entity-Name\""], \r\n    LastModified = (DateTime)doc[\""@metadata\""][\""Last-Modified\""],\r\n    LastModifiedTicks = ((DateTime)doc[\""@metadata\""][\""Last-Modified\""]).Ticks \r\n};"",
+                      ""Maps"": [
+                        ""from doc in docs \r\nselect new \r\n{ \r\n    Tag = doc[\""@metadata\""][\""Raven-Entity-Name\""], \r\n    LastModified = (DateTime)doc[\""@metadata\""][\""Last-Modified\""],\r\n    LastModifiedTicks = ((DateTime)doc[\""@metadata\""][\""Last-Modified\""]).Ticks \r\n};""
+        ],
+        ""Reduce"": null,
+        ""IsMapReduce"": false,
+        ""IsCompiled"": false,
+        ""Stores"": {},
+        ""Indexes"": {
+          ""Tag"": ""NotAnalyzed"",
+          ""LastModified"": ""NotAnalyzed"",
+          ""LastModifiedTicks"": ""NotAnalyzed""
+        },
+        ""SortOptions"": {
+          ""LastModified"": ""String"",
+          ""LastModifiedTicks"": ""Long""
+        },
+        ""Analyzers"": {},
+        ""Fields"": [
+          ""Tag"",
+          ""LastModified"",
+          ""LastModifiedTicks"",
+          ""__document_id""
+        ],
+        ""Suggestions"": null,
+        ""SuggestionsOptions"": [],
+        ""TermVectors"": {},
+        ""SpatialIndexes"": {},
+        ""InternalFieldsMapping"": {},
+        ""MaxIndexOutputsPerDocument"": null,
+        ""Type"": ""Map"",
+        ""DisableInMemoryIndexing"": true,
+        ""IsTestIndex"": false,
+        ""IsSideBySideIndex"": false
+    }
+}
+  ],            
+  ""Docs"": [";
+
+            var docStringPart1 = @"
+    {
+      ""Smuggler"": ""Test_";
+
+            var docStringPart2 = @""",
+      ""@metadata"": {
+        ""Raven-Entity-Name"": ""testdoc"",
+        ""@id"": ""testdoc/";
+
+            var docStringPart3 = @""",
+        ""Last-Modified"": ""2015-11-27T23:33:27.8437754Z"",
+        ""Raven-Last-Modified"": ""2015-11-27T23:33:27.8437754"",
+        ""@etag"": ""01000000-0000-0001-0000-000000000001"",
+        ""Non-Authoritative-Information"": false
+      }
+    }";
+            var exportString2 = @"
+  ],
+  ""Attachments"": [],
+  ""Transformers"": [],
+  ""Identities"": []
+}'";
+            var fileToExportTo = Path.GetTempFileName();
+            var fileStream = File.OpenWrite(fileToExportTo);
+            using (var gzipStream = new GZipStream(fileStream, CompressionMode.Compress, leaveOpen: true))
+            using (var streamWriter = new StreamWriter(gzipStream))
+            {
+                streamWriter.Write(exportString1);
+                int docs;
+                // 200K docs should produce about 2MB of compressed export file
+                for (docs = docFirstId; docs < numberOfDocs; docs++)
+                {
+                    streamWriter.Write($"{docStringPart1}{docs}{docStringPart2}{docs}{docStringPart3},");
+                }
+                streamWriter.Write($"{docStringPart1}{docs}{docStringPart2}{docs}{docStringPart3}");
+                streamWriter.Write(exportString2);
+                streamWriter.Flush();
+            }
+            fileStream.Flush();
+            fileStream.Close();
+            fileStream.Dispose();
+
+            return fileToExportTo;
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CanExportImportSmugglerMaxSplitExportFileSize()
+        {
+            var fileToExportTo = CreateTestExportFile(1, 200000); 
+            var splittedFileToExportTo = Path.GetTempFileName();
+            Assert.NotNull(splittedFileToExportTo);
+            try
+            {
+                using (var store = NewRemoteDocumentStore())
+                {
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
+                    var smuggler = new SmugglerDatabaseApi();
+
+                    // import one file:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fileToExportTo, To = connectionStringOptions });
+
+                    // export as two files:
+                    await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = splittedFileToExportTo, From = connectionStringOptions, MaxSplitExportFileSize = 1 });
+
+                    Assert.True(File.Exists(splittedFileToExportTo));
+                    Assert.True(File.Exists($"{splittedFileToExportTo}.part001"));
+                    Assert.False(File.Exists($"{splittedFileToExportTo}.part002"));
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("testdoc/199997");
+                        session.SaveChanges();
+                        var o = session.Load<object>("testdoc/199997");
+                        Assert.Null(o);
+                    }
+
+                    // import two files:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = splittedFileToExportTo, To = connectionStringOptions });
+
+                    using (var session = store.OpenSession())
+                    {
+                        var o = session.Load<object>("testdoc/199997");
+                        Assert.NotNull(o);
+                    }
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(splittedFileToExportTo);
+                IOExtensions.DeleteFile($"{splittedFileToExportTo}.part001");
+                IOExtensions.DeleteFile(fileToExportTo);
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CanExportImportIncrementalSmugglerMaxSplitExportFileSize()
+        {
+            var fileToExportTo = CreateTestExportFile(1, 10000);
+            var fileToExportIncrementalTo = CreateTestExportFile(10001, 200000);
+            var mainFileToExportTo = Path.GetTempFileName();
+            Assert.NotNull(mainFileToExportTo);
+            var directoryToExportIncrementalTo =
+                Path.Combine(Path.GetDirectoryName(mainFileToExportTo), "TestIncremental");
+            Directory.CreateDirectory(directoryToExportIncrementalTo);
+            string secondaryFileToExportTo = null;
+            try
+            {
+                using (var store = NewRemoteDocumentStore())
+                {
+                    var connectionStringOptions = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase };
+                    var smuggler = new SmugglerDatabaseApi();
+
+                    // import one file:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fileToExportTo, To = connectionStringOptions });
+
+                    // export as one files:
+                    await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = mainFileToExportTo, From = connectionStringOptions });
+                    Assert.True(File.Exists(mainFileToExportTo));
+
+                    // export incremental as two files:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = fileToExportIncrementalTo, To = connectionStringOptions });
+                    var operState = await smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = directoryToExportIncrementalTo, From = connectionStringOptions, MaxSplitExportFileSize = 1, IsIncrementalExport = true});
+
+                    secondaryFileToExportTo = operState.FilePath;
+                    Assert.True(File.Exists(secondaryFileToExportTo));
+                    Assert.True(File.Exists($"{secondaryFileToExportTo}.part001"));
+                    Assert.False(File.Exists($"{secondaryFileToExportTo}.part002"));
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("testdoc/20000");
+                        session.Delete("testdoc/199997");
+                        session.SaveChanges();
+                        var o = session.Load<object>("testdoc/20000");
+                        Assert.Null(o);
+                        o = session.Load<object>("testdoc/199997");
+                        Assert.Null(o);
+                    }
+
+                    // import two files:
+                    await smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = directoryToExportIncrementalTo, To = connectionStringOptions, IsIncrementalImport = true});
+
+                    using (var session = store.OpenSession())
+                    {
+                        var o = session.Load<object>("testdoc/20000");
+                        Assert.NotNull(o);
+                        o = session.Load<object>("testdoc/199997");
+                        Assert.NotNull(o);
+                    }
+                }
+            }
+            finally
+            {
+                IOExtensions.DeleteFile(fileToExportTo);
+                IOExtensions.DeleteFile(fileToExportIncrementalTo);
+                IOExtensions.DeleteFile(mainFileToExportTo);
+                if (secondaryFileToExportTo != null)
+                {
+                    IOExtensions.DeleteFile(secondaryFileToExportTo);
+                    IOExtensions.DeleteFile($"{secondaryFileToExportTo}.part001");
+                }
+                IOExtensions.DeleteDirectory(directoryToExportIncrementalTo);
+            }
+        }
     }
 }

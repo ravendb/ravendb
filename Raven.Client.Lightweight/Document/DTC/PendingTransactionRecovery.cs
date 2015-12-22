@@ -1,3 +1,4 @@
+#if !DNXCORE50
 //-----------------------------------------------------------------------
 // <copyright file="PendingTransactionRecovery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -5,9 +6,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.IsolatedStorage;
 using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
@@ -142,3 +141,4 @@ namespace Raven.Client.Document.DTC
         }
     }
 }
+#endif

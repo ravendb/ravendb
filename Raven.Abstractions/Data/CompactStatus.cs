@@ -18,9 +18,14 @@ namespace Raven.Abstractions.Data
             return "Raven/Database/Compact/Status/" + databaseName;
         }
 
-        public static string RavenFilesystemCompactStatusDocumentKey(string filesystemName)
+        public static string RavenFilesystemCompactStatusDocumentKey(string fileSystemName)
         {
-            return "Raven/FileSystem/Compact/Status/" + filesystemName;
+            return "Raven/FileSystem/Compact/Status/" + fileSystemName;
+        }
+
+        public static string RavenCounterStoageCompactStatusDocumentKey(string counterStorageName)
+        {
+            return "Raven/Counter/Compact/Status/" + counterStorageName;
         }
     }
 

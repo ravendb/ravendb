@@ -1,22 +1,27 @@
 using System;
 
+#if !DNXCORE50
 using Raven.Tests.FileSystem.ClientApi;
+#endif
 
 namespace Raven.Tryouts
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+#if !DNXCORE50
+            for (int i = 0; i < 100; i++)
             {
-                Console.Clear();
-                Console.WriteLine(i);
-                using (var x = new FileSessionListenersTests())
+                using (var test = new FileSessionListenersTests())
                 {
-                    x.ConflictListeners_RemoteVersion().Wait();
+                    Console.WriteLine(i);
+
+                    test.ConflictListeners_RemoteVersion().Wait();
+
                 }
             }
+#endif
         }
     }
 }

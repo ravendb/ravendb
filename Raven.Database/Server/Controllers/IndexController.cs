@@ -1,16 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -25,10 +12,23 @@ using Raven.Database.Queries;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web.Http;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class IndexController : RavenDbApiController
+    public class IndexController : ClusterAwareRavenDbApiController
     {
         [HttpGet]
         [RavenRoute("indexes")]
@@ -58,7 +58,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize index request. Error: ", e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize index request. Error: ", e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity.",
@@ -68,8 +69,9 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize index request. Error: ", e);
-
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize index request. Error: ", e);
+                
                 return GetMessageWithObject(new
                 {
                     Error = e
@@ -115,7 +117,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize index request. Error: ", e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize index request. Error: ", e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity.",
@@ -125,7 +128,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize index request. Error: ", e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize index request. Error: ", e);
 
                 return GetMessageWithObject(new
                 {
@@ -168,7 +172,7 @@ namespace Raven.Database.Server.Controllers
                         RavenJObject.FromObject(new IndexReplaceDocument {IndexToReplace = createdIndex.OriginalName, MinimumEtagBeforeReplace = sideBySideIndexes.MinimumEtagBeforeReplace, ReplaceTimeUtc = sideBySideIndexes.ReplaceTimeUtc}),
                         new RavenJObject(),
                         null);
-                }
+        }
             });
 
             return GetMessageWithObject(new { Indexes = createdIndexes.Select(x => x.Name).ToArray() }, HttpStatusCode.Created);
@@ -197,12 +201,12 @@ namespace Raven.Database.Server.Controllers
 
                 try
                 {
-                    return GetIndexQueryResult(index, cts.Token);
-                }
+                return GetIndexQueryResult(index, cts.Token);
+            }
                 catch (OperationCanceledException e)
                 {
                     throw new TimeoutException(string.Format("The query did not produce results in {0}", DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout), e);
-                }
+        }
             }
         }
 
@@ -233,11 +237,12 @@ namespace Raven.Database.Server.Controllers
 
             try
             {
-                jsonIndex = await ReadJsonAsync();
+                jsonIndex = await ReadJsonAsync().ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
-                Log.DebugException("Failed to deserialize index request. Error: ", e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize index request. Error: ", e);
                 return GetMessageWithObject(new
                 {
                     Message = "Could not understand json, please check its validity.",
@@ -247,7 +252,8 @@ namespace Raven.Database.Server.Controllers
             }
             catch (InvalidDataException e)
             {
-                Log.DebugException("Failed to deserialize index request. Error: ", e);
+                if (Log.IsDebugEnabled)
+                    Log.DebugException("Failed to deserialize index request. Error: ", e);
                 return GetMessageWithObject(new
                 {
                     e.Message
@@ -300,7 +306,7 @@ namespace Raven.Database.Server.Controllers
         [HttpPost]
         [RavenRoute("indexes/{*id}")]
         [RavenRoute("databases/{databaseName}/indexes/{*id}")]
-        public async Task<HttpResponseMessage >IndexPost(string id)
+        public async Task<HttpResponseMessage> IndexPost(string id)
         {
             var index = id;
 
@@ -322,7 +328,7 @@ namespace Raven.Database.Server.Controllers
 
             if ("hasChanged".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
             {
-                var data = await ReadJsonObjectAsync<IndexDefinition>();
+                var data = await ReadJsonObjectAsync<IndexDefinition>().ConfigureAwait(false);
                 if (data == null || (data.Map == null && (data.Maps == null || data.Maps.Count == 0)))
                     return GetMessageWithString("Expected json document with 'Map' or 'Maps' property", HttpStatusCode.BadRequest);
 
@@ -334,7 +340,7 @@ namespace Raven.Database.Server.Controllers
 
             if ("true".Equals(GetQueryStringValue("postQuery"), StringComparison.InvariantCultureIgnoreCase))
             {
-                var postedQuery = await ReadStringAsync();
+                var postedQuery = await ReadStringAsync().ConfigureAwait(false);
                 
                 SetPostRequestQuery(postedQuery);
                 return IndexGet(id);
@@ -361,9 +367,9 @@ namespace Raven.Database.Server.Controllers
         {
             var index = id;
 
-            var isReplication = GetQueryStringValue(Constants.IsIndexReplicatedUrlParamName);
+            var isReplication = GetQueryStringValue(Constants.IsReplicatedUrlParamName);
             if (Database.Indexes.DeleteIndex(index) &&
-                !String.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
+                !string.IsNullOrWhiteSpace(isReplication) && isReplication.Equals("true", StringComparison.InvariantCultureIgnoreCase))
             {
                 const string emptyFrom = "<no hostname>";
                 var from = Uri.UnescapeDataString(GetQueryStringValue("from") ?? emptyFrom);
@@ -390,10 +396,54 @@ namespace Raven.Database.Server.Controllers
             }
 
             var instance = Database.IndexStorage.GetIndexInstance(index);
+
             Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
             instance.Priority = indexingPriority;
 
             return GetEmptyMessage();
+        }
+
+        [HttpPatch]
+        [RavenRoute("indexes/try-recover-corrupted")]
+        [RavenRoute("databases/{databaseName}/indexes/try-recover-corrupted")]
+        public HttpResponseMessage TryRecoverCorruptedIndexes()
+        {
+            foreach (var indexId in Database.IndexStorage.Indexes)
+            {
+                var index = Database.IndexStorage.GetIndexInstance(indexId);
+
+                if(index.Priority != IndexingPriority.Error)
+                    continue;
+
+                long taskId;
+                var task = Task.Run(() =>
+                {
+                    // try to recover by reopening the index - it will reset it if necessary
+                    try
+                    {
+                        index = Database.IndexStorage.ReopenCorruptedIndex(index);
+
+                        Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(index.IndexId, IndexingPriority.Normal));
+                        index.Priority = IndexingPriority.Normal;
+
+                        Database.WorkContext.ShouldNotifyAboutWork(() => string.Format("Index {0} has been recovered.", index.PublicName));
+                        Database.WorkContext.NotifyAboutWork();
+                    }
+                    catch (Exception e)
+                    {
+                        Log.WarnException("Failed to recover the corrupted index '{0}' by reopening it.", e);
+                    }
+                });
+
+                Database.Tasks.AddTask(task, null, new TaskActions.PendingTaskDescription
+                {
+                    StartTime = SystemTime.UtcNow,
+                    TaskType = TaskActions.PendingTaskType.RecoverCorruptedIndexOperation,
+                    Payload = index.PublicName
+                }, out taskId);
+            }
+
+            return GetEmptyMessage(HttpStatusCode.Accepted);
         }
 
         [HttpGet]
@@ -572,12 +622,13 @@ namespace Raven.Database.Server.Controllers
                 PerformQueryAgainstExistingIndex(index, indexQuery, out indexEtag, msg, token);
 
             sp.Stop();
-            Log.Debug(() =>
-            {
-                var sb = new StringBuilder();
-                ReportQuery(sb, indexQuery, sp, result);
-                return sb.ToString();
-            });
+            if (Log.IsDebugEnabled)
+                Log.Debug(() =>
+                {
+                    var sb = new StringBuilder();
+                    ReportQuery(sb, indexQuery, sp, result);
+                    return sb.ToString();
+                });
             AddRequestTraceInfo(sb => ReportQuery(sb, indexQuery, sp, result));
 
             return result;
@@ -903,11 +954,8 @@ namespace Raven.Database.Server.Controllers
                 return GetEmptyMessage(HttpStatusCode.NotFound);
 
             stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(instance.indexId);
-            stats.Performance = Database.IndexStorage.GetIndexingPerformance(instance.indexId);
             stats.SetLastDocumentEtag(lastEtag);
             return GetMessageWithObject(stats);
         }
-
-
     }
 }

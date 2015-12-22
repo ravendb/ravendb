@@ -3,7 +3,7 @@ using System.Web.Http;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class BuildController : RavenDbApiController
+    public class BuildController : BaseDatabaseApiController
     {
         [HttpGet]
         public HttpResponseMessage Version()

@@ -126,23 +126,6 @@ namespace Voron.Tests
             GC.WaitForPendingFinalizers();
         }
 
-        protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)
-        {
-            if (name == null)
-                RenderAndShow(tx, tx.Root);
-            else
-                RenderAndShow(tx, tx.Environment.CreateTree(tx,name));
-        }
-
-        protected void RenderAndShow(Transaction tx, Tree root)
-        {
-            if (Debugger.IsAttached == false)
-                return;
-            var rootPageNumber = tx.Environment.CreateTree(tx,root.Name).State.RootPageNumber;
-            DebugStuff.RenderAndShow(root);
-
-        }
-
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
         {
             Lazy<Cursor> lazy;

@@ -42,6 +42,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -117,6 +118,10 @@
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Compaction\StorageCompactionTests.cs" />
     <Compile Include="DebugJournalTest.cs" />
+    <Compile Include="FixedSize\InlineDataWithRandomSeed.cs" />
+    <Compile Include="FixedSize\LargeFixedSizeTreeBugs.cs" />
+    <Compile Include="FixedSize\LargeFixedSizeTrees.cs" />
+    <Compile Include="FixedSize\SimpleFixedSizeTrees.cs" />
     <Compile Include="PrefixesFact.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
@@ -189,7 +194,6 @@
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

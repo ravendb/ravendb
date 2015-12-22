@@ -14,7 +14,7 @@
 																Protocol="tcp" Scope="any" IgnoreFailure="yes" Program="System" />
 			</Component>
 			<Component Id="PersistServiceValues" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
-				<RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]\v3.0" >
+				<RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]\v3.5" >
 					<RegistryValue Type="string" Name="SERVICE_NAME" Value="[SERVICE_NAME]"  />
 					<RegistryValue Type="string" Name="SERVICE_PORT" Value="[SERVICE_PORT]" />
 				</RegistryKey>
@@ -146,7 +146,14 @@
 											Value="[RAVENFS_DATA_DIR]"
 											SelectionLanguage="XSLPattern"
 											Sequence="17" />
-				
+			</Component>
+			<Component Id="Raven.Server.Shortcut" Guid="C7A448B6-5E3B-4705-B2D6-3766D83E8924">
+				<CreateFolder />
+				<util:InternetShortcut
+					Id="ServerLocalhostShortcut"
+					Directory="DesktopFolder"
+					Name="RavenDB Studio"
+					Target="http://localhost:[SERVICE_PORT]" Type="url" />
 			</Component>
 		</DirectoryRef>
 	</Fragment>

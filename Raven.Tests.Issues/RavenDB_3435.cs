@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
@@ -103,7 +105,7 @@ namespace Raven.Tests.Issues
                 var serverPort = servers[0].Configuration.Port;
                 var url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=2", serverUrl, serverPort, TestDatabaseName);
 
-                var replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
+                var replicateRequest = httpRavenRequestFactory.Create(url, HttpMethod.Post, new RavenConnectionStringOptions
                 {
                     DefaultDatabase = TestDatabaseName,
                     Url = url
@@ -116,8 +118,8 @@ namespace Raven.Tests.Issues
                 //simulate what happens when on storeA the doc is changed -> replication request to storeB
                 var afterChangeReplicationRequestBody = RavenJArray.Parse("[{\"Name\":\"John Doe B\",\"@metadata\":{\"Raven-Entity-Name\":\"Users\",\"Raven-Clr-Type\":\"Raven.Tests.Issues.RavenDB_3435+User, Raven.Tests.Issues\",\"Raven-Replication-Version\":4,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\",\"Raven-Replication-History\":[{\"Raven-Replication-Version\":3,\"Raven-Replication-Source\":\"b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a\"}],\"@id\":\"users/1\",\"Last-Modified\":\"2015-05-19T11:28:05.7662451Z\",\"Raven-Last-Modified\":\"2015-05-19T11:28:05.7662451\",\"@etag\":\"01000000-0000-0002-0000-000000000005\"}}]");
                 url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", serverUrl, serverPort, TestDatabaseName);
-                
-                replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
+
+                replicateRequest = httpRavenRequestFactory.Create(url, HttpMethod.Post, new RavenConnectionStringOptions
                 {
                     DefaultDatabase = TestDatabaseName,
                     Url = url
@@ -136,7 +138,7 @@ namespace Raven.Tests.Issues
                 var afterConflictResolveRequestBody = RavenJArray.Parse(requestString);			
                 url = string.Format("{0}:{1}/databases/{2}/replication/replicateDocs?from=http%3A%2F%2Fmichael%3A9000%2Fdatabases%2FtestDB&dbid=b2f4bdf5-9bc2-46bf-a173-8c441c5b3b5a&count=1", serverUrl, serverPort, TestDatabaseName);
 
-                replicateRequest = httpRavenRequestFactory.Create(url, "POST", new RavenConnectionStringOptions
+                replicateRequest = httpRavenRequestFactory.Create(url, HttpMethod.Post, new RavenConnectionStringOptions
                 {
                     DefaultDatabase = TestDatabaseName,
                     Url = url

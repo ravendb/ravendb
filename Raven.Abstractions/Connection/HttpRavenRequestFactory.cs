@@ -1,6 +1,8 @@
+#if !DNXCORE50
 using System;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -9,6 +11,7 @@ using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
 {
+    [Obsolete]
     public class HttpRavenRequestFactory
     {
         public int? RequestTimeoutInMs { get; set; }
@@ -22,7 +25,25 @@ namespace Raven.Abstractions.Connection
 
             if (options.ApiKey == null)
             {
-                request.Credentials = options.Credentials ?? CredentialCache.DefaultNetworkCredentials;
+                ICredentials credentialsToUse = CredentialCache.DefaultNetworkCredentials;
+                if (options.Credentials != null)
+                {
+                    var networkCredentials = options.Credentials as NetworkCredential;
+                    if (networkCredentials != null && options.AuthenticationScheme != null)
+                    {
+                        var credentialCache = new CredentialCache();
+                        var uri = new Uri(options.Url);
+                        credentialCache.Add(new Uri(string.Format("{0}://{1}:{2}/", uri.Scheme, uri.Host, uri.Port)), options.AuthenticationScheme, networkCredentials);
+
+                        credentialsToUse = credentialCache;
+                    }
+                    else
+                    {
+                        credentialsToUse = options.Credentials;
+                    }
+                }
+
+                request.Credentials = credentialsToUse;
                 return;
             }
 
@@ -48,9 +69,9 @@ namespace Raven.Abstractions.Connection
             return Tuple.Create(options.Url, options.ApiKey);
         }
 
-        public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering = null)
+                public HttpRavenRequest Create(string url, HttpMethod httpMethod, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering = null)
         {
-            return new HttpRavenRequest(url, method, ConfigureRequest, HandleUnauthorizedResponse, connectionStringOptions, allowWriteStreamBuffering);
+                        return new HttpRavenRequest(url, httpMethod, ConfigureRequest, HandleUnauthorizedResponse, connectionStringOptions, allowWriteStreamBuffering);
         }
 
         private Action<HttpWebRequest> HandleUnauthorizedResponse(RavenConnectionStringOptions options, WebResponse webResponse)
@@ -90,3 +111,4 @@ namespace Raven.Abstractions.Connection
         }
     }
 }
+#endif

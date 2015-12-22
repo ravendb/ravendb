@@ -136,7 +136,9 @@ namespace Raven.Tests.FileSystem.Shard
             try
             {
                 new ShardStrategy(shards).ShardAccessStrategy
+#pragma warning disable 1998
                     .ApplyAsync(new List<IAsyncFilesCommands>(), new ShardRequestData(), async (commands, i) => 1)
+#pragma warning restore 1998
                     .Wait();
             }
             catch (AggregateException ex)

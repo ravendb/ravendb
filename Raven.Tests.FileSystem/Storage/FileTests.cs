@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Database.FileSystem.Infrastructure;
 using Raven.Json.Linq;
 using Xunit;
 using Xunit.Extensions;
@@ -378,7 +379,7 @@ namespace Raven.Tests.FileSystem.Storage
 
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
                 Assert.Equal(EtagUtil.Increment(Etag.Empty, 1), etag);
-                
+
                 storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject()));
                 storage.Batch(accessor => etag = accessor.GetLastEtag());
                 Assert.Equal(EtagUtil.Increment(Etag.Empty, 2), etag);
@@ -648,6 +649,175 @@ namespace Raven.Tests.FileSystem.Storage
                     accessor.ReadPage(pageId, buffer);
                     Assert.True(buffer.All(b => b == default(byte)));
                     Assert.Null(accessor.ReadFile("test0.bin"));
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void CopyFile1(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => Assert.Throws<FileNotFoundException>(() => accessor.CopyFile("file1", "file2")));
+
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+
+                storage.Batch(accessor => accessor.CopyFile("file1", "file2"));
+
+                storage.Batch(accessor =>
+                {
+                    var file = accessor.GetFile("file2", 0, 0);
+
+                    Assert.NotNull(file);
+                    Assert.Equal("file2", file.Name);
+                    Assert.Equal(null, file.TotalSize);
+                    Assert.Equal(0, file.UploadedSize);
+                    Assert.Equal(0, file.Start);
+                    Assert.Equal(0, file.Pages.Count);
+
+                    var fileMetadata = file.Metadata;
+
+                    Assert.NotNull(fileMetadata);
+                    Assert.Equal(1, fileMetadata.Count);
+                    Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void GetFilesAfterWhereFileEtagsHaveDifferentRestartValues(string requestedStorage)
+        {
+            var etagGenerator = new UuidGenerator();
+
+            using (var storage = NewTransactionalStorage(requestedStorage, uuidGenerator: etagGenerator))
+            {
+                storage.Batch(accessor => accessor.PutFile("/file1", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 7;
+                storage.Batch(accessor => accessor.PutFile("/file2", 10, new RavenJObject()));
+
+                etagGenerator.EtagBase = 12;
+                storage.Batch(accessor => accessor.PutFile("/file3", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 300;
+                storage.Batch(accessor => accessor.PutFile("/file4", 10, new RavenJObject()));
+
+                etagGenerator.EtagBase = 450;
+                storage.Batch(accessor => accessor.PutFile("/file5", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 1024;
+                storage.Batch(accessor => accessor.PutFile("/file6", 10, new RavenJObject()));
+
+                etagGenerator.EtagBase = 3333;
+                storage.Batch(accessor => accessor.PutFile("/file7", null, new RavenJObject()));
+
+                etagGenerator.EtagBase = 10000;
+                storage.Batch(accessor => accessor.PutFile("/file8", 10, new RavenJObject()));
+
+                storage.Batch(accessor =>
+                {
+                    var files = accessor
+                        .GetFilesAfter(Etag.Empty, 10)
+                        .ToList();
+
+                    Assert.Equal(8, files.Count);
+                    Assert.Equal("file1", files[0].Name);
+                    Assert.Equal("file2", files[1].Name);
+                    Assert.Equal("file3", files[2].Name);
+                    Assert.Equal("file4", files[3].Name);
+                    Assert.Equal("file5", files[4].Name);
+                    Assert.Equal("file6", files[5].Name);
+                    Assert.Equal("file7", files[6].Name);
+                    Assert.Equal("file8", files[7].Name);
+
+                    files = accessor
+                        .GetFilesAfter(files[4].Etag, 100)
+                        .ToList();
+
+                    Assert.Equal(3, files.Count);
+                    Assert.Equal("file6", files[0].Name);
+                    Assert.Equal("file7", files[1].Name);
+                    Assert.Equal("file8", files[2].Name);
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void CopyFile2(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+
+                storage.Batch(accessor => accessor.AssociatePage("file1", 1, 0, 10));
+
+                storage.Batch(accessor => accessor.CopyFile("file1", "file2"));
+
+                storage.Batch(accessor =>
+                {
+                    var file = accessor.GetFile("file2", 0, 10);
+
+                    Assert.NotNull(file);
+                    Assert.Equal("file2", file.Name);
+                    Assert.Equal(-10, file.TotalSize);
+                    Assert.Equal(10, file.UploadedSize);
+                    Assert.Equal(0, file.Start);
+
+                    Assert.Equal(1, file.Pages.Count);
+                    Assert.Equal(1, file.Pages[0].Id);
+                    Assert.Equal(10, file.Pages[0].Size);
+
+                    var fileMetadata = file.Metadata;
+
+                    Assert.NotNull(fileMetadata);
+                    Assert.Equal(1, fileMetadata.Count);
+                    Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
+                });
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void CopyFile3(string requestedStorage)
+        {
+            using (var storage = NewTransactionalStorage(requestedStorage))
+            {
+                storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
+
+                storage.Batch(accessor =>
+                {
+                    var id = accessor.InsertPage(new byte[10], 10);
+                    accessor.AssociatePage("file1", id, 0, 10);
+                });
+
+                storage.Batch(accessor => accessor.CopyFile("file1", "file2"));
+
+                storage.Batch(accessor => Assert.NotNull(accessor.GetFile("file2", 0, int.MaxValue)));
+
+                storage.Batch(accessor => accessor.Delete("file1"));
+
+                storage.Batch(accessor =>
+                {
+                    var file = accessor.GetFile("file2", 0, 2);
+
+                    Assert.NotNull(file);
+                    Assert.Equal("file2", file.Name);
+                    Assert.Equal(-10, file.TotalSize);
+                    Assert.Equal(10, file.UploadedSize);
+                    Assert.Equal(0, file.Start);
+
+                    Assert.Equal(1, file.Pages.Count);
+                    Assert.Equal(1, file.Pages[0].Id);
+                    Assert.Equal(10, file.Pages[0].Size);
+
+                    var fileMetadata = file.Metadata;
+
+                    Assert.NotNull(fileMetadata);
+                    Assert.Equal(1, fileMetadata.Count);
+                    Assert.Equal("00000000-0000-0000-0000-000000000002", fileMetadata.Value<string>(Constants.MetadataEtagField));
                 });
             }
         }

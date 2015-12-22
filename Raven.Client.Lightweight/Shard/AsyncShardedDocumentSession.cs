@@ -18,6 +18,7 @@ using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
@@ -417,7 +418,7 @@ namespace Raven.Client.Shard
                         new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
                         async (dbCmd, i) =>
                         {
-                            var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters);
+                            var multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths, transformer, transformerParameters).ConfigureAwait(false);
                             var items = new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 
                             if (items.Length > currentShardIds.Length)
@@ -661,7 +662,7 @@ namespace Raven.Client.Shard
         /// </summary>
         async Task IAsyncDocumentSession.SaveChangesAsync(CancellationToken token)
         {
-            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges();
+            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().ConfigureAwait(false);
             var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
             try
             {
@@ -676,7 +677,7 @@ namespace Raven.Client.Shard
                 LogBatch(data);
 
                 // split by shards
-                var saveChangesPerShard = await GetChangesToSavePerShardAsync(data);
+                var saveChangesPerShard = await GetChangesToSavePerShardAsync(data).ConfigureAwait(false);
 
                 var saveTasks = new Task<BatchResult[]>[saveChangesPerShard.Count];
                 var saveChanges = new List<SaveChangesData>();
@@ -695,10 +696,10 @@ namespace Raven.Client.Shard
                     saveTasks[saveChanges.Count] =databaseCommands.BatchAsync(localCopy.Commands.ToArray());
                     saveChanges.Add(localCopy);
                 }
-                await Task.WhenAll(saveTasks);
+                await Task.WhenAll(saveTasks).ConfigureAwait(false);
                 for (int index = 0; index < saveTasks.Length; index++)
                 {
-                    var results = await saveTasks[index];
+                    var results = await saveTasks[index].ConfigureAwait(false);
                     UpdateBatchResults(results, saveChanges[index]);
                 }
             }
@@ -718,7 +719,7 @@ namespace Raven.Client.Shard
             for (int index = 0; index < data.Entities.Count; index++)
             {
                 var entity = data.Entities[index];
-                var metadata = await GetMetadataForAsync(entity);
+                var metadata = await GetMetadataForAsync(entity).ConfigureAwait(false);
                 var shardId = metadata.Value<string>(Constants.RavenShardId);
                 if (shardId == null)
                     throw new InvalidOperationException("Cannot save a document when the shard id isn't defined. Missing Raven-Shard-Id in the metadata");
@@ -804,6 +805,57 @@ namespace Raven.Client.Shard
 
             throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
              
+        }
+
+        public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            return await DeleteByIndexAsync(indexCreator.IndexName, expression).ConfigureAwait(false);
+        }
+
+        private IRavenQueryable<T> QueryInternal<T>(IAsyncDatabaseCommands assyncDatabaseCommands, string indexName, bool isMapReduce = false)
+        {
+            var ravenQueryStatistics = new RavenQueryStatistics();
+            var highlightings = new RavenQueryHighlightings();
+            var ravenQueryInspector = new RavenQueryInspector<T>();
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, assyncDatabaseCommands, isMapReduce);
+            ravenQueryInspector.Init(ravenQueryProvider,
+                ravenQueryStatistics,
+                highlightings,
+                indexName,
+                null,
+                this, null, assyncDatabaseCommands, isMapReduce);
+            return ravenQueryInspector;
+        }
+
+        public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            var shards = GetCommandsToOperateOn(new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { indexName }
+            });
+
+            var operations = shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { indexName }
+            }, (dbCmd, i) =>
+            {
+                var query = QueryInternal<T>(dbCmd, indexName).Where(expression);
+                var indexQuery = new IndexQuery()
+                {
+                    Query = query.ToString()
+                };
+
+                return dbCmd.DeleteByIndexAsync(indexName, indexQuery);
+            });
+
+            var result = await operations.ConfigureAwait(false);
+
+            var shardOperation = new ShardsOperation(result);
+
+            return shardOperation;
         }
     }
 }

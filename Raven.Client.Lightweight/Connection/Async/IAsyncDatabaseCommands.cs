@@ -9,9 +9,11 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -67,19 +69,21 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<BatchResult[]> BatchAsync(IEnumerable<ICommandData> commandDatas, CancellationToken token = default (CancellationToken));
 
+#if !DNXCORE50
         /// <summary>
         ///     Commits the specified tx id
         /// </summary>
         /// <param name="txId">transaction identifier</param>
         /// <param name="token">The cancellation token.</param>
         Task CommitAsync(string txId, CancellationToken token = default (CancellationToken));
+#endif
 
-        HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
+        HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
         /// <summary>
         ///     Create a http request to the specified relative url on the current database
         /// </summary>
-        HttpJsonRequest CreateRequest(string relativeUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
+        HttpJsonRequest CreateRequest(string relativeUrl, HttpMethod method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null);
 
         /// <summary>
         ///     Deletes the document with the specified key
@@ -130,7 +134,7 @@ namespace Raven.Client.Connection.Async
         ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
         ///     with the specified database
         /// </summary>
-        IAsyncDatabaseCommands ForDatabase(string database);
+        IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
         /// <summary>
         ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
@@ -258,6 +262,11 @@ namespace Raven.Client.Connection.Async
         Task<IndexDefinition> GetIndexAsync(string name, CancellationToken token = default (CancellationToken));
 
         /// <summary>
+        ///     Retrieves indexing performance statistics for all indexes
+        /// </summary>
+        Task<IndexingPerformanceStatistics[]> GetIndexingPerformanceStatisticsAsync();
+
+        /// <summary>
         ///     Retrieves all suggestions for an index merging
         /// </summary>
         /// <param name="token">The cancellation token.</param>
@@ -333,6 +342,7 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="name">The name of the transformer</param>
         /// <param name="lockMode">The lock mode to be set</param>
+        /// <param name="token">The cancellation token.</param>
         Task SetTransformerLockAsync(string name, TransformerLockMode lockMode, CancellationToken token = default(CancellationToken));
 
         /// <summary>
@@ -471,10 +481,12 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata, CancellationToken token = default(CancellationToken));
 
+#if !DNXCORE50
         /// <summary>
         ///     Prepares the transaction on the server.
         /// </summary>
         Task PrepareTransactionAsync(string txId, Guid? resourceManagerId = null, byte[] recoveryInformation = null, CancellationToken token = default (CancellationToken));
+#endif
 
         /// <summary>
         ///     Puts the document in the database with the specified key.
@@ -589,12 +601,14 @@ namespace Raven.Client.Connection.Async
         /// <param name="token">The cancellation token.</param>
         Task ResetIndexAsync(string name, CancellationToken token = default(CancellationToken));
 
+#if !DNXCORE50
         /// <summary>
         ///     Rollbacks the specified tx id
         /// </summary>
         /// <param name="txId">transaction identifier</param>
         /// <param name="token">The cancellation token.</param>
         Task RollbackAsync(string txId, CancellationToken token = default(CancellationToken));
+#endif
 
         /// <summary>
         ///     Seeds the next identity value on the server

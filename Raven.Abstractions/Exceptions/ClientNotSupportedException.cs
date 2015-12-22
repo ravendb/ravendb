@@ -38,8 +38,10 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
+#if !DNXCORE50
         protected ServerVersionNotSuppportedException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+#endif
     }
 }

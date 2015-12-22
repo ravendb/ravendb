@@ -84,9 +84,7 @@ namespace Raven.Client.Document
                     if (item.Value == null)
                         writer.WriteNull();
                     else
-                    {
-                        item.Value.WriteTo(writer);
-                    }
+                        writer.WriteValue(item.Value);
                 }
             };
 

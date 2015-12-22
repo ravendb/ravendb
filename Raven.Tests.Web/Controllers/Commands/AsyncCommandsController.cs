@@ -16,6 +16,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Web.Models.Indexes;
@@ -50,7 +51,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/async/commands/deleteAttachment")]
         public async Task<HttpResponseMessage> DeleteAttachment()
         {
+#pragma warning disable 618
             await DocumentStore.AsyncDatabaseCommands.DeleteAttachmentAsync("keys/1", null);
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -93,33 +96,39 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/async/commands/getAttachment")]
         public async Task<HttpResponseMessage> GetAttachment()
         {
+#pragma warning disable 618
             await DocumentStore.AsyncDatabaseCommands.GetAttachmentAsync("attachment1");
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
         [Route("api/async/commands/getAttachmentHeadersStartingWith")]
         public async Task<HttpResponseMessage> GetAttachmentHeadersStartingWith()
         {
+#pragma warning disable 618
             await DocumentStore.AsyncDatabaseCommands.GetAttachmentHeadersStartingWithAsync("attachments", 0, 128);
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
         [Route("api/async/commands/getAttachments")]
         public async Task<HttpResponseMessage> GetAttachments()
         {
+#pragma warning disable 618
             await DocumentStore.AsyncDatabaseCommands.GetAttachmentsAsync(0, Etag.Empty, 128);
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
         [Route("api/async/commands/getBulkInsertOperation")]
-        public async Task<HttpResponseMessage> GetBulkInsertOperation()
+        public Task<HttpResponseMessage> GetBulkInsertOperation()
         {
             using (var operation = DocumentStore.AsyncDatabaseCommands.GetBulkInsertOperation(new BulkInsertOptions(), DocumentStore.Changes()))
             {
                 operation.Write(Guid.NewGuid().ToString(), new RavenJObject(), new RavenJObject());
             }
 
-            return new HttpResponseMessage();
+            return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
         }
 
         [Route("api/async/commands/getDocuments1")]
@@ -245,7 +254,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/async/commands/headAttachment")]
         public async Task<HttpResponseMessage> HeadAttachment()
         {
+#pragma warning disable 618
             await DocumentStore.AsyncDatabaseCommands.HeadAttachmentAsync("keys/1");
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -314,7 +325,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/async/commands/putAttachment")]
         public async Task<HttpResponseMessage> PutAttachment()
         {
+#pragma warning disable 618
             await DocumentStore.AsyncDatabaseCommands.PutAttachmentAsync("keys/1", null, new MemoryStream(), new RavenJObject());
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -418,7 +431,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/async/commands/updateAttachmentMetadata")]
         public async Task<HttpResponseMessage> UpdateAttachmentMetadata()
         {
+#pragma warning disable 618
             await DocumentStore.AsyncDatabaseCommands.UpdateAttachmentMetadataAsync("keys/1", null, new RavenJObject());
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -440,7 +455,7 @@ namespace Raven.Tests.Web.Controllers.Commands
             }
             catch (Exception e)
             {
-                if (e.Message.Contains("Could not figure out what to do") == false)
+                if (e.Message.Contains("replication bundle not activated") == false)
                     throw;
             }
 

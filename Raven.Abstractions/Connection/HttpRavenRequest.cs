@@ -1,7 +1,10 @@
+#if !DNXCORE50
 using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions.Data;
@@ -15,7 +18,7 @@ namespace Raven.Abstractions.Connection
     public class HttpRavenRequest
     {
         private readonly string url;
-        private readonly string method;
+        private readonly HttpMethod httpMethod;
         private readonly Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest;
         private readonly Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse;
         private readonly RavenConnectionStringOptions connectionStringOptions;
@@ -38,10 +41,10 @@ namespace Raven.Abstractions.Connection
             set { webRequest = value; }
         }
 
-        public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering)
+                public HttpRavenRequest(string url, HttpMethod httpMethod, Action<RavenConnectionStringOptions, HttpWebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions, bool? allowWriteStreamBuffering)
         {
             this.url = url;
-            this.method = method;
+            this.httpMethod = httpMethod;
             this.configureRequest = configureRequest;
             this.handleUnauthorizedResponse = handleUnauthorizedResponse;
             this.connectionStringOptions = connectionStringOptions;
@@ -51,8 +54,8 @@ namespace Raven.Abstractions.Connection
         private HttpWebRequest CreateRequest()
         {
             var request = (HttpWebRequest)System.Net.WebRequest.Create(url);
-            request.Method = method;
-            if (method == "POST" || method == "PUT")
+            request.Method = httpMethod.Method;
+            if (httpMethod == HttpMethods.Post || httpMethod == HttpMethods.Put)
                 request.Headers["Content-Encoding"] = "gzip";
             request.Headers["Accept-Encoding"] = "deflate,gzip";
             request.ContentType = "application/json; charset=utf-8";
@@ -61,7 +64,7 @@ namespace Raven.Abstractions.Connection
             {
                 request.AllowWriteStreamBuffering = allowWriteStreamBuffering.Value;
                 if (allowWriteStreamBuffering.Value == false)
-                    request.SendChunked = true;
+                    request.SendChunked = !EnvironmentUtils.RunningOnPosix;
             }
 
             configureRequest(connectionStringOptions, request);
@@ -72,6 +75,9 @@ namespace Raven.Abstractions.Connection
         public void Write(Stream streamToWrite)
         {
             postedStream = streamToWrite;
+            if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                WebRequest.ContentLength = streamToWrite.Length;
+            
             using (var stream = WebRequest.GetRequestStream())
             using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
             using (var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
@@ -92,6 +98,9 @@ namespace Raven.Abstractions.Connection
         public void Write(byte[] data)
         {
             postedData = data;
+            if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                WebRequest.ContentLength = data.Length; 
+            
             using (var stream = WebRequest.GetRequestStream())
             using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
             using (var cmp = new GZipStream(countingStream, CompressionMode.Compress))
@@ -112,23 +121,28 @@ namespace Raven.Abstractions.Connection
 
         private void WriteToken(WebRequest httpWebRequest)
         {
+            if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                httpWebRequest.ContentLength = postedToken.ToString().Length;
+
             using (var stream = httpWebRequest.GetRequestStream())
-            using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
-            using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
-            using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
             {
-                if (writeBson)
+                using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+                using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
+                using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
                 {
-                    postedToken.WriteTo(new BsonWriter(countingStream2));
+                    if (writeBson)
+                    {
+                        postedToken.WriteTo(new BsonWriter(countingStream2));
+                    }
+                    else
+                    {
+                        var streamWriter = new StreamWriter(countingStream2);
+                        postedToken.WriteTo(new JsonTextWriter(streamWriter));
+                        streamWriter.Flush();
+                    }
+                    commpressedData.Flush();
+                    stream.Flush();
                 }
-                else
-                {
-                    var streamWriter = new StreamWriter(countingStream2);
-                    postedToken.WriteTo(new JsonTextWriter(streamWriter));
-                    streamWriter.Flush();
-                }
-                commpressedData.Flush();
-                stream.Flush();
             }
         }
 
@@ -276,6 +290,9 @@ namespace Raven.Abstractions.Connection
             if (postedStream != null)
             {
                 postedStream.Position = 0;
+                if (EnvironmentUtils.RunningOnPosix) // mono must set ContentLength before GetRequestStream (unlike .net)
+                    newWebRequest.ContentLength = postedStream.Length;
+                
                 using (var stream = newWebRequest.GetRequestStream())
                 using (var compressedData = new GZipStream(stream, CompressionMode.Compress))
                 {
@@ -289,3 +306,4 @@ namespace Raven.Abstractions.Connection
 
     }
 }
+#endif

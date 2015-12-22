@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 
 namespace Raven.Client.Changes
@@ -65,9 +63,9 @@ namespace Raven.Client.Changes
         /// <summary>
         /// Subscribe to all replication conflicts.
         /// </summary>
-        IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts();
+                IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts();
 
-        /// <summary>
+                /// <summary>
         /// Subscribe to all bulk insert operation changes that belong to a operation with given Id.
         /// </summary>
         IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid? operationId = null);

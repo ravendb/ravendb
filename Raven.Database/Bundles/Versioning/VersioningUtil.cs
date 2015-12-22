@@ -1,7 +1,10 @@
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Versioning.Data;
+using Raven.Client.Connection;
 using Raven.Database;
+using Raven.Database.Config.Retriever;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Versioning
@@ -14,19 +17,21 @@ namespace Raven.Bundles.Versioning
 
         public static VersioningConfiguration GetDocumentVersioningConfiguration(this DocumentDatabase database, RavenJObject metadata)
         {
-            JsonDocument doc = null;
-
+            ConfigurationDocument<VersioningConfiguration> config = null;
             var entityName = metadata.Value<string>("Raven-Entity-Name");
             if (entityName != null)
-                doc = database.Documents.Get("Raven/Versioning/" + entityName, null);
+                config = database.ConfigurationRetriever.GetConfigurationDocument<VersioningConfiguration>("Raven/Versioning/" + entityName);
 
-            if (doc == null)
-                doc = database.Documents.Get("Raven/Versioning/DefaultConfiguration", null);
+            if (config == null)
+                config = database.ConfigurationRetriever.GetConfigurationDocument<VersioningConfiguration>("Raven/Versioning/DefaultConfiguration");
 
-            if (doc == null)
-                return null;
+            return config == null ? null : config.MergedDocument;
+        }
 
-            return doc.DataAsJson.JsonDeserialization<VersioningConfiguration>();
+        public static bool IsVersioningDisabledForImport(this DocumentDatabase database, RavenJObject metadata)
+        {
+            var ignoreVersioning = metadata.Value<string>(Constants.RavenIgnoreVersioning);
+            return ignoreVersioning != null && ignoreVersioning.Equals("True");
         }
 
         public static bool IsVersioningActive(this DocumentDatabase database, RavenJObject metadata)

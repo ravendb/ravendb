@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -45,16 +46,7 @@ namespace Raven.Tests.MailingList
                             FieldStorage.Yes
                         }
                     },
-                    Suggestions =
-                    {
-                        {
-                            "Query", new SuggestionOptions
-                            {
-                                Accuracy = 0.5f,
-                                Distance = StringDistanceTypes.Default
-                            }
-                        }
-                    },
+                    SuggestionsOptions = new HashSet<string> { "Query" },
                     Indexes =
                     {
                         {

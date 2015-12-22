@@ -70,6 +70,7 @@ interface Array<T> {
     contains(item: T): boolean;
     count(filter?: (item: T) => boolean): number;
     distinct(): T[];
+    concatUnique(items: T[]): T[];
 }
 
 // String extensions

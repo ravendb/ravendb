@@ -10,7 +10,6 @@ using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Shard
@@ -100,7 +99,7 @@ namespace Raven.Client.Shard
         protected string GetDynamicIndexName<T>()
         {
             string indexName = CreateDynamicIndexName<T>();
-            
+
             return indexName;
         }
 
@@ -184,6 +183,7 @@ namespace Raven.Client.Shard
 
         #region Transaction methods (not supported)
 
+#if !DNXCORE50
         public override Task Commit(string txId)
         {
             throw new NotSupportedException("DTC support is handled via the internal document stores");
@@ -199,22 +199,12 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("DTC support is handled via the internal document stores");
         }
 
-        /// <summary>
-        /// Stores the recovery information for the specified transaction
-        /// </summary>
-        /// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-        /// <param name="txId">The tx id.</param>
-        /// <param name="recoveryInformation">The recovery information.</param>
-        public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
-        {
-            throw new NotSupportedException("DTC support is handled via the internal document stores");
-        }
-
         protected override void TryEnlistInAmbientTransaction()
         {
             // we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
             // turns out to be pretty much the same thing
         }
+#endif
 
         #endregion
 
@@ -245,7 +235,7 @@ namespace Raven.Client.Shard
         public IRavenQueryable<T> Query<T>()
         {
             var indexName = CreateDynamicIndexName<T>();
-            
+
             return Query<T>(indexName)
                 .Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
         }
@@ -314,6 +304,33 @@ namespace Raven.Client.Shard
 
             public readonly string Id;
             public readonly IList<TDatabaseCommands> Shards;
+        }
+
+        internal class ShardsOperation : Operation
+        {
+            private Operation[] shardsOperations;
+            internal ShardsOperation(Operation[] shardsOperations) : base(-1, null)
+            {
+                this.shardsOperations = shardsOperations;
+            }
+
+            public override async Task<RavenJToken> WaitForCompletionAsync()
+            {
+                RavenJToken rc = null;
+                foreach (var op in shardsOperations)
+                {
+                    rc = await op.WaitForCompletionAsync().ConfigureAwait(false);
+                }
+                return rc;
+            }
+
+            public override RavenJToken WaitForCompletion()
+            {
+                RavenJToken rc = null;
+                foreach (var op in shardsOperations)
+                    rc = op.WaitForCompletion();
+                return rc;
+            }
         }
     }
 }

@@ -54,7 +54,7 @@ namespace Raven.Database.Indexing
                 var replaceIndexId = HandleIndexReplaceDocument(document);
 
                 if (replaceIndexId != null)
-                    ReplaceIndexes(new []{ replaceIndexId.Value });
+                    ReplaceIndexes(new[] { replaceIndexId.Value });
             };
 
             Initialize();
@@ -222,25 +222,12 @@ namespace Raven.Database.Indexing
                     foreach (var pair in indexes)
                     {
                         var indexReplaceInformation = pair.Value;
-
-                        try
-                        {
                             ReplaceSingleIndex(indexReplaceInformation);
                             if (onIndexReplaced != null)
                                 onIndexReplaced(indexReplaceInformation.IndexToReplace);
                         }
-                        catch (Exception e)
-                        {
-                            var message = string.Format("Index replace failed. Could not replace index '{0}' with '{1}'", indexReplaceInformation.IndexToReplace, indexReplaceInformation.ReplaceIndex);
-
-                            log.ErrorException(message, e);
-
-                            indexReplaceInformation.ErrorCount++;
                         }
-                        
                     }
-                }
-            }
             catch (InvalidOperationException)
             {
                 // could not get lock, ignore?
@@ -259,10 +246,10 @@ namespace Raven.Database.Indexing
                 {
                     Database.Documents.Delete(key, etag, null);
                 }
-                catch (ConcurrencyException e)
+                catch (ConcurrencyException)
                 {
-                    // side by side document changed, probably means that we created a new side by side index and updated the index
-                    log.Debug("Failed to delete the side by side document after index replace.");
+                    if (log.IsDebugEnabled) // side by side document changed, probably means that we created a new side by side index and updated the index
+                        log.Debug("Failed to delete the side by side document after index replace.");
                 }
             }
             else

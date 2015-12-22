@@ -21,7 +21,6 @@ using Raven.Json.Linq;
 using Raven.Client.Document.Batches;
 using System.Diagnostics;
 using System.Dynamic;
-using System.Runtime.Remoting.Messaging;
 
 namespace Raven.Client.Document.Async
 {
@@ -281,9 +280,9 @@ namespace Raven.Client.Document.Async
 
                  var responseTimeDuration = new ResponseTimeInformation();
 
-                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration).WithCancellation(token))
+                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration).WithCancellation(token).ConfigureAwait(false))
                  {
-                     await Task.Delay(100).WithCancellation(token);
+                     await Task.Delay(100).WithCancellation(token).ConfigureAwait(false);
                  }
 
                  responseTimeDuration.ComputeServerTotal();
@@ -310,7 +309,7 @@ namespace Raven.Client.Document.Async
              try
              {
                  var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
-                 var responses = await AsyncDatabaseCommands.MultiGetAsync(requests);
+                 var responses = await AsyncDatabaseCommands.MultiGetAsync(requests).ConfigureAwait(false);
 
                  for (int i = 0; i < pendingLazyOperations.Count; i++)
                  {
@@ -475,7 +474,7 @@ namespace Raven.Client.Document.Async
         public class QueryYieldStream<T> : YieldStream<T>
         {
             private readonly QueryOperation queryOperation;
-            private IAsyncDocumentQuery<T> query;
+            private readonly IAsyncDocumentQuery<T> query;
 
             public QueryYieldStream(AsyncDocumentSession parent, IAsyncEnumerator<RavenJObject> enumerator, QueryOperation queryOperation, IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))
                 : base(parent, enumerator, token)
@@ -494,7 +493,10 @@ namespace Raven.Client.Document.Async
                 Etag etag = null;
                 if (meta != null)
                 {
-                    key = meta.Value<string>(Constants.DocumentIdFieldName);
+                    key = meta.Value<string>("@id") ??
+                          meta.Value<string>(Constants.DocumentIdFieldName) ??
+                          ravenJObject.Value<string>(Constants.DocumentIdFieldName);
+
                     var value = meta.Value<string>("@etag");
                     if (value != null)
                         etag = Etag.Parse(value);
@@ -727,7 +729,7 @@ namespace Raven.Client.Document.Async
 
             IncrementRequestCount();
             var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
-            return await CompleteLoadAsync<T>(id, loadOperation, token);
+            return await CompleteLoadAsync<T>(id, loadOperation, token).ConfigureAwait(false);
         }
 
         private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default (CancellationToken))
@@ -735,12 +737,12 @@ namespace Raven.Client.Document.Async
             loadOperation.LogOperation();
             using (loadOperation.EnterLoadContext())
             {
-                var result = await AsyncDatabaseCommands.GetAsync(id, token);
+                var result = await AsyncDatabaseCommands.GetAsync(id, token).ConfigureAwait(false);
 
                 if (loadOperation.SetResult(result) == false)
                     return loadOperation.Complete<T>();
 
-                return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token);
+                return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token).ConfigureAwait(false);
             }
         }
 
@@ -818,7 +820,7 @@ namespace Raven.Client.Document.Async
             IncrementRequestCount();
 
             var includeNames = includes != null ? includes.Select(x=>x.Key).ToArray() : new string[0];
-            var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token);
+            var multiLoadResult = await AsyncDatabaseCommands.GetAsync(ids, includeNames, transformer, transformerParameters, token: token).ConfigureAwait(false);
             return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
       
         }
@@ -827,7 +829,7 @@ namespace Raven.Client.Document.Async
         {
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {
-                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(id => LoadAsync<T>(id,token)).ToArray()).WithCancellation(token));
+                return new Lazy<Task<T[]>>(async () => await Task.WhenAll(ids.Select(id => LoadAsync<T>(id,token)).ToArray()).WithCancellation(token).ConfigureAwait(false));
             }
             var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids, includes);
             var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
@@ -842,7 +844,7 @@ namespace Raven.Client.Document.Async
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {                
                 var loadTasks = ids.Select(id => LoadAsync<T>(id,token)).ToArray();
-                var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token);
+                var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token).ConfigureAwait(false);
                 return loadedData;
             }
 
@@ -886,15 +888,15 @@ namespace Raven.Client.Document.Async
                     multiLoadOperation.LogOperation();
                     using (multiLoadOperation.EnterMultiLoadContext())
                     {
-                        multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null);
+                        multiLoadResult = await AsyncDatabaseCommands.GetAsync(idsOfNotExistingObjects, null).ConfigureAwait(false);
                     }
                 } while (multiLoadOperation.SetResult(multiLoadResult));
 
                 multiLoadOperation.Complete<T>();
             }
 
-            var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token)).ToArray();
-            var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token);
+            var loadTasks  = ids.Select(async id => await LoadAsync<T>(id, token).ConfigureAwait(false)).ToArray();
+            var loadedData = await Task.WhenAll(loadTasks).WithCancellation(token).ConfigureAwait(false);
             return loadedData;
         }
 
@@ -904,7 +906,7 @@ namespace Raven.Client.Document.Async
         /// <returns></returns>
         public async Task SaveChangesAsync(CancellationToken token = default (CancellationToken))
         {
-            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token);
+            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
 
             using (EntityToJson.EntitiesToJsonCachingScope())
             {
@@ -914,7 +916,7 @@ namespace Raven.Client.Document.Async
 
                 IncrementRequestCount();
 
-                var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray(), token);
+                var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray(), token).ConfigureAwait(false);
                 UpdateBatchResults(result, data);
             }
         }
@@ -927,6 +929,7 @@ namespace Raven.Client.Document.Async
             throw new NotSupportedException("Cannot get a document in a synchronous manner using async document session");
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Commits the specified tx id.
         /// </summary>
@@ -952,6 +955,7 @@ namespace Raven.Client.Document.Async
             await AsyncDatabaseCommands.PrepareTransactionAsync(txId, resourceManagerId, recoveryInformation).ConfigureAwait(false);
             ClearEnlistment();
         }
+#endif
 
         /// <summary>
         /// Dynamically queries RavenDB using LINQ
@@ -1028,13 +1032,13 @@ namespace Raven.Client.Document.Async
             if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
-            var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key, token);
+            var jsonDocument = await AsyncDatabaseCommands.GetAsync(value.Key, token).ConfigureAwait(false);
             RefreshInternal(entity, jsonDocument, value);
         }
 
         public async Task<RavenJObject> GetMetadataForAsync<T>(T instance)
         {
-            var metadata = await GetDocumentMetadataAsync(instance);
+            var metadata = await GetDocumentMetadataAsync(instance).ConfigureAwait(false);
             return metadata.Metadata;
         }
 
@@ -1050,7 +1054,7 @@ namespace Raven.Client.Document.Async
                 {
                     AssertNoNonUniqueInstance(instance, id);
 
-                    var jsonDocument = await GetJsonDocumentAsync(id);
+                    var jsonDocument = await GetJsonDocumentAsync(id).ConfigureAwait(false);
 
                     value =  GetDocumentMetadataValue(instance, id, jsonDocument);
                 }
@@ -1067,10 +1071,27 @@ namespace Raven.Client.Document.Async
         /// </summary>
         private async Task<JsonDocument> GetJsonDocumentAsync(string documentKey)
         {
-            var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey);
+            var jsonDocument = await AsyncDatabaseCommands.GetAsync(documentKey).ConfigureAwait(false);
             if (jsonDocument == null)
                 throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
             return jsonDocument;
+        }
+
+        public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            var operation = await DeleteByIndexAsync<T>(indexCreator.IndexName, expression).ConfigureAwait(false);
+            return operation;
+        }
+
+        public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            return await AsyncDatabaseCommands.DeleteByIndexAsync(indexName, indexQuery).ConfigureAwait(false);
         }
     }
 }

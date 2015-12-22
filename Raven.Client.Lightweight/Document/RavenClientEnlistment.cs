@@ -1,3 +1,4 @@
+#if !DNXCORE50
 //-----------------------------------------------------------------------
 // <copyright file="RavenClientEnlistment.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -5,7 +6,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using System.IO.IsolatedStorage;
 using System.Transactions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -193,3 +193,4 @@ namespace Raven.Client.Document
         }
     }
 }
+#endif

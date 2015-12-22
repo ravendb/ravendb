@@ -15,9 +15,9 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Indexes
 {
@@ -662,7 +662,7 @@ namespace Raven.Client.Indexes
                     {
                         Out("(double?)");
                     }
-                    else if(rightOp.Type == typeof(float))
+                    else if (rightOp.Type == typeof(float))
                     {
                         Out("(float?)");
                     }
@@ -672,7 +672,7 @@ namespace Raven.Client.Indexes
                 Out(str);
                 Out(' ');
                 Visit(rightOp, innerPrecedence);
-                if(rightOp.NodeType == ExpressionType.Constant)
+                if (rightOp.NodeType == ExpressionType.Constant)
                 {
                     // on the server side, double is treated as decimal, so we have
                     // to force this coercion so the constants would work
@@ -702,7 +702,7 @@ namespace Raven.Client.Indexes
                 case ExpressionType.Convert:
                     var expression = ((UnaryExpression)left).Operand;
                     var enumType = Nullable.GetUnderlyingType(expression.Type) ?? expression.Type;
-                    if (enumType.IsEnum == false)
+                    if (enumType.IsEnum() == false)
                         return;
 
                     var constantExpression = SkipConvertExpressions(right) as ConstantExpression;
@@ -906,7 +906,11 @@ namespace Raven.Client.Indexes
             if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
                 return @"\u" + ((int)c).ToString("x4");
 
+#if !DNXCORE50
             return c.ToString(CultureInfo.InvariantCulture);
+#else
+            return c.ToString();
+#endif
         }
 
         private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)
@@ -934,7 +938,7 @@ namespace Raven.Client.Indexes
 
         private string ConvertTypeToCSharpKeyword(Type type)
         {
-            if (type.IsGenericType)
+            if (type.IsGenericType())
             {
                 if (TypeExistsOnServer(type) == false)
                     throw new InvalidOperationException("Cannot make use of type " + type + " because it is a generic type that doesn't exists on the server");
@@ -1036,7 +1040,7 @@ namespace Raven.Client.Indexes
             {
                 return "byte?";
             }
-            if (type.IsEnum)
+            if (type.IsEnum())
             {
                 return "string";
             }
@@ -1056,7 +1060,7 @@ namespace Raven.Client.Indexes
             if (type.Assembly() == typeof(object).Assembly()) // mscorlib
                 return true;
 
-            if (type.Assembly == typeof(Uri).Assembly()) // System assembly
+            if (type.Assembly() == typeof(Uri).Assembly()) // System assembly
                 return true;
 
             if (type.Assembly() == typeof(HashSet<>).Assembly()) // System.Core
@@ -1107,6 +1111,7 @@ namespace Raven.Client.Indexes
             return node;
         }
 
+#if !DNXCORE50
         /// <summary>
         ///   Visits the children of the <see cref = "T:System.Linq.Expressions.DynamicExpression" />.
         /// </summary>
@@ -1120,6 +1125,7 @@ namespace Raven.Client.Indexes
             VisitExpressions('(', node.Arguments, ')');
             return node;
         }
+#endif
 
         /// <summary>
         ///   Visits the element init.
@@ -1164,7 +1170,12 @@ namespace Raven.Client.Indexes
         /// </returns>
         protected override Expression VisitExtension(Expression node)
         {
+#if !DNXCORE50
             const BindingFlags bindingAttr = BindingFlags.ExactBinding | BindingFlags.Public | BindingFlags.Instance;
+#else
+            const BindingFlags bindingAttr = BindingFlags.Public | BindingFlags.Instance;
+#endif
+
             if (node.GetType().GetMethod("ToString", bindingAttr, null, ReflectionUtils.EmptyTypes, null).DeclaringType !=
                 typeof(Expression))
             {
@@ -1186,7 +1197,11 @@ namespace Raven.Client.Indexes
         /// </returns>
         protected override Expression VisitGoto(GotoExpression node)
         {
+#if !DNXCORE50
             Out(node.Kind.ToString().ToLower(CultureInfo.CurrentCulture));
+#else
+            Out(node.Kind.ToString().ToLower());
+#endif
 
             DumpLabel(node.Target);
             if (node.Value != null)
@@ -1657,7 +1672,7 @@ namespace Raven.Client.Indexes
             }
             Out(IsIndexerCall(node) ? "]" : ")");
 
-            if (node.Type.IsValueType && TypeExistsOnServer(node.Type))
+            if (node.Type.IsValueType() && TypeExistsOnServer(node.Type))
             {
                 switch (node.Method.Name)
                 {
@@ -1711,7 +1726,10 @@ namespace Raven.Client.Indexes
 
         private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
         {
-            if (node.Method.DeclaringType.Name == "Enumerable")
+            var declaringType = node.Method.DeclaringType;
+            if (declaringType == null)
+                return false;
+            if (declaringType.Name == "Enumerable")
             {
                 switch (node.Method.Name)
                 {
@@ -1736,7 +1754,7 @@ namespace Raven.Client.Indexes
         }
         private static bool IsExtensionMethod(MethodCallExpression node)
         {
-            var attribute = Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute));
+            var attribute = node.Method.GetCustomAttribute(typeof(ExtensionAttribute));
             if (attribute == null)
                 return false;
 
@@ -1759,7 +1777,7 @@ namespace Raven.Client.Indexes
                 return false;
             }
 
-            if (node.Method.GetCustomAttributes(typeof(RavenMethodAttribute), false).Length != 0)
+            if (node.Method.GetCustomAttributes(typeof(RavenMethodAttribute), false).Count() != 0)
                 return false;
 
             return true;
@@ -1819,7 +1837,7 @@ namespace Raven.Client.Indexes
 
         private void VisitType(Type type)
         {
-            if (type.IsGenericType == false || CheckIfAnonymousType(type))
+            if (type.IsGenericType() == false || CheckIfAnonymousType(type))
             {
                 if (type.IsArray)
                 {
@@ -1872,31 +1890,48 @@ namespace Raven.Client.Indexes
             {
                 case ExpressionType.NewArrayInit:
                     Out("new ");
-                    if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
-                    {
-                        Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
-                    }
-                    else if (node.Expressions.Count == 0)
-                    {
-                        Out("object");
-                    }
+                    OutputAppropriateArrayType(node);
                     Out("[]");
                     VisitExpressions('{', node.Expressions, '}');
                     return node;
 
                 case ExpressionType.NewArrayBounds:
-                    Out("new " + node.Type.GetElementType());
+                    Out("new ");
+                    OutputAppropriateArrayType(node);
                     VisitExpressions('[', node.Expressions, ']');
                     return node;
             }
             return node;
         }
 
+        private void OutputAppropriateArrayType(NewArrayExpression node)
+        {
+                    if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
+                    {
+                        Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType()));
+                    }
+            else
+                    {
+                switch (node.NodeType)
+                {
+                    case ExpressionType.NewArrayInit:
+                        if (node.Expressions.Count == 0)
+                        {
+                        Out("object");
+                    }
+                        break;
+                case ExpressionType.NewArrayBounds:
+                        Out("object");
+                        break;
+            }
+        }
+        }
+
         private static bool CheckIfAnonymousType(Type type)
         {
             // hack: the only way to detect anonymous types right now
             return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
-                && type.IsGenericType && type.Name.Contains("AnonymousType")
+                && type.IsGenericType() && type.Name.Contains("AnonymousType")
                 && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
                 && type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
         }
@@ -2254,10 +2289,10 @@ namespace Raven.Client.Indexes
 
         private static bool ShouldConvert(Type nonNullableType)
         {
-            if (nonNullableType.IsEnum)
+            if (nonNullableType.IsEnum())
                 return true;
 
-            return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType == false);
+            return nonNullableType.Assembly() == typeof(string).Assembly() && (nonNullableType.IsGenericType() == false);
         }
     }
 }

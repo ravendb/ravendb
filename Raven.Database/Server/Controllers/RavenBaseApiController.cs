@@ -26,6 +26,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Database.Config;
+using Raven.Database.Raft;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
@@ -65,7 +66,7 @@ namespace Raven.Database.Server.Controllers
         {
             get
             {
-                HttpRequestMessage message = InnerRequest;
+                var message = InnerRequest;
                 return CloneRequestHttpHeaders(message.Headers, message.Content == null ? null : message.Content.Headers);
             }
         }
@@ -119,15 +120,14 @@ namespace Raven.Database.Server.Controllers
             landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
             fileSystemsLandlord = (FileSystemsLandlord)controllerContext.Configuration.Properties[typeof(FileSystemsLandlord)];
             countersLandlord = (CountersLandlord)controllerContext.Configuration.Properties[typeof(CountersLandlord)];
+            timeSeriesLandlord = (TimeSeriesLandlord)controllerContext.Configuration.Properties[typeof(TimeSeriesLandlord)];
             requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
-            maxNumberOfThreadsForDatabaseToLoad = (SemaphoreSlim)controllerContext.Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
-            maxSecondsForTaskToWaitForDatabaseToLoad = (int)controllerContext.Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
-            //MaxSecondsForTaskToWaitForDatabaseToLoad
+            clusterManager = ((Reference<ClusterManager>)controllerContext.Configuration.Properties[typeof(ClusterManager)]).Value;
         }
 
         public async Task<T> ReadJsonObjectAsync<T>()
         {
-            using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
             using (var gzipStream = new GZipStream(buffered, CompressionMode.Decompress))
             using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
@@ -141,35 +141,44 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-        public async Task<RavenJObject> ReadJsonAsync()
+        protected Guid ExtractOperationId()
         {
-            using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+            Guid result;
+            Guid.TryParse(GetQueryStringValue("operationId"), out result);
+            return result;
+        }
+
+        protected async Task<RavenJObject> ReadJsonAsync()
+        {
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
             using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
             using (var jsonReader = new RavenJsonTextReader(streamReader))
                 return RavenJObject.Load(jsonReader);
         }
 
-        public async Task<RavenJArray> ReadJsonArrayAsync()
+        protected async Task<RavenJArray> ReadJsonArrayAsync()
         {
-            using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
             using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
             using (var jsonReader = new RavenJsonTextReader(streamReader))
+            {
                 return RavenJArray.Load(jsonReader);
         }
+        }
 
-        public async Task<string> ReadStringAsync()
+        protected async Task<string> ReadStringAsync()
         {
-            using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
             using (var streamReader = new StreamReader(buffered, GetRequestEncoding()))
                 return streamReader.ReadToEnd();
         }
 
-        public async Task<RavenJArray> ReadBsonArrayAsync()
+        protected async Task<RavenJArray> ReadBsonArrayAsync()
         {
-            using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
+            using (var stream = await InnerRequest.Content.ReadAsStreamAsync().ConfigureAwait(false))
             using (var buffered = new BufferedStream(stream))
             using (var jsonReader = new BsonReader(buffered))
             {
@@ -185,14 +194,14 @@ namespace Raven.Database.Server.Controllers
             return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
         }
 
-        public int GetStart()
+        protected int GetStart()
         {
             int start;
             int.TryParse(GetQueryStringValue("start"), out start);
             return Math.Max(0, start);
         }
 
-        public int GetNextPageStart()
+        protected int GetNextPageStart()
         {
             bool isNextPage;
             if (bool.TryParse(GetQueryStringValue("next-page"), out isNextPage) && isNextPage)
@@ -201,7 +210,7 @@ namespace Raven.Database.Server.Controllers
             return 0;
         }
 
-        public int GetPageSize(int maxPageSize)
+        protected int GetPageSize(int maxPageSize)
         {
             int pageSize;
             if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
@@ -214,13 +223,12 @@ namespace Raven.Database.Server.Controllers
         }
 
 
-
-        public bool MatchEtag(Etag etag)
+        protected bool MatchEtag(Etag etag)
         {
             return EtagHeaderToEtag() == etag;
         }
 
-        internal Etag EtagHeaderToEtag()
+        private Etag EtagHeaderToEtag()
         {
             try
             {
@@ -253,8 +261,7 @@ namespace Raven.Database.Server.Controllers
 //			return value;
 //		}
 
-
-        public static string GetQueryStringValue(HttpRequestMessage req, string key)
+        protected static string GetQueryStringValue(HttpRequestMessage req, string key)
         {
             NameValueCollection nvc;
             object value;
@@ -264,34 +271,48 @@ namespace Raven.Database.Server.Controllers
                 return nvc[key];
             }
             nvc = HttpUtility.ParseQueryString(req.RequestUri.Query);
-
-            foreach (var _key in nvc.AllKeys)
-                nvc[_key] = Uri.UnescapeDataString(nvc[_key] ?? String.Empty);
-
+            if (!ClientIsV3OrHigher(req))
+            {
+                foreach (var queryKey in nvc.AllKeys)
+                    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
+            }
             req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
         }
 
-        public string[] GetQueryStringValues(string key)
+        protected static bool ClientIsV3OrHigher(HttpRequestMessage req)
+        {
+            IEnumerable<string> values;
+            if (req.Headers.TryGetValues("Raven-Client-Version", out values) == false)
+                return false; // probably 1.0 client?
+            foreach (var value in values)
+            {
+                if (string.IsNullOrEmpty(value) ) return false;
+                if (value[0] == '1' || value[0] == '2') return false;
+            }
+            return true;
+        }
+
+        protected string[] GetQueryStringValues(string key)
         {
             var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
             return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
         }
 
-        public Etag GetEtagFromQueryString()
+        protected Etag GetEtagFromQueryString()
         {
             var etagAsString = GetQueryStringValue("etag");
             return etagAsString != null ? Etag.Parse(etagAsString) : null;
         }
 
-        public void WriteETag(Etag etag, HttpResponseMessage msg)
+        protected void WriteETag(Etag etag, HttpResponseMessage msg)
         {
             if (etag == null)
                 return;
             WriteETag(etag.ToString(), msg);
         }
 
-        public void WriteETag(string etag, HttpResponseMessage msg)
+        protected static void WriteETag(string etag, HttpResponseMessage msg)
         {
             if (string.IsNullOrWhiteSpace(etag))
                 return;
@@ -299,7 +320,7 @@ namespace Raven.Database.Server.Controllers
             msg.Headers.ETag = new EntityTagHeaderValue("\"" + etag + "\"");
         }
 
-        public void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
+        protected void WriteHeaders(RavenJObject headers, Etag etag, HttpResponseMessage msg)
         {
             foreach (var header in headers)
             {
@@ -347,7 +368,8 @@ namespace Raven.Database.Server.Controllers
                         }
                         else
                         {
-                            var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None));
+                            //headers do not need url decoding because they might contain special symbols (like + symbol in clr type)
+                            var value = UnescapeStringIfNeeded(header.Value.ToString(Formatting.None), shouldDecodeUrl: false);
                             msg.Content.Headers.Add(header.Key, value);
                         }
                         break;
@@ -393,7 +415,7 @@ namespace Raven.Database.Server.Controllers
             return obj.ToString();
         }
 
-        private static string UnescapeStringIfNeeded(string str)
+        private static string UnescapeStringIfNeeded(string str, bool shouldDecodeUrl = true)
         {
             if (str.StartsWith("\"") && str.EndsWith("\""))
                 str = Regex.Unescape(str.Substring(1, str.Length - 2));
@@ -403,7 +425,7 @@ namespace Raven.Database.Server.Controllers
                 return Uri.EscapeDataString(str);
             }
 
-            return str;
+            return shouldDecodeUrl ? HttpUtility.UrlDecode(str) : str;
         }
 
         public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
@@ -606,6 +628,12 @@ namespace Raven.Database.Server.Controllers
             return msg;
         }
 
+        public abstract void MarkRequestDuration(long duration);
+
+        public abstract Task<RequestWebApiEventArgs> TrySetupRequestToProperResource();
+
+        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
+
         public HttpResponseMessage WriteFile(string filePath)
         {
             var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
@@ -702,6 +730,16 @@ namespace Raven.Database.Server.Controllers
                     return "application/x-silverlight-2";
                 case ".json":
                     return "application/json";
+                case ".eot":
+                    return "application/vnd.ms-fontobject";
+                case ".svg":
+                    return "image/svg+xml";
+                case ".ttf":
+                    return "application/octet-stream";
+                case ".woff":
+                    return "application/font-woff";
+                case ".woff2":
+                    return "application/font-woff2";
                 default:
                     return "text/plain";
             }
@@ -730,9 +768,9 @@ namespace Raven.Database.Server.Controllers
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
-        public abstract bool TrySetupRequestToProperResource(out RequestWebApiEventArgs args);
+        public abstract string ResourcePrefix { get; }
 
-        public abstract string TenantName { get; }
+        public abstract string ResourceName { get; protected set; }
 
         private int innerRequestsCount;
 
@@ -740,9 +778,7 @@ namespace Raven.Database.Server.Controllers
 
         public List<Action<StringBuilder>> CustomRequestTraceInfo { get; private set; }
 
-        public abstract InMemoryRavenConfiguration ResourceConfiguration { get; }
-
-        public void AddRequestTraceInfo(Action<StringBuilder> info)
+        protected void AddRequestTraceInfo(Action<StringBuilder> info)
         {
             if (info == null)
                 return;
@@ -753,14 +789,15 @@ namespace Raven.Database.Server.Controllers
             CustomRequestTraceInfo.Add(info);
         }
 
-        public void IncrementInnerRequestsCount()
+        protected void IncrementInnerRequestsCount()
         {
             Interlocked.Increment(ref innerRequestsCount);
         }
 
-
-        public abstract void MarkRequestDuration(long duration);
-
+        protected static bool Match(string x, string y)
+        {
+            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+        }
 
         #region Landlords
 
@@ -786,6 +823,17 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
+        private TimeSeriesLandlord timeSeriesLandlord;
+        public TimeSeriesLandlord TimeSeriesLandlord
+        {
+            get
+            {
+                if (Configuration == null)
+                    return timeSeriesLandlord;
+                return (TimeSeriesLandlord)Configuration.Properties[typeof(TimeSeriesLandlord)];
+            }
+        }
+
         private FileSystemsLandlord fileSystemsLandlord;
         public FileSystemsLandlord FileSystemsLandlord
         {
@@ -808,26 +856,15 @@ namespace Raven.Database.Server.Controllers
             }
         }
 
-        private SemaphoreSlim maxNumberOfThreadsForDatabaseToLoad;
-        private int maxSecondsForTaskToWaitForDatabaseToLoad;
-        public SemaphoreSlim MaxNumberOfThreadsForDatabaseToLoad
+        private ClusterManager clusterManager;
+        public ClusterManager ClusterManager
         {
             get
             {
                 if (Configuration == null)
-                    return maxNumberOfThreadsForDatabaseToLoad;
-                return (SemaphoreSlim)Configuration.Properties[Constants.MaxConcurrentRequestsForDatabaseDuringLoad];
-            }
-        }
-        public int MaxSecondsForTaskToWaitForDatabaseToLoad
-        {
-            get
-            {
-                if (Configuration == null)
-                {
-                    return maxSecondsForTaskToWaitForDatabaseToLoad;
-                }
-                return (int)Configuration.Properties[Constants.MaxSecondsForTaskToWaitForDatabaseToLoad];
+                    return clusterManager;
+
+                return ((Reference<ClusterManager>)Configuration.Properties[typeof(ClusterManager)]).Value;
             }
         }
         #endregion

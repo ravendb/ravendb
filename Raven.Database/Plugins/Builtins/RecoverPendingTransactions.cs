@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Transactions;
-using Microsoft.VisualBasic.Logging;
+// using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;

@@ -9,7 +9,9 @@ requirejs.config({
         'd3': '../Scripts/d3',
         forge: '../Scripts/forge',
         jszip: '../Scripts/jszip'
-    }
+    },
+    // 0 disables the timeout completely, default is 7 seconds
+    waitSeconds: 30
 });
 
 define('jquery', function() { return jQuery; });

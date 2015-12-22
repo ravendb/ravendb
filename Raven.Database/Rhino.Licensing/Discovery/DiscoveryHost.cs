@@ -24,7 +24,7 @@ namespace Rhino.Licensing.Discovery
             {
                 if (!IsStop) return;
                 StartListening();
-                IsStop = false;
+            IsStop = false;
                 return;
             }
             IsStop = false;
@@ -148,7 +148,7 @@ namespace Rhino.Licensing.Discovery
             {
                 socket.Dispose();
                 socket = null;
-            }
+        }
         }
 
         public void Stop()

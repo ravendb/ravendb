@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Raven.Abstractions.FileSystem;
 
 namespace Raven.Client.FileSystem
 {
@@ -27,9 +24,12 @@ namespace Raven.Client.FileSystem
         public int SkippedResults { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether any of the documents returned by this query
-        /// are non authoritative (modified by uncommitted transaction).
+        /// Update the query stats from the query results
         /// </summary>
-        public bool NonAuthoritativeInformation { get; set; }
+        internal void UpdateQueryStats(SearchResults searchResults)
+        {
+            DurationMilliseconds = searchResults.DurationMilliseconds;
+            TotalResults = searchResults.FileCount;
+        }
     }
 }

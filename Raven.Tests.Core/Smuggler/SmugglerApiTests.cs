@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client.Connection;
@@ -16,6 +17,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Core.Smuggler
 {
@@ -117,10 +119,12 @@ namespace Raven.Tests.Core.Smuggler
             }
         }
 
-        [Fact]
-        public async Task CanExportAndImportData()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanExportAndImportData(bool disableCompressionOnImport)
         {
-            using (var server1 = new RavenDbServer(new RavenConfiguration()
+            using (var server1 = new RavenDbServer(new RavenConfiguration
             {
                 Port = Port1,
                 ServerName = ServerName1
@@ -151,11 +155,18 @@ namespace Raven.Tests.Core.Smuggler
 
                     store1.DatabaseCommands.PutAttachment("attachement1", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
 
-                    var smugglerApi = new SmugglerDatabaseApi();
+                    var smugglerApi = new SmugglerDatabaseApi
+                    (
+                        new SmugglerDatabaseOptions
+                        {
+                            DisableCompressionOnImport = disableCompressionOnImport
+                        }
+                    );
+
                     await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> 
                         { 
                             From = new RavenConnectionStringOptions { Url = "http://localhost:" + Port1, DefaultDatabase = "db1" },
-                            ToFile = BackupDir
+                            ToFile = BackupDir,							
                         });
 
                     using (var server2 = new RavenDbServer(new RavenConfiguration()
@@ -198,3 +209,4 @@ namespace Raven.Tests.Core.Smuggler
         }
     }
 }
+#endif

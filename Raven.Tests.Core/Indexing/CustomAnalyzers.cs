@@ -13,6 +13,14 @@ namespace Raven.Tests.Core.Indexing
 {
     public class CustomAnalyzers : RavenCoreTestBase
     {
+#if DNXCORE50
+        public CustomAnalyzers(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
         {

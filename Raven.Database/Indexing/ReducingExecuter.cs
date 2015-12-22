@@ -9,6 +9,8 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Config;
+using Raven.Database.Impl.BackgroundTaskExecuter;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -60,7 +62,8 @@ namespace Raven.Database.Indexing
                 }
             });
 
-            currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index);
+            if (currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index) == false)
+                return null;
 
             var performanceStats = new List<ReducingPerformanceStats>();
 
@@ -104,6 +107,9 @@ namespace Raven.Database.Indexing
             }
             finally
             {
+                Index _;
+                currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
+
                 var postReducingOperations = new ReduceLevelPeformanceStats
                 {
                     Level = -1,
@@ -146,8 +152,6 @@ namespace Raven.Database.Indexing
                     LevelStats = new List<ReduceLevelPeformanceStats> { postReducingOperations }
                 });
 
-                Index _;
-                currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
             }
 
             return performanceStats.ToArray();
@@ -261,6 +265,7 @@ namespace Raven.Database.Indexing
                             {
                                 if (persistedResults.Count > 0)
                                 {
+                                    if (Log.IsDebugEnabled)
                                     Log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
                                         persistedResults.Count,
                                         string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()),
@@ -268,7 +273,8 @@ namespace Raven.Database.Indexing
                                 }
                                 else
                                 {
-                                    Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug("No reduce keys found for {0}", index.Index.PublicName);
                                 }									
                             }
 
@@ -381,7 +387,7 @@ namespace Raven.Database.Indexing
 
                 var parallelProcessingStart = SystemTime.UtcNow;
 
-                BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
+                context.Database.ReducingThreadPool.ExecuteBatch(keysToReduce, enumerator =>
                 {
                     var parallelStats = new ParallelBatchStats
                     {
@@ -487,7 +493,7 @@ namespace Raven.Database.Indexing
 
                         parallelOperations.Enqueue(parallelStats);
                     });
-                });
+                }, description: string.Format("Performing Single Step Reduction for index {0} from Etag {1} for {2} keys", index.Index.PublicName, index.Index.GetLastEtagFromStats(), keysToReduce.Count));
 
                 reduceLevelStats.Operations.Add(new ParallelPerformanceStats
                 {
@@ -614,20 +620,29 @@ namespace Raven.Database.Indexing
             };
         }
 
+        
         protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
         {
             ReducingBatchInfo reducingBatchInfo = null;
 
+            int executedPartially = 0;
             try
             {
                 reducingBatchInfo = context.ReportReducingBatchStarted(indexesToWorkOn.Select(x => x.Index.PublicName).ToList());
 
-                BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn, index =>
+                context.Database.ReducingThreadPool.ExecuteBatch(indexesToWorkOn, index =>
                 {
                     var performanceStats = HandleReduceForIndex(index, context.CancellationToken);
 
+                    if (performanceStats != null)
                     reducingBatchInfo.PerformanceStats.TryAdd(index.Index.PublicName, performanceStats);
-                });
+
+                    if (Thread.VolatileRead(ref executedPartially) == 1)
+                    {
+                        context.NotifyAboutWork();
+            }
+                }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, description: string.Format("Executing Indexex Reduction on {0} indexes", indexesToWorkOn.Count));
+                Interlocked.Increment(ref executedPartially);
             }
             finally
             {

@@ -10,6 +10,14 @@ namespace Raven.Tests.Core.Commands
 {
     public class Transformers : RavenCoreTestBase
     {
+#if DNXCORE50
+        public Transformers(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public async Task CanPutUpdateAndDeleteTransformer()
         {

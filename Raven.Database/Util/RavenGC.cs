@@ -126,7 +126,8 @@ namespace Raven.Database.Util
 
                 if (old != delayBetweenGCInMinutes)
                 {
-                    log.Debug("Increasing delay for forced GC (not enough memory released, so we need to back off). " +
+                    if (log.IsDebugEnabled)
+                        log.Debug("Increasing delay for forced GC (not enough memory released, so we need to back off). " +
                               "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
                 }
             }
@@ -134,7 +135,8 @@ namespace Raven.Database.Util
             {
                 if (old != delayBetweenGCInMinutes)
                 {
-                    log.Debug("Resetting delay for forced GC (enough memory was released to make it useful, so we don't need to back off). " +
+                    if (log.IsDebugEnabled)
+                        log.Debug("Resetting delay for forced GC (enough memory was released to make it useful, so we don't need to back off). " +
                               "New interval between GCs will be {0} minutes", delayBetweenGCInMinutes);
                 }
                 delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
@@ -148,14 +150,16 @@ namespace Raven.Database.Util
             var nowTime = SystemTime.UtcNow;
             if (MemoryAfterLastForcedGC == 0 || MemoryBeforeLastForcedGC == 0) //running for the first time
             {
-                log.Debug("GCing for the first time...");
+                if (log.IsDebugEnabled)
+                    log.Debug("GCing for the first time...");
                 return true;
             }
 
             //if last time was freed enough memory (more than 10%) allow the GC and store last GC time
             if (memoryDifferenceLastGc >= 0.1)
             {
-                log.Debug("Allowing GC because difference of memory before and after GC equals or more than 10% - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC) / 1024);
+                if (log.IsDebugEnabled)
+                    log.Debug("Allowing GC because difference of memory before and after GC equals or more than 10% - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC) / 1024);
                 delayBetweenGCInMinutes = DefaultDelayBetweenGCInMinutes;
 
                 return true;
@@ -165,7 +169,8 @@ namespace Raven.Database.Util
             //reset delay and allow GC
             if ((nowTime - LastForcedGCTime).TotalMinutes >= delayBetweenGCInMinutes)
             {
-                log.Debug("Allowing GC because more than {1} minutes passed since last GC - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC) / 1024, (nowTime - LastForcedGCTime).TotalMinutes);
+                if (log.IsDebugEnabled)
+                    log.Debug("Allowing GC because more than {1} minutes passed since last GC - last time was released {0}kbs.", Math.Abs(MemoryAfterLastForcedGC - MemoryBeforeLastForcedGC) / 1024, (nowTime - LastForcedGCTime).TotalMinutes);
                 return true;
             }
 

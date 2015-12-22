@@ -32,6 +32,5 @@ namespace Rhino.Licensing
         public bool SameLicense(string lic)
         {
             return lic == License;
-        }
     }
-}
+}}

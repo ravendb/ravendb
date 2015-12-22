@@ -14,6 +14,8 @@ using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
+using Raven.Database.Actions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
@@ -1154,6 +1156,64 @@ namespace Raven.Tests.Subscriptions
 
                     Assert.Throws<SubscriptionInUseException>(() => store.Subscriptions.Open<User>(id, new SubscriptionConnectionOptions()));
                 }
+            }
+        }
+
+        [Fact]
+        public void ShouldNotOverrideSubscriptionAckEtag()
+        {
+            using (EmbeddableDocumentStore store = NewDocumentStore())
+            {
+                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria());
+                var subscription = store.Subscriptions.Open(subscriptionId, new SubscriptionConnectionOptions());
+                var subscriptionActions = new SubscriptionActions(store.DocumentDatabase, null);
+                var names = new BlockingCollection<string>();
+                var etagFirst = new Etag("01000000-0000-0001-0000-000000000001");
+                var etagBigger = new Etag("01000000-0000-0001-0000-000000000003");
+
+                store.Changes().WaitForAllPendingSubscriptions();
+                subscription.Subscribe(x =>
+                {
+                    names.Add(x.Value<string>("Name"));
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "James" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var updatedEtag = subscriptionActions.GetAcknowledgeEtag(subscriptionId);
+                    return updatedEtag != null && etagFirst.CompareTo(updatedEtag) == 0;
+                }, TimeSpan.FromSeconds(5));
+
+                subscriptionActions.SetAcknowledgeEtag(subscriptionId, etagBigger);
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var updatedEtag = subscriptionActions.GetAcknowledgeEtag(subscriptionId);
+                    return updatedEtag != null && etagBigger.CompareTo(updatedEtag) == 0;
+                }, TimeSpan.FromSeconds(5));
+
+                store.Changes().WaitForAllPendingSubscriptions();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Adam" }, "users/12");
+                    session.SaveChanges();
+                }
+
+                string name;
+                SpinWait.SpinUntil(() =>
+                {
+                    names.TryTake(out name, TimeSpan.FromSeconds(1));
+                    return name?.Equals("Adam") ?? false;
+                }, TimeSpan.FromSeconds(5));
+
+                var afterAnotherUpdateEtag = subscriptionActions.GetAcknowledgeEtag(subscriptionId);
+                Assert.True(etagBigger.CompareTo(afterAnotherUpdateEtag) == 0);
             }
         }
     }

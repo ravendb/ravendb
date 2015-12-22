@@ -1,3 +1,5 @@
+using System.Net.Http;
+
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -21,7 +23,7 @@ namespace Raven.Client.Indexes
     /// The naming convention is that underscores in the inherited class names are replaced by slashed
     /// For example: Posts_ByName will be saved to Posts/ByName
     /// </remarks>
-#if !MONO
+#if !(MONO || DNXCORE50)
     [System.ComponentModel.Composition.InheritedExport]
 #endif
     public abstract class AbstractTransformerCreationTask : AbstractCommonApiForIndexesAndTransformers
@@ -151,7 +153,12 @@ namespace Raven.Client.Indexes
         public virtual void Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention)
         {
             Conventions = documentConvention;
-            var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
+#if !DNXCORE50
+            var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
+#else
+            var prettify = false;
+#endif
+            var transformerDefinition = CreateTransformerDefinition(prettify);
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches
             // the new definition.
@@ -168,7 +175,7 @@ namespace Raven.Client.Indexes
                 return;
 
             var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
+            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
             {
                 try
                 {
@@ -188,11 +195,11 @@ namespace Raven.Client.Indexes
                 return;
 
             var replicateTransformerUrl = String.Format("/replication/replicate-transformers?transformerName={0}", Uri.EscapeDataString(TransformerName));
-            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, "POST"))
+            using (var replicateTransformerRequest = serverClient.CreateRequest(replicateTransformerUrl, HttpMethods.Post))
             {
                 try
                 {
-                    await replicateTransformerRequest.ExecuteRawResponseAsync();
+                    await replicateTransformerRequest.ExecuteRawResponseAsync().ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
@@ -207,12 +214,17 @@ namespace Raven.Client.Indexes
         public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention, CancellationToken token = default(CancellationToken))
         {
             Conventions = documentConvention;
-            var transformerDefinition = CreateTransformerDefinition(documentConvention.PrettifyGeneratedLinqExpressions);
+#if !DNXCORE50
+            var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
+#else
+            var prettify = false;
+#endif
+            var transformerDefinition = CreateTransformerDefinition(prettify);
             // This code take advantage on the fact that RavenDB will turn an index PUT
             // to a noop of the index already exists and the stored definition matches
             // the new definition.
-            await asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token);
-            await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands);
+            await asyncDatabaseCommands.PutTransformerAsync(TransformerName, transformerDefinition, token).ConfigureAwait(false);
+            await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
         }
     }
 
@@ -251,7 +263,9 @@ namespace Raven.Client.Indexes
 
             if (prettify)
             {
+#if !DNXCORE50
                 transformerDefinition.TransformResults = IndexPrettyPrinter.TryFormat(transformerDefinition.TransformResults);
+#endif
             }
 
             return transformerDefinition;

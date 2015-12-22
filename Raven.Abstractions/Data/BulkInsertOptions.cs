@@ -1,5 +1,17 @@
 namespace Raven.Abstractions.Data
 {
+    public enum BulkInsertCompression
+    {
+        None = 0,
+        GZip = 1,        
+    }
+
+    public enum BulkInsertFormat
+    {
+        Bson = 0, 
+        Json = 1,        
+    }
+
     /// <summary>
     /// Options used during BulkInsert execution.
     /// </summary>
@@ -9,6 +21,8 @@ namespace Raven.Abstractions.Data
         {
             BatchSize = 512;
             WriteTimeoutMilliseconds = 15 * 1000;
+            Compression = BulkInsertCompression.GZip;
+            Format = BulkInsertFormat.Bson;
             ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
             {
                 MaxDocumentsPerChunk = BatchSize*4,
@@ -49,6 +63,21 @@ namespace Raven.Abstractions.Data
         public int WriteTimeoutMilliseconds { get; set; }
 
         /// <summary>
+        /// This specify which compression format we will use. Some are better than others and/or special purpose. 
+        /// You can also disable compression altogether.
+        /// </summary>
+        /// <remarks>Pre v3.5 bulk inserts only support GZip compression.</remarks>
+        public BulkInsertCompression Compression { get; set; }
+
+        /// <summary>
+        /// Will specify which type of format you will send the bulk insert request. While the default is most of the
+        /// times enough for you. Selecting the proper encoding for bulk inserts based on you data assumptions could give 
+        /// your code a performance push and/or smaller network requirements.
+        /// </summary>
+        /// <remarks>Pre v3.5 bulk inserts only support BSON format.</remarks>
+        public BulkInsertFormat Format { get; set; }
+
+        /// <summary>
         /// Represents options of the chunked functionality of the bulk insert operation, 
         /// which allows opening new connection for each chunk by amount of documents and total size. 
         /// If Set to null, bulk insert will be performed in a not chunked manner.
@@ -68,8 +97,7 @@ namespace Raven.Abstractions.Data
         {
             MaxDocumentsPerChunk = 2048;
             MaxChunkVolumeInBytes = 8 * 1024 * 1024;
-        }
-        /// <summary>
+}		/// <summary>
         /// Number of documents to send in each bulk insert sub operation (Default: 2048)
         /// <para>Value:</para>
         /// <para>2048 documents by default</para>

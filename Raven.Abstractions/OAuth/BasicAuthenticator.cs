@@ -37,9 +37,9 @@ namespace Raven.Abstractions.OAuth
                 var requestUri = oauthSource;
                 var response = await httpClient.GetAsync(requestUri)
                                                .ConvertSecurityExceptionToServerNotFound()
-                                               .AddUrlIfFaulting(new Uri(requestUri));
+                                               .AddUrlIfFaulting(new Uri(requestUri)).ConfigureAwait(false);
 
-                var stream = await response.GetResponseStreamWithHttpDecompression();
+                var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
                 using (var reader = new StreamReader(stream))
                 {
                     var currentOauthToken = reader.ReadToEnd();
@@ -50,6 +50,7 @@ namespace Raven.Abstractions.OAuth
             }
         }
 
+#if !DNXCORE50
         private HttpWebRequest PrepareOAuthRequest(string oauthSource, string apiKey)
         {
             var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
@@ -81,6 +82,7 @@ namespace Raven.Abstractions.OAuth
                 }
             }
         }
+#endif
 
         private const string BasicOAuthOverHttpError = @"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
 Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.

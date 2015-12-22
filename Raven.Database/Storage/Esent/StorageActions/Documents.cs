@@ -58,7 +58,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
             Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
             {
-                logger.Debug("Document with key '{0}' was not found", key);
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document with key '{0}' was not found", key);
                 return null;
             }
 
@@ -78,11 +79,13 @@ namespace Raven.Database.Storage.Esent.StorageActions
             Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
             {
-                logger.Debug("Document with key '{0}' was not found", key);
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document with key '{0}' was not found", key);
                 return null;
             }
             var existingEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
-            logger.Debug("Document with key '{0}' was found, etag: {1}", key, existingEtag);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Document with key '{0}' was found, etag: {1}", key, existingEtag);
             var lastModifiedInt64 = Api.RetrieveColumnAsInt64(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value;
             return createResult(new JsonDocumentMetadata()
             {
@@ -511,7 +514,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
             afterTouchEtag = newEtag;
             try
             {
-                logger.Debug("Touching document {0} {1} -> {2}", key, preTouchEtag, afterTouchEtag);
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Touching document {0} {1} -> {2}", key, preTouchEtag, afterTouchEtag);
                 using (var update = new Update(session, Documents, JET_prep.Replace))
                 {
                     Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
@@ -617,8 +621,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     throw;
                 }
 
-
-                logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
                                key, isUpdate);
 
                 cacher.RemoveCachedDocument(key, newEtag);
@@ -711,7 +715,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
             Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
             {
-                logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
                 deletedETag = null;
                 return false;
             }
@@ -724,7 +729,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
             deletedETag = existingEtag;
 
             Api.JetDelete(session, Documents);
-            logger.Debug("Document with key '{0}' was deleted", key);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Document with key '{0}' was deleted", key);
 
             cacher.RemoveCachedDocument(key, existingEtag);
 

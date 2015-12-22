@@ -23,7 +23,6 @@ using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
 using Raven.Database.Storage.Voron.Impl;
 using Raven.Database.Storage.Voron.Schema;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 using Sparrow.Collections;
@@ -31,10 +30,14 @@ using Sparrow.Collections;
 using Voron;
 using Voron.Impl;
 using Voron.Impl.Compaction;
-using Voron.Impl.Paging;
 using VoronConstants = Voron.Impl.Constants;
 using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
+using Raven.Unix.Native;
+using Raven.Abstractions;
+using Raven.Abstractions.Threading;
+using Raven.Database.Util;
+using Voron.Impl.Paging;
 
 namespace Raven.Storage.Voron
 {
@@ -44,8 +47,8 @@ namespace Raven.Storage.Voron
 
         private readonly ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>> lowMemoryHandlers = new ConcurrentSet<WeakReference<ITransactionalStorageNotificationHandler>>();
 
-        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
-        private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
         private volatile bool disposed;
         private readonly DisposableAction exitLockDisposable;
@@ -202,6 +205,14 @@ namespace Raven.Storage.Voron
             return accessor;
         }
 
+        public bool SkipConsistencyCheck
+        {
+            get
+            {
+                return configuration.Storage.SkipConsistencyCheck;
+            }
+        }
+
         public void Batch(Action<IStorageActionsAccessor> action)
         {
             if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
@@ -315,13 +326,15 @@ namespace Raven.Storage.Voron
             current.Value.OnStorageCommit += action;
         }
 
-        public void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
+        public void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null)
         {
             if (generator == null) throw new ArgumentNullException("generator");
             if (documentCodecs == null) throw new ArgumentNullException("documentCodecs");
 
             uuidGenerator = generator;
             _documentCodecs = documentCodecs;
+
+            Log.Info("Starting to initialize Voron storage. Path: " + configuration.DataDirectory);
 
             StorageEnvironmentOptions options = configuration.RunInMemory ?
                 CreateMemoryStorageOptionsFromConfiguration(configuration) :
@@ -346,7 +359,11 @@ namespace Raven.Storage.Voron
                 schemaCreator.UpdateSchemaIfNecessary();
 
             SetupDatabaseId();
-        }
+
+            if (putResourceMarker != null)
+                putResourceMarker(configuration.DataDirectory);
+
+            Log.Info("Voron storage initialized");        }
 
         private void SetupDatabaseId()
         {
@@ -355,7 +372,7 @@ namespace Raven.Storage.Voron
 
         private static StorageEnvironmentOptions CreateMemoryStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
-            var options = StorageEnvironmentOptions.CreateMemoryOnly();
+            var options = StorageEnvironmentOptions.CreateMemoryOnly(configuration.Storage.Voron.TempPath);
             options.InitialFileSize = configuration.Storage.Voron.InitialFileSize;
             options.MaxScratchBufferSize = configuration.Storage.Voron.MaxScratchBufferSize * 1024L * 1024L;
 
@@ -365,9 +382,16 @@ namespace Raven.Storage.Voron
         private static StorageEnvironmentOptions CreateStorageOptionsFromConfiguration(InMemoryRavenConfiguration configuration)
         {
             var directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
-            var filePathFolder = new DirectoryInfo(directoryPath);
-            if (filePathFolder.Exists == false)
-                filePathFolder.Create();
+            var filePathFolder = new DirectoryInfo (directoryPath);
+
+            if (filePathFolder.Exists == false) {
+                if (EnvironmentUtils.RunningOnPosix == true) {
+                    uint permissions = 509;
+                    Syscall.mkdir (filePathFolder.Name, permissions);
+                }
+                else
+                    filePathFolder.Create ();
+            }
 
             var tempPath = configuration.Storage.Voron.TempPath;
             var journalPath = configuration.Storage.Voron.JournalsStoragePath;
@@ -532,6 +556,8 @@ namespace Raven.Storage.Voron
             if (Directory.Exists(compactionBackup) == false) // not in the middle of compact op, we are good
                 return;
             
+            Log.Info("Starting to recover from failed compact. Data dir: " + sourcePath);
+
             if (File.Exists(Path.Combine(sourcePath, VoronConstants.DatabaseFilename)) &&
                 File.Exists(Path.Combine(sourcePath, "headers.one")) &&
                 File.Exists(Path.Combine(sourcePath, "headers.two")) &&
@@ -564,6 +590,8 @@ namespace Raven.Storage.Voron
 
                 Directory.Delete(compactionBackup, true);
             }
+
+            Log.Info("Successfully recovered from failed compact");
         }
 
         public Guid ChangeId()
@@ -599,7 +627,7 @@ namespace Raven.Storage.Voron
         }
 
         [CLSCompliant(false)]
-        public InFlightTransactionalState GetInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+        public InFlightTransactionalState InitializeInFlightTransactionalState(DocumentDatabase self, Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
         {            
             return new DtcNotSupportedTransactionalState(FriendlyName, put, delete);
         }

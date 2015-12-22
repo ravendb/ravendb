@@ -75,12 +75,12 @@ namespace Raven.Database.Indexing
                     performance = RecordCurrentBatch("Current", "Index", batch.Docs.Count);
 
                     var deleteExistingDocumentsDuration = new Stopwatch();
+
+                        Interlocked.Increment(ref sourceCount);
                     var docIdTerm = new Term(Constants.DocumentIdFieldName);
                     var documentsWrapped = batch.Docs.Select((doc, i) =>
                     {
                         token.ThrowIfCancellationRequested();
-
-                        Interlocked.Increment(ref sourceCount);
                         if (doc.__document_id == null)
                             throw new ArgumentException(
                                 string.Format("Cannot index something which doesn't have a document id, but got: '{0}'", doc));
@@ -117,8 +117,7 @@ namespace Raven.Database.Indexing
                     var parallelOperations = new ConcurrentQueue<ParallelBatchStats>();
 
                     var parallelProcessingStart = SystemTime.UtcNow;
-
-                    BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
+                    context.Database.MappingThreadPool.ExecuteBatch(documentsWrapped, (IEnumerator<dynamic> partition) =>
                     {
                         token.ThrowIfCancellationRequested();
                         var parallelStats = new ParallelBatchStats
@@ -227,11 +226,10 @@ namespace Raven.Database.Indexing
                             parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Linq_MapExecution, linqExecutionDuration.ElapsedMilliseconds));
                             parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_ConvertToLuceneDocument, convertToLuceneDocumentDuration.ElapsedMilliseconds));
                             parallelStats.Operations.Add(PerformanceStats.From(IndexingOperation.Lucene_AddDocument, addDocumentDutation.ElapsedMilliseconds));
-                            parallelOperations.Enqueue(parallelStats);
 
                             parallelOperations.Enqueue(parallelStats);
                         }
-                    });
+                    }, description: string.Format("Mapping index {0} from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
 
                     performanceStats.Add(new ParallelPerformanceStats
                     {
@@ -276,11 +274,17 @@ namespace Raven.Database.Indexing
 
             performanceStats.AddRange(writeToIndexStats);
 
-            performance.OnCompleted = () => BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
+            InitializeIndexingPerformanceCompleteDelegate(performance, sourceCount, count, performanceStats);
 
+            if (logIndexing.IsDebugEnabled)
             logIndexing.Debug("Indexed {0} documents for {1}", count, PublicName);
 
             return performance;
+        }
+
+        private void InitializeIndexingPerformanceCompleteDelegate(IndexingPerformanceStats performance, int sourceCount, int count, List<BasePerformanceStats> performanceStats)
+        {
+            performance.OnCompleted = () => BatchCompleted("Current", "Index", sourceCount, count, performanceStats);
         }
 
         protected override bool IsUpToDateEnoughToWriteToDisk(Etag highestETag)
@@ -295,6 +299,7 @@ namespace Raven.Database.Indexing
 
         protected override void HandleCommitPoints(IndexedItemsInfo itemsInfo, IndexSegmentsInfo segmentsInfo)
         {
+            logIndexing.Error("HandlingCommitPoint for index {0} in DB {1}", this.PublicName, this.context.DatabaseName);
             if (ShouldStoreCommitPoint(itemsInfo) && itemsInfo.HighestETag != null)
             {
                 context.IndexStorage.StoreCommitPoint(indexId.ToString(), new IndexCommitPoint
@@ -321,7 +326,7 @@ namespace Raven.Database.Indexing
                 return false;
             // no often than specified indexing interval
             return (LastIndexTime - PreviousIndexTime > context.Configuration.MinIndexingTimeIntervalToStoreCommitPoint ||
-                    // at least once for specified time interval
+                // at least once for specified time interval
                     LastIndexTime - LastCommitPointStoreTime > context.Configuration.MaxIndexCommitPointStoreTimeInterval);
         }
 
@@ -426,7 +431,7 @@ namespace Raven.Database.Indexing
             {
                 stats.Operation = IndexingWorkStats.Status.Ignore;
                 if (logIndexing.IsDebugEnabled)
-                    logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
+                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
 
                 var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
                     .Where(x => x != null)

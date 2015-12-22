@@ -1,47 +1,22 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Database.Util;
 
 namespace Raven.Client.Changes
 {
-    public class DatabaseConnectionState : IChangesConnectionState
+    public class DatabaseConnectionState : ConnectionStateBase
     {
-        private readonly Action onZero;
         private readonly Func<DatabaseConnectionState, Task> ensureConnection;
-        private Task task;
-        private int value;
-        public Task Task
-        {
-            get { return task; }
-        }
 
         public DatabaseConnectionState(Action onZero, Func<DatabaseConnectionState, Task> ensureConnection, Task task)
+            : base(onZero, task)
         {
-            value = 0;
-            this.onZero = onZero;
             this.ensureConnection = ensureConnection;
-            this.task = task;
         }
 
-        public void Inc()
+        protected override Task EnsureConnection()
         {
-            lock (this)
-            {
-                if (++value == 1)
-                    task = ensureConnection(this);
-            }
-
-        }
-
-        public void Dec()
-        {
-            lock(this)
-            {
-                if(--value == 0)
-                    onZero();
-            }
+            return ensureConnection(this);
         }
 
         public event Action<DocumentChangeNotification> OnDocumentChangeNotification = delegate { };
@@ -55,8 +30,6 @@ namespace Raven.Client.Changes
         public event Action<ReplicationConflictNotification> OnReplicationConflictNotification;
 
         public event Action<DataSubscriptionChangeNotification> OnDataSubscriptionNotification;
-
-        public event Action<Exception> OnError;
 
         public void Send(DocumentChangeNotification documentChangeNotification)
         {
@@ -102,13 +75,6 @@ namespace Raven.Client.Changes
             var onOnDataSubscriptionChangeNotification = OnDataSubscriptionNotification;
             if (onOnDataSubscriptionChangeNotification != null)
                 onOnDataSubscriptionChangeNotification(dataSubscriptionChangeNotification);
-        }
-
-        public void Error(Exception e)
-        {
-            var onOnError = OnError;
-            if (onOnError != null)
-                onOnError(e);
         }
     }
 }

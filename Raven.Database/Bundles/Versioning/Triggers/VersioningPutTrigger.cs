@@ -23,19 +23,37 @@ namespace Raven.Bundles.Versioning.Triggers
         {
             var jsonDocument = Database.Documents.Get(key, transactionInformation);
             if (jsonDocument == null)
-                return VetoResult.Allowed;
-
-            if (Database.ChangesToRevisionsAllowed() == false && 
-                jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
-                Database.IsVersioningActive(metadata))
             {
-                return VetoResult.Deny("Modifying a historical revision is not allowed");
+                if (Database.IsVersioningActive(metadata) == false)
+                    return VetoResult.Allowed;
+
+                if (Database.IsVersioningDisabledForImport(metadata))
+                    return VetoResult.Allowed;
+
+                if (Database.ChangesToRevisionsAllowed() == false &&
+                    metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
+                {
+                    return VetoResult.Deny("Creating a historical revision is not allowed");
+                }
+                return VetoResult.Allowed;
+            }
+
+            if (Database.IsVersioningActive(metadata))
+            {
+                if (Database.IsVersioningDisabledForImport(metadata))
+                    return VetoResult.Allowed;
+
+                if (Database.ChangesToRevisionsAllowed() == false &&
+                    jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
+                {
+                    return VetoResult.Deny("Modifying a historical revision is not allowed");
+                }
             }
 
             return VetoResult.Allowed;
         }
 
-        public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+        public override void OnPut(string key, RavenJObject jsonReplicationDocument, RavenJObject metadata, TransactionInformation transactionInformation)
         {
             VersioningConfiguration versioningConfiguration;
 

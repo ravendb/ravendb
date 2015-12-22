@@ -7,6 +7,8 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
@@ -28,6 +30,11 @@ namespace Raven.Database.FileSystem.Actions
         {
         }
 
+        public void StartSynchronizeDestinationsInBackground()
+        {
+            Task.Factory.StartNew(() => SynchronizationTask.Execute(false), CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+        }
+
         public void AssertFileIsNotBeingSynced(string fileName)
         {
             Storage.Batch(accessor =>
@@ -38,7 +45,8 @@ namespace Raven.Database.FileSystem.Actions
                 }
                 else
                 {
-                    Log.Debug("Cannot execute operation because file '{0}' is being synced", fileName);
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Cannot execute operation because file '{0}' is being synced", fileName);
 
                     throw new SynchronizationException(string.Format("File {0} is being synced", fileName));
                 }
@@ -90,9 +98,9 @@ namespace Raven.Database.FileSystem.Actions
             var key = SynchronizationConstants.RavenSynchronizationSourcesBasePath + "/" + sourceFileSystem.Id;
 
             Storage.Batch(accessor => accessor.SetConfig(key, JsonExtensions.ToJObject(synchronizationSourceInfo)));
-            
 
-            Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceFileSystem.Url, sourceFileSystem.Id);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Saved last synchronized file ETag {0} from {1} ({2})", lastSourceEtag, sourceFileSystem.Url, sourceFileSystem.Id);
         }
 
         private void SaveSynchronizationReport(string fileName, IStorageActionsAccessor accessor, SynchronizationReport report)

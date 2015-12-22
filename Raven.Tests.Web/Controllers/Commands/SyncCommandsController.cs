@@ -47,7 +47,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/sync/commands/deleteAttachment")]
         public HttpResponseMessage DeleteAttachment()
         {
+#pragma warning disable 618
             DocumentStore.DatabaseCommands.DeleteAttachment("keys/1", null);
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -90,21 +92,27 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/sync/commands/getAttachment")]
         public HttpResponseMessage GetAttachment()
         {
+#pragma warning disable 618
             DocumentStore.DatabaseCommands.GetAttachment("attachment1");
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
         [Route("api/sync/commands/getAttachmentHeadersStartingWith")]
         public HttpResponseMessage GetAttachmentHeadersStartingWith()
         {
+#pragma warning disable 618
             DocumentStore.DatabaseCommands.GetAttachmentHeadersStartingWith("attachments", 0, 128);
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
         [Route("api/sync/commands/getAttachments")]
         public HttpResponseMessage GetAttachments()
         {
+#pragma warning disable 618
             DocumentStore.DatabaseCommands.GetAttachments(0, Etag.Empty, 128);
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -242,7 +250,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/sync/commands/headAttachment")]
         public HttpResponseMessage HeadAttachment()
         {
+#pragma warning disable 618
             DocumentStore.DatabaseCommands.HeadAttachment("keys/1");
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -311,7 +321,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/sync/commands/putAttachment")]
         public HttpResponseMessage PutAttachment()
         {
+#pragma warning disable 618
             DocumentStore.DatabaseCommands.PutAttachment("keys/1", null, new MemoryStream(), new RavenJObject());
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -415,7 +427,9 @@ namespace Raven.Tests.Web.Controllers.Commands
         [Route("api/sync/commands/updateAttachmentMetadata")]
         public HttpResponseMessage UpdateAttachmentMetadata()
         {
+#pragma warning disable 618
             DocumentStore.DatabaseCommands.UpdateAttachmentMetadata("keys/1", null, new RavenJObject());
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -437,7 +451,7 @@ namespace Raven.Tests.Web.Controllers.Commands
             }
             catch (Exception e)
             {
-                if (e.Message.Contains("Could not figure out what to do") == false)
+                if (e.Message.Contains("replication bundle not activated") == false)
                     throw;
             }
 

@@ -50,7 +50,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             if (existingMetadata == null)
             {
                 AddWithoutConflict(id, null, metadata, incoming);
-                log.Debug("New item {0} replicated successfully from {1}", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("New item {0} replicated successfully from {1}", id, Src);
                 return;
             }
 
@@ -74,8 +75,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             {
                 var etag = deleted == false ? existingEtag : null;
                 AddWithoutConflict(id, etag, metadata, incoming);
-
-                log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
                 return;
             }
 
@@ -108,13 +109,15 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 
             if (existingDocumentIsInConflict) // the existing document is in conflict
             {
-                log.Debug("Conflicted item {0} has a new version from {1}, adding to conflicted documents", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Conflicted item {0} has a new version from {1}, adding to conflicted documents", id, Src);
 
                 createdConflict = AppendToCurrentItemConflicts(id, newDocumentConflictId, existingMetadata, existingItem);
             }
             else
             {
-                log.Debug("Existing item {0} is in conflict with replicated version from {1}, marking item as conflicted", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Existing item {0} is in conflict with replicated version from {1}, marking item as conflicted", id, Src);
                 // we have a new conflict
                 // move the existing doc to a conflict and create a conflict document
                 var existingDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifierForCurrentDatabase();
@@ -171,7 +174,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag, out deleted);
             if (existingMetadata == null)
             {
-                log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring.", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Replicating deleted item {0} from {1} that does not exist, ignoring.", id, Src);
                 return;
             }
 
@@ -189,13 +193,15 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
             if (currentReplicationEntry != null &&
                 existingHistory.Contains(currentReplicationEntry, RavenJTokenEqualityComparer.Default))
             {
-                log.Debug("Replicated delete for {0} already exist in item history, ignoring", id);
+                if (log.IsDebugEnabled)
+                    log.Debug("Replicated delete for {0} already exist in item history, ignoring", id);
                 return;
             }
             
             if (existingMetadata.Value<bool>(Constants.RavenDeleteMarker)) //deleted locally as well
             {
-                log.Debug("Replicating deleted item {0} from {1} that was deleted locally. Merging histories.", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Replicating deleted item {0} from {1} that was deleted locally. Merging histories.", id, Src);
 
                 var newHistory = ReplicationData.GetHistory(newMetadata);
                 if (currentReplicationEntry != null)
@@ -222,7 +228,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 
             if (Historian.IsDirectChildOfCurrent(newMetadata, existingMetadata)) // not modified
             {
-                log.Debug("Delete of existing item {0} was replicated successfully from {1}", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Delete of existing item {0} was replicated successfully from {1}", id, Src);
                 DeleteItem(id, existingEtag);
                 MarkAsDeleted(id, newMetadata);
                 return;
@@ -232,7 +239,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
 
             if (existingMetadata.Value<bool>(Constants.RavenReplicationConflict)) // locally conflicted
             {
-                log.Debug("Replicating deleted item {0} from {1} that is already conflicted, adding to conflicts.", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Replicating deleted item {0} from {1} that is already conflicted, adding to conflicts.", id, Src);
                 var savedConflictedItemId = SaveConflictedItem(id, newMetadata, incoming, existingEtag);
                 createdConflict = AppendToCurrentItemConflicts(id, savedConflictedItemId, existingMetadata, existingItem);
             }
@@ -246,7 +254,8 @@ namespace Raven.Database.Bundles.Replication.Responders.Behaviors
                     return;
                 }
                 var newConflictId = SaveConflictedItem(id, newMetadata, incoming, existingEtag);
-                log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
+                if (log.IsDebugEnabled)
+                    log.Debug("Existing item {0} is in conflict with replicated delete from {1}, marking item as conflicted", id, Src);
 
                 // we have a new conflict  move the existing doc to a conflict and create a conflict document
                 var existingDocumentConflictId = id + "/conflicts/" + GetReplicationIdentifierForCurrentDatabase();

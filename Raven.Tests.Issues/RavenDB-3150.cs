@@ -17,7 +17,7 @@ namespace Raven.Tests.Issues
 {
     public class LazilyLoadWithTransformerWhileUsingSharding : RavenTest
     {
-        private readonly Dictionary<string, RavenDbServer> servers;
+        private new readonly Dictionary<string, RavenDbServer> servers;
         private readonly ShardedDocumentStore store;
         private Dictionary<string, IDocumentStore> documentStores;
 

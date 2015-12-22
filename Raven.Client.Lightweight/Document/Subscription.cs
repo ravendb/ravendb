@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -33,9 +34,13 @@ namespace Raven.Client.Document
 
     public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
 
-    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class 
+    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog logger = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog logger = LogManager.GetLogger(typeof(Subscription<T>));
+#endif
 
         private readonly AutoResetEvent newDocuments = new AutoResetEvent(false);
         private readonly ManualResetEvent anySubscriber = new ManualResetEvent(false);
@@ -72,7 +77,7 @@ namespace Raven.Client.Document
             this.conventions = conventions;
             this.ensureOpenSubscription = ensureOpenSubscription;
 
-            if (typeof (T) != typeof (RavenJObject))
+            if (typeof(T) != typeof(RavenJObject))
             {
                 isStronglyTyped = true;
                 generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, entity => AsyncHelpers.RunSync(() => conventions.GenerateDocumentKeyAsync(database, commands, entity)));
@@ -205,7 +210,7 @@ namespace Raven.Client.Document
                                         }
                                         else
                                         {
-                                            queue.Add((T) (object) jsonDoc);
+                                            queue.Add((T)(object)jsonDoc);
                                         }
 
                                         if (IsErroredBecauseOfSubscriber)
@@ -218,7 +223,7 @@ namespace Raven.Client.Document
                         queue.CompleteAdding();
 
                         if (processingTask != null)
-                            await processingTask;
+                            await processingTask.ConfigureAwait(false);
 
                         if (IsErroredBecauseOfSubscriber)
                             break;
@@ -249,10 +254,10 @@ namespace Raven.Client.Document
                                     AcknowledgeBatchToServer(lastProcessedEtagOnServer);
 
                                     lastProcessedEtagOnClient = lastProcessedEtagOnServer;
-                                    
+
                                     continue; // try to pull more documents from subscription
                                 }
-                            }							
+                            }
                         }
 
                         while (newDocuments.WaitOne(options.ClientAliveNotificationInterval) == false)
@@ -331,11 +336,14 @@ namespace Raven.Client.Document
 
                 if (TryHandleRejectedConnection(ex, reopenTried: false))
                 {
-                    logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
+                    if (logger.IsDebugEnabled)
+                        logger.Debug(string.Format("Subscription #{0}. Stopping the connection '{1}'", id, options.ConnectionId));
                     return;
                 }
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 RestartPullingTask().ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
             if (IsErroredBecauseOfSubscriber)
@@ -364,7 +372,9 @@ namespace Raven.Client.Document
                 if (TryHandleRejectedConnection(ex, reopenTried: true))
                     return;
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 RestartPullingTask().ConfigureAwait(false);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 return;
             }
 
@@ -439,7 +449,7 @@ namespace Raven.Client.Document
                     }
 
                     // succeeded in opening the subscription
-                    
+
                     // no longer need to be notified about subscription status changes
                     dataSubscriptionReleasedObserver.Dispose();
                     dataSubscriptionReleasedObserver = null;
@@ -460,7 +470,7 @@ namespace Raven.Client.Document
                 return;
             }
 
-            var changesApi = (RemoteDatabaseChanges) sender;
+            var changesApi = (RemoteDatabaseChanges)sender;
 
             if (changesApi.Connected)
                 newDocuments.Set();
@@ -468,7 +478,7 @@ namespace Raven.Client.Document
 
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            if(IsErroredBecauseOfSubscriber)
+            if (IsErroredBecauseOfSubscriber)
                 throw new InvalidOperationException("Subscription encountered errors and stopped. Cannot add any subscriber.");
 
             if (subscribers.TryAdd(observer))
@@ -487,27 +497,27 @@ namespace Raven.Client.Document
 
         private HttpJsonRequest CreateAcknowledgmentRequest(Etag lastProcessedEtag)
         {
-            return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), "POST");
+            return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), HttpMethods.Post);
         }
 
         private HttpJsonRequest CreatePullingRequest()
         {
-            return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), "GET", timeout: options.PullingRequestTimeout);
+            return commands.CreateRequest(string.Format("/subscriptions/pull?id={0}&connection={1}", id, options.ConnectionId), HttpMethod.Get, timeout: options.PullingRequestTimeout);
         }
 
         private HttpJsonRequest CreateClientAliveRequest()
         {
-            return commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, options.ConnectionId), "PATCH");
+            return commands.CreateRequest(string.Format("/subscriptions/client-alive?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Patch);
         }
 
         private HttpJsonRequest CreateCloseRequest()
         {
-            return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), "POST");
+            return commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection={1}", id, options.ConnectionId), HttpMethods.Post);
         }
 
         private void OnCompletedNotification()
         {
-            if(completed)
+            if (completed)
                 return;
 
             foreach (var subscriber in subscribers)
@@ -540,10 +550,10 @@ namespace Raven.Client.Document
             if (putDocumentsObserver != null)
                 putDocumentsObserver.Dispose();
 
-            if(endedBulkInsertsObserver != null)
+            if (endedBulkInsertsObserver != null)
                 endedBulkInsertsObserver.Dispose();
 
-            if(dataSubscriptionReleasedObserver != null)
+            if (dataSubscriptionReleasedObserver != null)
                 dataSubscriptionReleasedObserver.Dispose();
 
             cts.Cancel();
@@ -553,11 +563,11 @@ namespace Raven.Client.Document
 
             changes.ConnectionStatusChanged -= ChangesApiConnectionChanged;
 
-            foreach (var task in new []{pullingTask, startPullingTask})
+            foreach (var task in new[] { pullingTask, startPullingTask })
             {
-                if (task == null) 
+                if (task == null)
                     continue;
-                
+
                 switch (task.Status)
                 {
                     case TaskStatus.RanToCompletion:

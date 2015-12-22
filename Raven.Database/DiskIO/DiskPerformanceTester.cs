@@ -11,16 +11,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Security;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Voron.Platform.Win32;
 using metrics.Core;
 using Raven.Database.Extensions;
 using Raven.Database.Util;
-using Raven.Json.Linq;
 
 namespace Raven.Database.DiskIO
 {
@@ -32,12 +32,27 @@ namespace Raven.Database.DiskIO
 
         public const string TemporaryJournalFileName = "journal.ravendb-io-test";
 
+        protected readonly ConcurrentBag<Exception> errors = new ConcurrentBag<Exception>();
+
+        protected bool hasFailed;
+
+        public bool HasFailed
+        {
+            get { return hasFailed; }
+        }
+
         public abstract void TestDiskIO();
 
         public abstract DiskPerformanceResult Result { get; }
 
+        public IEnumerable<Exception> Errors
+        {
+            get { return errors; }
+        }
+
         public static AbstractDiskPerformanceTester ForRequest(AbstractPerformanceTestRequest ioTestRequest, Action<string> add, CancellationToken token = new CancellationToken())
         {
+            
             var genericPerformanceRequest = ioTestRequest as GenericPerformanceTestRequest;
             if (genericPerformanceRequest != null)
             {
@@ -77,6 +92,8 @@ namespace Raven.Database.DiskIO
 
         protected long testTime;
 
+        protected readonly ILog log;
+        
         public override DiskPerformanceResult Result
         {
             get
@@ -104,6 +121,7 @@ namespace Raven.Database.DiskIO
             dataStorage = new DiskPerformanceStorage();
             testTimerCts = new CancellationTokenSource();
             linkedCts = CancellationTokenSource.CreateLinkedTokenSource(taskKillToken, testTimerCts.Token);
+            log = LogManager.GetCurrentClassLogger();
         }
 
         protected void PrepareTestFile(string path)
@@ -203,7 +221,6 @@ namespace Raven.Database.DiskIO
             secondTimer.Dispose();
             secondTimer = null;
         }
-
     }
 
     public class GenericDiskPerformanceTester : AbstractDiskPerformanceTester<GenericPerformanceTestRequest>
@@ -236,6 +253,7 @@ namespace Raven.Database.DiskIO
                 StartWorkers();
                 onInfo("Waiting for test to complete");
                 threads.ForEach(t => t.Join());
+                
                 taskKillToken.ThrowIfCancellationRequested();
             }
         }
@@ -267,38 +285,48 @@ namespace Raven.Database.DiskIO
 
         private void MeasurePerformance(CancellationToken token, Random random, long start, long end)
         {
-            if (token.IsCancellationRequested)
+            try
             {
-                return;
-            }
-            if (testRequest.Sequential)
-            {
-                switch (testRequest.OperationType)
+                if (token.IsCancellationRequested)
                 {
-                    case OperationType.Read:
-                        TestSequentialRead(token);
-                        break;
-                    case OperationType.Write:
-                        TestSequentialWrite(token, random, start, end);
-                        break;
-                    default:
-                        throw new NotSupportedException(string.Format("Operation type {0} is not supported for sequential", testRequest.OperationType));
+                    return;
+                }
+                if (testRequest.Sequential)
+                {
+                    switch (testRequest.OperationType)
+                    {
+                        case OperationType.Read:
+                            TestSequentialRead(token);
+                            break;
+                        case OperationType.Write:
+                            TestSequentialWrite(token, random, start, end);
+                            break;
+                        default:
+                            throw new NotSupportedException(string.Format("Operation type {0} is not supported for sequential", testRequest.OperationType));
+                    }
+                }
+                else
+                {
+                    switch (testRequest.OperationType)
+                    {
+                        case OperationType.Read:
+                            TestRandomRead(token, random);
+                            break;
+                        case OperationType.Write:
+                            TestRandomWrite(token, random, start, end);
+                            break;
+                        case OperationType.Mix:
+                            TestRandomReadWrite(token, random, start, end);
+                            break;
+                    }
                 }
             }
-            else
+            catch (Exception e)
             {
-                switch (testRequest.OperationType)
-                {
-                    case OperationType.Read:
-                        TestRandomRead(token, random);
-                        break;
-                    case OperationType.Write:
-                        TestRandomWrite(token, random, start, end);
-                        break;
-                    case OperationType.Mix:
-                        TestRandomReadWrite(token, random, start, end);
-                        break;
-                }
+                onInfo("Failed to perform I/O test... check logs for more information");
+                log.Error("Failed to perform I/O test...", e); //this could happen because of things like SAN network failure, and we really want to know about it if it happens		        
+                hasFailed = true;
+                errors.Add(e);
             }
         }
 
@@ -537,50 +565,60 @@ namespace Raven.Database.DiskIO
 
         public override void TestDiskIO()
         {
-            PrepareTestFile(filePath);
-            if (File.Exists(journalPath))
+            try
             {
-                File.Delete(journalPath);
-            }
-
-            using (TestTimeMeasure())
-            {
-                onInfo("Starting test...");
-                taskKillToken.ThrowIfCancellationRequested();
-
-                try
+                PrepareTestFile(filePath);
+                if (File.Exists(journalPath))
                 {
-                    secondTimer = new Timer(SecondTicked, null, 1000, 1000);
+                    File.Delete(journalPath);
+                }
 
-                    using (dataHandle = Win32NativeFileMethods.CreateFile(filePath,
-                                                                          Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.None, IntPtr.Zero,
-                                                                          Win32NativeFileCreationDisposition.OpenExisting,
-                                                                          Win32NativeFileAttributes.Write_Through,
-                                                                          IntPtr.Zero))
+                using (TestTimeMeasure())
+                {
+                    onInfo("Starting test...");
+                    taskKillToken.ThrowIfCancellationRequested();
+
+                    try
                     {
-                        ValidateHandle(dataHandle);
-                        using (dataFs = new FileStream(dataHandle, FileAccess.Write))
-                        using (journalHandle = Win32NativeFileMethods.CreateFile(journalPath,
-                                                                                 Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.None, IntPtr.Zero,
-                                                                                 Win32NativeFileCreationDisposition.CreateAlways,
-                                                                                 Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering,
-                                                                                 IntPtr.Zero))
+                        secondTimer = new Timer(SecondTicked, null, 1000, 1000);
+
+                        using (dataHandle = Win32NativeFileMethods.CreateFile(filePath,
+                            Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.None, IntPtr.Zero,
+                            Win32NativeFileCreationDisposition.OpenExisting,
+                            Win32NativeFileAttributes.Write_Through,
+                            IntPtr.Zero))
                         {
-                            ValidateHandle(journalHandle);
-                            using (journalFs = new FileStream(journalHandle, FileAccess.Write))
+                            ValidateHandle(dataHandle);
+                            using (dataFs = new FileStream(dataHandle, FileAccess.Write))
+                            using (journalHandle = Win32NativeFileMethods.CreateFile(journalPath,
+                                Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.None, IntPtr.Zero,
+                                Win32NativeFileCreationDisposition.CreateAlways,
+                                Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering,
+                                IntPtr.Zero))
                             {
-                                MeasurePerformance();
+                                ValidateHandle(journalHandle);
+                                using (journalFs = new FileStream(journalHandle, FileAccess.Write))
+                                {
+                                    MeasurePerformance();
+                                }
                             }
                         }
                     }
-                }
-                finally
-                {
-                    if (File.Exists(journalPath))
+                    finally
                     {
-                        IOExtensions.DeleteFile(journalPath);
+                        if (File.Exists(journalPath))
+                        {
+                            IOExtensions.DeleteFile(journalPath);
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                onInfo("Failed to perform I/O test... check logs for more information");
+                log.Error("Failed to perform I/O test...", e); //this could happen because of things like SAN network failure, and we really want to know about it if it happens
+                hasFailed = true;
+                errors.Add(e);
             }
         }
 

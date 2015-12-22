@@ -1,3 +1,19 @@
+<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#resources">
+                Counter Storages
+            </a>
+        </h3>
+    </li>
+    <li class="active" data-bind="with: activeCounterStorage">
+        <a data-bind="text: name, attr: { href: $parent.appUrls.counterStorageCounters }"></a>
+    </li>
+    <li class="active">
+        <span>Replication</span>
+    </li>
+</ul>
+
 <div class="settings-container row">
     <form data-bind="submit: $root.saveChanges" class="form-horizontal" role="form">
         <div class="panel panel-default">

@@ -9,7 +9,7 @@ using Raven.Database.Server.Controllers.Admin;
 
 namespace Raven.Database.Server.Controllers
 {
-    public abstract class AdminBundlesApiController : BaseAdminController
+    public abstract class AdminBundlesApiController : BaseAdminDatabaseApiController
     {
         public abstract string BundleName { get; }
 
@@ -17,15 +17,16 @@ namespace Raven.Database.Server.Controllers
         {
             InnerInitialization(controllerContext);
             var config = DatabasesLandlord.CreateTenantConfiguration(DatabaseName);
-            if (!config.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
+            if (config == null || config.ActiveBundles == null ||
+                !config.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
             {
                 return GetMessageWithObject(new
                 {
-                    Error = "Could not figure out what to do"
+                    Error = BundleName + " bundle not activated in database named: " + DatabaseName
                 }, HttpStatusCode.BadRequest);
             }
 
-            return await base.ExecuteAsync(controllerContext, cancellationToken);
+            return await base.ExecuteAsync(controllerContext, cancellationToken).ConfigureAwait(false);
         }
     }
 }

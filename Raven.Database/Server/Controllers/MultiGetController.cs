@@ -20,25 +20,30 @@ using Raven.Abstractions.Util;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class MultiGetController : RavenDbApiController
+    
+    public class MultiGetController : ClusterAwareRavenDbApiController
     {
-        private static ThreadLocal<bool> recursive = new ThreadLocal<bool>(() => false);
+        
+        private static Raven.Abstractions.Threading.ThreadLocal<bool> recursive = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
         [HttpPost]
         [RavenRoute("multi_get")]
         [RavenRoute("databases/{databaseName}/multi_get")]
         public async Task<HttpResponseMessage> MultiGet()
         {
+            
             if (recursive.Value)
                 throw new InvalidOperationException("Nested requests to multi_get are not supported");
 
+            
             recursive.Value = true;
             try
             {
-                var requests = await ReadJsonObjectAsync<GetRequest[]>();
+                var requests = await ReadJsonObjectAsync<GetRequest[]>().ConfigureAwait(false);
                 var results = new Tuple<HttpResponseMessage, List<Action<StringBuilder>>>[requests.Length];
 
                 string clientVersion = null;
@@ -62,7 +67,7 @@ namespace Raven.Database.Server.Controllers
                 DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Wait();
                 try
                 {
-                    await ExecuteRequests(results, requests);
+                    await ExecuteRequests(results, requests).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -193,14 +198,14 @@ namespace Raven.Database.Server.Controllers
                 Parallel.For(0, requests.Length, position =>
                     tasks[position] = HandleRequestAsync(requests, results, position)
                     );
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
             else
             {
                 for (var i = 0; i < requests.Length; i++)
                 {
                     // as we perform requests sequentially we can pass parent trace info
-                    await HandleRequestAsync(requests, results, i);
+                    await HandleRequestAsync(requests, results, i).ConfigureAwait(false);
                 }
             }
         }
@@ -211,7 +216,7 @@ namespace Raven.Database.Server.Controllers
             if (request == null)
                 return;
 
-            results[i] = await HandleActualRequestAsync(request);
+            results[i] = await HandleActualRequestAsync(request).ConfigureAwait(false);
 
         }
 
@@ -282,12 +287,12 @@ namespace Raven.Database.Server.Controllers
             controller.RequestContext = controllerContext.RequestContext;
             controller.Configuration = Configuration;
 
-            if (string.IsNullOrEmpty(indexQuery) == false && (controller as RavenDbApiController) != null)
+            if (string.IsNullOrEmpty(indexQuery) == false && (controller as BaseDatabaseApiController) != null)
             {
-                ((RavenDbApiController)controller).SetPostRequestQuery(indexQuery);
+                ((BaseDatabaseApiController)controller).SetPostRequestQuery(indexQuery);
             }
 
-            var httpResponseMessage = await controller.ExecuteAsync(controllerContext, CancellationToken.None);
+            var httpResponseMessage = await controller.ExecuteAsync(controllerContext, CancellationToken.None).ConfigureAwait(false);
             return Tuple.Create(httpResponseMessage, controller.CustomRequestTraceInfo);
         }
 

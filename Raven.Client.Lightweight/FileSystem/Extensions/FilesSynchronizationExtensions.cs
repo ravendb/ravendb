@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+
 using Raven.Abstractions.FileSystem;
 using Raven.Client.FileSystem.Connection;
 
@@ -16,6 +17,11 @@ namespace Raven.Client.FileSystem.Extensions
                 FileSystem = self.FileSystemName,
                 ServerUrl = selfImpl.ServerUrl,               
             };
+
+            if (selfImpl.Conventions != null)
+            {
+                result.AuthenticationScheme = self.Conventions.AuthenticationScheme;
+            }
 
             if (self.PrimaryCredentials != null)
             {                

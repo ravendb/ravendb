@@ -4,9 +4,11 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +16,10 @@ using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Abstractions.Util;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Actions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -23,12 +28,10 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using System.Linq;
-using System.Security.Principal;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class StreamsController : RavenDbApiController
+    public class StreamsController : ClusterAwareRavenDbApiController
     {
         [HttpHead]
         [RavenRoute("streams/docs")]
@@ -81,52 +84,60 @@ namespace Raven.Database.Server.Controllers
                 CurrentOperationContext.User.Value = user;
 
 
-                var bufferStream = new BufferedStream(stream, 1024 * 64);
-                using (var cts = new CancellationTokenSource())
-                using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
-                using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
+            var bufferStream = new BufferedStream(stream, 1024 * 64);
+            using (var cts = new CancellationTokenSource())
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (var writer = new JsonTextWriter(new StreamWriter(bufferStream)))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
+
+                Action<JsonDocument> addDocument = doc =>
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-
-                    Action<JsonDocument> addDocument = doc =>
+                    timeout.Delay();
+                    if (doc == null)
                     {
-                        timeout.Delay();
-                        doc.ToJson().WriteTo(writer);
+                        // we only have this heartbit when the streaming has gone on for a long time
+                        // and we haven't send anything to the user in a while (because of filtering, skipping, etc).
                         writer.WriteRaw(Environment.NewLine);
-                    };
+                        writer.Flush();
+                        return;
+                    }
+                    doc.ToJson().WriteTo(writer);
+                    writer.WriteRaw(Environment.NewLine);
+                };
 
-                    Database.TransactionalStorage.Batch(accessor =>
+                Database.TransactionalStorage.Batch(accessor =>
+                {
+                    // we may be sending a LOT of documents to the user, and most 
+                    // of them aren't going to be relevant for other ops, so we are going to skip
+                    // the cache for that, to avoid filling it up very quickly
+                    using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
                     {
-                        // we may be sending a LOT of documents to the user, and most 
-                        // of them aren't going to be relevant for other ops, so we are going to skip
-                        // the cache for that, to avoid filling it up very quickly
-                        using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                        if (string.IsNullOrEmpty(startsWith))
                         {
-                            if (string.IsNullOrEmpty(startsWith))
-                            {
-                                Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
-                            }
-                            else
-                            {
-                                var nextPageStartInternal = nextPageStart;
-
-                                Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
-
-                                nextPageStart = nextPageStartInternal;
-                            }
+                            Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
                         }
-                    });
+                        else
+                        {
+                            var nextPageStartInternal = nextPageStart;
 
-                    writer.WriteEndArray();
-                    writer.WritePropertyName("NextPageStart");
-                    writer.WriteValue(nextPageStart);
-                    writer.WriteEndObject();
-                    writer.Flush();
-                    bufferStream.Flush();
-                }
+                            Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
+
+                            nextPageStart = nextPageStartInternal;
+                        }
+                    }
+                });
+
+                writer.WriteEndArray();
+                writer.WritePropertyName("NextPageStart");
+                writer.WriteValue(nextPageStart);
+                writer.WriteEndObject();
+                writer.Flush();
+                bufferStream.Flush();
             }
+        }
             finally
             {
                 CurrentOperationContext.Headers.Value = old;
@@ -154,7 +165,7 @@ namespace Raven.Database.Server.Controllers
             var index = id;
             var query = GetIndexQuery(int.MaxValue);
             if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
-            var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+            var isHeadRequest = InnerRequest.Method == HttpMethods.Head;
             if (isHeadRequest) query.PageSize = 0;
 
             var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
@@ -191,12 +202,99 @@ namespace Raven.Database.Server.Controllers
             return msg;
         }
 
+        [HttpGet]
+        [RavenRoute("streams/exploration")]
+        [RavenRoute("databases/{databaseName}/streams/exploration")]
+        public Task<HttpResponseMessage> Exploration()
+        {
+            var linq = GetQueryStringValue("linq");
+            var collection = GetQueryStringValue("collection");
+            int timeoutSeconds;
+            if (int.TryParse(GetQueryStringValue("timeoutSeconds"), out timeoutSeconds) == false)
+                timeoutSeconds = 60;
+            int pageSize;
+            if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false)
+                pageSize = 100000;
+
+            var hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes(linq));
+            var sourceHashed = MonoHttpUtility.UrlEncode(Convert.ToBase64String(hash));
+            var transformerName = Constants.TemporaryTransformerPrefix + sourceHashed;
+
+            var transformerDefinition = Database.IndexDefinitionStorage.GetTransformerDefinition(transformerName);
+            if (transformerDefinition == null)
+            {
+                transformerDefinition = new TransformerDefinition
+                {
+                    Name = transformerName,
+                    Temporary = true,
+                    TransformResults = linq
+                };
+                Database.Transformers.PutTransform(transformerName, transformerDefinition);
+            }
+
+            var msg = GetEmptyMessage();
+
+            using (var cts = new CancellationTokenSource())
+            {
+                var timeout = cts.TimeoutAfter(TimeSpan.FromSeconds(timeoutSeconds));
+                var indexQuery = new IndexQuery
+                {
+                    PageSize = pageSize,
+                    Start = 0,
+                    Query = "Tag:" + collection,
+                    ResultsTransformer = transformerName
+                };
+
+                var accessor = Database.TransactionalStorage.CreateAccessor(); //accessor will be disposed in the StreamQueryContent.SerializeToStreamAsync!
+
+                try
+                {
+                    var queryOp = new QueryActions.DatabaseQueryOperation(Database, "Raven/DocumentsByEntityName", indexQuery, accessor, cts);
+                    queryOp.Init();
+
+                    msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor, timeout, mediaType => msg.Content.Headers.ContentType = new MediaTypeHeaderValue(mediaType) { CharSet = "utf-8" },
+                        o =>
+                        {
+                            if (o.Count == 2 &&
+                                o.ContainsKey(Constants.DocumentIdFieldName) &&
+                                    o.ContainsKey(Constants.Metadata))
+                            {
+                                // this is the raw value out of the server, we don't want to get that
+                                var doc = queryOp.DocRetriever.Load(o.Value<string>(Constants.DocumentIdFieldName));
+                                var djo = doc as IDynamicJsonObject;
+                                if (djo != null)
+                                    return djo.Inner;
+                            }
+                            return o;
+                        });
+                    msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+                    msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+                    msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStale ? "true" : "false");
+                    msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+                    msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+                    msg.Headers.Add("Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.GetDefaultRavenFormat());
+
+                    if (IsCsvDownloadRequest(InnerRequest))
+                    {
+                        msg.Content.Headers.Add("Content-Disposition", "attachment; filename=export.csv");
+                    }
+                }
+                catch (Exception)
+                {
+                    accessor.Dispose();
+                    throw;
+                }
+
+                return new CompletedTask<HttpResponseMessage>(msg);
+            }
+        }
+
         [HttpPost]
         [RavenRoute("streams/query/{*id}")]
         [RavenRoute("databases/{databaseName}/streams/query/{*id}")]
         public async Task<HttpResponseMessage> SteamQueryPost(string id)
         {
-            var postedQuery = await ReadStringAsync();
+            var postedQuery = await ReadStringAsync().ConfigureAwait(false);
 
             SetPostRequestQuery(postedQuery);
 
@@ -212,9 +310,13 @@ namespace Raven.Database.Server.Controllers
             private readonly Action<string> outputContentTypeSetter;
             private Lazy<NameValueCollection> headers;
             private IPrincipal user;
+            private readonly Func<RavenJObject, RavenJObject> modifyDocument;
 
             [CLSCompliant(false)]
-            public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor, CancellationTimeout timeout, Action<string> contentTypeSetter)
+            public StreamQueryContent(HttpRequestMessage req, QueryActions.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor,
+                CancellationTimeout timeout,
+                Action<string> contentTypeSetter,
+                Func<RavenJObject,RavenJObject> modifyDocument = null)
             {
                 headers = CurrentOperationContext.Headers.Value;
                 user = CurrentOperationContext.User.Value;
@@ -223,6 +325,7 @@ namespace Raven.Database.Server.Controllers
                 this.accessor = accessor;
                 _timeout = timeout;
                 outputContentTypeSetter = contentTypeSetter;
+                this.modifyDocument = modifyDocument;
             }
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -233,35 +336,37 @@ namespace Raven.Database.Server.Controllers
                 {
                     CurrentOperationContext.User.Value = user;
                     CurrentOperationContext.Headers.Value = headers;
-                    var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
-                    using (var bufferedStream = new BufferedStream(stream, bufferSize))
-                    using (queryOp)
-                    using (accessor)
-                    using (_timeout)
-                    using (var writer = GetOutputWriter(req, bufferedStream))
-                    // we may be sending a LOT of documents to the user, and most 
-                    // of them aren't going to be relevant for other ops, so we are going to skip
-                    // the cache for that, to avoid filling it up very quickly
-                    using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-                    {
-                        outputContentTypeSetter(writer.ContentType);
+                var bufferSize = queryOp.Header.TotalResults > 1024 ? 1024 * 64 : 1024 * 8;
+                using (var bufferedStream = new BufferedStream(stream, bufferSize))
+                using (queryOp)
+                using (accessor)
+                using (_timeout)
+                using (var writer = GetOutputWriter(req, bufferedStream))
+                // we may be sending a LOT of documents to the user, and most 
+                // of them aren't going to be relevant for other ops, so we are going to skip
+                // the cache for that, to avoid filling it up very quickly
+                using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                {
+                    outputContentTypeSetter(writer.ContentType);
 
-                        writer.WriteHeader();
-                        try
+                    writer.WriteHeader();
+                    try
+                    {
+                        queryOp.Execute(o =>
                         {
-                            queryOp.Execute(o =>
-                            {
-                                _timeout.Delay();
-                                writer.Write(o);
-                            });
-                        }
-                        catch (Exception e)
-                        {
-                            writer.WriteError(e);
-                        }
+                            _timeout.Delay();
+                            if (modifyDocument != null)
+                                o = modifyDocument(o);
+                            writer.Write(o);
+                        });
                     }
-                    return Task.FromResult(true);
+                    catch (Exception e)
+                    {
+                        writer.WriteError(e);
+                    }
                 }
+                return Task.FromResult(true);
+            }
                 finally
                 {
                     CurrentOperationContext.Headers.Value = old;

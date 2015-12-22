@@ -1,3 +1,4 @@
+#if !DNXCORE50
 // -----------------------------------------------------------------------
 //  <copyright file="ConfigurationTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -18,6 +19,7 @@ using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Util;
 
 using Xunit;
+using Raven.Abstractions;
 
 namespace Raven.Tests.Core.Configuration
 {
@@ -26,8 +28,9 @@ namespace Raven.Tests.Core.Configuration
         private readonly HashSet<string> propertyPathsToIgnore = new HashSet<string>
                                                                  {
                                                                      "DatabaseName",
-                                                                     "CountersDatabaseName",
                                                                      "FileSystemName",
+                                                                     "CounterStorageName",
+                                                                     "TimeSeriesName",
                                                                      "Settings",
                                                                      "Container",
                                                                      "Catalog",
@@ -62,15 +65,19 @@ namespace Raven.Tests.Core.Configuration
             Assert.Equal(basePath, workingDirectory);
             Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(basePath));
             Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(basePath));
-            Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(basePath));
             Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(basePath));
             Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(basePath));
+            Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(basePath));
+            Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(basePath));
         }
 
         [Fact]
         public void ChangingWorkingDirectoryShouldImpactPaths()
         {
-            const string WorkingDirectoryValue = "C:\\Raven\\";
+            string WorkingDirectoryValue = "C:\\Raven\\";
+            if (EnvironmentUtils.RunningOnPosix == true)
+                WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
+            
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
             inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
             inMemoryConfiguration.Initialize();
@@ -82,15 +89,19 @@ namespace Raven.Tests.Core.Configuration
             Assert.NotEqual(basePath, workingDirectory);
             Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(WorkingDirectoryValue));
             Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(WorkingDirectoryValue));
-            Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
             Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
             Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+            Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(WorkingDirectoryValue));
+            Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(WorkingDirectoryValue));
         }
 
         [Fact]
         public void ChangingWorkingDirectoryShouldImpactRelativePaths()
         {
-            const string WorkingDirectoryValue = "C:\\Raven\\";
+            string WorkingDirectoryValue = "C:\\Raven\\";
+            if (EnvironmentUtils.RunningOnPosix == true)
+                WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
+            
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
             inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
             inMemoryConfiguration.Settings["Raven/AssembliesDirectory"] = "./my-assemblies";
@@ -104,19 +115,25 @@ namespace Raven.Tests.Core.Configuration
             Assert.NotEqual(basePath, workingDirectory);
             Assert.True(inMemoryConfiguration.AssembliesDirectory.StartsWith(WorkingDirectoryValue));
             Assert.True(inMemoryConfiguration.CompiledIndexCacheDirectory.StartsWith(WorkingDirectoryValue));
-            Assert.True(inMemoryConfiguration.CountersDataDirectory.StartsWith(WorkingDirectoryValue));
             Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(WorkingDirectoryValue));
             Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(WorkingDirectoryValue));
+            Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(WorkingDirectoryValue));
+            Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(WorkingDirectoryValue));
         }
 
         [Fact]
         public void ChangingWorkingDirectoryShouldNotImpactUNCPaths()
         {
-            const string WorkingDirectoryValue = "C:\\Raven\\";
+            string WorkingDirectoryValue = "C:\\Raven\\";
+            if (EnvironmentUtils.RunningOnPosix == true)
+                WorkingDirectoryValue = Environment.GetEnvironmentVariable("HOME") + @"\";
+            
             var inMemoryConfiguration = new InMemoryRavenConfiguration();
             inMemoryConfiguration.Settings["Raven/WorkingDir"] = WorkingDirectoryValue;
             inMemoryConfiguration.Settings["Raven/DataDir"] = @"\\server1\ravendb\data";
             inMemoryConfiguration.Settings[Constants.FileSystem.DataDirectory] = @"\\server1\ravenfs\data";
+            inMemoryConfiguration.Settings[Constants.Counter.DataDirectory] = @"\\server1\ravenfs\data";
+            inMemoryConfiguration.Settings[Constants.TimeSeries.DataDirectory] = @"\\server1\ravenfs\data";
             inMemoryConfiguration.Initialize();
 
             var basePath = FilePathTools.MakeSureEndsWithSlash(AppDomain.CurrentDomain.BaseDirectory.ToFullPath());
@@ -124,8 +141,20 @@ namespace Raven.Tests.Core.Configuration
 
             Assert.Equal(WorkingDirectoryValue, inMemoryConfiguration.WorkingDirectory);
             Assert.NotEqual(basePath, workingDirectory);
+            if (EnvironmentUtils.RunningOnPosix)
+            {
+                Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"/"));
+                Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"/"));
+                Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"/"));
+                Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"/"));
+            }
+            else
+            {
             Assert.True(inMemoryConfiguration.DataDirectory.StartsWith(@"\\"));
             Assert.True(inMemoryConfiguration.FileSystem.DataDirectory.StartsWith(@"\\"));
+                Assert.True(inMemoryConfiguration.Counter.DataDirectory.StartsWith(@"\\"));
+                Assert.True(inMemoryConfiguration.TimeSeries.DataDirectory.StartsWith(@"\\"));
+        }
         }
 
         [Fact]
@@ -174,6 +203,14 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Voron.MaxBufferPoolSize.Value, actual => actual.Storage.Voron.MaxBufferPoolSize);
             configurationComparer.Assert(expected => expected.Voron.MaxScratchBufferSize.Value, actual => actual.Storage.Voron.MaxScratchBufferSize);
             configurationComparer.Assert(expected => expected.Voron.TempPath.Value, actual => actual.Storage.Voron.TempPath);
+            configurationComparer.Assert(expected => expected.Esent.CacheSizeMax.Value, actual => actual.Storage.Esent.CacheSizeMax);
+            configurationComparer.Assert(expected => expected.Esent.MaxVerPages.Value, actual => actual.Storage.Esent.MaxVerPages);
+            configurationComparer.Assert(expected => expected.Esent.PreferredVerPages.Value, actual => actual.Storage.Esent.PreferredVerPages);
+            configurationComparer.Assert(expected => expected.Esent.DbExtensionSize.Value, actual => actual.Storage.Esent.DbExtensionSize);
+            configurationComparer.Assert(expected => expected.Esent.LogFileSize.Value, actual => actual.Storage.Esent.LogFileSize);
+            configurationComparer.Assert(expected => expected.Esent.LogBuffers.Value, actual => actual.Storage.Esent.LogBuffers);
+            configurationComparer.Assert(expected => expected.Esent.MaxCursors.Value, actual => actual.Storage.Esent.MaxCursors);
+            configurationComparer.Assert(expected => expected.Esent.CircularLog.Value, actual => actual.Storage.Esent.CircularLog);
             configurationComparer.Assert(expected => expected.FileSystem.MaximumSynchronizationInterval.Value, actual => actual.FileSystem.MaximumSynchronizationInterval);
             configurationComparer.Assert(expected => expected.Encryption.EncryptionKeyBitsPreference.Value, actual => actual.Encryption.EncryptionKeyBitsPreference);
             configurationComparer.Assert(expected => expected.Encryption.UseFips.Value, actual => actual.Encryption.UseFips);
@@ -190,6 +227,13 @@ namespace Raven.Tests.Core.Configuration
 
             configurationComparer.Assert(expected => expected.Indexing.DisableIndexingFreeSpaceThreshold.Value, actual => actual.Indexing.DisableIndexingFreeSpaceThreshold);
             configurationComparer.Assert(expected => expected.Indexing.DisableMapReduceInMemoryTracking.Value, actual => actual.Indexing.DisableMapReduceInMemoryTracking);
+
+            configurationComparer.Assert(expected => expected.Monitoring.Snmp.Port.Value, actual => actual.Monitoring.Snmp.Port);
+            configurationComparer.Assert(expected => expected.Monitoring.Snmp.Community.Value, actual => actual.Monitoring.Snmp.Community);
+            configurationComparer.Assert(expected => expected.Monitoring.Snmp.Enabled.Value, actual => actual.Monitoring.Snmp.Enabled);
+
+            configurationComparer.Assert(expected => expected.LowMemoryLimitForLinuxDetectionInMB.Value, actual => actual.LowMemoryForLinuxDetectionInMB);
+            
 
             configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value, actual => actual.TimeToWaitBeforeMarkingAutoIndexAsIdle);
             configurationComparer.Assert(expected => expected.RedirectStudioUrl.Value, actual => actual.RedirectStudioUrl);
@@ -219,7 +263,8 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.MaxIndexCommitPointStoreTimeInterval.Value, actual => actual.MaxIndexCommitPointStoreTimeInterval);
             configurationComparer.Assert(expected => expected.MinIndexingTimeIntervalToStoreCommitPoint.Value, actual => actual.MinIndexingTimeIntervalToStoreCommitPoint);
             configurationComparer.Assert(expected => expected.MaxNumberOfStoredCommitPoints.Value, actual => actual.MaxNumberOfStoredCommitPoints);
-            configurationComparer.Assert(expected => expected.MemoryLimitForProcessing.Value, actual => actual.MemoryLimitForProcessingInMb);
+            // allow +- 16MB tolerance in memory during the test (can happen in slow machines / debug):
+            configurationComparer.AssertInRange(expected => expected.MemoryLimitForProcessing.Value, actual => actual.MemoryLimitForProcessingInMb, 16);
             configurationComparer.Assert(expected => expected.AvailableMemoryForRaisingBatchSizeLimit.Value, actual => actual.AvailableMemoryForRaisingBatchSizeLimit);
             configurationComparer.Assert(expected => expected.MaxProcessingRunLatency.Value, actual => actual.MaxProcessingRunLatency);
             configurationComparer.Assert(expected => expected.DisableClusterDiscovery.Value, actual => actual.DisableClusterDiscovery);
@@ -235,7 +280,8 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.PrewarmFacetsSyncronousWaitTime.Value, actual => actual.PrewarmFacetsSyncronousWaitTime);
             configurationComparer.Assert(expected => expected.MaxNumberOfParallelProcessingTasks.Value, actual => actual.MaxNumberOfParallelProcessingTasks);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.DataDir.Value.ToFullPath(null)), actual => actual.DataDirectory);
-            configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CountersDataDir.Value.ToFullPath(null)), actual => actual.CountersDataDirectory);
+            configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.Counter.DataDir.Value.ToFullPath(null)), actual => actual.Counter.DataDirectory);
+            configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.TimeSeries.DataDir.Value.ToFullPath(null)), actual => actual.TimeSeries.DataDirectory);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.PluginsDirectory.Value.ToFullPath(null)), actual => actual.PluginsDirectory);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.AssembliesDirectory.Value.ToFullPath(null)), actual => actual.AssembliesDirectory);
             configurationComparer.Assert(expected => expected.EmbeddedFilesDirectory.Value.ToFullPath(null), actual => actual.EmbeddedFilesDirectory);
@@ -248,9 +294,18 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.CompiledIndexCacheDirectory.Value.ToFullPath(null)), actual => actual.CompiledIndexCacheDirectory);
             configurationComparer.Assert(expected => expected.FlushIndexToDiskSizeInMb.Value, actual => actual.FlushIndexToDiskSizeInMb);
             configurationComparer.Assert(expected => expected.TombstoneRetentionTime.Value, actual => actual.TombstoneRetentionTime);
+            configurationComparer.Assert(expected => expected.Counter.ReplicationLatencyInMs.Value, actual => actual.Counter.ReplicationLatencyInMs);
+            configurationComparer.Assert(expected => expected.Counter.TombstoneRetentionTime.Value, actual => actual.Counter.TombstoneRetentionTime);
+            configurationComparer.Assert(expected => expected.Counter.DeletedTombstonesInBatch.Value, actual => actual.Counter.DeletedTombstonesInBatch);
+            configurationComparer.Assert(expected => expected.Counter.BatchTimeout.Value, actual => actual.Counter.BatchTimeout);
+            configurationComparer.Assert(expected => expected.TimeSeries.TombstoneRetentionTime.Value, actual => actual.TimeSeries.TombstoneRetentionTime);
+            configurationComparer.Assert(expected => expected.TimeSeries.DeletedTombstonesInBatch.Value, actual => actual.TimeSeries.DeletedTombstonesInBatch);
+            configurationComparer.Assert(expected => expected.TimeSeries.ReplicationLatencyInMs.Value, actual => actual.TimeSeries.ReplicationLatencyInMs);
             configurationComparer.Assert(expected => expected.Replication.ReplicationRequestTimeoutInMilliseconds.Value, actual => actual.Replication.ReplicationRequestTimeoutInMilliseconds);
             configurationComparer.Assert(expected => expected.Replication.ForceReplicationRequestBuffering.Value, actual => actual.Replication.ForceReplicationRequestBuffering);
             configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfItemsToProcessInTestIndexes.Value, actual => actual.Indexing.MaxNumberOfItemsToProcessInTestIndexes);
+            configurationComparer.Assert(expected => expected.Indexing.MaxNumberOfStoredIndexingBatchInfoElements.Value, actual => actual.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
+            configurationComparer.Assert(expected => expected.Indexing.UseLuceneASTParser.Value, actual => actual.Indexing.UseLuceneASTParser);
             configurationComparer.Assert(expected => expected.IndexAndTransformerReplicationLatencyInSec.Value, actual => actual.IndexAndTransformerReplicationLatencyInSec);
             configurationComparer.Assert(expected => expected.MaxConcurrentRequestsForDatabaseDuringLoad.Value, actual => actual.MaxConcurrentRequestsForDatabaseDuringLoad);
             configurationComparer.Assert(expected => expected.Replication.MaxNumberOfItemsToReceiveInSingleBatch.Value, actual => actual.Replication.MaxNumberOfItemsToReceiveInSingleBatch);
@@ -259,11 +314,19 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.FileSystem.PreventSchemaUpdate.Value, actual => actual.Storage.PreventSchemaUpdate);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
             configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
+            configurationComparer.Assert(expected => expected.Cluster.HeartbeatTimeout.Value, actual => actual.Cluster.HeartbeatTimeout);
+            configurationComparer.Assert(expected => expected.Cluster.ElectionTimeout.Value, actual => actual.Cluster.ElectionTimeout);
+            configurationComparer.Assert(expected => expected.Cluster.MaxEntriesPerRequest.Value, actual => actual.Cluster.MaxEntriesPerRequest);
+            configurationComparer.Assert(expected => expected.Cluster.MaxStepDownDrainTime.Value, actual => actual.Cluster.MaxStepDownDrainTime);
+            configurationComparer.Assert(expected => expected.Cluster.MaxLogLengthBeforeCompaction.Value, actual => actual.Cluster.MaxLogLengthBeforeCompaction);
+            configurationComparer.Assert(expected => expected.TempPath.Value, actual => actual.TempPath);    
+            
             configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
             configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
             configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
             configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
             configurationComparer.Ignore(x => x.TransactionMode);
+            configurationComparer.Ignore(x => x.Storage.SkipConsistencyCheck);
 
             Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
             Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);
@@ -319,13 +382,52 @@ namespace Raven.Tests.Core.Configuration
                 if (propertyPathsToCheck.Contains(propertyPath) == false)
                     throw new InvalidOperationException("Cannot assert property that is not on a list of properties to assert. Path: " + propertyPath);
 
+                Func<StronglyTypedRavenSettings, T> e;
+                try
+                {
+                    e = expected.Compile();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failure when compiling " + expected, ex);
+                }
+                T expectedValue;
+                try
+                {
+                    expectedValue = e(stronglyTypedConfiguration);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Failure when running " + expected, ex);
+
+                }
+
+                var a = actual.Compile();
+                var actualValue = a(inMemoryConfiguration);
+
+                Xunit.Assert.Equal(expectedValue, actualValue);
+            }
+
+            public void AssertInRange<T>(Expression<Func<StronglyTypedRavenSettings, T>> expected, Expression<Func<InMemoryRavenConfiguration, T>> actual, int range)
+            {
+                var propertyPath = actual.ToPropertyPath();
+                if (assertedPropertyPaths.Add(propertyPath) == false)
+                    throw new InvalidOperationException("Cannot assert one property more than once. Path: " + propertyPath);
+
+                if (propertyPathsToCheck.Contains(propertyPath) == false)
+                    throw new InvalidOperationException("Cannot assert property that is not on a list of properties to assert. Path: " + propertyPath);
+
                 var e = expected.Compile();
                 var expectedValue = e(stronglyTypedConfiguration);
 
                 var a = actual.Compile();
                 var actualValue = a(inMemoryConfiguration);
 
-                Xunit.Assert.Equal(expectedValue, actualValue);
+                int low    = Convert.ToInt32(expectedValue) - range;
+                int high   = Convert.ToInt32(expectedValue) + range;
+                int value = Convert.ToInt32(actualValue);
+
+                Xunit.Assert.InRange(value, low, high);
             }
 
             public void Validate()
@@ -376,3 +478,4 @@ namespace Raven.Tests.Core.Configuration
         }
     }
 }
+#endif

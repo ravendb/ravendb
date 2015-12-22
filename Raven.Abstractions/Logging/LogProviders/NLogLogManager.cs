@@ -52,7 +52,11 @@ namespace Raven.Abstractions.Logging.LogProviders
         {
             try
             {
+#if !DNXCORE50
                 return Assembly.Load("NLog");
+#else
+                return Assembly.Load(new AssemblyName("NLog"));
+#endif
             }
             catch (Exception)
             {
@@ -73,6 +77,11 @@ namespace Raven.Abstractions.Logging.LogProviders
             internal NLogLogger(object logger)
             {
                 this.logger = logger;
+            }
+
+            public bool IsInfoEnabled
+            {
+                get { return logger.IsInfoEnabled; }
             }
 
             public bool IsDebugEnabled

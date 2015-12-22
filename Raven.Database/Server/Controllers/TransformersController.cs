@@ -1,24 +1,17 @@
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
+using Raven.Database.Server.WebApi.Attributes;
+using Raven.Json.Linq;
+
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-using JetBrains.Annotations;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Database.Server.WebApi.Attributes;
-using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class TransformersController : RavenDbApiController
+    public class TransformersController : ClusterAwareRavenDbApiController
     {
         [HttpGet]
         [RavenRoute("transformers/{*id}")]
@@ -29,7 +22,7 @@ namespace Raven.Database.Server.Controllers
             if (string.IsNullOrEmpty(transformer) == false && transformer != "/")
             {
                 var transformerDefinition = Database.Transformers.GetTransformerDefinition(transformer);
-                if (transformerDefinition == null)
+                if (transformerDefinition == null || transformerDefinition.Temporary)
                     return GetEmptyMessage(HttpStatusCode.NotFound);
 
                 return GetMessageWithObject(new
@@ -62,7 +55,7 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> TransformersPut(string id)
         {
             var transformer = id;
-            var data = await ReadJsonObjectAsync<TransformerDefinition>();
+            var data = await ReadJsonObjectAsync<TransformerDefinition>().ConfigureAwait(false);
             if (data == null || string.IsNullOrEmpty(data.TransformResults))
                 return GetMessageWithString("Expected json document with 'TransformResults' property", HttpStatusCode.BadRequest);
 
@@ -84,23 +77,23 @@ namespace Raven.Database.Server.Controllers
         [HttpPost]
         [RavenRoute("transformers/{*id}")]
         [RavenRoute("databases/{databaseName}/transformers/{*id}")]
-        public async Task<HttpResponseMessage> TransformersPost(string id)
+        public Task<HttpResponseMessage> TransformersPost(string id)
         {
             var transformer = id;
             var lockModeStr = GetQueryStringValue("mode");
 
             TransformerLockMode transformerLockMode;
             if (Enum.TryParse(lockModeStr, out transformerLockMode) == false)
-                return GetMessageWithString("Cannot understand transformer lock mode: " + lockModeStr, HttpStatusCode.BadRequest);
+                return GetMessageWithStringAsTask("Cannot understand transformer lock mode: " + lockModeStr, HttpStatusCode.BadRequest);
 
             var transformerDefinition = Database.IndexDefinitionStorage.GetTransformerDefinition(transformer);
             if (transformerDefinition == null)
-                return GetMessageWithString("Cannot find transformer : " + transformer, HttpStatusCode.NotFound);
+                return GetMessageWithStringAsTask("Cannot find transformer : " + transformer, HttpStatusCode.NotFound);
 
             transformerDefinition.LockMode = transformerLockMode;
             Database.IndexDefinitionStorage.UpdateTransformerDefinitionWithoutUpdatingCompiledTransformer(transformerDefinition);
 
-            return GetEmptyMessage();
+            return GetEmptyMessageAsTask();
         }
 
         [HttpDelete]

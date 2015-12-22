@@ -71,7 +71,7 @@ namespace Raven.Database.Embedded
             {
                 try
                 {
-                    await _next(state.Environment);
+                    await _next(state.Environment).ConfigureAwait(false);
                     state.CompleteResponse();
                 }
                 catch (Exception ex)

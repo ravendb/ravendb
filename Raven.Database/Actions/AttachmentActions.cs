@@ -114,9 +114,18 @@ namespace Raven.Database.Actions
 
                     WorkContext.ShouldNotifyAboutWork(() => "PUT ATTACHMENT " + name);
                 });
-
                 TransactionalStorage
-                    .ExecuteImmediatelyOrRegisterForSynchronization(() => Database.AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
+                    .ExecuteImmediatelyOrRegisterForSynchronization(() =>
+                {
+                    Database.AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag));
+                    var newAttachmentNotification = new AttachmentChangeNotification()
+                    {
+                        Id = name,
+                        Type = AttachmentChangeTypes.Put,
+                        Etag = newEtag
+                    };
+                    Database.Notifications.RaiseNotifications(newAttachmentNotification, metadata);
+                });
                 return newEtag;
             }
             finally
@@ -143,10 +152,19 @@ namespace Raven.Database.Actions
 
                 WorkContext.ShouldNotifyAboutWork(() => "DELETE ATTACHMENT " + name);
             });
-
             TransactionalStorage
                 .ExecuteImmediatelyOrRegisterForSynchronization(
-                    () => Database.AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name)));
+                    () =>
+                    {
+                        Database.AttachmentDeleteTriggers.Apply(trigger => trigger.AfterCommit(name));
+                        var newAttachmentNotification = new AttachmentChangeNotification()
+                        {
+                            Id = name,
+                            Type = AttachmentChangeTypes.Delete,
+                            Etag = etag
+                        };
+                        Database.Notifications.RaiseNotifications(newAttachmentNotification, null);
+                    });
 
         }
 

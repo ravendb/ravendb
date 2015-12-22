@@ -1,5 +1,7 @@
 using System;
 using System.Net;
+using System.Net.Http;
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
@@ -56,7 +58,7 @@ namespace Raven.Backup
                 url += "?incremental=true";
             try
             {
-                using (var req = CreateRequest("/fs/" + parameters.Filesystem + url, "POST"))
+                using (var req = CreateRequest("/fs/" + parameters.Filesystem + url, HttpMethod.Post))
                 {
                     req.WriteAsync(json).Wait();
 
@@ -75,11 +77,11 @@ namespace Raven.Backup
             return true;
         }
 
-        protected override HttpJsonRequest CreateRequest(string url, string method)
+        protected override HttpJsonRequest CreateRequest(string url, HttpMethod method)
         {
             var uriString = parameters.ServerUrl + url;
             return store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method,
-                new OperationCredentials(parameters.ApiKey, parameters.Credentials), store.Conventions, parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
+                new OperationCredentials(parameters.ApiKey, parameters.Credentials), store.Conventions, timeout: parameters.Timeout.HasValue ? TimeSpan.FromMilliseconds(parameters.Timeout.Value) : (TimeSpan?)null));
         }
 
         public override BackupStatus GetStatusDoc()

@@ -128,10 +128,14 @@ but the attachment itself was found. Data corruption?", key));
 
             WriteAttachmentMetadata(loweredKey, newETag, headers);
 
-            if (data != null && data.CanSeek)
-                logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length);
-            else
-                logger.Debug("Fetched document attachment (key = '{0}')", key);
+            if (logger.IsDebugEnabled)
+            {
+                var message = data != null && data.CanSeek
+                    ? string.Format("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length)
+                    : string.Format("Fetched document attachment (key = '{0}')", key);
+
+                logger.Debug(message);
+            }
 
             return newETag;
         }
@@ -143,9 +147,10 @@ but the attachment itself was found. Data corruption?", key));
 
             var loweredKey = (Slice) CreateKey(key);
 
-            if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value))
+            if (!attachmentsTable.Contains(Snapshot, loweredKey, writeBatch.Value) )
             {
-                logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
                 return;
             }
 
@@ -166,8 +171,8 @@ but the attachment itself was found. Data corruption?", key));
             metadataIndex.Delete(writeBatch.Value, loweredKey);
             attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
                             .Delete(writeBatch.Value, existingEtag);
-
-            logger.Debug("Deleted document attachment (key = '{0}')", key);
+            if (logger.IsDebugEnabled)
+                logger.Debug("Deleted document attachment (key = '{0}')", key);
         }
 
         public Attachment GetAttachment(string key)
@@ -204,8 +209,8 @@ but the attachment itself was found. Data corruption?", key));
                     },
                     Size = (int) stream.Length
                 };
-
-                logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, stream.Length);
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, stream.Length);
                 return attachment;
             }
         }

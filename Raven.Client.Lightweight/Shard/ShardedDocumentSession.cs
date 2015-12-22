@@ -37,6 +37,7 @@ namespace Raven.Client.Shard
         /// <param name="shardStrategy">The shard strategy.</param>
         /// <param name="shardDbCommands">The shard IDatabaseCommands.</param>
         /// <param name="id"></param>
+        /// <param name="dbName">The db name.</param>
         /// <param name="documentStore"></param>
         /// <param name="listeners"></param>
         public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
@@ -962,9 +963,39 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }
 
+        public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            return DeleteByIndex<T>(indexCreator.IndexName, expression);
+        }
+
+        public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+
+            var shards = GetCommandsToOperateOn(new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { indexName }
+            });
+            var operations = shardStrategy.ShardAccessStrategy.Apply(shards, new ShardRequestData
+            {
+                EntityType = typeof(T),
+                Keys = { indexName }
+            }, (dbCmd, i) => dbCmd.DeleteByIndex(indexName, indexQuery));
+
+            var shardOperation = new ShardsOperation(operations);
+
+            return shardOperation;
+        }
+
         public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
         {
             throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
+        }
     }
-}
 }

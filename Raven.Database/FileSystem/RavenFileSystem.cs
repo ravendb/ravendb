@@ -1,9 +1,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Abstractions.Util;
@@ -11,23 +15,23 @@ using Raven.Abstractions.Util.Streams;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Actions;
-using Raven.Database.FileSystem.Plugins;
-using Raven.Database.Impl;
-using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Connections;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Notifications;
-using Raven.Database.Util;
+using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Search;
 using Raven.Database.FileSystem.Storage;
+using Raven.Database.FileSystem.Storage.Voron;
 using Raven.Database.FileSystem.Synchronization;
 using Raven.Database.FileSystem.Synchronization.Conflictuality;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
-using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper.Unmanaged;
-using System.Runtime.InteropServices;
-using Raven.Abstractions.Data;
-using TaskActions = Raven.Database.FileSystem.Actions.TaskActions;
+using Raven.Database.Impl;
+using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Connections;
+using Raven.Database.Util;
+using Raven.Abstractions.Threading;
+using Raven.Abstractions;
+using Raven.Database.Common;
 
 namespace Raven.Database.FileSystem
 {
@@ -44,11 +48,11 @@ namespace Raven.Database.FileSystem
         private readonly SigGenerator sigGenerator;
         private readonly ITransactionalStorage storage;
         private readonly SynchronizationTask synchronizationTask;
-        private readonly InMemoryRavenConfiguration systemConfiguration;
+        private readonly InMemoryRavenConfiguration configuration;
         private readonly TransportState transportState;
         private readonly MetricsCountersManager metricsCounters;
 
-        private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+        private readonly Raven.Abstractions.Threading.ThreadLocal<bool> disableAllTriggers = new Raven.Abstractions.Threading.ThreadLocal<bool>(() => false);
 
         private volatile bool disposed;
 
@@ -58,42 +62,60 @@ namespace Raven.Database.FileSystem
 
         public string ResourceName { get; private set; }
 
-        public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, string name, TransportState receivedTransportState = null)
+        public RavenFileSystem(InMemoryRavenConfiguration config, string name, TransportState receivedTransportState = null)
         {
             ExtensionsState = new AtomicDictionary<object>();
 
             Name = name;
-            ResourceName = string.Concat(Abstractions.Data.Constants.FileSystem.UrlPrefix, "/", name);
-            this.systemConfiguration = systemConfiguration;
+            ResourceName = string.Concat(Constants.FileSystem.UrlPrefix, "/", name);
+            configuration = config;
 
-            systemConfiguration.Container.SatisfyImportsOnce(this);
+            try
+            {
+                ValidateStorage();
 
-            transportState = receivedTransportState ?? new TransportState();
+                configuration.Container.SatisfyImportsOnce(this);
 
-            storage = CreateTransactionalStorage(systemConfiguration);
+                transportState = receivedTransportState ?? new TransportState();
 
-            sigGenerator = new SigGenerator();
-            fileLockManager = new FileLockManager();			        
+                storage = CreateTransactionalStorage(configuration);
+
+                sigGenerator = new SigGenerator();
+                fileLockManager = new FileLockManager();			        
    
-            BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
-            conflictDetector = new ConflictDetector();
-            conflictResolver = new ConflictResolver(storage, new CompositionContainer(systemConfiguration.Catalog));
+                BufferPool = new BufferPool(1024 * 1024 * 1024, 65 * 1024);
+                conflictDetector = new ConflictDetector();
+                conflictResolver = new ConflictResolver(storage, new CompositionContainer(configuration.Catalog));
 
-            notificationPublisher = new NotificationPublisher(transportState);
-            synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, systemConfiguration);
+                notificationPublisher = new NotificationPublisher(transportState);
+                synchronizationTask = new SynchronizationTask(storage, sigGenerator, notificationPublisher, configuration);
 
-            metricsCounters = new MetricsCountersManager();
+                metricsCounters = new MetricsCountersManager();
 
-            search = new IndexStorage(name, systemConfiguration);
+                search = new IndexStorage(name, configuration);
 
-            conflictArtifactManager = new ConflictArtifactManager(storage, search);
+                conflictArtifactManager = new ConflictArtifactManager(storage, search);
 
-            Tasks = new TaskActions(this, Log);
-            Files = new FileActions(this, Log);
-            Synchronizations = new SynchronizationActions(this, Log);
+                Tasks = new TaskActions(this, Log);
+                Files = new FileActions(this, Log);
+                Synchronizations = new SynchronizationActions(this, Log);
 
-            AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
-            AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
+                AppDomain.CurrentDomain.ProcessExit += ShouldDispose;
+                AppDomain.CurrentDomain.DomainUnload += ShouldDispose;
+            }
+            catch (Exception e)
+            {
+                Log.ErrorException(string.Format("Could not create file system '{0}'", Name ?? "unknown name"), e);
+                try
+                {
+                    Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Log.FatalException("Failed to dispose when already getting an error in file system ctor", ex);
+                }
+                throw;
+            }
         }
 
         public TaskActions Tasks { get; private set; }
@@ -104,25 +126,52 @@ namespace Raven.Database.FileSystem
 
         public void Initialize()
         {
-            var generator = new UuidGenerator();
-            storage.Initialize(generator, FileCodecs);
-            generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
+            try
+            {
+                var generator = new UuidGenerator();
+                storage.Initialize(generator, FileCodecs, storagePath =>
+                {
+                    if (configuration.RunInMemory)
+                        return;
 
-            historian = new Historian(storage, new SynchronizationHiLo(storage));
+                    var resourceTypeFile = Path.Combine(storagePath, Constants.FileSystem.FsResourceMarker);
 
-            InitializeTriggersExceptIndexCodecs();
+                    if (File.Exists(resourceTypeFile) == false)
+                        using (File.Create(resourceTypeFile)) { }
+                });
+                generator.EtagBase = new SequenceActions(storage).GetNextValue("Raven/Etag");
 
-            search.Initialize(this);
+                historian = new Historian(storage, new SynchronizationHiLo(storage));
 
-            SecondStageInitialization();
+                InitializeTriggersExceptIndexCodecs();
 
-            synchronizationTask.Start();
+                search.Initialize(this);
+
+                SecondStageInitialization();
+
+                synchronizationTask.Start();
+            }
+            catch (Exception e)
+            {
+                Log.ErrorException(string.Format("Could not create file system '{0}'", Name ?? "unknown name"), e);
+                try
+                {
+                    Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Log.FatalException("Failed to dispose when already getting an error during file system initialization", ex);
+                }
+                throw;
+            }
         }
 
         public static bool IsRemoteDifferentialCompressionInstalled
         {
             get
             {
+                if (EnvironmentUtils.RunningOnPosix)
+                    return false;
                 try
                 {
                     var rdcLibrary = new RdcLibrary();
@@ -137,29 +186,56 @@ namespace Raven.Database.FileSystem
             }
         }
 
+        private void ValidateStorage()
+        {
+            var storageEngineTypeName = configuration.FileSystem.SelectFileSystemStorageEngineAndFetchTypeName();
+            if (InMemoryRavenConfiguration.VoronTypeName == storageEngineTypeName
+                && configuration.Storage.Voron.AllowOn32Bits == false &&
+                Environment.Is64BitProcess == false)
+            {
+                throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
+            }
+
+            if (string.IsNullOrEmpty(configuration.FileSystem.DefaultStorageTypeName) == false &&
+                configuration.FileSystem.DefaultStorageTypeName.Equals(storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new Exception(string.Format("The file system is configured to use '{0}' storage engine, but it points to '{1}' data", configuration.FileSystem.DefaultStorageTypeName, storageEngineTypeName));
+            }
+
+            if (configuration.RunInMemory == false && string.IsNullOrEmpty(configuration.FileSystem.DataDirectory) == false && Directory.Exists(configuration.FileSystem.DataDirectory))
+            {
+                var resourceTypeFiles = Directory.EnumerateFiles(configuration.FileSystem.DataDirectory, Constants.ResourceMarkerPrefix + "*").Select(Path.GetFileName).ToArray();
+                
+                if (resourceTypeFiles.Length == 0)
+                    return;
+
+                if (resourceTypeFiles.Length > 1)
+                {
+                    throw new Exception(string.Format("The file system directory cannot contain more than one resource file marker, but it contains: {0}", string.Join(", ", resourceTypeFiles)));
+                }
+
+                var resourceType = resourceTypeFiles[0];
+
+                if (resourceType.Equals(Constants.FileSystem.FsResourceMarker) == false)
+                {
+                    throw new Exception(string.Format("The file system data directory contains data of a different resource kind: {0}", resourceType.Substring(Constants.ResourceMarkerPrefix.Length)));
+                }
+            }
+        }
+
         internal static ITransactionalStorage CreateTransactionalStorage(InMemoryRavenConfiguration configuration)
         {
-            // We select the most specific.
-            var storageType = configuration.FileSystem.DefaultStorageTypeName;
-            if (storageType == null) // We choose the system wide if not defined.
-                storageType = configuration.DefaultStorageTypeName;
-
-            if (storageType != null)
-                storageType = storageType.ToLowerInvariant();
+            var storageType = configuration.FileSystem.SelectFileSystemStorageEngineAndFetchTypeName();
 
             switch (storageType)
             {
                 case InMemoryRavenConfiguration.VoronTypeName:
-                    if (Environment.Is64BitProcess == false && configuration.Storage.Voron.AllowOn32Bits == false)
-                    {
-                        throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
-                    }
-                    return new Storage.Voron.TransactionalStorage(configuration);
+                    return new TransactionalStorage(configuration);
                 case InMemoryRavenConfiguration.EsentTypeName:
                     return new Storage.Esent.TransactionalStorage(configuration);
                 
-                default: // We choose esent by default.
-                    return new Storage.Esent.TransactionalStorage(configuration);
+                default: 
+                    throw new NotSupportedException("Unknown storage type name: " + storageType);
             }
         }
 
@@ -262,7 +338,7 @@ namespace Raven.Database.FileSystem
 
         public InMemoryRavenConfiguration Configuration
         {
-            get { return systemConfiguration; }
+            get { return configuration; }
         }
 
         public SigGenerator SigGenerator
@@ -367,7 +443,7 @@ namespace Raven.Database.FileSystem
                 RequestsPerSecond = Math.Round(metrics.RequestsPerSecondCounter.CurrentValue, 3),
                 FilesWritesPerSecond = Math.Round(metrics.FilesPerSecond.CurrentValue, 3),
 
-                RequestsDuration = metrics.RequestDuationMetric.CreateHistogramData(),
+                RequestsDuration = metrics.RequestDurationMetric.CreateHistogramData(),
                 Requests = metrics.ConcurrentRequests.CreateMeterData()
             };
         }

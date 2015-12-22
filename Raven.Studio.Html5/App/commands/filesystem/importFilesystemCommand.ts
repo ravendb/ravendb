@@ -3,7 +3,7 @@ import filesystem = require("models/filesystem/filesystem");
 
 class importFilesystemCommand extends commandBase {
 
-    constructor(private fileData: FormData, private batchSize: number, private fs: filesystem) {
+    constructor(private fileData: FormData, private batchSize: number, private fs: filesystem, private shouldDisableVersioiningBundle: boolean) {
         super();
     }
 
@@ -12,6 +12,7 @@ class importFilesystemCommand extends commandBase {
 
         var args = {
             batchSize: this.batchSize,
+            shouldDisableVersioningBundle: this.shouldDisableVersioiningBundle
         }
 
         var url = "/studio-tasks/import" + this.urlEncodeArgs(args);

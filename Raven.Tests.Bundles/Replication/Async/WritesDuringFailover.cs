@@ -2,7 +2,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Connection;
@@ -25,8 +25,8 @@ namespace Raven.Tests.Bundles.Replication.Async
             TellFirstInstanceToReplicateToSecondInstance();
 
             var serverClient = ((ServerClient)store1.DatabaseCommands);
-            
-            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
             using (var session = store1.OpenAsyncSession())
             {
@@ -56,7 +56,7 @@ namespace Raven.Tests.Bundles.Replication.Async
             TellFirstInstanceToReplicateToSecondInstance();
 
             var serverClient = ((ServerClient)store1.DatabaseCommands);
-            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
             using (var session = store1.OpenAsyncSession())
             {
@@ -70,7 +70,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             using (var session = store1.OpenAsyncSession())
             {
-                await AssertAsync.Throws<HttpRequestException>(async () => await session.LoadAsync<Company>("companies/1"));
+                await AssertAsync.Throws<ErrorResponseException>(async () => await session.LoadAsync<Company>("companies/1"));
             }
         }
 
@@ -83,7 +83,7 @@ namespace Raven.Tests.Bundles.Replication.Async
             TellFirstInstanceToReplicateToSecondInstance();
 
             var serverClient = ((ServerClient)store1.DatabaseCommands);
-            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
             
             using (var session = store1.OpenAsyncSession())
             {
@@ -116,7 +116,7 @@ namespace Raven.Tests.Bundles.Replication.Async
             TellFirstInstanceToReplicateToSecondInstance();
 
             var serverClient = ((ServerClient)store1.DatabaseCommands);
-            serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+            GetReplicationInformer(serverClient).RefreshReplicationInformation(serverClient);
 
 
             using (var session = store1.OpenAsyncSession())

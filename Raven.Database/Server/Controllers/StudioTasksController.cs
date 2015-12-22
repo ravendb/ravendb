@@ -18,11 +18,13 @@ using System.Web.Http;
 using Jint;
 using Jint.Parser;
 
-using Microsoft.VisualBasic.FileIO;
+using Raven.Abstractions.Replication;
+using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
@@ -30,14 +32,14 @@ using Raven.Abstractions.Util;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Database.Smuggler;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class StudioTasksController : RavenDbApiController
+    public class StudioTasksController : BaseDatabaseApiController
     {
         const int CsvImportBatchSize = 512;
 
@@ -53,7 +55,7 @@ namespace Raven.Database.Server.Controllers
             if (httpResponseMessage.StatusCode != HttpStatusCode.NotFound)
                 return httpResponseMessage.WithNoCache();
 
-            documentsController.SetCurrentDatabase(DatabasesLandlord.SystemDatabase);
+            documentsController.SetResource(DatabasesLandlord.SystemDatabase);
             return documentsController.DocGet("Raven/StudioConfig").WithNoCache();
         }
         [HttpGet]
@@ -126,14 +128,14 @@ for(var customFunction in customFunctions) {{
         [HttpPost]
         [RavenRoute("studio-tasks/import")]
         [RavenRoute("databases/{databaseName}/studio-tasks/import")]
-        public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
+        public async Task<HttpResponseMessage> ImportDatabase(int batchSize, bool includeExpiredDocuments, bool stripReplicationInformation,bool shouldDisableVersioningBundle, ItemType operateOnTypes, string filtersPipeDelimited, string transformScript)
         {
             if (!Request.Content.IsMimeMultipartContent())
             {
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
             }
 
-            string tempPath = Path.GetTempPath();
+            string tempPath = Database.Configuration.TempPath;
             var fullTempPath = tempPath + Constants.TempUploadsDirectoryName;
             if (File.Exists(fullTempPath))
                 File.Delete(fullTempPath);
@@ -166,6 +168,7 @@ for(var customFunction in customFunctions) {{
                         smugglerOptions.BatchSize = batchSize;
                         smugglerOptions.ShouldExcludeExpired = !includeExpiredDocuments;
                         smugglerOptions.StripReplicationInformation = stripReplicationInformation;
+                        smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
                         smugglerOptions.OperateOnTypes = operateOnTypes;
                         smugglerOptions.TransformScript = transformScript;
                         smugglerOptions.CancelToken = cts;
@@ -180,7 +183,7 @@ for(var customFunction in customFunctions) {{
                                 .Select(o => new FilterSetting { Path = o[0], Values = new List<string> { o[1] }, ShouldMatch = bool.Parse(o[2]) }));
                         }
 
-                        await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream });
+                        await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = fileStream }).ConfigureAwait(false);
                     }
                 }
                 catch (Exception e)
@@ -203,6 +206,10 @@ for(var customFunction in customFunctions) {{
                     else if (e is Imports.Newtonsoft.Json.JsonReaderException)
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
+                    }
+                    else if (e is OperationVetoedException)
+                    {
+                        status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
                     }
                     else
                     {
@@ -229,7 +236,7 @@ for(var customFunction in customFunctions) {{
             return GetMessageWithObject(new
             {
                 OperationId = id
-            });
+            }, HttpStatusCode.Accepted);
         }
 
         public class ExportData
@@ -296,41 +303,42 @@ for(var customFunction in customFunctions) {{
             using (var sampleData = typeof(StudioTasksController).Assembly.GetManifestResourceStream("Raven.Database.Server.Assets.EmbeddedData.Northwind.dump"))
             {
                 var dataDumper = new DatabaseDataDumper(Database) { Options = { OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers, ShouldExcludeExpired = false } };
-                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData });
+                await dataDumper.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromStream = sampleData }).ConfigureAwait(false);
             }
 
             return GetEmptyMessage();
         }
 
-        [HttpGet]
+        [HttpPost]
         [RavenRoute("studio-tasks/simulate-sql-replication")]
         [RavenRoute("databases/{databaseName}/studio-tasks/simulate-sql-replication")]
-        public Task<HttpResponseMessage> SimulateSqlReplication(string documentId, bool performRolledBackTransaction)
+        public async Task<HttpResponseMessage> SimulateSqlReplication()
         {
+            var sqlSimulate = await ReadJsonObjectAsync<SimulateSqlReplicationResult>().ConfigureAwait(false);
 
             var task = Database.StartupTasks.OfType<SqlReplicationTask>().FirstOrDefault();
             if (task == null)
-                return GetMessageWithObjectAsTask(new
+                return GetMessageWithObject(new
                 {
                     Error = "SQL Replication bundle is not installed"
                 }, HttpStatusCode.NotFound);
+            
             try
             {
                 Alert alert = null;
                 var sqlReplication =
-                    JsonConvert.DeserializeObject<SqlReplicationConfig>(GetQueryStringValue("sqlReplication"));
+                    JsonConvert.DeserializeObject<SqlReplicationConfig>(sqlSimulate.SqlReplication);
 
                 // string strDocumentId, SqlReplicationConfig sqlReplication, bool performRolledbackTransaction, out Alert alert, out Dictionary<string,object> parameters
-                var results = task.SimulateSqlReplicationSqlQueries(documentId, sqlReplication, performRolledBackTransaction, out alert);
-
-                return GetMessageWithObjectAsTask(new {
+                var results = task.SimulateSqlReplicationSqlQueries(sqlSimulate.DocumentId, sqlReplication, sqlSimulate.PerformRolledBackTransaction, out alert);
+                return GetMessageWithObject(new {
                     Results = results,
                     LastAlert = alert
                 });
             }
             catch (Exception ex)
             {
-                    return GetMessageWithObjectAsTask(new
+                    return GetMessageWithObject(new
                     {
                         Error = "Executeion failed",
                         Exception = ex
@@ -466,7 +474,7 @@ for(var customFunction in customFunctions) {{
             try
             {
                 //Request is of type HttpRequestMessage
-                string keyObjectString = await Request.Content.ReadAsStringAsync();
+                string keyObjectString = await Request.Content.ReadAsStringAsync().ConfigureAwait(false);
                 NameValueCollection nvc = HttpUtility.ParseQueryString(keyObjectString);
                 var key = nvc["key"];
 
@@ -520,13 +528,13 @@ for(var customFunction in customFunctions) {{
                 throw new Exception(); // divided by zero
 
             var provider = new MultipartMemoryStreamProvider();
-            await Request.Content.ReadAsMultipartAsync(provider);
+            await Request.Content.ReadAsMultipartAsync(provider).ConfigureAwait(false);
 
             foreach (var file in provider.Contents)
             {
                 var filename = file.Headers.ContentDisposition.FileName.Trim('\"');
 
-                var stream = await file.ReadAsStreamAsync();
+                var stream = await file.ReadAsStreamAsync().ConfigureAwait(false);
 
                 using (var csvReader = new TextFieldParser(stream))
                 {
@@ -585,14 +593,14 @@ for(var customFunction in customFunctions) {{
 
                         if (batch.Count >= CsvImportBatchSize)
                         {
-                            await FlushBatch(batch);
+                            await FlushBatch(batch).ConfigureAwait(false);
                             batch.Clear();
                         }
                     }
 
                     if (batch.Count > 0)
                     {
-                        await FlushBatch(batch);
+                        await FlushBatch(batch).ConfigureAwait(false);
                     }
                 }
 
@@ -628,6 +636,123 @@ for(var customFunction in customFunctions) {{
             });
 
             return GetMessageWithObjectAsTask(results);
+        }
+
+        [HttpPost]
+        [RavenRoute("studio-tasks/replication/conflicts/resolve")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/replication/conflicts/resolve")]
+        public Task<HttpResponseMessage> ResolveAllConflicts()
+        {
+            var resolutionAsString = GetQueryStringValue("resolution");
+            StraightforwardConflictResolution resolution;
+            if (Enum.TryParse(resolutionAsString, true, out resolution) == false || resolution == StraightforwardConflictResolution.None)
+                return GetMessageWithStringAsTask("Invalid conflict resolution.", HttpStatusCode.BadRequest);
+
+            if (Database.IndexDefinitionStorage.Contains("Raven/ConflictDocuments") == false)
+                return GetMessageWithStringAsTask("Raven/ConflictDocuments index does not exist.", HttpStatusCode.BadRequest);
+
+            var cts = new CancellationTokenSource();
+
+            var task = Task.Factory.StartNew(() => Database.TransactionalStorage.Batch(accessor =>
+            {
+                using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, Database.WorkContext.CancellationToken))
+                {
+                    var transactionalStorageId = Database.TransactionalStorage.Id.ToString();
+                    bool stale;
+                    foreach (var documentId in Database.Queries.QueryDocumentIds("Raven/ConflictDocuments", new IndexQuery { PageSize = int.MaxValue }, linked, out stale))
+                    {
+                        var conflicts = accessor
+                            .Documents
+                            .GetDocumentsWithIdStartingWith(documentId, 0, Int32.MaxValue, null)
+                            .Where(x => x.Key.Contains("/conflicts/"))
+                            .ToList();
+
+                        KeyValuePair<JsonDocument, DateTime> local;
+                        KeyValuePair<JsonDocument, DateTime> remote;
+                        GetConflictDocuments(conflicts, accessor, documentId, transactionalStorageId, out local, out remote);
+
+                        var documentToSave = GetDocumentToSave(resolution, local, remote);
+                        if (documentToSave == null)
+                            continue;
+
+                        documentToSave.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+
+                        if (documentToSave.Metadata.Value<bool>(Constants.RavenDeleteMarker))
+                            Database.Documents.Delete(documentId, null, null);
+                        else
+                            Database.Documents.Put(documentId, null, documentToSave.DataAsJson, documentToSave.Metadata, null);
+                    }
+                }
+            }));
+
+            long id;
+            Database.Tasks.AddTask(task, new TaskBasedOperationState(task), new TaskActions.PendingTaskDescription
+                                                                            {
+                                                                                StartTime = SystemTime.UtcNow,
+                                                                                TaskType = TaskActions.PendingTaskType.BulkInsert,
+                                                                            }, out id, cts);
+
+            return GetMessageWithObjectAsTask(new
+            {
+                OperationId = id
+            }, HttpStatusCode.Accepted);
+        }
+
+        private static void GetConflictDocuments(IEnumerable<JsonDocument> conflicts, IStorageActionsAccessor actions, string documentId, string transactionalStorageId, out KeyValuePair<JsonDocument, DateTime> local, out KeyValuePair<JsonDocument, DateTime> remote)
+        {
+            DateTime localModified = DateTime.MinValue, remoteModified = DateTime.MinValue;
+            JsonDocument localDocument = null, newestRemote = null;
+            foreach (var conflict in conflicts)
+            {
+                var lastModified = conflict.LastModified.HasValue ? conflict.LastModified.Value : DateTime.MinValue;
+                var replicationSource = conflict.Metadata.Value<string>(Constants.RavenReplicationSource);
+
+                if (string.Equals(replicationSource, transactionalStorageId, StringComparison.OrdinalIgnoreCase))
+                {
+                    localModified = lastModified;
+                    localDocument = conflict;
+                    continue;
+                }
+
+                if (lastModified <= remoteModified)
+                    continue;
+
+                newestRemote = conflict;
+                remoteModified = lastModified;
+            }
+            
+            local = new KeyValuePair<JsonDocument, DateTime>(localDocument, localModified);
+            remote = new KeyValuePair<JsonDocument, DateTime>(newestRemote, remoteModified);
+        }
+
+        private static JsonDocument GetDocumentToSave(StraightforwardConflictResolution resolution, KeyValuePair<JsonDocument, DateTime> local, KeyValuePair<JsonDocument, DateTime> remote)
+        {
+            if (local.Key == null && remote.Key == null) 
+                return null;
+
+            if (local.Key == null) 
+                return remote.Key;
+
+            if (remote.Key == null) 
+                return local.Key;
+
+            JsonDocument documentToSave;
+            switch (resolution)
+            {
+                case StraightforwardConflictResolution.ResolveToLatest:
+                    documentToSave = local.Value >= remote.Value ? local.Key : remote.Key;
+                    break;
+                case StraightforwardConflictResolution.ResolveToLocal:
+                    documentToSave = local.Key;
+                    break;
+                case StraightforwardConflictResolution.ResolveToRemote:
+                    documentToSave = remote.Key;
+                    break;
+                default:
+                    throw new NotSupportedException(resolution.ToString());
+            }
+
+            return documentToSave;
         }
 
         [HttpPost]

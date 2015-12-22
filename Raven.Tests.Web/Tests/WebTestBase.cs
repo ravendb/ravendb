@@ -45,9 +45,10 @@ namespace Raven.Tests.Web.Tests
         {
             Console.Write("Testing " + method.Route);
 
-            var request = new HttpRequestMessage(new HttpMethod(method.Method), Url + "/" + method.Route);
+            var requestUri = Url + "/" + method.Route;
+            var request = new HttpRequestMessage(new HttpMethod(method.Method), requestUri);
             var response = await client.SendAsync(request);
-            await HandleErrorsIfNecessaryAsync(response);
+            await HandleErrorsIfNecessaryAsync(response, requestUri);
 
             Console.Write(" OK");
             Console.WriteLine();
@@ -75,7 +76,7 @@ namespace Raven.Tests.Web.Tests
             return JsonConvert.DeserializeObject<List<ApiControllerMethod>>(contentAsString);
         }
 
-        private async Task HandleErrorsIfNecessaryAsync(HttpResponseMessage response)
+        private async Task HandleErrorsIfNecessaryAsync(HttpResponseMessage response, string requestUri)
         {
             if (response.IsSuccessStatusCode)
                 return;
@@ -89,7 +90,7 @@ namespace Raven.Tests.Web.Tests
             {
             }
 
-            throw new InvalidOperationException(string.Format("Request failed. Status: {0}. Response: {1}.", response, content));
+            throw new InvalidOperationException(string.Format("Request failed {0}, status {1}. Response: {2}.", requestUri, response.StatusCode, content));
         }
 
         public void SetFixture(WebTestFixture data)

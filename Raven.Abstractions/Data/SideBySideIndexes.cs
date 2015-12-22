@@ -10,17 +10,17 @@ namespace Raven.Abstractions.Data
     public class SideBySideIndexes
     {
         /// <summary>
-        /// The name of an index that will be added
+        /// Side-by-side indexes definitions
         /// </summary>
         public IndexToAdd[] IndexesToAdd { get; set; }
 
         /// <summary>
-        /// Definition of an index
+        /// Minimum etag before replacement
         /// </summary>
         public Etag MinimumEtagBeforeReplace { get; set; }
 
         /// <summary>
-        /// Priority of an index
+        /// UTC time of replacement
         /// </summary>
         public DateTime? ReplaceTimeUtc { get; set; }
     }

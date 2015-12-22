@@ -14,12 +14,24 @@ properties {
     $build_dir = "$base_dir\build"
     $sln_file_name = "zzz_RavenDB_Release.sln"
     $sln_file = "$base_dir\$sln_file_name"
-    $version = "3.0"
+    $version = "3.5"
     $tools_dir = "$base_dir\Tools"
     $release_dir = "$base_dir\Release"
     $liveTest_dir = "C:\Sites\RavenDB 3\Web"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
+    $msbuild = "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
+    $nowarn = "1591 1573 1591 HeapAnalyzerBoxingRule HeapAnalyzerClosureCaptureRule HeapAnalyzerImplicitParamsRule HeapAnalyzerStringConcatRule HeapAnalyzerValueTypeNonOverridenCallRule HeapAnalyzerClosureSourceRule HeapAnalyzerLambdaInGenericMethodRule HeapAnalyzerEnumeratorAllocationRule HeapAnalyzerMethodGroupAllocationRule HeapAnalyzerLambdaInGenericMethodRule"
+
+    $dnxVersion = "1.0.0-rc1-update1"
+    $dnxArchitecture = "x64"
+    $dnxToolsDir = "$base_dir\Tools\DNX"
+    $dnvm = "$dnxToolsDir\dnvm.cmd"
+    $dnxRuntimeDir = "$env:USERPROFILE\.dnx\runtimes\dnx-coreclr-win-$dnxArchitecture.$dnxVersion\bin";
+    $dnu = "$dnxRuntimeDir\dnu.cmd"
+    $dnx = "$dnxRuntimeDir\dnx.exe"
+    
+    $nuget = "$base_dir\.nuget\NuGet.exe"
 }
 
 task default -depends Test, DoReleasePart1
@@ -30,13 +42,16 @@ task Verify40 {
     }
 }
 
-
 task Clean {
     Remove-Item -force -recurse $build_dir -ErrorAction SilentlyContinue
     Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
-task Init -depends Verify40, Clean {
+task NuGet {
+    &"$nuget" restore "$sln_file"
+}
+
+task Init -depends Verify40, Clean, NuGet {
 
     $commit = Get-Git-Commit
     (Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
@@ -52,13 +67,12 @@ task Init -depends Verify40, Clean {
 task Compile -depends Init, CompileHtml5 {
     
     $commit = Get-Git-Commit-Full
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
-    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
 
-    &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" /p:VisualStudioVersion=12.0 /maxcpucount
+    Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
     
-    Write-Host "msbuild exit code:  $LastExitCode"
+    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
+    
+    Write-Host "msbuild exit code: $LastExitCode"
 
     if( $LastExitCode -ne 0){
         throw "Failed to build"
@@ -75,10 +89,9 @@ task CompileHtml5 {
     
     "{ ""BuildVersion"": $env:buildlabel }" | Out-File "Raven.Studio.Html5\version.json" -Encoding UTF8
     
-    $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-    
     Write-Host "Compiling HTML5" -ForegroundColor Yellow
-    exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:VisualStudioVersion=12.0 /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+
+    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=14.0 /maxcpucount /verbosity:minimal
     
     Remove-Item $build_dir\Html5 -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
     Remove-Item $build_dir\Raven.Studio.Html5.zip -Force -ErrorAction SilentlyContinue | Out-Null
@@ -87,30 +100,62 @@ task CompileHtml5 {
     exec { & $tools_dir\Pvc\pvc.exe optimized-build }
     
     Copy-Item $base_dir\Raven.Studio.Html5\optimized-build $build_dir\Html5 -Recurse
-
+    Copy-Item $base_dir\Raven.Studio.Html5\fonts $build_dir\Html5 -Recurse -Force
+    Copy-Item $base_dir\Raven.Studio.Html5\Content $build_dir\Html5 -Recurse -Force
+    
     Set-Location $build_dir\Html5
     exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
     Set-Location $base_dir
+}
+
+task CompileDnx -depends Compile {
+
+    &"$dnvm" install $dnxVersion -r coreclr -arch $dnxArchitecture
+
+    &"$dnvm" use -r coreclr -arch $dnxArchitecture $dnxVersion
+
+    &"$dnu" restore --quiet .
+    
+    &"$dnu" build --quiet --configuration "$global:configuration" --out "$build_dir\DNX\Raven.Client\" Raven.Sparrow\Sparrow Raven.Abstractions Raven.Client.Lightweight
+    
+    &"$dnu" build --quiet --configuration "$global:configuration" --out "$build_dir\DNX\Raven.Client.Authorization" Bundles\Raven.Client.Authorization
+    
+    &"$dnu" build --quiet --configuration "$global:configuration" --out "$build_dir\DNX\Raven.Client.UniqueConstraints" Bundles\Raven.Client.UniqueConstraints
+}
+
+task TestDnx -depends CompileDnx {
+    Clear-Host
+
+    Push-Location "$base_dir\Raven.Tests.Core"
+    
+    Start-Process -FilePath "$dnx" -ArgumentList "--configuration $global:configuration test" -NoNewWindow -Wait -ErrorAction SilentlyContinue
+
+    Pop-Location
 }
 
 task FullStorageTest {
     $global:full_storage_test = $true
 }
 
-task Test -depends Compile {
+task Test -depends TestDnx {
     Clear-Host
 
     $test_prjs = @( `
-        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
-        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
-        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
-        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
-        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
-        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
-        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
-        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+        "$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.Tests.dll", `
         "$base_dir\Raven.Voron\Voron.Tests\bin\$global:configuration\Voron.Tests.dll", `
-        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll")
+        "$base_dir\Raven.Tests.Core\bin\$global:configuration\Raven.Tests.Core.dll", `
+        "$base_dir\Raven.Tests\bin\$global:configuration\Raven.Tests.dll", `
+        "$base_dir\Raven.Tests.Issues\bin\$global:configuration\Raven.Tests.Issues.dll", `
+        "$base_dir\Raven.Tests.MailingList\bin\$global:configuration\Raven.Tests.MailingList.dll", `
+        "$base_dir\Raven.Tests.Web\bin\Raven.Tests.Web.dll", `
+        "$base_dir\Raven.Tests.FileSystem\bin\$global:configuration\Raven.Tests.FileSystem.dll", `
+        "$base_dir\Raven.Tests.Counters\bin\$global:configuration\Raven.Tests.Counters.dll", `
+        "$base_dir\Raven.Tests.TimeSeries\bin\$global:configuration\Raven.Tests.TimeSeries.dll", `
+        "$base_dir\Raven.Tests.Bundles\bin\$global:configuration\Raven.Tests.Bundles.dll", `
+        "$base_dir\Raven.DtcTests\bin\$global:configuration\Raven.DtcTests.dll", `
+        "$base_dir\Raven.SlowTests\bin\$global:configuration\Raven.SlowTests.dll", `
+        "$base_dir\Rachis\Rachis.Tests\bin\$global:configuration\Rachis.Tests.dll")
+        
     Write-Host $test_prjs
     
     $xUnit = "$lib_dir\xunit\xunit.console.clr4.exe"
@@ -200,19 +245,23 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
     New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
     New-Item $build_dir\Output\Backup -Type directory | Out-Null
     New-Item $build_dir\Output\Migration -Type directory | Out-Null
-    New-Item $build_dir\Output\Diag\Raven.Traffic -Type directory | Out-Null
+    New-Item $build_dir\Output\Diag\Traffic -Type directory | Out-Null
     New-Item $build_dir\Output\Diag\StorageExporter -Type directory | Out-Null
+    New-Item $build_dir\Output\Monitor -Type directory | Out-Null
 }
 
 task CleanOutputDirectory { 
     Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+task CopyMonitor {
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\amd64 $build_dir\Output\Monitor\amd64 -recurse
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\x86 $build_dir\Output\Monitor\x86 -recurse
+    Copy-Item $base_dir\Raven.Monitor\bin\$global:configuration\Raven.Monitor.exe $build_dir\Output\Monitor
+}
+
 task CopySmuggler {
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Client.Lightweight.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Jint.Raven.??? $build_dir\Output\Smuggler
-    Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\System.Reactive.Core.??? $build_dir\Output\Smuggler
     Copy-Item $base_dir\Raven.Smuggler\bin\$global:configuration\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
@@ -227,8 +276,8 @@ task CopyMigration {
 }
 
 task CopyRavenTraffic {
-    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Raven.Traffic
-    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Raven.Traffic
+    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Abstractions.??? $build_dir\Output\Diag\Traffic
+    Copy-Item $base_dir\Tools\Raven.Traffic\bin\$global:configuration\Raven.Traffic.??? $build_dir\Output\Diag\Traffic
 }
 
 task CopyStorageExporter {
@@ -284,17 +333,17 @@ function SignFile($filePath){
     if (!(Test-Path $signTool)) 
     {
         
-        $signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+    $signTool = "C:\Program Files (x86)\Windows Kits\8.0\bin\x86\signtool.exe"
+    
+    if (!(Test-Path $signTool)) 
+    {
+        $signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
     
         if (!(Test-Path $signTool)) 
         {
-            $signTool = "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\signtool.exe"
-
-            if (!(Test-Path $signTool)) 
-            {
-                throw "Could not find SignTool.exe under the specified path $signTool"
-            }
+            throw "Could not find SignTool.exe under the specified path $signTool"
         }
+    }
     }
   
     $installerCert = "$base_dir\..\BuildsInfo\RavenDB\certs\installer.pfx"
@@ -361,7 +410,7 @@ task CopyRootFiles {
     
     (Get-Content "$build_dir\Output\Start.cmd") | 
         Foreach-Object { $_ -replace "{build}", "$($env:buildlabel)" } |
-        Set-Content "$build_dir\Output\Start.cmd" -Encoding Default
+        Set-Content "$build_dir\Output\Start.cmd" -Encoding ASCII
 }
 
 task ZipOutput {
@@ -387,6 +436,7 @@ task ZipOutput {
             Bundles\*.* `
             Web\bin\*.* `
             Server\*.* `
+            Diag\*.* `
             *.*
     }
     
@@ -395,9 +445,11 @@ task ZipOutput {
 
 
 task DoReleasePart1 -depends Compile, `
+    CompileDnx, `
     CleanOutputDirectory, `
     CreateOutpuDirectories, `
     CopySmuggler, `
+    CopyMonitor, `
     CopyBackup, `
     CopyMigration, `
     CopyClient, `
@@ -406,9 +458,9 @@ task DoReleasePart1 -depends Compile, `
     CopyServer, `
     SignServer, `
     CopyRootFiles, `
-    ZipOutput, `
     CopyRavenTraffic, `
-    CopyStorageExporter {	
+    CopyStorageExporter, `
+    ZipOutput { 
     
     Write-Host "Done building RavenDB"
 }
@@ -416,7 +468,7 @@ task DoRelease -depends DoReleasePart1, `
     CopyInstaller, `
     SignInstaller,
     CreateNugetPackages,
-    CreateSymbolSources {	
+    CreateSymbolSources {   
     
     Write-Host "Done building RavenDB"
 }
@@ -505,7 +557,7 @@ task Upload {
     if (Test-Path $uploader) {
         $log = $env:push_msg 
         if(($log -eq $null) -or ($log.Length -eq 0)) {
-          $log = git log -n 1 --oneline		
+          $log = git log -n 1 --oneline     
         }
         
         $log = $log.Replace('"','''') # avoid problems because of " escaping the output
@@ -577,7 +629,7 @@ task PushNugetPackages {
             $tries = 0
             while ($tries -lt 10) {
                 try {
-                    &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
+                    &"$nuget" push "$($_.BaseName).$global:nugetVersion.nupkg" $accessKey -Source $sourceFeed -Timeout 4800
                     $tries = 100
                 } catch {
                     $tries++
@@ -591,7 +643,7 @@ task PushNugetPackages {
     }
 }
 
-task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
+task CreateNugetPackages -depends Compile, CompileDnx, CompileHtml5, InitNuget {
 
     Remove-Item $base_dir\RavenDB*.nupkg
     
@@ -600,10 +652,22 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
     New-Item $nuget_dir -Type directory | Out-Null
     
     New-Item $nuget_dir\RavenDB.Client\lib\net45 -Type directory | Out-Null
-    Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
-    
     @("Raven.Client.Lightweight.???", "Raven.Abstractions.???") |% { Copy-Item "$base_dir\Raven.Client.Lightweight\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client\lib\net45 }
     
+    $nuspecPath = "$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec"
+    Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec "$nuspecPath"
+    
+    if ($global:uploadMode -eq "Unstable") 
+    {
+        [xml] $xmlNuspec = Get-Content("$nuget_dir\RavenDB.Client\RavenDB.Client.nuspec")
+    
+        New-Item $nuget_dir\RavenDB.Client\lib\dnxcore50 -Type directory | Out-Null
+        @("Raven.Client.Lightweight.???", "Raven.Abstractions.???", "Sparrow.???") |% { Copy-Item "$build_dir\DNX\Raven.Client\$global:configuration\dnxcore50\$_" $nuget_dir\RavenDB.Client\lib\dnxcore50 }
+        
+        $projects = "$base_dir\Raven.Sparrow\Sparrow", "$base_dir\Raven.Client.Lightweight", "$base_dir\Raven.Abstractions"
+        AddDependenciesToNuspec $projects "$nuspecPath" "dnxcore50"
+    }
+
     New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 -Type directory | Out-Null
     Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
     @("Raven.Client.MvcIntegration.???") |% { Copy-Item "$base_dir\Raven.Client.MvcIntegration\bin\$global:configuration\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net45 }
@@ -634,8 +698,19 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
     @("Authorization", "UniqueConstraints") | Foreach-Object { 
         $name = $_;
         New-Item $nuget_dir\RavenDB.Client.$name\lib\net45 -Type directory | Out-Null
-        Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec $nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec
         @("$base_dir\Bundles\Raven.Client.$_\bin\$global:configuration\Raven.Client.$_.???") |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\net45 }
+        
+        $nuspecPath = "$nuget_dir\RavenDB.Client.$name\RavenDB.Client.$name.nuspec"
+        Copy-Item $base_dir\NuGet\RavenDB.Client.$name.nuspec "$nuspecPath"
+        
+        if ($global:uploadMode -eq "Unstable") 
+        {
+            New-Item $nuget_dir\RavenDB.Client.$name\lib\dnxcore50 -Type directory | Out-Null
+            @("$build_dir\DNX\Raven.Client.$name\$global:configuration\dnxcore50\Raven.Client.$_.???") |% { Copy-Item $_ $nuget_dir\RavenDB.Client.$name\lib\dnxcore50 }
+            
+            $projects = "$base_dir\Bundles\Raven.Client.$name"
+            AddDependenciesToNuspec $projects "$nuspecPath" "dnxcore50"
+    }
     }
     
     New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net45 -Type directory | Out-Null
@@ -665,7 +740,7 @@ task CreateNugetPackages -depends Compile, CompileHtml5, InitNuget {
             }
         }
         $nuspec.Save($_.FullName);
-        Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName }
+        Exec { &"$nuget" pack $_.FullName }
     }
 }
 
@@ -696,7 +771,7 @@ task PushSymbolSources -depends InitNuget {
         $packages | ForEach-Object {
             try {
                 Write-Host "Publish symbol package $($_.BaseName).$global:nugetVersion.symbols.nupkg"
-                &"$base_dir\.nuget\NuGet.exe" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
+                &"$nuget" push "$($_.BaseName).$global:nugetVersion.symbols.nupkg" $accessKey -Source http://nuget.gw.symbolsource.org/Public/NuGet -Timeout 4800
             } catch {
                 Write-Host $error[0]
                 $LastExitCode = 0
@@ -738,14 +813,14 @@ task CreateSymbolSources -depends CreateNugetPackages {
         $srcDirNames = @($srcDirName1)
         if ($dirName -eq "RavenDB.Server") {
             $srcDirNames += @("Raven.Smuggler")
-        }		
+        }       
         
         foreach ($srcDirName in $srcDirNames) {
             Write-Host $srcDirName
             $csprojFile = $srcDirName -replace ".*\\", ""
             $csprojFile += ".csproj"
         
-            Get-ChildItem $srcDirName\*.cs -Recurse |	ForEach-Object {
+            Get-ChildItem $srcDirName\*.cs -Recurse |   ForEach-Object {
                 $indexOf = $_.FullName.IndexOf($srcDirName)
                 $copyTo = $_.FullName.Substring($indexOf + $srcDirName.Length + 1)
                 $copyTo = "$nuget_dir\$dirName\src\$copyTo"
@@ -770,7 +845,7 @@ task CreateSymbolSources -depends CreateNugetPackages {
                     
                     if ($fileToCopy.EndsWith("\*.cs")) {
                         #Get-ChildItem "$srcDirName\$fileToCopy" | ForEach-Object {
-                        #	Copy-Item $_.FullName "$nuget_dir\$dirName\src\$copyToPath".Replace("\*.cs", "\") -Recurse -Force
+                        #   Copy-Item $_.FullName "$nuget_dir\$dirName\src\$copyToPath".Replace("\*.cs", "\") -Recurse -Force
                         #}
                     } else {
                         New-Item -ItemType File -Path "$nuget_dir\$dirName\src\$copyToPath" -Force | Out-Null
@@ -793,8 +868,8 @@ task CreateSymbolSources -depends CreateNugetPackages {
                         $srcDirName2 = "Raven.Voron/" + $srcDirName2
                     }
 
-                    Get-ChildItem $srcDirName2\*.cs -Recurse |	ForEach-Object {
-                        $indexOf = $_.FullName.IndexOf($srcDirName2)	
+                    Get-ChildItem $srcDirName2\*.cs -Recurse |  ForEach-Object {
+                        $indexOf = $_.FullName.IndexOf($srcDirName2)    
                         $copyTo = $_.FullName.Substring($indexOf + $srcDirName2.Length + 1)
                         $copyTo = "$nuget_dir\$dirName\src\$srcDirName2\$copyTo"
                         
@@ -851,7 +926,7 @@ task CreateSymbolSources -depends CreateNugetPackages {
         Remove-Item "$nuget_dir\$dirName\src\bin" -force -recurse -ErrorAction SilentlyContinue
         Remove-Item "$nuget_dir\$dirName\src\obj" -force -recurse -ErrorAction SilentlyContinue
         
-        Exec { &"$base_dir\.nuget\nuget.exe" pack $_.FullName -Symbols }
+        Exec { &"$nuget" pack $_.FullName -Symbols }
     }
 }
 
@@ -863,4 +938,43 @@ TaskTearDown {
         # throw "TaskTearDown detected an error. Build failed."
         exit 1
     }
+}
+
+function AddDependenciesToNuspec($projects, $nuspecPath, $framework)
+{
+    [xml] $xmlNuspec = Get-Content("$nuspecPath")
+    
+    $dnxDependencies = New-Object 'System.Collections.Generic.Dictionary[String,String]'
+
+    $xmlDependencies = $xmlNuspec.SelectSingleNode('//package/metadata/dependencies')
+    $xmlFrameworkDependency = $xmlNuspec.CreateElement("group")
+    $xmlFrameworkDependency.SetAttribute("targetFramework", $framework)
+    
+    $xmlDependencies.AppendChild($xmlFrameworkDependency)
+    
+    foreach ($project in $projects)
+    {
+        $projectJson = Get-Content "$project\project.json" -Raw | ConvertFrom-Json
+        $frameworks = $projectJson.frameworks
+        $dependencies = $frameworks."$framework".dependencies
+
+        foreach ($dependency in $dependencies.psobject.properties)
+        {
+            $dependencyName = $dependency.name;
+            $dependencyVersion = $dependency.value;
+
+            $dnxDependencies[$dependencyName] = $dependencyVersion
+        }
+    }
+
+    foreach ($dependency in $dnxDependencies.Keys)
+    {
+        $xmlDependency = $xmlNuspec.CreateElement("dependency")
+        $xmlDependency.SetAttribute("id", $dependency)
+        $xmlDependency.SetAttribute("version", $dnxDependencies[$dependency])
+
+        $xmlFrameworkDependency.AppendChild($xmlDependency)
+    }
+    
+    $xmlNuspec.Save("$nuspecPath")
 }

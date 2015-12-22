@@ -33,14 +33,14 @@ namespace Raven.Tests.Common.Attributes
             }
         }
 
-
+    
         private static ConnectionStringSettings GetAppropriateConnectionStringNameInternal()
         {
             foreach (var settings in new[]
             {
                 ConfigurationManager.ConnectionStrings["SqlExpress"],
                 ConfigurationManager.ConnectionStrings["LocalHost"],
-                ConfigurationManager.ConnectionStrings["CiHost"],
+                ConfigurationManager.ConnectionStrings["CiHost"]
             })
             {
                 if (settings == null)
@@ -65,9 +65,9 @@ namespace Raven.Tests.Common.Attributes
                     }
                     return localSettings;
                 }
-                // ReSharper disable EmptyGeneralCatchClause
+                    // ReSharper disable EmptyGeneralCatchClause
                 catch
-                // ReSharper restore EmptyGeneralCatchClause
+                    // ReSharper restore EmptyGeneralCatchClause
                 {
                 }
             }

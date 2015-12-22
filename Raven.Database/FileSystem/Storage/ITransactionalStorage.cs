@@ -14,7 +14,7 @@ namespace Raven.Database.FileSystem.Storage
     {
         Guid Id { get; }
 
-        void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> fileCodecs);
+        void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> fileCodecs, Action<string> putResourceMarker = null);
 
         [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         void Batch(Action<IStorageActionsAccessor> action);
@@ -22,6 +22,7 @@ namespace Raven.Database.FileSystem.Storage
         string FriendlyName { get; }
 
         void StartBackupOperation(DocumentDatabase systemDatabase, RavenFileSystem filesystem, string backupDestinationDirectory, bool incrementalBackup, FileSystemDocument fileSystemDocument);
+
         void Restore(FilesystemRestoreRequest restoreRequest, Action<string> output);
 
         void Compact(InMemoryRavenConfiguration configuration, Action<string> output);

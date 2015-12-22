@@ -1,3 +1,6 @@
+using System.Net;
+using Raven.Imports.Newtonsoft.Json;
+
 namespace Raven.Abstractions.FileSystem
 {
     public class SynchronizationDestination
@@ -32,11 +35,28 @@ namespace Raven.Abstractions.FileSystem
 
         public string ApiKey { get; set; }
 
+        public string AuthenticationScheme { get; set; }
+
         public bool Enabled { get; set; }
 
         public SynchronizationDestination ()
         {
             this.Enabled = true;
+        }
+
+        [JsonIgnore]
+        public ICredentials Credentials
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Username) == false)
+                {
+                    return string.IsNullOrEmpty(Domain)
+                                      ? new NetworkCredential(Username, Password)
+                                      : new NetworkCredential(Username, Password, Domain);
+                }
+                return null;
+            }
         }
 
         protected bool Equals(SynchronizationDestination other)

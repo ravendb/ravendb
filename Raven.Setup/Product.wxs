@@ -5,9 +5,9 @@
 
   <!-- Set version based on build_number env. variable. -->
   <?ifdef env.BUILD_NUMBER ?>
-  <?define PRODUCTVERSION="3.0.$(env.BUILD_NUMBER)"?>
+  <?define PRODUCTVERSION="3.5.$(env.BUILD_NUMBER)"?>
   <?else?>
-  <?define PRODUCTVERSION="3.0.0"?>
+  <?define PRODUCTVERSION="3.5.0"?>
   <?endif?>
   
   <Product Id="*" Name="RavenDB" Language="1033" Version="$(var.PRODUCTVERSION)" Manufacturer="Hibernating Rhinos LTD" UpgradeCode="7F3F621A-C773-4951-BCD1-F6F534024133">
@@ -28,7 +28,7 @@
     <Property Id="INSTALLFOLDER">
       <RegistrySearch Id="InstallFolderFromRegistry"
                        Root="HKLM"
-                       Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0"
+                       Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5"
                        Name="RAVEN_INSTALLATION_PATH"
                        Type="raw" />
     </Property>
@@ -36,7 +36,7 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="INSTALLFOLDER" Name="RavenDB">
         <Component Id="StoreInstallationPath" Guid="{1313C2AF-E8AD-46B6-9EA8-A60C5134CC8F}">
-          <RegistryKey Root="HKLM" Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.0" Action="createAndRemoveOnUninstall">
+          <RegistryKey Root="HKLM" Key="SOFTWARE\[Manufacturer]\[ProductName]\v3.5" Action="createAndRemoveOnUninstall">
             <RegistryValue Type="string" Name="RAVEN_INSTALLATION_PATH" Value="[INSTALLFOLDER]"></RegistryValue>
           </RegistryKey>
         </Component>
@@ -44,6 +44,7 @@
         </Directory>
       </Directory>
       <Directory Id="NEW_WEB_SITE_DIRECTORY" />
+			<Directory Id="DesktopFolder"/>
     </Directory>
 
     <Feature Id='Service' 
@@ -59,7 +60,8 @@
       <ComponentRef Id='PersistServiceValues' />
       <ComponentRef Id ="CopyLicenseFile"/>
 			<ComponentRef Id="NLog.Ignored.Config.File"/>
-    </Feature>
+			<ComponentRef Id="Raven.Server.Shortcut"/>
+		</Feature>
 
     <Feature Id='IIS'
              Title='RavenDB IIS'
@@ -79,6 +81,7 @@
       <ComponentRef Id="PersistWebSiteValues" />
       <ComponentRef Id ="CopyLicenseFile"/>
 			<ComponentRef Id="NLog.Ignored.Config.File"/>
+			<ComponentRef Id="Raven.Web.Shortcut"/>
     </Feature>
 
     <UIRef Id="InstallerUI" />

@@ -15,7 +15,7 @@ namespace Raven.Bundles.Replication.Triggers
     [InheritedExport(typeof(AbstractPutTrigger))]
     public class PreventConflictDocumentsPutTrigger : AbstractPutTrigger
     {
-        public override void OnPut(string key, Json.Linq.RavenJObject document, Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
+        public override void OnPut(string key, Json.Linq.RavenJObject jsonReplicationDocument, Json.Linq.RavenJObject metadata, Abstractions.Data.TransactionInformation transactionInformation)
         {
             if (metadata.Remove(Constants.RavenReplicationConflictDocumentForcePut))
                 return;

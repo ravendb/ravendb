@@ -23,12 +23,13 @@ namespace Raven.Database.Json
 
         protected DocumentDatabase Database { get; private set; }
 
-        public JsonDocument CustomFunctions { get; set; }
+        public RavenJObject CustomFunctions { get; set; }
 
         public RavenJObject DebugActions { get; private set; }
 
         public int AdditionalStepsPerSize { get; set; }
         public int MaxSteps { get; set; }
+        public JsValue ActualPatchResult { get; set; }
 
         protected ScriptedJsonPatcherOperationScope(DocumentDatabase database, bool debugMode)
         {
@@ -38,7 +39,11 @@ namespace Raven.Database.Json
             Database = database;
 
             if (database != null)
-                CustomFunctions = database.Documents.Get(Constants.RavenJavascriptFunctions, null);
+            {
+                var configurationDocument = database.ConfigurationRetriever.GetConfigurationDocument<RavenJObject>(Constants.RavenJavascriptFunctions);
+                if(configurationDocument != null)
+                    CustomFunctions = configurationDocument.MergedDocument;
+            }
         }
 
         protected virtual void ValidateDocument(JsonDocument newDocument)
@@ -112,14 +117,22 @@ namespace Raven.Database.Json
             if (documentKeyContext.TryGetValue(documentKey, out document) == false)
                 document = Database.Documents.Get(documentKey, null);
             
+            
+
+            RavenJObject loadedDoc = null;
+
             if (document != null)
             {
-                totalStatements += (MaxSteps/2 + (document.SerializedSizeOnDisk*AdditionalStepsPerSize));
+                totalStatements += (MaxSteps / 2 + (document.SerializedSizeOnDisk * AdditionalStepsPerSize));
                 engine.Options.MaxStatements(totalStatements);
+                loadedDoc = document.ToJson();
+
+                // we need to make sure that a previous Put document will not be marked
+                // as snapshot (and cannot be modified)
+
+                document.DataAsJson = (RavenJObject) document.DataAsJson.CreateSnapshot();
+                document.Metadata = (RavenJObject) document.Metadata.CreateSnapshot();
             }
-
-            var loadedDoc = document == null ? null : document.ToJson();
-
             if (loadedDoc == null)
                 return JsValue.Null;
 

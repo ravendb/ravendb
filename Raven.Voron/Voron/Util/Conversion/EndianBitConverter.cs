@@ -27,7 +27,7 @@ namespace Voron.Util.Conversion
         #endregion
 
         #region Factory properties
-        static LittleEndianBitConverter little = new LittleEndianBitConverter();
+        static readonly LittleEndianBitConverter little = new LittleEndianBitConverter();
         /// <summary>
         /// Returns a little-endian bit converter instance. The same instance is
         /// always returned.

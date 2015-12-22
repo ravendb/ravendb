@@ -3,26 +3,31 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using Raven.Client.Document.Batches;
-using System.Transactions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
+#if !DNXCORE50
+using System.Transactions;
+#endif
+
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Logging;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Document.Batches;
+#if !DNXCORE50
 using Raven.Client.Document.DTC;
+#endif
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -57,7 +62,11 @@ namespace Raven.Client.Document
             internal set { _databaseName = value; }
         }
 
+#if !DNXCORE50
         protected static readonly ILog log = LogManager.GetCurrentClassLogger();
+#else
+        protected static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
+#endif
 
         /// <summary>
         /// The entities waiting to be deleted
@@ -76,7 +85,10 @@ namespace Raven.Client.Document
             get { return externalState ?? (externalState = new Dictionary<string, object>()); }
         }
 
+#if !DNXCORE50
         private bool hasEnlisted;
+#endif
+
         [ThreadStatic]
         private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
 
@@ -586,7 +598,7 @@ more responsive application.
         /// <returns></returns>
         static object GetDefaultValue(Type type)
         {
-            return type.IsValueType ? Activator.CreateInstance(type) : null;
+            return type.IsValueType() ? Activator.CreateInstance(type) : null;
         }
 
         /// <summary>
@@ -752,7 +764,7 @@ more responsive application.
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
         }
 
-        public Task StoreAsync(object entity, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
         {
             string id;
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
@@ -760,29 +772,29 @@ more responsive application.
             return StoreAsyncInternal(entity, null, null, forceConcurrencyCheck: hasId == false, token: token);
         }
 
-        public Task StoreAsync(object entity, Etag etag, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, Etag etag, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, etag, null, forceConcurrencyCheck: true, token: token);
         }
 
-        public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, Etag etag, string id, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, etag, id, forceConcurrencyCheck: true, token: token);
         }
 
-        public Task StoreAsync(object entity, string id, CancellationToken token = default (CancellationToken))
+        public Task StoreAsync(object entity, string id, CancellationToken token = default(CancellationToken))
         {
             return StoreAsyncInternal(entity, null, id, forceConcurrencyCheck: false, token: token);
         }
 
-        private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default (CancellationToken))
+        private async Task StoreAsyncInternal(object entity, Etag etag, string id, bool forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
         {
             if (null == entity)
                 throw new ArgumentNullException("entity");
 
             if (id == null)
             {
-                id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token);
+                id = await GenerateDocumentKeyForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
             }
 
             StoreInternal(entity, etag, id, forceConcurrencyCheck);
@@ -803,14 +815,14 @@ more responsive application.
                 if (GenerateEntityIdOnTheClient.TryGetIdFromDynamic(entity, out id))
                     return id;
 
-                var key = await GenerateKeyAsync(entity);
+                var key = await GenerateKeyAsync(entity).ConfigureAwait(false);
                 // If we generated a new id, store it back into the Id field so the client has access to to it                    
                 if (key != null)
                     GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
                 return key;
             }
 
-            var result = await GetOrGenerateDocumentKeyAsync(entity);
+            var result = await GetOrGenerateDocumentKeyAsync(entity).ConfigureAwait(false);
             GenerateEntityIdOnTheClient.TrySetIdentity(entity, result);
             return result;
         }
@@ -820,7 +832,7 @@ more responsive application.
         protected virtual void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
         {
             deletedEntities.Remove(entity);
-            if(id !=null)
+            if (id != null)
                 knownMissingIds.Remove(id);
 
             entitiesAndMetadata.Add(entity, new DocumentMetadata
@@ -856,7 +868,7 @@ more responsive application.
                 ? CompletedTask.With(id)
                 : GenerateKeyAsync(entity);
 
-            var result = await generator;
+            var result = await generator.ConfigureAwait(false);
             if (result != null && result.StartsWith("/"))
                 throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 
@@ -956,8 +968,10 @@ more responsive application.
             };
             deferedCommands.Clear();
 
+#if !DNXCORE50
             if (documentStore.EnlistInDistributedTransactions)
                 TryEnlistInAmbientTransaction();
+#endif
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
@@ -1078,6 +1092,7 @@ more responsive application.
                 deletedEntities.Clear();
         }
 
+#if !DNXCORE50
         protected virtual void TryEnlistInAmbientTransaction()
         {
 
@@ -1114,6 +1129,7 @@ more responsive application.
             }
             hasEnlisted = true;
         }
+#endif
 
         /// <summary>
         /// Mark the entity as read only, change tracking won't apply 
@@ -1165,8 +1181,11 @@ more responsive application.
 
             var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
             var changedData = changes != null ? new List<DocumentsChanges>() : null;
-            var changed = (RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData) == false) 
-                || (RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData) == false);
+
+            var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
+            var isMetadataEquals = RavenJToken.DeepEquals(documentMetadata.Metadata, documentMetadata.OriginalMetadata, changedData);
+
+            var changed = (isObjectEquals == false) || (isMetadataEquals == false);
 
             if (changes != null && changedData.Count > 0)
                 changes[documentMetadata.Key] = changedData.ToArray();
@@ -1235,6 +1254,7 @@ more responsive application.
         {
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Commits the specified tx id.
         /// </summary>
@@ -1253,6 +1273,7 @@ more responsive application.
         {
             hasEnlisted = false;
         }
+#endif
 
         /// <summary>
         /// Metadata held about an entity by the session
@@ -1327,8 +1348,7 @@ more responsive application.
 
         protected void LogBatch(SaveChangesData data)
         {
-            if ( log.IsDebugEnabled )
-            {
+            if (log.IsDebugEnabled)
                 log.Debug(() =>
                 {
                     var sb = new StringBuilder()
@@ -1341,7 +1361,6 @@ more responsive application.
                     return sb.ToString();
                 });
             }
-        }
 
         public void RegisterMissing(string id)
         {

@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Implementation;
@@ -72,17 +70,21 @@ namespace Raven.Client.Connection
         {
             if (allRequestsCanBeServedFromAggressiveCache) // can be fully served from aggressive cache
             {
-                jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, () => new RequestResultArgs
+                if (jsonRequestFactory.CanLogRequest)
                 {
-                    DurationMilliseconds = httpJsonRequest.CalculateDuration(),
-                    Method = httpJsonRequest.Method,
-                    HttpResult = 0,
-                    Status = RequestStatus.AggressivelyCached,
-                    Result = "",
-                    Url = httpJsonRequest.Url.ToString(),
-                    //TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
-                    PostedData = postedData
-                });
+
+                    jsonRequestFactory.OnLogRequest(holdProfilingInformation, new RequestResultArgs
+                    {
+                        DurationMilliseconds = httpJsonRequest.CalculateDuration(),
+                        Method = httpJsonRequest.Method,
+                        HttpResult = 0,
+                        Status = RequestStatus.AggressivelyCached,
+                        Result = "",
+                        Url = httpJsonRequest.Url.ToString(),
+                        //TODO: check that is the same as: Url = httpJsonRequest.webRequest.RequestUri.PathAndQuery,
+                        PostedData = postedData
+                    });
+                }
                 return true;
             }
             return false;
@@ -178,7 +180,8 @@ namespace Raven.Client.Connection
                             id,
                             etag,
                             docResult,
-                            response);
+                            response)
+                            .ConfigureAwait(false);
                     }
 
                     continue;
@@ -193,7 +196,8 @@ namespace Raven.Client.Connection
                         id,
                         etag,
                         result,
-                        response);
+                        response)
+                        .ConfigureAwait(false);
                 }
             }
         }
@@ -205,7 +209,7 @@ namespace Raven.Client.Connection
             RavenJObject docResult,
             GetResponse response)
         {
-            var concurrencyException = await tryResolveConflictOrCreateConcurrencyException(id, docResult, etag);
+            var concurrencyException = await tryResolveConflictOrCreateConcurrencyException(id, docResult, etag).ConfigureAwait(false);
 
             if (concurrencyException != null)
                 throw concurrencyException;

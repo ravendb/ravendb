@@ -234,7 +234,7 @@ namespace Raven.Database.Actions
         private string PutIndexInternal(string name, IndexDefinition definition, bool disableIndexBeforePut = false, bool isUpdateBySideSide = false, IndexCreationOptions? creationOptions = null)
         {
             if (name == null)
-                throw new ArgumentNullException("name");
+                throw new ArgumentNullException(nameof(name));
 
             name = name.Trim();
             IsIndexNameValid(name);
@@ -286,6 +286,7 @@ namespace Raven.Database.Actions
             {
                 Name = name,
                 Type = IndexChangeTypes.IndexAdded,
+                Version = definition.IndexVersion
             }));
 
             return name;
@@ -602,7 +603,8 @@ namespace Raven.Database.Actions
                         return;
                     }
 
-                    Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("For new index {0}, using precomputed indexing batch optimization for {1} docs", index,
                               op.Header.TotalResults);
                     op.Execute(document =>
                     {
@@ -682,26 +684,18 @@ namespace Raven.Database.Actions
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition, Index index)
         {
-            foreach (var suggestion in definition.Suggestions)
+            foreach (var suggestion in definition.SuggestionsOptions)
             {
-                var field = suggestion.Key;
-                var suggestionOption = suggestion.Value;
+                var field = suggestion;
 
-                if (suggestionOption.Distance == StringDistanceTypes.None)
-                    continue;
-
-                var indexExtensionKey =
-                    MonoHttpUtility.UrlEncode(field + "-" + suggestionOption.Distance + "-" +
-                                              suggestionOption.Accuracy);
+                var indexExtensionKey = MonoHttpUtility.UrlEncode(field);
 
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
                     index,
                      WorkContext,
                      Path.Combine(Database.Configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
-                     SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
                      Database.Configuration.RunInMemory,
-                     field,
-                     suggestionOption.Accuracy);
+                     field);
 
                 Database.IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
             }
@@ -724,6 +718,7 @@ namespace Raven.Database.Actions
             var deleteIndexTask = Task.Run(() =>
             {
                 Debug.Assert(Database.IndexStorage != null);
+                Log.Info("Starting async deletion of index {0}", indexName);
                 Database.IndexStorage.DeleteIndexData(id); // Data can take a while
 
                 TransactionalStorage.Batch(actions =>
@@ -818,7 +813,8 @@ namespace Raven.Database.Actions
                 {
                     TimeOfOriginalDeletion = SystemTime.UtcNow,
                     instance.IndexId,
-                    IndexName = instance.Name
+                    IndexName = instance.Name,
+                    instance.IndexVersion
                 })), UuidType.Tasks));
 
                 // Delete the main record synchronously
@@ -842,9 +838,10 @@ namespace Raven.Database.Actions
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
                     Database.Notifications.RaiseNotifications(new IndexChangeNotification
-                    {
-                        Name = instance.Name,
+                {
+                    Name = instance.Name,
                         Type = indexChangeType,
+                        Version = instance.IndexVersion
                     })
                 );
             }

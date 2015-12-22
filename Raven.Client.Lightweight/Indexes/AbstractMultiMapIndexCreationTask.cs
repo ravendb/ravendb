@@ -1,7 +1,8 @@
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
-using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 using System;
 using System.Collections;
@@ -9,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+
 
 namespace Raven.Client.Indexes
 {
@@ -44,7 +46,7 @@ namespace Raven.Client.Indexes
             var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
             foreach (var child in children)
             {
-                if (child.IsGenericTypeDefinition)
+                if (child.IsGenericTypeDefinition())
                     continue;
                 var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
                 var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
@@ -72,7 +74,7 @@ namespace Raven.Client.Indexes
                 Stores = Stores,
                 TermVectors = TermVectors,
                 SpatialIndexes = SpatialIndexes,
-                Suggestions = IndexSuggestions,
+                SuggestionsOptions = IndexSuggestions,
                 AnalyzersStrings = AnalyzersStrings,
                 IndexesStrings = IndexesStrings,
                 StoresStrings = StoresStrings,
@@ -84,11 +86,10 @@ namespace Raven.Client.Indexes
             foreach (var map in maps.Select(generateMap => generateMap()))
             {
                 string formattedMap = map;
+#if !DNXCORE50
                 if (Conventions.PrettifyGeneratedLinqExpressions)
-                {
-                        formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
-                   
-                }
+                    formattedMap = IndexPrettyPrinter.TryFormat(formattedMap);
+#endif
                 indexDefinition.Maps.Add(formattedMap);
             }
             return indexDefinition;

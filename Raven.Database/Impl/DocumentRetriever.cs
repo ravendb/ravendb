@@ -35,7 +35,6 @@ namespace Raven.Database.Impl
         private readonly InMemoryRavenConfiguration configuration;
         private readonly IStorageActionsAccessor actions;
         private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
-        private readonly InFlightTransactionalState inFlightTransactionalState;
         private readonly Dictionary<string, RavenJToken> transformerParameters;
         private readonly HashSet<string> itemsToInclude;
         private bool disableCache;
@@ -43,14 +42,12 @@ namespace Raven.Database.Impl
         public Etag Etag = Etag.Empty;
 
         public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
-            InFlightTransactionalState inFlightTransactionalState,
             Dictionary<string, RavenJToken> transformerParameters = null,
             HashSet<string> itemsToInclude = null)
         {
             this.configuration = configuration;
             this.actions = actions;
             this.triggers = triggers;
-            this.inFlightTransactionalState = inFlightTransactionalState;
             this.transformerParameters = transformerParameters ?? new Dictionary<string, RavenJToken>();
             this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
         }
@@ -246,7 +243,7 @@ namespace Raven.Database.Impl
                 return null;
 
             // first we check the dtc state, then the cache and the storage, to avoid race conditions
-            var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
+            var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
 
             JsonDocument doc;
 
@@ -328,7 +325,8 @@ namespace Raven.Database.Impl
                                                       }
                         };
                     case ReadVetoResult.ReadAllow.Ignore:
-                        log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
+                        if (log.IsDebugEnabled)
+                            log.Debug("Trigger {0} asked us to ignore {1}", readTrigger.Value, document.Key);
                         return null;
                     default:
                         throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());

@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+#if !DNXCORE50
 using Lucene.Net.Analysis;
+#endif
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
 using Raven.Tests.Core.Utils.Entities;
@@ -20,9 +22,13 @@ namespace Raven.Tests.Core.Utils.Indexes
 
             Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
 
-            IndexSuggestions.Add(x => x.Name, new SuggestionOptions());
+            IndexSuggestions.Add(x => x.Name);
 
+#if !DNXCORE50
             Analyzers.Add(x => x.Name, typeof(SimpleAnalyzer).FullName);
+#else
+            Analyzers.Add(x => x.Name, "Lucene.Net.Analysis.SimpleAnalyzer");
+#endif
 
             Stores.Add(x => x.Name, FieldStorage.Yes);
         }

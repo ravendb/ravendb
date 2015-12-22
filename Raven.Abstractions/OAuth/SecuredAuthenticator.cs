@@ -27,11 +27,14 @@ namespace Raven.Abstractions.OAuth
             {
                 if (e.Client != null)
                     e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
+#if !DNXCORE50
                 if (e.Request != null)
                     e.Request.Headers["Has-Api-Key"] = "true";
+#endif
             }
         }
 
+#if !DNXCORE50
         private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge, string apiKey)
         {
             var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
@@ -147,6 +150,7 @@ namespace Raven.Abstractions.OAuth
                 }
             }
         }
+#endif
 
         public async Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string apiKey)
         {
@@ -166,8 +170,11 @@ namespace Raven.Abstractions.OAuth
             while (true)
             {
                 tries++;
-
+#if !DNXCORE50
                 var handler = new WebRequestHandler();
+#else
+                var handler = new WinHttpHandler();
+#endif
 
                 using (var httpClient = new HttpClient(handler))
                 {
@@ -195,7 +202,7 @@ namespace Raven.Abstractions.OAuth
 
                     var requestUri = oauthSource;
 
-                    var response = await httpClient.PostAsync(requestUri, data != null ? (HttpContent)new CompressedStringContent(data, true) : new StringContent("")).AddUrlIfFaulting(new Uri(requestUri)).ConvertSecurityExceptionToServerNotFound();
+                    var response = await httpClient.PostAsync(requestUri, data != null ? (HttpContent)new CompressedStringContent(data, true) : new StringContent("")).AddUrlIfFaulting(new Uri(requestUri)).ConvertSecurityExceptionToServerNotFound().ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode == false)
                     {
@@ -220,13 +227,13 @@ namespace Raven.Abstractions.OAuth
                         continue;
                     }
 
-                    using (var stream = await response.GetResponseStreamWithHttpDecompression())
+                    using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
                     using (var reader = new StreamReader(stream))
                     {
                         var currentOauthToken = reader.ReadToEnd();
                         CurrentOauthToken = currentOauthToken;
                         CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
-                 
+
                         return (Action<HttpClient>)(SetAuthorization);
                     }
                 }

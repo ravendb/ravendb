@@ -1,6 +1,6 @@
 /// <reference path="../../Scripts/typings/knockout/knockout.d.ts" />
 
-import database = require("models/database");
+import database = require("models/resources/database");
 
 class recentQueriesStorage {
     public static getRecentQueries(db: database): storedQueryDto[] {

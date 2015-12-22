@@ -9,6 +9,7 @@ using System.Net;
 using Lucene.Net.Support;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -63,7 +64,7 @@ namespace Raven.Tests.Issues
 
                 var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
-                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
                 request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
                 var result = request.ReadResponseJson() as RavenJArray;
@@ -116,14 +117,14 @@ namespace Raven.Tests.Issues
 
                 var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
-                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
                 request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
                 var result = request.ReadResponseJson() as RavenJArray;
 
                 Assert.NotNull(result);
                 Assert.Equal(1, result.Length);
-                Assert.Equal("Replication Bundle not activated.", result[0].Value<string>("Status"));
+                Assert.Equal("Replication bundle not activated.", result[0].Value<string>("Status"));
                 Assert.Equal(400, result[0].Value<int>("Code"));
             }
         }
@@ -153,7 +154,7 @@ namespace Raven.Tests.Issues
 
                 var replicationDocument = store1.DatabaseCommands.Get("Raven/Replication/Destinations");
 
-                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
                 request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
                 var result = request.ReadResponseJson() as RavenJArray;
@@ -189,7 +190,7 @@ namespace Raven.Tests.Issues
 
                 SetupReplication(store1.DatabaseCommands, "http://localhost:8078/databases/Northwind");
 
-                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", "POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
+                var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, db1Url + "/admin/replicationInfo", HttpMethods.Post, new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
                 request.WriteAsync(RavenJObject.FromObject(new ReplicationDocument { Destinations = new EquatableList<ReplicationDestination> { new ReplicationDestination { Url = "http://unknown.url/" } } }).ToString(Formatting.None)).Wait();
                 var result = request.ReadResponseJson() as RavenJArray;
@@ -197,7 +198,7 @@ namespace Raven.Tests.Issues
                 Assert.NotNull(result);
                 Assert.Equal(1, result.Length);
                 Assert.NotNull(result[0].Value<string>("Status"));
-                Assert.Equal(-1, result[0].Value<int>("Code"));
+                Assert.True(0 > result[0].Value<int>("Code"));
             }
         }
     }

@@ -31,6 +31,7 @@ using Voron.Impl.Compaction;
 using VoronConstants = Voron.Impl.Constants;
 using Constants = Raven.Abstractions.Data.Constants;
 using VoronExceptions = Voron.Exceptions;
+using Raven.Abstractions.Threading;
 
 namespace Raven.Database.FileSystem.Storage.Voron
 {
@@ -44,8 +45,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
         private readonly NameValueCollection settings;
 
-        private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
-        private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor> current = new Raven.Abstractions.Threading.ThreadLocal<IStorageActionsAccessor>();
+        private readonly Raven.Abstractions.Threading.ThreadLocal<object> disableBatchNesting = new Raven.Abstractions.Threading.ThreadLocal<object>();
 
         private volatile bool disposed;
 
@@ -117,7 +118,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             return options;
         }
 
-        public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs)
+        public void Initialize(UuidGenerator generator, OrderedPartCollection<AbstractFileCodec> codecs, Action<string> putResourceMarker = null)
         {
             if (codecs == null)
                 throw new ArgumentNullException("codecs");
@@ -128,7 +129,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             bool runInMemory;
             bool.TryParse(settings[Constants.RunInMemory], out runInMemory);
 
-            var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly() :
+            var persistenceSource = runInMemory ? StorageEnvironmentOptions.CreateMemoryOnly(settings[Constants.Voron.TempPath]) :
                 CreateStorageOptionsFromConfiguration(path, settings);
 
             tableStorage = new TableStorage(persistenceSource, bufferPool);
@@ -139,6 +140,9 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             SetupDatabaseId();
             idGenerator = new IdGenerator(tableStorage);
+
+            if (putResourceMarker != null)
+                putResourceMarker(path);
         }
 
         private void SetupDatabaseId()

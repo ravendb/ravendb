@@ -2,12 +2,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
-using Raven.Database.FileSystem.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
 {
-    public class FoldersController : RavenFsApiController
+    public class FoldersController : BaseFileSystemApiController
     {
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/folders/Subdirectories/{*directory}")]

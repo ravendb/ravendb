@@ -1,8 +1,10 @@
+#if !DNXCORE50
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -51,25 +53,15 @@ namespace Raven.Tests.Core.ChangesApi
 
             using (var store = NewRemoteDocumentStore())
             {
-                Stopwatch testTimer;
-                var mre = new ManualResetEventSlim();
                 using (var bulkInsert = store.BulkInsert(store.DefaultDatabase))
                 {
-                    store.Changes().ForBulkInsert(bulkInsert.OperationId).Subscribe(x =>
+                    var testTimer = Stopwatch.StartNew();
+                    store.Changes().Task.Result.ForBulkInsert(bulkInsert.OperationId).Task.Result.Subscribe(counter.Enqueue);
+
+                    bulkInsert.Store(new ChunkedBulkInsert.Node
                     {
-                        counter.Enqueue(x);
-                        mre.Set();
+                        Name = "Parent"
                     });
-
-                    do
-                    {
-                        bulkInsert.Store(new ChunkedBulkInsert.Node
-                        {
-                            Name = "Parent"
-                        });
-                    } while (!mre.IsSet);
-
-                    testTimer = Stopwatch.StartNew();
 
                     IssueGCRequest(store);
 
@@ -78,15 +70,20 @@ namespace Raven.Tests.Core.ChangesApi
                         Name = "Parent"
                     });
 
-                    const int maxMillisecondsToWaitUntilConnectionRestores = 1000;
+                    const int maxMillisecondsToWaitUntilConnectionRestores = 5000;
+
                     //wait until connection restores
-                    IEnumerable<RavenJToken> response;
+                    RavenJArray response;
                     var sw = Stopwatch.StartNew();
+
+                    int retryCount = 0;
                     do
                     {
                         response = IssueGetChangesRequest(store);
-                    } while (response == null || !response.Any() || sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
-                    
+                        retryCount++;
+                    }
+                    while (response == null || response.Length == 0 || sw.ElapsedMilliseconds <= maxMillisecondsToWaitUntilConnectionRestores);
+
                     //sanity check, if the test fails here, then something is wrong
                     // if it is null or empty then it means the connection did not restore after 1 second by itself. Should be investigated.
                     Assert.NotEmpty(response);
@@ -104,7 +101,7 @@ namespace Raven.Tests.Core.ChangesApi
             var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null,
                     store.Url + "/debug/gc-info",
-                    "GET",
+                    HttpMethod.Get,
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions));
 
@@ -113,13 +110,13 @@ namespace Raven.Tests.Core.ChangesApi
 
         }
 
-        private static IEnumerable<RavenJToken> IssueGetChangesRequest(DocumentStore store)
+        private static RavenJArray IssueGetChangesRequest(DocumentStore store)
         {
             var getChangesRequest = store
                 .JsonRequestFactory
                 .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                     store.Url.ForDatabase(store.DefaultDatabase) + "/debug/changes",
-                    "GET",
+                    HttpMethod.Get,
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions));
 
@@ -133,7 +130,7 @@ namespace Raven.Tests.Core.ChangesApi
                 .JsonRequestFactory
                 .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                     store.Url.ForDatabase(null) + "/admin/gc",
-                    "GET",
+                    HttpMethod.Get,
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions));
             var gcResponse = gcRequest.ReadResponseBytesAsync();
@@ -153,3 +150,4 @@ namespace Raven.Tests.Core.ChangesApi
         }
     }
 }
+#endif

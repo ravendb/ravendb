@@ -14,14 +14,16 @@ namespace Raven.Abstractions.Logging
 
         public static void EnsureValidLogger()
         {
-            GetLogger(typeof (LogManager));
+            GetLogger(typeof(LogManager));
         }
 
+#if !DNXCORE50
         public static ILog GetCurrentClassLogger()
         {
             var stackFrame = new StackFrame(1, false);
             return GetLogger(stackFrame.GetMethod().DeclaringType);
         }
+#endif
 
         private static ILogManager currentLogManager;
         public static ILogManager CurrentLogManager
@@ -42,7 +44,7 @@ namespace Raven.Abstractions.Logging
             ILogManager logManager = CurrentLogManager;
             if (logManager == null)
                 return new LoggerExecutionWrapper(new NoOpLogger(), name, Targets);
-            
+
             // This can throw in a case of invalid NLog.config file.
             var log = logManager.GetLogger(name);
             return new LoggerExecutionWrapper(log, name, Targets);
@@ -61,7 +63,7 @@ namespace Raven.Abstractions.Logging
             return null;
         }
 
-        public static void RegisterTarget<T>() where T: Target, new()
+        public static void RegisterTarget<T>() where T : Target, new()
         {
             if (Targets.OfType<T>().Any())
                 return;
@@ -69,23 +71,25 @@ namespace Raven.Abstractions.Logging
             Targets.Add(new T());
         }
 
-        public static T GetTarget<T>() where T: Target
+        public static T GetTarget<T>() where T : Target
         {
             return Targets.OfType<T>().FirstOrDefault();
         }
 
         public class NoOpLogger : ILog
         {
+            public bool IsInfoEnabled { get { return false; } }
+
             public bool IsDebugEnabled { get { return false; } }
 
             public bool IsWarnEnabled { get { return false; } }
 
             public void Log(LogLevel logLevel, Func<string> messageFunc)
-            {}
+            { }
 
             public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception)
                 where TException : Exception
-            {}
+            { }
 
             public bool ShouldLog(LogLevel logLevel)
             {
@@ -96,13 +100,13 @@ namespace Raven.Abstractions.Logging
         public static IDisposable OpenNestedConext(string context)
         {
             ILogManager logManager = CurrentLogManager;
-            return logManager == null ? new DisposableAction(() =>{}) : logManager.OpenNestedConext(context);
+            return logManager == null ? new DisposableAction(() => { }) : logManager.OpenNestedConext(context);
         }
 
         public static IDisposable OpenMappedContext(string key, string value)
         {
             ILogManager logManager = CurrentLogManager;
-            return logManager == null ? new DisposableAction(() => {}) : logManager.OpenMappedContext(key, value);
+            return logManager == null ? new DisposableAction(() => { }) : logManager.OpenMappedContext(key, value);
         }
 
         public static void ClearTargets()
@@ -147,7 +151,9 @@ namespace Raven.Abstractions.Logging
         public string FormattedMessage { get; set; }
         public string LoggerName { get; set; }
         public Exception Exception { get; set; }
+#if !DNXCORE50
         public StackTrace StackTrace { get; set; }
+#endif
     }
 
     public class LogEventInfoFormatted
@@ -158,7 +164,9 @@ namespace Raven.Abstractions.Logging
         public string Message { get; set; }
         public string LoggerName { get; set; }
         public string Exception { get; set; }
+#if !DNXCORE50
         public string StackTrace { get; set; }
+#endif
 
         public LogEventInfoFormatted(LogEventInfo eventInfo)
         {
@@ -168,7 +176,9 @@ namespace Raven.Abstractions.Logging
             Level = eventInfo.Level.ToString();
             Exception = eventInfo.Exception == null ? null : eventInfo.Exception.ToString();
             Database = eventInfo.Database;
+#if !DNXCORE50
             StackTrace = eventInfo.StackTrace == null ? null : eventInfo.StackTrace.ToString();
+#endif
         }
     }
 }

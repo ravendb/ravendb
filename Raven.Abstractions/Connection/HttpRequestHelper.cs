@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -10,7 +11,7 @@ namespace Raven.Abstractions.Connection
     {
         public static void WriteDataToRequest(HttpWebRequest req, string data, bool disableCompression)
         {
-            req.SendChunked = true;
+            req.SendChunked = !EnvironmentUtils.RunningOnPosix;
             // we want to make sure that we use a buffer properly here so we won't send the data
             // in many different TCP packets
             using (var requestStream = new BufferedStream(req.GetRequestStream()))
@@ -93,3 +94,4 @@ namespace Raven.Abstractions.Connection
         }
     }
 }
+#endif

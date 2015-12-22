@@ -1,10 +1,10 @@
 using System.Globalization;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 using Sparrow.Collections;
 using System;
@@ -14,9 +14,13 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Changes
 {
-    public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState>, IDatabaseChanges
+    public class RemoteDatabaseChanges : RemoteChangesClientBase<IDatabaseChanges, DatabaseConnectionState, DocumentConvention>, IDatabaseChanges
     {
-        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+#if !DNXCORE50
+        private readonly static ILog Logger = LogManager.GetCurrentClassLogger();
+#else
+        private readonly static ILog Logger = LogManager.GetLogger(typeof(RemoteDatabaseChanges));
+#endif
 
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
@@ -32,17 +36,13 @@ namespace Raven.Client.Changes
         
         private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
-        protected readonly DocumentConvention Conventions;
-
         public RemoteDatabaseChanges(string url, string apiKey,
                                        ICredentials credentials,
-                                       HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions,
-                                       IReplicationInformerBase replicationInformer,
+                                       HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
                                        Action onDispose,                                
                                        Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
-            : base ( url, apiKey, credentials, jsonRequestFactory, conventions, replicationInformer, onDispose)
+            : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {
-            this.Conventions = conventions;
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }
 
@@ -72,12 +72,12 @@ namespace Raven.Client.Changes
 
             foreach (var watchedCollection in watchedCollections)
             {
-                await Send("watch-collection", watchedCollection);
+                await Send("watch-collection", watchedCollection).ConfigureAwait(false);
             }
 
             foreach (var watchedType in watchedTypes)
             {
-                await Send("watch-type", watchedType);
+                await Send("watch-type", watchedType).ConfigureAwait(false);
             }
 
             foreach (var watchedIndex in watchedIndexes)
@@ -143,7 +143,8 @@ namespace Raven.Client.Changes
 
                                 if (t.Result)
                                 {
-                                    logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+                                    if (Logger.IsDebugEnabled)
+                                        Logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
                                                  replicationConflictNotification.Id);
                                 }
                             });
@@ -397,53 +398,5 @@ namespace Raven.Client.Changes
 
             return taskedObservable;
         }
-
-        private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, Action afterConnection, Action beforeDisconnect, string value)
-        {
-            var counter = Counters.GetOrAdd(name, s =>
-            {
-                var documentSubscriptionTask = AfterConnection(() =>
-                {
-                    afterConnection();
-                    return Send(watchCommand, value);
-                });
-
-                return new DatabaseConnectionState(
-                    () =>
-                    {
-                        beforeDisconnect();
-                        Send(unwatchCommand, value);
-                        Counters.Remove(name);
-                    },
-                    existingConnectionState =>
-                    {
-                        DatabaseConnectionState _;
-                        if (Counters.TryGetValue(name, out _))
-                            return _.Task;
-
-                        Counters.GetOrAdd(name, x => existingConnectionState);
-
-                        return AfterConnection(() =>
-                        {
-                            afterConnection();
-                            return Send(watchCommand, value);
-                        });
-                    },
-                    documentSubscriptionTask);
-            });
-
-            return counter;
         }
-
-        private Task AfterConnection(Func<Task> action)
-        {
-            return Task.ContinueWith(task =>
-            {
-                task.AssertNotFailed();
-                return action();
-            })
-            .Unwrap();
         }
-
-    }
-}

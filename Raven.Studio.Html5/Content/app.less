@@ -416,6 +416,7 @@ html, body {
             cursor: pointer;
             border-radius: 2px;
             box-shadow: 0 0 5px 2px silver;
+            border-left: solid 5px silver;
             min-width: 160px;
             min-height: 70px;
             display: inline-block;
@@ -563,6 +564,9 @@ html, body {
             &.selected {
                 box-shadow: 0 0 20px 0 @selectColor;
             }
+            &.isLoaded {
+                border-left: solid 5px @brand-success;
+            }
 
             &.system-database {
                 @systemDbColor: rgba(192, 192, 192, 0.21);
@@ -586,6 +590,12 @@ html, body {
         cursor: default;
         text-decoration: line-through;
     }
+}
+
+.index-lock-mode-disabled{
+    pointer-events: none;
+    cursor: default;
+    opacity: 0.5;
 }
 
 #tenantNameLink{
@@ -664,7 +674,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         max-width: 90%;
     }
 
-    li:not(:first-child) {
+    &.has-show-all-items li:not(:first-child) {
         // All collections except the first one ("All Documents") are indented.
         padding-left: 15px;
     }
@@ -1085,6 +1095,15 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     .peg {
         opacity: 0;
     }
+}
+
+.collection-resize {
+	position: absolute; 
+	right: 0; 
+	height: 100%; 
+	width: 10px; 
+	top: 0; 
+	cursor: col-resize;
 }
 
 .documents-page {
@@ -1919,10 +1938,16 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 #fileSystemFilesPage {
     .files-select {
         text-align: center;
-        background-color: #ffffcc;
+        background-color: @selectionColor;
         margin-top: 5px;
         border: 1px solid;
-        border-radius: 25px;
+        padding: 5px;
+        border: 1px solid @gray-light;
+
+        .select-link {
+            text-decoration: underline;
+            cursor: pointer;
+        }
     }
 }
 
@@ -1962,6 +1987,49 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
         column-width: 10px;
 
         .document-link {
+            margin-left: 10px;
+            width: 80%;
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+        }
+    }
+}
+
+#editCounterContainer {
+    &:focus {
+        outline: 0;
+    }
+
+    .counter-recent {
+        margin-top: 95px;
+        padding-top: 10px;
+        padding-bottom: 40px;
+        max-width: 41%;
+    }
+
+    hr {
+        margin-top: 5px;
+    }
+
+    .counter-recent-internal {
+        padding-top: 20px;
+    }
+
+    .counters-links-container {
+        -webkit-column-count: 2; /* Chrome, Safari, Opera */
+        -moz-column-count: 2; /* Firefox */
+        column-count: 2;
+        -webkit-column-gap: 30px; /* Chrome, Safari, Opera */
+        -moz-column-gap: 30px; /* Firefox */
+        column-gap: 30px;
+        -moz-column-width: 10px;
+        -webkit-column-width: 10px;
+        column-width: 10px;
+
+        .counter-link {
             margin-left: 10px;
             width: 80%;
             overflow: hidden;
@@ -2217,9 +2285,26 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
     &:hover {
         box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
+        -webkit-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
+        -moz-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
     }
     &.selected {
-         box-shadow: 0 0 20px 0 #7109AA;
+        box-shadow: 0 0 20px 0 #7109AA;
+        -webkit-box-shadow: 0 0 20px 0 #7109AA;
+        -moz-box-shadow: 0 0 20px 0 #7109AA;
+    }
+}
+
+#resources-page .resources-container .resource.cs {
+    a {
+        color: #0f6716;
+    }
+
+    &:hover {
+        box-shadow: 0 0 5px 0 lighten(#0f6716, 20%);
+    }
+    &.selected {
+        box-shadow: 0 0 20px 0 #0f6716;
     }
 }
 
@@ -2253,6 +2338,12 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .negative-margin {
     margin-top: -10px;
 }
+.padd-top-10 {
+	padding-top: 10px;
+}
+.padd-right-10 {
+	padding-right: 10px;
+}
 #indexingPerformance {
     background-color: white;
 }
@@ -2284,4 +2375,17 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .alert-danger a {
     color: white;
     text-decoration: underline;
+}
+}
+
+.experimental {
+    font-size: 9px;
+    font-weight: bold;
+    color: red;
+}
+
+.time-series-label {
+    width: 55px;
+    display: inline-block;
+    font-weight: bold;
 }

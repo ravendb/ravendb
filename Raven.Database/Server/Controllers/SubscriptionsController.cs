@@ -26,7 +26,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class SubscriptionsController : RavenDbApiController
+    public class SubscriptionsController : BaseDatabaseApiController
     {
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -35,7 +35,7 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/subscriptions/create")]
         public async Task<HttpResponseMessage> Create()
         {
-            var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>();
+            var subscriptionCriteria = await ReadJsonObjectAsync<SubscriptionCriteria>().ConfigureAwait(false);
 
             if(subscriptionCriteria == null)
                 throw new InvalidOperationException("Criteria cannot be null");
@@ -55,7 +55,7 @@ namespace Raven.Database.Server.Controllers
         {
             Database.Subscriptions.DeleteSubscription(id);
 
-            return GetEmptyMessage();
+            return GetEmptyMessage(HttpStatusCode.NoContent);
         }
 
         [HttpPost]
@@ -65,7 +65,7 @@ namespace Raven.Database.Server.Controllers
         {
             Database.Subscriptions.GetSubscriptionConfig(id);
 
-            var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>();
+            var options = await ReadJsonObjectAsync<SubscriptionConnectionOptions>().ConfigureAwait(false);
 
             if (options == null)
                 throw new InvalidOperationException("Options cannot be null");
@@ -165,6 +165,28 @@ namespace Raven.Database.Server.Controllers
             return GetEmptyMessage();
         }
 
+        [HttpPost]
+        [RavenRoute("subscriptions/setSubscriptionAckEtag")]
+        [RavenRoute("databases/{databaseName}/subscriptions/setSubscriptionAckEtag")]
+        public HttpResponseMessage SetSubscriptionAckEtag()
+        {
+            var idStringVal = GetQueryStringValue("id");
+            long id;
+            if (long.TryParse(idStringVal, out id) == false)
+            {
+                return GetMessageWithString("Subscription Id is missing or invalid", HttpStatusCode.BadRequest);
+            }
+
+            var newEtag = GetQueryStringValue("newEtag");
+            if (string.IsNullOrEmpty(newEtag))
+            {
+                return GetMessageWithString("Acknowledged Etag Set Value is missing or invalid", HttpStatusCode.BadRequest);
+            }
+
+            Database.Subscriptions.SetAcknowledgeEtag(id, Etag.Parse(newEtag));
+            return GetEmptyMessage();
+        }
+
         [HttpGet]
         [RavenRoute("subscriptions")]
         [RavenRoute("databases/{databaseName}/subscriptions")]
@@ -206,8 +228,17 @@ namespace Raven.Database.Server.Controllers
 
                     Func<JsonDocument, bool> addDocument = doc =>
                     {
-                        processedDocuments++;
                         timeout.Delay();
+                        if (doc == null)
+                        {
+                            // we only have this heartbeat when the streaming has gone on for a long time
+                            // and we haven't send anything to the user in a while (because of filtering, skipping, etc).
+                            writer.WriteRaw(Environment.NewLine);
+                            writer.Flush();
+                            return true;
+                        }
+                        processedDocuments++;
+                        
 
                         // We cant continue because we have already maxed out the batch bytes size.
                         if (options.MaxSize.HasValue && batchSize >= options.MaxSize)

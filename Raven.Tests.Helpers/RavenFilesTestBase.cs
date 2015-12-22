@@ -53,7 +53,7 @@ namespace Raven.Tests.Helpers
         private readonly List<IFilesStore> filesStores = new List<IFilesStore>();
         private readonly List<IAsyncFilesCommands> asyncCommandClients = new List<IAsyncFilesCommands>();
         private readonly HashSet<string> pathsToDelete = new HashSet<string>();
-        protected static readonly int[] Ports = { 8079, 8078, 8077 };
+        protected static readonly int[] Ports = { 8079, 8078, 8077, 8076, 8075 };
 
         protected TimeSpan SynchronizationInterval { get; set; }
         
@@ -81,36 +81,30 @@ namespace Raven.Tests.Helpers
             var storageType = GetDefaultStorageType(requestedStorage);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new RavenConfiguration
-            {
-                Port = port,
-                DataDirectory = directory,
-                RunInMemory = runInMemory,
-#if DEBUG
-                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
-#endif                
-                DefaultStorageTypeName = storageType,
-                AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin, 
-                Encryption = 
-                { 
-                    UseFips = SettingsHelper.UseFipsEncryptionAlgorithms 
-                },
-                FileSystem = 
-                {
-                    MaximumSynchronizationInterval = this.SynchronizationInterval, 
-                    DataDirectory = Path.Combine(directory, "FileSystems"),
-                    DefaultStorageTypeName = storageType
-                },
-            };
-
-            if (activeBundles != null)
-            {
-                ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
-            }
+            var ravenConfiguration = new RavenConfiguration();
 
             if (customConfig != null)
             {
                 customConfig(ravenConfiguration);
+            }
+
+            ravenConfiguration.Port = port;
+            ravenConfiguration.DataDirectory = directory;
+            ravenConfiguration.RunInMemory = runInMemory;
+#if DEBUG
+            ravenConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory;
+#endif
+            ravenConfiguration.DefaultStorageTypeName = storageType;
+            ravenConfiguration.AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin;
+            ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
+
+            ravenConfiguration.FileSystem.MaximumSynchronizationInterval = SynchronizationInterval;
+            ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystems");
+            ravenConfiguration.FileSystem.DefaultStorageTypeName = storageType;
+
+            if (activeBundles != null)
+            {
+                ravenConfiguration.Settings[Constants.ActiveBundles] = activeBundles;
             }
 
             if (enableAuthentication)
@@ -120,8 +114,8 @@ namespace Raven.Tests.Helpers
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-                UseEmbeddedHttpServer = true,          
-            };			
+                UseEmbeddedHttpServer = true,                
+            };
 
             ravenDbServer.Initialize();
 
@@ -158,7 +152,7 @@ namespace Raven.Tests.Helpers
                 Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
-                ApiKey = apiKey,
+                ApiKey = apiKey,                 
                 ConnectionStringName = connectionStringName
             };
 
@@ -460,6 +454,17 @@ namespace Raven.Tests.Helpers
             return ms;
         }
 
+        protected void WaitForFile(IAsyncFilesCommands filesCommands, string fileName)
+        {
+            var done = SpinWait.SpinUntil(() =>
+            {
+                var file = filesCommands.GetMetadataForAsync(fileName).Result;
+                return file != null;
+            }, TimeSpan.FromSeconds(15));
+
+            if (!done) throw new Exception("WaitForDocument failed");
+        }
+
         protected async Task WaitForRestoreAsync(string url, long operationId)
         {
             using (var sysDbStore = new DocumentStore
@@ -512,6 +517,5 @@ namespace Raven.Tests.Helpers
 
         protected virtual void ModifyStore(FilesStore store)
         {
-        }
     }
-}
+}}
