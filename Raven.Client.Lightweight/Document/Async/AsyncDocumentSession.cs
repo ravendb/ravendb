@@ -1076,5 +1076,22 @@ namespace Raven.Client.Document.Async
                 throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
             return jsonDocument;
         }
+
+        public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        {
+            var indexCreator = new TIndexCreator();
+            var operation = await DeleteByIndexAsync<T>(indexCreator.IndexName, expression).ConfigureAwait(false);
+            return operation;
+        }
+
+        public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
+        {
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            return await AsyncDatabaseCommands.DeleteByIndexAsync(indexName, indexQuery).ConfigureAwait(false);
+        }
     }
 }
