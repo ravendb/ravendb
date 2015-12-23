@@ -61,7 +61,7 @@ namespace Raven.Tests.Issues
 
                 var options = new FilesConnectionStringOptions { Url = store.Url, DefaultFileSystem = store.DefaultFileSystem };
 
-                var e = await AssertAsync.Throws<OperationVetoedException>(async () => await smuggler.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export, To = options }));
+                var e = await AssertAsync.Throws<ErrorResponseException>(async () => await smuggler.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export, To = options }));
 
                 Assert.Contains("PUT vetoed on file /test-0/revisions/1 by Raven.Database.FileSystem.Bundles.Versioning.Plugins.VersioningPutTrigger because: Creating a historical revision is not allowed", e.Message);
 

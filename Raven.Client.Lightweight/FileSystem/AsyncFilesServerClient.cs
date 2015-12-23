@@ -736,8 +736,6 @@ namespace Raven.Client.FileSystem
                 }
                 catch (Exception e)
                 {
-                    if (e.Message.Contains("Raven.Abstractions.Exceptions.OperationVetoedException"))
-                        throw new OperationVetoedException(e.Message, e);
                     var simplified = e.SimplifyException();
 
                     if (simplified != e)
