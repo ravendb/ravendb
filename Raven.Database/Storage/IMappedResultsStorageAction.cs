@@ -50,6 +50,7 @@ namespace Raven.Database.Storage
         List<MappedResultInfo> GetMappedResults(int view, HashSet<string> keysLeftToReduce, bool loadData, int take, HashSet<string> keysReturned, CancellationToken cancellationToken, List<MappedResultInfo> outputCollection = null);
     
         IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take);
+        Dictionary<int, long> DeleteObsoleteScheduledReductions(List<int> mapReduceIndexIds, long delete);
     }
 
     public class GetItemsToReduceParams
