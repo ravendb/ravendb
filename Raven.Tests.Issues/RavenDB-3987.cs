@@ -99,15 +99,15 @@ namespace Raven.Tests.Issues
         {
             using (var server = GetNewServer())
             {
-                using (var session = server.DocumentStore.OpenAsyncSession())
+                using (var session = server.DocumentStore.OpenSession())
                 {
                     var persons = GetNewPersons();
-                    persons.ForEach(async (x) =>
+                    persons.ForEach((x) =>
                     {
-                        await session.StoreAsync(x);
+                        session.Store(x);
                     });
 
-                    await session.SaveChangesAsync();
+                    session.SaveChanges();
                 }
 
                 new Person_ByName().Execute(server.DocumentStore);
