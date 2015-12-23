@@ -3,7 +3,7 @@ import filesystem = require("models/filesystem/filesystem");
 
 class importFilesystemCommand extends commandBase {
 
-    constructor(private fileData: FormData, private batchSize: number, private fs: filesystem, private shouldDisableVersioiningBundle: boolean) {
+    constructor(private fileData: FormData, private batchSize: number, private stripReplicationInformation: boolean, private shouldDisableVersioiningBundle: boolean, private fs: filesystem) {
         super();
     }
 
@@ -12,6 +12,7 @@ class importFilesystemCommand extends commandBase {
 
         var args = {
             batchSize: this.batchSize,
+            stripReplicationInformation: this.stripReplicationInformation,
             shouldDisableVersioningBundle: this.shouldDisableVersioiningBundle
         }
 

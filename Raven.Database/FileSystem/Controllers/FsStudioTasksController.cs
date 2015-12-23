@@ -32,7 +32,7 @@ namespace Raven.Database.FileSystem.Controllers
     {
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
-        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize, bool shouldDisableVersioningBundle)
+        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize, bool stripReplicationInformation, bool shouldDisableVersioningBundle)
         {
             if (!Request.Content.IsMimeMultipartContent())
             {
@@ -69,6 +69,7 @@ namespace Raven.Database.FileSystem.Controllers
                     var smugglerOptions = dataDumper.Options;
                     smugglerOptions.BatchSize = batchSize;
                     smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
+                    smugglerOptions.StripReplicationInformation = stripReplicationInformation;
                     smugglerOptions.CancelToken = cts;
 
                     await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath }).ConfigureAwait(false);
