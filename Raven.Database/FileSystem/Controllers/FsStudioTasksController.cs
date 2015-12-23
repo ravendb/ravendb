@@ -17,10 +17,12 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler;
 using Raven.Abstractions.Database.Smuggler.FileSystem;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Actions;
+using Raven.Database.FileSystem.Bundles.Versioning.Plugins;
 using Raven.Database.FileSystem.Smuggler;
 using Raven.Database.FileSystem.Smuggler.Embedded;
 using Raven.Database.Server.Controllers;
@@ -98,6 +100,11 @@ namespace Raven.Database.FileSystem.Controllers
                     if (e is InvalidDataException)
                     {
                         status.ExceptionDetails = e.Message;
+                    }
+                    else if (e is OperationVetoedException && e.Message.Contains(VersioningTriggerActions.CreationOfHistoricalRevisionIsNotAllowed))
+                    {
+                        status.ExceptionDetails = "You are trying to import historical documents while the versioning bundle is enabled. " +
+                                                  "You should disable versioning during such import. Please mark the checkbox 'Disable versioning bundle during import' at Import File System";
                     }
                     else
                     {
