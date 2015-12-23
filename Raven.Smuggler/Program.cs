@@ -126,6 +126,7 @@ namespace Raven.Smuggler
             // TODO arek
             //optionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => options.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
             //optionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => options.Incremental = true);
+            databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerFileSystem, "Disables versioning for the duration of the import", _ => options.ShouldDisableVersioningBundle = true);
             optionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(source).UserName = value);
             optionSet.Add("u2|user2|username2:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(destination).UserName = value);
             optionSet.Add("p|pass|password:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate.", value => GetCredentials(source).Password = value);
