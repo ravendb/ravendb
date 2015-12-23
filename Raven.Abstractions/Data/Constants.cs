@@ -406,6 +406,8 @@ namespace Raven.Abstractions.Data
             public const string RavenVersioningPrefix = "Raven/Versioning/";
 
             public const string RavenVersioningDefaultConfiguration = "Raven/Versioning/DefaultConfiguration";
+
+            public const string ChangesToRevisionsAllowed = "Raven/Versioning/ChangesToRevisionsAllowed";
         }
 
         public class SqlReplication

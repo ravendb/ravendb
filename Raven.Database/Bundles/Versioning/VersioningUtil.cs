@@ -42,7 +42,7 @@ namespace Raven.Bundles.Versioning
 
         public static bool ChangesToRevisionsAllowed(this DocumentDatabase database)
         {
-            var changesToRevisionsAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+            var changesToRevisionsAllowed = database.Configuration.Settings[Constants.Versioning.ChangesToRevisionsAllowed];
             if (changesToRevisionsAllowed == null)
                 return false;
             bool result;
