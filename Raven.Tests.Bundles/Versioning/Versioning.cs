@@ -487,7 +487,10 @@ namespace Raven.Tests.Bundles.Versioning
             try
             {
                 var smuggler = new DatabaseSmuggler(
-                    new DatabaseSmugglerOptions(), 
+                    new DatabaseSmugglerOptions()
+                    {
+                        ShouldDisableVersioningBundle = true
+                    }, 
                     new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
                     {
                         Database = documentStore.DefaultDatabase,

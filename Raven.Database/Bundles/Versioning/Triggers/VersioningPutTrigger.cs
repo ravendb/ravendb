@@ -19,22 +19,23 @@ namespace Raven.Bundles.Versioning.Triggers
     [ExportMetadata("Bundle", "Versioning")]
     public class VersioningPutTrigger : AbstractPutTrigger
     {
+        internal const string CreationOfHistoricalRevisionIsNotAllowed = "Creating a historical revision is not allowed";
+        internal const string ModificationOfHistoricalRevisionIsNotAllowed = "Modifying a historical revision is not allowed";
+
         public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
         {
-            var jsonDocument = Database.Documents.Get(key);
-            if (jsonDocument == null)
+            if (Database.IsVersioningActive(metadata) == false)
                 return VetoResult.Allowed;
 
-            if (Database.IsVersioningActive(metadata))
-            {
-                if (Database.IsVersioningDisabledForImport(metadata))
-                    return VetoResult.Allowed;
+            if (Database.IsVersioningDisabledForImport(metadata))
+                return VetoResult.Allowed;
 
-                if (Database.Configuration.Versioning.ChangesToRevisionsAllowed == false &&
-                    jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
-                {
-                    return VetoResult.Deny("Modifying a historical revision is not allowed");
-                }
+            var jsonDocument = Database.Documents.Get(key);
+
+            if (Database.Configuration.Versioning.ChangesToRevisionsAllowed == false &&
+                (jsonDocument?.Metadata ?? metadata).Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
+            {
+                return VetoResult.Deny(jsonDocument == null ? CreationOfHistoricalRevisionIsNotAllowed : ModificationOfHistoricalRevisionIsNotAllowed);
             }
 
             return VetoResult.Allowed;
