@@ -80,7 +80,7 @@ namespace Raven.Tests.Helpers
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new AppSettingsBasedConfiguration(beforeInit: config =>
+            var ravenConfiguration = new AppSettingsBasedConfiguration(false, beforeInit: config =>
             {
                 if (activeBundles != null)
                     config.SetSetting(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), activeBundles);
@@ -109,8 +109,10 @@ namespace Raven.Tests.Helpers
 
             if (customConfig != null)
             {
-                customConfig(ravenConfiguration);
+                customConfig(ravenConfiguration);  //TODO arek - consider better approach here, so we won't need to set settings this way: customConfig: x => x.SetSetting(RavenConfiguration.GetKey(_ => _.FileSystem.Versioning.ChangesToRevisionsAllowed), "true")
             }
+
+            ravenConfiguration.Initialize();
 
             if (enableAuthentication)
             {

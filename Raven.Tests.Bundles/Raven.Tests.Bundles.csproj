@@ -214,7 +214,7 @@
     <Compile Include="Versioning\Bugs\MultiTenant.cs" />
     <Compile Include="Versioning\Bugs\RavenDB_438.cs" />
     <Compile Include="Versioning\Bugs\VersioningWithGuidIds.cs" />
-    <Compile Include="Versioning\RavenDB_3979.cs" />
+    <Compile Include="Versioning\RavenDB_3979_documents.cs" />
     <Compile Include="Versioning\Versioning.cs" />
     <Compile Include="Versioning\VersioningTest.cs" />
   </ItemGroup>

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -31,7 +32,7 @@ namespace Raven.Bundles.Versioning
         public static bool IsVersioningDisabledForImport(this DocumentDatabase database, RavenJObject metadata)
         {
             var ignoreVersioning = metadata.Value<string>(Constants.RavenIgnoreVersioning);
-            return ignoreVersioning != null && ignoreVersioning.Equals("True");
+            return ignoreVersioning != null && ignoreVersioning.Equals("True", StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsVersioningActive(this DocumentDatabase database, RavenJObject metadata)

@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Versioning
 {
-    public class RavenDB_3979 : RavenTest
+    public class RavenDB_3979_documents : RavenTest
     {
         private bool changesToRevisionsAllowed = false;
 
