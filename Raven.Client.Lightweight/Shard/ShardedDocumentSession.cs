@@ -988,8 +988,7 @@ namespace Raven.Client.Shard
                 Keys = { indexName }
             }, (dbCmd, i) => dbCmd.DeleteByIndex(indexName, indexQuery));
 
-            var shardOperation = new ShardsOperation(-1, null);
-            shardOperation.ShardsOperations = operations;
+            var shardOperation = new ShardsOperation(operations);
 
             return shardOperation;
         }

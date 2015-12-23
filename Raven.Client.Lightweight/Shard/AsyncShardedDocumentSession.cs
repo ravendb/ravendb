@@ -853,8 +853,7 @@ namespace Raven.Client.Shard
 
             var result = await operations.ConfigureAwait(false);
 
-            var shardOperation = new ShardsOperation(-1, null);
-            shardOperation.ShardsOperations = result;
+            var shardOperation = new ShardsOperation(result);
 
             return shardOperation;
         }
