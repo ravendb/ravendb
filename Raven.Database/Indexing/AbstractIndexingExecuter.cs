@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
-using Raven.Database.Server;
 using Raven.Database.Storage;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -129,7 +126,16 @@ namespace Raven.Database.Indexing
                             {
                                 Log.WarnException("Could not cleanup prefetchers properly", e);
                             }
-                            
+
+                            try
+                            {
+                                CleanupScheduledReductions();
+                            }
+                            catch (Exception e)
+                            {
+                                Log.WarnException("Could not cleanup scheduled reductions properly", e);
+                            }
+
                         }, name);
                     }
                     else // notify the tasks executer that it has work to do
@@ -144,10 +150,9 @@ namespace Raven.Database.Indexing
 
         public abstract bool ShouldRun { get; }
 
-        protected virtual void CleanupPrefetchers()
-        {
-            
-        }
+        protected virtual void CleanupPrefetchers() { }
+
+        protected virtual void CleanupScheduledReductions() { }
 
         protected virtual void Dispose() { }
 

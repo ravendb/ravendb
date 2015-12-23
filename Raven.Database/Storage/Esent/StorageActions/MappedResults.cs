@@ -189,6 +189,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     }
 
                     Api.JetDelete(session, ScheduledReductions);
+                    MaybePulseTransaction();
                 }
             }
             return hasResult ? result : null;
@@ -240,11 +241,38 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     continue;
 
                 Api.JetDelete(Session, ScheduledReductions);
+
                 if (scheduledReductionsPerViewAndLevel != null)
                     scheduledReductionsPerViewAndLevel.AddOrUpdate(view, new RemainingReductionPerLevel(), (key, oldvalue) => oldvalue.DecrementPerLevelCounters(level));
             } while (Api.TryMoveNext(Session, ScheduledReductions));
         }
 
+        public Dictionary<int, long> DeleteObsoleteScheduledReductions(List<int> mapReduceIndexIds, long delete)
+        {
+            var obsoleteScheduledReductions = new Dictionary<int, long>();
+            Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
+            Api.MakeKey(session, ScheduledReductions, 0, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
+                return obsoleteScheduledReductions;
+
+            long count = 0;
+            do
+            {
+                var indexIdFromDb = Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"], RetrieveColumnGrbit.RetrieveFromIndex);
+                if (indexIdFromDb == null || mapReduceIndexIds.Exists(x => x == indexIdFromDb))
+                    continue; // index id exists, no need to delete the scheduled reduction
+
+                Api.JetDelete(Session, ScheduledReductions);
+                MaybePulseTransaction();
+
+                long currentCount = 0;
+                obsoleteScheduledReductions.TryGetValue(indexIdFromDb.Value, out currentCount);
+                obsoleteScheduledReductions[indexIdFromDb.Value] = currentCount + 1;
+                count++;
+            } while (Api.TryMoveNext(Session, ScheduledReductions) && count < delete);
+
+            return obsoleteScheduledReductions;
+        }
 
         public IList<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams, CancellationToken cancellationToken)
         {
@@ -478,7 +506,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 var keyFromDb = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReduceResultsColumns["reduce_key"]);
                 if (string.Equals(keyFromDb, reduceKey, StringComparison.Ordinal) == false)// case sensitive check on purpose
                     continue;
-
 
                 Api.JetDelete(session, ReducedResults);
             } while (Api.TryMoveNext(session, ReducedResults));
