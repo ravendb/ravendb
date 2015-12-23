@@ -43,7 +43,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
                 ignoreVersioning = metadata.Value<string>(Constants.RavenIgnoreVersioning);
             }
 
-            return ignoreVersioning != null && ignoreVersioning.Equals("True");
+            return ignoreVersioning != null && ignoreVersioning.Equals("True", StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsVersioningActive(this RavenFileSystem fileSystem, string filePath)
