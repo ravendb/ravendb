@@ -293,7 +293,16 @@ namespace Raven.Abstractions.Data
                 changes = changes + amount
             };
         }
-
+        public Etag DecrementBy(int amount)
+        {
+            if(changes< amount)
+                throw new ArgumentOutOfRangeException("The etag changes is lower than the given amount");
+            return new Etag
+            {
+                restarts = restarts,
+                changes = changes - amount
+            };
+        }
         public static implicit operator string(Etag etag)
         {
             if (etag == null)
