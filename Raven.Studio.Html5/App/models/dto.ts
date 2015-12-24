@@ -700,7 +700,7 @@ interface sqlReplicationDto extends documentDto {
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     QuoteTables?: boolean;
-    PerformTableQuatation?: boolean; //obsolate
+    PerformTableQuatation?: boolean; //obsolete
 }
 
 interface commandData {
