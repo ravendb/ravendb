@@ -1413,8 +1413,11 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
+
             foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
             {
+                var sp = Stopwatch.StartNew();
+
                 try
                 {
                     value.Flush(value.GetLastEtagFromStats());
@@ -1422,7 +1425,15 @@ namespace Raven.Database.Indexing
                 catch (Exception e)
                 {
                     value.IncrementWriteErrors(e);
+                    log.WarnException(string.Format("Failed to flush simple map index: {0} (id: {1})",
+                        value.PublicName, value.IndexId), e);
                     throw;
+                }
+
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug("Flashed simple map index: {0} (id: {1}), took {2}ms",
+                        value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
                 }
             }
         }
@@ -1431,8 +1442,11 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
+
             foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
             {
+                var sp = Stopwatch.StartNew();
+
                 try
                 {
                     value.Flush(value.GetLastEtagFromStats());
@@ -1440,7 +1454,15 @@ namespace Raven.Database.Indexing
                 catch (Exception e)
                 {
                     value.IncrementWriteErrors(e);
+                    log.WarnException(string.Format("Failed to flush map-reduce index: {0} (id: {1})",
+                        value.PublicName, value.IndexId), e);
                     throw;
+                }
+
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug("Flashed map-reduce index: {0} (id: {1}), took {2}ms",
+                        value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
                 }
             }
         }
