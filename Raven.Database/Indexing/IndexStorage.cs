@@ -1514,9 +1514,27 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
+
             foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
             {
-                value.Flush(value.GetLastEtagFromStats());
+                var sp = Stopwatch.StartNew();
+
+                try
+                {
+                    value.Flush(value.GetLastEtagFromStats());
+                }
+                catch (Exception e)
+                {
+                    value.HandleWriteError(e);
+                    log.WarnException($"Failed to flush simple map index: {value.PublicName} (id: {value.IndexId})", e);
+                    throw;
+                }
+
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug("Flashed simple map index: {0} (id: {1}), took {2}ms",
+                        value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
+                }
             }
         }
 
@@ -1524,9 +1542,27 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
+
             foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
             {
-                value.Flush(value.GetLastEtagFromStats());
+                var sp = Stopwatch.StartNew();
+
+                try
+                {
+                    value.Flush(value.GetLastEtagFromStats());
+                }
+                catch (Exception e)
+                {
+                    value.HandleWriteError(e);
+                    log.WarnException($"Failed to flush map-reduce index: {value.PublicName} (id: {value.IndexId})", e);
+                    throw;
+                }
+
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug("Flashed map-reduce index: {0} (id: {1}), took {2}ms",
+                        value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
+                }
             }
         }
 

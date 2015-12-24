@@ -1975,7 +1975,7 @@ namespace Raven.Database.Indexing
             return false;
         }
 
-        private void HandleWriteError(Exception e)
+        public void HandleWriteError(Exception e)
         {
             if (disposed)
                 return;
