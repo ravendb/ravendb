@@ -161,7 +161,7 @@ namespace Rachis.Behaviors
         {
             Engine = engine;
             
-            _log = LogManager.GetLogger(engine.Name + "." + GetType().Name);
+            _log = LogManager.GetLogger(engine.Name + "." + GetType().FullName);
 
             _actionDispatch = new Dictionary<Type, Action<MessageContext>>
             {
