@@ -634,7 +634,7 @@ namespace Raven.Bundles.Replication.Tasks
                         log.Info("This is the first failure for {0}, assuming transient failure and trying again", destination);
                         if (TryReplicationAttachments(destination, attachments, out lastError)) // success on second fail
                         {
-                            RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2);
+                            RecordSuccess(destination.ConnectionStringOptions.Url, lastReplicatedEtag: tuple.Item2, forDocuments:false);
                             return true;
                         }
                     }
@@ -646,7 +646,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
 
             RecordSuccess(destination.ConnectionStringOptions.Url,
-                lastReplicatedEtag: tuple.Item2);
+                lastReplicatedEtag: tuple.Item2, forDocuments: false);
 
             return true;
         }
@@ -809,7 +809,7 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void RecordSuccess(string url,
             Etag lastReplicatedEtag = null, DateTime? lastReplicatedLastModified = null,
-            DateTime? lastHeartbeatReceived = null, string lastError = null)
+            DateTime? lastHeartbeatReceived = null, string lastError = null, bool forDocuments = true)
         {
             var stats = destinationStats.GetOrAdd(url, new DestinationStats { Url = url });
             Interlocked.Exchange(ref stats.FailureCountInternal, 0);
@@ -819,7 +819,10 @@ namespace Raven.Bundles.Replication.Tasks
             if (lastReplicatedEtag != null)
             {
                 stats.LastEtagCheckedForReplication = lastReplicatedEtag;
-                stats.LastReplicatedEtag = lastReplicatedEtag;
+                if (forDocuments)
+                    stats.LastReplicatedEtag = lastReplicatedEtag;
+                else
+                    stats.LastReplicatedAttachmentEtag = lastReplicatedEtag;
             }
 
             if (lastReplicatedLastModified.HasValue)
