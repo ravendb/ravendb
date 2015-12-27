@@ -12,6 +12,7 @@ using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Bundles.Authorization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Bundles.Authorization.Model;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
@@ -101,12 +102,23 @@ namespace Raven.Client.Authorization
             return decidingPermission != null && decidingPermission.Allow;
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool OperationMatches(string op1, string op2)
         {
-            return op2.StartsWith(op1);
+            return IsHierarchicPrefix(op2, op1);
         }
-
+        private static bool IsHierarchicPrefix(string fullPath, string prefix)
+        {
+            if (!fullPath.StartsWith(prefix))
+                return false;
+            //strings are equal
+            if (fullPath.Length == prefix.Length)
+                return true;
+            //strings are hierarchic to one another
+            if (fullPath[prefix.Length] == '/')
+                return true;
+            return false;
+        }
         public static void SecureFor(this IDocumentSession session, string userId, string operation)
         {
             var databaseCommands = ((DocumentSession)session).DatabaseCommands;
