@@ -1022,11 +1022,13 @@ namespace Raven.Client.Document
                 configure(configuration);
             }
 
+            var queryOperation = new QueryOperation(this, "Load/StartingWith", null, null, false, TimeSpan.Zero, null, null, false);
+
             return
                 DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude,
                                             pagingInformation: pagingInformation, transformer: transformer, transformerParameters: configuration.TransformerParameters,
                                             skipAfter: skipAfter)
-                                .Select(TrackEntity<TResult>)
+                                .Select(document => queryOperation.Deserialize<TResult>(document.ToJson()))
                                 .ToArray();
         }
 
