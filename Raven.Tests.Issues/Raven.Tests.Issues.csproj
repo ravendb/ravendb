@@ -147,6 +147,7 @@
     <Compile Include="BackupRestore.cs" />
     <Compile Include="RavenDB-3472-async.cs" />
     <Compile Include="RavenDB-4142.cs" />
+    <Compile Include="RavenDB-4161.cs" />
     <Compile Include="RavenDB3936.cs" />
     <Compile Include="RavenDB_3646.cs" />
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
