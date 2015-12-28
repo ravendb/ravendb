@@ -237,10 +237,7 @@
   <ItemGroup>
     <None Include="app.config" />
     <EmbeddedResource Include="DefaultLogging.config" />
-    <None Include="Migration\Backups\from-3628\destination-3628-esent.zip" />
-    <None Include="Migration\Backups\from-3628\destination-3628-voron.zip" />
-    <None Include="Migration\Backups\from-3628\source-3628-esent.zip" />
-    <None Include="Migration\Backups\from-3628\source-3628-voron.zip" />
+    <None Include="Migration\Backups\readme.md" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
