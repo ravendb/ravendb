@@ -222,7 +222,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             foreach (var keyAndBucket in removed)
             {
-                DecrementReduceKeyCounter(view,  keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
+                DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
             }
         }
 
@@ -912,33 +912,35 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             foreach (var reduceKey in allKeysToReduce)
             {
-                var count = GetNumberOfMappedItemsPerReduceKey(view, reduceKey);
+                var reduceKeySlice = CreateMappedResultKey(view, reduceKey);
+                var count = GetNumberOfMappedItemsPerReduceKey(reduceKeySlice);
                 var reduceType = count >= limitOfItemsToReduceInSingleStep ? ReduceType.MultiStep : ReduceType.SingleStep;
                 yield return new ReduceTypePerKey(reduceKey, reduceType);
             }
         }
 
-        private int GetNumberOfMappedItemsPerReduceKey(int view, string reduceKey)
+        private int GetNumberOfMappedItemsPerReduceKey(Slice key)
         {
-            var key = CreateMappedResultKey(view, reduceKey);
-
             ushort version;
             var value = LoadStruct(tableStorage.ReduceKeyCounts, key, writeBatch.Value, out version);
-            if (value == null)
-                return 0;
-
-            return value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
+            return value == null ? 0 : value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
         }
 
         public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType reduceType)
         {
-            var key = CreateMappedResultKey(view,reduceKey);
-            var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key, writeBatch.Value);
+            var key = CreateMappedResultKey(view, reduceKey);
+            if (GetNumberOfMappedItemsPerReduceKey(key) == 0)
+            {
+                // the reduce key doesn't exist anymore
+                // no need to update the reduce key type
+                return;
+            }
 
+            var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key, writeBatch.Value);
             AddReduceKeyType(key, view, reduceKey, reduceType, version);
         }
 
-        private void DeleteReduceKeyCount( Slice key, int view, Slice viewKey, ushort? expectedVersion)
+        private void DeleteReduceKeyCount(Slice key, int view, Slice viewKey, ushort? expectedVersion)
         {
             var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
