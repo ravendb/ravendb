@@ -18,6 +18,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -446,12 +447,44 @@ namespace Raven.Database.Config
             Settings[key] = value;
         }
 
+        internal void SetSettingInTest<TValue>(Expression<Func<RavenConfiguration, TValue>> key, TValue value, string customStringValue = null)
+        {
+            var expression = key.Body as MemberExpression;
+
+            var members = new Stack<MemberInfo>();
+
+            while (expression != null)
+            {
+                members.Push(expression.Member);
+
+                expression = expression.Expression as MemberExpression;
+            }
+
+            object entity = this;
+
+            foreach (var member in members)
+            {
+                var entityObject = member.GetValue(entity);
+
+                if (entityObject is ConfigurationCategory)
+                {
+                    entity = entityObject;
+                }
+                else
+                {
+                    member.SetValue(entity, value);
+                }
+            }
+
+           Settings[GetKey(key)] = customStringValue ?? value.ToString();
+        }
+
         public string GetSetting(string key)
         {
             return Settings[key];
         }
 
-        public static string GetKey(Expression<Func<RavenConfiguration, object>> getKey)
+        public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
             var prop = getKey.ToProperty();
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key;
