@@ -946,6 +946,21 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
         public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType performedReduceType)
         {
+            var reduceKeyExists = false;
+
+            ExecuteOnReduceKey(view, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
+                () =>
+                {
+                    reduceKeyExists = true;
+                }, null);
+
+            if (reduceKeyExists == false)
+            {
+                // the reduce key doesn't exist anymore
+                // no need to update the reduce key type
+                return;
+            }
+
             ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns, () =>
             {
                 using (var update = new Update(session, ReduceKeysStatus, JET_prep.Replace))
@@ -1220,7 +1235,10 @@ namespace Raven.Database.Storage.Esent.StorageActions
             if (removeReducedKeyStatus)
             {
                 ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns,
-                                   () => Api.JetDelete(session, ReduceKeysStatus), null);
+                    () =>
+                    {
+                        Api.JetDelete(session, ReduceKeysStatus);
+                    }, null);
             }
         }
 
