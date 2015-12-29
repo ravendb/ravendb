@@ -8,9 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
 using Raven.Database.Bundles.Versioning.Data;
-using Raven.Database.Config;
 using Raven.Database.FileSystem.Bundles.Versioning;
 using Raven.Database.FileSystem.Bundles.Versioning.Plugins;
 using Raven.Json.Linq;
@@ -39,7 +37,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
         [Fact]
         public async Task allows_to_create_historical_file_if_changes_to_revisions_are_allowed()
         {
-            using (var store = NewStore(activeBundles: "Versioning", customConfig: x => x.SetSettingInTest(_ => _.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
+            using (var store = NewStore(activeBundles: "Versioning", customConfig: x => x.Modify(_ => _.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
             {
                 await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName, MaxRevisions = 10 });
 

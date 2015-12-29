@@ -26,7 +26,7 @@ namespace Raven.Tests.Core
         {
             var configuration = new AppSettingsBasedConfiguration();
 
-            ConfigurationHelper.ApplySettingsToConfiguration(configuration);
+            ConfigurationHelper.ApplySettingsToConfiguration(new ConfigurationModification(configuration));
 
             configuration.Core.Port = Port;
             configuration.Server.Name = ServerName;

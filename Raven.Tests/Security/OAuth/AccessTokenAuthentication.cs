@@ -11,6 +11,7 @@ using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -27,9 +28,9 @@ namespace Raven.Tests.Security.OAuth
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
+        protected override void ModifyConfiguration(ConfigurationModification ravenConfiguration)
         {
-            ravenConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            ravenConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
             Authentication.EnableOnce();
         }
 

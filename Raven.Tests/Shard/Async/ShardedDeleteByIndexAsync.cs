@@ -134,11 +134,12 @@ namespace Raven.Tests.Shard.Async
             using (var session = shardedDocumentStore.OpenAsyncSession())
             {
                 var persons = GetNewPersons();
-                persons.ForEach(async (x) =>
-                {
-                    await session.StoreAsync(x);
-                });
 
+                foreach (var person in persons)
+                {
+                    await session.StoreAsync(person);
+                }
+                
                 await session.SaveChangesAsync();
             }
 

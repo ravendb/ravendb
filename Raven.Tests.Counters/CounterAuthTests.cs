@@ -7,6 +7,8 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Counters;
 using Raven.Database.Config;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Counters
@@ -16,7 +18,7 @@ namespace Raven.Tests.Counters
         private const string GoodApiKey = "thisIsApiKeyName/thisIsSecret";
         private const string BadApiKey = "NotThisIsApiKeyName/thisIsSecret";
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
             ConfigureServerForAuth(configuration);
         }

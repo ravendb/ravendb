@@ -15,6 +15,7 @@ using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -27,9 +28,9 @@ namespace Raven.Tests.Issues
             public int Id { get; set; }
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "DocumentExpiration";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "DocumentExpiration");
         }
 
         [Fact, Trait("Category", "Smuggler")]

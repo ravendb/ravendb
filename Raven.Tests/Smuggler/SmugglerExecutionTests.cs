@@ -26,6 +26,7 @@ using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
 using Raven.Smuggler.Database.Streams;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
@@ -157,9 +158,9 @@ namespace Raven.Tests.Smuggler
             }
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "PeriodicBackup";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "PeriodicBackup");
         }
 
         public class User
@@ -778,7 +779,7 @@ namespace Raven.Tests.Smuggler
         {
             var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");
 
-            using (var server = GetNewServer(configureConfig: configuration => configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 1234))
+            using (var server = GetNewServer(configureConfig: configuration => configuration.Modify(x => x.Core.MaxNumberOfItemsToProcessInSingleBatch, 1234)))
             {
                 var smuggler = new DatabaseSmuggler(
                     new DatabaseSmugglerOptions
@@ -829,7 +830,7 @@ namespace Raven.Tests.Smuggler
         {
             var path = Path.Combine(NewDataPath(forceCreateDir: true), "raven.dump");
 
-            using (var server = GetNewServer(configureConfig: configuration => configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 1234))
+            using (var server = GetNewServer(configureConfig: configuration => configuration.Modify(x => x.Core.MaxNumberOfItemsToProcessInSingleBatch, 1234)))
             {
                 var smuggler = new DatabaseSmuggler(
                     new DatabaseSmugglerOptions

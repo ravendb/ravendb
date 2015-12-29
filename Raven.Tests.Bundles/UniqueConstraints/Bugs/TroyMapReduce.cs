@@ -5,8 +5,8 @@ using System.Linq;
 
 using Raven.Client.Indexes;
 using Raven.Client.UniqueConstraints;
-using Raven.Database.Config;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -17,9 +17,9 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
         private Guid _appKey;
         private Guid _privateKey;
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(Raven.Bundles.UniqueConstraints.UniqueConstraintsPutTrigger).Assembly));
+            configuration.Get().Catalog.Catalogs.Add(new AssemblyCatalog(typeof(Raven.Bundles.UniqueConstraints.UniqueConstraintsPutTrigger).Assembly));
         }
 
         protected override void ModifyStore(Client.Document.DocumentStore store)

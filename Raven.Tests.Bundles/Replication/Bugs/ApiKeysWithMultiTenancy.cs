@@ -16,6 +16,7 @@ using Raven.Tests.Common.Dto;
 
 using Xunit;
 using Raven.Client.Extensions;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Bundles.Replication.Bugs
 {
@@ -23,9 +24,9 @@ namespace Raven.Tests.Bundles.Replication.Bugs
     {
         private const string apikey = "test/ThisIsMySecret";
 
-        protected override void ModifyConfiguration(RavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(ConfigurationModification serverConfiguration)
         {
-            serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            serverConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
             Authentication.EnableOnce();
         }
 

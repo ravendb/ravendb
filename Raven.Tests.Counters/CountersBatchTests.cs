@@ -20,7 +20,7 @@ namespace Raven.Tests.Counters
                 {
                     Settings = new Dictionary<string, string>
                     {
-                        {"Raven/Counters/DataDir", @"~\Counters\Cs1"}
+                        {"Raven/Counter/DataDir", @"~\Counters\Cs1"}
                     },
                 }, OtherCounterStorageName))
                 {
@@ -217,7 +217,7 @@ namespace Raven.Tests.Counters
                 {
                     Settings = new Dictionary<string, string>
                     {
-                        {"Raven/Counters/DataDir", @"~\Counters\" + OtherCounterStorageName}
+                        {"Raven/Counter/DataDir", @"~\Counters\" + OtherCounterStorageName}
                     },
                 }, OtherCounterStorageName))
                 {

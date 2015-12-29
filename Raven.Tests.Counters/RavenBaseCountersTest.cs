@@ -20,6 +20,7 @@ using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Counters
 {
@@ -54,9 +55,9 @@ namespace Raven.Tests.Counters
         }
 
 
-        protected void ConfigureServerForAuth(RavenConfiguration serverConfiguration)
+        protected void ConfigureServerForAuth(ConfigurationModification serverConfiguration)
         {
-            serverConfiguration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            serverConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
             Authentication.EnableOnce();
         }
 

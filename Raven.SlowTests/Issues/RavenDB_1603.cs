@@ -30,6 +30,7 @@ using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Triggers;
 using Raven.Tests.Common.Util;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -50,9 +51,9 @@ namespace Raven.SlowTests.Issues
             public string Name { get; set; }
             public string Id { get; set; }
         }
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Container = new CompositionContainer(new TypeCatalog(
+            configuration.Get().Container = new CompositionContainer(new TypeCatalog(
                                                                typeof(HiddenDocumentsTrigger)));
         }
 

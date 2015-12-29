@@ -10,6 +10,7 @@ using Raven.Bundles.Versioning;
 using Raven.Bundles.Versioning.Triggers;
 using Raven.Database.Config;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -68,10 +69,10 @@ namespace Raven.Tests.Bundles.Versioning
             }
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
             if (changesToRevisionsAllowed)
-                configuration.Versioning.ChangesToRevisionsAllowed = true;
+                configuration.Modify(x => x.Versioning.ChangesToRevisionsAllowed, true);
         }
     }
 }

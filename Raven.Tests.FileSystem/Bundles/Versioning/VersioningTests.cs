@@ -219,7 +219,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
         {
             const string FileName = "file1.txt";
 
-            using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: config => config.SetSettingInTest(x => x.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
+            using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: config => config.Modify(x => x.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
             {
                 await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
@@ -433,7 +433,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
         [PropertyData("Storages")]
         public async Task CanModifyHistoricalRevisionIfProperConfigurationSet_PUT(string requestedStorage)
         {
-            using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: x => x.SetSettingInTest(_ => _.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
+            using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: x => x.Modify(_ => _.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
             {
                 await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 
@@ -481,7 +481,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
         [PropertyData("Storages")]
         public async Task CanModifyHistoricalRevisionIfProperConfigurationSet_POST(string requestedStorage)
         {
-            using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: x => x.SetSettingInTest(_ => _.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
+            using (var store = NewStore(requestedStorage: requestedStorage, activeBundles: "Versioning", customConfig: x => x.Modify(_ => _.FileSystem.Versioning.ChangesToRevisionsAllowed, true)))
             {
                 await store.AsyncFilesCommands.Configuration.SetKeyAsync(VersioningUtil.DefaultConfigurationName, new FileVersioningConfiguration { Id = VersioningUtil.DefaultConfigurationName });
 

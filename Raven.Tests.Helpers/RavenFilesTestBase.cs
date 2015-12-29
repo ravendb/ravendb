@@ -76,16 +76,12 @@ namespace Raven.Tests.Helpers
                                                     bool enableAuthentication = false,
                                                     string fileSystemName = null,
                                                     string activeBundles = null,
-                                                    Action<RavenConfiguration> customConfig = null)
+                                                    Action<ConfigurationModification> customConfig = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new AppSettingsBasedConfiguration(beforeInit: config =>
-            {
-                if (activeBundles != null)
-                    config.SetSetting(RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), activeBundles);
-            })
+            var ravenConfiguration = new AppSettingsBasedConfiguration()
             {
                 Core =
                 {
@@ -108,9 +104,14 @@ namespace Raven.Tests.Helpers
                 },
             };
 
+            if (activeBundles != null)
+            {
+                new ConfigurationModification(ravenConfiguration).Modify(x => x.Core._ActiveBundlesString, activeBundles);
+            }
+
             if (customConfig != null)
             {
-                customConfig(ravenConfiguration);
+                customConfig(new ConfigurationModification(ravenConfiguration));
             }
 
             if (enableAuthentication)
@@ -139,7 +140,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null,
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null,
-                                                bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
+                                                bool runInMemory = true, Action<ConfigurationModification> customConfig = null, string activeBundles = null, string connectionStringName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -178,7 +179,7 @@ namespace Raven.Tests.Helpers
             ICredentials credentials = null,
             string requestedStorage = null,
             [CallerMemberName] string fileSystemName = null,
-            Action<RavenConfiguration> customConfig = null,
+            Action<ConfigurationModification> customConfig = null,
             string activeBundles = null,
             string dataDirectory = null,
             bool runInMemory = true)

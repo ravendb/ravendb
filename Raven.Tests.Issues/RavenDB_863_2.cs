@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -17,11 +18,11 @@ namespace Raven.Tests.Issues
     {
         public class User { public string Name { get; set; } }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.InitialNumberOfItemsToReduceInSingleBatch = 2;
-            configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 2;
-            configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = 2;
+            configuration.Modify(x => x.Core.InitialNumberOfItemsToReduceInSingleBatch, 2);
+            configuration.Modify(x => x.Core.MaxNumberOfItemsToReduceInSingleBatch, 2);
+            configuration.Modify(x => x.Core.NumberOfItemsToExecuteReduceInSingleStep, 2);
         }
 
         [Theory]

@@ -15,6 +15,7 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Config.Settings;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -75,9 +76,9 @@ namespace Raven.Tests.Issues
             }
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Storage.MaxScratchBufferSize = new Size(7, SizeUnit.Megabytes);
+            configuration.Modify(x => x.Storage.MaxScratchBufferSize, new Size(7, SizeUnit.Megabytes), "7");
         }
 
         [Theory]

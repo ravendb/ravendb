@@ -16,13 +16,15 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Document;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Raft
 {
     public class RaftWithAuth : RaftTestBase
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
             Authentication.EnableOnce();
         }

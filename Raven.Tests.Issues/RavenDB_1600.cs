@@ -6,6 +6,7 @@
 using System.Threading;
 using Raven.Database.Actions;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Issues
 {
@@ -40,10 +41,10 @@ namespace Raven.Tests.Issues
             public string Name { get; set; }
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
             base.ModifyConfiguration(configuration);
-            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
         }
 
         [Fact]

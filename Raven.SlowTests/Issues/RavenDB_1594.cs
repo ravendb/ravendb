@@ -14,6 +14,7 @@ using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -68,9 +69,9 @@ namespace Raven.SlowTests.Issues
             public string Data { get; set; }
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "PeriodicBackup";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "PeriodicBackup");
         }
 
         [Fact, Trait("Category", "Smuggler")]

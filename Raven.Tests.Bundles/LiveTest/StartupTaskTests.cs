@@ -6,17 +6,14 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
 using Raven.Bundles.LiveTest;
-using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
-using Raven.Database.Config;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -24,9 +21,9 @@ namespace Raven.Tests.Bundles.LiveTest
 {
     public class StartupTaskTests : RavenTest
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(LiveTestDatabaseDocumentPutTrigger).Assembly));
+            configuration.Get().Catalog.Catalogs.Add(new AssemblyCatalog(typeof(LiveTestDatabaseDocumentPutTrigger).Assembly));
         }
 
         [Fact]

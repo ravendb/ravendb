@@ -4,6 +4,7 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Tests.Common;
 using Raven.Tests.Helpers;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -17,9 +18,9 @@ namespace Raven.Tests.MailingList
             public string Id { get; set; }
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "Versioning";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "Versioning");
         }
 
         [Fact]

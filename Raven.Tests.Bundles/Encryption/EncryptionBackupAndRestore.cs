@@ -15,15 +15,17 @@ using Raven.Tests.Common;
 
 using Xunit;
 using Raven.Database.Extensions;
+using Raven.Tests.Helpers.Util;
+
 using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Encryption
 {
     public class EncryptionBackupAndRestore : RavenTest
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
+            configuration.Modify(x => x.Server.MaxTimeForTaskToWaitForDatabaseToLoad, new TimeSetting(10, TimeUnit.Seconds), "10");
 
             base.ModifyConfiguration(configuration);
         }

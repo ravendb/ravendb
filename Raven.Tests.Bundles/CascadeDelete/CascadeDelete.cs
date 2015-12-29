@@ -25,7 +25,7 @@ namespace Raven.Tests.Bundles.CascadeDelete
         {
             var ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, configureConfig: configuration =>
             {
-                configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
+                configuration.Get().Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
             });
 
             documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: Constants.SystemDatabase);

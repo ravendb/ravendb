@@ -13,6 +13,7 @@ using Raven.Database.Config.Settings;
 using Raven.Database.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -36,9 +37,9 @@ namespace Raven.Tests.Indexes.Recovery
             configuration.Indexing.MaxIndexCommitPointStoreInterval = new TimeSetting((long) TimeSpan.MaxValue.TotalSeconds, TimeUnit.Seconds);
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Indexing.FlushIndexToDiskSize = new Size(0, SizeUnit.Bytes);
+            configuration.Modify(x => x.Indexing.FlushIndexToDiskSize, new Size(0, SizeUnit.Bytes), "0");
         }
 
         [Fact]

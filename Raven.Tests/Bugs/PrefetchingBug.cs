@@ -5,16 +5,18 @@ using Raven.Tests.Common;
 using Xunit;
 using System.Linq;
 
+using Raven.Tests.Helpers.Util;
+
 namespace Raven.Tests.Bugs
 {
     public class PrefetchingBug : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 2;
-            configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 2;
-            configuration.Core.InitialNumberOfItemsToProcessInSingleBatch = 2;
-            configuration.Core.InitialNumberOfItemsToReduceInSingleBatch = 2;
+            configuration.Modify(x => x.Core.MaxNumberOfItemsToProcessInSingleBatch, 2);
+            configuration.Modify(x => x.Core.MaxNumberOfItemsToReduceInSingleBatch, 2);
+            configuration.Modify(x => x.Core.InitialNumberOfItemsToProcessInSingleBatch, 2);
+            configuration.Modify(x => x.Core.InitialNumberOfItemsToReduceInSingleBatch, 2);
         }
 
         [Fact]

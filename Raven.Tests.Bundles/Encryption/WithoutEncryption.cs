@@ -1,16 +1,16 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Config;
-using Raven.Tests.Bundles.Versioning;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Bundles.Encryption
 {
     public class WithoutEncryption : Encryption
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "none";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "none");
         }
 
         [Fact]

@@ -8,6 +8,7 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -19,9 +20,9 @@ namespace Raven.Tests.Security.OAuth
     {
         private const string apiKey = "test/ThisIsMySecret";
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
 
 
             Authentication.EnableOnce();

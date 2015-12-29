@@ -35,6 +35,7 @@ namespace Raven.Database.Config
         private CompositionContainer container;
         private bool containerExternallySet;
         private bool initialized = false;
+        private bool allowChanges = false;
 
         public CoreConfiguration Core { get; }
 
@@ -441,42 +442,17 @@ namespace Raven.Database.Config
 
         public void SetSetting(string key, string value)
         {
-            if (initialized)
-                throw new InvalidOperationException("Configuration already initialized. You cannot specify already initialized settings.");
+            if (initialized && allowChanges == false)
+                throw new InvalidOperationException("Configuration already initialized. You cannot specify an already initialized setting.");
 
             Settings[key] = value;
         }
 
-        internal void SetSettingInTest<TValue>(Expression<Func<RavenConfiguration, TValue>> key, TValue value, string customStringValue = null)
+        internal IDisposable AllowChangeAfterInit()
         {
-            var expression = key.Body as MemberExpression;
+            allowChanges = true;
 
-            var members = new Stack<MemberInfo>();
-
-            while (expression != null)
-            {
-                members.Push(expression.Member);
-
-                expression = expression.Expression as MemberExpression;
-            }
-
-            object entity = this;
-
-            foreach (var member in members)
-            {
-                var entityObject = member.GetValue(entity);
-
-                if (entityObject is ConfigurationCategory)
-                {
-                    entity = entityObject;
-                }
-                else
-                {
-                    member.SetValue(entity, value);
-                }
-            }
-
-           Settings[GetKey(key)] = customStringValue ?? value.ToString();
+            return new DisposableAction(() => allowChanges = false);
         }
 
         public string GetSetting(string key)
