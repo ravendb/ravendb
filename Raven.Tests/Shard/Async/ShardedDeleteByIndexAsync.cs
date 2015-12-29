@@ -134,15 +134,15 @@ namespace Raven.Tests.Shard.Async
         [Fact]
         public async Task DeleteByIndexShardedAsync()
         {
-            using (var session = shardedDocumentStore.OpenAsyncSession())
+            using (var session = shardedDocumentStore.OpenSession())
             {
                 var persons = GetNewPersons();
-                persons.ForEach(async (x) =>
+                persons.ForEach((x) =>
                 {
-                    await session.StoreAsync(x);
+                    session.Store(x);
                 });
 
-                await session.SaveChangesAsync();
+                session.SaveChanges();
             }
 
             new Person_ByName().Execute(shardedDocumentStore);

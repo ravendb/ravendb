@@ -29,6 +29,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Bundles.Versioning.Triggers;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
@@ -207,9 +208,11 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }
-                    else if (e is OperationVetoedException)
+                    else if (e is OperationVetoedException && e.Message.Contains(VersioningPutTrigger.CreationOfHistoricalRevisionIsNotAllowed))
                     {
-                        status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
+                        status.ExceptionDetails = "You are trying to import historical documents while the versioning bundle is enabled. " +
+                                                  "The versioning bundle is enabled. You should disable versioning during import. " + 
+                                                  "Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
                     }
                     else
                     {

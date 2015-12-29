@@ -303,10 +303,10 @@ namespace Raven.Database.Util
         {
             var cfg = RavenJObject.FromObject(database.Configuration);
             cfg["OAuthTokenKey"] = "<not shown>";
-            var changesAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+            var changesAllowed = database.Configuration.Settings[Constants.Versioning.ChangesToRevisionsAllowed];
 
             if (string.IsNullOrWhiteSpace(changesAllowed) == false)
-                cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
+                cfg[Constants.Versioning.ChangesToRevisionsAllowed] = changesAllowed;
 
             return cfg;
         }

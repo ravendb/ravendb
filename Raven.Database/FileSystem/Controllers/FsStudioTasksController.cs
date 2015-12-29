@@ -21,6 +21,7 @@ using Raven.Abstractions.Json;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Actions;
+using Raven.Database.FileSystem.Bundles.Versioning.Plugins;
 using Raven.Database.FileSystem.Smuggler;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.WebApi.Attributes;
@@ -32,7 +33,7 @@ namespace Raven.Database.FileSystem.Controllers
     {
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/import")]
-        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize, bool shouldDisableVersioningBundle)
+        public async Task<HttpResponseMessage> ImportFilesystem(int batchSize, bool stripReplicationInformation, bool shouldDisableVersioningBundle)
         {
             if (!Request.Content.IsMimeMultipartContent())
             {
@@ -69,6 +70,7 @@ namespace Raven.Database.FileSystem.Controllers
                     var smugglerOptions = dataDumper.Options;
                     smugglerOptions.BatchSize = batchSize;
                     smugglerOptions.ShouldDisableVersioningBundle = shouldDisableVersioningBundle;
+                    smugglerOptions.StripReplicationInformation = stripReplicationInformation;
                     smugglerOptions.CancelToken = cts;
 
                     await dataDumper.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = uploadedFilePath }).ConfigureAwait(false);
@@ -90,9 +92,10 @@ namespace Raven.Database.FileSystem.Controllers
                     {
                         status.ExceptionDetails = e.Message;
                     }
-                    if (e is OperationVetoedException)
+                    else if (e is OperationVetoedException && e.Message.Contains(VersioningTriggerActions.CreationOfHistoricalRevisionIsNotAllowed))
                     {
-                        status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import File System";
+                        status.ExceptionDetails = "You are trying to import historical documents while the versioning bundle is enabled. " + 
+                                                  "You should disable versioning during such import. Please mark the checkbox 'Disable versioning bundle during import' at Import File System";
                     }
                     else
                     {
