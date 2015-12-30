@@ -9,9 +9,6 @@ using Raven.Tests.Common;
 namespace Raven.Tests.Storage.Bugs
 {
     using System.Linq;
-
-    using Raven.Database.Storage;
-
     using Xunit;
 
     public class GetReduceKeysAndTypesNotPagingProperly : RavenTest
@@ -21,8 +18,11 @@ namespace Raven.Tests.Storage.Bugs
         {
             using (var storage = NewTransactionalStorage(requestedStorage: "esent"))
             {
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(1, "reduceKey1", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(1, "reduceKey1", ReduceType.SingleStep));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(1, "reduceKey2", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(1, "reduceKey2", ReduceType.SingleStep));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(1, "reduceKey3", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(1, "reduceKey3", ReduceType.SingleStep));
 
                 storage.Batch(accessor =>
@@ -44,6 +44,6 @@ namespace Raven.Tests.Storage.Bugs
                     Assert.NotEqual(k2.ReduceKey, k3.ReduceKey);
                 });
             }
-        } 
+        }
     }
 }
