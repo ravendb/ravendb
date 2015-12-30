@@ -1656,7 +1656,6 @@ namespace Raven.Imports.Newtonsoft.Json
 
         public Stream ReadBytesAsStream()
         {
-            var tempFileName = System.IO.Path.GetTempFileName();
             
             if(TokenType != JsonToken.PropertyName)
                 throw new InvalidOperationException("Can only call this on a value");
@@ -1699,10 +1698,15 @@ namespace Raven.Imports.Newtonsoft.Json
                     >= buffer.Length)
                 {
                     if (stream == null)
+                    {
+                        var tempFileName = System.IO.Path.GetTempFileName();
+
                         stream = new FileStream(tempFileName,
                             FileMode.OpenOrCreate, FileAccess.ReadWrite,
                             FileShare.None, 4096,
                             FileOptions.SequentialScan | FileOptions.DeleteOnClose );
+                        
+                    }
                     stream.Write(buffer, 0, bufferPos);
                     bufferPos = 0;
                 }
