@@ -124,6 +124,7 @@ namespace Raven.Database.Config
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 			FlushIndexToDiskSizeInMb = ravenSettings.FlushIndexToDiskSizeInMb.Value;
+			UseNullDocumentCacher = ravenSettings.UseNullDocumentCacher.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
@@ -893,6 +894,11 @@ namespace Raven.Database.Config
 		/// Indexes are flushed to a disk only if their in-memory size exceed the specified value. Default: 5MB
 		/// </summary>
 		public long FlushIndexToDiskSizeInMb { get; set; }
+		
+		/// <summary>
+		/// Do not use any memory cache as document cacher
+		/// </summary>
+		public bool UseNullDocumentCacher { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
