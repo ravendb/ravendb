@@ -463,7 +463,7 @@ namespace Raven.Database.Config
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
             var prop = getKey.ToProperty();
-            return prop.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key;
+            return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
         }
 
         public static RavenConfiguration CreateFrom(RavenConfiguration parent)
