@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
 using Raven.Tests.Common;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Storage.Bugs
 {
@@ -13,10 +14,12 @@ namespace Raven.Tests.Storage.Bugs
 
     public class GetReduceKeysAndTypesNotPagingProperly : RavenTest
     {
+        [Theory]
+        [PropertyData("Storages")]
         [Fact]
-        public void IssueWithPaging()
+        public void IssueWithPaging(string storageType)
         {
-            using (var storage = NewTransactionalStorage(requestedStorage: "esent"))
+            using (var storage = NewTransactionalStorage(requestedStorage: storageType))
             {
                 storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(1, "reduceKey1", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(1, "reduceKey1", ReduceType.SingleStep));
