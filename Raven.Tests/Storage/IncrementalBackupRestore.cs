@@ -27,7 +27,7 @@ namespace Raven.Tests.Storage
             DataDir = NewDataPath("DataDirectory");
         }
 
-        private void InitializeDocumentDatabase(string storageName)
+        private void InitializeDocumentDatabase()
         {
             db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
@@ -41,7 +41,7 @@ namespace Raven.Tests.Storage
                 {
                     AllowIncrementalBackups = true
                 }
-            }.Initialize(), null);
+            }, null);
             db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
         }
 
@@ -51,11 +51,10 @@ namespace Raven.Tests.Storage
             base.Dispose();
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void AfterIncrementalBackupRestoreCanReadDocument(string storageName)
+        [Fact]
+        public void AfterIncrementalBackupRestoreCanReadDocument()
         {
-            InitializeDocumentDatabase(storageName);
+            InitializeDocumentDatabase();
             IOExtensions.DeleteDirectory(BackupDir);
 
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
@@ -111,11 +110,10 @@ namespace Raven.Tests.Storage
             Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void AfterMultipleIncrementalBackupRestoreCanReadDocument(string storageName)
+        [Fact]
+        public void AfterMultipleIncrementalBackupRestoreCanReadDocument()
         {
-            InitializeDocumentDatabase(storageName);
+            InitializeDocumentDatabase();
             IOExtensions.DeleteDirectory(BackupDir);
 
             db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
@@ -187,9 +185,8 @@ namespace Raven.Tests.Storage
 
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void IncrementalBackupWithCircularLogOrVoronIncrementalBackupsNotEnabledThrows(string storageName)
+        [Fact]
+        public void IncrementalBackupWithCircularLogOrVoronIncrementalBackupsNotEnabledThrows()
         {
             db = new DocumentDatabase(new AppSettingsBasedConfiguration
             {
