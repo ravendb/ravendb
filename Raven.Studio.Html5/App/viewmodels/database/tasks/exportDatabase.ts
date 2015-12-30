@@ -96,6 +96,7 @@ class exportDatabase extends viewModelBase {
         };
         
         $("#SmugglerOptions").val(JSON.stringify(smugglerOptions));
+        $("#FileName").val(this.noneDefualtFileName());
 
         new validateExportDatabaseOptionsCommand(smugglerOptions, this.activeDatabase()).execute()
             .done(() => {

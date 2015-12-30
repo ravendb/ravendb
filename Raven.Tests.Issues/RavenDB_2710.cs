@@ -6,18 +6,19 @@
 using System;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Client.Embedded;
 using Raven.Tests.Common.Dto;
 using Raven.Tests.Helpers;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
     public class RavenDB_2710 : RavenTestBase
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "PeriodicBackup;Replication";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "PeriodicBackup;Replication");
         }
 
         [Fact]

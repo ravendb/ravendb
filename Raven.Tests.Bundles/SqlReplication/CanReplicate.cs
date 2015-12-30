@@ -20,6 +20,7 @@ using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Util;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -29,9 +30,9 @@ namespace Raven.Tests.Bundles.SqlReplication
 {
     public class CanReplicate : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "sqlReplication";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "sqlReplication");
         }
 
         private const string defaultScript = @"

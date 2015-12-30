@@ -29,8 +29,8 @@ namespace Raven.Tests.Bundles.Expiration
         {
             ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, activeBundles: "documentExpiration", configureConfig: configuration =>
             {
-                configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
-                configuration.Expiration.DeleteFrequency = new TimeSetting(1, TimeUnit.Seconds);
+                configuration.Get().Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
+                configuration.Modify(x => x.Expiration.DeleteFrequency, new TimeSetting(1, TimeUnit.Seconds), "1");
             });
             documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: Constants.SystemDatabase);
 

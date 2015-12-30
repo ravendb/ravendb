@@ -18,6 +18,7 @@ using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -25,7 +26,7 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_2516 : ReplicationBase
     {
-        protected override void ModifyConfiguration(RavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(ConfigurationModification serverConfiguration)
         {
             Authentication.EnableOnce();
         }

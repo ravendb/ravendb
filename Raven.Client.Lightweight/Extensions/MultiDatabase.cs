@@ -65,7 +65,7 @@ namespace Raven.Client.Extensions
                 Id = Constants.Counter.Prefix + name,
                 Settings =
                 {
-                    {"Raven/Counters/DataDir", Path.Combine("~", "Counters", name)},
+                    {"Raven/Counter/DataDir", Path.Combine("~", "Counters", name)},
                 }
             };
         }

@@ -7,6 +7,7 @@ using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -21,10 +22,10 @@ namespace Raven.Tests.Triggers.Bugs
             store = NewRemoteDocumentStore(databaseName: Constants.SystemDatabase);
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
-            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (AuditTrigger)));
+            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.Admin);
+            configuration.Get().Catalog.Catalogs.Add(new TypeCatalog(typeof (AuditTrigger)));
         }
 
         [Fact]

@@ -6,10 +6,12 @@
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.FileSystem;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.FileSystem.Bundles.Versioning;
-using Raven.Smuggler;
+using Raven.Smuggler.FileSystem;
+using Raven.Smuggler.FileSystem.Files;
+using Raven.Smuggler.FileSystem.Remote;
 using Raven.Tests.Helpers;
 using Xunit;
 using VersioningUtil = Raven.Database.FileSystem.Bundles.Versioning.VersioningUtil;
@@ -30,19 +32,15 @@ namespace Raven.Tests.FileSystem.Smuggler
                 {
                     await store.AsyncFilesCommands.UploadAsync("test-" + i, StringToStream("hello"));
                 }
-
-                var options = new FilesConnectionStringOptions
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = store.DefaultFileSystem
-                };
-
-                var smuggler = new SmugglerFilesApi();
-                await smuggler.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions>
-                {
-                    From = options,
-                    ToFile = export
-                });
+                
+                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                await smuggler.ExecuteAsync(
+                    new RemoteSmugglingSource(new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = store.DefaultFileSystem
+                    }), 
+                    new FileSmugglingDestination(export, false));
 
                 fileCount = (await store.AsyncFilesCommands.GetStatisticsAsync()).FileCount;
             }
@@ -54,14 +52,18 @@ namespace Raven.Tests.FileSystem.Smuggler
                     Id = VersioningUtil.DefaultConfigurationName
                 });
 
-                var smuggler = new SmugglerFilesApi(new SmugglerFilesOptions()
-                {
-                    ShouldDisableVersioningBundle = true
-                });
+                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions()
+                                                      {
+                                                          ShouldDisableVersioningBundle = true
+                                                      });
 
-                var options = new FilesConnectionStringOptions { Url = store.Url, DefaultFileSystem = store.DefaultFileSystem };
-
-                await smuggler.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = export, To = options });
+                await smuggler.ExecuteAsync(
+                    new FileSmugglingSource(export),
+                    new RemoteSmugglingDestination(
+                        new FilesConnectionStringOptions
+                        {
+                            Url = store.Url, DefaultFileSystem = store.DefaultFileSystem
+                        }));
 
                 var fileCountAfterImport = (await store.AsyncFilesCommands.GetStatisticsAsync()).FileCount;
 
@@ -96,26 +98,21 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                 var fileCount = (await storeExport.AsyncFilesCommands.GetStatisticsAsync()).FileCount;
 
-                var smuggler = new SmugglerFilesApi(new SmugglerFilesOptions()
+                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions
                 {
                     ShouldDisableVersioningBundle = true
                 });
 
-                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+                await smuggler.ExecuteAsync(new RemoteSmugglingSource(new FilesConnectionStringOptions
                 {
-                    From = new FilesConnectionStringOptions
-                    {
-                        Url = storeExport.Url,
-                        DefaultFileSystem = storeExport.DefaultFileSystem
-                    },
-                    To = new FilesConnectionStringOptions
-                    {
-                        Url = storeImport.Url,
-                        DefaultFileSystem = storeImport.DefaultFileSystem
-                    }
-                };
-
-                await smuggler.Between(options);
+                    Url = storeExport.Url,
+                    DefaultFileSystem = storeExport.DefaultFileSystem
+                }), 
+                new RemoteSmugglingDestination(new FilesConnectionStringOptions
+                {
+                    Url = storeImport.Url,
+                    DefaultFileSystem = storeImport.DefaultFileSystem
+                }));
 
                 var fileCountAfterImport = (await storeImport.AsyncFilesCommands.GetStatisticsAsync()).FileCount;
 

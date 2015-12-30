@@ -1,39 +1,31 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.FileSystem;
 
 namespace Raven.Smuggler
 {
-    public class SmugglerFilesOperationDispatcher : SmugglerOperationDispatcher<SmugglerFilesOptions>
+    public class SmugglerFilesOperationDispatcher : SmugglerOperationDispatcher<FileSystemSmugglerOptions>
     {
-        private readonly SmugglerFilesApiBase api;
-
-        public SmugglerFilesOperationDispatcher(SmugglerFilesApiBase api)
-            : base(api.Options)
+        public SmugglerFilesOperationDispatcher()
+            : base(null)
         {
-            this.api = api;
+            // TODO arek
         }
 
-
-        protected override async Task PerformImportAsync(SmugglerFilesOptions parameters)
+        protected override Task PerformImportAsync(FileSystemSmugglerOptions parameters)
         {
-            await api.ImportData(new SmugglerImportOptions<FilesConnectionStringOptions> { FromFile = parameters.BackupPath, To = parameters.Source }).ConfigureAwait(false);            
+            throw new NotImplementedException();
         }
 
-        protected override async Task PerformExportAsync(SmugglerFilesOptions parameters)
+        protected override Task PerformExportAsync(FileSystemSmugglerOptions parameters)
         {
-            await api.ExportData(new SmugglerExportOptions<FilesConnectionStringOptions> { From = parameters.Source, ToFile = parameters.BackupPath }).ConfigureAwait(false);
+            throw new NotImplementedException();
         }
 
-        protected override async Task PerformBetweenAsync(SmugglerFilesOptions parameters)
+        protected override Task PerformBetweenAsync(FileSystemSmugglerOptions parameters)
         {
-            parameters.Destination.Url = parameters.BackupPath;
-            await api.Between(new SmugglerBetweenOptions<FilesConnectionStringOptions> { From = parameters.Source, To = parameters.Destination }).ConfigureAwait(false);
+            throw new NotImplementedException();
         }
     }
 }

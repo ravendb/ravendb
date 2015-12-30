@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -22,9 +23,9 @@ namespace Raven.Tests.MailingList
             public string ETag { get; set; }
             public DateTimeOffset LastModified { get; set; }
         }
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.RunInMemory = false;
+            configuration.Modify(x => x.Core.RunInMemory, false);
         }
         [Fact]
         public void AddTest()

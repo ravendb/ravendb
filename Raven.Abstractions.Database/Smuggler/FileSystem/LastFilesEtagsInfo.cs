@@ -1,13 +1,13 @@
 using Raven.Abstractions.Data;
 
-namespace Raven.Abstractions.Database.Smuggler.Other
+namespace Raven.Abstractions.Database.Smuggler.FileSystem
 {
     public class LastFilesEtagsInfo
     {
         public LastFilesEtagsInfo()
         {
-            this.LastFileEtag = Etag.Empty;
-            this.LastDeletedFileEtag = Etag.Empty;
+            LastFileEtag = Etag.Empty;
+            LastDeletedFileEtag = Etag.Empty; // TODO arek - verify if that property make any sense for file systems smuggling
         }
 
         public Etag LastDeletedFileEtag { get; set; }

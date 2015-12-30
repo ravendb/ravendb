@@ -462,7 +462,7 @@ class resources extends viewModelBase {
                 var settings = {
                     "Raven/ActiveBundles": bundles.join(";")
                 }
-                settings["Raven/Counters/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
+                settings["Raven/Counter/DataDir"] = (!this.isEmptyStringOrWhitespace(counterStoragePath)) ? counterStoragePath : "~\\Counters\\" + counterStorageName;
                 if (!this.isEmptyStringOrWhitespace(tempPath)) {
                     settings["Raven/Storage/TempPath"] = tempPath;
                 }

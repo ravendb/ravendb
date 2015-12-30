@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -28,9 +29,9 @@ namespace Raven.Tests.Bugs.MapRedue
             };
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.MaxNumberOfParallelProcessingTasks = 1;
+            configuration.Modify(x => x.Core.MaxNumberOfParallelProcessingTasks, 1);
         }
 
         [Fact]

@@ -12,7 +12,7 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Smuggler
 {
-    public abstract class SmugglerOperationDispatcher<T> where T : SmugglerOptions
+    public abstract class SmugglerOperationDispatcher<T>
     {
         public T Options { get; private set; }
 
@@ -46,7 +46,7 @@ namespace Raven.Smuggler
                 {
                     if (e.Status == WebExceptionStatus.ConnectFailure)
                     {
-                        Console.WriteLine("Error: {0} {1}", e.Message, Options.SourceUrl + (action == SmugglerAction.Between ? " => " + this.Options.DestinationUrl : ""));
+                       // TODO arek Console.WriteLine("Error: {0} {1}", e.Message, Options.SourceUrl + (action == SmugglerAction.Between ? " => " + this.Options.DestinationUrl : ""));
                         var socketException = e.InnerException as SocketException;
                         if (socketException != null)
                         {

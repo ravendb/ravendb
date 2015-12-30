@@ -76,7 +76,7 @@ namespace Raven.Abstractions.Database.Smuggler
         }
     }
 
-    public class SmugglerBetweenOptions<T> where T : ConnectionStringOptions
+    public class SmugglerBetweenOptions<T> where T : ConnectionStringOptions // TODO arek - remove that
     {
         public T From { get; set; }
 
@@ -90,7 +90,7 @@ namespace Raven.Abstractions.Database.Smuggler
         public Action<string> ReportProgress { get; set; } 
     }
 
-    public class SmugglerExportOptions<T> where T : ConnectionStringOptions
+    public class SmugglerExportOptions<T> where T : ConnectionStringOptions // TODO arek - remove that
     {
         public T From { get; set; }
 
@@ -105,7 +105,7 @@ namespace Raven.Abstractions.Database.Smuggler
         public Stream ToStream { get; set; }
     }
 
-    public class SmugglerImportOptions<T> where T : ConnectionStringOptions
+    public class SmugglerImportOptions<T> where T : ConnectionStringOptions // TODO arek - remove that
     {
         public T To { get; set; }
 

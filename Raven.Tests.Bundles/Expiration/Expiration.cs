@@ -33,7 +33,7 @@ namespace Raven.Tests.Bundles.Expiration
             SystemTime.UtcDateTime = () => DateTime.UtcNow;
             ravenDbServer = GetNewServer(activeBundles: "DocumentExpiration", configureConfig: configuration =>
             {
-                configuration.Expiration.DeleteFrequency = new TimeSetting(1, TimeUnit.Seconds);
+                configuration.Modify(x => x.Expiration.DeleteFrequency, new TimeSetting(1, TimeUnit.Seconds), "1");
             });
             documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
         }

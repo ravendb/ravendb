@@ -13,6 +13,7 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -20,9 +21,9 @@ namespace Raven.Tests.Bundles.LiveTest
 {
     public class PutTriggerTests : RavenTest
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(LiveTestDatabaseDocumentPutTrigger).Assembly));
+            configuration.Get().Catalog.Catalogs.Add(new AssemblyCatalog(typeof(LiveTestDatabaseDocumentPutTrigger).Assembly));
         }
 
         [Fact]

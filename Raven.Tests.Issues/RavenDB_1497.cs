@@ -15,6 +15,7 @@ using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -41,11 +42,11 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(DataDir);
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Storage.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
-            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
-            configuration.Core.RunInMemory = false;
+            configuration.Modify(x => x.Storage.AllowIncrementalBackups, true); //for now all tests run under Voron - so this is needed
+            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.Modify(x => x.Core.RunInMemory, false);
         }
 
         public class Users_ByName : AbstractIndexCreationTask<User> 

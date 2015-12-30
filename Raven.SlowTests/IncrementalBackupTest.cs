@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -60,11 +61,11 @@ namespace Raven.SlowTests
             }
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
-            configuration.Initialize();
-            configuration.Storage.AllowIncrementalBackups = true;
+            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.Get().Initialize();
+            configuration.Modify(x => x.Storage.AllowIncrementalBackups, true);
         }
 
         public override void Dispose()

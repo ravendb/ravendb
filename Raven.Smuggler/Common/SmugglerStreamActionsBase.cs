@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="DatabaseSmugglerStreamActionsBase.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SmugglerStreamActionsBase.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -8,13 +8,13 @@ using System;
 
 using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Smuggler.Database.Streams
+namespace Raven.Smuggler.Common
 {
-    public class DatabaseSmugglerStreamActionsBase : IDisposable
+    public abstract class SmugglerStreamActionsBase : IDisposable
     {
         protected JsonTextWriter Writer { get; private set; }
 
-        public DatabaseSmugglerStreamActionsBase(JsonTextWriter writer, string sectionName)
+        protected SmugglerStreamActionsBase(JsonTextWriter writer, string sectionName)
         {
             Writer = writer;
             Writer.WritePropertyName(sectionName);

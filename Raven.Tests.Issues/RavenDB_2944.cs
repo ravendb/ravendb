@@ -13,6 +13,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -22,9 +23,9 @@ namespace Raven.Tests.Issues
     {
         private const int MaxNumberOfItemsToProcessInTestIndexes = 256;
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Indexing.MaxNumberOfItemsToProcessInTestIndexes = MaxNumberOfItemsToProcessInTestIndexes;
+            configuration.Modify(x => x.Indexing.MaxNumberOfItemsToProcessInTestIndexes, MaxNumberOfItemsToProcessInTestIndexes);
         }
 
         private class Order

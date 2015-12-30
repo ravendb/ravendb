@@ -8,6 +8,8 @@ using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Document;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Security.OAuth
@@ -23,9 +25,9 @@ namespace Raven.Tests.Security.OAuth
             store.ApiKey = apiKey;
         }
 
-        protected override void ConfigureConfig(RavenConfiguration ravenConfiguration)
+        protected override void ConfigureConfig(ConfigurationModification ravenConfiguration)
         {
-            ravenConfiguration.Licensing.AllowAdminAnonymousAccessForCommercialUse = true;
+            ravenConfiguration.Modify(x => x.Licensing.AllowAdminAnonymousAccessForCommercialUse, true);
         }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)

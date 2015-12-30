@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
+
 using Raven.Client.Document;
 using Raven.Server;
 using Raven.Tests.Common;
@@ -30,7 +32,7 @@ namespace Raven.Tests.Bundles.Encryption
                 runInMemory: false, dataDirectory: path, activeBundles: "Encryption",
                 configureConfig: configuration =>
             {
-                configuration.Encryption.EncryptionKey = "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=";
+                configuration.Modify(x => x.Encryption.EncryptionKey, "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8=");
             });
         }
 

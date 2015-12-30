@@ -5,6 +5,8 @@ using Raven.Tests.Common;
 using Xunit;
 using System.Linq;
 
+using Raven.Tests.Helpers.Util;
+
 namespace Raven.Tests.MailingList
 {
     using Raven.Abstractions.Indexing;
@@ -22,9 +24,9 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FilterEverything)));
+            configuration.Get().Catalog.Catalogs.Add(new TypeCatalog(typeof(FilterEverything)));
         }
 
         [Fact]

@@ -11,10 +11,11 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Common;
 
 namespace Raven.Smuggler.Database.Streams
 {
-    public class DatabaseSmugglerStreamTransformerActions : DatabaseSmugglerStreamActionsBase, IDatabaseSmugglerTransformerActions
+    public class DatabaseSmugglerStreamTransformerActions : SmugglerStreamActionsBase, IDatabaseSmugglerTransformerActions
     {
         public DatabaseSmugglerStreamTransformerActions(JsonTextWriter writer)
             : base(writer, "Transformers")

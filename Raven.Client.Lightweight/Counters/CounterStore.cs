@@ -61,7 +61,7 @@ namespace Raven.Client.Counters
                         Id = Constants.Counter.Prefix + Name,
                         Settings = new Dictionary<string, string>
                         {
-                            {"Raven/Counters/DataDir", @"~\Counters\" + Name}
+                            {"Raven/Counter/DataDir", @"~\Counters\" + Name}
                         },
                     }, Name).ConfigureAwait(false).GetAwaiter().GetResult();
                 }

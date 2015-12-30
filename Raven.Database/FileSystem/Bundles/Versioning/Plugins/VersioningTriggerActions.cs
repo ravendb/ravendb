@@ -16,6 +16,9 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 {
     public class VersioningTriggerActions
     {
+        internal const string CreationOfHistoricalRevisionIsNotAllowed = "Creating a historical revision is not allowed";
+        internal const string ModificationOfHistoricalRevisionIsNotAllowed = "Modifying a historical revision is not allowed";
+
         private readonly RavenFileSystem fileSystem;
 
         public VersioningTriggerActions(RavenFileSystem fileSystem)
@@ -28,15 +31,23 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
             VetoResult veto = VetoResult.Allowed;
             fileSystem.Storage.Batch(accessor =>
             {
-                var file = accessor.ReadFile(name);
-                if (file == null)
-                    return;
-
-                if (fileSystem.Configuration.FileSystem.Versioning.ChangesToRevisionsAllowed == false &&
-                    file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical" &&
-                    accessor.IsVersioningActive(name))
+                if (accessor.IsVersioningActive(name) == false)
                 {
-                    veto = VetoResult.Deny("Modifying a historical revision is not allowed");
+                    veto = VetoResult.Allowed;
+                }
+                else if (accessor.IsVersioningDisabledForImport(metadata))
+                {
+                    veto = VetoResult.Allowed;
+                }
+                else
+                {
+                    var file = accessor.ReadFile(name);
+
+                    if (fileSystem.Configuration.FileSystem.Versioning.ChangesToRevisionsAllowed == false &&
+                         (file?.Metadata ?? metadata).Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
+                    {
+                        veto = VetoResult.Deny(file == null ? CreationOfHistoricalRevisionIsNotAllowed : ModificationOfHistoricalRevisionIsNotAllowed);
+                    }
                 }
             });
 

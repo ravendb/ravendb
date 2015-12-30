@@ -11,14 +11,16 @@ using Raven.Tests.Common;
 using Xunit;
 using System.Linq;
 
+using Raven.Tests.Helpers.Util;
+
 namespace Raven.Tests.Indexes
 {
     public class OldIndexRunWhileNewIndexesAreRunning : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 128;
-            configuration.Core.InitialNumberOfItemsToProcessInSingleBatch = 128;
+            configuration.Modify(x => x.Core.MaxNumberOfItemsToProcessInSingleBatch, 128);
+            configuration.Modify(x => x.Core._InitialNumberOfItemsToProcessInSingleBatch, 128);
         }
 
         [Fact]

@@ -5,6 +5,8 @@ using System.Linq;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Helpers;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 using Xunit.Extensions;
 
@@ -38,9 +40,9 @@ namespace Raven.Tests.Issues
             }
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Queries.MaxClauseCount = MaxClauseCountInTest + 1;
+            configuration.Modify(x => x.Queries.MaxClauseCount, MaxClauseCountInTest + 1);
         }
 
         [Fact]

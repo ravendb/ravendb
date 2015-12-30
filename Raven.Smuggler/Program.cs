@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Net.Http;
 using System.Runtime.Remoting.Messaging;
 using NDesk.Options;
 using Raven.Abstractions;
@@ -16,21 +15,42 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Database.Smuggler;
+using Raven.Abstractions.Database.Smuggler.FileSystem;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
-//using Raven.Database.Smuggler;
+using Raven.Smuggler.FileSystem;
+using Raven.Smuggler.FileSystem.Files;
+using Raven.Smuggler.FileSystem.Remote;
 using Raven.Smuggler.Helpers;
 
 namespace Raven.Smuggler
 {
     public class Program
     {
+        private class FileSystemSmugglingStuff
+        {
+            public FileSystemSmugglingStuff()
+            {
+                Smuggler = new FileSystemSmuggler(Options);
+            }
+
+            public FileSystemSmuggler Smuggler { get; }
+
+            public readonly FileSystemSmugglerOptions Options = new FileSystemSmugglerOptions();
+
+            public readonly FilesConnectionStringOptions FirstConnection = new FilesConnectionStringOptions();
+
+            public readonly FilesConnectionStringOptions SecondConnection = new FilesConnectionStringOptions();
+
+            public readonly OptionSet OptionSet = new OptionSet();
+        }
+
+        private readonly FileSystemSmugglingStuff fileSystem = new FileSystemSmugglingStuff();
+
         //private readonly SmugglerDatabaseApi smugglerApi = new SmugglerDatabaseApi();
-        //private readonly SmugglerFilesApi smugglerFilesApi = new SmugglerFilesApi();
         //private readonly SmugglerCounterApi smugglerCounterApi = new SmugglerCounterApi();
 
         private OptionSet databaseOptionSet;
-        private OptionSet filesystemOptionSet;
         private OptionSet counterOptionSet;
         private readonly OptionSet selectionDispatching;
         private bool allowImplicitDatabase = false;
@@ -38,11 +58,11 @@ namespace Raven.Smuggler
         private Program()
         {
    //         var databaseOptions = smugglerApi.Options;
-   //         var filesOptions = smugglerFilesApi.Options;
+
             //var counterOptions = smugglerCounterApi.Options;
 
-      //      selectionDispatching = new OptionSet();
-         //   selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
+            selectionDispatching = new OptionSet();
+            selectionDispatching.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
             //selectionDispatching.Add("nc|no-compression-on-import:", OptionCategory.None, "A flag that if set disables compression usage during import of documents.", value =>
             //{
             //	bool disableCompression;
@@ -53,19 +73,19 @@ namespace Raven.Smuggler
             //		PrintUsageAndExit(new ArgumentException("Invalid value for no-compression-on-import flag. Only 'true' and 'false' values should be used."));
             //});
 
-         //   selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
-         //   {
+            //   selectionDispatching.Add("d|d2|database|database2:", OptionCategory.None, string.Empty, value =>
+            //   {
             //    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Database)
             //	    mode = SmugglerMode.Database;
             //	else PrintUsageAndExit(new ArgumentException("Parameters for Database and for other storage types are mixed. You cannot use multiple in the same request."));
-         //   });
+            //   });
 
-            //selectionDispatching.Add("f|f2|filesystem|filesystem2:", OptionCategory.None, string.Empty, value =>
-         //   {
-            //    if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Filesystem)
-            //	    mode = SmugglerMode.Filesystem;
-            //	else PrintUsageAndExit(new ArgumentException("Parameters for Filesystem and for other storage types are mixed. You cannot use multiple in the same request."));
-         //   });
+            selectionDispatching.Add("f|f2|filesystem|filesystem2:", OptionCategory.None, string.Empty, value =>
+            {
+                if (mode == SmugglerMode.Unknown || mode == SmugglerMode.Filesystem)
+                    mode = SmugglerMode.Filesystem;
+                else PrintUsageAndExit(new ArgumentException("Parameters for Filesystem and for other storage types are mixed. You cannot use multiple in the same request."));
+            });
 
             //selectionDispatching.Add("c|c2|counter|counter2:", OptionCategory.None, string.Empty, value =>
             //{
@@ -75,7 +95,7 @@ namespace Raven.Smuggler
             //});
 
             //DefineDatabaseOptionsSet(databaseOptions);
-            //DefineFilesystemOptionSet(filesOptions);
+            DefineFilesystemOptionSet(fileSystem.OptionSet, fileSystem.Options, fileSystem.FirstConnection, fileSystem.SecondConnection);
             //DefineCounterOptionSet(counterOptions);
         }
 
@@ -100,22 +120,23 @@ namespace Raven.Smuggler
             counterOptionSet.Add("c2|counter2:", OptionCategory.SmugglerCounter, "The counter storage to export to. If no specified, the operations will be on the default counter storage. This parameter is used only in the between operation.", value => counterStorageName2 = value);
         }
 
-        private void DefineFilesystemOptionSet(SmugglerFilesOptions filesOptions)
+        private void DefineFilesystemOptionSet(OptionSet optionSet, FileSystemSmugglerOptions options, FilesConnectionStringOptions source, FilesConnectionStringOptions destination)
         {
-            filesystemOptionSet = new OptionSet();
-            filesystemOptionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
-            filesystemOptionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => filesOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
-            filesystemOptionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => filesOptions.Incremental = true);
-            filesystemOptionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).UserName = value);
-            filesystemOptionSet.Add("u2|user2|username2:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).UserName = value);
-            filesystemOptionSet.Add("p|pass|password:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Password = value);
-            filesystemOptionSet.Add("p2|pass2|password2:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Password = value);
-            filesystemOptionSet.Add("domain:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate.", value => GetCredentials(filesOptions.Source).Domain = value);
-            filesystemOptionSet.Add("domain2:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(filesOptions.Destination).Domain = value);
-            filesystemOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth.", value => filesOptions.Source.ApiKey = value);
-            filesystemOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => filesOptions.Destination.ApiKey = value);
-            filesystemOptionSet.Add("f|filesystem:", OptionCategory.SmugglerFileSystem, "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => filesOptions.Source.DefaultFileSystem = value);
-            filesystemOptionSet.Add("f2|filesystem2:", OptionCategory.SmugglerFileSystem, "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value);
+            optionSet.OnWarning += s => ConsoleHelper.WriteLineWithColor(ConsoleColor.Yellow, s);
+            // TODO arek
+            //optionSet.Add("timeout:", OptionCategory.SmugglerFileSystem, "The timeout to use for requests", s => options.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
+            //optionSet.Add("incremental", OptionCategory.SmugglerFileSystem, "States usage of incremental operations", _ => options.Incremental = true);
+            databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerFileSystem, "Disables versioning for the duration of the import", _ => options.ShouldDisableVersioningBundle = true);
+            optionSet.Add("u|user|username:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate.", value => GetCredentials(source).UserName = value);
+            optionSet.Add("u2|user2|username2:", OptionCategory.SmugglerFileSystem, "The username to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(destination).UserName = value);
+            optionSet.Add("p|pass|password:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate.", value => GetCredentials(source).Password = value);
+            optionSet.Add("p2|pass2|password2:", OptionCategory.SmugglerFileSystem, "The password to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(destination).Password = value);
+            optionSet.Add("domain:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate.", value => GetCredentials(source).Domain = value);
+            optionSet.Add("domain2:", OptionCategory.SmugglerFileSystem, "The domain to use when the filesystem requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(destination).Domain = value);
+            optionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth.", value => source.ApiKey = value);
+            optionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => destination.ApiKey = value);
+            optionSet.Add("f|filesystem:", OptionCategory.SmugglerFileSystem, "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => source.DefaultFileSystem = value);
+            optionSet.Add("f2|filesystem2:", OptionCategory.SmugglerFileSystem, "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => destination.DefaultFileSystem = value);
         }
 
         //private void DefineDatabaseOptionsSet(DatabaseSmugglerOptions databaseOptions)
@@ -187,7 +208,7 @@ namespace Raven.Smuggler
         //	databaseOptionSet.Add("d2|database2:", OptionCategory.SmugglerDatabase, "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => databaseOptions.Destination.DefaultDatabase = value);
         //	databaseOptionSet.Add("wait-for-indexing", OptionCategory.SmugglerDatabase, "Wait until all indexing activity has been completed (import only)", _ => databaseOptions.WaitForIndexing = true);
         //	databaseOptionSet.Add("excludeexpired", OptionCategory.SmugglerDatabase, "Excludes expired documents created by the expiration bundle", _ => databaseOptions.ShouldExcludeExpired = true);
-  //          databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerDatabase, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
+        //          databaseOptionSet.Add("disable-versioning-during-import", OptionCategory.SmugglerDatabase, "Disables versioning for the duration of the import", _ => databaseOptions.ShouldDisableVersioningBundle = true);
         //	databaseOptionSet.Add("limit:", OptionCategory.SmugglerDatabase, "Reads at most VALUE documents.", s => databaseOptions.Limit = int.Parse(s));
         //	databaseOptionSet.Add("timeout:", OptionCategory.SmugglerDatabase, "The timeout to use for requests", s => databaseOptions.Timeout = TimeSpan.FromMilliseconds(int.Parse(s)));
         //	databaseOptionSet.Add("incremental", OptionCategory.SmugglerDatabase, "States usage of incremental operations", _ => databaseOptions.Incremental = true);
@@ -199,9 +220,9 @@ namespace Raven.Smuggler
         //	databaseOptionSet.Add("domain2:", OptionCategory.SmugglerDatabase, "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => GetCredentials(databaseOptions.Destination).Domain = value);
         //	databaseOptionSet.Add("key|api-key|apikey:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth.", value => databaseOptions.Source.ApiKey = value);
         //	databaseOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerDatabase, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => databaseOptions.Destination.ApiKey = value);
-  //          databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
+        //          databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
         //	databaseOptionSet.Add("continuation-token:", OptionCategory.SmugglerDatabase, "Activates the usage of a continuation token in case of unreliable connections or huge imports", s => databaseOptions.ContinuationToken = s);
-  //          databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
+        //          databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
         //}
 
         private NetworkCredential GetCredentials(FilesConnectionStringOptions connectionStringOptions)
@@ -244,9 +265,6 @@ namespace Raven.Smuggler
 
         private async Task Parse(string[] args)
         {
-            //var options = smugglerApi.Options;
-            //var filesOptions = smugglerFilesApi.Options;
-
             // Do these arguments the traditional way to maintain compatibility
             if (args.Length < 3)
                 PrintUsageAndExit(-1);
@@ -319,21 +337,40 @@ namespace Raven.Smuggler
                         {
                             try
                             {
-                                filesystemOptionSet.Parse(args);
+                                fileSystem.OptionSet.Parse(args);
                             }
                             catch (Exception e)
                             {
                                 PrintUsageAndExit(e);
                             }
 
-                            //filesOptions.Source.Url = url;
-                            //filesOptions.BackupPath = args[2];
+                            var destination = args[2];
 
-                            //if (action != SmugglerAction.Between && Directory.Exists(options.BackupPath))
-                            //    smugglerFilesApi.Options.Incremental = true;
+                            fileSystem.FirstConnection.Url = url;
 
-                            //var filesDispatcher = new SmugglerFilesOperationDispatcher(smugglerFilesApi);
-                            //await filesDispatcher.Execute(action).ConfigureAwait(false);
+                            switch (action)
+                            {
+                                case SmugglerAction.Export:
+                                    await fileSystem.Smuggler.ExecuteAsync(
+                                        new RemoteSmugglingSource(fileSystem.FirstConnection),
+                                        new FileSmugglingDestination(destination, Directory.Exists(destination)))
+                                        .ConfigureAwait(false);
+                                    break;
+                                case SmugglerAction.Import:
+                                    await fileSystem.Smuggler.ExecuteAsync(
+                                        new FileSmugglingSource(destination),
+                                        new RemoteSmugglingDestination(fileSystem.FirstConnection))
+                                        .ConfigureAwait(false);
+                                    break;
+                                case SmugglerAction.Between:
+                                    fileSystem.SecondConnection.Url = destination;
+
+                                    await fileSystem.Smuggler.ExecuteAsync(
+                                        new RemoteSmugglingSource(fileSystem.FirstConnection),
+                                        new RemoteSmugglingDestination(fileSystem.SecondConnection))
+                                        .ConfigureAwait(false);
+                                    break;
+                            }
                         }
                         break;
                     case SmugglerMode.Counter:
@@ -341,11 +378,11 @@ namespace Raven.Smuggler
                         try
                         {
                             counterOptionSet.Parse(args);
-                }
+                        }
                         catch (Exception e)
                         {
                             PrintUsageAndExit(e);
-            }
+                        }
 
                         switch (action)
                         {
@@ -462,7 +499,7 @@ Command line options:");
                     break;
                 case SmugglerMode.Filesystem:
                     selectionDispatching.WriteOptionDescriptions(Console.Out);
-                    filesystemOptionSet.WriteOptionDescriptions(Console.Out);
+                    fileSystem.OptionSet.WriteOptionDescriptions(Console.Out);
                     break;
                 case SmugglerMode.Counter:
                     selectionDispatching.WriteOptionDescriptions(Console.Out);
@@ -471,7 +508,7 @@ Command line options:");
                 default:
                     selectionDispatching.WriteOptionDescriptions(Console.Out);
                     databaseOptionSet.WriteOptionDescriptions(Console.Out);
-                    filesystemOptionSet.WriteOptionDescriptions(Console.Out);
+                    fileSystem.OptionSet.WriteOptionDescriptions(Console.Out);
                     counterOptionSet.WriteOptionDescriptions(Console.Out);
                     break;
             }

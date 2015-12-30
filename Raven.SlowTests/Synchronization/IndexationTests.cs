@@ -9,6 +9,7 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -17,9 +18,9 @@ namespace Raven.SlowTests.Synchronization
 {
     public class IndexationTests : RavenTest
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.EnableResponseLoggingForEmbeddedDatabases = true;
+            configuration.Get().EnableResponseLoggingForEmbeddedDatabases = true;
         }
 
         private class Person

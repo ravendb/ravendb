@@ -13,6 +13,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -108,7 +109,7 @@ namespace Raven.Tests.Helpers
             var messages = GetAsyncVoidMethods(assembly)
                 .Select(method =>
                     String.Format("'{0}.{1}' is an async Task method.",
-                        method.DeclaringType.Name,
+                        method.DeclaringType.FullName,
                         method.Name))
                 .ToList();
             if (messages.Any())
@@ -213,7 +214,7 @@ namespace Raven.Tests.Helpers
                 }
 
                 ModifyStore(documentStore);
-                ModifyConfiguration(documentStore.Configuration);
+                ModifyConfiguration(new ConfigurationModification(documentStore.Configuration));
                 documentStore.Configuration.PostInit();
                 documentStore.Initialize();
 
@@ -387,7 +388,7 @@ namespace Raven.Tests.Helpers
             bool enableAuthentication = false,
             string activeBundles = null,
             Action<RavenDBOptions> configureServer = null,
-            Action<RavenConfiguration> configureConfig = null,
+            Action<ConfigurationModification> configureConfig = null,
             [CallerMemberName] string databaseName = null)
         {
             if (databaseName == ".ctor")
@@ -399,7 +400,7 @@ namespace Raven.Tests.Helpers
                 pathsToDelete.Add(dataDirectory);
 
             var directory = dataDirectory ?? NewDataPath(databaseName == Constants.SystemDatabase ? null : databaseName);
-            var ravenConfiguration = new AppSettingsBasedConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration()
             {
                 Core =
                 {
@@ -407,7 +408,6 @@ namespace Raven.Tests.Helpers
                     DataDirectory = Path.Combine(directory, "System"),
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -417,9 +417,19 @@ namespace Raven.Tests.Helpers
             ravenConfiguration.FileSystem.DataDirectory = Path.Combine(directory, "FileSystem");
             ravenConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
+            var configurationModification = new ConfigurationModification(ravenConfiguration);
+
+            if (activeBundles != null)
+            {
+                configurationModification.Modify(x => x.Core._ActiveBundlesString, activeBundles);
+            }
+
             if (configureConfig != null)
-                configureConfig(ravenConfiguration);
-            ModifyConfiguration(ravenConfiguration);
+            {
+                configureConfig(configurationModification);
+            }
+
+            ModifyConfiguration(configurationModification);
 
             ravenConfiguration.PostInit();
 
@@ -455,7 +465,7 @@ namespace Raven.Tests.Helpers
             if (enableAuthentication)
             {
                 EnableAuthentication(ravenDbServer.SystemDatabase);
-                ModifyConfiguration(ravenConfiguration);
+                ModifyConfiguration(configurationModification);
                 ravenConfiguration.PostInit();
             }
 
@@ -498,7 +508,7 @@ namespace Raven.Tests.Helpers
         {
         }
 
-        protected virtual void ModifyConfiguration(RavenConfiguration configuration)
+        protected virtual void ModifyConfiguration(ConfigurationModification configuration)
         {
         }
 

@@ -22,7 +22,7 @@ namespace Raven.Tests.Common
                     return (TException) e;
                 throw new ThrowsException(typeof (TException), e);
             }
-            throw new ThrowsException(typeof(TException), null);
+            throw new ThrowsException(typeof(TException));
         }
 
         public static async Task<bool> DoesNotThrow(Func<Task> func) 

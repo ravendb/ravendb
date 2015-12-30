@@ -8,6 +8,7 @@ using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Tests.Bugs;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -15,9 +16,9 @@ namespace Raven.Tests.MultiGet
 {
     public class MultiGetSecurity : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
+        protected override void ModifyConfiguration(ConfigurationModification ravenConfiguration)
         {
-            ravenConfiguration.Core.AnonymousUserAccessMode =AnonymousUserAccessMode.Get;
+            ravenConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.Get);
             Authentication.EnableOnce();
         }
 
