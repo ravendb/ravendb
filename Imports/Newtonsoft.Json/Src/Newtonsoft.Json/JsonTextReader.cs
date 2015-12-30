@@ -76,7 +76,7 @@ namespace Raven.Imports.Newtonsoft.Json
 
             _reader = reader;
             _lineNumber = 1;
-            _chars = new char[4096];
+            _chars = new char[4097];
         }
 
         internal void SetCharBuffer(char[] chars)
