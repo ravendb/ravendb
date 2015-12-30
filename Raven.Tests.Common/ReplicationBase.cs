@@ -138,7 +138,7 @@ namespace Raven.Tests.Common
 
         }
 
-        protected virtual void ConfigureConfig(RavenConfiguration ravenConfiguration)
+        protected virtual void ConfigureConfig(ConfigurationModification config)
         {
 
         }
@@ -185,7 +185,7 @@ namespace Raven.Tests.Common
 
             serverConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
-            ModifyConfiguration(serverConfiguration);
+            ModifyConfiguration(new ConfigurationModification(serverConfiguration));
 
             serverConfiguration.PostInit();
             var ravenDbServer = new RavenDbServer(serverConfiguration)

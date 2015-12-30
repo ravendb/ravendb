@@ -10,19 +10,19 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Client.Indexes;
-using Raven.Database.Config;
 using Raven.Tests.Common;
-using Raven.Tests.Common.Attributes;
+using Raven.Tests.Helpers.Util;
+
 using Xunit.Extensions;
 
 namespace Raven.SlowTests.Issues
 {
     public class RavenDB_1280_ReOpen : RavenTest
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 50;
-            configuration.Core.MaxNumberOfItemsToReduceInSingleBatch = 50;
+            configuration.Modify(x => x.Core.MaxNumberOfItemsToProcessInSingleBatch, 50);
+            configuration.Modify(x => x.Core.MaxNumberOfItemsToReduceInSingleBatch, 50);
         }
 
         [Theory]

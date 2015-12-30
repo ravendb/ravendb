@@ -12,6 +12,7 @@ using Raven.Bundles.Versioning.Data;
 using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Bundles.Versioning
 {
@@ -35,6 +36,17 @@ namespace Raven.Database.FileSystem.Bundles.Versioning
         {
             var versioningConfiguration = GetVersioningConfiguration(accessor, filePath);
             return versioningConfiguration != null && versioningConfiguration.Exclude == false;
+        }
+
+        public static bool IsVersioningDisabledForImport(this IStorageActionsAccessor accessor, RavenJObject metadata)
+        {
+            string ignoreVersioning = null;
+            if (metadata != null)
+            {
+                ignoreVersioning = metadata.Value<string>(Constants.RavenIgnoreVersioning);
+            }
+
+            return ignoreVersioning != null && ignoreVersioning.Equals("True", StringComparison.OrdinalIgnoreCase);
         }
 
         public static FileVersioningConfiguration GetVersioningConfiguration(this IStorageActionsAccessor accessor, string filePath)

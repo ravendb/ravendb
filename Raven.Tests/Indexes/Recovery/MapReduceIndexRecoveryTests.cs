@@ -9,6 +9,7 @@ using System.Linq;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -16,9 +17,9 @@ namespace Raven.Tests.Indexes.Recovery
 {
     public class MapReduceIndexRecoveryTests : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.NumberOfItemsToExecuteReduceInSingleStep = 10;		    
+            configuration.Modify(x => x.Core.NumberOfItemsToExecuteReduceInSingleStep, 10);		    
         }
 
         [Fact]

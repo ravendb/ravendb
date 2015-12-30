@@ -2,6 +2,7 @@ using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Bundles.Versioning;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -13,9 +14,9 @@ namespace Raven.Tests.Bundles.Versioning.Bugs
 
         private readonly IDocumentStore store;
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "Versioning";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "Versioning");
         }
 
         public MultiTenant()

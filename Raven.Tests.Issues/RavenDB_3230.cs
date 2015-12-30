@@ -15,6 +15,8 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -27,11 +29,11 @@ namespace Raven.Tests.Issues
         {
             store = NewRemoteDocumentStore(enableAuthentication:true);
         }
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
             Authentication.EnableOnce();
-            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(AdminOnlyPutTrigger)));  
+            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            configuration.Get().Catalog.Catalogs.Add(new TypeCatalog(typeof(AdminOnlyPutTrigger)));  
         }
         public override void Dispose()
         {

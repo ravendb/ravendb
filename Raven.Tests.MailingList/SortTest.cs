@@ -1,9 +1,8 @@
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Database.Config;
-using Raven.Tests.Common;
 using Raven.Tests.Helpers;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -11,9 +10,9 @@ namespace Raven.Tests.MailingList
 {
     public class SortTest : RavenTestBase
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "IndexedProperties";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "IndexedProperties");
         }
 
         [Fact]

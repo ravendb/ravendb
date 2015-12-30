@@ -8,6 +8,7 @@ using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -88,9 +89,9 @@ namespace Raven.Tests.Issues
             public string CityName { get; set; }
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.MaxNumberOfParallelProcessingTasks = 1;
+            configuration.Modify(x => x.Core.MaxNumberOfParallelProcessingTasks, 1);
         }
 
         [Fact]

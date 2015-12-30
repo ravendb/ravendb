@@ -6,6 +6,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -15,9 +16,9 @@ namespace Raven.Tests.MailingList
     {
         private const int MaxNumberOfItemsInDataSet = 50;
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Indexing.MaxSimpleIndexOutputsPerDocument = 100;
+            configuration.Modify(x => x.Indexing.MaxSimpleIndexOutputsPerDocument, 100);
         }
 
         [Fact]

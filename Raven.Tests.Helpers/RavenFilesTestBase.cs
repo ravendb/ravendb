@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -75,12 +76,12 @@ namespace Raven.Tests.Helpers
                                                     bool enableAuthentication = false,
                                                     string fileSystemName = null,
                                                     string activeBundles = null,
-                                                    Action<AppSettingsBasedConfiguration> customConfig = null)
+                                                    Action<ConfigurationModification> customConfig = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var directory = dataDirectory ?? NewDataPath(fileSystemName + "_" + port);
 
-            var ravenConfiguration = new AppSettingsBasedConfiguration
+            var ravenConfiguration = new AppSettingsBasedConfiguration()
             {
                 Core =
                 {
@@ -88,7 +89,6 @@ namespace Raven.Tests.Helpers
                     DataDirectory = directory,
                     Port = port,
                     AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
-                    _ActiveBundlesString = activeBundles ?? string.Empty
                 },
 #if DEBUG
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -104,9 +104,14 @@ namespace Raven.Tests.Helpers
                 },
             };
 
+            if (activeBundles != null)
+            {
+                new ConfigurationModification(ravenConfiguration).Modify(x => x.Core._ActiveBundlesString, activeBundles);
+            }
+
             if (customConfig != null)
             {
-                customConfig(ravenConfiguration);
+                customConfig(new ConfigurationModification(ravenConfiguration));
             }
 
             if (enableAuthentication)
@@ -135,7 +140,7 @@ namespace Raven.Tests.Helpers
 
         protected virtual FilesStore NewStore(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null,
                                                 ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null,
-                                                bool runInMemory = true, Action<AppSettingsBasedConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
+                                                bool runInMemory = true, Action<ConfigurationModification> customConfig = null, string activeBundles = null, string connectionStringName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
@@ -174,7 +179,7 @@ namespace Raven.Tests.Helpers
             ICredentials credentials = null,
             string requestedStorage = null,
             [CallerMemberName] string fileSystemName = null,
-            Action<AppSettingsBasedConfiguration> customConfig = null,
+            Action<ConfigurationModification> customConfig = null,
             string activeBundles = null,
             string dataDirectory = null,
             bool runInMemory = true)

@@ -18,6 +18,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -34,6 +35,7 @@ namespace Raven.Database.Config
         private CompositionContainer container;
         private bool containerExternallySet;
         private bool initialized = false;
+        private bool allowChanges = false;
 
         public CoreConfiguration Core { get; }
 
@@ -440,10 +442,17 @@ namespace Raven.Database.Config
 
         public void SetSetting(string key, string value)
         {
-            if (initialized)
-                throw new InvalidOperationException("Configuration already initialized. You cannot specify already initialized settings.");
+            if (initialized && allowChanges == false)
+                throw new InvalidOperationException("Configuration already initialized. You cannot specify an already initialized setting.");
 
             Settings[key] = value;
+        }
+
+        internal IDisposable AllowChangeAfterInit()
+        {
+            allowChanges = true;
+
+            return new DisposableAction(() => allowChanges = false);
         }
 
         public string GetSetting(string key)
@@ -451,10 +460,10 @@ namespace Raven.Database.Config
             return Settings[key];
         }
 
-        public static string GetKey(Expression<Func<RavenConfiguration, object>> getKey)
+        public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
             var prop = getKey.ToProperty();
-            return prop.GetCustomAttributes<ConfigurationEntryAttribute>().First().Key;
+            return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
         }
 
         public static RavenConfiguration CreateFrom(RavenConfiguration parent)

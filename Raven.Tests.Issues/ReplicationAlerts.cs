@@ -14,6 +14,7 @@ using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -30,9 +31,9 @@ namespace Raven.Tests.Issues
                 File.Delete(DumpFile);
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.RunInMemory = false;
+            configuration.Modify(x => x.Core.RunInMemory, false);
         }
 
         [Trait("Category", "Smuggler")]

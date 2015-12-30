@@ -9,6 +9,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 using Xunit.Extensions;
 
@@ -23,9 +25,9 @@ namespace Raven.Tests.Issues
             BackupDir = NewDataPath("BackupDatabase");
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration config)
+        protected override void ModifyConfiguration(ConfigurationModification config)
         {
-            config.Storage.AllowIncrementalBackups = true;
+            config.Modify(x => x.Storage.AllowIncrementalBackups, true);
         }
 
         [Theory]

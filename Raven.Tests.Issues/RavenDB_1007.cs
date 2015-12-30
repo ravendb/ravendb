@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
                 {
                     AllowIncrementalBackups = true
                 }
-            }.Initialize(), null))
+            }, null))
             {
                 db.SpinBackgroundWorkers();
                 db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());

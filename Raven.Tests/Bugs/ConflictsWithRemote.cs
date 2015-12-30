@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -19,9 +20,9 @@ namespace Raven.Tests.Bugs
             public int StatusId { get; set; }
         }
 
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.RunInMemory = false;
+            configuration.Modify(x => x.Core.RunInMemory, false);
         }
 
 

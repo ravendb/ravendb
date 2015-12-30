@@ -1,26 +1,21 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util.Streams;
 using Raven.Client.Indexes;
-using Raven.Database.Config;
-using Raven.Database.FileSystem.Storage.Voron.Impl;
 using Raven.Tests.Helpers;
 using Xunit;
-using Voron;
-using Voron.Debugging;
-using System.IO;
+
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Issues
 {
     public class IndexResestWithReplication : RavenTestBase
     {
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "Replication; Compression";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "Replication; Compression");
         }
 
         [Fact]

@@ -13,11 +13,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Database.Smuggler.Database;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Bundles.PeriodicExports;
-using Raven.Database.Extensions;
 using Raven.Database.Smuggler.Embedded;
 using Raven.Smuggler.Database;
 using Raven.Smuggler.Database.Files;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -25,9 +25,9 @@ namespace Raven.Tests.Bundles.PeriodicExports
 {
     public class PeriodicBackupTests : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core._ActiveBundlesString = "PeriodicBackup";
+            configuration.Modify(x => x.Core._ActiveBundlesString, "PeriodicBackup");
         }
         public class User
         {

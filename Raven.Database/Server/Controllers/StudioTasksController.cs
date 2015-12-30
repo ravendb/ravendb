@@ -30,6 +30,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
+using Raven.Bundles.Versioning.Triggers;
 using Raven.Client.Util;
 using Raven.Database.Actions;
 using Raven.Database.Bundles.SqlReplication;
@@ -210,9 +211,11 @@ for(var customFunction in customFunctions) {{
                     {
                         status.ExceptionDetails = "Failed to load JSON Data. Please make sure you are importing .ravendump file, exported by smuggler (aka database export). If you are importing a .ravnedump file then the file may be corrupted";
                     }
-                    else if (e is OperationVetoedException)
+                    else if (e is OperationVetoedException && e.Message.Contains(VersioningPutTrigger.CreationOfHistoricalRevisionIsNotAllowed))
                     {
-                        status.ExceptionDetails = "The versioning bundle is enabled. You should disable versioning during import. Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
+                        status.ExceptionDetails = "You are trying to import historical documents while the versioning bundle is enabled. " +
+                                                  "The versioning bundle is enabled. You should disable versioning during import. " +
+                                                  "Please mark the checkbox 'Disable versioning bundle during import' at Import Database: Advanced settings before importing";
                     }
                     else
                     {
@@ -245,14 +248,16 @@ for(var customFunction in customFunctions) {{
         public class ExportData
         {
             public string SmugglerOptions { get; set; }
+
+            public string FileName { get; set; }
         }
-        
+
         [HttpPost]
         [RavenRoute("studio-tasks/exportDatabase")]
         [RavenRoute("databases/{databaseName}/studio-tasks/exportDatabase")]
-        public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData smugglerOptionsJson)
+        public Task<HttpResponseMessage> ExportDatabase([FromBody]ExportData exportData)
         {
-            var requestString = smugglerOptionsJson.SmugglerOptions;
+            var requestString = exportData.SmugglerOptions;
             DatabaseSmugglerOptions smugglerOptions;
 
             using (var jsonReader = new RavenJsonTextReader(new StringReader(requestString)))
@@ -277,9 +282,9 @@ for(var customFunction in customFunctions) {{
                 }
             });
 
-            var fileName = // TODO [ppekrol] String.IsNullOrEmpty(smugglerOptions.NoneDefualtFileName) || (smugglerOptions.NoneDefualtFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
-                string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm"));// :
-              //  smugglerOptions.NoneDefualtFileName;
+            var fileName = string.IsNullOrEmpty(exportData.FileName) || (exportData.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) ?
+                string.Format("Dump of {0}, {1}", DatabaseName, DateTime.Now.ToString("yyyy-MM-dd HH-mm")) :
+              exportData.FileName;
 
             result.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
             {
@@ -288,7 +293,7 @@ for(var customFunction in customFunctions) {{
 
             return new CompletedTask<HttpResponseMessage>(result);
         }
-        
+
         [HttpPost]
         [RavenRoute("studio-tasks/createSampleData")]
         [RavenRoute("databases/{databaseName}/studio-tasks/createSampleData")]

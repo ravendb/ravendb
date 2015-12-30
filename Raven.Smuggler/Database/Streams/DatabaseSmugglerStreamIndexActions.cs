@@ -5,10 +5,11 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Smuggler.Common;
 
 namespace Raven.Smuggler.Database.Streams
 {
-    public class DatabaseSmugglerStreamIndexActions : DatabaseSmugglerStreamActionsBase, IDatabaseSmugglerIndexActions
+    public class DatabaseSmugglerStreamIndexActions : SmugglerStreamActionsBase, IDatabaseSmugglerIndexActions
     {
         public DatabaseSmugglerStreamIndexActions(JsonTextWriter writer)
             : base(writer, "Indexes")

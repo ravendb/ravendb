@@ -5,9 +5,9 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -16,9 +16,9 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_2699 : RavenTest
     {
-        protected override void ModifyConfiguration(RavenConfiguration config)
+        protected override void ModifyConfiguration(ConfigurationModification config)
         {
-            config.Storage.AllowIncrementalBackups = true;
+            config.Modify(x => x.Storage.AllowIncrementalBackups, true);
         }
 
         [Theory]

@@ -18,6 +18,7 @@ using Raven.Tests.Common;
 
 using Xunit;
 using Raven.Database.Config;
+using Raven.Tests.Helpers.Util;
 
 namespace Raven.SlowTests.Migration
 {
@@ -79,11 +80,11 @@ namespace Raven.SlowTests.Migration
             }
         }
 
-        protected override void ModifyConfiguration(RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Storage.AllowIncrementalBackups = true; //for now all tests run under Voron - so this is needed
-            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
-            configuration.Core.RunInMemory = false;
+            configuration.Modify(x => x.Storage.AllowIncrementalBackups, true); //for now all tests run under Voron - so this is needed
+            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.Modify(x => x.Core.RunInMemory, false);
         }
 
 

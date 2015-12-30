@@ -5,13 +5,13 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -19,9 +19,9 @@ namespace Raven.Tests.Issues
 {
     public class BulkInsertAuth : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
             Authentication.EnableOnce();
         }
 
@@ -41,9 +41,9 @@ namespace Raven.Tests.Issues
 
     public class BulkInsertOAuth : RavenTest
     {
-        protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
+        protected override void ModifyConfiguration(ConfigurationModification configuration)
         {
-            configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
             Authentication.EnableOnce();
         }
 
