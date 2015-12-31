@@ -422,6 +422,8 @@ namespace Raven.Abstractions.Smuggler
 
         protected class AttachmentExportInfo
         {
+            [JsonIgnore]
+            public Stream Stream { get; set; }
             public byte[] Data { get; set; }
             public RavenJObject Metadata { get; set; }
             public string Key { get; set; }
@@ -555,47 +557,35 @@ namespace Raven.Abstractions.Smuggler
 
                 byte[] data;
                 using (var valueStream = jsonReader.ReadBytesAsStream())
-                    data = valueStream.ReadData();
-
-                jsonReader.Read();
-                ValidatePropertyName(jsonReader, "Metadata");
-
-                jsonReader.Read(); //go to StartObject token
-                ValidateStartObject(jsonReader);
-
-                var metadata = RavenJToken.ReadFrom(jsonReader); //read the property as the object
-
-                jsonReader.Read();
-                ValidatePropertyName(jsonReader, "Key");
-
-                var key = jsonReader.ReadAsString();
-
-                var item = RavenJObject.FromObject(new
                 {
-                    Data = data,
-                    Metadata = metadata,
-                    Key = key
-                });
+                    jsonReader.Read();
+                    ValidatePropertyName(jsonReader, "Metadata");
 
-                jsonReader.Read();
-                ValidateEndObject(jsonReader);
+                    jsonReader.Read(); //go to StartObject token
+                    ValidateStartObject(jsonReader);
 
-                if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
-                    continue;
+                    var metadata = (RavenJObject)RavenJToken.ReadFrom(jsonReader); //read the property as the object
 
-                var attachmentExportInfo =
-                    new JsonSerializer
+                    jsonReader.Read();
+                    ValidatePropertyName(jsonReader, "Key");
+
+                    var key = jsonReader.ReadAsString();
+
+                    jsonReader.Read();
+                    ValidateEndObject(jsonReader);
+
+                    if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
+                        continue;
+
+                    ShowProgress("Importing attachment {0}", key);
+
+                    await PutAttachment(new AttachmentExportInfo
                     {
-                        Converters =
-                            {
-                                new JsonToJsonConverter()
-                            }
-                    }.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
-
-                ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
-
-                await PutAttachment(attachmentExportInfo);
-
+                        Key = key,
+                        Metadata = metadata,
+                        Stream = valueStream
+                    });
+                }
                 count++;
             }
 
