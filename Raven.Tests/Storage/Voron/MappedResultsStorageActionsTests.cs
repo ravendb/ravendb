@@ -3,27 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-
-using Raven.Database.Util;
+using Raven.Abstractions.Data;
+using Raven.Database.Indexing;
+using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Tests.Common;
+using Sparrow.Collections;
+using Xunit;
+using Xunit.Extensions;
 
-namespace Raven.Tests.Storage
+namespace Raven.Tests.Storage.Voron
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-
-    using Raven.Abstractions;
-    using Raven.Abstractions.Data;
-    using Raven.Database.Indexing;
-    using Raven.Database.Storage;
-    using Raven.Json.Linq;
-
-    using Xunit;
-    using Xunit.Extensions;
-    using Sparrow.Collections;
-
     [Trait("VoronTest", "StorageActionsTests")]
     public class MappedResultsStorageActionsTests : TransactionalStorageTestBase
     {
@@ -479,7 +472,7 @@ namespace Raven.Tests.Storage
                 storage.Batch(accessor =>
                 {
                     var removed = new Dictionary<ReduceKeyAndBucket, int>();
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -502,7 +495,7 @@ namespace Raven.Tests.Storage
                                       { new ReduceKeyAndBucket(123, "reduceKey1"), 3 }
                                   };
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -525,8 +518,8 @@ namespace Raven.Tests.Storage
                                       { new ReduceKeyAndBucket(123, "reduceKey1"), 4 }
                                   };
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(404, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(404, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>

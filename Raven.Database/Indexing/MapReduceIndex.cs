@@ -495,12 +495,14 @@ namespace Raven.Database.Indexing
                 foreach (var key in keys)
                 {
                     actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
+                    context.CancellationToken.ThrowIfCancellationRequested();
                 }
 
-                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets);
+                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);
                 foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
                 {
                     actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
+                    context.CancellationToken.ThrowIfCancellationRequested();
                 }
             });
         }

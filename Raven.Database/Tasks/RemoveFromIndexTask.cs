@@ -16,6 +16,11 @@ namespace Raven.Database.Tasks
     {
         public HashSet<string> Keys { get; set; }
 
+        public override int NumberOfKeys
+        {
+            get { return Keys.Count; }
+        }
+
         public override bool SeparateTasksByIndex
         {
             get { return true; }
@@ -47,6 +52,7 @@ namespace Raven.Database.Tasks
                     keysToRemove = new HashSet<string>(Keys.Where(key=>FilterDocuments(context, accessor, key)));
                     accessor.Indexing.TouchIndexEtag(Index);
                 });
+
                 if (keysToRemove.Count == 0)
                     return;
                 context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);

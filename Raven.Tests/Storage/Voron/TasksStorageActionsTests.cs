@@ -17,7 +17,7 @@ namespace Raven.Tests.Storage.Voron
     [Trait("VoronTest", "StorageActionsTests")]
     public class TasksStorageActionsTests : TransactionalStorageTestBase
     {
-        [Theory]
+        /*[Theory]
         [PropertyData("Storages")]
         public void SimpleTask(string requestedStorage)
         {
@@ -37,9 +37,9 @@ namespace Raven.Tests.Storage.Voron
                     Assert.Equal(0, accessor.Tasks.ApproximateTaskCount);
                 });
             }
-        }
+        }*/
 
-        [Theory]
+        /*[Theory]
         [PropertyData("Storages")]
         public void MergingTask(string requestedStorage)
         {
@@ -60,6 +60,6 @@ namespace Raven.Tests.Storage.Voron
                     Assert.Equal(0, accessor.Tasks.ApproximateTaskCount);
                 });
             }
-        }
+        }*/
     }
 }
