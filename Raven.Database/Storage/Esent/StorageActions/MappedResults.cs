@@ -598,10 +598,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
             } while (Api.TryMoveNext(session, MappedResults));
         }
 
-        public void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed)
+        public void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed, CancellationToken token)
         {
             foreach (var keyAndBucket in removed)
             {
+                token.ThrowIfCancellationRequested();
                 DecrementReduceKeyCounter(indexId, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
             }
         }
@@ -630,6 +631,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
             foreach (var reduceKey in deletedReduceKeys)
             {
+                token.ThrowIfCancellationRequested();
                 DecrementReduceKeyCounter(indexId, reduceKey, 1);
             }
         }

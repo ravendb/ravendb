@@ -68,7 +68,7 @@ namespace Raven.Tests.Storage
             Assert.DoesNotThrow(() => new Guid(id));
         }
 
-        [Fact]
+        /*[Fact]
         public void CanAddAndRemoveMultipleTasks_InSingleTx()
         {
             db.TransactionalStorage.Batch(actions =>
@@ -91,7 +91,7 @@ namespace Raven.Tests.Storage
                 var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
                 Assert.False(isIndexStale);
             });
-        }
+        }*/
 
         [Fact]
         public void CanGetDocumentCounts()

@@ -216,10 +216,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed)
+        public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed, CancellationToken token)
         {
             foreach (var keyAndBucket in removed)
             {
+                token.ThrowIfCancellationRequested();
                 DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
             }
         }

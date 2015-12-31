@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="Task.cs" company="Hibernating Rhinos LTD">
+// <copyright file="DatabaseTask.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -12,6 +12,7 @@ namespace Raven.Database.Tasks
     public abstract class DatabaseTask
     {
         public int Index { get; set; }
+        public abstract int NumberOfKeys { get; }
 
         public abstract bool SeparateTasksByIndex { get; }
 
@@ -37,5 +38,12 @@ namespace Raven.Database.Tasks
         }
 
         public abstract DatabaseTask Clone();
+    }
+
+    public enum MaxTaskIdStatus
+    {
+        ReachedMaxTaskId,
+        MergeDisabled,
+        Updated
     }
 }

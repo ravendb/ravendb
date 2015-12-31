@@ -1041,14 +1041,15 @@ namespace Raven.Database.Indexing
 
         public void RemoveFromIndex(int index, string[] keys, WorkContext context)
         {
-            Index value = indexes[index];
-            if (value == null)
+            Index value;
+            if (indexes.TryGetValue(index, out value) == false)
             {
                 if (log.IsDebugEnabled)
                     log.Debug("Removing from non existing index '{0}', ignoring", index);
 
                 return;
             }
+
             value.Remove(keys, context);
             context.RaiseIndexChangeNotification(new IndexChangeNotification
             {
@@ -1091,18 +1092,20 @@ namespace Raven.Database.Indexing
             HashSet<string> reduceKeys,
             int inputCount)
         {
-            Index value = indexes[index];
-            if (value == null)
+            Index value;
+            if (indexes.TryGetValue(index, out value) == false)
             {
                 log.Debug("Tried to index on a non existent index {0}, ignoring", index);
                 return null;
             }
+
             var mapReduceIndex = value as MapReduceIndex;
             if (mapReduceIndex == null)
             {
                 log.Warn("Tried to reduce on an index that is not a map/reduce index: {0}, ignoring", index);
                 return null;
             }
+
             using (CultureHelper.EnsureInvariantCulture())
             {
                 var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys, inputCount);
@@ -1413,26 +1416,35 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
-            foreach (var value in indexes.Values.Where(value => value != null && !value.IsMapReduce))
-            {
-                try
-                {
-                    value.Flush(value.GetLastEtagFromStats());
-                }
-                catch (Exception e)
-                {
-                    value.IncrementWriteErrors(e);
-                    throw;
-                }
-            }
+
+            var indexesToFlush = indexes.Values.Where(value => value != null && !value.IsMapReduce);
+            FlushIndexesInternal(indexesToFlush);
         }
 
         public void FlushReduceIndexes()
         {
             if (indexes == null)
                 return;
-            foreach (var value in indexes.Values.Where(value => value != null && value.IsMapReduce))
+
+            var indexesToFlush = indexes.Values.Where(value => value != null && value.IsMapReduce);
+            FlushIndexesInternal(indexesToFlush);
+        }
+
+        public void FlushIndexes(HashSet<int> indexIds)
+        {
+            if (indexes == null || indexIds.Count == 0)
+                return;
+
+            var indexesToFlush = indexes.Values.Where(x => indexIds.Contains(x.IndexId));
+            FlushIndexesInternal(indexesToFlush);
+        }
+
+        private static void FlushIndexesInternal(IEnumerable<Index> indexesToFlush)
+        {
+            foreach (var value in indexesToFlush)
             {
+                var sp = Stopwatch.StartNew();
+
                 try
                 {
                     value.Flush(value.GetLastEtagFromStats());
@@ -1440,9 +1452,22 @@ namespace Raven.Database.Indexing
                 catch (Exception e)
                 {
                     value.IncrementWriteErrors(e);
+                    log.WarnException(string.Format("Failed to flush {0} index: {1} (id: {2})",
+                        GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId), e);
                     throw;
                 }
+
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug("Flashed {0} index: {1} (id: {2}), took {3}ms",
+                        GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
+                }
             }
+        }
+
+        private static string GetIndexType(bool isMapReduce)
+        {
+            return isMapReduce ? "map-reduce" : "simple map";
         }
 
         public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)

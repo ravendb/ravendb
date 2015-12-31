@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Indexing;
-using Raven.Database.Util;
 
 namespace Raven.Database.Tasks
 {
@@ -15,11 +12,15 @@ namespace Raven.Database.Tasks
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         public IDictionary<string, Etag> ReferencesToCheck { get; set; }
 
+        public override int NumberOfKeys
+        {
+            get { return ReferencesToCheck.Count; }
+        }
+
         public override string ToString()
         {
             return string.Format("Index: {0}, References: {1}", Index, string.Join(", ", ReferencesToCheck.Keys));
         }
-
 
         public override bool SeparateTasksByIndex
         {
