@@ -327,9 +327,13 @@ namespace Raven.Bundles.Replication.Tasks
                         t =>
                         {
                             // here we purge all the completed tasks at the head of the queue
-                            if (activeTasks.TryRemove(t))
+                            if (activeTasks.TryRemove(t) == false)
                             {
-                                Debugger.Break();//WTF TODO check
+                                log.Warn("Failed to remove a replication task from active tasks, will try again.");
+                                if (activeTasks.TryRemove(t) == false)
+                                {
+                                    log.Error("Failed to remove a replication task from active tasks, a second time.");
+                                }
                             }
 
                             if (t.Result ||
