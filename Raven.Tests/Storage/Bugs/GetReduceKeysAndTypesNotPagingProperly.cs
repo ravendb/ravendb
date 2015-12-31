@@ -16,7 +16,6 @@ namespace Raven.Tests.Storage.Bugs
     {
         [Theory]
         [PropertyData("Storages")]
-        [Fact]
         public void IssueWithPaging(string storageType)
         {
             using (var storage = NewTransactionalStorage(requestedStorage: storageType))
