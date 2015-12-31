@@ -56,11 +56,12 @@ namespace Rhino.Licensing
         public async Task<DateTime> GetDateAsync()
         {
             var sp = Stopwatch.StartNew();
+            var original = index;
             while (true)
             {
                 if (sp.Elapsed.TotalSeconds > 5)
                 {
-                    throw new TimeoutException("After " + sp.Elapsed + " we couldn't get a time from the network, giving up (tried " + (index + 1) + " servers");
+                    throw new TimeoutException("After " + sp.Elapsed + " we couldn't get a time from the network, giving up (tried " + (original- index) + " servers");
                 }
                 index++;
                 if (hosts.Length <= index)
