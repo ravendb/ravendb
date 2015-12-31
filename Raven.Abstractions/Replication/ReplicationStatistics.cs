@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Replication
         public string Url { get; set; }
         public DateTime? LastHeartbeatReceived { get; set; }
         public Etag LastEtagCheckedForReplication { get; set; }
-        public Etag LastReplicatedDocumentEtag { get; set; }
+        public Etag LastReplicatedEtag { get; set; }
         public Etag LastReplicatedAttachmentEtag { get; set; }
         public DateTime? LastReplicatedLastModified { get; set; }
         public DateTime? LastSuccessTimestamp { get; set; }

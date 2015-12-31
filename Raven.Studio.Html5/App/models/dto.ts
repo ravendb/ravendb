@@ -362,7 +362,7 @@ interface replicationStatsDto {
     Url: string;
     LastHeartbeatReceived: string;
     LastEtagCheckedForReplication: string;
-    LastReplicatedDocumentEtag: string;
+    LastReplicatedEtag: string;
     LastReplicatedAttachmentEtag: string;
     LastReplicatedLastModified: string;
     LastSuccessTimestamp: string;
