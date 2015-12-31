@@ -73,7 +73,7 @@ task Compile -depends Init, CompileHtml5 {
 
     &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="$nowarn" /p:VisualStudioVersion=12.0 /maxcpucount /verbosity:minimal
     
-    Write-Host "msbuild exit code:  $LastExitCode"
+    Write-Host "msbuild exit code: $LastExitCode"
 
     if( $LastExitCode -ne 0){
         throw "Failed to build"

@@ -125,14 +125,18 @@ namespace Raven.Tests.Storage.Voron
             {
                 storage.Batch(accessor => Assert.Equal(0, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.SingleStep));
                 storage.Batch(accessor => Assert.Equal(1, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.SingleStep));
                 storage.Batch(accessor => Assert.Equal(1, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey2", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey2", ReduceType.SingleStep));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey3", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey3", ReduceType.SingleStep));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(404, "reduceKey4", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(404, "reduceKey4", ReduceType.MultiStep));
                 storage.Batch(accessor => Assert.Equal(3, accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).Count()));
 
@@ -256,13 +260,14 @@ namespace Raven.Tests.Storage.Voron
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 5));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.None));
 
                 storage.Batch(
                     accessor =>
                     {
                         var keyStats = accessor.MapReduce.GetKeysStats(303, 0, 10).ToList();
-                        Assert.Equal(0, keyStats.Count);
+                        Assert.Equal(1, keyStats.Count);
 
                         var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).ToList();
                         Assert.Equal(1, reduceKeysAndTypes.Count);
@@ -276,7 +281,7 @@ namespace Raven.Tests.Storage.Voron
                     accessor =>
                     {
                         var keyStats = accessor.MapReduce.GetKeysStats(303, 0, 10).ToList();
-                        Assert.Equal(0, keyStats.Count);
+                        Assert.Equal(1, keyStats.Count);
 
                         var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes(303, 0, 10).ToList();
                         Assert.Equal(1, reduceKeysAndTypes.Count);
@@ -292,8 +297,8 @@ namespace Raven.Tests.Storage.Voron
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.MultiStep));
                 storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 5));
+                storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.MultiStep));
 
                 storage.Batch(
                     accessor =>
@@ -340,7 +345,7 @@ namespace Raven.Tests.Storage.Voron
 
                 storage.Batch(x =>
                 {
-                    var results = x.MapReduce.GetMappedResults(303, new HashSet<string> { "reduceKey1" }, true,100, new HashSet<string>(), CancellationToken.None);
+                    var results = x.MapReduce.GetMappedResults(303, new HashSet<string> { "reduceKey1" }, true, 100, new HashSet<string>(), CancellationToken.None);
 
                     Assert.Equal(1, results.Count);
 
@@ -1200,16 +1205,16 @@ namespace Raven.Tests.Storage.Voron
                 storage.Batch(accessor =>
                 {
                     var results = accessor.MapReduce
-                        .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()){}, CancellationToken.None)
+                        .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>()) { }, CancellationToken.None)
                         .ToList();
 
                     Assert.Equal(0, results.Count);
 
                     results = accessor.MapReduce
                         .GetItemsToReduce(new GetItemsToReduceParams(303, new HashSet<string> { "reduceKey1" }, 1, false, new ConcurrentSet<object>())
-                                          {
-                                              Take = 10
-                                          }, CancellationToken.None)
+                        {
+                            Take = 10
+                        }, CancellationToken.None)
                         .ToList();
 
                     Assert.Equal(1, results.Count);
@@ -1603,6 +1608,7 @@ namespace Raven.Tests.Storage.Voron
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
                 storage.Batch(accessor => Assert.Equal(ReduceType.None, accessor.MapReduce.GetLastPerformedReduceType(303, "reduceKey1")));
+                storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter(303, "reduceKey1", 2));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.SingleStep));
                 storage.Batch(accessor => Assert.Equal(ReduceType.SingleStep, accessor.MapReduce.GetLastPerformedReduceType(303, "reduceKey1")));
                 storage.Batch(accessor => accessor.MapReduce.UpdatePerformedReduceType(303, "reduceKey1", ReduceType.MultiStep));
