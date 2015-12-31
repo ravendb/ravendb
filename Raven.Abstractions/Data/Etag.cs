@@ -21,17 +21,6 @@ namespace Raven.Abstractions.Data
 
         public int CompareTo(Etag other)
         {
-            return CompareToInternal(other);
-        }
-
-        public int CompareTo(object other)
-        {
-            var otherAsEtag = other as Etag;
-            return CompareToInternal(otherAsEtag);
-        }
-
-        private int CompareToInternal(Etag other)
-        {
             if (other == null)
                 return -1;
             var sub = restarts - other.restarts;
@@ -41,6 +30,12 @@ namespace Raven.Abstractions.Data
             if (sub != 0)
                 return sub > 0 ? 1 : -1;
             return 0;
+        }
+
+        public int CompareTo(object other)
+        {
+            var otherAsEtag = other as Etag;
+            return CompareTo(otherAsEtag);
         }
 
         long restarts;
