@@ -425,6 +425,11 @@ namespace Rhino.Licensing
 			if (!NetworkInterface.GetIsNetworkAvailable())
 				return;
 
+		    var sntpDisable = Environment.GetEnvironmentVariable("RAVENDB_SNTP_DISABLE");
+		    bool result;
+		    if (bool.TryParse(sntpDisable, out result) && result)
+		        return;
+
 			var sntp = new SntpClient(TimeServers);
 			sntp.GetDateAsync()
 				.ContinueWith(task =>
