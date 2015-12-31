@@ -234,7 +234,7 @@ namespace Raven.Bundles.Replication.Tasks
                     if (IsRunning)
                     {
                         try
-                        {
+                        {							
                             var copy = runningBecauseOfDataModifications;
                             AsyncHelpers.RunSync(() => ExecuteReplicationOnce(copy));
                         }
@@ -312,7 +312,7 @@ namespace Raven.Bundles.Replication.Tasks
                         continue;
                     }
                     
-                    var replicationTask = Task.Factory.StartNew(
+                    var replicationTask = Task.Run(
                         state =>
                         {
                             ReplicationStrategy destination = (ReplicationStrategy) state;
@@ -325,7 +325,7 @@ namespace Raven.Bundles.Replication.Tasks
                                     int filtered;
                                     Etag lastDocumentEtag;
                                     Etag lastAttachmentEtag;
-                                    if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag) || filtered > 0)
+                                    if (ReplicateTo(destination, out lastDocumentEtag, out lastAttachmentEtag, out filtered) || filtered > 0)
                                     {
                                         docDb.WorkContext.NotifyAboutWork();
                                         lastReplicatedDocumentEtags.Add(lastDocumentEtag);
@@ -548,7 +548,10 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool ReplicateTo(ReplicationStrategy destination, out Etag lastDocumentEtag,out Etag lastAttachmentEtag, out int filteredDocuments)
+        private bool ReplicateTo(ReplicationStrategy destination, 
+            out Etag lastDocumentEtag,
+            out Etag lastAttachmentEtag,
+            out int filteredDocuments)
         {
             lastDocumentEtag = Etag.InvalidEtag;
             lastAttachmentEtag = Etag.InvalidEtag;

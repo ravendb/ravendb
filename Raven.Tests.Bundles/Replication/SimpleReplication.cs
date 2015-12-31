@@ -237,7 +237,7 @@ namespace Raven.Tests.Bundles.Replication
             }			
 
             WaitForDeletionReplication<Company>(store2, "companies/1");
-            WaitForUserToContinueTheTest(store2);
+            
             using (var session = store1.OpenSession())
             {
                 session.Store(item);
@@ -246,11 +246,14 @@ namespace Raven.Tests.Bundles.Replication
 
             WaitForReplication(store2, "companies/1");
 
-                using (var session = store2.OpenSession())
-                {
+            var one = store1.DatabaseCommands.Get("companies/1");
+            var two = store2.DatabaseCommands.Get("companies/1");
+
+            using (var session = store2.OpenSession())
+            {
                 var company = session.Load<Company>("companies/1");
-            Assert.NotNull(company);
-            Assert.Equal("Hibernating Rhinos", company.Name);
+                Assert.NotNull(company);
+                Assert.Equal("Hibernating Rhinos", company.Name);
             }
 
             foreach (var ravenDbServer in servers)
