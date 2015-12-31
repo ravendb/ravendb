@@ -66,6 +66,7 @@ namespace Rhino.Licensing
                 index++;
                 if (hosts.Length <= index)
                 {
+                    index = 0;
                     throw new InvalidOperationException(
                         "After trying out all the hosts, was unable to find anyone that could tell us what the time is");
                 }
