@@ -452,7 +452,7 @@ namespace Raven.Bundles.Replication.Tasks
                         var url = connectionStringOptions.Url + "/replication/heartbeat?from=" + UrlEncodedServerUrl() + "&dbid=" + docDb.TransactionalStorage.Id;
                         var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, connectionStringOptions);
                         request.WebRequest.ContentLength = 0;
-                        request.ExecuteRequest();
+                        request.ExecuteRequest(_cts.Token);
                     }
                     catch (Exception e)
                     {
@@ -1056,7 +1056,6 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
                 var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
-                var hasMoreWork = false;
                 docDb.TransactionalStorage.Batch(actions =>
                 {
                     var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
