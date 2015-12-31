@@ -87,9 +87,12 @@ namespace Raven.Bundles.Replication.Tasks
 
         public TransformerReplicationTask TransformerReplication { get; set; }
 
+        private CancellationTokenSource _cts;
+
         public void Execute(DocumentDatabase database)
         {            
             docDb = database;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(database.WorkContext.CancellationToken);
             docDb.Notifications.OnIndexChange += (_, indexChangeNotification) =>
             {
                 if (indexChangeNotification.Type == IndexChangeTypes.MapCompleted ||
@@ -279,7 +282,7 @@ namespace Raven.Bundles.Replication.Tasks
                     var lastWorkNotificationIsIndexOrTransformer = lastWorkIsIndexOrTransformer;
                     if (!lastWorkNotificationIsIndexOrTransformer && destinationStats.TryGetValue(destination.ConnectionStringOptions.Url, out stat))
                     {
-                        var lastDocEtag = stat.LastReplicatedDocumentEtag;
+                        var lastDocEtag = stat.LastReplicatedEtag;
                         var lastAttEtag = stat.LastReplicatedAttachmentEtag;
                         var replicationLastDocEtag = lastWorkDocumentEtag;
                         var replicationLastAttEtag = lastWorkAttachmentEtag;
@@ -394,7 +397,7 @@ namespace Raven.Bundles.Replication.Tasks
             while (true)
             {
                 int nextPageStart = skip; // will trigger rapid pagination
-                var replicationSourceDocs = docDb.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, CancellationToken.None, ref nextPageStart);
+                var replicationSourceDocs = docDb.Documents.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, _cts.Token, ref nextPageStart);
                 if (replicationSourceDocs.Length == 0)
                 {
                     notifications.TryAdd(null, 15 * 1000); // marker to stop notify this
@@ -437,7 +440,7 @@ namespace Raven.Bundles.Replication.Tasks
                     RavenConnectionStringOptions connectionStringOptions;
                     try
                     {
-                        collection.TryTake(out connectionStringOptions, 15 * 1000, docDb.WorkContext.CancellationToken);
+                        collection.TryTake(out connectionStringOptions, 15 * 1000, _cts.Token);
                         if (connectionStringOptions == null)
                             return;
                     }
@@ -798,7 +801,7 @@ namespace Raven.Bundles.Replication.Tasks
 
                 var request = httpRavenRequestFactory.Create(url, HttpMethods.Put, destination.ConnectionStringOptions, GetRequestBuffering(destination));
                 request.Write(new byte[0]);
-                request.ExecuteRequest();
+                request.ExecuteRequest(_cts.Token);
                 if (log.IsDebugEnabled)
                 log.Debug("Sent last replicated document Etag {0} to server {1}", lastDocEtag, destination.ConnectionStringOptions.Url);
             }
@@ -876,7 +879,7 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 stats.LastEtagCheckedForReplication = lastReplicatedEtag;
                 if(forDocuments)
-                    stats.LastReplicatedDocumentEtag = lastReplicatedEtag;
+                    stats.LastReplicatedEtag = lastReplicatedEtag;
                 else
                     stats.LastReplicatedAttachmentEtag = lastReplicatedEtag;
             }
@@ -913,7 +916,7 @@ namespace Raven.Bundles.Replication.Tasks
                     var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
 
                     request.WriteBson(jsonAttachments);
-                    request.ExecuteRequest(docDb.WorkContext.CancellationToken);
+                    request.ExecuteRequest(_cts.Token);
                     log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
                     errorMessage = "";
                     return true;
@@ -981,7 +984,7 @@ namespace Raven.Bundles.Replication.Tasks
                 {
                     var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
                     request.Write(jsonDocuments);
-                    request.ExecuteRequest(docDb.WorkContext.CancellationToken);
+                    request.ExecuteRequest(_cts.Token);
 
                     log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
                     lastError = "";
@@ -1068,7 +1071,7 @@ namespace Raven.Bundles.Replication.Tasks
 
                     while (true)
                     {
-                        docDb.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+                        _cts.Token.ThrowIfCancellationRequested();
 
                         fetchedDocs = GetDocsToReplicate(actions, prefetchingBehavior, result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);                        
 
@@ -1559,10 +1562,23 @@ namespace Raven.Bundles.Replication.Tasks
             if (TransformerReplication != null)
                 TransformerReplication.Dispose();
 
+            _cts.Cancel();
+
             Task task;
             while (activeTasks.TryDequeue(out task))
             {
-                task.Wait();
+                try
+                {
+                    task.Wait();
+                }
+                catch (OperationCanceledException)
+                {
+                    // okay
+                }
+                catch (Exception e)
+                {
+                    log.InfoException("Error while waiting for replication tasks to complete during replication disposal", e);
+                }
             }
 
             foreach (var prefetchingBehavior in prefetchingBehaviors)
