@@ -1441,13 +1441,16 @@ namespace Raven.Database.Indexing
 
             foreach (var indexId in indexIds)
             {
-                Index value;
-                if(indexes.TryGetValue(indexId, out value))
-                    FlushIndex(value);
+                FlushIndex(indexId);
             }
         }
 
-     
+        public void FlushIndex(int indexId)
+        {
+            Index value;
+            if (indexes.TryGetValue(indexId, out value))
+                FlushIndex(value);
+        }
 
         private static void FlushIndex(Index value)
         {

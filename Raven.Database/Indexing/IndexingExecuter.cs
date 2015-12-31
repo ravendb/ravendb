@@ -135,7 +135,7 @@ namespace Raven.Database.Indexing
                         addToPulseCount: processedKeys,
                         beforePulseTransaction: () =>
                         {
-                            // if we need to PulseTransction, we are going to delete
+                            // if we need to PulseTransaction, we are going to delete
                             // all the completed tasks, so we need to flush 
                             // all the changes made to the indexes to disk before that
                             context.IndexStorage.FlushIndexes(indexIds);
@@ -220,12 +220,10 @@ namespace Raven.Database.Indexing
 
         private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, Reference<bool> foundWork)
         {
-            var removeFromIndexTasks = 
-                (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
-            var touchReferenceDocumentIfChangedTask = removeFromIndexTasks ?? 
-                actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
-
-            return touchReferenceDocumentIfChangedTask;
+            var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
+            if (removeFromIndexTasks != null)
+                return removeFromIndexTasks;
+            return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
         }
 
         private MaxTaskIdStatus MaxIdStatus(IComparable currentTaskId)
