@@ -270,13 +270,13 @@ namespace Raven.Database.Json
             var val = property as RavenJValue;
             if (val == null)
             {
-                document[propName] = valToSet.Value<int>();
+                document[propName] = valToSet.Value<long>();
                 return;
             }
             if (val.Value == null || val.Type == JTokenType.Null)
-                document[propName] = valToSet.Value<int>();
+                document[propName] = valToSet.Value<long>();
             else
-                document[propName] = RavenJToken.FromObject(val.Value<int>() + valToSet.Value<int>()).Value<int>();
+                document[propName] = RavenJToken.FromObject(val.Value<long>() + valToSet.Value<long>()).Value<long>();
         }
 
         private static void EnsurePreviousValueMatchCurrentValue(PatchRequest patchCmd, RavenJToken property)
