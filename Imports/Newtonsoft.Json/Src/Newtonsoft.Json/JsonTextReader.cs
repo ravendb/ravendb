@@ -1654,6 +1654,7 @@ namespace Raven.Imports.Newtonsoft.Json
             get { return _charPos - _lineStartPos; }
         }
 
+        private byte[] _largeBytesBuffer;
         public Stream ReadBytesAsStream()
         {
             
@@ -1667,14 +1668,15 @@ namespace Raven.Imports.Newtonsoft.Json
                 if(ReadData(false) == 0)
                     throw new EndOfStreamException();
             }
-            var buffer = new byte[64*1024];
+            if (_largeBytesBuffer == null)
+                _largeBytesBuffer = new byte[1024*64];
             var bufferPos = 0;
             FileStream stream = null;
             int buf = 0;
             int iter = 0;
             do
             {
-                var bytes = ConvertBase64(buffer, bufferPos, ref buf, ref iter);
+                var bytes = ConvertBase64(_largeBytesBuffer, bufferPos, ref buf, ref iter);
                 bufferPos += bytes;				
                 if (bytes == 0)
                 {
@@ -1682,12 +1684,12 @@ namespace Raven.Imports.Newtonsoft.Json
                     switch (iter)
                     {
                         case 3:
-                            buffer[bufferPos++] = (byte) ((buf >> 10) & 255);
-                            buffer[bufferPos++] = (byte) ((buf >> 2) & 255);
+                            _largeBytesBuffer[bufferPos++] = (byte) ((buf >> 10) & 255);
+                            _largeBytesBuffer[bufferPos++] = (byte) ((buf >> 2) & 255);
                             _charPos += 2;
                             break;
                         case 2:
-                            buffer[bufferPos++] = (byte) ((buf >> 4) & 255);
+                            _largeBytesBuffer[bufferPos++] = (byte) ((buf >> 4) & 255);
                             _charPos++;
                             break;
                     }
@@ -1695,7 +1697,7 @@ namespace Raven.Imports.Newtonsoft.Json
                 }
 
                 if (bufferPos + 4 /*give enough space so we'll be able to flush and account for quote char*/ 
-                    >= buffer.Length)
+                    >= _largeBytesBuffer.Length)
                 {
                     if (stream == null)
                     {
@@ -1703,11 +1705,14 @@ namespace Raven.Imports.Newtonsoft.Json
 
                         stream = new FileStream(tempFileName,
                             FileMode.OpenOrCreate, FileAccess.ReadWrite,
-                            FileShare.None, 4096,
-                            FileOptions.SequentialScan | FileOptions.DeleteOnClose );
+                            FileShare.None, 4096
+#if !SILVERLIGHT
+                            , FileOptions.SequentialScan | FileOptions.DeleteOnClose
+#endif
+                            );
                         
                     }
-                    stream.Write(buffer, 0, bufferPos);
+                    stream.Write(_largeBytesBuffer, 0, bufferPos);
                     bufferPos = 0;
                 }
                 if (_charPos == _charsUsed && ReadData(false) == 0)
@@ -1715,9 +1720,18 @@ namespace Raven.Imports.Newtonsoft.Json
             } while (_chars[_charPos] != quoteChar);
 
             if (_chars[_charPos] == quoteChar)
+            {
                 _charPos++;
-            else if (_chars[_charPos + 1] == quoteChar)
-                _charPos += 2;
+            }
+            else
+            {
+                if (_charPos == _charsUsed)
+                {
+                    ReadData(false);
+                }
+                if (_chars[_charPos + 1] == quoteChar)
+                    _charPos += 2;
+            }
 
             _tokenType = JsonToken.String;
             _currentState = State.PostValue;
@@ -1725,11 +1739,11 @@ namespace Raven.Imports.Newtonsoft.Json
 
             if (stream != null)
             {
-                stream.Write(buffer, 0, bufferPos);
+                stream.Write(_largeBytesBuffer, 0, bufferPos);
                 stream.Position = 0;
                 return stream;
             }
-            return new MemoryStream(buffer, 0, bufferPos);
+            return new MemoryStream(_largeBytesBuffer, 0, bufferPos);
         }
 
         static readonly byte[] charsLookupTable = {
@@ -1750,6 +1764,8 @@ namespace Raven.Imports.Newtonsoft.Json
 
         private int ConvertBase64(byte[] buffer, int bufferPos, ref int buf, ref int iter)
         {
+            if (_charPos == _charsUsed)
+                ReadData(false);
             var originBufferPos = bufferPos;
             bool stop = false;
             for (; _charPos < _charsUsed && 

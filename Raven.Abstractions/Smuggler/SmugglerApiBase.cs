@@ -545,33 +545,49 @@ namespace Raven.Abstractions.Smuggler
                 return count;
             if (jsonReader.TokenType != JsonToken.StartArray)
                 throw new InvalidDataException("StartArray was expected");
+           
             while (true)
             {
-                jsonReader.Read();
+                if (jsonReader.Read() == false)
+                    throw new EndOfStreamException();
                 if (jsonReader.TokenType == JsonToken.EndArray)
                     break;
                 ValidateStartObject(jsonReader);
 
-                jsonReader.Read();
-                ValidatePropertyName(jsonReader, "Data");
+                if (jsonReader.Read() == false)
+                    throw new EndOfStreamException();
 
-                byte[] data;
+                ValidatePropertyName(jsonReader, "Data");
                 using (var valueStream = jsonReader.ReadBytesAsStream())
                 {
-                    jsonReader.Read();
+                   
+                    if (jsonReader.Read() == false)
+                        throw new EndOfStreamException();
                     ValidatePropertyName(jsonReader, "Metadata");
 
-                    jsonReader.Read(); //go to StartObject token
+                    if (jsonReader.Read() == false) //go to StartObject token
+                        throw new EndOfStreamException();
                     ValidateStartObject(jsonReader);
 
                     var metadata = (RavenJObject)RavenJToken.ReadFrom(jsonReader); //read the property as the object
 
-                    jsonReader.Read();
+                    if (jsonReader.Read() == false)
+                        throw new EndOfStreamException();
                     ValidatePropertyName(jsonReader, "Key");
 
                     var key = jsonReader.ReadAsString();
 
-                    jsonReader.Read();
+                    if (jsonReader.Read() == false) 
+                        throw new EndOfStreamException();
+                    if (jsonReader.TokenType == JsonToken.PropertyName)
+                    {
+                        ValidatePropertyName(jsonReader, "Etag");
+                        if(jsonReader.Read() == false) // read the etag value
+                            throw new EndOfStreamException();
+                        if (jsonReader.Read() == false) // consume the etag value...
+                            throw new EndOfStreamException();
+
+                    }
                     ValidateEndObject(jsonReader);
 
                     if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)

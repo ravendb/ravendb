@@ -246,7 +246,7 @@ namespace Raven.Tests.Issues
         [InlineData(10)]
         [InlineData(128)]
         [InlineData(1024 * 1024 * 3)]
-        [InlineData(1024 * 1024 * 501)]
+        [InlineData(1024 * 1024 * 50)]
         public void SingleAttachmentsImportShouldWork(int size)
         {
             var data = new byte[size];
