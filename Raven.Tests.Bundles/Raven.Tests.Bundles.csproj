@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -215,6 +215,7 @@
     <Compile Include="Versioning\Bugs\MultiTenant.cs" />
     <Compile Include="Versioning\Bugs\RavenDB_438.cs" />
     <Compile Include="Versioning\Bugs\VersioningWithGuidIds.cs" />
+    <Compile Include="Versioning\RavenDB_3979_documents.cs" />
     <Compile Include="Versioning\Versioning.cs" />
     <Compile Include="Versioning\VersioningTest.cs" />
   </ItemGroup>

@@ -128,7 +128,7 @@ task TestDnx -depends CompileDnx {
 
     Push-Location "$base_dir\Raven.Tests.Core"
     
-    Start-Process -FilePath "$dnx" -ArgumentList "--configuration $global:configuration test" -NoNewWindow -Wait -ErrorAction SilentlyContinue
+    Start-Process -FilePath "$dnx" -ArgumentList "--configuration $global:configuration test" -NoNewWindow -Wait
 
     Pop-Location
 }
@@ -138,7 +138,6 @@ task FullStorageTest {
 }
 
 task Test -depends TestDnx {
-    Clear-Host
 
     $test_prjs = @( `
         "$base_dir\Raven.Sparrow\Sparrow.Tests\bin\$global:configuration\Sparrow.Tests.dll", `

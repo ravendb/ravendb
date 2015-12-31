@@ -16,6 +16,9 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 {
     public class VersioningTriggerActions
     {
+        internal const string CreationOfHistoricalRevisionIsNotAllowed = "Creating a historical revision is not allowed";
+        internal const string ModificationOfHistoricalRevisionIsNotAllowed = "Modifying a historical revision is not allowed";
+
         private readonly RavenFileSystem fileSystem;
 
         public VersioningTriggerActions(RavenFileSystem fileSystem)
@@ -28,32 +31,22 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
             VetoResult veto = VetoResult.Allowed;
             fileSystem.Storage.Batch(accessor =>
             {
-                var file = accessor.ReadFile(name);
-                if (file == null)
+                if (accessor.IsVersioningActive(name) == false)
                 {
-                    if (fileSystem.IsVersioningActive(name) == false)
-                        veto = VetoResult.Allowed;
-
-                    else if (accessor.IsVersioningDisabledForImport(metadata))
-                        veto = VetoResult.Allowed;
-
-                    else if (fileSystem.ChangesToRevisionsAllowed() == false &&
-                        metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
-                    {
-                        veto = VetoResult.Deny("Creating a historical revision is not allowed");
-                    }
-                    return;
+                    veto = VetoResult.Allowed;
                 }
-
-                if (accessor.IsVersioningActive(name))
+                else if (accessor.IsVersioningDisabledForImport(metadata))
                 {
-                    if (accessor.IsVersioningDisabledForImport(metadata))
-                        veto = VetoResult.Allowed;
+                    veto = VetoResult.Allowed;
+                }
+                else
+                {
+                    var file = accessor.ReadFile(name);
 
-                    else if (fileSystem.ChangesToRevisionsAllowed() == false &&
-                             file.Metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
+                    if (fileSystem.ChangesToRevisionsAllowed() == false &&
+                         (file?.Metadata ?? metadata).Value<string>(VersioningUtil.RavenFileRevisionStatus) == "Historical")
                     {
-                        veto = VetoResult.Deny("Modifying a historical revision is not allowed");
+                        veto = VetoResult.Deny(file == null ? CreationOfHistoricalRevisionIsNotAllowed : ModificationOfHistoricalRevisionIsNotAllowed);
                     }
                 }
             });

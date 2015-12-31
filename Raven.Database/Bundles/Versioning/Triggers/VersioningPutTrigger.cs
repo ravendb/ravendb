@@ -19,35 +19,23 @@ namespace Raven.Bundles.Versioning.Triggers
     [ExportMetadata("Bundle", "Versioning")]
     public class VersioningPutTrigger : AbstractPutTrigger
     {
+        internal const string CreationOfHistoricalRevisionIsNotAllowed = "Creating a historical revision is not allowed";
+        internal const string ModificationOfHistoricalRevisionIsNotAllowed = "Modifying a historical revision is not allowed";
+
         public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
-            var jsonDocument = Database.Documents.Get(key, transactionInformation);
-            if (jsonDocument == null)
-            {
-                if (Database.IsVersioningActive(metadata) == false)
-                    return VetoResult.Allowed;
-
-                if (Database.IsVersioningDisabledForImport(metadata))
-                    return VetoResult.Allowed;
-
-                if (Database.ChangesToRevisionsAllowed() == false &&
-                    metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
-                {
-                    return VetoResult.Deny("Creating a historical revision is not allowed");
-                }
+            if (Database.IsVersioningActive(metadata) == false)
                 return VetoResult.Allowed;
-            }
 
-            if (Database.IsVersioningActive(metadata))
+            if (Database.IsVersioningDisabledForImport(metadata))
+                return VetoResult.Allowed;
+
+            var jsonDocument = Database.Documents.Get(key, transactionInformation);
+
+            if (Database.ChangesToRevisionsAllowed() == false &&
+                (jsonDocument?.Metadata ?? metadata).Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
             {
-                if (Database.IsVersioningDisabledForImport(metadata))
-                    return VetoResult.Allowed;
-
-                if (Database.ChangesToRevisionsAllowed() == false &&
-                    jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")
-                {
-                    return VetoResult.Deny("Modifying a historical revision is not allowed");
-                }
+                return VetoResult.Deny(jsonDocument == null ? CreationOfHistoricalRevisionIsNotAllowed : ModificationOfHistoricalRevisionIsNotAllowed);
             }
 
             return VetoResult.Allowed;
