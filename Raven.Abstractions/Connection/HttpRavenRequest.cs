@@ -59,9 +59,14 @@ namespace Raven.Abstractions.Connection
 			return request;
 		}
 
-		public void Write(Stream streamToWrite)
+		public void Write(Stream streamToWrite, bool disableBuffering = false)
 		{
 			postedStream = streamToWrite;
+		    if (disableBuffering)
+		    {
+		        WebRequest.AllowWriteStreamBuffering = false;
+		        WebRequest.SendChunked = true;
+		    }
 			using (var stream = WebRequest.GetRequestStream())
 			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
 			using (var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
@@ -266,7 +271,12 @@ namespace Raven.Abstractions.Connection
 			if (postedStream != null)
 			{
 				postedStream.Position = 0;
-				using (var stream = newWebRequest.GetRequestStream())
+			    if (WebRequest.AllowWriteStreamBuffering)
+			    {
+			        newWebRequest.AllowWriteStreamBuffering = true;
+			        newWebRequest.SendChunked = true;
+			    }
+                using (var stream = newWebRequest.GetRequestStream())
 				using (var compressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
 					postedStream.CopyTo(compressedData);

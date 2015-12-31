@@ -373,8 +373,14 @@ namespace Raven.Smuggler
 						}
 					}
 				}
-
-				request.Write(attachmentExportInfo.Data);
+			    if (attachmentExportInfo.Stream != null)
+			    {
+			        request.Write(attachmentExportInfo.Stream, disableBuffering: true);
+			    }
+			    else
+			    {
+			        request.Write(attachmentExportInfo.Data);
+			    }
 				request.ExecuteRequest();
 			}
 
