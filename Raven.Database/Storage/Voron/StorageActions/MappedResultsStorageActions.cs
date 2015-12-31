@@ -2,7 +2,6 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
-using Raven.Abstractions.Util.Encryptors;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
 using Sparrow.Collections;
@@ -12,8 +11,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using Raven.Database.Config.Settings;
 using Sparrow;
@@ -29,7 +26,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
     using Indexing;
     using Plugins;
     using Raven.Json.Linq;
-    using Raven.Abstractions.Util;
+    using Abstractions.Util;
 
     internal class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
     {
@@ -1133,12 +1130,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var reductionsToDelete = GetScheduledReductionsToDelete(mapReduceIndexIds, delete);
             foreach (var data in reductionsToDelete)
             {
-                var id = data.Id;
-                int _;
-                var idAsEtag = Etag.Parse(id.CreateReader().ReadBytes(16, out _));
                 var scheduleReductionKey = CreateScheduleReductionKey(data.View, data.Level, data.ReduceKey);
                 var viewKey = CreateViewKey(data.View);
-                DeleteScheduledReduction(idAsEtag, id, scheduleReductionKey, viewKey, data.Bucket);
+                DeleteScheduledReduction(data.Etag, data.EtagAsSlice, scheduleReductionKey, viewKey, data.Bucket);
                 generalStorageActions.MaybePulseTransaction();
 
                 long currentCount = 0;
@@ -1179,13 +1173,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
                             if (mapReduceIndexIds.Exists(x => x == view))
                                 continue; // index id exists, no need to delete the scheduled reduction
 
+                            var etag = Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag));
                             var level = value.ReadInt(ScheduledReductionFields.Level);
                             var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
                             var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
 
                             results.Add(new ScheduleReductionData
                             {
-                                Id = id,
+                                Etag = etag,
+                                EtagAsSlice = id,
                                 View = view,
                                 Level = level,
                                 ReduceKey = reduceKey,
@@ -1224,9 +1220,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     if (value == null)
                         continue;
 
-                    int _;
-                    var idAsEtag = Etag.Parse(id.CreateReader().ReadBytes(16, out _));
-
+                    var idAsEtag = Etag.Parse(value.ReadBytes(ScheduledReductionFields.Etag));
                     var level = value.ReadInt(ScheduledReductionFields.Level);
                     var reduceKey = value.ReadString(ScheduledReductionFields.ReduceKey);
                     var bucket = value.ReadInt(ScheduledReductionFields.Bucket);
@@ -1348,7 +1342,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
     internal class ScheduleReductionData
     {
-        public Slice Id { get; set; }
+        public Etag Etag { get; set; }
+        public Slice EtagAsSlice { get; set; }
         public int View { get; set; }
         public int Level { get; set; }
         public string ReduceKey { get; set; }

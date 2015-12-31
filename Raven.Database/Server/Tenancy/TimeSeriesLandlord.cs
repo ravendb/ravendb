@@ -245,22 +245,23 @@ namespace Raven.Database.Server.Tenancy
 
         private void AssertLicenseParameters(RavenConfiguration config)
         {
-            string maxDatabases;
-            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfTimeSeries", out maxDatabases))
+            string maxTimeSeries;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfTimeSeries", out maxTimeSeries))
             {
-                if (string.Equals(maxDatabases, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
+                if (string.Equals(maxTimeSeries, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    var numberOfAllowedFileSystems = int.Parse(maxDatabases);
+                    var numberOfAllowedTimeSeries = int.Parse(maxTimeSeries);
 
                     int nextPageStart = 0;
-                    var databases =
+                    var timeSeries =
                         systemDatabase.Documents.GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
-                            numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
-                    if (databases.Count >= numberOfAllowedFileSystems)
+                            numberOfAllowedTimeSeries, CancellationToken.None, ref nextPageStart).ToList();
+                    if (timeSeries.Count >= numberOfAllowedTimeSeries)
                         throw new InvalidOperationException(
                             "You have reached the maximum number of time series that you can have according to your license: " +
-                            numberOfAllowedFileSystems + Environment.NewLine +
-                            "You can either upgrade your RavenDB license or delete a timeSeries from the server");
+                            numberOfAllowedTimeSeries + Environment.NewLine +
+                            "But we detect: " + timeSeries.Count + " time series" + Environment.NewLine +
+                            "You can either upgrade your RavenDB license or delete a time series from the server");
                 }
             }
 
