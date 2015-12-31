@@ -4,26 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
-using Raven.Bundles.Replication.Data;
-using Raven.Database;
-using Raven.Database.Bundles.Replication.Tasks.Handlers;
-using Raven.Database.Config.Retriever;
-using Raven.Database.Data;
-using Raven.Database.Extensions;
-using Raven.Database.Plugins;
-using Raven.Database.Prefetching;
-using Raven.Database.Storage;
-using Raven.Database.Util;
-using Raven.Json.Linq;
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -32,16 +12,33 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Linq;
+using Raven.Abstractions;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
+using Raven.Bundles.Replication.Data;
+using Raven.Database;
 using Raven.Database.Bundles.Replication;
+using Raven.Database.Bundles.Replication.Tasks.Handlers;
+using Raven.Database.Config.Retriever;
+using Raven.Database.Data;
+using Raven.Database.Extensions;
+using Raven.Database.Indexing;
+using Raven.Database.Plugins;
+using Raven.Database.Prefetching;
+using Raven.Database.Storage;
+using Raven.Database.Util;
+using Raven.Json.Linq;
+using Sparrow.Collections;
 
 namespace Raven.Bundles.Replication.Tasks
 {
-    using Database.Indexing;
-
     [ExportMetadata("Bundle", "Replication")]
     [InheritedExport(typeof(IStartupTask))]
     public class ReplicationTask : IStartupTask, IDisposable
@@ -53,7 +50,7 @@ namespace Raven.Bundles.Replication.Tasks
         public const int SystemDocsLimitForRemoteEtagUpdate = 15;
         public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
 
-        public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
+        public readonly ConcurrentSet<Task> activeTasks = new ConcurrentSet<Task>();
 
         private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
             new ConcurrentDictionary<string, DestinationStats>(StringComparer.OrdinalIgnoreCase);
@@ -223,7 +220,8 @@ namespace Raven.Bundles.Replication.Tasks
                     {
                         try
                         {
-                            AsyncHelpers.RunSync(()=>ExecuteReplicationOnce(runningBecauseOfDataModifications));
+                            var copy = runningBecauseOfDataModifications;
+                            AsyncHelpers.RunSync(() => ExecuteReplicationOnce(copy));
                         }
                         catch (Exception e)
                         {
@@ -241,10 +239,10 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
         /// <summary>
-        /// Indicats that we got work notifications while bussy processing old notifications.
-        /// We use this instand of having to pole the destination semaphores
+        /// Indicats that we got work notifications while busy processing old notifications.
+        /// We use this instand of having to poll the destination semaphores
         /// </summary>
-        private int gotWorkWhileReplicating = 0;
+        private int onCompleteReplicationRunReplicationAgain;
 
         public Task ExecuteReplicationOnce(bool runningBecauseOfDataModifications)
         {
@@ -260,11 +258,10 @@ namespace Raven.Bundles.Replication.Tasks
                 
                 var currentReplicationAttempts = Interlocked.Increment(ref replicationAttempts);
 
-                var copyOfrunningBecauseOfDataModifications = runningBecauseOfDataModifications;
                 var destinationForReplication = destinations.Where(
                     dest =>
                     {
-                        if (copyOfrunningBecauseOfDataModifications == false) return true;
+                        if (runningBecauseOfDataModifications == false) return true;
                         return IsNotFailing(dest, currentReplicationAttempts);
                     }).ToList();
 
@@ -275,37 +272,33 @@ namespace Raven.Bundles.Replication.Tasks
 
                 foreach (var dest in destinationForReplication)
                 {
-                    var destination = dest;
                     DestinationStats stat;
                     //If last change is due to index or transformer we continue replicating normally.
                     //If we can't verify work needs to be done we asume there is work to be done.
                     var lastWorkNotificationIsIndexOrTransformer = lastWorkIsIndexOrTransformer;
-                    if (!lastWorkNotificationIsIndexOrTransformer && destinationStats.TryGetValue(destination.ConnectionStringOptions.Url, out stat))
+                    if (!lastWorkNotificationIsIndexOrTransformer && destinationStats.TryGetValue(dest.ConnectionStringOptions.Url, out stat))
                     {
-                        var lastDocEtag = stat.LastReplicatedEtag;
-                        var lastAttEtag = stat.LastReplicatedAttachmentEtag;
-                        var replicationLastDocEtag = lastWorkDocumentEtag;
-                        var replicationLastAttEtag = lastWorkAttachmentEtag;
-                        var lastReplicationSuccess = stat.LastSuccessTimestamp ?? DateTime.MinValue;
                         //If we didn't get any work to do and the destination can't be stale for more than 5 minutes
-                        //We will skip querying the destination for its last Etag untill we get some real work.
-                        if (lastDocEtag == replicationLastDocEtag && lastAttEtag == replicationLastAttEtag
-                            && (SystemTime.UtcNow - lastReplicationSuccess).TotalMinutes <= 5)
+                        //We will skip querying the destination for its last Etag until we get some real work.
+                        if (stat.LastReplicatedEtag == lastWorkDocumentEtag && stat.LastReplicatedAttachmentEtag == lastWorkAttachmentEtag
+                            && (SystemTime.UtcNow - (stat.LastSuccessTimestamp ?? DateTime.MinValue)).TotalMinutes <= 5)
                             continue;
                     }
-                    var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
+                    var holder = activeReplicationTasks.GetOrAdd(dest.ConnectionStringOptions.Url, s => new SemaphoreSlim(1));
                     if (holder.Wait(0) == false)
                     {
                         if (log.IsDebugEnabled)
-                        log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
-                        Interlocked.Exchange(ref gotWorkWhileReplicating, 1);
+                        {
+                            log.Debug("Replication to distination {0} skipped due to existing replication operation", dest.ConnectionStringOptions.Url);
+                        }
+                        Interlocked.Exchange(ref onCompleteReplicationRunReplicationAgain, 1);
                         continue;
                     }
                     
                     var replicationTask = Task.Factory.StartNew(
-                        () =>
+                        state =>
                         {
-                            bool hasMoreWorkToDo = false;
+                            ReplicationStrategy destination = (ReplicationStrategy) state;
 
                             using (LogContext.WithResource(docDb.Name))
                             using (CultureHelper.EnsureInvariantCulture())
@@ -314,35 +307,36 @@ namespace Raven.Bundles.Replication.Tasks
                                 {
                                     if (ReplicateTo(destination))
                                     {
-                                        hasMoreWorkToDo = true;
                                         docDb.WorkContext.NotifyAboutWork();
+                                        return true;
                                     }
                                 }
                                 catch (Exception e)
                                 {
                                     log.ErrorException("Could not replicate to " + destination, e);
                                 }
+                                return false;
                             }
-                            return hasMoreWorkToDo;
 
-                        });
+                        }, dest);
 
                     startedTasks.Add(replicationTask);
 
-                    activeTasks.Enqueue(replicationTask);
+                    activeTasks.Add(replicationTask);
                     replicationTask.ContinueWith(
                         t =>
                         {
                             // here we purge all the completed tasks at the head of the queue
-                            Task task;
-                            while (activeTasks.TryPeek(out task))
+                            if (activeTasks.TryRemove(t))
                             {
-                                if (!task.IsCompleted && !task.IsCanceled && !task.IsFaulted) break;
-                                activeTasks.TryDequeue(out task); // remove it from end
+                                Debugger.Break();//WTF TODO check
                             }
 
-                            if (t.Result || Interlocked.CompareExchange(ref gotWorkWhileReplicating, 0, 1) == 1)
+                            if (t.Result ||
+                                Interlocked.CompareExchange(ref onCompleteReplicationRunReplicationAgain, 0, 1) == 1)
+                            {
                                 docDb.WorkContext.ReplicationResetEvent.Set();
+                            }
                         });
                 }
                 if (!startedTasks.Any()) return completedTask;
@@ -1306,7 +1300,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
             catch (InvalidDataException e)
             {
-                RecordFailure(String.Empty, string.Format("Data is corrupted, could not proceed with attachment replication. Exception : {0}", e));
+                RecordFailure(url: String.Empty, lastError: $"Data is corrupted, could not proceed with attachment replication. Exception : {e}");
                 scope.RecordError(e);
                 log.ErrorException("Data is corrupted, could not proceed with replication", e);
             }
@@ -1564,12 +1558,11 @@ namespace Raven.Bundles.Replication.Tasks
 
             _cts.Cancel();
 
-            Task task;
-            while (activeTasks.TryDequeue(out task))
+            foreach (var activeTask in activeTasks)
             {
                 try
                 {
-                    task.Wait();
+                    activeTask.Wait();
                 }
                 catch (OperationCanceledException)
                 {
