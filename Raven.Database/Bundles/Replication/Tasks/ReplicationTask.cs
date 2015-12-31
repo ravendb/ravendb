@@ -46,6 +46,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Database.Bundles.Replication;
@@ -370,15 +371,25 @@ namespace Raven.Bundles.Replication.Tasks
                     lastReplicatedAttachmentEtags.Count > 0)
                 {
                     Task.WhenAll(startedTasks)
-                        .AssertNotFailed()
                         .ContinueWith(t =>
                         {
-                            //purge tombstones that are not needed anymore
-                            docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
-                                lastReplicatedDocumentEtags.Max());
+                            if (!startedTasks.Any(st => st.IsFaulted))
+                            {
+                                //purge tombstones that are not needed anymore
+                                docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
+                                    lastReplicatedDocumentEtags.Max());
 
-                            docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones,
-                                lastReplicatedAttachmentEtags.Max());							
+                                docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones,
+                                    lastReplicatedAttachmentEtags.Max());
+                            }
+                            else
+                            {
+                                log.Error("One or more of replication (sub)tasks have failed, in this case I prefer not to delete tombstones.");
+                                var faultedTasks = startedTasks.Where(stt => stt.IsFaulted).ToList();
+                                for (int i = 0; i < faultedTasks.Count; i++)
+                                    log.ErrorException($"Task id={faultedTasks[i].Id} exception", 
+                                        faultedTasks[i].Exception.SimplifyException());
+                            }
                         });
                 }
                 if (!startedTasks.Any())
