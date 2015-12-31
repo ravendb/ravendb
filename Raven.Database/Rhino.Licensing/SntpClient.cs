@@ -114,7 +114,14 @@ namespace Rhino.Licensing
 										              return GetDateAsync();
 									              }
 									              var result = receiveTask.Result;
-									              if (IsResponseValid(result) == false)
+                                                  try
+                                                  {
+                                                      socket.Close();
+                                                  }
+                                                  catch (Exception)
+                                                  {
+                                                  }
+                                                  if (IsResponseValid(result) == false)
 									              {
 										              log.Debug("Did not get valid time information from " + host);
 										              return GetDateAsync();
