@@ -24,6 +24,7 @@ namespace Raven.Database.Actions
         public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
         public event Action<DocumentDatabase, IndexChangeNotification> OnIndexChange;
         public event Action<DocumentDatabase, TransformerChangeNotification> OnTransformerChange;
+        public event Action<DocumentDatabase, BulkInsertChangeNotification> OnBulkInsertChange;
 
         public void RaiseNotifications(DocumentChangeNotification obj, RavenJObject metadata)
         {
@@ -56,6 +57,9 @@ namespace Raven.Database.Actions
         public void RaiseNotifications(BulkInsertChangeNotification obj)
         {
             Database.TransportState.Send(obj);
+            var handler = OnBulkInsertChange;
+            if (handler != null)
+                handler(Database, obj);
         }
 
         public void RaiseNotifications(DataSubscriptionChangeNotification obj)
