@@ -108,13 +108,13 @@ class changesApi {
                 else if (e.status === ResponseCodes.ServiceUnavailable) {
                     // We're still loading the database, try to reconnect every 2 seconds.
                     if (this.rs.isLoading() === false) {
-                        this.commandBase.reportError(error);
+                        this.commandBase.reportError(error || "Failed to connect to changes", e.responseText, e.statusText);
                     }
                     this.rs.isLoading(true);
                     setTimeout(() => this.connect(action, true), 2 * 1000);
                 }
                 else if (e.status !== ResponseCodes.Forbidden) { // authorized connection
-                    this.commandBase.reportError(error);
+                    this.commandBase.reportError(error || "Failed to connect to changes", e.responseText, e.StatusText);
                     this.connectToChangesApiTask.reject();
                 }
             });

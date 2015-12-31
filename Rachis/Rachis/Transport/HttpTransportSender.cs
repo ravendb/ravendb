@@ -386,15 +386,12 @@ namespace Rachis.Transport
             {
                 Task.WaitAll(array);
             }
-            catch (OperationCanceledException)
+            catch (Exception)
             {
-                // nothing to do here
-            }
-            catch (AggregateException e)
-            {
-                if (e.InnerException is OperationCanceledException == false)
-                    throw;
-                // nothing to do here
+                // nothing to do here, we just need to wait until 
+                // all the requests are done, we don't care if they errored
+                // the error handling is actually handled in the LogStatus method
+                // but we need to wait so we won't have an old request hitting a new server in tests
             }
         }
 

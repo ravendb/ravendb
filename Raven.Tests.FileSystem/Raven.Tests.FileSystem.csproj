@@ -134,6 +134,7 @@
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
     <Compile Include="Bugs\UploadDownload.cs" />
     <Compile Include="Bundles\Versioning\RavenDB_3295.cs" />
+    <Compile Include="Bundles\Versioning\RavenDB_3979_files.cs" />
     <Compile Include="Bundles\Versioning\VersioningAndSynchronization.cs" />
     <Compile Include="Bundles\Versioning\VersioningTests.cs" />
     <Compile Include="ClientApi\FileQueryTests.cs" />
@@ -156,6 +157,8 @@
     <Compile Include="Issues\RavenDB_3920.cs" />
     <Compile Include="Issues\RavenDB_3955.cs" />
     <Compile Include="Issues\RavenDB_4059.cs" />
+    <Compile Include="Issues\RavenDB_4065.cs" />
+    <Compile Include="Issues\RavenDB_4066.cs" />
     <Compile Include="Issues\RavenDB_4069.cs" />
     <Compile Include="Issues\RavenDB_4092.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />

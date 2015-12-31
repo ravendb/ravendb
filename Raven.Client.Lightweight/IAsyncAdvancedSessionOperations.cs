@@ -7,12 +7,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -240,5 +242,18 @@ namespace Raven.Client
         /// </summary>
         /// <param name="instance">The instance.</param>
         Task<RavenJObject> GetMetadataForAsync<T>(T instance);
+
+        /// <summary>
+        ///     DeleteByIndexAsync using linq expression
+        /// </summary>
+        /// <param name="expression">The linq expression</param>
+        Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new();
+
+        /// <summary>
+        ///     DeleteByIndexAsync using linq expression
+        /// </summary>
+        /// <param name="indexName">Index string name</param>
+        /// <param name="expression">The linq expression</param>
+        Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression);
     }
 }

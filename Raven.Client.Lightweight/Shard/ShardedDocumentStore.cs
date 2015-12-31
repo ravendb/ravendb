@@ -7,7 +7,9 @@ using System;
 using System.CodeDom;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -508,6 +510,20 @@ namespace Raven.Client.Shard
 
                                                                 return tcs.Task;
                                                             });
+        }
+
+        public bool WaitForNonStaleIndexesOnAllShards(TimeSpan? timeout = null)
+        {
+            foreach (var kvp in ShardStrategy.Shards)
+            {
+                var docStore = kvp.Value;
+                TimeSpan? spinTimeout = timeout ?? (Debugger.IsAttached
+              ? TimeSpan.FromMinutes(5)
+              : TimeSpan.FromSeconds(20));
+                if (SpinWait.SpinUntil(() => docStore.DatabaseCommands.GetStatistics().StaleIndexes.Length == 0, spinTimeout.Value) == false)
+                    return false;
+            }
+            return true;
         }
     }
 }

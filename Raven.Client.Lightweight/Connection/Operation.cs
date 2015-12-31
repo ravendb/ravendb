@@ -33,7 +33,7 @@ namespace Raven.Client.Connection
         }
 
 
-        public async Task<RavenJToken> WaitForCompletionAsync()
+        public virtual async Task<RavenJToken> WaitForCompletionAsync()
         {
             if (done)
                 return state;
@@ -64,7 +64,7 @@ namespace Raven.Client.Connection
             }
         }
 
-        public RavenJToken WaitForCompletion()
+        public virtual RavenJToken WaitForCompletion()
         {
             return AsyncHelpers.RunSync(WaitForCompletionAsync);
         }

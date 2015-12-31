@@ -144,7 +144,7 @@ class filesystemFiles extends viewModelBase {
             newFolder = "/";
         }
 
-        if (!this.folderNotificationSubscriptions[newFolder]) {
+        if (!this.folderNotificationSubscriptions[newFolder] && changesContext.currentResourceChangesApi() != null) {
             this.folderNotificationSubscriptions[newFolder] = changesContext.currentResourceChangesApi()
                 .watchFsFolders(newFolder, (e: fileChangeNotification) => {
                     var callbackFolder = new folder(newFolder);
