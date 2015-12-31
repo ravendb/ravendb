@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -54,83 +55,92 @@ namespace Rhino.Licensing
 
         public async Task<DateTime> GetDateAsync()
         {
-            index++;
-            if (hosts.Length <= index)
+            var sp = Stopwatch.StartNew();
+            while (true)
             {
-                throw new InvalidOperationException(
-                    "After trying out all the hosts, was unable to find anyone that could tell us what the time is");
-            }
-            var host = hosts[index];
+                if (sp.Elapsed.TotalSeconds > 5)
+                {
+                    throw new TimeoutException("After " + sp.Elapsed + " we couldn't get a time from the network, giving up (tried " + (index + 1) + " servers");
+                }
+                index++;
+                if (hosts.Length <= index)
+                {
+                    index = 0;
+                    throw new InvalidOperationException(
+                        "After trying out all the hosts, was unable to find anyone that could tell us what the time is");
+                }
+                var host = hosts[index];
 
-            var exceptionWasThrown = false;
+                var exceptionWasThrown = false;
 
-            try
-            {
-                var addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
-                var endPoint = new IPEndPoint(addresses[0], 123);
-
-                var socket = new UdpClient();
                 try
                 {
-                    socket.Connect(endPoint);
-                    socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
-                    socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
-                    var sntpData = new byte[SntpDataLength];
-                    sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
+                    var addresses = await Dns.GetHostAddressesAsync(host).ConfigureAwait(false);
+                    var endPoint = new IPEndPoint(addresses[0], 123);
 
+                    var socket = new UdpClient();
                     try
                     {
-                        await socket.SendAsync(sntpData, sntpData.Length).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        exceptionWasThrown = true;
+                        socket.Connect(endPoint);
+                        socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 500);
+                        socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 500);
+                        var sntpData = new byte[SntpDataLength];
+                        sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
 
-                        if (log.IsDebugEnabled)
-                            log.DebugException("Could not send time request to : " + host, e);
-                    }
+                        try
+                        {
+                            await socket.SendAsync(sntpData, sntpData.Length).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            exceptionWasThrown = true;
 
-                    if (exceptionWasThrown)
-                        return await GetDateAsync().ConfigureAwait(false);
+                            if (log.IsDebugEnabled)
+                                log.DebugException("Could not send time request to : " + host, e);
+                        }
 
-                    try
-                    {
-                        var result = await socket.ReceiveAsync().ConfigureAwait(false);
-                        if (IsResponseValid(result.Buffer) == false)
+                        if (exceptionWasThrown)
+                            continue;
+
+                        try
+                        {
+                            var result = await socket.ReceiveAsync().ConfigureAwait(false);
+                            if (IsResponseValid(result.Buffer) == false)
+                            {
+                                if (log.IsDebugEnabled)
+                                    log.Debug("Did not get valid time information from " + host);
+                                continue;
+                            }
+                            var transmitTimestamp = GetTransmitTimestamp(result.Buffer);
+                            if (log.IsDebugEnabled)
+                            {
+                                log.Debug("Got time {0} from {1}", transmitTimestamp, host);
+                            }
+                            return transmitTimestamp;
+                        }
+                        catch (Exception e)
                         {
                             if (log.IsDebugEnabled)
-                                log.Debug("Did not get valid time information from " + host);
-                            return await GetDateAsync().ConfigureAwait(false);
+                                log.DebugException("Could not get time response from: " + host, e);
                         }
-                        var transmitTimestamp = GetTransmitTimestamp(result.Buffer);
-                        return transmitTimestamp;
                     }
-                    catch (Exception e)
+                    finally
                     {
-                        if (log.IsDebugEnabled)
-                            log.DebugException("Could not get time response from: " + host, e);
+                        try
+                        {
+                            socket.Close();
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
-
-                    return await GetDateAsync().ConfigureAwait(false);
                 }
-                finally
+                catch (Exception e)
                 {
-                    try
-                    {
-                        socket.Close();
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    if (log.IsDebugEnabled)
+                        log.DebugException("Could not get time from: " + host, e);
                 }
             }
-            catch (Exception e)
-            {
-                if (log.IsDebugEnabled)
-                    log.DebugException("Could not get time from: " + host, e);
-            }
-
-            return await GetDateAsync().ConfigureAwait(false);
         }
 
         private bool IsResponseValid(byte[] sntpData)

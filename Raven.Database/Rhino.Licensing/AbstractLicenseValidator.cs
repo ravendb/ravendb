@@ -54,6 +54,7 @@ namespace Rhino.Licensing
         private readonly DiscoveryHost discoveryHost;
         private DiscoveryClient discoveryClient;
         private readonly Guid senderId = Guid.NewGuid();
+        private readonly SntpClient sntpClient;
 
         /// <summary>
         /// Fired when license data is invalidated
@@ -176,6 +177,7 @@ namespace Rhino.Licensing
             LicenseAttributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             this.publicKey = publicKey;
             discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
+            sntpClient = new SntpClient(TimeServers);
         }
 
         private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
@@ -439,8 +441,12 @@ namespace Rhino.Licensing
             if (!NetworkInterface.GetIsNetworkAvailable())
                 return;
 
-            var sntp = new SntpClient(TimeServers);
-            sntp.GetDateAsync()
+            var sntpDisable = Environment.GetEnvironmentVariable("RAVENDB_SNTP_DISABLE");
+            bool result;
+            if (bool.TryParse(sntpDisable, out result) && result)
+                return;
+
+            sntpClient.GetDateAsync()
                 .ContinueWith(task =>
                 {
                     if (task.IsFaulted)
