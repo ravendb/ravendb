@@ -208,7 +208,7 @@ namespace Raven.Tests.Bundles.Replication
         }
 
         [Fact]
-        public void Will_remove_tombstones_when_deleting_and_creating_new_item_with_same_id()
+        public async Task Will_remove_tombstones_when_deleting_and_creating_new_item_with_same_id()
         {
             var store1 = CreateStore();
             var store2 = CreateStore();
@@ -223,18 +223,18 @@ namespace Raven.Tests.Bundles.Replication
 
             WaitForReplication(store2,"companies/1");
 
-                using (var session = store2.OpenSession())
-                {
+            using (var session = store2.OpenSession())
+            {
                 var company = session.Load<Company>("companies/1");
-            Assert.NotNull(company);
-            Assert.Equal("Hibernating Rhinos", company.Name);
+                Assert.NotNull(company);
+                Assert.Equal("Hibernating Rhinos", company.Name);
             }
 
             using (var session = store1.OpenSession())
             {
                 session.Delete(session.Load<Company>("companies/1"));
                 session.SaveChanges();
-            }			
+            }
 
             WaitForDeletionReplication<Company>(store2, "companies/1");
             
@@ -245,9 +245,6 @@ namespace Raven.Tests.Bundles.Replication
             }
 
             WaitForReplication(store2, "companies/1");
-
-            var one = store1.DatabaseCommands.Get("companies/1");
-            var two = store2.DatabaseCommands.Get("companies/1");
 
             using (var session = store2.OpenSession())
             {
