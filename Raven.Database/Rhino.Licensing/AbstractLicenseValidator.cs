@@ -255,7 +255,8 @@ namespace Rhino.Licensing
                 if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
                     return;
 
-                nextLeaseTimer = new Timer(LeaseLicenseAgain);
+                if (nextLeaseTimer == null)
+                    nextLeaseTimer = new Timer(LeaseLicenseAgain);
                 if (!turnOffDiscoveryClient)
                 {
                     try
@@ -291,6 +292,7 @@ namespace Rhino.Licensing
         {
             try
             {
+                Logger.Debug("Validating license...");
                 if (TryLoadingLicenseValuesFromValidatedXml() == false)
                 {
                     Logger.Warn("Failed validating license:\r\n{0}", License);
@@ -326,8 +328,9 @@ namespace Rhino.Licensing
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.WarnException("Unhandled error during license validation", e);
                 return false;
             }
         }
