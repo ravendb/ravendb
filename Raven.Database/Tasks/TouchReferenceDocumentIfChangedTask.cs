@@ -14,7 +14,12 @@ namespace Raven.Database.Tasks
 
         public override int NumberOfKeys
         {
-            get { return ReferencesToCheck.Count; }
+            get
+            {
+                if (ReferencesToCheck == null)
+                    return 0;
+                return ReferencesToCheck.Count;
+            }
         }
 
         public override string ToString()

@@ -18,7 +18,12 @@ namespace Raven.Database.Tasks
 
         public override int NumberOfKeys
         {
-            get { return Keys.Count; }
+            get
+            {
+                if (Keys == null)
+                    return 0;
+                return Keys.Count;
+            }
         }
 
         public override bool SeparateTasksByIndex
