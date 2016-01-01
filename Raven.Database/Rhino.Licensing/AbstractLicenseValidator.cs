@@ -235,9 +235,9 @@ namespace Rhino.Licensing
         /// <summary>
         /// Validates loaded license
         /// </summary>
-        public virtual void AssertValidLicense(bool turnOffDiscoveryClient = false)
+        public virtual void AssertValidLicense()
         {
-            AssertValidLicense(() => { }, turnOffDiscoveryClient);
+            AssertValidLicense(() => { });
         }
 
         /// <summary>
