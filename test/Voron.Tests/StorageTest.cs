@@ -99,8 +99,15 @@ namespace Voron.Tests
 					Thread.Sleep(13);
 				}
 			}
-			
-			Directory.Delete(dir, true);
+
+		    try
+		    {
+		        Directory.Delete(dir, true);
+		    }
+		    catch (Exception e)
+		    {
+		        throw new InvalidOperationException("Could not delete " + dir, e);
+		    }
 		}
 
 		protected virtual void Configure(StorageEnvironmentOptions options)
