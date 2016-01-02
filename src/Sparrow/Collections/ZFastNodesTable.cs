@@ -1,4 +1,3 @@
-#if !DNXCORE50
 using Sparrow.Binary;
 using System;
 using System.Collections;
@@ -148,9 +147,6 @@ namespace Sparrow.Collections
                 this._entries[bucket].Signature = signature;
                 this._entries[bucket].Node = node;
 
-#if DETAILED_DEBUG_H
-                Console.WriteLine(string.Format("Add: {0}, Bucket: {1}, Signature: {2}", node.ToDebugString(this.owner), bucket, signature));
-#endif
 #if VERIFY
                 VerifyStructure();
 #endif
@@ -182,10 +178,6 @@ namespace Sparrow.Collections
 
                         if (entries[bucket].Hash < kDeleted)
                         {
-
-#if DETAILED_DEBUG_H
-                            Console.WriteLine(string.Format("Remove: {0}, Bucket: {1}, Signature: {2}", node.ToDebugString(this.owner), bucket, signature));
-#endif
 
                             entries[bucket].Hash = kDeleted;
                             entries[bucket].Signature = kUnused;
@@ -237,11 +229,6 @@ namespace Sparrow.Collections
                 Debug.Assert(this._entries[pos].Node.Handle(this.owner).CompareTo(newNode.Handle(this.owner)) == 0);
 
                 this._entries[pos].Node = newNode;
-
-#if DETAILED_DEBUG_H
-                Console.WriteLine(string.Format("Old: {0}, Bucket: {1}, Signature: {2}", oldNode.ToDebugString(this.owner), pos, hash, signature));
-                Console.WriteLine(string.Format("New: {0}", newNode.ToDebugString(this.owner)));
-#endif
 
 #if VERIFY
                 VerifyStructure();
@@ -524,7 +511,6 @@ namespace Sparrow.Collections
                 }
 
 
-                [Serializable]
                 public struct Enumerator : IEnumerator<BitVector>, IEnumerator
                 {
                     private ZFastNodesTable dictionary;
@@ -645,7 +631,6 @@ namespace Sparrow.Collections
                 }
 
 
-                [Serializable]
                 public struct Enumerator : IEnumerator<Internal>, IEnumerator
                 {
                     private ZFastNodesTable dictionary;
@@ -731,23 +716,11 @@ namespace Sparrow.Collections
                     {
                         uint hash = Hashing.Iterative.XXHash32.CalculateInline((byte*)bitsPtr, words * sizeof(ulong), state, lcp / BitVector.BitsPerByte);
 
-// #if ALTERNATIVE_HASHING
                         remainingWord = ((remainingWord) >> shift) << shift;
                         ulong intermediate = Hashing.CombineInline(remainingWord, ((ulong)remaining) << 32 | (ulong)hash);
 
                         hash = (uint)intermediate ^ (uint)(intermediate >> 32);
-//#else
-//                        uint* combine = stackalloc uint[4];
-//                        ((ulong*)combine)[0] = ((remainingWord) >> shift) << shift;
-//                        combine[2] = (uint)remaining;
-//                        combine[3] = hash;
 
-//                        hash = Hashing.XXHash32.CalculateInline((byte*)combine, 4 * sizeof(uint));
-//#endif
-
-#if DETAILED_DEBUG_H
-                        Console.WriteLine(string.Format("\tHash -> Hash: {0}, Remaining: {2}, Bits({1}), Vector:{3}", hash, remaining, remainingWord, vector.SubVector(0, length).ToBinaryString()));
-#endif
                         return hash;
                     }
                 }
@@ -879,4 +852,3 @@ namespace Sparrow.Collections
 
 
 }
-#endif

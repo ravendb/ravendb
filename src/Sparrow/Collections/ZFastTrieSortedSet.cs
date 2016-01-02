@@ -1,4 +1,3 @@
-#if !DNXCORE50
 using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
@@ -389,9 +388,6 @@ namespace Sparrow.Collections
         {
             // We prepare the signature to compute incrementally. 
             BitVector searchKey = binarizeFunc(key);
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("Add(Binary: {1}, Key: {0})", key.ToString(), searchKey.ToBinaryString()));
-#endif
             if ( size == 0 )
             {
                 // We set the root of the current key to the new leaf.
@@ -416,10 +412,6 @@ namespace Sparrow.Collections
 
                 var exitNode = cutPoint.Exit;
 
-#if DETAILED_DEBUG        
-                Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != null ? cutPoint.Parent.ToDebugString(this) : "null", cutPoint.Exit.ToDebugString(this), cutPoint.LongestPrefix));
-#endif
-
                 // If the exit node is a leaf and the key is equal to the LCP 
                 var exitNodeAsLeaf = exitNode as Leaf;
                 if (exitNodeAsLeaf != null && binarizeFunc(exitNodeAsLeaf.Key).Count == cutPoint.LongestPrefix)
@@ -431,9 +423,6 @@ namespace Sparrow.Collections
                 bool exitDirection = cutPoint.SearchKey.Get(cutPoint.LongestPrefix);   // Compute the exit direction from the LCP.
                 bool isCutLow = cutPoint.LongestPrefix >= exitNodeHandleLength;  // Is this cut point low or high? 
 
-#if DETAILED_DEBUG
-                Console.WriteLine(string.Format("Cut {0}; exit to the {1}", isCutLow ? "low" : "high", exitDirection ? "right" : "left"));
-#endif
 
                 // Create a new internal node that will hold the new leaf.            
                 var newLeaf = new Leaf(cutPoint.LongestPrefix + 1, key, value);
@@ -491,9 +480,6 @@ namespace Sparrow.Collections
                     // If the cut point was low and the exit node internal
                     if (isCutLow && exitNodeAsInternal != null)
                     {
-#if DETAILED_DEBUG_H
-                        Console.WriteLine("Replace Cut-Low");
-#endif
                         uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, exitNodeHandleLength);
 
                         Debug.Assert(exitNodeHandleLength == exitNodeAsInternal.GetHandleLength(this));
@@ -502,10 +488,6 @@ namespace Sparrow.Collections
                         this.NodesTable.Replace(exitNodeAsInternal, newInternal, hash);
 
                         exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
-
-#if DETAILED_DEBUG_H
-                        Console.WriteLine("Insert Cut-Low");
-#endif
 
                         hash = ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this), cutPoint.LongestPrefix);
                         this.NodesTable.Add(exitNodeAsInternal, hash);
@@ -517,9 +499,6 @@ namespace Sparrow.Collections
                     {
                         //  We add the internal node to the jump table.                
                         exitNode.NameLength = cutPoint.LongestPrefix + 1;
-#if DETAILED_DEBUG_H
-                        Console.WriteLine("Insert Cut-High");
-#endif
                         uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));
 
                         this.NodesTable.Add(newInternal, hash);
@@ -534,10 +513,6 @@ namespace Sparrow.Collections
 
                 size++;
 
-#if DETAILED_DEBUG
-                Console.WriteLine(this.NodesTable.DumpNodesTable(this));
-#endif
-
                 return true;
             }
             finally
@@ -550,9 +525,6 @@ namespace Sparrow.Collections
         private void UpdateJumps(Internal node)
         {
 
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("UpdateJumps: {0}", node.ToDebugString(this)));
-#endif
             int jumpLength = node.GetJumpLength(this);
 
             Node jumpNode;
@@ -583,10 +555,6 @@ namespace Sparrow.Collections
             // We prepare the signature to compute incrementally.
             BitVector searchKey = binarizeFunc(key);
 
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("Remove(Binary: {1}, Key: {0})", key.ToString(), searchKey.ToBinaryString()));
-#endif
-
             if ( size == 1 )
             {                
                 // Is the root key (which has to be a Leaf) equal to the one we are looking for?
@@ -615,9 +583,6 @@ namespace Sparrow.Collections
                 var exitNode = cutPoint.Exit;
                 var parentExitNode = cutPoint.Parent;
 
-#if DETAILED_DEBUG        
-                Console.WriteLine(string.Format("Parex Node: {0}, Exit Node: {1}, LCP: {2}", cutPoint.Parent != null ? cutPoint.Parent.ToDebugString(this) : "null", cutPoint.Exit.ToDebugString(this), cutPoint.LongestPrefix));
-#endif
                 // If the exit node is not a leaf or the key is not equal to the LCP                
                 var exitNodeAsLeaf = exitNode as Leaf;
                 if (exitNodeAsLeaf == null || binarizeFunc(exitNodeAsLeaf.Key).Count != cutPoint.LongestPrefix)
@@ -633,9 +598,6 @@ namespace Sparrow.Collections
                 if ( parentExitNode != null && parentExitNode != this.Root )
                 {
                     var grandParentExitNode = FindGrandParentExitNode(searchKey, hashState, stack);
-#if DETAILED_DEBUG        
-                    Console.WriteLine(string.Format("GrandParex Node: {0}", grandParentExitNode.ToDebugString(this)));
-#endif
                     isRightLeaf = grandParentExitNode.Right == parentExitNode;
                     if (isRightLeaf)
                         grandParentExitNode.Right = otherNode;
@@ -668,10 +630,6 @@ namespace Sparrow.Collections
 
                 int t = parentExitNodeHandleLength | otherNodeHandleLength;
                 bool isCutLow = (t & -t & otherNodeHandleLength) != 0;  // Is this cut point low or high? 
-
-#if DETAILED_DEBUG
-                Console.WriteLine(string.Format("Cut {0}; leaf on the {1}; other node is {2}", isCutLow ? "low" : "high", isRightLeaf ? "right" : "left", otherNodeAsInternal == null ? "leaf" : "internal"));
-#endif
 
                 // Update the jump table after the deletion.
                 if (isRightLeaf)
@@ -919,9 +877,6 @@ namespace Sparrow.Collections
 
         private void UpdateRightJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Internal> stack)
         {
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("UpdateRightJumpsAfterInsertion({0}, {1}, {2}, {3}, {4})", insertedNode.ToDebugString(this), exitNode.ToDebugString(this), isRightChild, insertedLeaf.ToDebugString(this), DumpStack(stack)));
-#endif
             if ( ! isRightChild )
             {
                 // Not all the jump pointers of 2-fat ancestors need to be updated: actually, we
@@ -973,9 +928,6 @@ namespace Sparrow.Collections
 
         private void UpdateLeftJumpsAfterInsertion(Internal insertedNode, Node exitNode, bool isRightChild, Leaf insertedLeaf, Stack<Internal> stack)
         {
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("UpdateLeftJumpsAfterInsertion({0}, {1}, {2}, {3}, {4})", insertedNode.ToDebugString(this), exitNode.ToDebugString(this), isRightChild, insertedLeaf.ToDebugString(this), DumpStack(stack)));
-#endif
             // See: Algorithm 2 of [1]
 
             if ( isRightChild )
@@ -1027,10 +979,6 @@ namespace Sparrow.Collections
 
         private void UpdateRightJumpsAfterDeletion(Internal parentExitNode, Leaf deletedLeaf, Node otherNode, bool isRightChild, Stack<Internal> stack)
         {
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("UpdateRightJumpsAfterDeletion({0}, {1}, {2}, {3}, {4})", parentExitNode.ToDebugString(this), deletedLeaf.ToDebugString(this), otherNode.ToDebugString(this), isRightChild, DumpStack(stack)));
-#endif
-
             if (!isRightChild)
             {
                 // Not all the jump pointers of 2-fat ancestors need to be updated: we need to
@@ -1071,9 +1019,6 @@ namespace Sparrow.Collections
 
         private void UpdateLeftJumpsAfterDeletion(Internal parentExitNode, Leaf deletedLeaf, Node otherNode, bool isRightChild, Stack<Internal> stack)
         {
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("UpdateLeftJumpsAfterDeletion({0}, {1}, {2}, {3}, {4})", parentExitNode.ToDebugString(this), deletedLeaf.ToDebugString(this), otherNode.ToDebugString(this), isRightChild, DumpStack(stack)));
-#endif
 
             if (isRightChild)
             {
@@ -1116,9 +1061,6 @@ namespace Sparrow.Collections
         private CutPoint FindParentExitNode(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack)
         {
             Contract.Requires(size != 0);
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("FindParentExitNode({0})", searchKey.ToBinaryString()));
-#endif
             // If there is only a single element, then the exit point is the root.
             if (size == 1)
                 return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), null, Root, searchKey);
@@ -1208,9 +1150,6 @@ namespace Sparrow.Collections
         private Internal FindGrandParentExitNode(BitVector searchKey, Hashing.Iterative.XXHash32Block state, Stack<Internal> stack)
         {
             Contract.Requires(size != 0);
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("FindGrandParentExitNode({0})", searchKey.ToBinaryString()));
-#endif
             var parentExitNode = stack.Pop();
 
             // The parent is the root, therefore there is no grandparent. 
@@ -1296,9 +1235,6 @@ namespace Sparrow.Collections
             Contract.Requires(stack != null);
             Contract.Requires(startBit < endBit - 1);
 
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("FatBinarySearch({0},{1},({2}..{3})", searchKey.ToDebugString(), DumpStack(stack), startBit, endBit));
-#endif
             endBit--;
 
             Internal top = stack.Count != 0 ? stack.Peek() : null;
@@ -1319,15 +1255,9 @@ namespace Sparrow.Collections
             {
                 Contract.Assert(checkMask != 0);
 
-#if DETAILED_DEBUG
-                Console.WriteLine(string.Format("({0}..{1})", startBit, endBit + 1));
-#endif
                 int current = endBit & (int)checkMask;
                 if ((startBit & checkMask) != current)
                 {
-#if DETAILED_DEBUG
-                    Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
-#endif
                     // We calculate the hash up to the word it makes sense. 
                     uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, state, current);
 
@@ -1337,16 +1267,10 @@ namespace Sparrow.Collections
                     Internal item = position != -1 ? nodesTable[position] : null;
                     if (item == null || item.ExtentLength < current)
                     {
-#if DETAILED_DEBUG
-                        Console.WriteLine("Missing " + ((isExact) ? "exact" : "non exact"));
-#endif
                         endBit = current - 1;
                     }
                     else
                     {
-#if DETAILED_DEBUG
-                        Console.WriteLine("Found " + ((isExact) ? "exact" : "non exact") + " extent of length " + item.ExtentLength + " with GetExtentLength of " + item.GetExtentLength(this));
-#endif
                         // Add it to the stack, update search and continue
                         top = item;
                         stack.Push(top);
@@ -1358,9 +1282,6 @@ namespace Sparrow.Collections
                 checkMask >>= 1;
             }
 
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}; Stack: {3}", startBit, endBit + 1, top.ToDebugString(this), DumpStack(stack)));
-#endif
             return top;
         }
 
@@ -1370,9 +1291,6 @@ namespace Sparrow.Collections
             Contract.Requires(state != null);
             Contract.Requires(startBit < endBit - 1);
 
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("FatBinarySearch({0},({1}..{2})", searchKey.ToDebugString(), startBit, endBit));
-#endif
             endBit--;
 
             Internal top = null;
@@ -1392,15 +1310,9 @@ namespace Sparrow.Collections
             {
                 Contract.Assert(checkMask != 0);
 
-#if DETAILED_DEBUG
-                Console.WriteLine(string.Format("({0}..{1})", startBit, endBit + 1));
-#endif
                 int current = endBit & (int)checkMask;
                 if ((startBit & checkMask) != current)
                 {
-#if DETAILED_DEBUG
-                    Console.WriteLine(string.Format("Inquiring with key {0} ({1})", searchKey.SubVector(0, current).ToBinaryString(), current));
-#endif
                     // We calculate the hash up to the word it makes sense. 
                     uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, state, current);
 
@@ -1410,16 +1322,10 @@ namespace Sparrow.Collections
                     Internal item = position != -1 ? nodesTable[position] : null;
                     if (item == null || item.ExtentLength < current)
                     {
-#if DETAILED_DEBUG
-                        Console.WriteLine("Missing " + ((isExact) ? "exact" : "non exact"));
-#endif
                         endBit = current - 1;
                     }
                     else
                     {
-#if DETAILED_DEBUG
-                        Console.WriteLine("Found " + ((isExact) ? "exact" : "non exact") + " extent of length " + item.ExtentLength + " with GetExtentLength of " + item.GetExtentLength(this));
-#endif
                         // Add it to the stack, update search and continue
                         top = item;                   
 
@@ -1430,9 +1336,6 @@ namespace Sparrow.Collections
                 checkMask >>= 1;
             }
 
-#if DETAILED_DEBUG
-            Console.WriteLine(string.Format("Final interval: ({0}..{1}); Top: {2}", startBit, endBit + 1, top.ToDebugString(this)));
-#endif
             return top;
         }
 
@@ -1467,4 +1370,3 @@ namespace Sparrow.Collections
 
     }
 }
-#endif
