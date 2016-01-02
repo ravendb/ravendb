@@ -13,7 +13,7 @@ namespace Voron.Platform.Win32
     {
         public static unsafe void WriteFileHeader(FileHeader* header, string path)
         {
-            using (var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
+            using (var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,4096,FileOptions.None))
             {
                 var ptr = (byte*)header;
                 int remaining = sizeof(FileHeader);
@@ -32,7 +32,7 @@ namespace Voron.Platform.Win32
 
         public static unsafe bool TryReadFileHeader(FileHeader* header, string path)
         {
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
             {
                 if (fs.Length != sizeof(FileHeader))
                     return false; // wrong file size

@@ -1,18 +1,25 @@
 ﻿{
   "version": "4.0.0-*",
-  "description": "Voron - Low level storage engine",
-  "authors": [ "Hibernating Rhinos" ],
-  "tags": [ "storage", "acid", "voron", "ravendb", "nosql" ],
-  "projectUrl": "",
-  "licenseUrl": "",
+  "commands": {
+    "test": "xunit.runner.dnx"
+  },
   "compilationOptions": {
     "allowUnsafe": true,
     "warningsAsErrors": true
   },
-  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+  "resource": [
+   
+    "Bugs/Data/*.txt"
+  ],
+
   "frameworks": {
     "dnxcore50": {
       "dependencies": {
+        "xunit": "2.1.0",
+        "xunit.runner.dnx": "2.1.0-rc1-build204",
+
+        "System.Linq": "4.0.1-beta-23516",
+
         "Microsoft.Win32.Primitives": "4.0.1-beta-23516",
 
         "System.Collections": "4.0.11-beta-23516",
@@ -35,6 +42,7 @@
         "System.Threading.Tasks": "4.0.11-beta-23516",
         "System.Threading.Thread": "4.0.0-beta-23516",
         "System.Threading.Overlapped": "4.0.1-beta-23516",
+        "System.Threading.Tasks.Parallel": "4.0.1-beta-23516",
 
         "System.Text.Encoding": "4.0.11-beta-23516",
 
@@ -49,7 +57,7 @@
     }
   },
   "dependencies": {
-    "Bond.Runtime.CSharp": "4.0.2",
-    "Sparrow": "4.0.0-*"
+    "Sparrow": "4.0.0-*",
+    "Voron": "4.0.0-*"
   }
 }

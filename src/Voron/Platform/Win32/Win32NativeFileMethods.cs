@@ -42,28 +42,38 @@ namespace Voron.Platform.Win32
             NativeOverlapped* lpOverlapped);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         public static extern bool GetOverlappedResult(SafeFileHandle hFile,
             NativeOverlapped* lpOverlapped,
             out uint lpNumberOfBytesTransferred, bool bWait);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         public static extern bool SetFilePointerEx(SafeFileHandle hFile, long liDistanceToMove,
            IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
 
         public delegate void WriteFileCompletionDelegate(UInt32 dwErrorCode, UInt32 dwNumberOfBytesTransfered, NativeOverlapped* lpOverlapped);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         public static extern bool WriteFileEx(SafeFileHandle hFile, byte* lpBuffer,
            uint nNumberOfBytesToWrite, NativeOverlapped* lpOverlapped,
            WriteFileCompletionDelegate lpCompletionRoutine);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
                                             out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
 
 
 
         [DllImport(@"kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         public static extern bool ReadFile(
             SafeFileHandle hFile,
             byte* pBuffer,
@@ -73,6 +83,7 @@ namespace Voron.Platform.Win32
             );
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+
         public static extern SafeFileHandle CreateFile(string lpFileName,
                                                        Win32NativeFileAccess dwDesiredAccess, Win32NativeFileShare dwShareMode,
                                                        IntPtr lpSecurityAttributes,
@@ -80,12 +91,18 @@ namespace Voron.Platform.Win32
                                                        Win32NativeFileAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         public static extern bool CloseHandle(IntPtr hObject);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         private static extern bool SetEndOfFile(SafeFileHandle hFile);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+
         public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
         [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
