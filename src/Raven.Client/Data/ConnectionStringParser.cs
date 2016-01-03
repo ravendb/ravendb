@@ -83,19 +83,6 @@ namespace Raven.Abstractions.Data
 
     public class ConnectionStringParser<TConnectionString> where TConnectionString : ConnectionStringOptions, new()
     {
-        public static ConnectionStringParser<TConnectionString> FromConnectionStringName(string connectionStringName)
-        {
-#if !(MONODROID || DNXCORE50)
-            var connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
-            if (connectionStringSettings == null)
-                throw new ArgumentException(string.Format("Could not find connection string name: '{0}'", connectionStringName));
-        
-            return new ConnectionStringParser<TConnectionString>(connectionStringName, connectionStringSettings.ConnectionString);
-#else
-            throw new ArgumentException(string.Format("Connection string not supported"));
-#endif
-        }
-
         public static ConnectionStringParser<TConnectionString> FromConnectionString(string connectionString)
         {
             return new ConnectionStringParser<TConnectionString>("code", connectionString);

@@ -37,13 +37,6 @@ namespace Raven.Abstractions.Util
             this.reader = reader;
         }
 
-#if !DNXCORE50
-        public TextFieldParser(string path)
-        {
-            reader = new StreamReader(path);
-        }
-#endif
-
         public TextFieldParser(Stream stream, Encoding defaultEncoding)
         {
             reader = new StreamReader(stream, defaultEncoding);
@@ -246,11 +239,7 @@ namespace Raven.Abstractions.Util
         {
             if (reader != null && leaveOpen == false)
             {
-#if !DNXCORE50
-                reader.Close();
-#else
                 reader.Dispose();
-#endif
             }
             reader = null;
         }

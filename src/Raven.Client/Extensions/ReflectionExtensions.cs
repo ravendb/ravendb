@@ -18,11 +18,7 @@ namespace Raven.Abstractions.Extensions
 
         public static bool IsGenericTypeDefinition(this Type type)
         {
-#if !DNXCORE50
-            return type.IsGenericTypeDefinition;
-#else
             return type.GetTypeInfo().IsGenericTypeDefinition;
-#endif
         }
 
         public static bool IsDefined(this Type type, Type attributeType, bool inherit)

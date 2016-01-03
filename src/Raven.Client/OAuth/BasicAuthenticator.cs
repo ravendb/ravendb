@@ -50,40 +50,6 @@ namespace Raven.Abstractions.OAuth
             }
         }
 
-#if !DNXCORE50
-        private HttpWebRequest PrepareOAuthRequest(string oauthSource, string apiKey)
-        {
-            var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-            authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-            authRequest.Headers["grant_type"] = "client_credentials";
-            authRequest.Accept = "application/json;charset=UTF-8";
-
-            if (String.IsNullOrEmpty(apiKey) == false)
-                SetHeader(authRequest.Headers, "Api-Key", apiKey);
-
-            if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
-                throw new InvalidOperationException(BasicOAuthOverHttpError);
-
-            return authRequest;
-        }
-
-        public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
-        {
-            var authRequest = PrepareOAuthRequest(oauthSource, apiKey);
-            using (var response = authRequest.GetResponse())
-            {
-                using (var stream = response.GetResponseStreamWithHttpDecompression())
-                using (var reader = new StreamReader(stream))
-                {
-                    var currentOauthToken = reader.ReadToEnd();
-                    CurrentOauthToken = currentOauthToken;
-                    CurrentOauthTokenWithBearer = "Bearer " + currentOauthToken;
-                    return request => SetHeader(request.Headers, "Authorization", CurrentOauthTokenWithBearer);
-                }
-            }
-        }
-#endif
-
         private const string BasicOAuthOverHttpError = @"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
 Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
 You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:

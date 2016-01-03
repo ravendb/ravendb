@@ -80,13 +80,9 @@ namespace Raven.Abstractions.Logging
                 return;
             }
 
-#if !DNXCORE50
             string databaseName = LogContext.DatabaseName;
             if (string.IsNullOrWhiteSpace(databaseName))
                 databaseName = Constants.SystemDatabase;
-#else
-            var databaseName = Constants.SystemDatabase;
-#endif
 
             foreach (var target in targets)
             {

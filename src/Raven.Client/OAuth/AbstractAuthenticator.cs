@@ -21,15 +21,9 @@ namespace Raven.Abstractions.OAuth
             if (string.IsNullOrEmpty(CurrentOauthToken))
                 return;
 
-            if (e.Client != null)
-            {
-                SetAuthorization(e.Client);
-            }
-
-#if !DNXCORE50
-            if (e.Request != null)
-                SetHeader(e.Request.Headers, "Authorization", CurrentOauthTokenWithBearer);
-#endif
+            if (e.Client == null)
+                return;
+            SetAuthorization(e.Client);
         }
 
         protected void SetAuthorization(HttpClient e)
@@ -58,9 +52,5 @@ namespace Raven.Abstractions.OAuth
                 throw new InvalidOperationException("Could not set '" + key + "' = '" + value + "'", e);
             }
         }
-
-#if !DNXCORE50
-        public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey);
-#endif
     }
 }

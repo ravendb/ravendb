@@ -337,12 +337,10 @@ namespace Raven.Abstractions.Extensions
             }
         }
 
-#if !DNXCORE50
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
-            if (inner != null)
-                inner.Close();
+            base.Dispose(disposing);
+            inner?.Dispose();
         }
-#endif
     }
 }

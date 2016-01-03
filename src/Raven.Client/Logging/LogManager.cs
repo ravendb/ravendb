@@ -17,13 +17,6 @@ namespace Raven.Abstractions.Logging
             GetLogger(typeof(LogManager));
         }
 
-#if !DNXCORE50
-        public static ILog GetCurrentClassLogger()
-        {
-            var stackFrame = new StackFrame(1, false);
-            return GetLogger(stackFrame.GetMethod().DeclaringType);
-        }
-#endif
 
         private static ILogManager currentLogManager;
         public static ILogManager CurrentLogManager
@@ -151,9 +144,7 @@ namespace Raven.Abstractions.Logging
         public string FormattedMessage { get; set; }
         public string LoggerName { get; set; }
         public Exception Exception { get; set; }
-#if !DNXCORE50
-        public StackTrace StackTrace { get; set; }
-#endif
+        public string StackTrace { get; set; }
     }
 
     public class LogEventInfoFormatted
@@ -164,9 +155,7 @@ namespace Raven.Abstractions.Logging
         public string Message { get; set; }
         public string LoggerName { get; set; }
         public string Exception { get; set; }
-#if !DNXCORE50
         public string StackTrace { get; set; }
-#endif
 
         public LogEventInfoFormatted(LogEventInfo eventInfo)
         {
@@ -174,11 +163,9 @@ namespace Raven.Abstractions.Logging
             Message = eventInfo.FormattedMessage;
             LoggerName = eventInfo.LoggerName;
             Level = eventInfo.Level.ToString();
-            Exception = eventInfo.Exception == null ? null : eventInfo.Exception.ToString();
+            Exception = eventInfo.Exception?.ToString();
             Database = eventInfo.Database;
-#if !DNXCORE50
-            StackTrace = eventInfo.StackTrace == null ? null : eventInfo.StackTrace.ToString();
-#endif
+            StackTrace = eventInfo.StackTrace;
         }
     }
 }
