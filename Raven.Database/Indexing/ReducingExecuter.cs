@@ -112,10 +112,7 @@ namespace Raven.Database.Indexing
                 {
                     // need to flush the changes made to the map-reduce index
                     // before commiting the deletions of the scheduled reductions 
-                    context.IndexStorage.FlushIndexes(new HashSet<int>
-                    {
-                        indexToWorkOn.IndexId
-                    });
+                    context.IndexStorage.FlushIndex(indexToWorkOn.IndexId);
 
                     var deletingScheduledReductionsDuration = new Stopwatch();
                     var storageCommitDuration = new Stopwatch();

@@ -1416,18 +1416,22 @@ namespace Raven.Database.Indexing
         {
             if (indexes == null)
                 return;
-
-            var indexesToFlush = indexes.Values.Where(value => value != null && !value.IsMapReduce);
-            FlushIndexesInternal(indexesToFlush);
+            foreach (var index in indexes)
+            {
+                if (index.Value.IsMapReduce == false)
+                    FlushIndex(index.Value);
+            }
         }
 
         public void FlushReduceIndexes()
         {
             if (indexes == null)
                 return;
-
-            var indexesToFlush = indexes.Values.Where(value => value != null && value.IsMapReduce);
-            FlushIndexesInternal(indexesToFlush);
+            foreach (var index in indexes)
+            {
+                if (index.Value.IsMapReduce)
+                    FlushIndex(index.Value);
+            }
         }
 
         public void FlushIndexes(HashSet<int> indexIds)
@@ -1435,33 +1439,39 @@ namespace Raven.Database.Indexing
             if (indexes == null || indexIds.Count == 0)
                 return;
 
-            var indexesToFlush = indexes.Values.Where(x => indexIds.Contains(x.IndexId));
-            FlushIndexesInternal(indexesToFlush);
+            foreach (var indexId in indexIds)
+            {
+                FlushIndex(indexId);
+            }
         }
 
-        private static void FlushIndexesInternal(IEnumerable<Index> indexesToFlush)
+        public void FlushIndex(int indexId)
         {
-            foreach (var value in indexesToFlush)
+            Index value;
+            if (indexes.TryGetValue(indexId, out value))
+                FlushIndex(value);
+        }
+
+        private static void FlushIndex(Index value)
+        {
+            var sp = Stopwatch.StartNew();
+
+            try
             {
-                var sp = Stopwatch.StartNew();
+                value.Flush(value.GetLastEtagFromStats());
+            }
+            catch (Exception e)
+            {
+                value.IncrementWriteErrors(e);
+                log.WarnException(string.Format("Failed to flush {0} index: {1} (id: {2})",
+                    GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId), e);
+                throw;
+            }
 
-                try
-                {
-                    value.Flush(value.GetLastEtagFromStats());
-                }
-                catch (Exception e)
-                {
-                    value.IncrementWriteErrors(e);
-                    log.WarnException(string.Format("Failed to flush {0} index: {1} (id: {2})",
-                        GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId), e);
-                    throw;
-                }
-
-                if (log.IsDebugEnabled)
-                {
-                    log.Debug("Flashed {0} index: {1} (id: {2}), took {3}ms",
-                        GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
-                }
+            if (log.IsDebugEnabled)
+            {
+                log.Debug("Flashed {0} index: {1} (id: {2}), took {3}ms",
+                    GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId, sp.ElapsedMilliseconds);
             }
         }
 

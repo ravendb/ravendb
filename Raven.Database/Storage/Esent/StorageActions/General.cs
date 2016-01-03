@@ -239,7 +239,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 {
                     if (totalMaybePulseCount >= maxNumberOfCallsBeforePulsingIsForced)
                     {
-                        Interlocked.Add(ref totalMaybePulseCount, -maxNumberOfCallsBeforePulsingIsForced);
+                        Interlocked.Exchange(ref totalMaybePulseCount, 0);
 
                         if (beforePulseTransaction != null)
                             beforePulseTransaction();
@@ -255,7 +255,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (eightyPrecentOfMax <= sizeInBytes ||
                     totalMaybePulseCount >= maxNumberOfCallsBeforePulsingIsForced)
                 {
-                    Interlocked.Add(ref totalMaybePulseCount, -maxNumberOfCallsBeforePulsingIsForced);
+                    Interlocked.Exchange(ref totalMaybePulseCount, 0);
 
                     if (beforePulseTransaction != null)
                         beforePulseTransaction();
