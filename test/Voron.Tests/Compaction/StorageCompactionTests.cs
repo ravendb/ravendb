@@ -13,14 +13,16 @@ using Voron.Impl.Compaction;
 
 namespace Voron.Tests.Compaction
 {
-	public class StorageCompactionTests : IDisposable
+	public class StorageCompactionTests : StorageTest
 	{
-		public const string CompactionTestsData = "Data";
-		public const string CompactedData = "Data.Compacted";
-
-		public StorageCompactionTests()
+	    public StorageCompactionTests()
 		{
-			Clean();
+	        if (Directory.Exists(DataDir))
+	            StorageTest.DeleteDirectory(DataDir);
+
+	        var compactedData = Path.Combine(DataDir, "Compacted");
+	        if (Directory.Exists(compactedData))
+	            StorageTest.DeleteDirectory(compactedData);
 		}
 
 		[Fact]
@@ -43,7 +45,7 @@ namespace Voron.Tests.Compaction
 			const int multiValueRecordsCount = 4;
 			const int multiValuesCount = 3;
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				for (int i = 0; i < treeCount; i++)
 				{
@@ -85,9 +87,10 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData));
+		    var compactedData = Path.Combine(DataDir, "Compacted");
+		    StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
 
-			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactedData)))
+			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
 			{
 				using (var tx = compacted.ReadTransaction())
 				{
@@ -146,7 +149,7 @@ namespace Voron.Tests.Compaction
 		public void ShouldOccupyLessSpace()
 		{
 			var r = new Random();
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -176,11 +179,12 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			var oldSize = GetDirSize(new DirectoryInfo(CompactionTestsData));
+			var oldSize = GetDirSize(new DirectoryInfo(DataDir));
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(CompactedData));
+		    var compactedData = Path.Combine(DataDir, "Compacted");
+		    StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions) StorageEnvironmentOptions.ForPath(compactedData));
 
-			var newSize = GetDirSize(new DirectoryInfo(CompactedData));
+			var newSize = GetDirSize(new DirectoryInfo(compactedData));
 
 			Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
 		}
@@ -188,7 +192,7 @@ namespace Voron.Tests.Compaction
 		[Fact]
 		public void CannotCompactStorageIfIncrementalBackupEnabled()
 		{
-			var envOptions = StorageEnvironmentOptions.ForPath(CompactionTestsData);
+			var envOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			envOptions.IncrementalBackupEnabled = true;
 			using (var env = new StorageEnvironment(envOptions))
 			{
@@ -203,10 +207,10 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			var srcOptions = StorageEnvironmentOptions.ForPath(CompactionTestsData);
+			var srcOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			srcOptions.IncrementalBackupEnabled = true;
 
-			var invalidOperationException = Assert.Throws<InvalidOperationException>(() => StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData)));
+			var invalidOperationException = Assert.Throws<InvalidOperationException>(() => StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "Compacted"))));
 
 			Assert.Equal(StorageCompaction.CannotCompactBecauseOfIncrementalBackup, invalidOperationException.Message);
 		}
@@ -214,7 +218,7 @@ namespace Voron.Tests.Compaction
 		[Fact]
 		public void ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace()
 		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -227,9 +231,10 @@ namespace Voron.Tests.Compaction
 				}
 			}
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData));
+		    var compactedData = Path.Combine(DataDir, "Compacted");
+		    StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
 
-			var compactedDir = new DirectoryInfo(CompactedData);
+			var compactedDir = new DirectoryInfo(compactedData);
 
 			var journalsAfterCompaction = compactedDir.GetFiles("*.journal").Select(x => x.Name).ToList();
 
@@ -237,7 +242,7 @@ namespace Voron.Tests.Compaction
 
 			// ensure it can write more data
 
-			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactedData)))
+			using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
 			{
 				using (var tx = compacted.WriteTransaction())
 				{
@@ -251,7 +256,7 @@ namespace Voron.Tests.Compaction
 		[Fact]
 		public void ShouldReportProgress()
 		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(CompactionTestsData)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -280,7 +285,7 @@ namespace Voron.Tests.Compaction
 
 			var progressReport = new List<string>();
 
-			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(CompactionTestsData), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(CompactedData), x => progressReport.Add(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
+			StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir), (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "Compacted")), x => progressReport.Add(string.Format("Copied {0} of {1} records in '{2}' tree. Copied {3} of {4} trees.", x.CopiedTreeRecords, x.TotalTreeRecordsCount, x.TreeName, x.CopiedTrees, x.TotalTreeCount)));
 
 			Assert.NotEmpty(progressReport);
 		    var lines = new[]
@@ -309,20 +314,6 @@ namespace Voron.Tests.Compaction
 			size += directories.Sum(x => GetDirSize(x));
 
 			return size;
-		}
-
-		public void Dispose()
-		{
-		    Clean();
-		}
-
-		private static void Clean()
-		{
-			if (Directory.Exists(CompactionTestsData))
-				StorageTest.DeleteDirectory(CompactionTestsData);
-
-			if (Directory.Exists(CompactedData))
-				StorageTest.DeleteDirectory(CompactedData);
 		}
 	}
 }

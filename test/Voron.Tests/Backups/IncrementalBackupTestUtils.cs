@@ -5,17 +5,22 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Voron.Tests.Backups
 {
     public class IncrementalBackupTestUtils
     {
-        public static readonly Func<int, string> IncrementalBackupFile = n => string.Format("voron-test.{0}-incremental-backup.zip", n);
-        public const string RestoredStoragePath = "incremental-backup-test.data";
+        public string IncrementalBackupFile(int n) =>
+            Path.Combine(DataDir, string.Format("voron-test.{0}-incremental-backup.zip", n));
 
-        public static void Clean()
+        public string RestoredStoragePath => Path.Combine(DataDir, "incremental-backup-test.data");
+
+        public string DataDir = StorageTest.GenerateDataDir();
+
+        public void Clean()
         {
-            foreach (var incBackupFile in Directory.EnumerateFiles(".", "*incremental-backup.zip"))
+            foreach (var incBackupFile in Directory.EnumerateFiles(DataDir, "*incremental-backup.zip"))
             {
                 File.Delete(incBackupFile);
             }

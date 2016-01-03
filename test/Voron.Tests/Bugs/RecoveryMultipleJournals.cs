@@ -268,10 +268,10 @@ namespace Voron.Tests.Bugs
 		private void CorruptPage(long journal, long page, int pos)
 		{
 			_options.Dispose();
-			_options = StorageEnvironmentOptions.ForPath("test.data");
+			_options = StorageEnvironmentOptions.ForPath(DataDir);
 			Configure(_options);
 			using (var fileStream = new FileStream(
-				Path.Combine("test.data", StorageEnvironmentOptions.JournalName(journal)), 
+				Path.Combine(DataDir, StorageEnvironmentOptions.JournalName(journal)), 
 				FileMode.Open,
 				FileAccess.ReadWrite, 
 				FileShare.ReadWrite | FileShare.Delete))

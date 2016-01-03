@@ -14,8 +14,8 @@ namespace Voron.Tests.Backups
 {
 	public class Incremental : StorageTest
 	{
-
-		protected override void Configure(StorageEnvironmentOptions options)
+        IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
+        protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.MaxLogFileSize = 1000 * options.PageSize;
 			options.IncrementalBackupEnabled = true;
@@ -24,7 +24,7 @@ namespace Voron.Tests.Backups
 
 		public Incremental()
 		{
-			IncrementalBackupTestUtils.Clean();
+            IncrementalBackupTestUtils.Clean();
 		}
 
 		[Fact]

@@ -15,9 +15,17 @@ namespace Voron.Tests
 	{
 		private StorageEnvironment _storageEnvironment;
 		protected StorageEnvironmentOptions _options;
-		protected string DataDir = "test.data";
+	    protected string DataDir = GenerateDataDir();
 
-		public StorageEnvironment Env
+	    public static string GenerateDataDir()
+	    {
+	        var tempFileName = Path.GetTempFileName();
+	        File.Delete(tempFileName);
+	        Directory.CreateDirectory(tempFileName);
+	        return tempFileName;
+	    }
+
+	    public StorageEnvironment Env
 		{
 		    get
 		    {

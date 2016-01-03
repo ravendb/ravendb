@@ -11,9 +11,11 @@ using Xunit;
 
 namespace Voron.Tests.Backups
 {
-	public class RavenDB_3115 : IDisposable
+	public class RavenDB_3115 : StorageTest
 	{
-		protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)
+        private IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
+
+        protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)
 		{
 			options.MaxLogFileSize = 1000 * options.PageSize;
 			options.IncrementalBackupEnabled = true;
@@ -24,17 +26,17 @@ namespace Voron.Tests.Backups
 
 		public RavenDB_3115()
 		{
-			Clean();
+		    IncrementalBackupTestUtils.Clean();
 		}
 
-		[Fact]
+	    [Fact]
 		public void ShouldCorrectlyLoadAfterRestartIfIncrementalBackupWasDone()
 		{
 			var bytes = new byte[1024];
 
 			new Random().NextBytes(bytes);
 
-			using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath("Data"))))
+			using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir))))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -67,17 +69,9 @@ namespace Voron.Tests.Backups
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
-			Clean();
-		}
-
-		private static void Clean()
-		{
-			if (Directory.Exists("Data"))
-				Directory.Delete("Data", true);
-
-			IncrementalBackupTestUtils.Clean();
+		    IncrementalBackupTestUtils.Clean();
 		}
 	}
 }

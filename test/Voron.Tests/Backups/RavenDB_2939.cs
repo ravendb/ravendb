@@ -13,7 +13,9 @@ namespace Voron.Tests.Backups
 {
 	public class RavenDB_2939 : StorageTest
 	{
-		public RavenDB_2939()
+	    private IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
+
+        public RavenDB_2939()
 		{
 			IncrementalBackupTestUtils.Clean();
 		}
