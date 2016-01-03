@@ -857,7 +857,7 @@ namespace Raven.Database.Actions
                 {
                     Index = instance.IndexId
                 });
-                task.Keys.Add(key);
+                task.AddKey(key);
             }
         }
     }

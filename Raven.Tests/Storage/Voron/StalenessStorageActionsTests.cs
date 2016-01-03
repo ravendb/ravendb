@@ -290,8 +290,7 @@ namespace Raven.Tests.Storage.Voron
                     accessor.Indexing.UpdateLastIndexed(101, etag3, date3);
                     accessor.Tasks.AddTask(new RemoveFromIndexTask
                                            {
-                                               Index = 101,
-                                               Keys = new HashSet<string>()
+                                               Index = 101
                                            }, date1);
                 });
 
@@ -351,8 +350,7 @@ namespace Raven.Tests.Storage.Voron
                     accessor.MapReduce.DeleteScheduledReduction(101, 0, "reduceKey1");
                     accessor.Tasks.AddTask(new RemoveFromIndexTask
                     {
-                        Index = 101,
-                        Keys = new HashSet<string>()
+                        Index = 101
                     }, date1);
                 });
 

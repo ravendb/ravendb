@@ -1875,8 +1875,7 @@ namespace Raven.Database.Indexing
             }
             var task = new TouchReferenceDocumentIfChangedTask
             {
-                Index = indexId, // so we will get IsStale properly
-                ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase)
+                Index = indexId // so we will get IsStale properly
             };
 
             IDictionary<string, Etag> docs;
@@ -1884,21 +1883,16 @@ namespace Raven.Database.Indexing
             {
                 foreach (var doc in docs)
                 {
-                    Etag etag;
-                    if (task.ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
-                    {
-                        task.ReferencesToCheck[doc.Key] = doc.Value;
-                        continue;
-                    }
-                    if (etag == doc.Value)
-                        continue;
-                    task.ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
+                    task.UpdateReferenceToCheck(doc);
                 }
-                if (task.ReferencesToCheck.Count > 0)
-                    logIndexing.Debug("Scheduled to touch documents: {0}", String.Join(";", task.ReferencesToCheck.Select(x => x.Key + ":" + x.Value)));
+
+                if (task.NumberOfKeys > 0)
+                    logIndexing.Debug("Scheduled to touch documents: {0}", string.Join(";", task.GetReferencesForDebug()));
             }
-            if (task.ReferencesToCheck.Count == 0)
+
+            if (task.NumberOfKeys == 0)
                 return;
+
             actions.Tasks.AddTask(task, SystemTime.UtcNow);
         }
 
