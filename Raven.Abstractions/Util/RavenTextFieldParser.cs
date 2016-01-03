@@ -100,19 +100,16 @@ namespace Raven.Abstractions.Util
         private string GetNextField(string line, int startIndex, ref int nextIndex)
         {
             bool inQuote = false;
-            int currentindex = 0;
 
             if (nextIndex == int.MinValue) {
                 nextIndex = int.MaxValue;
                 return string.Empty;
             }
 
-            if (hasFieldsEnclosedInQuotes && line[currentindex] == '"') {
+            if (hasFieldsEnclosedInQuotes && line[startIndex] == '"') {
                 inQuote = true;
                 startIndex += 1;
             }
-
-            currentindex = startIndex;
 
             bool mustMatch = false;
             for (int j = startIndex; j <= line.Length - 1; j++) {
