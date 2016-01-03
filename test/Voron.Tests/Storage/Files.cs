@@ -48,7 +48,7 @@ namespace Voron.Tests.Storage
             using (var env = new StorageEnvironment(options))
             {
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
-                var scratchFileTemp = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFileTemp = Path.Combine(DataDir +"Temp", StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.False(File.Exists(scratchFile));
                 Assert.True(File.Exists(scratchFileTemp));

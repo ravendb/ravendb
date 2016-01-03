@@ -64,7 +64,7 @@ namespace Voron.Tests.Backups
 			}
 
 			// restart
-			using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath("Data"))))
+			using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir))))
 			{
 			}
 		}

@@ -15,28 +15,20 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreNoTransactionsToRecoverFromLog()
 		{
-			var path = "test2.data";
-
-			DeleteDirectory(path);
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 			}
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
-			{
-			}
-
-			DeleteDirectory(path);
+		    using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+		    {
+		    }
 		}
 
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereSingleTransactionToRecoverFromLog()
 		{
-			var path = "test2.data";
-			DeleteDirectory(path);
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -51,7 +43,7 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -71,18 +63,13 @@ namespace Voron.Tests.Bugs
 					}
 				}
 			}
-
-			DeleteDirectory(path);
 		}
 
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions()
 		{
-			var path = "test2.data";
 
-			DeleteDirectory(path);
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -100,20 +87,16 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 			}
-
-			DeleteDirectory(path);
 		}
 
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions2()
 		{
-			var path = "test2.data";
-			DeleteDirectory(path);
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -133,21 +116,16 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 			}
-
-			DeleteDirectory(path);
 		}
 
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions()
 		{
-			var path = "test2.data";
 
-			DeleteDirectory(path);
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -174,7 +152,7 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -201,17 +179,13 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			DeleteDirectory(path);
 		}
 
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions2()
 		{
-			var path = "test2.data";
 
-			DeleteDirectory(path);
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -238,7 +212,7 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
 			{
 				using (var tx = env.WriteTransaction())
 				{
@@ -265,7 +239,6 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -274,11 +247,9 @@ namespace Voron.Tests.Bugs
 			var random = new Random(1234);
 			var buffer = new byte[4096];
 			random.NextBytes(buffer);
-			var path = "test2.data";
 			var count = 1000;
-			DeleteDirectory(path);
 
-			var options = StorageEnvironmentOptions.ForPath(path);
+			var options = StorageEnvironmentOptions.ForPath(DataDir);
 			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
@@ -308,7 +279,7 @@ namespace Voron.Tests.Bugs
 
 			var expectedString = Encoding.UTF8.GetString(buffer);
 
-			options = StorageEnvironmentOptions.ForPath(path);
+			options = StorageEnvironmentOptions.ForPath(DataDir);
 			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
@@ -349,7 +320,6 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			DeleteDirectory(path);
 		}
 	}
 }

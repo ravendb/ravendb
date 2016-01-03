@@ -23,8 +23,8 @@ namespace Tryouts
         {
             for (int i = 0; i < 10; i++)
             {
-                var x = new SmallDataSection();
-                x.CanReadAndWriteFromSection_AfterFlush();
+                var x = new SplittingVeryBig();
+                x.ShouldBeAbleToWriteValuesGreaterThanLogAndRecoverThem();
                 x.Dispose();
                 Console.WriteLine(i);
             }

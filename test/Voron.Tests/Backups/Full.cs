@@ -9,28 +9,12 @@ namespace Voron.Tests.Backups
 {
     public class Full : StorageTest
     {
-        private const string _backupFile = "voron-test.backup";
-        private const string _recoveredStoragePath = "backup-test.data";
-
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxLogFileSize = 1000 * options.PageSize;
             options.ManualFlushing = true;
         }
 
-        public Full()
-        {
-            DeleteBackupData();
-        }
-
-        private void DeleteBackupData()
-        {
-            if (File.Exists(_backupFile))
-                File.Delete(_backupFile);
-
-            if (Directory.Exists(_recoveredStoragePath))
-                Directory.Delete(_recoveredStoragePath, true);
-        }
 
         [Fact]
         public void CanBackupAndRestoreSmall()
@@ -67,11 +51,11 @@ namespace Voron.Tests.Backups
 
             Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
 
-            BackupMethods.Full.ToFile(Env, _backupFile);
+            BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"));
 
-            BackupMethods.Full.Restore(_backupFile, _recoveredStoragePath);
+            BackupMethods.Full.Restore(Path.Combine(DataDir, "voron-test.backup"), Path.Combine(DataDir, "backup-test.data"));
 
-            var options = StorageEnvironmentOptions.ForPath(_recoveredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "backup-test.data"));
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             using (var env = new StorageEnvironment(options))
@@ -128,11 +112,11 @@ namespace Voron.Tests.Backups
 
             Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
 
-            BackupMethods.Full.ToFile(Env, _backupFile);
+            BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"));
 
-            BackupMethods.Full.Restore(_backupFile, _recoveredStoragePath);
+            BackupMethods.Full.Restore(Path.Combine(DataDir, "voron-test.backup"), Path.Combine(DataDir, "backup-test.data"));
 
-            var options = StorageEnvironmentOptions.ForPath(_recoveredStoragePath);
+            var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "backup-test.data"));
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             using (var env = new StorageEnvironment(options))
@@ -150,12 +134,6 @@ namespace Voron.Tests.Backups
                     }
                 }
             }
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            DeleteBackupData();
         }
     }
 }

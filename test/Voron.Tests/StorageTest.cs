@@ -15,7 +15,7 @@ namespace Voron.Tests
 	{
 		private StorageEnvironment _storageEnvironment;
 		protected StorageEnvironmentOptions _options;
-	    protected string DataDir = GenerateDataDir();
+	    protected readonly string DataDir = GenerateDataDir();
 
 	    public static string GenerateDataDir()
 	    {
@@ -111,6 +111,10 @@ namespace Voron.Tests
 		    try
 		    {
 		        Directory.Delete(dir, true);
+		    }
+		    catch (DirectoryNotFoundException)
+		    {
+		        
 		    }
 		    catch (Exception e)
 		    {

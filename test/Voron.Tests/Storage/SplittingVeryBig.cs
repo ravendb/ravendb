@@ -50,13 +50,11 @@ namespace Voron.Tests.Storage
 		[Fact]
 		public void ShouldBeAbleToWriteValuesGreaterThanLogAndRecoverThem()
 		{
-			DeleteDirectory("test2.data");
-
 			var random = new Random(1234);
 			var buffer = new byte[1024 * 512];
 			random.NextBytes(buffer);
 
-			var options = StorageEnvironmentOptions.ForPath("test2.data");
+			var options = StorageEnvironmentOptions.ForPath(DataDir);
 			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
@@ -74,7 +72,7 @@ namespace Voron.Tests.Storage
 				}
 			}
 
-			options = StorageEnvironmentOptions.ForPath("test2.data");
+			options = StorageEnvironmentOptions.ForPath(DataDir);
 			options.MaxLogFileSize = 10 * options.PageSize;
 
 			using (var env = new StorageEnvironment(options))
@@ -98,8 +96,6 @@ namespace Voron.Tests.Storage
                     }
                 }
 			}
-
-			DeleteDirectory("test2.data");
 		}
 	}
 }

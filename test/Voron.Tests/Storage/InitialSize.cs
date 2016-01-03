@@ -13,20 +13,8 @@ namespace Voron.Tests.Storage
 {
     public class InitialSize : StorageTest
     {
-        private readonly string path;
-
-        public InitialSize()
-        {
-            path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            if (Directory.Exists(path))
-                Directory.Delete(path, true);
-        }
-
         public int GetExpectedInitialSize()
         {
-//			Win32NativeMethods.SYSTEM_INFO systemInfo;
-//			Win32NativeMethods.GetSystemInfo(out systemInfo);
-
             return 64 * 1024;
         }
 
@@ -35,13 +23,13 @@ namespace Voron.Tests.Storage
         {
 
 
-            var options = StorageEnvironmentOptions.ForPath(path);
+            var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = null;
 
             using (new StorageEnvironment(options))
             {
-                var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+                var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
+                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.Equal(GetExpectedInitialSize(), new FileInfo(dataFile).Length);
                 Assert.Equal(GetExpectedInitialSize(), new FileInfo(scratchFile).Length);
@@ -51,13 +39,13 @@ namespace Voron.Tests.Storage
         [Fact]
         public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordingly()
         {
-            var options = StorageEnvironmentOptions.ForPath(path);
+            var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = GetExpectedInitialSize()* 2;
 
             using (new StorageEnvironment(options))
             {
-                var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+                var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
+                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(dataFile).Length);
                 Assert.Equal(GetExpectedInitialSize() * 2, new FileInfo(scratchFile).Length);
@@ -67,13 +55,13 @@ namespace Voron.Tests.Storage
         [Fact]
         public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity()
         {
-            var options = StorageEnvironmentOptions.ForPath(path);
+            var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.InitialFileSize = GetExpectedInitialSize() * 2 + 1;
 
             using (new StorageEnvironment(options))
             {
-                var dataFile = Path.Combine(path, Constants.DatabaseFilename);
-                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+                var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
+                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 if (StorageEnvironmentOptions.RunningOnPosix) {
                     // on Linux, we use 4K as the allocation granularity
@@ -89,8 +77,8 @@ namespace Voron.Tests.Storage
 
         public override void Dispose()
         {
-            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
-                Directory.Delete(path, true);
+            if (!string.IsNullOrEmpty(DataDir) && Directory.Exists(DataDir))
+                Directory.Delete(DataDir, true);
 
             base.Dispose();
         }

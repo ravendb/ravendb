@@ -9,30 +9,17 @@ namespace Voron.Tests.Backups
 {
 	public class MinimalIncrementalBackupTests : StorageTest
 	{
-		private string _tempDir;
-
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.IncrementalBackupEnabled = true;
 			options.MaxLogFileSize = 1000 * options.PageSize;
 		}
 
-		public override void Dispose()
-		{
-			base.Dispose();
-
-			if (_tempDir == null)
-				return;
-
-			Directory.Delete(_tempDir, true);
-		}
-
-		[Fact]
+	    [Fact]
 		public void Can_write_minimal_incremental_backup_and_restore_with_regular_incremental()
 		{
 			const int UserCount = 5000;
-			_tempDir = Guid.NewGuid().ToString();
-			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			storageEnvironmentOptions.IncrementalBackupEnabled = true;
 			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
 			{
@@ -54,13 +41,13 @@ namespace Voron.Tests.Backups
 				}
 
 				var snapshotWriter = new MinimalIncrementalBackup();
-				snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, "1.snapshot"));
+				snapshotWriter.ToFile(envToSnapshot, Path.Combine(DataDir, "1.snapshot"));
 			}
 
 			var incremental = new IncrementalBackup();
 
-			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
-			incremental.Restore(restoredOptions, new[] { Path.Combine(_tempDir, "1.snapshot") });
+			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
+			incremental.Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.snapshot") });
 
 			using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
 			{
@@ -82,8 +69,7 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void Can_use_full_back_then_full_min_backup()
 		{
-			_tempDir = Guid.NewGuid().ToString();
-			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			storageEnvironmentOptions.IncrementalBackupEnabled = true;
 			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
 			{
@@ -99,7 +85,7 @@ namespace Voron.Tests.Backups
 					tx.Commit();
 				}
 
-				new FullBackup().ToFile(envToSnapshot, Path.Combine(_tempDir, "full.backup"));
+				new FullBackup().ToFile(envToSnapshot, Path.Combine(DataDir, "full.backup"));
 
 				using (var tx = envToSnapshot.WriteTransaction())
 				{
@@ -117,13 +103,13 @@ namespace Voron.Tests.Backups
 
 					tx.Commit();
 				}
-				new MinimalIncrementalBackup().ToFile(envToSnapshot, Path.Combine(_tempDir, "1.backup"));
+				new MinimalIncrementalBackup().ToFile(envToSnapshot, Path.Combine(DataDir, "1.backup"));
 			}
 
 
-			new FullBackup().Restore(Path.Combine(_tempDir, "full.backup"), Path.Combine(_tempDir, "restored"));
-			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
-			new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(_tempDir, "1.backup") });
+			new FullBackup().Restore(Path.Combine(DataDir, "full.backup"), Path.Combine(DataDir, "restored"));
+			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
+			new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.backup") });
 
 			using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
 			{
@@ -159,8 +145,7 @@ namespace Voron.Tests.Backups
 		public void Can_make_multiple_min_inc_backups_and_then_restore()
 		{
 			const int UserCount = 5000;
-			_tempDir = Guid.NewGuid().ToString();
-			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			storageEnvironmentOptions.IncrementalBackupEnabled = true;
 			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
 			{
@@ -183,14 +168,14 @@ namespace Voron.Tests.Backups
 						}
 					}
 					var snapshotWriter = new MinimalIncrementalBackup();
-					snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, xi + ".snapshot"));
+					snapshotWriter.ToFile(envToSnapshot, Path.Combine(DataDir, xi + ".snapshot"));
 				}
 			}
 
 			var incremental = new IncrementalBackup();
 
-			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
-			incremental.Restore(restoredOptions, Enumerable.Range(0, 5).Select(i => Path.Combine(_tempDir, i + ".snapshot")));
+			var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
+			incremental.Restore(restoredOptions, Enumerable.Range(0, 5).Select(i => Path.Combine(DataDir, i + ".snapshot")));
 
 			using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
 			{
@@ -213,8 +198,7 @@ namespace Voron.Tests.Backups
 		public unsafe void Min_inc_backup_is_smaller_than_normal_inc_backup()
 		{
 			const int UserCount = 5000;
-			_tempDir = Guid.NewGuid().ToString();
-			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			storageEnvironmentOptions.IncrementalBackupEnabled = true;
 			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
 			{
@@ -236,17 +220,17 @@ namespace Voron.Tests.Backups
 				var incrementalBackupInfo = envToSnapshot.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
 				var snapshotWriter = new MinimalIncrementalBackup();
-				snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, "1.snapshot"));
+				snapshotWriter.ToFile(envToSnapshot, Path.Combine(DataDir, "1.snapshot"));
 
 				// reset the incremental backup stuff
 
 				envToSnapshot.HeaderAccessor.Modify(ptr => ptr->IncrementalBackup = incrementalBackupInfo);
 
 				var incBackup = new IncrementalBackup();
-				incBackup.ToFile(envToSnapshot, Path.Combine(_tempDir, "2.snapshot"));
+				incBackup.ToFile(envToSnapshot, Path.Combine(DataDir, "2.snapshot"));
 
-				var incLen = new FileInfo(Path.Combine(_tempDir, "2.snapshot")).Length;
-				var minInLen = new FileInfo(Path.Combine(_tempDir, "1.snapshot")).Length;
+				var incLen = new FileInfo(Path.Combine(DataDir, "2.snapshot")).Length;
+				var minInLen = new FileInfo(Path.Combine(DataDir, "1.snapshot")).Length;
 
 				Assert.True(incLen > minInLen);
 			}
@@ -256,8 +240,7 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void Can_split_merged_transaction_to_multiple_tx()
 		{
-			_tempDir = Guid.NewGuid().ToString();
-			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			storageEnvironmentOptions.IncrementalBackupEnabled = true;
 			storageEnvironmentOptions.MaxNumberOfPagesInMergedTransaction = 8;
 			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
@@ -278,7 +261,7 @@ namespace Voron.Tests.Backups
 				}
 
 				var snapshotWriter = new MinimalIncrementalBackup();
-				var backupPath = Path.Combine(_tempDir, "1.snapshot");
+				var backupPath = Path.Combine(DataDir, "1.snapshot");
 				snapshotWriter.ToFile(envToSnapshot, backupPath);
 
 				using (var stream = File.OpenRead(backupPath))
@@ -292,8 +275,7 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void Mixed_small_and_overflow_changes()
 		{
-			_tempDir = Guid.NewGuid().ToString();
-			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(_tempDir);
+			var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
 			storageEnvironmentOptions.IncrementalBackupEnabled = true;
 			using (var envToSnapshot = new StorageEnvironment(storageEnvironmentOptions))
 			{
@@ -316,10 +298,10 @@ namespace Voron.Tests.Backups
 				}
 
 				var snapshotWriter = new MinimalIncrementalBackup();
-				snapshotWriter.ToFile(envToSnapshot, Path.Combine(_tempDir, "1.snapshot"));
+				snapshotWriter.ToFile(envToSnapshot, Path.Combine(DataDir, "1.snapshot"));
 
-				var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(_tempDir, "restored"));
-				new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(_tempDir, "1.snapshot") });
+				var restoredOptions = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "restored"));
+				new IncrementalBackup().Restore(restoredOptions, new[] { Path.Combine(DataDir, "1.snapshot") });
 
 				using (var snapshotRestoreEnv = new StorageEnvironment(restoredOptions))
 				{
@@ -339,15 +321,14 @@ namespace Voron.Tests.Backups
 		[Fact]
 		public void Can_write_minimal_incremental_backup()
 		{
-			_tempDir = Guid.NewGuid().ToString();
-			Directory.CreateDirectory(_tempDir);
+			Directory.CreateDirectory(DataDir);
 
 			var snapshotWriter = new MinimalIncrementalBackup();
-			snapshotWriter.ToFile(Env, Path.Combine(_tempDir, "1.snapshot"));
+			snapshotWriter.ToFile(Env, Path.Combine(DataDir, "1.snapshot"));
 
-			Assert.True(File.Exists(Path.Combine(_tempDir, "1.snapshot")), " Even empty minimal backup should create a file");
+			Assert.True(File.Exists(Path.Combine(DataDir, "1.snapshot")), " Even empty minimal backup should create a file");
 
-			var snapshotFileInfo = new FileInfo(Path.Combine(_tempDir, "1.snapshot"));
+			var snapshotFileInfo = new FileInfo(Path.Combine(DataDir, "1.snapshot"));
 			Assert.True(snapshotFileInfo.Length > 0, " Even empty minimal backup should create a file with some information");
 		}
 	}
