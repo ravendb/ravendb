@@ -172,24 +172,24 @@ namespace Raven.Client.Counters
                 }
             }
 
-			[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	        public async Task<bool> CounterStorageExists(CancellationToken token = default(CancellationToken))
-	        {
-		        return await CounterStorageExists(parent.Name, token).ConfigureAwait(false);
-	        }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public async Task<bool> CounterStorageExists(CancellationToken token = default(CancellationToken))
+            {
+                return await CounterStorageExists(parent.Name, token).ConfigureAwait(false);
+            }
 
-			public async Task<bool> CounterStorageExists(string storageName, CancellationToken token = default(CancellationToken))
-	        {
-				parent.AssertInitialized();
+            public async Task<bool> CounterStorageExists(string storageName, CancellationToken token = default(CancellationToken))
+            {
+                parent.AssertInitialized();
 
-				var requestUriString = $"{parent.Url}/cs/exists?storageName={storageName}";
+                var requestUriString = $"{parent.Url}/cs/exists?storageName={storageName}";
 
-				using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
-				{
-					var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-					return response.Value<bool>("Exists");
-				}
-			}
+                using (var request = parent.CreateHttpJsonRequest(requestUriString, HttpMethods.Get))
+                {
+                    var response = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    return response.Value<bool>("Exists");
+                }
+            }
         }
     }
 }

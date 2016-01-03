@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Controllers
     {
         protected virtual bool ForceClusterAwareness => false;
 
-	    public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+        public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
         {
             if (ForceClusterAwareness == false)
             {

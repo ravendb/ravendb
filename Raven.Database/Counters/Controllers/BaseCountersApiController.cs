@@ -12,13 +12,13 @@ namespace Raven.Database.Counters.Controllers
     {
         protected string CountersName => ResourceName;
 
-	    protected CounterStorage CounterStorage => Resource;
+        protected CounterStorage CounterStorage => Resource;
 
-	    public override ResourceType ResourceType => ResourceType.Counter;
+        public override ResourceType ResourceType => ResourceType.Counter;
 
-	    public override void MarkRequestDuration(long duration)
+        public override void MarkRequestDuration(long duration)
         {
-		    Resource?.MetricsCounters.RequestDurationMetric.Update(duration);
+            Resource?.MetricsCounters.RequestDurationMetric.Update(duration);
         }
     }
 }

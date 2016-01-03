@@ -4,8 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
-
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 
@@ -207,7 +208,7 @@ namespace Raven.Tests.Bundles.Replication
         }
 
         [Fact]
-        public void Will_remove_tombstones_when_deleting_and_creating_new_item_with_same_id()
+        public async Task Will_remove_tombstones_when_deleting_and_creating_new_item_with_same_id()
         {
             var store1 = CreateStore();
             var store2 = CreateStore();
@@ -220,19 +221,14 @@ namespace Raven.Tests.Bundles.Replication
                 session.SaveChanges();
             }
 
-            Company company = null;
-            for (int i = 0; i < RetriesCount; i++)
+            WaitForReplication(store2,"companies/1");
+
+            using (var session = store2.OpenSession())
             {
-                using (var session = store2.OpenSession())
-                {
-                    company = session.Load<Company>("companies/1");
-                    if (company != null)
-                        break;
-                    Thread.Sleep(100);
-                }
+                var company = session.Load<Company>("companies/1");
+                Assert.NotNull(company);
+                Assert.Equal("Hibernating Rhinos", company.Name);
             }
-            Assert.NotNull(company);
-            Assert.Equal("Hibernating Rhinos", company.Name);
 
             using (var session = store1.OpenSession())
             {
@@ -240,36 +236,22 @@ namespace Raven.Tests.Bundles.Replication
                 session.SaveChanges();
             }
 
-
-            Company deletedCompany = null;
-            for (int i = 0; i < RetriesCount; i++)
-            {
-                using (var session = store2.OpenSession())
-                    deletedCompany = session.Load<Company>("companies/1");
-                if (deletedCompany == null)
-                    break;
-                Thread.Sleep(100);
-            }
-            Assert.Null(deletedCompany);
-
+            WaitForDeletionReplication<Company>(store2, "companies/1");
+            
             using (var session = store1.OpenSession())
             {
                 session.Store(item);
                 session.SaveChanges();
             }
 
-            for (int i = 0; i < RetriesCount; i++)
+            WaitForReplication(store2, "companies/1");
+
+            using (var session = store2.OpenSession())
             {
-                using (var session = store2.OpenSession())
-                {
-                    company = session.Load<Company>("companies/1");
-                    if (company != null)
-                        break;
-                    Thread.Sleep(100);
-                }
+                var company = session.Load<Company>("companies/1");
+                Assert.NotNull(company);
+                Assert.Equal("Hibernating Rhinos", company.Name);
             }
-            Assert.NotNull(company);
-            Assert.Equal("Hibernating Rhinos", company.Name);
 
             foreach (var ravenDbServer in servers)
             {
@@ -277,5 +259,25 @@ namespace Raven.Tests.Bundles.Replication
                     accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
             }
         }
+
+        private void WaitForDeletionReplication<T>(DocumentStore store, string Id, int timeout = 5000)
+            where T : class 
+        {
+            T item = null;
+            var mre = new ManualResetEventSlim();
+            var pollTask = Task.Run(() =>
+            {
+                do
+                {
+                    Thread.Sleep(100);
+                    using (var session = store.OpenSession())
+                        item = session.Load<T>(Id);
+                } while (item != null && !mre.IsSet);
+            });
+
+            Task.WaitAny(Task.Delay(timeout), pollTask);
+            mre.Set();
+            Assert.Null(item);
+    }
     }
 }

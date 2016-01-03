@@ -69,24 +69,24 @@ namespace Raven.Database.Raft.Util
             return true;
         }
 
-		public static bool IsClusterDatabase(this CounterStorage counter)
-		{
+        public static bool IsClusterDatabase(this CounterStorage counter)
+        {
 
-			var value = counter.Configuration.Settings.Get(Constants.Cluster.NonClusterDatabaseMarker);
-			if (string.IsNullOrEmpty(value))
-				return true;
+            var value = counter.Configuration.Settings.Get(Constants.Cluster.NonClusterDatabaseMarker);
+            if (string.IsNullOrEmpty(value))
+                return true;
 
-			bool result;
-			if (bool.TryParse(value, out result) == false)
-				return true;
+            bool result;
+            if (bool.TryParse(value, out result) == false)
+                return true;
 
-			if (result)
-				return false;
+            if (result)
+                return false;
 
-			return true;
-		}
+            return true;
+        }
 
-		public static bool IsClusterDatabase(this DatabaseDocument document)
+        public static bool IsClusterDatabase(this DatabaseDocument document)
         {
             string value;
             if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
@@ -100,20 +100,20 @@ namespace Raven.Database.Raft.Util
         }
 
 
-		public static bool IsClusterDatabase(this CounterStorageDocument document)
-		{
-			string value;
-			if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
-				return true;
+        public static bool IsClusterDatabase(this CounterStorageDocument document)
+        {
+            string value;
+            if (document.Settings.TryGetValue(Constants.Cluster.NonClusterDatabaseMarker, out value) == false)
+                return true;
 
-			bool result;
-			if (bool.TryParse(value, out result) == false)
-				return true;
+            bool result;
+            if (bool.TryParse(value, out result) == false)
+                return true;
 
-			return !result;
-		}
+            return !result;
+        }
 
-		public static void AssertClusterDatabase(this DatabaseDocument document)
+        public static void AssertClusterDatabase(this DatabaseDocument document)
         {
             if (document.IsClusterDatabase() == false)
                 throw new InvalidOperationException("Not a cluster database. Database: " + document.Id);

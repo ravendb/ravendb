@@ -47,19 +47,19 @@ namespace Raven.Tests.Counters
             {
                 using (NewRemoteDocumentStore(ravenDbServer: serverB))
                 {
-	                using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenServer: serverA))
-	                using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenServer: serverB))
-	                {
-		                await SetupReplicationAsync(storeA, storeB);
-		                await storeA.ChangeAsync("group", "counter", 2);
+                    using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenServer: serverA))
+                    using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenServer: serverB))
+                    {
+                        await SetupReplicationAsync(storeA, storeB);
+                        await storeA.ChangeAsync("group", "counter", 2);
 
-		                await WaitForReplicationBetween(storeA, storeB, "group", "counter");
+                        await WaitForReplicationBetween(storeA, storeB, "group", "counter");
 
-		                serverA.Dispose();
+                        serverA.Dispose();
 
-		                var total = await storeA.GetOverallTotalAsync("group", "counter");
-		                Assert.Equal(2, total.Total);
-	                }
+                        var total = await storeA.GetOverallTotalAsync("group", "counter");
+                        Assert.Equal(2, total.Total);
+                    }
                 }
             }
         }

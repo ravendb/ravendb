@@ -120,7 +120,7 @@ namespace Raven.Database.Extensions
                 isTimerDisposed = true;
             }
 
-	        timer?.Dispose();
+            timer?.Dispose();
         }
     }
 }

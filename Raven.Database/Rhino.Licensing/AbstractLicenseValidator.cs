@@ -667,5 +667,7 @@ namespace Rhino.Licensing
         public void Dispose()
         {
             discoveryHost.Dispose();
-    }
+            var disposableDiscoveryClient = discoveryClient as IDisposable;
+            if (disposableDiscoveryClient != null) disposableDiscoveryClient.Dispose();
+        }
 }}
