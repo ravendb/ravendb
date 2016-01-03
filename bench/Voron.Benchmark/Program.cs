@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -22,53 +22,34 @@ namespace Voron.Benchmark
             var oldbg = Console.BackgroundColor;
             Console.ForegroundColor = ConsoleColor.Red;
             Console.BackgroundColor = ConsoleColor.Yellow;
-            Console.Beep();
+      
             Console.WriteLine("Dude, you are running benchmark in debug mode?!");
             Console.ForegroundColor = oldfg;
             Console.BackgroundColor = oldbg;
 #endif
             _randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
-            Time("fill seq none", sw => FillSeqOneTransaction(sw));
-            Time("fill seq buff", sw => FillSeqOneTransaction(sw));
-            Time("fill seq sync", sw => FillSeqOneTransaction(sw));
-            
-            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw));
-            Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw));
-            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw));
+            Time("fill seq", sw => FillSeqOneTransaction(sw));
 
-            Time("fill rnd none", sw => FillRandomOneTransaction(sw));
-            Time("fill rnd buff", sw => FillRandomOneTransaction(sw));
-            Time("fill rnd sync", sw => FillRandomOneTransaction(sw));
+            Time("fill seq separate tx", sw => FillSeqMultipleTransaction(sw));
 
-            Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw));
-            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw));
-            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw));
+            Time("fill rnd", sw => FillRandomOneTransaction(sw));
+
+            Time("fill rnd separate tx", sw => FillRandomMultipleTransaction(sw));
 
             Time("Data for tests", sw => FillSeqOneTransaction(sw));
 
             Time("read seq", ReadOneTransaction, delete: false);
+
             Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
             Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
             Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
             Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
             Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-            Time("fill batch read batch", sw => FillBatchReadBatchOneTransaction(sw, 1000 * ItemsPerTransaction));
-
             Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
-
-        }
-
-        private static void FlushOsBuffer()
-        {
-            //const FileOptions fileFlagNoBuffering = (FileOptions)0x20000000;
-
-            //using (new FileStream(Path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
-            //                           fileFlagNoBuffering))
-            //{
-
-            //}
+            Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8));
+            Time("fill seq non then read parallel 16", stopwatch => ReadAndWriteOneTransaction(stopwatch, 16));
         }
 
         private static HashSet<long> InitRandomNumbers(int count)
@@ -86,8 +67,7 @@ namespace Voron.Benchmark
         {
             if (delete)
                 DeleteDirectory(Path);
-            else
-                FlushOsBuffer();
+
             var sp = new Stopwatch();
             Console.Write("{0,-35}: running...", name);
             action(sp);
@@ -128,19 +108,20 @@ namespace Voron.Benchmark
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    tx.CreateTree("test");
                     tx.Commit();
                 }
 
                 sw.Start();
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("test");
                     foreach (var l in _randomNumbers)
                     {
                         ms.Position = 0;
-                        tx.State.Root.Add(tx, l.ToString("0000000000000000"), ms);
+                        tree.Add(l.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -158,20 +139,23 @@ namespace Voron.Benchmark
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
+                    tx.CreateTree("test");
+
                     tx.Commit();
                 }
 
 
                 sw.Start();
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("test");
                     for (long i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         ms.Position = 0;
-                        tx.State.Root.Add(tx, i.ToString("0000000000000000"), ms);
+                        tree.Add(i.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -188,9 +172,11 @@ namespace Voron.Benchmark
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
+                    tx.CreateTree("test");
+
                     tx.Commit();
                 }
 
@@ -198,13 +184,14 @@ namespace Voron.Benchmark
                 var enumerator = _randomNumbers.GetEnumerator();
                 for (int x = 0; x < Transactions; x++)
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
+                        var tree = tx.CreateTree("test");
                         for (long i = 0; i < ItemsPerTransaction; i++)
                         {
                             ms.Position = 0;
                             enumerator.MoveNext();
-                            tx.State.Root.Add(tx, (enumerator.Current).ToString("0000000000000000"), ms);
+                            tree.Add((enumerator.Current).ToString("0000000000000000"), ms);
                         }
                         tx.Commit();
                     }
@@ -221,9 +208,11 @@ namespace Voron.Benchmark
                 new Random().NextBytes(value);
                 var ms = new MemoryStream(value);
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
+                    tx.CreateTree("test");
+
                     tx.Commit();
                 }
 
@@ -231,12 +220,13 @@ namespace Voron.Benchmark
                 int counter = 0;
                 for (int x = 0; x < Transactions; x++)
                 {
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    using (var tx = env.WriteTransaction())
                     {
+                        var tree = tx.CreateTree("test");
                         for (long i = 0; i < ItemsPerTransaction; i++)
                         {
                             ms.Position = 0;
-                            tx.State.Root.Add(tx, (counter++).ToString("0000000000000000"), ms);
+                            tree.Add((counter++).ToString("0000000000000000"), ms);
                         }
 
                         tx.Commit();
@@ -259,14 +249,15 @@ namespace Voron.Benchmark
                     var currentBase = i;
                     ThreadPool.QueueUserWorkItem(state =>
                     {
-                        using (var tx = env.NewTransaction(TransactionFlags.Read))
+                        using (var tx = env.ReadTransaction())
                         {
+                            var tree = tx.ReadTree("test");
                             var ms = new byte[100];
                             for (int j = 0; j < ((ItemsPerTransaction * Transactions) / concurrency); j++)
                             {
-                                var current = j*currentBase;
+                                var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                var stream = tx.State.Root.Read(tx, key).Reader;
+                                var stream = tree.Read(key).Reader;
                                 while (stream.Read(ms, 0, ms.Length) != 0)
                                 {
                                 }
@@ -283,55 +274,19 @@ namespace Voron.Benchmark
             }
         }
 
-        private static void FillBatchReadBatchOneTransaction(Stopwatch sw, int iterations)
-        {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
-            {
-                sw.Start();
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
-                    var ms = new byte[100];
-
-                    var batch = new WriteBatch();
-                    for (int i = 0; i < iterations; i++)
-                    {
-                        var key = i.ToString("0000000000000000");
-                        batch.Add(key, new MemoryStream(), null);
-                    }
-
-                    using (var snapshot = env.CreateSnapshot())
-                    {
-                        for (int i = 0; i < iterations; i++)
-                        {
-                            var key = i.ToString("0000000000000000");
-
-                            var read = snapshot.Read(null, key, batch).Reader;
-                            {
-                                while (read.Read(ms, 0, ms.Length) != 0)
-                                {
-                                }
-                            }
-                        }
-                    }
-
-                    tx.Commit();
-                }
-                sw.Stop();
-            }
-        }
-
         private static void ReadOneTransaction(Stopwatch sw)
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 sw.Start();
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                using (var tx = env.ReadTransaction())
                 {
+                    var test = tx.ReadTree("test");
                     var ms = new byte[100];
                     for (int i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         var key = i.ToString("0000000000000000");
-                        var stream = tx.State.Root.Read(tx, key).Reader;
+                        var stream = test.Read(key).Reader;
                         {
                             while (stream.Read(ms, 0, ms.Length) != 0)
                             {
@@ -352,19 +307,23 @@ namespace Voron.Benchmark
                 var value = new byte[100];
                 new Random().NextBytes(value);
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
-                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.EnsureContinuous(0, 256 * 1024);
+                    tx.CreateTree("test");
+
                     tx.Commit();
                 }
 
-                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var tx = env.WriteTransaction())
                 {
+                    var tree = tx.CreateTree("test");
+
                     var ms = new MemoryStream(value);
                     for (long i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         ms.Position = 0;
-                        tx.State.Root.Add(tx, i.ToString("0000000000000000"), ms);
+                        tree.Add(i.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -378,14 +337,15 @@ namespace Voron.Benchmark
                     var currentBase = i;
                     ThreadPool.QueueUserWorkItem(state =>
                     {
-                        using (var tx = env.NewTransaction(TransactionFlags.Read))
+                        using (var tx = env.ReadTransaction())
                         {
+                            var tree = tx.ReadTree("test");
                             var ms = new byte[100];
-                            for (int j = 0; j < ((ItemsPerTransaction*Transactions)/concurrency); j++)
+                            for (int j = 0; j < ((ItemsPerTransaction * Transactions) / concurrency); j++)
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                var stream = tx.State.Root.Read(tx, key).Reader;
+                                var stream = tree.Read(key).Reader;
                                 {
                                     while (stream.Read(ms, 0, ms.Length) != 0)
                                     {
