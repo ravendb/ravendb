@@ -26,11 +26,9 @@ using Raven.Client.Metrics;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Json.Linq;
-using Raven.Abstractions;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Connection.Implementation

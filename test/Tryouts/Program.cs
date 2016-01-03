@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Bond;
+using Raven.Client.Document;
 using Voron.Impl.FileHeaders;
 using Voron.Platform.Win32;
 using Voron.Tests.Backups;
@@ -21,13 +22,12 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 10; i++)
+            var a = new DocumentStore
             {
-                var x = new SplittingVeryBig();
-                x.ShouldBeAbleToWriteValuesGreaterThanLogAndRecoverThem();
-                x.Dispose();
-                Console.WriteLine(i);
-            }
+                DefaultDatabase = "test",
+                Url = "http://live-test.ravendb.net"
+            }.Initialize();
+
         }
     }
 }

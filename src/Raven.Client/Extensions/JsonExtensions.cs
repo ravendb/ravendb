@@ -160,18 +160,13 @@ namespace Raven.Abstractions.Extensions
             return (T)self.Deserialize(reader, typeof(T));
         }
 
-        private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
+        private static readonly IContractResolver contractResolver = new DefaultServerContractResolver()
         {
             DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
         };
 
         private class DefaultServerContractResolver : DefaultContractResolver
         {
-            public DefaultServerContractResolver(bool shareCache)
-                : base(shareCache)
-            {
-            }
-
             protected override System.Collections.Generic.List<MemberInfo> GetSerializableMembers(Type objectType)
             {
                 var serializableMembers = base.GetSerializableMembers(objectType);

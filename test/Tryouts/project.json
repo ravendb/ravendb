@@ -7,6 +7,7 @@
   },
 
   "dependencies": {
+    "Raven.Client": "4.0.0-*"
   },
 
   "commands": {
@@ -24,7 +25,9 @@
         "System.Linq": "4.0.1-beta-23516",
         "System.Threading": "4.0.11-beta-23516",
         "Voron": "4.0.0-*",
-        "Voron.Tests": "4.0.0-*"
+        "Voron.Tests": "4.0.0-*",
+
+        "System.IO.IsolatedStorage": "4.0.1-beta-23516"
       }
     }
   }

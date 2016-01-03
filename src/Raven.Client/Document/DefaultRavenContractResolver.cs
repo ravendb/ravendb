@@ -17,21 +17,9 @@ namespace Raven.Client.Document
     /// </summary>
     public class DefaultRavenContractResolver : DefaultContractResolver
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DefaultRavenContractResolver"/> class.
-        /// </summary>
-        /// <param name="shareCache">If set to <c>true</c> the <see cref="T:Raven.Imports.Newtonsoft.Json.Serialization.DefaultContractResolver"/> will use a cached shared with other resolvers of the same type.
-        /// Sharing the cache will significantly performance because expensive reflection will only happen once but could cause unexpected
-        /// behavior if different instances of the resolver are suppose to produce different results. When set to false it is highly
-        /// recommended to reuse <see cref="T:Raven.Imports.Newtonsoft.Json.Serialization.DefaultContractResolver"/> instances with the <see cref="T:Raven.Imports.Newtonsoft.Json.JsonSerializer"/>.</param>
-        public DefaultRavenContractResolver(bool shareCache) : base(shareCache)
-        {
-            clearExtensionData = new DisposableAction(() => currentExtensionData = null);
-        }
-
         [ThreadStatic]
         private static ExtensionDataSetter currentExtensionData;
-        private readonly DisposableAction clearExtensionData;
+        private readonly DisposableAction clearExtensionData = new DisposableAction(() => currentExtensionData = null);
 
         public IDisposable RegisterForExtensionData(ExtensionDataSetter setter)
         {

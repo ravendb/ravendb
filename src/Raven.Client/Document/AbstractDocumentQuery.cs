@@ -989,10 +989,10 @@ namespace Raven.Client.Document
             return queryOperation.Complete<T>().GetEnumerator();
         }
 
-        private async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
+        private Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
         {
             var list = currentQueryOperation.Complete<T>();
-            return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
+            return Task.FromResult(Tuple.Create(currentQueryOperation.CurrentQueryResults, list));
         }
 
         /// <summary>

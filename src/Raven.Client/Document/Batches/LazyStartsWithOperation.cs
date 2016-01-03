@@ -59,8 +59,8 @@ namespace Raven.Client.Document.Batches
                     string.Format(
                         "startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}&skipAfter={6}",
                         Uri.EscapeDataString(keyPrefix),
-                        actualStart.ToInvariantString(),
-                        pageSize.ToInvariantString(),
+                        actualStart,
+                        pageSize,
                         Uri.EscapeDataString(matches ?? ""),
                         Uri.EscapeDataString(exclude ?? ""),
                         nextPage ? "true" : "false",

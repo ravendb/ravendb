@@ -83,7 +83,7 @@ namespace Raven.Client.Document
             FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
             FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
             IdentityPartsSeparator = "/";
-            JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
+            JsonContractResolver = new DefaultRavenContractResolver()
             {
                 DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
             };
