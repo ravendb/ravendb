@@ -59,12 +59,13 @@ namespace Raven.Abstractions.Replication
     {
         public ReplicationDocumentWithClusterInformation()
         {
-            ClusterInformation = ClusterInformation.NotInCluster;
+            ClusterInformation = new ClusterInformation(false,false);
             ClusterCommitIndex = -1;
+            Term = -1;
         }
 
         public ClusterInformation ClusterInformation { get; set; }
-
+        public long Term { get; set; }
         public long ClusterCommitIndex { get; set; }
     }
 }
