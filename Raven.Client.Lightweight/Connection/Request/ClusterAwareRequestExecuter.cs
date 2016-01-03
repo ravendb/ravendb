@@ -347,12 +347,13 @@ namespace Raven.Client.Connection.Request
                         var newestTopology = replicationDocuments
                             .Where(x => x.Task.Result != null)
                             .OrderByDescending(x=>x.Task.Result.Term)
-                            .ThenBy(x =>
+                            .ThenByDescending(x =>
                             {
                                 var index = x.Task.Result.ClusterCommitIndex;
                                 return x.Task.Result.ClusterInformation.IsLeader ? index + 1 : index;
                             })
                             .FirstOrDefault();
+
 
                         if (newestTopology == null && FailoverServers != null && FailoverServers.Length > 0 && tryFailoverServers == false)
                             tryFailoverServers = true;
@@ -370,7 +371,8 @@ namespace Raven.Client.Connection.Request
                         if (newestTopology != null)
                         {
                             Nodes = GetNodes(newestTopology.Node, newestTopology.Task.Result);
-                            LeaderNode = GetLeaderNode(Nodes);
+                            LeaderNode = newestTopology.Task.Result.ClusterInformation.IsLeader? 
+                                Nodes.FirstOrDefault(n=>n.Url == newestTopology.Node.Url):null;
 
                             ReplicationInformerLocalCache.TrySavingClusterNodesToLocalCache(serverHash, Nodes);
 
