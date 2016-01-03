@@ -248,21 +248,22 @@ namespace Raven.Database.Server.Tenancy
 
         private void AssertLicenseParameters(RavenConfiguration config)
         {
-            string maxDatabases;
-            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfCounters", out maxDatabases))
+            string maxCounters;
+            if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfCounters", out maxCounters))
             {
-                if (string.Equals(maxDatabases, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
+                if (string.Equals(maxCounters, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    var numberOfAllowedFileSystems = int.Parse(maxDatabases);
+                    var numberOfAllowedCounters = int.Parse(maxCounters);
 
                     int nextPageStart = 0;
-                    var databases =
+                    var counters =
                         systemDatabase.Documents.GetDocumentsWithIdStartingWith(ResourcePrefix, null, null, 0,
-                            numberOfAllowedFileSystems, CancellationToken.None, ref nextPageStart).ToList();
-                    if (databases.Count >= numberOfAllowedFileSystems)
+                            numberOfAllowedCounters, CancellationToken.None, ref nextPageStart).ToList();
+                    if (counters.Count >= numberOfAllowedCounters)
                         throw new InvalidOperationException(
                             "You have reached the maximum number of counters that you can have according to your license: " +
-                            numberOfAllowedFileSystems + Environment.NewLine +
+                            numberOfAllowedCounters + Environment.NewLine +
+                            "But we detect: " + counters.Count + " counter storages" + Environment.NewLine +
                             "You can either upgrade your RavenDB license or delete a counter from the server");
                 }
             }
