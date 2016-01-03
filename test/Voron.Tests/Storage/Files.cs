@@ -11,44 +11,32 @@ namespace Voron.Tests.Storage
 {
     public class Files : StorageTest
     {
-        private readonly string path;
-
-        private readonly string temp;
-
-        public Files()
-        {
-            path = Path.GetFullPath("Data");
-            temp = Path.GetFullPath("Temp");
-
-            DeleteDirectory(path);
-            DeleteDirectory(temp);
-        }
-
+        
         [Fact]
         public void ByDefaultAllFilesShouldBeStoredInOneDirectory()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path);
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
 
-            Assert.Equal(path, options.BasePath);
+            Assert.Equal(DataDir, options.BasePath);
             Assert.Equal(options.BasePath, options.TempPath);
         }
 
         [Fact]
         public void TemporaryPathTest()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path, temp);
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp");
 
-            Assert.Equal(path, options.BasePath);
-            Assert.Equal(temp, options.TempPath);
+            Assert.Equal(DataDir, options.BasePath);
+            Assert.Equal(DataDir + "Temp", options.TempPath);
         }
 
         [Fact]
         public void DefaultScratchLocation()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path);
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
             using (var env = new StorageEnvironment(options))
             {
-                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
                 Assert.True(File.Exists(scratchFile));
             }
         }
@@ -56,11 +44,11 @@ namespace Voron.Tests.Storage
         [Fact]
         public void ScratchLocationWithTemporaryPathSpecified()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(path, temp);
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp");
             using (var env = new StorageEnvironment(options))
             {
-                var scratchFile = Path.Combine(path, StorageEnvironmentOptions.ScratchBufferName(0));
-                var scratchFileTemp = Path.Combine(temp, StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFileTemp = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.False(File.Exists(scratchFile));
                 Assert.True(File.Exists(scratchFileTemp));
@@ -69,8 +57,7 @@ namespace Voron.Tests.Storage
 
         public override void Dispose()
         {
-            DeleteDirectory(path);
-            DeleteDirectory(temp);
+            DeleteDirectory(DataDir+"Temp");
 
             base.Dispose();
         }

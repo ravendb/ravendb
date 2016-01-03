@@ -11,11 +11,9 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void MultiTreeIteratorShouldBeIsolated1()
 		{
-			var directory = "Test2";
+			DeleteDirectory(DataDir);
 
-			DeleteDirectory(directory);
-
-			var options = StorageEnvironmentOptions.ForPath(directory);
+			var options = StorageEnvironmentOptions.ForPath(DataDir);
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -51,11 +49,10 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void MultiTreeIteratorShouldBeIsolated2()
 		{
-			var directory = "Test2";
 
-			DeleteDirectory(directory);
+			DeleteDirectory(DataDir);
 
-			var options = StorageEnvironmentOptions.ForPath(directory);
+			var options = StorageEnvironmentOptions.ForPath(DataDir);
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -116,12 +113,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void ScratchPagesShouldNotBeReleasedUntilNotUsed()
 		{
-			var directory = "Test2";
-
-			if (Directory.Exists(directory))
-				Directory.Delete(directory, true);
-
-			var options = StorageEnvironmentOptions.ForPath(directory);
+			var options = StorageEnvironmentOptions.ForPath(DataDir);
 
 			options.ManualFlushing = true;
 			using (var env = new StorageEnvironment(options))

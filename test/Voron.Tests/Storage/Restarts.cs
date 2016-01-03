@@ -7,14 +7,12 @@ using Xunit;
 
 namespace Voron.Tests.Storage
 {
-    public class Restarts
+    public class Restarts : StorageTest
     {
         [Fact]
         public void DataIsKeptAfterRestart_OnDisk()
         {
-            if (Directory.Exists("test.data"))
-                Directory.Delete("test.data", true);
-            using (var pager = StorageEnvironmentOptions.ForPath("test.data"))
+            using (var pager = StorageEnvironmentOptions.ForPath(DataDir))
             {
                 pager.OwnsPagers = false;
                 using (var env = new StorageEnvironment(pager))

@@ -16,10 +16,7 @@
 
             var enumerator = sequentialLargeIds.GetEnumerator();
 
-            if (Directory.Exists("tests"))
-                Directory.Delete("tests", true);
-
-            var options = StorageEnvironmentOptions.ForPath("tests");
+            var options = StorageEnvironmentOptions.ForPath(DataDir);
             options.ManualFlushing = true;
 
             using (var env = new StorageEnvironment(options))
@@ -46,7 +43,7 @@
                 ValidateRecords(env, new List<string> { "foo" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
             }
 
-            options = StorageEnvironmentOptions.ForPath("tests");
+            options = StorageEnvironmentOptions.ForPath(DataDir);
             options.ManualFlushing = true;
 
             using (var env = new StorageEnvironment(options))
