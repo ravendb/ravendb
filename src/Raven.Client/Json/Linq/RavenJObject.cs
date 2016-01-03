@@ -379,5 +379,86 @@ namespace Raven.Json.Linq
         {
             return Properties.Values.Convert<T>();
         }
+
+
+        public static async Task<RavenJToken> LoadAsync(JsonTextReaderAsync reader)
+        {
+            if (reader.TokenType == JsonToken.None)
+            {
+                if (!await reader.ReadAsync().ConfigureAwait(false))
+                    throw new Exception("Error reading RavenJObject from JsonReader.");
+            }
+
+            if (reader.TokenType != JsonToken.StartObject)
+                throw new Exception(
+                    "Error reading RavenJObject from JsonReader. Current JsonReader item is not an object: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+
+            if (await reader.ReadAsync().ConfigureAwait(false) == false)
+                throw new Exception("Unexpected end of json object");
+
+            string propName = null;
+            var o = new RavenJObject();
+            do
+            {
+                switch (reader.TokenType)
+                {
+                    case JsonToken.Comment:
+                        // ignore comments
+                        break;
+                    case JsonToken.PropertyName:
+                        propName = reader.Value.ToString();
+                        if (String.Equals(propName, String.Empty))
+                            throw new InvalidDataException("Deserializing Json object with empty string as property name is not supported.");
+
+                        break;
+                    case JsonToken.EndObject:
+                        return o;
+                    case JsonToken.StartObject:
+                        if (!string.IsNullOrEmpty(propName))
+                        {
+                            var val = await LoadAsync(reader).ConfigureAwait(false);
+                            o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
+                            propName = null;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("The JsonReader should not be on a token of type {0}."
+                                                                    .FormatWith(CultureInfo.InvariantCulture,
+                                                                                reader.TokenType));
+                        }
+                        break;
+                    case JsonToken.StartArray:
+                        if (!string.IsNullOrEmpty(propName))
+                        {
+                            var val = await RavenJArray.LoadAsync(reader).ConfigureAwait(false);
+                            o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
+                            propName = null;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("The JsonReader should not be on a token of type {0}."
+                                                                    .FormatWith(CultureInfo.InvariantCulture,
+                                                                                reader.TokenType));
+                        }
+                        break;
+                    default:
+                        if (!string.IsNullOrEmpty(propName))
+                        {
+                            var val = RavenJValue.Load(reader);
+                            o[propName] = val; // TODO: Assert when o.Properties.ContainsKey and its value != val
+                            propName = null;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("The JsonReader should not be on a token of type {0}."
+                                                                    .FormatWith(CultureInfo.InvariantCulture,
+                                                                                reader.TokenType));
+                        }
+                        break;
+                }
+            } while (await reader.ReadAsync().ConfigureAwait(false));
+
+            throw new Exception("Error reading RavenJObject from JsonReader.");
+        }
     }
 }

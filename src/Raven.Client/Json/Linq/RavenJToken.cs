@@ -925,5 +925,43 @@ namespace Raven.Json.Linq
 
         #endregion
 
+
+        public static async Task<RavenJToken> TryLoadAsync(Stream stream)
+        {
+            var jsonTextReader = new JsonTextReaderAsync(new StreamReader(stream));
+            if (await jsonTextReader.ReadAsync().ConfigureAwait(false) == false || jsonTextReader.TokenType == JsonToken.None)
+            {
+                return null;
+            }
+            return await ReadFromAsync(jsonTextReader).ConfigureAwait(false);
+        }
+
+        public static async Task<RavenJToken> ReadFromAsync(JsonTextReaderAsync reader)
+        {
+            if (reader.TokenType == JsonToken.None)
+            {
+                if (!await reader.ReadAsync().ConfigureAwait(false))
+                    throw new Exception("Error reading RavenJToken from JsonReader.");
+            }
+
+            switch (reader.TokenType)
+            {
+                case JsonToken.StartObject:
+                    return await RavenJObject.LoadAsync(reader).ConfigureAwait(false);
+                case JsonToken.StartArray:
+                    return await RavenJArray.LoadAsync(reader).ConfigureAwait(false);
+                case JsonToken.String:
+                case JsonToken.Integer:
+                case JsonToken.Float:
+                case JsonToken.Date:
+                case JsonToken.Boolean:
+                case JsonToken.Bytes:
+                case JsonToken.Null:
+                case JsonToken.Undefined:
+                    return new RavenJValue(reader.Value);
+            }
+
+            throw new Exception(StringUtils.FormatWith("Error reading RavenJToken from JsonReader. Unexpected token: {0}", CultureInfo.InvariantCulture, reader.TokenType));
+        }
     }
 }

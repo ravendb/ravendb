@@ -1,18 +1,27 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
-    public static class StringExtensions
+    internal static class StringExtensions
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string ConvertToString(this byte[] buffer, int size)
+        public static string ToInvariantString(this int value)
         {
-            return Encoding.UTF8.GetString(buffer, 0, size);
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string ToInvariantString(this float value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string ToInvariantString(this double value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string ToInvariantString(this decimal value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
         }
     }
 }

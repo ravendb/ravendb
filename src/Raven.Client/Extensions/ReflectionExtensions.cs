@@ -14,73 +14,10 @@ namespace Raven.Abstractions.Extensions
 {
     public static class ReflectionExtensions
     {
-        private const BindingFlags DefaultFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
-
-        public static bool IsGenericTypeDefinition(this Type type)
-        {
-            return type.GetTypeInfo().IsGenericTypeDefinition;
-        }
-
-        public static bool IsDefined(this Type type, Type attributeType, bool inherit)
-        {
-            return type.GetTypeInfo().CustomAttributes.Any(a => a.AttributeType == attributeType);
-        }
-
-        public static bool IsEnum(this Type type)
-        {
-            return type.GetTypeInfo().IsEnum;
-        }
-
-        public static bool IsValueType(this Type type)
-        {
-            return type.GetTypeInfo().IsValueType;
-        }
-
-        public static Type BaseType(this Type type)
-        {
-            return type.GetTypeInfo().BaseType;
-        }
-
-        public static MethodInfo GetMethod(this Type type, string name, IList<Type> parameterTypes)
-        {
-            return type.GetMethod(name, DefaultFlags, null, parameterTypes, null);
-        }
-
-        public static MethodInfo GetMethod(this Type type, string name, BindingFlags bindingFlags, object placeHolder1, IList<Type> parameterTypes, object placeHolder2)
-        {
-            return type
-                .GetTypeInfo()
-                .DeclaredMethods
-                .Where(m =>
-                {
-                    if (name != null && m.Name != name)
-                        return false;
-
-                    if (!TestAccessibility(m, bindingFlags))
-                        return false;
-
-                    return m
-                    .GetParameters()
-                    .Select(p => p.ParameterType)
-                    .SequenceEqual(parameterTypes);
-                })
-                .SingleOrDefault();
-        }
-
         public static void InvokeMember(this Type type, string name, BindingFlags invokeAttr, object target)
         {
             var method = type.GetMethod(name);
             method.Invoke(target, null);
-        }
-
-        public static Assembly Assembly(this Type type)
-        {
-            return type.GetTypeInfo().Assembly;
-        }
-
-        public static bool IsGenericType(this Type type)
-        {
-            return type.GetTypeInfo().IsGenericType;
         }
 
         public static Type GetMemberType(this MemberInfo member)

@@ -184,10 +184,6 @@ namespace Raven.Json.Linq
         {
             if (value == null)
                 return JTokenType.Null;
-#if !DNXCORE50
-            else if (value == DBNull.Value)
-                return JTokenType.Null;
-#endif
             else if (value is string)
                 return GetStringValueType(current);
             else if (value is long || value is int || value is short || value is sbyte
@@ -678,5 +674,30 @@ namespace Raven.Json.Linq
             get { return new RavenJValue(null, JTokenType.Null); }
         }
 
+        public static RavenJToken Load(JsonTextReaderAsync reader)
+        {
+            RavenJValue v;
+            switch (reader.TokenType)
+            {
+                case JsonToken.String:
+                case JsonToken.Integer:
+                case JsonToken.Float:
+                case JsonToken.Date:
+                case JsonToken.Boolean:
+                case JsonToken.Bytes:
+                    v = new RavenJValue(reader.Value);
+                    break;
+                case JsonToken.Null:
+                    v = new RavenJValue(null, JTokenType.Null);
+                    break;
+                case JsonToken.Undefined:
+                    v = new RavenJValue(null, JTokenType.Undefined);
+                    break;
+                default:
+                    throw new InvalidOperationException(StringUtils.FormatWith("The JsonReader should not be on a token of type {0}.", CultureInfo.InvariantCulture,
+                                                                        reader.TokenType));
+            }
+            return v;
+        }
     }
 }

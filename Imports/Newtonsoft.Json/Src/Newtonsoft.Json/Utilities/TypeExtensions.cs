@@ -364,14 +364,12 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         {
             return type.GetField(member, DefaultFlags);
         }
-#endif
 
         public static MemberInfo GetField(this Type type, string member, BindingFlags bindingFlags)
         {
             return type.GetTypeInfo().GetDeclaredField(member);
         }
 
-#if !DNXCORE50
         public static IEnumerable<PropertyInfo> GetProperties(this Type type, BindingFlags bindingFlags)
         {
             IList<PropertyInfo> properties = (bindingFlags.HasFlag(BindingFlags.DeclaredOnly))
