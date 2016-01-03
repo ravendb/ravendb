@@ -346,7 +346,12 @@ namespace Raven.Client.Connection.Request
 
                         var newestTopology = replicationDocuments
                             .Where(x => x.Task.Result != null)
-                            .OrderByDescending(x => x.Task.Result.ClusterCommitIndex)
+                            .OrderByDescending(x=>x.Task.Result.Term)
+                            .ThenBy(x =>
+                            {
+                                var index = x.Task.Result.ClusterCommitIndex;
+                                return x.Task.Result.ClusterInformation.IsLeader ? index + 1 : index;
+                            })
                             .FirstOrDefault();
 
                         if (newestTopology == null && FailoverServers != null && FailoverServers.Length > 0 && tryFailoverServers == false)
