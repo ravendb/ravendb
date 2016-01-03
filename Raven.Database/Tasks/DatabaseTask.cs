@@ -11,13 +11,18 @@ namespace Raven.Database.Tasks
 {
     public abstract class DatabaseTask
     {
-        public int Index { get; set; }
+        public int Index { get; private set; }
         public abstract int NumberOfKeys { get; }
 
         public abstract bool SeparateTasksByIndex { get; }
 
         public abstract void Merge(DatabaseTask task);
         public abstract void Execute(WorkContext context);
+
+        protected DatabaseTask(int indexId)
+        {
+            Index = indexId;
+        }
 
         public byte[] AsBytes()
         {

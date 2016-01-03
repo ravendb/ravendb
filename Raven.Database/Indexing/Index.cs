@@ -1873,10 +1873,9 @@ namespace Raven.Database.Indexing
                 actions.Indexing.UpdateDocumentReferences(indexId, referencedDocument.Key, referencedDocument.Value);
                 actions.General.MaybePulseTransaction();
             }
-            var task = new TouchReferenceDocumentIfChangedTask
-            {
-                Index = indexId // so we will get IsStale properly
-            };
+
+            // so we will get IsStale properly
+            var task = new TouchReferenceDocumentIfChangedTask(indexId);
 
             IDictionary<string, Etag> docs;
             while (missingReferencedDocs.TryDequeue(out docs))

@@ -16,7 +16,7 @@ namespace Raven.Database.Tasks
     {
         private HashSet<string> Keys { get; set; }
 
-        public RemoveFromIndexTask()
+        public RemoveFromIndexTask(int indexId) : base(indexId)
         {
             Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
@@ -88,10 +88,9 @@ namespace Raven.Database.Tasks
 
         public override DatabaseTask Clone()
         {
-            return new RemoveFromIndexTask
+            return new RemoveFromIndexTask(Index)
             {
-                Keys = new HashSet<string>(Keys),
-                Index = Index,
+                Keys = new HashSet<string>(Keys)
             };
         }
 

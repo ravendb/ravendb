@@ -13,7 +13,7 @@ namespace Raven.Database.Tasks
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         private IDictionary<string, Etag> ReferencesToCheck { get; set; }
 
-        public TouchReferenceDocumentIfChangedTask()
+        public TouchReferenceDocumentIfChangedTask(int indexId) : base(indexId)
         {
             ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
         }
@@ -128,9 +128,8 @@ namespace Raven.Database.Tasks
 
         public override DatabaseTask Clone()
         {
-            return new TouchReferenceDocumentIfChangedTask
+            return new TouchReferenceDocumentIfChangedTask(Index)
             {
-                Index = Index,
                 ReferencesToCheck = new Dictionary<string, Etag>(ReferencesToCheck, StringComparer.OrdinalIgnoreCase)
             };
         }

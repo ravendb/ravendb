@@ -853,10 +853,8 @@ namespace Raven.Database.Actions
                 }
 
                 var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
-                var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
-                {
-                    Index = instance.IndexId
-                });
+                var task = actions.GetTask(x => x.Index == instance.IndexId, 
+                    new RemoveFromIndexTask(instance.IndexId));
                 task.AddKey(key);
             }
         }
