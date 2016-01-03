@@ -173,6 +173,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
             var isInCluster = ClusterManager.IsActive() && Database.IsClusterDatabase();
             var commitIndex = isInCluster ? ClusterManager.Engine.CommitIndex : -1;
+            var term = isInCluster ? ClusterManager.Engine.PersistentState.CurrentTerm : -1;
             var currentTopology = isInCluster ? ClusterManager.Engine.CurrentTopology : null;
             var currentLeader = ClusterManager.Engine.CurrentLeader;
             var isLeader = currentLeader == ClusterManager.Engine.Options.SelfConnection.Name;
@@ -182,7 +183,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 ClientConfiguration = mergedDocument.ClientConfiguration,
                 Id = mergedDocument.Id,
                 Source = mergedDocument.Source,
-                ClusterCommitIndex = commitIndex
+                ClusterCommitIndex = commitIndex,
+                Term = term
             };
 
             if (isInCluster)
