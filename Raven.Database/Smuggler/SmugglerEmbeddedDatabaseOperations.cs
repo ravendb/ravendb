@@ -29,6 +29,7 @@ namespace Raven.Database.Smuggler
         private List<JsonDocument> bulkInsertBatch = new List<JsonDocument>();
 
         private SmugglerJintHelper scriptedJsonPatcher = new SmugglerJintHelper();
+        private readonly Etag etagEmpty = Etag.Empty;
 
         public SmugglerEmbeddedDatabaseOperations(DocumentDatabase database)
         {
@@ -103,6 +104,7 @@ namespace Raven.Database.Smuggler
         public LastEtagsInfo FetchCurrentMaxEtags()
         {
             LastEtagsInfo result = null;
+
             database.TransactionalStorage.Batch(accessor =>
             {
                 result = new LastEtagsInfo
@@ -116,11 +118,43 @@ namespace Raven.Database.Smuggler
                     result.LastDocDeleteEtag = lastDocumentTombstone.Etag;
 
                 var attachmentTombstones =
-                    accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, Etag.Empty, null, int.MaxValue)
+                    accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, etagEmpty, null, int.MaxValue)
                             .OrderBy(x => x.Etag).ToArray();
                 if (attachmentTombstones.Any())
                 {
                     result.LastAttachmentsDeleteEtag = attachmentTombstones.Last().Etag;
+                }
+            });
+
+            return result;
+        }
+
+        public Etag FetchLastDocDeleteEtag()
+        {
+            var result = etagEmpty;
+
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                var lastDocumentTombstone = accessor.Lists.ReadLast(Constants.RavenPeriodicExportsDocsTombstones);
+                if (lastDocumentTombstone != null)
+                    result = lastDocumentTombstone.Etag;
+            });
+
+            return result;
+        }
+
+        public Etag FetchLastAttachmentsDeleteEtag()
+        {
+            var result = etagEmpty;
+
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                var attachmentTombstones =
+                    accessor.Lists.Read(Constants.RavenPeriodicExportsAttachmentsTombstones, etagEmpty, null, int.MaxValue)
+                            .OrderBy(x => x.Etag).ToArray();
+                if (attachmentTombstones.Any())
+                {
+                    result = attachmentTombstones.Last().Etag;
                 }
             });
 

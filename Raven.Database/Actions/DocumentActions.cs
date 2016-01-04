@@ -137,7 +137,7 @@ namespace Raven.Database.Actions
 
                         docCount = 0;
                         var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize, string.IsNullOrEmpty(skipAfter) ? null : skipAfter);
-                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                        var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
 
                         foreach (var doc in docs)
                         {
@@ -149,7 +149,7 @@ namespace Raven.Database.Actions
                                 continue;
 
                             JsonDocument.EnsureIdInMetadata(doc);
-                            var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                            var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
 
                             var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
                             document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
@@ -172,9 +172,17 @@ namespace Raven.Database.Actions
                                                          .Select(x => JsonExtensions.ToJObject(x))
                                                          .ToArray();
 
-                                    if (transformed.Length == 0)
+                                    RavenJObject ravenJObject;
+                                    switch (transformed.Length)
                                     {
-                                        throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
+                                        case 0:
+                                            throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
+                                        case 1:
+                                            ravenJObject = transformed[0];
+                                            break;
+                                        default:
+                                    ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
+                                            break;
                                     }
 
                                     var transformedJsonDocument = new JsonDocument
@@ -182,7 +190,7 @@ namespace Raven.Database.Actions
                                         Etag = document.Etag.HashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
                                         NonAuthoritativeInformation = document.NonAuthoritativeInformation,
                                         LastModified = document.LastModified,
-                                        DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed) } },
+                                        DataAsJson = ravenJObject,
                                     };
 
                                     addDoc(transformedJsonDocument);
@@ -439,7 +447,7 @@ namespace Raven.Database.Actions
                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
                         : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
 
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
                     int docCount = 0;
                     foreach (var doc in documents)
                     {
@@ -452,7 +460,7 @@ namespace Raven.Database.Actions
 
                         JsonDocument.EnsureIdInMetadata(doc);
 
-                        var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                        var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
 
                         document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
@@ -494,7 +502,7 @@ namespace Raven.Database.Actions
                 while (true)
                 {
                     var documents = actions.Documents.GetDocumentsAfterWithIdStartingWith(etag, idPrefix, pageSize, token, timeout: TimeSpan.FromSeconds(2), lastProcessedDocument: x => lastDocumentReadEtag = x );
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState);
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
                     
                     int docCount = 0;
                     foreach (var doc in documents)
@@ -506,7 +514,7 @@ namespace Raven.Database.Actions
                         
                         JsonDocument.EnsureIdInMetadata(doc);
                         
-                        var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+                        var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         var document = nonAuthoritativeInformationBehavior == null ? doc : nonAuthoritativeInformationBehavior(doc);
                        
                         document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
@@ -549,18 +557,20 @@ namespace Raven.Database.Actions
             if (transactionInformation == null ||
                 Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
             {
-                // first we check the dtc state, then the storage, to avoid race conditions
-                var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
+                TransactionalStorage.Batch(actions =>
+                {
+                    var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocument>(transactionInformation, key);
 
-                TransactionalStorage.Batch(actions => { document = actions.Documents.DocumentByKey(key); });
+                    document = actions.Documents.DocumentByKey(key);
 
-                if (nonAuthoritativeInformationBehavior != null)
-                    document = nonAuthoritativeInformationBehavior(document);
+                    if (nonAuthoritativeInformationBehavior != null)
+                        document = nonAuthoritativeInformationBehavior(document);
+                });
             }
 
             JsonDocument.EnsureIdInMetadata(document);
 
-            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
+            return new DocumentRetriever(null, null, Database.ReadTriggers)
                 .ExecuteReadTriggers(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -573,17 +583,20 @@ namespace Raven.Database.Actions
             if (transactionInformation == null ||
                 Database.InFlightTransactionalState.TryGet(key, transactionInformation, out document) == false)
             {
-                var nonAuthoritativeInformationBehavior = Database.InFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
                 TransactionalStorage.Batch(actions =>
                 {
+                    var nonAuthoritativeInformationBehavior = actions.InFlightStateSnapshot.GetNonAuthoritativeInformationBehavior<JsonDocumentMetadata>(transactionInformation, key);
+
                     document = actions.Documents.DocumentMetadataByKey(key);
+                    
+                    if (nonAuthoritativeInformationBehavior != null)
+                        document = nonAuthoritativeInformationBehavior(document);
                 });
-                if (nonAuthoritativeInformationBehavior != null)
-                    document = nonAuthoritativeInformationBehavior(document);
+                
             }
 
             JsonDocument.EnsureIdInMetadata(document);
-            return new DocumentRetriever(null, null, Database.ReadTriggers, Database.InFlightTransactionalState)
+            return new DocumentRetriever(null, null, Database.ReadTriggers)
                 .ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
         }
 
@@ -609,7 +622,7 @@ namespace Raven.Database.Actions
             TransactionalStorage.Batch(
             actions =>
             {
-                docRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, Database.InFlightTransactionalState, transformerParameters);
+                docRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
                 using (new CurrentTransformationScope(Database, docRetriever))
                 {
                     var document = Get(key, transactionInformation);
@@ -840,11 +853,9 @@ namespace Raven.Database.Actions
                 }
 
                 var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
-                var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
-                {
-                    Index = instance.IndexId
-                });
-                task.Keys.Add(key);
+                var task = actions.GetTask(x => x.Index == instance.IndexId, 
+                    new RemoveFromIndexTask(instance.IndexId));
+                task.AddKey(key);
             }
         }
     }

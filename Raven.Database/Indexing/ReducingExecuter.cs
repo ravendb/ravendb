@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -12,7 +11,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
 using Raven.Database.Util;
 using Sparrow.Collections;
 
@@ -112,6 +110,10 @@ namespace Raven.Database.Indexing
 
                 if (operationCanceled == false)
                 {
+                    // need to flush the changes made to the map-reduce index
+                    // before commiting the deletions of the scheduled reductions 
+                    context.IndexStorage.FlushIndex(indexToWorkOn.IndexId);
+
                     var deletingScheduledReductionsDuration = new Stopwatch();
                     var storageCommitDuration = new Stopwatch();
 
@@ -123,7 +125,7 @@ namespace Raven.Database.Indexing
                         actions.AfterStorageCommit += storageCommitDuration.Stop;
 
                         ScheduledReductionInfo latest;
-
+                        
                         using (StopwatchScope.For(deletingScheduledReductionsDuration))
                         {
                             latest = actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
@@ -131,6 +133,7 @@ namespace Raven.Database.Indexing
 
                         if (latest == null)
                             return;
+
                         actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexId, latest.Etag, latest.Timestamp);
                     });
 
@@ -595,11 +598,6 @@ namespace Raven.Database.Indexing
             get { return context.RunReducing; }
         }
 
-        protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
-        {
-            return null;
-        }
-
         protected override void FlushAllIndexes()
         {
             context.IndexStorage.FlushReduceIndexes();
@@ -640,6 +638,25 @@ namespace Raven.Database.Indexing
         {
             var indexDefinition = context.IndexDefinitionStorage.GetIndexDefinition(indexesStat.Id);
             return indexDefinition != null && indexDefinition.IsMapReduce;
+        }
+
+        protected override void CleanupScheduledReductions()
+        {
+            transactionalStorage.Batch(actions =>
+            {
+                var mapReduceIndexIds = actions.Indexing.GetIndexesStats()
+                    .Where(IsValidIndex)
+                    .Select(x => x.Id)
+                    .ToList();
+
+                var obsoleteScheduledReductions = actions.MapReduce.DeleteObsoleteScheduledReductions(mapReduceIndexIds, 10000);
+                foreach (var indexIdWithCount in obsoleteScheduledReductions)
+                {
+                    Log.Warn(
+                        "Deleted " + indexIdWithCount.Value + " obsolete scheduled reductions of index id: " +
+                        indexIdWithCount.Key + " (probably the index was already deleted).");
+                }
+            });
         }
     }
 }

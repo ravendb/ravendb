@@ -1,5 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <CopyNuGetImplementations>true</CopyNuGetImplementations>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -224,6 +228,7 @@
     <Compile Include="Data\PatchResult.cs" />
     <Compile Include="Data\PutResult.cs" />
     <Compile Include="Data\IndexingError.cs" />
+    <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\StopWordsSetup.cs" />
@@ -277,6 +282,7 @@
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
+    <Compile Include="Extensions\ReflectionExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="FileSystem\ConfigurationSearchResults.cs" />
     <Compile Include="FileSystem\FileHeader.cs" />
@@ -418,6 +424,7 @@
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
+    <Compile Include="Util\ConfigurationManager.cs" />
     <Compile Include="Util\Streams\BufferPoolMemoryStream.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
@@ -455,7 +462,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="packages.config" />
+    <None Include="Raven.Abstractions.project.json" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
@@ -467,7 +474,6 @@
     <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" Condition="'$(TasksTargetsImported)' == ''" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

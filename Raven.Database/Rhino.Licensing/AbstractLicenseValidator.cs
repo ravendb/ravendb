@@ -54,6 +54,7 @@ namespace Rhino.Licensing
         private readonly DiscoveryHost discoveryHost;
         private DiscoveryClient discoveryClient;
         private readonly Guid senderId = Guid.NewGuid();
+        private readonly SntpClient sntpClient;
 
         /// <summary>
         /// Fired when license data is invalidated
@@ -176,6 +177,7 @@ namespace Rhino.Licensing
             LicenseAttributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             this.publicKey = publicKey;
             discoveryHost.ClientDiscovered += DiscoveryHostOnClientDiscovered;
+            sntpClient = new SntpClient(TimeServers);
         }
 
         private void DiscoveryHostOnClientDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
@@ -253,7 +255,8 @@ namespace Rhino.Licensing
                 if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
                     return;
 
-                nextLeaseTimer = new Timer(LeaseLicenseAgain);
+                if (nextLeaseTimer == null)
+                    nextLeaseTimer = new Timer(LeaseLicenseAgain);
                 if (!turnOffDiscoveryClient)
                 {
                     try
@@ -289,6 +292,7 @@ namespace Rhino.Licensing
         {
             try
             {
+                Logger.Debug("Validating license...");
                 if (TryLoadingLicenseValuesFromValidatedXml() == false)
                 {
                     Logger.Warn("Failed validating license:\r\n{0}", License);
@@ -324,8 +328,9 @@ namespace Rhino.Licensing
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.WarnException("Unhandled error during license validation", e);
                 return false;
             }
         }
@@ -439,8 +444,12 @@ namespace Rhino.Licensing
             if (!NetworkInterface.GetIsNetworkAvailable())
                 return;
 
-            var sntp = new SntpClient(TimeServers);
-            sntp.GetDateAsync()
+            var sntpDisable = Environment.GetEnvironmentVariable("RAVENDB_SNTP_DISABLE");
+            bool result;
+            if (bool.TryParse(sntpDisable, out result) && result)
+                return;
+
+            sntpClient.GetDateAsync()
                 .ContinueWith(task =>
                 {
                     if (task.IsFaulted)
@@ -666,6 +675,8 @@ namespace Rhino.Licensing
         public void Dispose()
         {
             discoveryHost.Dispose();
+            var disposableDiscoveryClient = discoveryClient as IDisposable;
+            if (disposableDiscoveryClient != null) disposableDiscoveryClient.Dispose();
         }
     }
 }

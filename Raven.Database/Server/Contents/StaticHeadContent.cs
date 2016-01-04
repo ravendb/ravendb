@@ -13,6 +13,7 @@ namespace Raven.Database.Server.Controllers
         {
             AttachmentSize = size;
             Headers.ContentLength = AttachmentSize;
+            Headers.Add("Raven-Content-Length", AttachmentSize.ToString());
         }
 
         public int AttachmentSize { get; set; }

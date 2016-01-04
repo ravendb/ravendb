@@ -888,8 +888,9 @@ namespace Raven.Client.Shard
                             exclude: exclude, transformer: transformer,
                             transformerParameters: configuration.TransformerParameters,
                             skipAfter: skipAfter));
+            var queryOperation = new QueryOperation(this, "Load/StartingWith", null, null, false, TimeSpan.Zero, null, null, false);
 
-            return results.SelectMany(x => x).Select(TrackEntity<TResult>)
+            return results.SelectMany(x => x).Select(x=>queryOperation.Deserialize<TResult>(x.ToJson()))
                           .ToArray();
         }
 

@@ -13,9 +13,13 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
+
+#if !DNXCORE50
+using System.Runtime.Remoting.Messaging;
+#endif
+
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -23,7 +27,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Extensions;
+using Raven.Client.Helpers;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -53,7 +57,7 @@ namespace Raven.Client.Connection.Implementation
         // avoid the potential for clearing the cache from a cached item
         internal CachedRequest CachedRequestDetails;
         private readonly HttpJsonRequestFactory factory;
-        private readonly Func<HttpMessageHandler> recreateHandler; 
+        private readonly Func<HttpMessageHandler> recreateHandler;
         private readonly IHoldProfilingInformation owner;
         private readonly Convention conventions;
         private readonly bool disabledAuthRetries;
@@ -63,14 +67,14 @@ namespace Raven.Client.Connection.Implementation
         internal bool ShouldCacheRequest;
         private Stream postedStream;
         private bool writeCalled;
-        public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
-        
+        public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly().GetName().Version.ToString();
+
         private string primaryUrl;
 
         private string operationUrl;
 
         public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
-        
+
         /// <summary>
         /// Gets or sets the response headers.
         /// </summary>
@@ -86,7 +90,7 @@ namespace Raven.Client.Connection.Implementation
 
             Url = requestParams.Url;
             Method = requestParams.Method;
-            
+
 
             if (requestParams.Timeout.HasValue)
             {
@@ -108,10 +112,39 @@ namespace Raven.Client.Connection.Implementation
             conventions = requestParams.Convention;
 
             recreateHandler = factory.httpMessageHandler ?? (
-                () => new WebRequestHandler
+                () =>
                 {
-                    UseDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false,
-                    Credentials = _credentials != null ? _credentials.Credentials : null,
+                    var useDefaultCredentials = _credentials != null && _credentials.HasCredentials() == false;
+                    ICredentials credentialsToUse = null;
+                    if (_credentials != null)
+                    {
+                        var networkCredentials = _credentials.Credentials as NetworkCredential;
+                        if (networkCredentials != null && factory.authenticationScheme != null)
+                        {
+                            var credentialCache = new CredentialCache();
+                            var uri = new Uri(requestParams.Url);
+                            credentialCache.Add(new Uri(string.Format("{0}://{1}:{2}/", uri.Scheme, uri.Host, uri.Port)), factory.authenticationScheme, networkCredentials);
+
+                            credentialsToUse = credentialCache;
+                        }
+                        else
+                        {
+                            credentialsToUse = _credentials.Credentials;
+                        }
+                    }
+#if !DNXCORE50
+                    var handler = new WebRequestHandler
+                    {
+                        UseDefaultCredentials = useDefaultCredentials,
+                        Credentials = credentialsToUse
+                    };
+#else
+                    var handler = new WinHttpHandler
+                    {
+                        ServerCredentials = useDefaultCredentials ? CredentialCache.DefaultCredentials : credentialsToUse
+                    };
+#endif
+                    return handler;
                 }
             );
 
@@ -152,26 +185,30 @@ namespace Raven.Client.Connection.Implementation
             if (SkipServerCheck)
             {
                 var cachedResult = factory.GetCachedResponse(this);
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int) ResponseStatusCode,
-                    Status = RequestStatus.AggressivelyCached,
-                    Result = cachedResult.ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)ResponseStatusCode,
+                        Status = RequestStatus.AggressivelyCached,
+                        Result = cachedResult.ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
+               
                 return cachedResult;
             }
-            
+
             if (writeCalled)
                 return await ReadJsonInternalAsync().ConfigureAwait(false);
 
             var result = await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)).ConfigureAwait(false);
             if (result != null)
                 return result;
-            return await ReadJsonInternalAsync().ConfigureAwait(false); 
+            return await ReadJsonInternalAsync().ConfigureAwait(false);
         }
 
         private Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
@@ -203,8 +240,10 @@ namespace Raven.Client.Connection.Implementation
 
         private void AssertServerVersionSupported()
         {
+#if !DNXCORE50
             if ((CallContext.GetData(Constants.Smuggler.CallContext) as bool?) == true) // allow Raven.Smuggler to work against old servers
                 return;
+#endif
 
             var serverBuildString = ResponseHeaders[Constants.RavenServerBuild];
             int serverBuild;
@@ -216,8 +255,8 @@ namespace Raven.Client.Connection.Implementation
                 {
                     throw new ServerVersionNotSuppportedException(string.Format("Server version {0} is not supported. Use server with build >= {1}", serverBuildString, MinimumServerVersion));
                 }
-            } 
-           
+            }
+
         }
 
         private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
@@ -286,22 +325,26 @@ namespace Raven.Client.Connection.Implementation
 
         private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
         {
-            if (Response.IsSuccessStatusCode) 
+            if (Response.IsSuccessStatusCode)
                 return null;
             if (Response.StatusCode == HttpStatusCode.Unauthorized ||
                 Response.StatusCode == HttpStatusCode.NotFound ||
                 Response.StatusCode == HttpStatusCode.Conflict)
             {
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)Response.StatusCode,
-                    Status = RequestStatus.ErrorOnServer,
-                    Result = Response.StatusCode.ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner,new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)Response.StatusCode,
+                        Status = RequestStatus.ErrorOnServer,
+                        Result = Response.StatusCode.ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
+               
 
                 throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
             }
@@ -317,16 +360,20 @@ namespace Raven.Client.Connection.Implementation
                 // is still valid
                 HandleReplicationStatusChanges(ResponseHeaders, primaryUrl, operationUrl);
 
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)Response.StatusCode,
-                    Status = RequestStatus.Cached,
-                    Result = result.ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)Response.StatusCode,
+                        Status = RequestStatus.Cached,
+                        Result = result.ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
+               
 
                 return result;
             }
@@ -336,16 +383,19 @@ namespace Raven.Client.Connection.Implementation
             {
                 var readToEnd = sr.ReadToEnd();
 
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)Response.StatusCode,
-                    Status = RequestStatus.Cached,
-                    Result = readToEnd,
-                    Url = Url,
-                    PostedData = postedData
-                });
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)Response.StatusCode,
+                        Status = RequestStatus.Cached,
+                        Result = readToEnd,
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
 
                 if (string.IsNullOrWhiteSpace(readToEnd))
                     throw ErrorResponseException.FromResponseMessage(Response);
@@ -470,17 +520,20 @@ namespace Raven.Client.Connection.Implementation
                 {
                     factory.CacheResponse(Url, data, ResponseHeaders);
                 }
-
-                factory.InvokeLogRequest(owner, () => new RequestResultArgs
+                if (factory.CanLogRequest)
                 {
-                    DurationMilliseconds = CalculateDuration(),
-                    Method = Method,
-                    HttpResult = (int)ResponseStatusCode,
-                    Status = RequestStatus.SentToServer,
-                    Result = (data ?? "").ToString(),
-                    Url = Url,
-                    PostedData = postedData
-                });
+
+                    factory.OnLogRequest(owner, new RequestResultArgs
+                    {
+                        DurationMilliseconds = CalculateDuration(),
+                        Method = Method,
+                        HttpResult = (int)ResponseStatusCode,
+                        Status = RequestStatus.SentToServer,
+                        Result = (data ?? "").ToString(),
+                        Url = Url,
+                        PostedData = postedData
+                    });
+                }
 
                 return data;
             }
@@ -528,7 +581,7 @@ namespace Raven.Client.Connection.Implementation
         {
             var uriBuilder = new UriBuilder(primaryUrl);
             if (uriBuilder.Host == "localhost" || uriBuilder.Host == "127.0.0.1")
-                uriBuilder.Host = Environment.MachineName;
+                uriBuilder.Host = EnvironmentHelper.MachineName;
             return uriBuilder.Uri.ToString();
         }
 
@@ -587,7 +640,12 @@ namespace Raven.Client.Connection.Implementation
                 bool isRestricted;
                 try
                 {
+#if !DNXCORE50
                     isRestricted = WebHeaderCollection.IsRestricted(headerName);
+#else
+                    // TODO [ppekrol] Check if this is OK
+                    isRestricted = false;
+#endif
                 }
                 catch (Exception e)
                 {
@@ -655,7 +713,7 @@ namespace Raven.Client.Connection.Implementation
             }).ConfigureAwait(false);
         }
 
-        public Task WriteWithObjectAsync<T>(IEnumerable<T> data) 
+        public Task WriteWithObjectAsync<T>(IEnumerable<T> data)
         {
             return WriteAsync(JsonExtensions.ToJArray(data));
         }
@@ -665,15 +723,15 @@ namespace Raven.Client.Connection.Implementation
             if (data is IEnumerable)
                 throw new ArgumentException("The object implements IEnumerable. This method cannot handle it. Give the type system some hint with the 'as IEnumerable' statement to help the compiler to select the correct overload.");
 
-            return WriteAsync(JsonExtensions.ToJObject(data));           
+            return WriteAsync(JsonExtensions.ToJObject(data));
         }
 
         public Task WriteAsync(RavenJToken tokenToWrite)
         {
             writeCalled = true;
 
-            return SendRequestInternal(() => 
-            {                    
+            return SendRequestInternal(() =>
+            {
                 HttpContent content = new JsonContent(tokenToWrite);
                 if (!factory.DisableRequestCompression)
                     content = new CompressedContent(content, "gzip");
@@ -729,7 +787,7 @@ namespace Raven.Client.Connection.Implementation
                 return request;
             });
         }
-        
+
         public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
         {
             return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));
@@ -791,7 +849,7 @@ namespace Raven.Client.Connection.Implementation
                 }
 
                 return Response;
-            }).ConfigureAwait(false);		
+            }).ConfigureAwait(false);
         }
 
         private class PushContent : HttpContent
@@ -831,23 +889,23 @@ namespace Raven.Client.Connection.Implementation
         {
             foreach (var item in headersToAdd)
             {
-                switch( item.Value.Type )
+                switch (item.Value.Type)
                 {
                     case JTokenType.Object:
                     case JTokenType.Array:
                         AddHeader(item.Key, item.Value.ToString(Formatting.None));
                         break;
                     case JTokenType.Date:
-                            var rfc1123 = GetDateString(item.Value, "r");
-                            var iso8601 = GetDateString(item.Value, "o");
-                            AddHeader(item.Key, rfc1123);
-                            if (item.Key.StartsWith("Raven-") == false)
-                                AddHeader("Raven-" + item.Key, iso8601);
+                        var rfc1123 = GetDateString(item.Value, "r");
+                        var iso8601 = GetDateString(item.Value, "o");
+                        AddHeader(item.Key, rfc1123);
+                        if (item.Key.StartsWith("Raven-") == false)
+                            AddHeader("Raven-" + item.Key, iso8601);
                         break;
                     default:
                         AddHeader(item.Key, item.Value.Value<string>());
                         break;
-                }                
+                }
             }
         }
 

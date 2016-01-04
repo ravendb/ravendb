@@ -281,6 +281,7 @@ namespace Raven.Database.Config
             AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
             RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
+            // Voron settings
             Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
             Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
             Storage.Voron.MaxScratchBufferSize = ravenSettings.Voron.MaxScratchBufferSize.Value;
@@ -290,7 +291,17 @@ namespace Raven.Database.Config
             Storage.Voron.JournalsStoragePath = ravenSettings.Voron.JournalsStoragePath.Value;
             Storage.Voron.AllowOn32Bits = ravenSettings.Voron.AllowOn32Bits.Value;
 
+            // Esent settings
             Storage.Esent.JournalsStoragePath = ravenSettings.Esent.JournalsStoragePath.Value;
+            Storage.Esent.CacheSizeMax = ravenSettings.Esent.CacheSizeMax.Value;
+            Storage.Esent.MaxVerPages = ravenSettings.Esent.MaxVerPages.Value;
+            Storage.Esent.PreferredVerPages = ravenSettings.Esent.PreferredVerPages.Value;
+            Storage.Esent.DbExtensionSize = ravenSettings.Esent.DbExtensionSize.Value;
+            Storage.Esent.LogFileSize = ravenSettings.Esent.LogFileSize.Value;
+            Storage.Esent.LogBuffers = ravenSettings.Esent.LogBuffers.Value;
+            Storage.Esent.MaxCursors = ravenSettings.Esent.MaxCursors.Value;
+            Storage.Esent.CircularLog = ravenSettings.Esent.CircularLog.Value;
+
             Storage.PreventSchemaUpdate = ravenSettings.FileSystem.PreventSchemaUpdate.Value;
 
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = ravenSettings.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value;
@@ -1201,7 +1212,7 @@ namespace Raven.Database.Config
             return typeName;
         }
 
-        public string SelectStorageEngineAndFetchTypeName()
+        public string SelectDatabaseStorageEngineAndFetchTypeName()
         {
             if (RunInMemory)
             {
@@ -1211,18 +1222,18 @@ namespace Raven.Database.Config
                 return VoronTypeName;
             }
 
-            if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+            if (string.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
             {
                 if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
-                {
                     return VoronTypeName;
-                }
+
                 if (File.Exists(Path.Combine(DataDirectory, "Data")))
                     return EsentTypeName;
             }
 
             if (string.IsNullOrEmpty(DefaultStorageTypeName))
                 return EsentTypeName;
+
             return DefaultStorageTypeName;
         }
 
@@ -1310,6 +1321,8 @@ namespace Raven.Database.Config
             }
             public bool PreventSchemaUpdate { get; set; }
 
+            public bool SkipConsistencyCheck { get; set; }
+
             public VoronConfiguration Voron { get; private set; }
 
             public EsentConfiguration Esent { get; private set; }
@@ -1317,6 +1330,14 @@ namespace Raven.Database.Config
             public class EsentConfiguration
             {
                 public string JournalsStoragePath { get; set; }
+                public int CacheSizeMax { get; set; }
+                public int MaxVerPages { get; set; }
+                public int PreferredVerPages { get; set; }
+                public int DbExtensionSize { get; set; }
+                public int LogFileSize { get; set; }
+                public int LogBuffers { get; set; }
+                public int MaxCursors { get; set; }
+                public bool CircularLog { get; set; }
             }
 
             public class VoronConfiguration
@@ -1409,6 +1430,7 @@ namespace Raven.Database.Config
             public void InitializeFrom(InMemoryRavenConfiguration configuration)
             {
                 workingDirectory = configuration.WorkingDirectory;
+                defaultSystemStorageTypeName = configuration.DefaultStorageTypeName;
             }
 
             private string fileSystemDataDirectory;
@@ -1418,6 +1440,8 @@ namespace Raven.Database.Config
             private string defaultFileSystemStorageTypeName;
 
             private string workingDirectory;
+
+            private string defaultSystemStorageTypeName;
 
             public TimeSpan MaximumSynchronizationInterval { get; set; }
 
@@ -1451,6 +1475,26 @@ namespace Raven.Database.Config
             {
                 get { return defaultFileSystemStorageTypeName; }
                 set { if (!string.IsNullOrEmpty(value)) defaultFileSystemStorageTypeName = value; }
+            }
+
+            public string SelectFileSystemStorageEngineAndFetchTypeName()
+            {
+                if (string.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
+                {
+                    if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
+                        return VoronTypeName;
+
+                    if (File.Exists(Path.Combine(DataDirectory, "Data.ravenfs")))
+                        return EsentTypeName;
+                }
+
+                if (string.IsNullOrEmpty(DefaultStorageTypeName) == false)
+                    return DefaultStorageTypeName; // We select the most specific
+
+                if (string.IsNullOrEmpty(defaultSystemStorageTypeName) == false)
+                    return defaultSystemStorageTypeName; // We choose the system wide if not defined
+
+                return EsentTypeName; // We choose esent by default
             }
         }
 

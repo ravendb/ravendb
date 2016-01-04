@@ -336,6 +336,7 @@ interface replicationStatsDto {
     LastHeartbeatReceived: string;
     LastEtagCheckedForReplication: string;
     LastReplicatedEtag: string;
+    LastReplicatedAttachmentEtag: string;
     LastReplicatedLastModified: string;
     LastSuccessTimestamp: string;
     LastFailureTimestamp: string;
@@ -654,7 +655,7 @@ interface sqlReplicationDto extends documentDto {
     SqlReplicationTables: sqlReplicationTableDto[];
     ForceSqlServerQueryRecompile?: boolean;
     QuoteTables?: boolean;
-    PerformTableQuatation?: boolean; //obsolate
+    PerformTableQuatation?: boolean; //obsolete
 }
 
 interface commandData {

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Indexes;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
 
@@ -101,5 +102,12 @@ namespace Raven.Client
         ///     Executed the query and returns the results.
         /// </summary>
         Task<IList<T>> ToListAsync(CancellationToken token = default (CancellationToken));
+
+
+        /// <summary>
+        ///     Sets a transformer to use after executing a query
+        /// </summary>
+        IAsyncDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+            where TTransformer : AbstractTransformerCreationTask, new();
     }
 }

@@ -31,6 +31,8 @@ namespace Raven.Database.Indexing
         private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
         private readonly Prefetcher prefetcher;
         private readonly PrefetchingBehavior defaultPrefetchingBehavior;
+        private IComparable maxTaskId = null;
+        private bool executeTasksOneByOne = false;
 
         public IndexingExecuter(WorkContext context, Prefetcher prefetcher, IndexReplacer indexReplacer)
             : base(context, indexReplacer)
@@ -93,12 +95,174 @@ namespace Raven.Database.Indexing
                    index.IsMapIndexingInProgress; // precomputed? slow? it is already running, nothing to do with it for now;
         }
 
-        protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
+        protected override bool ExecuteTasks()
         {
-            var removeFromIndexTasks = (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
-            var touchReferenceDocumentIfChangedTask = removeFromIndexTasks ?? actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>();
+            if (executeTasksOneByOne == false)
+                maxTaskId = null;
 
-            return touchReferenceDocumentIfChangedTask;
+            try
+            {
+                return ExecuteTasksInternal();
+            }
+            catch (Exception e)
+            {
+                executeTasksOneByOne = true;
+                throw;
+            }
+        }
+
+        private bool ExecuteTasksInternal()
+        {
+            // we want to drain all of the pending tasks before the next run
+            // but we don't want to halt indexing completely
+            var runs = 32;
+            var sp = Stopwatch.StartNew();
+            var count = 0;
+            var indexIds = new HashSet<int>();
+            var totalProcessedKeys = 0;
+            var foundWorkLocal = new Reference<bool>();
+
+            transactionalStorage.Batch(actions =>
+            {
+                while (context.RunIndexing && runs-- > 0)
+                {
+                    var processedKeys = ExecuteTask(indexIds, foundWorkLocal);
+                    if (processedKeys == 0)
+                        break;
+
+                    totalProcessedKeys += processedKeys;
+                    actions.General.MaybePulseTransaction(
+                        addToPulseCount: processedKeys,
+                        beforePulseTransaction: () =>
+                        {
+                            // if we need to PulseTransaction, we are going to delete
+                            // all the completed tasks, so we need to flush 
+                            // all the changes made to the indexes to disk before that
+                            context.IndexStorage.FlushIndexes(indexIds);
+                            indexIds.Clear();
+                        });
+
+                    count++;
+
+                    if (executeTasksOneByOne)
+                        break;
+                }
+
+                // need to flush all the changes
+                context.IndexStorage.FlushIndexes(indexIds);
+            });
+
+            if (count == 0)
+            {
+                return foundWorkLocal.Value;
+            }
+                
+            if (Log.IsDebugEnabled)
+            {
+                Log.Debug("Executed {0} tasks, processed documents: {1}, took {2}ms",
+                    count, totalProcessedKeys, sp.ElapsedMilliseconds);
+            }
+
+            return true;
+        }
+
+        private int ExecuteTask(HashSet<int> indexIds, Reference<bool> foundWorkLocal)
+        {
+            var processedKeys = 0;
+
+            transactionalStorage.Batch(actions =>
+            {
+                var task = GetApplicableTask(actions, foundWorkLocal);
+                if (task == null)
+                {
+                    // no tasks were found or we reached the max task id after a failure,
+                    // the next execution will try to merge tasks
+                    executeTasksOneByOne = false;
+                    return;
+                }
+                
+                context.UpdateFoundWork();
+
+                var indexName = GetIndexName(task.Index);
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug("Executing task for index: {0} (id: {1}), details: {2}",
+                        indexName, task.Index, task);
+                }
+
+                processedKeys = task.NumberOfKeys;
+
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var sp = Stopwatch.StartNew();
+                try
+                {
+                    task.Execute(context);
+                    indexIds.Add(task.Index);
+                }
+                catch (Exception e)
+                {
+                    Log.WarnException(
+                        string.Format("Task for index: {0} (id: {1}) has failed, details: {2}",
+                            indexName, task.Index, task), e);
+                    throw;
+                }
+
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug("Task for index: {0} (id: {1}) has finished, took {2}ms",
+                        indexName, task.Index, sp.ElapsedMilliseconds);
+                }
+            });
+
+            return processedKeys;
+        }
+
+        private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, Reference<bool> foundWork)
+        {
+            var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
+            if (removeFromIndexTasks != null)
+                return removeFromIndexTasks;
+            return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
+        }
+
+        private MaxTaskIdStatus MaxIdStatus(IComparable currentTaskId)
+        {
+            var canUpdateMaxId = CanUpdateMaxId(currentTaskId);
+            if (executeTasksOneByOne && canUpdateMaxId)
+            {
+                // merge is disabled and we've reached the maximum task id
+                // that was set after the failure to execute a batch of tasks.
+                return MaxTaskIdStatus.ReachedMaxTaskId;
+            }
+
+            if (executeTasksOneByOne)
+            {
+                // no need to merge tasks
+                return MaxTaskIdStatus.MergeDisabled;
+            }
+
+            if (canUpdateMaxId)
+                maxTaskId = currentTaskId;
+
+            return MaxTaskIdStatus.Updated;
+        }
+
+        private bool CanUpdateMaxId(IComparable currentTaskId)
+        {
+            return maxTaskId == null || currentTaskId.CompareTo(maxTaskId) > 0;
+        }
+
+        private void UpdateMaxTaskId(IComparable currentTaskId)
+        {
+            if (CanUpdateMaxId(currentTaskId))
+                maxTaskId = currentTaskId;
+        }
+
+        private string GetIndexName(int indexId)
+        {
+            var index = context.IndexStorage.GetIndexInstance(indexId);
+            return index == null ? indexId.ToString() : index.PublicName;
         }
 
         protected override void FlushAllIndexes()
@@ -551,7 +715,7 @@ namespace Raven.Database.Indexing
             var lastEtag = last.Etag;
             var lastModified = last.LastModified.Value;
 
-            var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers, context.Database.InFlightTransactionalState);
+            var documentRetriever = new DocumentRetriever(null, null, context.ReadTriggers);
 
             var filteredDocs =
                 BackgroundTaskExecuter.Instance.Apply(context, jsonDocs, doc =>

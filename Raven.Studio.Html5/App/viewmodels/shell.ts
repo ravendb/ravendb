@@ -397,7 +397,8 @@ class shell extends viewModelBase {
         if (!!fs && !fs.disabled() && fs.isLicensed()) {
             new getFileSystemStatsCommand(fs)
                 .execute()
-                .done((result: filesystemStatisticsDto) => fs.saveStatistics(result));
+                .done((result: filesystemStatisticsDto) => fs.saveStatistics(result))
+                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get file system stats", response.responseText, response.statusText));
         }
     }
 

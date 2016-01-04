@@ -13,6 +13,14 @@ namespace Raven.Tests.Core.Shard
 {
     public class Sharding : RavenReplicationCoreTest
     {
+#if DNXCORE50
+        public Sharding(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanUseShardedDocumentStore()
         {
@@ -24,11 +32,11 @@ namespace Raven.Tests.Core.Shard
             using (var shard2 = GetDocumentStore())
             using (var shard3 = GetDocumentStore())
             {
-                var shards = new Dictionary<string, IDocumentStore> 
-                { 
-                    {shard1Name, shard1}, 
-                    {shard2Name, shard2}, 
-                    {shard3Name, shard3} 
+                var shards = new Dictionary<string, IDocumentStore>
+                {
+                    {shard1Name, shard1},
+                    {shard2Name, shard2},
+                    {shard3Name, shard3}
                 };
 
                 var shardStrategy = new ShardStrategy(shards)
@@ -75,7 +83,7 @@ namespace Raven.Tests.Core.Shard
                         Assert.Equal(shard3Name + "/companies/5", companies[4].Id);
                         Assert.Equal(shard3Name + "/companies/6", companies[5].Id);
 
-                        Assert.Throws<InvalidOperationException>(() => 
+                        Assert.Throws<InvalidOperationException>(() =>
                             {
                                 session.Store(new Company { });
                                 session.SaveChanges();

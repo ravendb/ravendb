@@ -20,7 +20,11 @@ namespace Raven.Client.Changes
                                 where TConnectionState : class, IChangesConnectionState
                                 where TChangesApi : class, IConnectableChanges
     {
+#if !DNXCORE50
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+#else
+        private static readonly ILog logger = LogManager.GetLogger(typeof(RemoteChangesClientBase<TChangesApi, TConnectionState>));
+#endif
 
         private Timer clientSideHeartbeatTimer;
 
@@ -30,7 +34,7 @@ namespace Raven.Client.Changes
         private readonly Convention conventions;
         private readonly IReplicationInformerBase replicationInformer;
 
-        private readonly Action onDispose;                
+        private readonly Action onDispose;
 
         private IDisposable connection;
         private DateTime lastHeartbeat;
@@ -38,7 +42,7 @@ namespace Raven.Client.Changes
         private static int connectionCounter;
         private readonly string id;
 
-        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);        
+        protected readonly AtomicDictionary<TConnectionState> Counters = new AtomicDictionary<TConnectionState>(StringComparer.OrdinalIgnoreCase);
 
         public RemoteChangesClientBase(
             string url,
@@ -47,7 +51,7 @@ namespace Raven.Client.Changes
             HttpJsonRequestFactory jsonRequestFactory,
             Convention conventions,
             IReplicationInformerBase replicationInformer,
-            Action onDispose )
+            Action onDispose)
         {
             // Precondition
             TChangesApi api = this as TChangesApi;
@@ -63,7 +67,7 @@ namespace Raven.Client.Changes
             this.jsonRequestFactory = jsonRequestFactory;
             this.conventions = conventions;
             this.replicationInformer = replicationInformer;
-            this.onDispose = onDispose;            
+            this.onDispose = onDispose;
 
             this.Task = EstablishConnection()
                         .ObserveException()
@@ -149,7 +153,7 @@ namespace Raven.Client.Changes
             {
                 Connected = false;
                 ConnectionStatusChanged(this, EventArgs.Empty);
-                throw new ObjectDisposedException( this.GetType().Name );
+                throw new ObjectDisposedException(this.GetType().Name);
             }
 
             Connected = true;
@@ -181,7 +185,7 @@ namespace Raven.Client.Changes
                 var sendTask = lastSendTask;
                 if (sendTask != null)
                 {
-                    sendTask.ContinueWith(_ =>
+                    return sendTask.ContinueWith(_ =>
                     {
                         Send(command, value);
                     });

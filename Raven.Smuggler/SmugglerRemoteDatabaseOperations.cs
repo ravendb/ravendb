@@ -97,6 +97,16 @@ namespace Raven.Smuggler
             };
         }
 
+        public Etag FetchLastDocDeleteEtag()
+        {
+            return null;
+        }
+
+        public Etag FetchLastAttachmentsDeleteEtag()
+        {
+            return null;
+        }
+
         [Obsolete("Use RavenFS instead.")]
         public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
         {

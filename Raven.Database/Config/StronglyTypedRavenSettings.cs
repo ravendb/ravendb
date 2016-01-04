@@ -74,6 +74,7 @@ namespace Raven.Database.Config
 
             MaxPageSize =
                 new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
+
             MemoryCacheLimitMegabytes =
                 new IntegerSetting(settings["Raven/MemoryCacheLimitMegabytes"], GetDefaultMemoryCacheLimitMegabytes);
             MemoryCacheExpiration =
@@ -235,6 +236,16 @@ namespace Raven.Database.Config
             Voron.JournalsStoragePath = new StringSetting(string.IsNullOrEmpty(txJournalPath) ? esentLogsPath : txJournalPath, (string)null);
 
             Esent.JournalsStoragePath = new StringSetting(string.IsNullOrEmpty(esentLogsPath) ? txJournalPath : esentLogsPath, (string)null);
+
+            var defaultCacheSize = Environment.Is64BitProcess ? Math.Min(1024, (MemoryStatistics.TotalPhysicalMemory / 4)) : 256;
+            Esent.CacheSizeMax = new IntegerSetting(settings[Constants.Esent.CacheSizeMax], defaultCacheSize);
+            Esent.MaxVerPages = new IntegerSetting(settings[Constants.Esent.MaxVerPages], 512);
+            Esent.PreferredVerPages = new IntegerSetting(settings[Constants.Esent.PreferredVerPages], 472);
+            Esent.DbExtensionSize = new IntegerSetting(settings[Constants.Esent.DbExtensionSize], 8);
+            Esent.LogFileSize = new IntegerSetting(settings[Constants.Esent.LogFileSize], 64);
+            Esent.LogBuffers = new IntegerSetting(settings[Constants.Esent.LogBuffers], 8192);
+            Esent.MaxCursors = new IntegerSetting(settings[Constants.Esent.MaxCursors], 2048);
+            Esent.CircularLog = new BooleanSetting(settings[Constants.Esent.CircularLog], true);
 
             Replication.FetchingFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Replication/FetchingFromDiskTimeout"], 30);
             Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
@@ -464,6 +475,22 @@ namespace Raven.Database.Config
         public class EsentConfiguration
         {
             public StringSetting JournalsStoragePath { get; set; }
+
+            public IntegerSetting CacheSizeMax { get; set; }
+
+            public IntegerSetting MaxVerPages { get; set; }
+
+            public IntegerSetting PreferredVerPages { get; set; }
+
+            public IntegerSetting DbExtensionSize { get; set; }
+
+            public IntegerSetting LogFileSize { get; set; }
+
+            public IntegerSetting LogBuffers { get; set; }
+
+            public IntegerSetting MaxCursors { get; set; }
+
+            public BooleanSetting CircularLog { get; set; }
         }
 
         public class IndexingConfiguration

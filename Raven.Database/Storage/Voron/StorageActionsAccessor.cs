@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
+using Raven.Database.Impl.DTC;
 using Raven.Storage.Voron;
 
 namespace Raven.Database.Storage.Voron
@@ -28,7 +29,7 @@ namespace Raven.Database.Storage.Voron
 
         public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, Reference<WriteBatch> writeBatchReference, Reference<SnapshotReader> snapshotReference, TableStorage storage, TransactionalStorage transactionalStorage, IBufferPool bufferPool)
         {
-            Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatchReference, snapshotReference, storage, bufferPool);
+            Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatchReference, snapshotReference, storage, bufferPool, transactionalStorage.SkipConsistencyCheck);
             Queue = new QueueStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Tasks = new TasksStorageActions(storage, generator, snapshotReference, writeBatchReference, bufferPool);
             Staleness = new StalenessStorageActions(storage, snapshotReference, writeBatchReference, bufferPool);
@@ -66,6 +67,14 @@ namespace Raven.Database.Storage.Voron
         public IGeneralStorageActions General { get; private set; }
 
         public IMappedResultsStorageAction MapReduce { get; private set; }
+
+        public IInFlightStateSnapshot InFlightStateSnapshot
+        {
+            get
+            {
+                return EmptyInFlightStateSnapshot.Instance;
+            }
+        }
 
         public bool IsNested { get; set; }
         public event Action OnStorageCommit;

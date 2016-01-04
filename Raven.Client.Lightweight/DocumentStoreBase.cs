@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
 using System.Collections.ObjectModel;
-using System.Configuration;
 using System.Linq;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+#if !DNXCORE50
 using Raven.Client.Document.DTC;
+#endif
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
@@ -32,7 +34,9 @@ namespace Raven.Client
             InitializeEncryptor();
 
             LastEtagHolder = new GlobalLastEtagHolder();
+#if !DNXCORE50
             TransactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
+#endif
             AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
             Subscriptions = new DocumentSubscriptions(this);
         }
@@ -221,6 +225,7 @@ namespace Raven.Client
         /// </summary>
         public bool UseFipsEncryptionAlgorithms { get; set; }
 
+#if !DNXCORE50
         ///<summary>
         /// Whatever or not we will automatically enlist in distributed transactions
         ///</summary>
@@ -229,6 +234,8 @@ namespace Raven.Client
             get { return Conventions.EnlistInDistributedTransactions; }
             set { Conventions.EnlistInDistributedTransactions = value; }
         }
+#endif
+
         /// <summary>
         /// The resource manager id for the document store.
         /// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set
@@ -273,7 +280,7 @@ namespace Raven.Client
         /// </summary>
         public DocumentStoreBase RegisterListener(IDocumentConversionListener conversionListener)
         {
-            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] {conversionListener,}).ToArray();
+            listeners.ConversionListeners = listeners.ConversionListeners.Concat(new[] { conversionListener, }).ToArray();
             return this;
         }
 
@@ -283,7 +290,7 @@ namespace Raven.Client
         /// <param name="queryListener">The query listener.</param>
         public DocumentStoreBase RegisterListener(IDocumentQueryListener queryListener)
         {
-            listeners.QueryListeners = listeners.QueryListeners.Concat(new[] {queryListener}).ToArray();
+            listeners.QueryListeners = listeners.QueryListeners.Concat(new[] { queryListener }).ToArray();
             return this;
         }
 
@@ -293,7 +300,7 @@ namespace Raven.Client
         /// <param name="documentStoreListener">The document store listener.</param>
         public IDocumentStore RegisterListener(IDocumentStoreListener documentStoreListener)
         {
-            listeners.StoreListeners = listeners.StoreListeners.Concat(new[] {documentStoreListener}).ToArray();
+            listeners.StoreListeners = listeners.StoreListeners.Concat(new[] { documentStoreListener }).ToArray();
             return this;
         }
 
@@ -303,7 +310,7 @@ namespace Raven.Client
         /// <param name="deleteListener">The delete listener.</param>
         public DocumentStoreBase RegisterListener(IDocumentDeleteListener deleteListener)
         {
-            listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] {deleteListener}).ToArray();
+            listeners.DeleteListeners = listeners.DeleteListeners.Concat(new[] { deleteListener }).ToArray();
             return this;
         }
 
@@ -313,7 +320,7 @@ namespace Raven.Client
         /// <param name="conflictListener">The conflict listener.</param>
         public DocumentStoreBase RegisterListener(IDocumentConflictListener conflictListener)
         {
-            listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] {conflictListener}).ToArray();
+            listeners.ConflictListeners = listeners.ConflictListeners.Concat(new[] { conflictListener }).ToArray();
             return this;
         }
 
@@ -364,7 +371,10 @@ namespace Raven.Client
         protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
         public ILastEtagHolder LastEtagHolder { get; set; }
+
+#if !DNXCORE50
         public ITransactionRecoveryStorage TransactionRecoveryStorage { get; set; }
+#endif
 
         /// <summary>
         ///  Get the profiling information for the given id
@@ -384,7 +394,7 @@ namespace Raven.Client
 
         protected void InitializeEncryptor()
         {
-            var setting = ConfigurationManager.AppSettings["Raven/Encryption/FIPS"];
+            var setting = ConfigurationManager.GetAppSetting("Raven/Encryption/FIPS");
 
             bool fips;
             if (string.IsNullOrEmpty(setting) || !bool.TryParse(setting, out fips))

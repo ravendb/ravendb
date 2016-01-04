@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using Raven.Abstractions.Data;
-using Raven.Database.Storage;
-using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl.DTC
@@ -38,7 +36,7 @@ namespace Raven.Database.Impl.DTC
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
 
-        public new Etag AddDocumentInTransaction(
+        public override Etag AddDocumentInTransaction(
             string key,
             Etag etag,
             RavenJObject data,
@@ -50,7 +48,7 @@ namespace Raven.Database.Impl.DTC
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
 
-        public new void DeleteDocumentInTransaction(
+        public override void DeleteDocumentInTransaction(
             TransactionInformation transactionInformation,
             string key,
             Etag etag,
@@ -60,31 +58,29 @@ namespace Raven.Database.Impl.DTC
             throw new InvalidOperationException("DTC is not supported by " + storageName + " storage.");
         }
 
-        public new bool IsModified(string key)
+        public override bool IsModified(string key)
         {
             return false;
         }
 
-        public new Func<TDocument, TDocument> GetNonAuthoritativeInformationBehavior<TDocument>(TransactionInformation tx,
-                                                                                            string key)
-            where TDocument : class, IJsonDocumentMetadata, new()
+        public override IInFlightStateSnapshot GetSnapshot()
         {
-            return null;
+            return EmptyInFlightStateSnapshot.Instance;
         }
 
-        public new bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
+        public override bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
         {
             document = null;
             return false;
         }
 
-        public new bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocumentMetadata document)
+        public override bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocumentMetadata document)
         {
             document = null;
             return false;
         }
 
-        public new bool HasTransaction(string txId)
+        public override bool HasTransaction(string txId)
         {
             return false;
         }

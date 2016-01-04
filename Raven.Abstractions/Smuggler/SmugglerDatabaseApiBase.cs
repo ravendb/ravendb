@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -127,17 +128,17 @@ namespace Raven.Abstractions.Smuggler
                         await ExportIndexes(exportOptions.From, jsonWriter);
                     }
                     jsonWriter.WriteEndArray();
-
-                    // used to synchronize max returned values for put/delete operations
-                    var maxEtags = Operations.FetchCurrentMaxEtags();
-
+                    
+                    var lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag();
                     jsonWriter.WritePropertyName("Docs");
                     jsonWriter.WriteStartArray();
                     if (Options.OperateOnTypes.HasFlag(ItemType.Documents))
                     {
                         try
                         {
-                            result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, result.LastDocsEtag, maxEtags.LastDocsEtag);
+                            result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, 
+                                result.LastDocsEtag, 
+                                updateLastDocDeleteEtag: () => lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag());
                         }
                         catch (SmugglerExportException e)
                         {
@@ -148,13 +149,16 @@ namespace Raven.Abstractions.Smuggler
                     }
                     jsonWriter.WriteEndArray();
 
+                    var lastAttachmentsDeleteEtag = Operations.FetchLastAttachmentsDeleteEtag();
                     jsonWriter.WritePropertyName("Attachments");
                     jsonWriter.WriteStartArray();
                     if (Options.OperateOnTypes.HasFlag(ItemType.Attachments) && lastException == null)
                     {
                         try
                         {
-                            result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, result.LastAttachmentsEtag, maxEtags.LastAttachmentsEtag);
+                            result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, 
+                                result.LastAttachmentsEtag,
+                                updateLastAttachmentsDeleteEtag: () => lastAttachmentsDeleteEtag = Operations.FetchLastAttachmentsDeleteEtag());
                         }
                         catch (SmugglerExportException e)
                         {
@@ -175,7 +179,12 @@ namespace Raven.Abstractions.Smuggler
 
                     if (Options.ExportDeletions)
                     {
-                        await ExportDeletions(jsonWriter, result, maxEtags);
+                        var maxEtagsToFetch = new LastEtagsInfo
+                        {
+                            LastDocDeleteEtag = lastDocDeleteEtag,
+                            LastAttachmentsDeleteEtag = lastAttachmentsDeleteEtag
+                        };
+                        await ExportDeletions(jsonWriter, result, maxEtagsToFetch);
                     }
 
                     await ExportIdentities(jsonWriter, Options.OperateOnTypes);
@@ -395,7 +404,7 @@ namespace Raven.Abstractions.Smuggler
         public abstract Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch);
 
         [Obsolete("Use RavenFS instead.")]
-        protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+        protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag = null, Action updateLastAttachmentsDeleteEtag = null)
         {
             var totalCount = 0;
             var retries = RetriesCount;
@@ -416,7 +425,10 @@ namespace Raven.Abstractions.Smuggler
 
                     try
                     {
-                        attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
+                        if (Options.ExportDeletions && updateLastAttachmentsDeleteEtag != null)
+                            updateLastAttachmentsDeleteEtag();
+
+                        attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);                                                                                                                                                                                                                                                                                                                                   
                     }
                     catch (Exception e)
                     {
@@ -510,7 +522,7 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag = null, Action updateLastDocDeleteEtag = null)
         {
             var now = SystemTime.UtcNow;
             var totalCount = 0;
@@ -518,6 +530,9 @@ namespace Raven.Abstractions.Smuggler
             var reportInterval = TimeSpan.FromSeconds(2);
             var reachedMaxEtag = false;
             Operations.ShowProgress("Exporting Documents");
+            int numberOfSkippedDocs = 0;
+            var lastForcedFlush = SystemTime.UtcNow;
+            var maxFlushInterval = TimeSpan.FromSeconds(1);
 
             while (true)
             {
@@ -532,6 +547,17 @@ namespace Raven.Abstractions.Smuggler
                         {
                             while (await documents.MoveNextAsync())
                             {
+                                if (numberOfSkippedDocs > 0 && (SystemTime.UtcNow - lastForcedFlush) > maxFlushInterval)
+                                {
+                                    Operations.ShowProgress("Skipped {0:#,#} documents", numberOfSkippedDocs);
+                                    jsonWriter.WriteWhitespace(" ");
+                                    jsonWriter.Flush();
+                                    lastForcedFlush = SystemTime.UtcNow;
+                                    numberOfSkippedDocs = 0;
+                                }
+                                if (Options.ExportDeletions && updateLastDocDeleteEtag != null)
+                                    updateLastDocDeleteEtag();
+
                                 hasDocs = true;
                                 var document = documents.Current;
 
@@ -547,17 +573,26 @@ namespace Raven.Abstractions.Smuggler
                                 lastEtag = tempLastEtag;
 
                                 if (!Options.MatchFilters(document))
+                                {
+                                    numberOfSkippedDocs++;
                                     continue;
+                                }
 
                                 if (Options.ShouldExcludeExpired && Options.ExcludeExpired(document, now))
+                                {
+                                    numberOfSkippedDocs++;
                                     continue;
+                                }
 
                                 if (string.IsNullOrEmpty(Options.TransformScript) == false)
                                     document = await Operations.TransformDocument(document, Options.TransformScript);
 
                                 // If document is null after a transform we skip it. 
                                 if (document == null)
+                                {
+                                    numberOfSkippedDocs++;
                                     continue;
+                                }
 
                                 try
                                 {
@@ -1392,25 +1427,24 @@ namespace Raven.Abstractions.Smuggler
                 return;
             }
 
-            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
 
-            var subServerVersion = serverVersion.Substring(0, 3);
-            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
+            var customAttributes = typeof(SmugglerDatabaseApiBase).Assembly.GetCustomAttributes(false);
+            dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+            var intServerVersion = int.Parse(versionAtt.Version.Replace(".", ""));
 
-            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
 
             if (intServerVersion < 25)
             {
                 IsTransformersSupported = false;
                 IsDocsStreamingSupported = false;
                 IsIdentitiesSmugglingSupported = false;
-                Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                Operations.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version);
                 return;
             }
 
             if (intServerVersion == 25)
             {
-                Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                Operations.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version);
 
                 IsTransformersSupported = true;
                 IsDocsStreamingSupported = true;
@@ -1438,3 +1472,4 @@ namespace Raven.Abstractions.Smuggler
         public bool IsIdentitiesSmugglingSupported { get; private set; }
     }
 }
+#endif

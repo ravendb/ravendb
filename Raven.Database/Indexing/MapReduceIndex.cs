@@ -130,6 +130,8 @@ namespace Raven.Database.Indexing
             .Where(x => x is FilteredDocument == false)
             .ToList();
 
+            actions.MapReduce.UpdateRemovedMapReduceStats(indexId, deleted, token);
+
             performanceStats.Add(new PerformanceStats
             {
                 Name = IndexingOperation.Map_DeleteMappedResults,
@@ -493,41 +495,15 @@ namespace Raven.Database.Indexing
                 foreach (var key in keys)
                 {
                     actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
+                    context.CancellationToken.ThrowIfCancellationRequested();
                 }
 
-                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets);
+                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);
                 foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
                 {
                     actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
+                    context.CancellationToken.ThrowIfCancellationRequested();
                 }
-            });
-            Write((writer, analyzer, stats) =>
-            {
-                stats.Operation = IndexingWorkStats.Status.Ignore;
-                if (logIndexing.IsDebugEnabled)
-                    logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), PublicName));
-
-                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
-                    .Where(x => x != null)
-                    .ToList();
-
-                keys.Apply(
-                    key =>
-                    InvokeOnIndexEntryDeletedOnAllBatchers(batchers, new Term(Constants.ReduceKeyFieldName, key.ToLowerInvariant())));
-
-                writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
-                batchers.ApplyAndIgnoreAllErrors(
-                    e =>
-                    {
-                        logIndexing.WarnException("Failed to dispose on index update trigger in " + PublicName, e);
-                        context.AddError(indexId, PublicName, null, e, "Dispose Trigger");
-                    },
-                    batcher => batcher.Dispose());
-
-                return new IndexedItemsInfo(null)
-                {
-                    ChangedDocs = keys.Length
-                };
             });
         }
 

@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
@@ -29,6 +30,8 @@ namespace Raven.Database.FileSystem.Actions
 {
     public class FileActions : ActionsBase
     {
+        internal const int MaxNumberOfFilesToDeleteByCleanupTaskRun = 1024;
+
         private readonly ConcurrentDictionary<string, Task> deleteFileTasks = new ConcurrentDictionary<string, Task>();
         private readonly ConcurrentDictionary<string, Task> renameFileTasks = new ConcurrentDictionary<string, Task>();
         private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
@@ -398,9 +401,11 @@ namespace Raven.Database.FileSystem.Actions
 
         public Task CleanupDeletedFilesAsync()
         {
+            const int MaxNumberOfConcurrentDeletions = 10;
+
             var filesToDelete = new List<DeleteFileOperation>();
 
-            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, 10)
+            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun)
                                                               .Select(config => config.JsonDeserialization<DeleteFileOperation>())
                                                               .ToList());
 
@@ -409,54 +414,71 @@ namespace Raven.Database.FileSystem.Actions
 
             var tasks = new List<Task>();
 
-            foreach (var fileToDelete in filesToDelete)
+            using (var semaphore = new SemaphoreSlim(MaxNumberOfConcurrentDeletions))
             {
-                var deletingFileName = fileToDelete.CurrentFileName;
-
-                if (IsDeleteInProgress(deletingFileName))
-                    continue;
-
-                if (IsUploadInProgress(fileToDelete.OriginalFileName))
-                    continue;
-
-                if (IsSynchronizationInProgress(fileToDelete.OriginalFileName))
-                    continue;
-
-                if (fileToDelete.OriginalFileName.EndsWith(RavenFileNameHelper.DownloadingFileSuffix)) // if it's .downloading file
+                foreach (var fileToDelete in filesToDelete)
                 {
-                    if (IsSynchronizationInProgress(SynchronizedFileName(fileToDelete.OriginalFileName))) // and file is being synced
+                    var deletingFileName = fileToDelete.CurrentFileName;
+
+                    if (IsDeleteInProgress(deletingFileName))
                         continue;
-                }
 
-                Log.Debug("Starting to delete file '{0}' from storage", deletingFileName);
+                    if (IsUploadInProgress(fileToDelete.OriginalFileName))
+                        continue;
 
-                var deleteTask = Task.Run(() =>
-                {
-                    try
+                    if (IsSynchronizationInProgress(fileToDelete.OriginalFileName))
+                        continue;
+
+                    if (fileToDelete.OriginalFileName.EndsWith(RavenFileNameHelper.DownloadingFileSuffix)) // if it's .downloading file
                     {
-                        Storage.Batch(accessor => accessor.Delete(deletingFileName));
+                        if (IsSynchronizationInProgress(SynchronizedFileName(fileToDelete.OriginalFileName))) // and file is being synced
+                            continue;
                     }
-                    catch (Exception e)
-                    {
-                        Log.Warn(string.Format("Could not delete file '{0}' from storage", deletingFileName), e);
-                        return;
-                    }
-                    var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
 
-                    Storage.Batch(accessor => accessor.DeleteConfig(configName));
+                    Log.Debug("Starting to delete file '{0}' from storage", deletingFileName);
 
-                    Publisher.Publish(new ConfigurationChangeNotification
+                    var deleteTask = new Task(() =>
                     {
-                        Name = configName,
-                        Action = ConfigurationChangeAction.Delete
+                        try
+                        {
+                            Storage.Batch(accessor => accessor.Delete(deletingFileName));
+                        }
+                        catch (Exception e)
+                        {
+                            var warnMessage = string.Format("Could not delete file '{0}' from storage", deletingFileName);
+
+                            Log.Warn(warnMessage, e);
+
+                            throw new InvalidOperationException(warnMessage, e);
+                        }
+                        var configName = RavenFileNameHelper.DeleteOperationConfigNameForFile(deletingFileName);
+
+                        Storage.Batch(accessor => accessor.DeleteConfig(configName));
+
+                        Publisher.Publish(new ConfigurationChangeNotification
+                        {
+                            Name = configName,
+                            Action = ConfigurationChangeAction.Delete
+                        });
+
+                        Log.Debug("File '{0}' was deleted from storage", deletingFileName);
                     });
 
-                    Log.Debug("File '{0}' was deleted from storage", deletingFileName);
-                });
+                    deleteTask.ContinueWith(x =>
+                    {
+                        Task _;
+                        deleteFileTasks.TryRemove(deletingFileName, out _);
+                        semaphore.Release();
+                    });
 
-                deleteFileTasks.AddOrUpdate(deletingFileName, deleteTask, (file, oldTask) => deleteTask);
+                    semaphore.Wait();
 
-                tasks.Add(deleteTask);
+                    deleteTask.Start();
+
+                    deleteFileTasks.AddOrUpdate(deletingFileName, deleteTask, (file, oldTask) => deleteTask);
+
+                    tasks.Add(deleteTask);
+                }
             }
 
             return Task.WhenAll(tasks);

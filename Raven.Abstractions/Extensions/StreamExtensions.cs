@@ -22,6 +22,12 @@ namespace Raven.Abstractions.Extensions
     /// </summary>
     public static class StreamExtensions
     {
+#if !DNXCORE50
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+#else
+        private static readonly ILog Logger = LogManager.GetLogger(typeof(StreamExtensions));
+#endif
+
         public static void CopyTo(this Stream stream, Stream other)
         {
             var buffer = BufferSharedPools.ByteArray.Allocate();
@@ -361,7 +367,7 @@ namespace Raven.Abstractions.Extensions
                         }
                         catch (Exception ex)
                         {
-                            LogManager.GetCurrentClassLogger().ErrorException("Error when disposing a DisposingStream: " + ex.Message, ex);
+                            Logger.ErrorException("Error when disposing a DisposingStream: " + ex.Message, ex);
                         }
                     }
                 }

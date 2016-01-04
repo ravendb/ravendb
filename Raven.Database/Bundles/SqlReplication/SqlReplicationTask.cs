@@ -184,6 +184,9 @@ namespace Raven.Database.Bundles.SqlReplication
                 }
                 var localReplicationStatus = GetReplicationStatus();
 
+                // remove all last replicated statuses which are not in the config
+                UpdateLastReplicatedStatus(localReplicationStatus, config);
+
                 var relevantConfigs = config.Where(x =>
                 {
                     if (x.Disabled)
@@ -193,7 +196,7 @@ namespace Raven.Database.Bundles.SqlReplication
                         return true;
                     return SystemTime.UtcNow >= sqlReplicationStatistics.SuspendUntil;
                 }) // have error or the timeout expired
-                        .ToList();
+                .ToList();
 
                 var configGroups = SqlReplicationClassifier.GroupConfigs(relevantConfigs, c => GetLastEtagFor(localReplicationStatus, c));
 
@@ -334,7 +337,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
                                         int countOfReplicatedItems = 0;
                                         if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
-                                                                                            ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList, out countOfReplicatedItems))
+                                            ReplicateChangesToDestination(replicationConfig, docsToReplicateAsList, out countOfReplicatedItems))
                                         {
                                             if (deletedDocs.Count > 0)
                                             {
@@ -416,6 +419,28 @@ namespace Raven.Database.Bundles.SqlReplication
                     RemoveUnusedPrefetchers(usedPrefetchers);
                 }
             }
+        }
+
+        private void UpdateLastReplicatedStatus(SqlReplicationStatus localReplicationStatus, List<SqlReplicationConfig> config)
+        {
+            var lastReplicatedToDelete = new List<LastReplicatedEtag>();
+            foreach (var lastReplicated in localReplicationStatus.LastReplicatedEtags)
+            {
+                if (config.Exists(x => x.Name.Equals(lastReplicated.Name, StringComparison.InvariantCultureIgnoreCase)) == false)
+                {
+                    lastReplicatedToDelete.Add(lastReplicated);
+                }
+            }
+
+            if (lastReplicatedToDelete.Count == 0)
+                return; // nothing to do
+
+            foreach (var status in lastReplicatedToDelete)
+            {
+                localReplicationStatus.LastReplicatedEtags.Remove(status);
+            }
+
+            SaveNewReplicationStatus(localReplicationStatus);
         }
 
         private void SetPrefetcherForIndexingGroup(SqlConfigGroup sqlConfig, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
@@ -856,7 +881,7 @@ namespace Raven.Database.Bundles.SqlReplication
             }
             else if (string.IsNullOrWhiteSpace(cfg.ConnectionStringName) == false)
             {
-                var connectionString = ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];
+                var connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[cfg.ConnectionStringName];
                 if (connectionString == null)
                 {
                     if (writeToLog)

@@ -686,15 +686,13 @@ namespace Raven.Smuggler
                 };
             }
 
-            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
-            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
-
-            var subServerVersion = buildNumber.ProductVersion.Substring(0, 3);
-            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+            var customAttributes = typeof(SmugglerDatabaseApiBase).Assembly.GetCustomAttributes(false);
+            dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+            var intServerVersion = int.Parse(versionAtt.Version.Replace(".", ""));
 
             if (intServerVersion < 25)
             {
-                ShowProgress("Running in legacy mode, importing/exporting transformers and identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                ShowProgress("Running in legacy mode, importing/exporting transformers and identities is not supported. Server version: {0}. Smuggler version: {1}.", buildNumber, versionAtt.Version);
                 return new ServerSupportedFeatures
                 {
                     IsTransformersSupported = false,
@@ -705,7 +703,7 @@ namespace Raven.Smuggler
 
             if (intServerVersion == 25)
             {
-                ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", buildNumber, versionAtt.Version);
                 return new ServerSupportedFeatures
                 {
                     IsTransformersSupported = true,

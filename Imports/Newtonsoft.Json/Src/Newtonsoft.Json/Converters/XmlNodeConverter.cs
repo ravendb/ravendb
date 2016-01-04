@@ -39,6 +39,7 @@ using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
+using System.Reflection;
 #endif
 
 namespace Raven.Imports.Newtonsoft.Json.Converters

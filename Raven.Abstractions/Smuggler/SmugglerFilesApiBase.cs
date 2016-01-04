@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -331,13 +332,13 @@ namespace Raven.Abstractions.Smuggler
             if (string.IsNullOrEmpty(serverVersion))
                 throw new SmugglerExportException("Server version is not available.");
 
-            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerFilesApiBase>()).ProductVersion;
-            var subServerVersion = serverVersion.Substring(0, 3);
-            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
 
-            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+            var customAttributes = typeof(SmugglerDatabaseApiBase).Assembly.GetCustomAttributes(false);
+            dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+            var intServerVersion = int.Parse(versionAtt.Version.Replace(".", ""));
+
             if (intServerVersion < 30)
-                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion));
+                throw new SmugglerExportException(string.Format("File Systems are not available on Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version));
         }
 
         private static void ReadLastEtagsFromFile(ExportFilesResult result)
@@ -659,3 +660,4 @@ namespace Raven.Abstractions.Smuggler
         }
     }
 }
+#endif

@@ -25,6 +25,7 @@ using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -48,7 +49,7 @@ namespace Raven.Client.Document
         private readonly IList<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
             new List<Tuple<Type, Func<string, IAsyncDatabaseCommands, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions = 
+        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions =
             new List<Tuple<Type, Func<ValueType, string>>>();
 
         /// <summary>
@@ -63,7 +64,9 @@ namespace Raven.Client.Document
                 new Int64Converter(),
             };
             PreserveDocumentPropertiesNotFoundOnModel = true;
+#if !DNXCORE50
             PrettifyGeneratedLinqExpressions = true;
+#endif
             DisableProfiling = true;
             EnlistInDistributedTransactions = true;
             UseParallelMultiGet = true;
@@ -149,7 +152,7 @@ namespace Raven.Client.Document
                 if (outputId != null)
                     return outputId;
             }
-            
+
 
             var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
             var tag = GetTypeTagName(type);
@@ -263,7 +266,7 @@ namespace Raven.Client.Document
 
             if (t.Name.Contains("<>"))
                 return null;
-            if (t.IsGenericType)
+            if (t.IsGenericType())
             {
                 var name = t.GetGenericTypeDefinition().Name;
                 if (name.Contains('`'))
@@ -298,31 +301,31 @@ namespace Raven.Client.Document
             return FindTypeTagName(type) ?? DefaultTypeTagName(type);
         }
 
-       /// <summary>
-       /// If object is dynamic, try to load a tag name.
-       /// </summary>
-       /// <param name="entity">Current entity.</param>
-       /// <returns>Dynamic tag name if available.</returns>
-       public string GetDynamicTagName(object entity)
-       {
-          if (entity == null)
-          {
-             return null;
-          }
+        /// <summary>
+        /// If object is dynamic, try to load a tag name.
+        /// </summary>
+        /// <param name="entity">Current entity.</param>
+        /// <returns>Dynamic tag name if available.</returns>
+        public string GetDynamicTagName(object entity)
+        {
+            if (entity == null)
+            {
+                return null;
+            }
 
-          if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
-          {
-             try
-             {
-                return FindDynamicTagName(entity);
-             }
-             catch (RuntimeBinderException)
-             {
-             }
-          }
+            if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+            {
+                try
+                {
+                    return FindDynamicTagName(entity);
+                }
+                catch (RuntimeBinderException)
+                {
+                }
+            }
 
-          return GetTypeTagName(entity.GetType());
-       }
+            return GetTypeTagName(entity.GetType());
+        }
 
         /// <summary>
         /// Generates the document key.
@@ -393,11 +396,11 @@ namespace Raven.Client.Document
         /// <value>The name of the find type tag.</value>
         public Func<Type, string> FindTypeTagName { get; set; }
 
-      /// <summary>
-      /// Gets or sets the function to find the tag name if the object is dynamic.
-      /// </summary>
-      /// <value>The tag name.</value>
-      public Func<dynamic, string> FindDynamicTagName { get; set; }
+        /// <summary>
+        /// Gets or sets the function to find the tag name if the object is dynamic.
+        /// </summary>
+        /// <value>The tag name.</value>
+        public Func<dynamic, string> FindDynamicTagName { get; set; }
 
         /// <summary>
         /// Gets or sets the function to find the indexed property name
@@ -568,12 +571,12 @@ namespace Raven.Client.Document
         {
             get { return defaultConverters.Value; }
         }
-        
+
         private static JsonConverterCollection DefaultConvertersEnumsAsIntegers
         {
             get { return defaultConvertersEnumsAsIntegers.Value; }
         }
-        
+
         /// <summary>
         /// Creates the serializer.
         /// </summary>
@@ -664,10 +667,12 @@ namespace Raven.Client.Document
         /// </summary>
         public Func<string, HttpJsonRequestFactory, IDocumentStoreReplicationInformer> ReplicationInformerFactory { get; set; }
 
+#if !DNXCORE50
         /// <summary>
         ///  Attempts to prettify the generated linq expressions for indexes and transformers
         /// </summary>
         public bool PrettifyGeneratedLinqExpressions { get; set; }
+#endif
 
         /// <summary>
         /// How index and transformer updates should be handled in replicated setup.
@@ -776,8 +781,8 @@ namespace Raven.Client.Document
             if (nonNullable != null)
                 type = nonNullable;
 
-            if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
-                type == typeof (decimal) || type == typeof (TimeSpan) || type == typeof(short))
+            if (type == typeof(int) || type == typeof(long) || type == typeof(double) || type == typeof(float) ||
+                type == typeof(decimal) || type == typeof(TimeSpan) || type == typeof(short))
                 return true;
 
             return customRangeTypes.Contains(type);

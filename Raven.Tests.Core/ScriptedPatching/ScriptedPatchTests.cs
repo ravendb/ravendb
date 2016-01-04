@@ -6,6 +6,14 @@ namespace Raven.Tests.Core.ScriptedPatching
 {
     public class ScriptedPatchTests : RavenCoreTestBase
     {
+#if DNXCORE50
+        public ScriptedPatchTests(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         public class Foo
         {
             public string Id { get; set; }
@@ -59,11 +67,10 @@ namespace Raven.Tests.Core.ScriptedPatching
                     });
                 });
 
-                Assert.DoesNotThrow(() =>
-                 store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
-                 {
-                     Script = @"IncreaseNumberOfAllowedStepsBy(4500); for(var i = 0;i < 7500;i++){}"
-                 }));
+                store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+                {
+                    Script = @"IncreaseNumberOfAllowedStepsBy(4500); for(var i = 0;i < 7500;i++){}"
+                });
             }
         }
 
@@ -102,11 +109,10 @@ namespace Raven.Tests.Core.ScriptedPatching
                     });
                 });
 
-                Assert.DoesNotThrow(() =>
-                 store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
-                 {
-                     Script = @"LoadDocument('bar/1'); for(var i = 0;i < 7500;i++){}"
-                 }));
+                store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+                {
+                    Script = @"LoadDocument('bar/1'); for(var i = 0;i < 7500;i++){}"
+                });
             }
         }
     }

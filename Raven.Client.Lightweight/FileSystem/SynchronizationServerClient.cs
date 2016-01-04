@@ -58,7 +58,7 @@ namespace Raven.Client.FileSystem
             this.filesConvention = convention ?? new FilesConvention();
             this.operationCredentials = operationCredentials ?? new OperationCredentials(apiKey, credentials);
 
-            this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+            this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests, authenticationScheme: Conventions.AuthenticationScheme);
 
             if(requestFactory == null)
                 SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl);

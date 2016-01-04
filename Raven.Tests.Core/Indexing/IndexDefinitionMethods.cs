@@ -11,6 +11,14 @@ namespace Raven.Tests.Core.Indexing
 {
     public class IndexDefinitionMethods : RavenCoreTestBase
     {
+#if DNXCORE50
+        public IndexDefinitionMethods(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanUseMetadataFor()
         {
@@ -26,31 +34,31 @@ namespace Raven.Tests.Core.Indexing
                     var contact3 = new Contact { FirstName = "FirstName3" };
                     session.SaveChanges();
 
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Public, 
-                            Contacts = new List<Contact> {contact1, contact2, contact3}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Public, 
-                            Contacts = new List<Contact> {contact3}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Public, 
-                            Contacts = new List<Contact> {contact1, contact2}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Private, 
-                            Contacts = new List<Contact> {contact1, contact2}
-                        });
-                    session.Store(new Company 
-                        {
-                            Type = Company.CompanyType.Private, 
-                            Contacts = new List<Contact> {contact1, contact2, contact3}
-                        });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Public,
+                        Contacts = new List<Contact> { contact1, contact2, contact3 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Public,
+                        Contacts = new List<Contact> { contact3 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Public,
+                        Contacts = new List<Contact> { contact1, contact2 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Private,
+                        Contacts = new List<Contact> { contact1, contact2 }
+                    });
+                    session.Store(new Company
+                    {
+                        Type = Company.CompanyType.Private,
+                        Contacts = new List<Contact> { contact1, contact2, contact3 }
+                    });
                     session.SaveChanges();
                     WaitForIndexing(store);
 
@@ -102,9 +110,9 @@ namespace Raven.Tests.Core.Indexing
                 using (var session = store.OpenSession())
                 {
                     var post1 = new Post { Title = "Post1", Desc = "Post1 desc" };
-                    var post2 = new Post { Title = "Post2", Desc = "Post2 desc", Comments = new Post[] {post1} };
-                    var post3 = new Post { Title = "Post3", Desc = "Post3 desc", Comments = new Post[] {post2} };
-                    var post4 = new Post { Title = "Post4", Desc = "Post4 desc", Comments = new Post[] {post3} };
+                    var post2 = new Post { Title = "Post2", Desc = "Post2 desc", Comments = new Post[] { post1 } };
+                    var post3 = new Post { Title = "Post3", Desc = "Post3 desc", Comments = new Post[] { post2 } };
+                    var post4 = new Post { Title = "Post4", Desc = "Post4 desc", Comments = new Post[] { post3 } };
                     session.Store(post4);
                     session.SaveChanges();
                     WaitForIndexing(store);
@@ -139,7 +147,7 @@ namespace Raven.Tests.Core.Indexing
                     session.Store(new Post
                     {
                         Id = "posts/1",
-                        AttachmentIds = new []{"posts/1/attachments/1", "posts/1/attachments/2"}
+                        AttachmentIds = new[] { "posts/1/attachments/1", "posts/1/attachments/2" }
                     });
 
                     session.SaveChanges();

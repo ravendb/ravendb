@@ -10,6 +10,14 @@ namespace Raven.Tests.Core.Bundles
 {
     public class MoreLikeThis : RavenCoreTestBase
     {
+#if DNXCORE50
+        public MoreLikeThis(TestServerFixture fixture)
+            : base(fixture)
+        {
+
+        }
+#endif
+
         [Fact]
         public void CanUseBasicMoreLikeThis()
         {

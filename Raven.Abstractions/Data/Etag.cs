@@ -8,7 +8,7 @@ using Raven.Abstractions.Util.Encryptors;
 namespace Raven.Abstractions.Data
 {
     [Serializable]
-    public class Etag : IEquatable<Etag>, IComparable<Etag>
+    public class Etag : IEquatable<Etag>, IComparable<Etag>, IComparable
     {
 
         public override int GetHashCode()
@@ -17,6 +17,25 @@ namespace Raven.Abstractions.Data
             {
                 return (restarts.GetHashCode() * 397) ^ changes.GetHashCode();
             }
+        }
+
+        public int CompareTo(Etag other)
+        {
+            if (other == null)
+                return -1;
+            var sub = restarts - other.restarts;
+            if (sub != 0)
+                return sub > 0 ? 1 : -1;
+            sub = changes - other.changes;
+            if (sub != 0)
+                return sub > 0 ? 1 : -1;
+            return 0;
+        }
+
+        public int CompareTo(object other)
+        {
+            var otherAsEtag = other as Etag;
+            return CompareTo(otherAsEtag);
         }
 
         long restarts;
@@ -77,19 +96,6 @@ namespace Raven.Abstractions.Data
             if (null == other) return false;
 
             return restarts == other.restarts && changes == other.changes;
-        }
-
-        public int CompareTo(Etag other)
-        {
-            if (other == null)
-                return -1;
-            var sub = restarts - other.restarts;
-            if (sub != 0)
-                return sub > 0 ? 1 : -1;
-            sub = changes - other.changes;
-            if (sub != 0)
-                return sub > 0 ? 1 : -1;
-            return 0;
         }
 
         private IEnumerable<byte> ToBytes()
@@ -165,7 +171,6 @@ namespace Raven.Abstractions.Data
                 return results;
             }
         }
-
 
         public unsafe static Etag Parse(byte[] bytes)
         {
@@ -264,6 +269,7 @@ namespace Raven.Abstractions.Data
                 };
             }
         }
+
         public static Etag Empty
         {
             get
@@ -291,6 +297,17 @@ namespace Raven.Abstractions.Data
             {
                 restarts = restarts,
                 changes = changes + amount
+            };
+        }
+
+        public Etag DecrementBy(int amount)
+        {
+            if(changes< amount)
+                throw new ArgumentOutOfRangeException("The etag changes is lower than the given amount");
+            return new Etag
+            {
+                restarts = restarts,
+                changes = changes - amount
             };
         }
 
