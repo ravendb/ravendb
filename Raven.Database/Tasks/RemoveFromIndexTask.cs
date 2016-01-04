@@ -95,7 +95,7 @@ namespace Raven.Database.Tasks
         {
             return new RemoveFromIndexTask(Index)
             {
-                Keys = new HashSet<string>(Keys)
+                Keys = new HashSet<string>(Keys, StringComparer.OrdinalIgnoreCase)
             };
         }
 
