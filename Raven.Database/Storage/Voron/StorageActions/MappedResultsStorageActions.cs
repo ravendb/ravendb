@@ -215,10 +215,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed)
+        public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed, CancellationToken token)
         {
             foreach (var keyAndBucket in removed)
             {
+                token.ThrowIfCancellationRequested();
                 DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
             }
         }
@@ -285,6 +286,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             foreach (var g in deletedReduceKeys.GroupBy(x => x, StringComparer.InvariantCultureIgnoreCase))
             {
+                token.ThrowIfCancellationRequested();
                 DecrementReduceKeyCounter(view, g.Key, g.Count());
             }
         }
@@ -292,7 +294,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, string sourceId, int start, int take)
         {
             var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
-            using (var iterator = mappedResultsByView.MultiRead(Snapshot,CreateViewKey(view)))
+            using (var iterator = mappedResultsByView.MultiRead(Snapshot, CreateViewKey(view)))
             {
                 if (!iterator.Seek(Slice.BeforeAllKeys)) 
                     return Enumerable.Empty<string>();

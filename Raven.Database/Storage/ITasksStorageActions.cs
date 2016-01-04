@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Tasks;
 
 namespace Raven.Database.Storage
@@ -16,7 +17,9 @@ namespace Raven.Database.Storage
         bool HasTasks { get; }
         long ApproximateTaskCount { get; }
 
-        T GetMergedTask<T>() where T : DatabaseTask;
+        T GetMergedTask<T>(Func<IComparable, MaxTaskIdStatus> maxIdStatus,
+            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork)
+            where T : DatabaseTask;
 
         IEnumerable<TaskMetadata> GetPendingTasksForDebug();
     }

@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Raven.Abstractions.Util.Encryptors;
 using Sparrow;
 
 namespace Raven.Abstractions.Data
 {
     [Serializable]
-    public class Etag : IEquatable<Etag>, IComparable<Etag>
+    public class Etag : IEquatable<Etag>, IComparable<Etag>, IComparable
     {
 
         public override int GetHashCode()
@@ -44,7 +43,7 @@ namespace Raven.Abstractions.Data
             changes = etag.changes;
         }
 
-        public Etag( long restarts, long changes )
+        public Etag(long restarts, long changes)
         {
             this.restarts = restarts;
             this.changes = changes;
@@ -54,6 +53,25 @@ namespace Raven.Abstractions.Data
         {
             this.restarts = ((long)type << 56) | restarts;
             this.changes = changes;
+        }
+
+        public int CompareTo(Etag other)
+        {
+            if (other == null)
+                return -1;
+            var sub = restarts - other.restarts;
+            if (sub != 0)
+                return sub > 0 ? 1 : -1;
+            sub = changes - other.changes;
+            if (sub != 0)
+                return sub > 0 ? 1 : -1;
+            return 0;
+        }
+
+        public int CompareTo(object other)
+        {
+            var otherAsEtag = other as Etag;
+            return CompareTo(otherAsEtag);
         }
 
         public override bool Equals(object obj)
@@ -86,19 +104,6 @@ namespace Raven.Abstractions.Data
             return restarts == other.restarts && changes == other.changes;
         }
 
-        public int CompareTo(Etag other)
-        {
-            if (other == null)
-                return -1;
-            var sub = restarts - other.restarts;
-            if (sub != 0)
-                return sub > 0 ? 1 : -1;
-            sub = changes - other.changes;
-            if (sub != 0)
-                return sub > 0 ? 1 : -1;
-            return 0;
-        }
-
         private IEnumerable<byte> ToBytes()
         {
             return BitConverter.GetBytes(restarts).Reverse()
@@ -109,6 +114,7 @@ namespace Raven.Abstractions.Data
         {
             return ToBytes().ToArray();
         }
+
         [StructLayout(LayoutKind.Explicit)]
         struct LongBytes
         {
@@ -172,7 +178,6 @@ namespace Raven.Abstractions.Data
                 return results;
             }
         }
-
 
         public unsafe static Etag Parse(byte[] bytes)
         {
@@ -271,6 +276,7 @@ namespace Raven.Abstractions.Data
                 };
             }
         }
+
         public static Etag Empty
         {
             get

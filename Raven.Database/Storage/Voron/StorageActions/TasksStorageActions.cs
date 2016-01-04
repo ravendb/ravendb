@@ -3,25 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Lucene.Net.Search;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
-using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Storage.Voron.StorageActions
 {
     using System;
-
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Logging;
-    using Raven.Database.Impl;
-    using Raven.Database.Storage.Voron.Impl;
-    using Raven.Database.Tasks;
-    using Raven.Json.Linq;
-
+    using Abstractions.Data;
+    using Abstractions.Logging;
+    using Database.Impl;
+    using Impl;
+    using Tasks;
     using global::Voron;
     using global::Voron.Impl;
 
@@ -83,7 +76,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public T GetMergedTask<T>() where T : DatabaseTask
+        public T GetMergedTask<T>(Func<IComparable, MaxTaskIdStatus> maxIdStatus,
+            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork)
+            where T : DatabaseTask
         {
             var type = CreateKey(typeof(T).FullName);
             var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
@@ -99,6 +94,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
                     if (value == null)
                         continue;
+
                     DatabaseTask task;
                     try
                     {
@@ -112,20 +108,33 @@ namespace Raven.Database.Storage.Voron.StorageActions
                         continue;
                     }
 
-                    MergeSimilarTasks(task, value.ReadBytes(TaskFields.TaskId));
+                    var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
+                    switch (maxIdStatus(currentId))
+                    {
+                        case MaxTaskIdStatus.ReachedMaxTaskId:
+                            // we found work and next run the merge option will be enabled
+                            foundWork.Value = true;
+                            return null;
+                        case MaxTaskIdStatus.Updated:
+                            MergeSimilarTasks(task, currentId, updateMaxTaskId);
+                            break;
+                        case MaxTaskIdStatus.MergeDisabled:
+                        default:
+                            // returning only one task without merging
+                            break;
+                    }
+
                     RemoveTask(iterator.CurrentKey, task.Index, type);
 
                     return (T)task;
-                }
-                while (iterator.MoveNext());
+                } while (iterator.MoveNext());
             }
 
             return null;
         }
 
-        private void MergeSimilarTasks(DatabaseTask task, byte[] taskId)
+        private void MergeSimilarTasks(DatabaseTask task, Etag taskId, Action<IComparable> updateMaxTaskId)
         {
-            var id = Etag.Parse(taskId);
             var type = task.GetType().FullName;
             var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
@@ -134,18 +143,22 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 if (!iterator.Seek(Slice.BeforeAllKeys))
                     return;
 
-                int totalTaskCount = 0;
-
+                var totalKeysToProcess = task.NumberOfKeys;
                 do
                 {
+                    if (totalKeysToProcess >= 5 * 1024)
+                        break;
+
                     var currentId = Etag.Parse(iterator.CurrentKey.ToString());
-                    if (currentId == id)
+                    // this is the same task that we are trying to merge
+                    if (currentId == taskId)
                         continue;
 
                     ushort version;
                     var value = LoadStruct(tableStorage.Tasks, iterator.CurrentKey, writeBatch.Value, out version);
                     if (value == null)
                         continue;
+
                     DatabaseTask existingTask;
                     try
                     {
@@ -153,21 +166,18 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     }
                     catch (Exception e)
                     {
-                        Logger.ErrorException(
-                            string.Format("Could not create instance of a task: {0}", value),
-                            e);
+                        Logger.ErrorException(string.Format("Could not create instance of a task: {0}", value), e);
 
                         RemoveTask(iterator.CurrentKey, task.Index, type);
                         continue;
                     }
 
+                    updateMaxTaskId(currentId);
+
+                    totalKeysToProcess += existingTask.NumberOfKeys;
                     task.Merge(existingTask);
                     RemoveTask(iterator.CurrentKey, task.Index, type);
-
-                    if (totalTaskCount++ > 1024)
-                        break;
-                }
-                while (iterator.MoveNext());
+                } while (iterator.MoveNext());
             }
         }
 
@@ -202,25 +212,25 @@ namespace Raven.Database.Storage.Voron.StorageActions
                     ushort version;
                     var taskData = LoadStruct(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch.Value, out version); 
                     if (taskData == null) 
-                            throw new InvalidOperationException("Retrieved a pending task object, but was unable to parse it. This is probably a data corruption or a bug.");
+                        throw new InvalidOperationException("Retrieved a pending task object, but was unable to parse it. This is probably a data corruption or a bug.");
 
-                        TaskMetadata pendingTasksForDebug;
-                        try
+                    TaskMetadata pendingTasksForDebug;
+                    try
+                    {
+                        pendingTasksForDebug = new TaskMetadata
                         {
-                            pendingTasksForDebug = new TaskMetadata
-                            {
-                                Id = Etag.Parse(taskData.ReadBytes(TaskFields.TaskId)),
-                                AddedTime = DateTime.FromBinary(taskData.ReadLong(TaskFields.AddedAt)),
-                                Type = taskData.ReadString(TaskFields.Type),
-                                IndexId = taskData.ReadInt(TaskFields.IndexId)
-                            };
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("The pending task record was parsed, but contained invalid values. See more details at inner exception.",e);
-                        }
+                            Id = Etag.Parse(taskData.ReadBytes(TaskFields.TaskId)),
+                            AddedTime = DateTime.FromBinary(taskData.ReadLong(TaskFields.AddedAt)),
+                            Type = taskData.ReadString(TaskFields.Type),
+                            IndexId = taskData.ReadInt(TaskFields.IndexId)
+                        };
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("The pending task record was parsed, but contained invalid values. See more details at inner exception.",e);
+                    }
 
-                        yield return pendingTasksForDebug;
+                    yield return pendingTasksForDebug;
                 } while (taskIterator.MoveNext());
             }
             

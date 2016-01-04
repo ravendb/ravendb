@@ -478,7 +478,7 @@ namespace Raven.Tests.Storage.Voron
                 storage.Batch(accessor =>
                 {
                     var removed = new Dictionary<ReduceKeyAndBucket, int>();
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -501,7 +501,7 @@ namespace Raven.Tests.Storage.Voron
                                       { new ReduceKeyAndBucket(123, "reduceKey1"), 3 }
                                   };
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -524,8 +524,8 @@ namespace Raven.Tests.Storage.Voron
                                       { new ReduceKeyAndBucket(123, "reduceKey1"), 4 }
                                   };
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed);
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(404, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(303, removed, CancellationToken.None);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(404, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>

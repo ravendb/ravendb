@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Tasks;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
@@ -56,24 +54,8 @@ namespace Raven.Database.Indexing
                         if (foundWork && onlyFoundIdleWork == false)
                             isIdle = false;
 
-                        int runs = 32;
-
-                        // we want to drain all of the pending tasks before the next run
-                        // but we don't want to halt indexing completely
-                        var sp = Stopwatch.StartNew();
-                        var count = 0;
-                        while (context.RunIndexing && runs-- > 0)
-                        {
-                            if (ExecuteTasks() == false)
-                                break;
-                            count++;
-                            foundWork = true;
-                        }
-
-                        if (Log.IsDebugEnabled && count > 0)
-                        {
-                            Log.Debug("Executed {0} tasks, took {1}ms", count, sp.ElapsedMilliseconds);
-                        }
+                        var foundTasksWork = ExecuteTasks();
+                        foundWork = foundWork || foundTasksWork;
                     }
                     catch (OutOfMemoryException oome)
                     {
@@ -177,50 +159,10 @@ namespace Raven.Database.Indexing
             autoTuner.HandleOutOfMemory();
         }
 
-        private bool ExecuteTasks()
+        protected virtual bool ExecuteTasks()
         {
-            bool foundWork = false;
-            transactionalStorage.Batch(actions =>
-            {
-                DatabaseTask task = GetApplicableTask(actions);
-                if (task == null)
-                    return;
-
-                context.UpdateFoundWork();
-
-                var indexName = GetIndexName(task.Index);
-                if (Log.IsDebugEnabled)
-                    Log.Debug("Executing task on index: {0} (id: {1}), details: {2}", indexName, task.Index, task);
-
-                foundWork = true;
-
-                context.CancellationToken.ThrowIfCancellationRequested();
-
-                var sp = Stopwatch.StartNew();
-                var failed = false;
-                try
-                {
-                    task.Execute(context);
-                    // since we are deleting the task in this transaction,
-                    // we need to flush all the changes made to the index to the disk
-                    FlushAllIndexes();
-                }
-                catch (Exception e)
-                {
-                    failed = true;
-                    Log.WarnException($"Task {task} has failed and was deleted without completing any work", e);
-                }
-
-                if (Log.IsDebugEnabled && failed == false)
-                {
-                    Log.Debug("Task on index: {0} (id: {1}) has finished, took {2}ms",
-                        indexName, task.Index, sp.ElapsedMilliseconds);
-                }
-            });
-            return foundWork;
+            return false;
         }
-
-        protected abstract DatabaseTask GetApplicableTask(IStorageActionsAccessor actions);
 
         private void FlushIndexes()
         {
@@ -306,11 +248,5 @@ namespace Raven.Database.Indexing
         protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
         protected abstract bool IsValidIndex(IndexStats indexesStat);
-
-        private string GetIndexName(int indexId)
-        {
-            var index = context.IndexStorage.GetIndexInstance(indexId);
-            return index == null ? indexId.ToString() : index.PublicName;
-        }
     }
 }
