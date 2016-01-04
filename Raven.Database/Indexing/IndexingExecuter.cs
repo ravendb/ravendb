@@ -176,7 +176,7 @@ namespace Raven.Database.Indexing
                 if (task == null)
                 {
                     // no tasks were found or we reached the max task id after a failure,
-                    // the next execution of will try to merge tasks
+                    // the next execution will try to merge tasks
                     executeTasksOneByOne = false;
                     return;
                 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
@@ -10,7 +11,12 @@ namespace Raven.Database.Tasks
     public class TouchReferenceDocumentIfChangedTask : DatabaseTask
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-        public IDictionary<string, Etag> ReferencesToCheck { get; set; }
+        private IDictionary<string, Etag> ReferencesToCheck { get; set; }
+
+        public TouchReferenceDocumentIfChangedTask(int indexId) : base(indexId)
+        {
+            ReferencesToCheck = new Dictionary<string, Etag>(StringComparer.OrdinalIgnoreCase);
+        }
 
         public override int NumberOfKeys
         {
@@ -127,11 +133,30 @@ namespace Raven.Database.Tasks
 
         public override DatabaseTask Clone()
         {
-            return new TouchReferenceDocumentIfChangedTask
+            return new TouchReferenceDocumentIfChangedTask(Index)
             {
-                Index = Index,
                 ReferencesToCheck = new Dictionary<string, Etag>(ReferencesToCheck, StringComparer.OrdinalIgnoreCase)
             };
+        }
+
+        public void UpdateReferenceToCheck(KeyValuePair<string, Etag> doc)
+        {
+            Etag etag;
+            if (ReferencesToCheck.TryGetValue(doc.Key, out etag) == false)
+            {
+                ReferencesToCheck[doc.Key] = doc.Value;
+                return;
+            }
+
+            if (etag == doc.Value)
+                return;
+
+            ReferencesToCheck[doc.Key] = Etag.InvalidEtag; // different etags, force a touch
+        }
+
+        public IEnumerable<string> GetReferencesForDebug()
+        {
+            return ReferencesToCheck.Select(x => x.Key + ":" + x.Value);
         }
     }
 }
