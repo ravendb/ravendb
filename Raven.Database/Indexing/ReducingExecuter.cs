@@ -118,6 +118,10 @@ namespace Raven.Database.Indexing
 
                 if (operationCanceled == false)
                 {
+                    // need to flush the changes made to the map-reduce index
+                    // before commiting the deletions of the scheduled reductions 
+                    context.IndexStorage.FlushIndex(indexToWorkOn.IndexId);
+
                     var deletingScheduledReductionsDuration = new Stopwatch();
                     var storageCommitDuration = new Stopwatch();
 
@@ -601,11 +605,6 @@ namespace Raven.Database.Indexing
             get { return context.RunReducing; }
         }
 
-        protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
-        {
-            return null;
-        }
-
         protected override void FlushAllIndexes()
         {
             context.IndexStorage.FlushReduceIndexes();
@@ -619,7 +618,6 @@ namespace Raven.Database.Indexing
                 LastIndexedEtag = Etag.Empty
             };
         }
-
         
         protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
         {

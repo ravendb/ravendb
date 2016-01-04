@@ -96,7 +96,7 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
 
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>
@@ -236,7 +236,7 @@ namespace Raven.Tests.Issues
                     var removed = new Dictionary<ReduceKeyAndBucket, int>();
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
-                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed);
+                    accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
                 });
 
                 storage.Batch(accessor =>

@@ -1,14 +1,20 @@
+//-----------------------------------------------------------------------
+// <copyright file="GeneralStorage.cs" company="Hibernating Rhinos LTD">
+//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
+using System.Threading;
+using Raven.Client.Embedded;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Client.Embedded;
+using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Tasks;
-using Raven.Json.Linq;
 using Raven.Tests.Common;
-using System;
-using System.Linq;
-using System.Threading;
 using Xunit;
+using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Storage
 {
@@ -65,16 +71,227 @@ namespace Raven.Tests.Storage
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    actions.Tasks.AddTask(new RemoveFromIndexTask
-                    {
-                        Index = 100,
-                        Keys = { "tasks/" + i },
-                    }, SystemTime.UtcNow);
+                    var task = new RemoveFromIndexTask(100);
+                    task.AddKey("tasks/" + i);
+                    actions.Tasks.AddTask(task, SystemTime.UtcNow);
                 }
             });
 
-            db.TransactionalStorage.Batch(actions => actions.Tasks.GetMergedTask<RemoveFromIndexTask>());
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var foundWork = new Reference<bool>();
+                var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.Updated,
+                    x => { },
+                    foundWork);
+                Assert.NotNull(task);
+                Assert.False(foundWork.Value);
 
+                foundWork = new Reference<bool>();
+                task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.Updated,
+                    x => { },
+                    foundWork);
+                Assert.Null(task);
+                Assert.False(foundWork.Value);
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
+                Assert.False(isIndexStale);
+            });
+        }
+
+        [Fact]
+        public void CanAddAndRemoveMultipleTasks_InSingleTx_OneByOne()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    var task = new RemoveFromIndexTask(100);
+                    task.AddKey("tasks/" + i);
+                    actions.Tasks.AddTask(task, SystemTime.UtcNow);
+                }
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                Reference<bool> foundWork;
+                DatabaseTask task;
+                for (int i = 0; i < 3; i++)
+                {
+                    foundWork = new Reference<bool>();
+                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.MergeDisabled,
+                    x => { },
+                    foundWork);
+                    Assert.NotNull(task);
+                    Assert.False(foundWork.Value);
+                }
+
+                foundWork = new Reference<bool>();
+                task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.Updated,
+                    x => { },
+                    foundWork);
+                Assert.Null(task);
+                Assert.False(foundWork.Value);
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
+                Assert.False(isIndexStale);
+            });
+        }
+
+        [Fact]
+        public void DontRemoveTasksWhenReachingMaxTaskId()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    var task = new RemoveFromIndexTask(100);
+                    task.AddKey("tasks/" + i);
+                    actions.Tasks.AddTask(task, SystemTime.UtcNow);
+                }
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var foundWork = new Reference<bool>();
+                var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                        x => MaxTaskIdStatus.ReachedMaxTaskId,
+                        x => { },
+                        foundWork);
+                Assert.Null(task);
+                Assert.True(foundWork.Value);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    foundWork = new Reference<bool>();
+                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.MergeDisabled,
+                    x => { },
+                    foundWork);
+                    Assert.NotNull(task);
+                    Assert.False(foundWork.Value);
+                }
+
+                task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.MergeDisabled,
+                    x => { },
+                    foundWork);
+                Assert.Null(task);
+                Assert.False(foundWork.Value);
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
+                Assert.False(isIndexStale);
+            });
+        }
+
+        [Fact]
+        public void CanUpdateMaxTaskId()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    var task = new RemoveFromIndexTask(100);
+                    task.AddKey("tasks/" + i);
+                    actions.Tasks.AddTask(task, SystemTime.UtcNow);
+                }
+            });
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                IComparable maxTaskId = null;
+                var foundWork = new Reference<bool>();
+                var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.Updated,
+                    x => maxTaskId = x,
+                    foundWork);
+                Assert.NotNull(task);
+                Assert.NotNull(maxTaskId);
+                Assert.False(foundWork.Value);
+
+                maxTaskId = null;
+                foundWork = new Reference<bool>();
+                task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.Updated,
+                    x => maxTaskId = x,
+                    foundWork);
+                Assert.Null(task);
+                Assert.Null(maxTaskId);
+                Assert.False(foundWork.Value);
+            });
+        }
+
+        [Fact]
+        public void MaxTaskIdIsntUpdatedWhenThereAreNoTasks()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                IComparable maxTaskId = null;
+                var foundWork = new Reference<bool>();
+                var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.Updated,
+                    x => maxTaskId = x,
+                    foundWork);
+                Assert.Null(task);
+                Assert.Null(maxTaskId);
+                Assert.False(foundWork.Value);
+            });
+        }
+
+        [Fact]
+        public void CorrectlyNotifyAboutWorkAfterReachingMaxTaskId()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    var task = new RemoveFromIndexTask(100);
+                    task.AddKey("tasks/" + i);
+                    actions.Tasks.AddTask(task, SystemTime.UtcNow);
+                }
+            });
+
+
+            db.TransactionalStorage.Batch(actions =>
+            {
+                var foundWork = new Reference<bool>();
+                var task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.ReachedMaxTaskId,
+                    x => { },
+                    foundWork);
+                Assert.Null(task);
+                Assert.True(foundWork.Value);
+
+                for (int i = 0; i < 3; i++)
+                {
+                    foundWork = new Reference<bool>();
+                    task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                        x => MaxTaskIdStatus.MergeDisabled,
+                        x => { },
+                        foundWork);
+                    Assert.NotNull(task);
+                    Assert.False(foundWork.Value);
+                }
+
+                task = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    x => MaxTaskIdStatus.Updated,
+                    x => { },
+                    foundWork);
+                Assert.Null(task);
+                Assert.False(foundWork.Value);
+            });
 
             db.TransactionalStorage.Batch(actions =>
             {
@@ -281,6 +498,6 @@ namespace Raven.Tests.Storage
             });
         }
 
-        
+
     }
 }

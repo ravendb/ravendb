@@ -7,7 +7,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Tasks;
 using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
@@ -55,17 +54,8 @@ namespace Raven.Database.Indexing
                         if (foundWork && onlyFoundIdleWork == false)
                             isIdle = false;
 
-                        int runs = 32;
-
-                        // we want to drain all of the pending tasks before the next run
-                        // but we don't want to halt indexing completely
-                        while (context.RunIndexing && runs-- > 0)
-                        {
-                            if (ExecuteTasks() == false)
-                                break;
-                            foundWork = true;
-                        }
-
+                        var foundTasksWork = ExecuteTasks();
+                        foundWork = foundWork || foundTasksWork;
                     }
                     catch (OutOfMemoryException oome)
                     {
@@ -169,39 +159,10 @@ namespace Raven.Database.Indexing
             autoTuner.HandleOutOfMemory();
         }
 
-        private bool ExecuteTasks()
+        protected virtual bool ExecuteTasks()
         {
-            bool foundWork = false;
-            transactionalStorage.Batch(actions =>
-            {
-                DatabaseTask task = GetApplicableTask(actions);
-                if (task == null)
-                    return;
-
-                context.UpdateFoundWork();
-
-                if (Log.IsDebugEnabled)
-                    Log.Debug("Executing task: {0}", task);
-
-                foundWork = true;
-
-                context.CancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    task.Execute(context);
-                }
-                catch (Exception e)
-                {
-                    Log.WarnException(
-                        string.Format("Task {0} has failed and was deleted without completing any work", task),
-                        e);
-                }
-            });
-            return foundWork;
+            return false;
         }
-
-        protected abstract DatabaseTask GetApplicableTask(IStorageActionsAccessor actions);
 
         private void FlushIndexes()
         {
