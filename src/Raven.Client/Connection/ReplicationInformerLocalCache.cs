@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.IsolatedStorage;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -13,24 +12,16 @@ namespace Raven.Client.Connection
     {
         private readonly static ILog Log = LogManager.GetLogger(typeof(ReplicationInformerLocalCache));
 
-        public static IsolatedStorageFile GetIsolatedStorageFile()
-        {
-            return IsolatedStorageFile.GetUserStoreForApplication();
-        }
-
         public static void ClearReplicationInformationFromLocalCache(string serverHash)
         {
             try
             {
-                using (var machineStoreForApplication = GetIsolatedStorageFile())
-                {
-                    var path = "RavenDB Replication Information For - " + serverHash;
+                var path = GetDocsReplicationInformerPath(serverHash);
 
-                    if (machineStoreForApplication.GetFileNames(path).Length == 0)
-                        return;
+                if (File.Exists(path) == false)
+                    return;
 
-                    machineStoreForApplication.DeleteFile(path);
-                }
+                File.Delete(path);
             }
             catch (Exception e)
             {
@@ -38,21 +29,29 @@ namespace Raven.Client.Connection
             }
         }
 
+        private static string GetDocsReplicationInformerPath(string serverHash)
+        {
+            return Path.Combine(AppContext.BaseDirectory, serverHash + ".raven-docs-replication-info");
+        }
+
+
+        private static string GetClusterReplicationPath(string serverHash)
+        {
+            return Path.Combine(AppContext.BaseDirectory, serverHash + ".raven-cluster-replication-info");
+
+        }
+
         public static JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
         {
             try
             {
-                using (var machineStoreForApplication = GetIsolatedStorageFile())
+                var path = GetDocsReplicationInformerPath(serverHash);
+                if (File.Exists(path) == false)
+                    return null;
+
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    var path = "RavenDB Replication Information For - " + serverHash;
-
-                    if (machineStoreForApplication.GetFileNames(path).Length == 0)
-                        return null;
-
-                    using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
-                    {
-                        return stream.ToJObject().ToJsonDocument();
-                    }
+                    return stream.ToJObject().ToJsonDocument();
                 }
             }
             catch (Exception e)
@@ -66,13 +65,10 @@ namespace Raven.Client.Connection
         {
             try
             {
-                using (var machineStoreForApplication = GetIsolatedStorageFile())
+                var path = GetDocsReplicationInformerPath(serverHash);
+                using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
                 {
-                    var path = "RavenDB Replication Information For - " + serverHash;
-                    using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
-                    {
-                        document.ToJson().WriteTo(stream);
-                    }
+                    document.ToJson().WriteTo(stream);
                 }
             }
             catch (Exception e)
@@ -85,19 +81,16 @@ namespace Raven.Client.Connection
         {
             try
             {
-                using (var machineStoreForApplication = GetIsolatedStorageFile())
+                var path = GetClusterReplicationPath(serverHash);
+
+                if (File.Exists(path) == false)
+                    return null;
+
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    var path = "RavenDB Cluster Nodes For - " + serverHash;
-
-                    if (machineStoreForApplication.GetFileNames(path).Length == 0)
-                        return null;
-
-                    using (var stream = new IsolatedStorageFileStream(path, FileMode.Open, machineStoreForApplication))
-                    {
-                        return RavenJToken
-                            .TryLoad(stream)
-                            .JsonDeserialization<List<OperationMetadata>>();
-                    }
+                    return RavenJToken
+                        .TryLoad(stream)
+                        .JsonDeserialization<List<OperationMetadata>>();
                 }
             }
             catch (Exception e)
@@ -111,13 +104,11 @@ namespace Raven.Client.Connection
         {
             try
             {
-                using (var machineStoreForApplication = GetIsolatedStorageFile())
+                var path = GetClusterReplicationPath(serverHash);
+
+                using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
                 {
-                    var path = "RavenDB Cluster Nodes For - " + serverHash;
-                    using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
-                    {
-                        RavenJToken.FromObject(nodes).WriteTo(stream);
-                    }
+                    RavenJToken.FromObject(nodes).WriteTo(stream);
                 }
             }
             catch (Exception e)
