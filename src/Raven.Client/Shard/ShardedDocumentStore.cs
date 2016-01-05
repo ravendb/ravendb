@@ -290,7 +290,6 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("This isn't a single last written etag when sharding");
         }
 
-        [Obsolete("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead",error: true)]
         public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
         {
             throw new NotSupportedException("Cannot use BulkInsert using Sharded store, use ShardedBulkInsert, instead");

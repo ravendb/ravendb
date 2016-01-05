@@ -26,7 +26,6 @@
         "System.Threading": "4.0.11-beta-23516",
         "Voron": "4.0.0-*",
         "Voron.Tests": "4.0.0-*"
-
       }
     }
   }
