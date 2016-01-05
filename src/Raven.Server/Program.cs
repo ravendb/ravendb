@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Raven.Abstractions.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using SampleStartups.ServerWide;
 
 namespace Raven.Server
 {
@@ -30,7 +29,7 @@ namespace Raven.Server
         public static int Main(string[] args)
         {
             var configBuilder = new ConfigurationBuilder()
-               .AddJsonFile("hosting.json", optional: true)
+               .AddJsonFile("settings.json", optional: true)
                .AddEnvironmentVariables(prefix: "RAVEN_");
 
          
@@ -41,24 +40,20 @@ namespace Raven.Server
 
             var config = configBuilder.Build();
 
-            var serverConfig = config.Get<ServerConfig>("Server");
             WelcomeMessage.Print();
-            Console.WriteLine(serverConfig.Print());
-            if (Log.IsInfoEnabled)
-            {
-                Log.Info("Server started. {0}", serverConfig.Print());
-            }
+           
             var sp = Stopwatch.StartNew();
 
             ServerStore serverStore;
             try
             {
-                serverStore = new ServerStore(serverConfig);
+                serverStore = new ServerStore(config);
                 serverStore.Initialize();
             }
             catch (Exception e)
             {
                 Log.FatalException("Could not open the server store", e);
+                Console.WriteLine(e);
                 return -1;
             }
 
@@ -79,6 +74,7 @@ namespace Raven.Server
             catch (Exception e)
             {
                 Log.FatalException("Could not setup server", e);
+                Console.WriteLine(e);
                 return -2;
             }
 
@@ -99,6 +95,7 @@ namespace Raven.Server
                 catch (Exception e)
                 {
                     Log.FatalException("Could not start server", e);
+                    Console.WriteLine(e);
                     return -3;
                 }
 

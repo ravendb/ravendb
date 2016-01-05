@@ -13,7 +13,7 @@ namespace Raven.Server.ServerWide
         private static RavenVersionAttribute GetRavenVersionAttribute()
         {
             return (RavenVersionAttribute)
-                typeof (ServerVersion).GetTypeInfo()
+                typeof (RavenVersionAttribute).GetTypeInfo()
                     .Assembly.GetCustomAttributes(typeof (RavenVersionAttribute))
                     .Single();
         }

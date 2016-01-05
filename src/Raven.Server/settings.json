@@ -1,6 +1,5 @@
 ﻿{
-  "Server": {
-    "port": 999,
-    "Path": "foo"
-  }
+  "server.urls": "http://localhost:999",
+  "system.path": "~/Databsaes/System",
+  "run.in.memory":  false
 }
