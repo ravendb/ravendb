@@ -10,10 +10,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("4.0.40.0")]
 [assembly: AssemblyInformationalVersion("4.0.0 / cdc39ac / ")]
 
-#if !DNXCORE50
-[assembly: SuppressIldasm()]
-#endif
-
 #if DEBUG
 [assembly: AssemblyConfiguration("Debug")]
 #else

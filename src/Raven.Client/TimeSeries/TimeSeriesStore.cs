@@ -91,7 +91,7 @@ namespace Raven.Client.TimeSeries
             }
         }
 
-        public event EventHandler AfterDispose;
+        public event EventHandler AfterDispose = delegate {  };
 
         public bool WasDisposed { get; private set; }
 
