@@ -130,7 +130,8 @@ namespace Raven.Database.Indexing
             .Where(x => x is FilteredDocument == false)
             .ToList();
 
-            actions.MapReduce.UpdateRemovedMapReduceStats(indexId, deleted, token);
+            //TODO: remove the comment to this line and uncomment the tests in RavenDB_4153
+            //actions.MapReduce.UpdateRemovedMapReduceStats(indexId, deleted, token);
 
             performanceStats.Add(new PerformanceStats
             {

@@ -21,7 +21,7 @@ namespace Raven.Tests.Issues
     {
         const string IndexName = "test";
 
-        [Theory]
+        /*[Theory]
         [PropertyData("Storages")]
         public void can_change_reduce_key_leaving_correct_stats1(string storageType)
         {
@@ -197,7 +197,7 @@ namespace Raven.Tests.Issues
                     .Deserialize<List<ReduceKeyAndCount>>(store.Conventions);
                 Assert.Equal(0, results.Count);
             }
-        }
+        }*/
 
         [Theory]
         [PropertyData("Storages")]
@@ -375,7 +375,7 @@ Count = g.Sum(x => x.Count)
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions));
 
-            var json = (RavenJObject) request.ReadResponseJson();
+            var json = (RavenJObject)request.ReadResponseJson();
             return json;
         }
 
