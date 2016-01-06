@@ -9,7 +9,8 @@
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
 
   "compilationOptions": {
-    "emitEntryPoint": true
+    "emitEntryPoint": true,
+    "allowUnsafe": true
   },
 
   "dependencies": {
