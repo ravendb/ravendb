@@ -1,5 +1,5 @@
 ﻿{
   "server.urls": "http://localhost:999",
-  "system.path": "~/Databsaes/System",
-  "run.in.memory":  false
+  "system.path": "D:/Deployment/Databsaes/System",
+  "run.in.memory": false
 }

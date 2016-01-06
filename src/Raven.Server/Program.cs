@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Hosting.Internal;
+using Microsoft.AspNet.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,11 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
-            app.UseMvc();
+            //app.UseMvc();
+            app.Run(async context =>
+            {
+                await context.Response.WriteAsync("Hello there");
+            });
         }
 
         public static int Main(string[] args)

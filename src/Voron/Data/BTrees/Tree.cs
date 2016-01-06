@@ -168,7 +168,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        internal byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
+        public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 

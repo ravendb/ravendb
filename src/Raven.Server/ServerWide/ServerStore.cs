@@ -1,24 +1,33 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using Microsoft.Extensions.Configuration;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Server.Json;
 using Raven.Server.Utils;
+using Sparrow;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Impl;
 
 namespace Raven.Server.ServerWide
 {
     /// <summary>
     /// Persistent store for server wide configuration, such as cluster settings, database configuration, etc
     /// </summary>
-    public class ServerStore : IDisposable
+    public unsafe class ServerStore : IDisposable
     {
-        private static readonly ILog Log= LogManager.GetLogger(typeof (ServerStore));
+        private static readonly ILog Log = LogManager.GetLogger(typeof(ServerStore));
 
         private StorageEnvironment _env;
-        private IConfigurationRoot _config;
+        private readonly IConfigurationRoot _config;
+
+        private UnmanagedBuffersPool _pool;
+        private ConcurrentStack<RavenOperationContext> _contextPool;
+
 
         public ServerStore(IConfigurationRoot config)
         {
@@ -59,36 +68,59 @@ namespace Raven.Server.ServerWide
                 options.Dispose();
                 throw;
             }
+
+            _pool = new UnmanagedBuffersPool("ServerStore", 1024 * 1024 * 128);// 128MB should be more than big enough for the server store
+            _contextPool = new ConcurrentStack<RavenOperationContext>();
         }
 
-        // TODO: store as blittable, so no alloc for this
-        public RavenJObject Read(string id)
+        public IDisposable AllocateRequestContext(out RavenOperationContext context)
         {
-            using (var tx = _env.ReadTransaction())
+            if (_contextPool.TryPop(out context) == false)
+                context = new RavenOperationContext(_pool);
+            context.Transaction = _env.ReadTransaction();
+            return new ReturnRequestContext
             {
-                var dbs = tx.ReadTree("items");
-                var result = dbs.Read(id);
-                if (result == null)
-                    return null;
-                using (var asStream = result.Reader.AsStream())
+                Store = this,
+                Context = context
+            };
+        }
+
+        private class ReturnRequestContext : IDisposable
+        {
+            public RavenOperationContext Context;
+            public ServerStore Store;
+            public void Dispose()
+            {
+                Context.Transaction?.Dispose();
+
+                //TODO: this probably should have low memory handle
+                if (Store._contextPool.Count > 25) // don't keep too much of them around
                 {
-                    var db = RavenJObject.Load(new JsonTextReader(new StreamReader(asStream)));
-                    return db;
+                    Context.Dispose();
+                    return;
                 }
+                Store._contextPool.Push(Context);
             }
         }
+        
 
-        public void Write(string id, RavenJObject obj)
+        public BlittableJsonReaderObject Read(RavenOperationContext ctx, string id)
+        {
+            var dbs = ctx.Transaction.ReadTree("items");
+            var result = dbs.Read(id);
+            if (result == null)
+                return null;
+            return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, ctx);
+        }
+
+        public void Write(string id, BlittableJsonWriter writer)
         {
             using (var tx = _env.WriteTransaction())
             {
                 var dbs = tx.ReadTree("items");
-                var ms = new MemoryStream();
-                var streamWriter = new StreamWriter(ms);
-                obj.WriteTo(new JsonTextWriter(streamWriter));
-                streamWriter.Flush();
-                ms.Position = 0;
-                dbs.Add(id, ms);
+
+                var ptr = dbs.DirectAdd(id, writer.SizeInBytes);
+                writer.CopyTo(ptr);
 
                 tx.Commit();
             }
@@ -96,6 +128,15 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
+            if (_contextPool != null)
+            {
+                RavenOperationContext result;
+                while (_contextPool.TryPop(out result))
+                {
+                    result.Dispose();
+                }
+            }
+            _pool?.Dispose();
             _env?.Dispose();
         }
     }
