@@ -120,7 +120,7 @@ namespace Raven.Server.Json
         public byte* GetMemory(int size, string documentId, out int actualSize)
         {
             Interlocked.Increment(ref _allocateMemoryCalls);
-            actualSize = (int)Utils.GetNextPowerOfTwo(size);
+            actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
 
             AllocatedMemoryData memoryDataForLength;
             ConcurrentStack<AllocatedMemoryData> existingQueue;

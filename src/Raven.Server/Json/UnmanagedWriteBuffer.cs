@@ -63,7 +63,7 @@ namespace Raven.Server.Json
 
         private void AllocateNextSegment(int required)
         {
-            var nextSegmentSize = Math.Max(_current.ActualSize*2, (int)Utils.GetNextPowerOfTwo(required));
+            var nextSegmentSize = Math.Max(_current.ActualSize*2, (int)Voron.Util.Utils.NearestPowerOfTwo(required));
             _current = new Segment
             {
                 Prev = _current,
