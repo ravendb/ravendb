@@ -71,10 +71,8 @@ namespace Raven.Tests.Storage.Voron
                     {
                         var keyStats = accessor.MapReduce.GetKeysStats(303, 0, 10).ToList();
 
-                        Assert.Equal(1, keyStats.Count);
-
-                        var k1 = keyStats[0];
-                        Assert.Equal(0, k1.Count);
+                        //the reduce key counter for "reduceKey1" will be removed
+                        Assert.Equal(0, keyStats.Count);
                     });
             }
         }

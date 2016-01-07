@@ -21,7 +21,7 @@ namespace Raven.Tests.Issues
     {
         const string IndexName = "test";
 
-        /*[Theory]
+        [Theory]
         [PropertyData("Storages")]
         public void can_change_reduce_key_leaving_correct_stats1(string storageType)
         {
@@ -197,7 +197,7 @@ namespace Raven.Tests.Issues
                     .Deserialize<List<ReduceKeyAndCount>>(store.Conventions);
                 Assert.Equal(0, results.Count);
             }
-        }*/
+        }
 
         [Theory]
         [PropertyData("Storages")]
@@ -303,6 +303,13 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey, 
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>
@@ -320,6 +327,13 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/1", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/2", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey,
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>

@@ -603,7 +603,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             foreach (var keyAndBucket in removed)
             {
                 token.ThrowIfCancellationRequested();
-                DecrementReduceKeyCounter(indexId, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
+                IncrementReduceKeyCounter(indexId, keyAndBucket.Key.ReduceKey, -keyAndBucket.Value);
             }
         }
 
@@ -946,7 +946,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
         }
 
-        public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType performedReduceType)
+        public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType performedReduceType, bool skipAdd = false)
         {
             var reduceKeyExists = false;
 
@@ -958,10 +958,18 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
             if (reduceKeyExists == false)
             {
-                // the reduce key doesn't exist anymore
-                // no need to update the reduce key type
+                // the reduce key doesn't exist anymore,
+                // we can delete the reduce key type for this reduce key
+                ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns,
+                    () =>
+                    {
+                        Api.JetDelete(session, ReduceKeysStatus);
+                    }, null);
                 return;
             }
+
+            if (skipAdd)
+                return;
 
             ExecuteOnReduceKey(view, reduceKey, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns, () =>
             {
@@ -1203,8 +1211,17 @@ namespace Raven.Database.Storage.Esent.StorageActions
             try
             {
                 ExecuteOnReduceKey(indexId, reduceKey, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns,
-                                   () => Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val),
-                                   () => Api.SetColumn(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val));
+                () =>
+                {
+                    var numberOfMappedItemsPerReduceKey = Api.RetrieveColumnAsInt32(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"]).Value;
+                    if (numberOfMappedItemsPerReduceKey + val == 0)
+                    {
+                        Api.JetDelete(session, ReduceKeysCounts);
+                        return;
+                    }
+                    Api.EscrowUpdate(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val);
+                },
+                () => Api.SetColumn(session, ReduceKeysCounts, tableColumnsCache.ReduceKeysCountsColumns["mapped_items_count"], val));
             }
             catch (EsentErrorException e)
             {
