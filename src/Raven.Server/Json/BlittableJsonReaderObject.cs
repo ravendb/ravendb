@@ -18,9 +18,9 @@ namespace NewBlittable
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
         private readonly unsafe byte* _objStart;
+        private string[] _propertyNames;
 
-
-        private Dictionary<string, Tuple<object, BlittableJsonToken>> cache;
+        private Dictionary<string, Tuple<object, BlittableJsonToken>> _objectsPathCache;
 
 
         public unsafe BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context)
@@ -132,19 +132,28 @@ namespace NewBlittable
             // generate string array, sorted according to it's offsets
             for (int i = 0; i < _propCount; i++)
             {
-                // Get the offset of the property name from the _proprNames position
-                var propertyNameOffsetPtr = _propNames + 1 + idsAndOffsets[i].PropertyId * _propNamesDataOffsetSize;
+                sortedNames[i] = GetPropertyName(idsAndOffsets[i].PropertyId);
+            }
+            return sortedNames;
+        }
+
+        private unsafe string GetPropertyName(int propertyId)
+        {
+            if(_propertyNames == null)
+                _propertyNames = new string[_propCount];
+
+            if (_propertyNames[propertyId] == null)
+            {
+                var propertyNameOffsetPtr = _propNames + 1 + propertyId*_propNamesDataOffsetSize;
                 var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
                 // Get the relative "In Document" position of the property Name
                 var propertyNameRelativePaosition = _propNames - propertyNameOffset;
                 var position = propertyNameRelativePaosition - _mem;
-
-                
-                
-                sortedNames[i] = (string) ReadStringLazily((int)position);
+                _propertyNames[propertyId] = ReadStringLazily((int)position);
             }
-            return sortedNames;
+
+            return _propertyNames[propertyId];
         }
 
         public RavenJObject GenerateRavenJObject()
@@ -179,7 +188,7 @@ namespace NewBlittable
             int min = 0, max = _propCount;
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
-            if (cache != null && cache.TryGetValue(name, out result))
+            if (_objectsPathCache != null && _objectsPathCache.TryGetValue(name, out result))
                 return true;
 
             var comparer = _context.GetComparerFor(name);
@@ -207,11 +216,11 @@ namespace NewBlittable
                         type & typesMask);
                     if (result.Item1 is BlittableJsonReaderBase)
                     {
-                        if (cache == null)
+                        if (_objectsPathCache == null)
                         {
-                            cache = new Dictionary<string, Tuple<object, BlittableJsonToken>>();
+                            _objectsPathCache = new Dictionary<string, Tuple<object, BlittableJsonToken>>();
                         }
-                        cache[name] = result;
+                        _objectsPathCache[name] = result;
                     }
                     return true;
                 }
@@ -242,8 +251,8 @@ namespace NewBlittable
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
-            var propertyNameRelativePaosition = _propNames - propertyNameOffset;
-            var position = propertyNameRelativePaosition - _mem;
+            var properyNameRelativePaosition = _propNames - propertyNameOffset;
+            var position = properyNameRelativePaosition - _mem;
 
             byte propertyNameLengthDataLength;
 
@@ -251,7 +260,7 @@ namespace NewBlittable
             var size = ReadVariableSizeInt((int) position, out propertyNameLengthDataLength);
 
             // Return result of comparison between proprty name and received comparer
-            return comparer.Compare(propertyNameRelativePaosition + propertyNameLengthDataLength, size);
+            return comparer.Compare(properyNameRelativePaosition + propertyNameLengthDataLength, size);
         }
 
         public async Task WriteAsync(Stream stream)

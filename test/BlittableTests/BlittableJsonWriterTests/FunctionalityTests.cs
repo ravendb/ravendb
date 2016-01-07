@@ -72,7 +72,7 @@ namespace NewBlittable.Tests
          ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
          employee.CopyTo(ptr);
 
-         AssertComplexEmployee(str, ptr, employee, blittableContext);
+         AssertComplexEmployee(str, ptr, employee.SizeInBytes, blittableContext);
      }
  }
 
@@ -146,7 +146,7 @@ namespace NewBlittable.Tests
         {
             var originStr = string.Join("", Enumerable.Repeat(1, repeatSize).Select(x => "sample"));
             var sampleObject = new
-            {
+            { 
                 SomeProperty = "text",
                 SomeNumber = 1,
                 SomeArray = new[] {1,2,3},

@@ -28,12 +28,14 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
                 "doc1"))
             {
                 employee.Write();
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                var sizeInBytes = employee.SizeInBytes;
+                ptr = unmanagedPool.GetMemory(sizeInBytes, string.Empty, out size);
                 employee.CopyTo(ptr);
 
                 Parallel.ForEach(Enumerable.Range(0, 100), x =>
                 {
-                    AssertComplexEmployee(str, ptr, employee, blittableContext);
+                    using (var localCtx = new RavenOperationContext(unmanagedPool))
+                        AssertComplexEmployee(str, ptr, sizeInBytes, localCtx);
                 });
             }
         }
