@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using ConsoleApplication4;
+using Raven.Server.Json;
+using Sparrow;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public unsafe class BlittableJsonReaderBase
     {

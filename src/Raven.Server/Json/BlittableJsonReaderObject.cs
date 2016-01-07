@@ -1,23 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using ConsoleApplication4;
 using Raven.Json.Linq;
+using Raven.Server.Json;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public class BlittableJsonReaderObject : BlittableJsonReaderBase
     {
         private unsafe readonly byte* _propTags;
-        private unsafe readonly byte* _objStart;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
+        private unsafe readonly byte* _objStart;
         
 
         private Dictionary<string, object> cache;
+
 
         public unsafe BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context)
         {
@@ -63,7 +67,7 @@ namespace Raven.Server.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
         }
 
-        internal unsafe BlittableJsonReaderObject(int pos, BlittableJsonReaderBase parent, BlittableJsonToken type)
+        public unsafe BlittableJsonReaderObject(int pos, BlittableJsonReaderBase parent, BlittableJsonToken type)
         {
             _context = parent._context;
             _mem = parent._mem;
@@ -97,7 +101,7 @@ namespace Raven.Server.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
         }
 
-        
+
         /// <summary>
         /// Returns an array of property names, ordered in the order it was stored 
         /// </summary>
@@ -205,7 +209,7 @@ namespace Raven.Server.Json
         }
 
         /// <summary>
-        /// Compares property names between received LazyStringValue and the string stored in the document's propery names storage
+        /// Compares property names between received StringToByteComparer and the string stored in the document's propery names storage
         /// </summary>
         /// <param name="propertyId">Position of the string in the property ids storage</param>
         /// <param name="comparer">Comparer of a specific string value</param>
@@ -237,5 +241,6 @@ namespace Raven.Server.Json
             var bytes = Encoding.UTF8.GetBytes("Some JSON goes here");
             await stream.WriteAsync(bytes, 0, bytes.Length);
         }
+
     }
 }

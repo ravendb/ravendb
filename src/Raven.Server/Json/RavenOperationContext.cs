@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using ConsoleApplication4;
+using NewBlittable;
 using Raven.Imports.Newtonsoft.Json;
 using Voron.Impl;
 using Voron.Util;
@@ -40,11 +42,16 @@ namespace Raven.Server.Json
             if (requestedSize == 0)
                 throw new ArgumentException(nameof(requestedSize));
 
-            if (requestedSize > _bufferSize)
+            if (_bufferSize == 0)
+            {
+                _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
+            }
+            else if (requestedSize > _bufferSize)
             {
                 _pool.ReturnMemory(_tempBuffer);
                 _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
             }
+            
             actualSize = _bufferSize;
             return _tempBuffer;
         }
@@ -103,5 +110,6 @@ namespace Raven.Server.Json
                 throw;
             }
         }
+
     }
 }
