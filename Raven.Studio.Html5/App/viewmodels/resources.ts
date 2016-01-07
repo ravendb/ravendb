@@ -221,7 +221,7 @@ class resources extends viewModelBase {
         }
 
         if ((this.resources().length > 0) && (this.resources().contains(this.selectedResource()) === false)) {
-            this.selectResource(this.resources().first());
+	        ko.postbox.publish("SelectNone");
         }
     }
 
