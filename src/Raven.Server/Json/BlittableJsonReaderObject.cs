@@ -304,10 +304,14 @@ namespace NewBlittable
                     ((BlittableJsonReaderObject) val).WriteTo(writer);
                     break;
                 case BlittableJsonToken.String:
+                    writer.Write('"');
                     writer.Write((string) (LazyStringValue)val);
+                    writer.Write('"');
                     break;
                 case BlittableJsonToken.CompressedString:
+                    writer.Write('"');
                     writer.Write((string)(LazyCompressedStringValue)val);
+                    writer.Write('"');
                     break;
                 case BlittableJsonToken.Integer:
                     writer.Write((long) val);
