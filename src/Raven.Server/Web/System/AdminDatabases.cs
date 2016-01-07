@@ -7,7 +7,8 @@
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+//using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 

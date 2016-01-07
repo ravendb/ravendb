@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using ConsoleApplication4;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+//using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Server.Json;
 using Xunit;
@@ -46,8 +47,8 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             var expando = GenerateExpandoObject(depth,width,reuseFieldNames);
 
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings();
-            serializerSettings.Converters.Add(new StringEnumConverter());
-            serializerSettings.Converters.Add(new ExpandoObjectConverter());
+            serializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
+            serializerSettings.Converters.Add(new Newtonsoft.Json.Converters.ExpandoObjectConverter());
 
             JsonSerializer serializer = JsonSerializer.Create(serializerSettings);
 

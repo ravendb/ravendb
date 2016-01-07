@@ -9,10 +9,13 @@ using System.Text;
 using System.Threading.Tasks;
 using ConsoleApplication4;
 using NewBlittable.Tests.BlittableJsonWriterTests;
+using Newtonsoft.Json;
 using Raven.Abstractions.Linq;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server.Json;
+//using Raven.Imports.Newtonsoft.Json;
+/*using Raven.Json.Linq;
+using Raven.Server.Json;*/
 using Voron.Util;
 using Xunit;
 

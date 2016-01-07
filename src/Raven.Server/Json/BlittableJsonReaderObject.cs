@@ -137,9 +137,12 @@ namespace NewBlittable
                 var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
                 // Get the relative "In Document" position of the property Name
-                var properyNameRelativePaosition = _propNames - propertyNameOffset - _mem;
+                var propertyNameRelativePaosition = _propNames - propertyNameOffset;
+                var position = propertyNameRelativePaosition - _mem;
+
                 
-                sortedNames[i] = (string) ReadStringLazily((int)properyNameRelativePaosition);
+                
+                sortedNames[i] = (string) ReadStringLazily((int)position);
             }
             return sortedNames;
         }
@@ -239,8 +242,8 @@ namespace NewBlittable
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
-            var properyNameRelativePaosition = _propNames - propertyNameOffset;
-            var position = properyNameRelativePaosition - _mem;
+            var propertyNameRelativePaosition = _propNames - propertyNameOffset;
+            var position = propertyNameRelativePaosition - _mem;
 
             byte propertyNameLengthDataLength;
 
@@ -248,7 +251,7 @@ namespace NewBlittable
             var size = ReadVariableSizeInt((int) position, out propertyNameLengthDataLength);
 
             // Return result of comparison between proprty name and received comparer
-            return comparer.Compare(properyNameRelativePaosition + propertyNameLengthDataLength, size);
+            return comparer.Compare(propertyNameRelativePaosition + propertyNameLengthDataLength, size);
         }
 
         public async Task WriteAsync(Stream stream)

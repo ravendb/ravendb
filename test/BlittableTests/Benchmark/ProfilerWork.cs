@@ -7,7 +7,8 @@
 using System.IO;
 using System.Linq;
 using ConsoleApplication4;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+//using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Json;
 
 namespace NewBlittable.Tests.Benchmark

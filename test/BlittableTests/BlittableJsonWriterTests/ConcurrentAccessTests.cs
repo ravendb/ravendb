@@ -5,8 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ConsoleApplication4;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Raven.Server.Json;
+/*using Raven.Imports.Newtonsoft.Json;
+using Raven.Server.Json;*/
 using Xunit;
 
 namespace NewBlittable.Tests.BlittableJsonWriterTests
