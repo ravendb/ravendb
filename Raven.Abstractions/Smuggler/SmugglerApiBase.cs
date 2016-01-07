@@ -560,7 +560,6 @@ namespace Raven.Abstractions.Smuggler
                 ValidatePropertyName(jsonReader, "Data");
                 using (var valueStream = jsonReader.ReadBytesAsStream())
                 {
-                   
                     if (jsonReader.Read() == false)
                         throw new EndOfStreamException();
                     ValidatePropertyName(jsonReader, "Metadata");

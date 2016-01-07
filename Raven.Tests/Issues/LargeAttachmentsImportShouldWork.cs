@@ -310,28 +310,36 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(1)]
-        [InlineData(2)]
-        [InlineData(3)]
-        [InlineData(4)]
-        [InlineData(5)]
-        [InlineData(6)]
-        [InlineData(7)]
-        [InlineData(8)]
-        [InlineData(9)]
-        [InlineData(10)]
-        [InlineData(128)]
-        [InlineData(1024 * 1024)]
-        [InlineData(1024 * 1024 * 3)]
-        public void MultipleAttachmentsImportShouldWork(int size)
+        [Fact]
+        public void MultipleAttachmentsImportShouldWork()
         {
-            const int ItemCount = 5;
+            //test specials
+            InternalMultipleAttachmentsImportShouldWork(1024 * 1024 * 500, 3);
+            InternalMultipleAttachmentsImportShouldWork(0, 1);
+            InternalMultipleAttachmentsImportShouldWork(5164, 12);
+
+            for (int size = 1; size < 1024 * 1024; size++)
+                for (int itemCount = 1; itemCount < 4; itemCount++)
+                {
+                    try
+                    {
+                        InternalMultipleAttachmentsImportShouldWork(size, itemCount);
+                    }
+                    catch (Exception e)
+                    {
+                        var message = string.Format("Failed test at size: {0}, itemCount: {1}. Reason: {2}", size, itemCount,e);
+                        Assert.True(false,message);
+                    }
+                }
+
+        }
+
+        public void InternalMultipleAttachmentsImportShouldWork(int size, int itemCount)
+        {
             var buffer = new byte[size];
             var random = new Random(size);
             var dataList = new List<Data>();
-            for (int i = 0; i < ItemCount; i++)
+            for (int i = 0; i < itemCount; i++)
             {
                 random.NextBytes(buffer);
                 dataList.Add(new Data
@@ -401,7 +409,8 @@ namespace Raven.Tests.Issues
                 foreach (var dataItem in dataList)
                 {
                     var attachment = source.DatabaseCommands.ForDatabase("fooDB2").GetAttachment("foo/" + (id++));
-                    Assert.Equal(attachment.Data().ReadData(), dataItem.Foo);
+                    var fetchedData = attachment.Data().ReadData();
+                    Assert.Equal(fetchedData, dataItem.Foo);
                 }
             }
         }
