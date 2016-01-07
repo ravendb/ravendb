@@ -1,8 +1,9 @@
 using System;
 using System.Text;
+using Raven.Server.Json;
 using Sparrow;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>
@@ -42,7 +43,7 @@ namespace Raven.Server.Json
         {
             return CompareTo(other) == 0;
         }
-        
+
 
         public bool Equals(LazyStringValue other)
         {
@@ -113,7 +114,7 @@ namespace Raven.Server.Json
                     hash ^= Buffer[i];
                     hash *= fnvPrime;
                 }
-                return (int) hash;
+                return (int)hash;
             }
         }
 

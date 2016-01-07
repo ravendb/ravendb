@@ -1,36 +1,24 @@
-{
+﻿{
   "version": "4.0.0-*",
-
-  "compilationOptions": {
-    "emitEntryPoint": true,
-    "allowUnsafe": true
-  },
-
-  "dependencies": {
-    "Raven.Client": "4.0.0-*",
-    "Raven.Server": "4.0.0-*",
-    "BlittableTests": "4.0.0-*"
-  },
-
+  "description": "BlittableTests Class Library",
+  "authors": [ "maxim" ],
+  "tags": [ "database", "nosql", "doc db" ],
+  "projectUrl": "https://ravendb.net",
+  "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
+  "compilationOptions": { "allowUnsafe": true },
   "commands": {
-    "Tryouts": "Tryouts"
+    "test": "xunit.runner.dnx"
   },
-
   "frameworks": {
     "dnxcore50": {
       "dependencies": {
+        "xunit": "2.1.0",
+        "xunit.runner.dnx": "2.1.0-rc1-build204",        
         "Microsoft.CSharp": "4.0.1-beta-23516",
-        "Sparrow": "4.0.0-*",
-        "Sparrow.Tests": "4.0.0-*",
         "System.Collections": "4.0.11-beta-23516",
         "System.Console": "4.0.0-beta-23516",
         "System.Linq": "4.0.1-beta-23516",
         "System.Threading": "4.0.11-beta-23516",
-        "Voron": "4.0.0-*",
-        "Voron.Tests": "4.0.0-*",
-        "xunit": "2.1.0",
-        "xunit.runner.dnx": "2.1.0-rc1-build204",
-
         "Microsoft.AspNet.Hosting": "1.0.0-rc1-final",
         "Microsoft.AspNet.Server.Kestrel": "1.0.0-rc1-final",
         "Microsoft.AspNet.Mvc": "6.0.0-rc1-final",
@@ -70,5 +58,9 @@
         "System.Runtime.InteropServices.RuntimeInformation": "4.0.0-beta-23516"
       }
     }
+  },
+  "dependencies": {
+    "Raven.Client": "4.0.0-*",
+    "Raven.Server": "4.0.0-*"
   }
 }

@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using ConsoleApplication4;
+using Raven.Server.Json;
+using Sparrow;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public unsafe class BlittableJsonReaderBase
     {
@@ -51,17 +56,19 @@ namespace Raven.Server.Json
             }
         }
 
-        internal object GetObject(BlittableJsonToken type, int position)
-        {
-            const BlittableJsonToken typesMask =
+        internal const BlittableJsonToken typesMask =
                 BlittableJsonToken.Boolean |
                 BlittableJsonToken.Float |
-                BlittableJsonToken.Integer | 
-                BlittableJsonToken.Null | 
+                BlittableJsonToken.Integer |
+                BlittableJsonToken.Null |
                 BlittableJsonToken.StartArray |
-                BlittableJsonToken.StartObject | 
-                BlittableJsonToken.String | 
+                BlittableJsonToken.StartObject |
+                BlittableJsonToken.String |
                 BlittableJsonToken.CompressedString;
+
+        internal object GetObject(BlittableJsonToken type, int position)
+        {
+            
             switch (type & typesMask)
             {
                 case BlittableJsonToken.StartObject:

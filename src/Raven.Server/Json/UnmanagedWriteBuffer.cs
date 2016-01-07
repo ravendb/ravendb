@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Voron.Util;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public unsafe class UnmanagedWriteBuffer : IDisposable
     {
@@ -63,7 +65,7 @@ namespace Raven.Server.Json
 
         private void AllocateNextSegment(int required)
         {
-            var nextSegmentSize = Math.Max(_current.ActualSize*2, (int)Voron.Util.Utils.NearestPowerOfTwo(required));
+            var nextSegmentSize = Math.Max(_current.ActualSize*2, (int)Utils.NearestPowerOfTwo(required));
             _current = new Segment
             {
                 Prev = _current,

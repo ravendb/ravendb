@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
+using Voron.Util;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public unsafe class UnmanagedBuffersPool : IDisposable
     {
@@ -79,8 +81,8 @@ namespace Raven.Server.Json
 
         ~UnmanagedBuffersPool()
         {
-            if (_isDisposed==false)
-                log.Warn("UnmanagedBuffersPool being finalized before it was disposed");
+         //   if (_isDisposed==false)
+       //         log.Warn("UnmanagedBuffersPool being finalized before it was disposed");
             Dispose();
         }
 
@@ -120,7 +122,7 @@ namespace Raven.Server.Json
         public byte* GetMemory(int size, string documentId, out int actualSize)
         {
             Interlocked.Increment(ref _allocateMemoryCalls);
-            actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
+            actualSize = (int)Utils.NearestPowerOfTwo(size);
 
             AllocatedMemoryData memoryDataForLength;
             ConcurrentStack<AllocatedMemoryData> existingQueue;
@@ -153,7 +155,8 @@ namespace Raven.Server.Json
             // document the allocated memory
             if (!_allocatedSegments.TryAdd(memoryDataForLength.Address, memoryDataForLength))
             {
-                throw new InvalidOperationException($"Allocated memory at address {memoryDataForLength.Address} was already allocated");
+                throw new InvalidOperationException(
+                    $"Allocated memory at address {memoryDataForLength.Address} was already allocated");
             }
             if (_currentSize >= _maxSize)
                 HandleLowMemory();

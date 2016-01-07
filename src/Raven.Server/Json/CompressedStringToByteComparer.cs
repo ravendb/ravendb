@@ -1,7 +1,10 @@
 using System;
+using System.Text;
+using Raven.Server.Json;
+using Sparrow;
 using Voron.Util;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public unsafe class CompressedStringToByteComparer 
     {

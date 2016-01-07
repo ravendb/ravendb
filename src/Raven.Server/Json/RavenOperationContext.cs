@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using ConsoleApplication4;
+using NewBlittable;
 using Raven.Imports.Newtonsoft.Json;
 using Voron.Impl;
 using Voron.Util;
@@ -21,11 +23,13 @@ namespace Raven.Server.Json
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
         public Transaction Transaction;
+        private Dictionary<string,byte[]> _fieldNamesAsUnicodeByteArrays = new Dictionary<string, byte[]>();
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
             _pool = pool;
             Encoding = new UTF8Encoding();
+            EncodingUnicode = new UnicodeEncoding();
         }
 
 
@@ -40,11 +44,16 @@ namespace Raven.Server.Json
             if (requestedSize == 0)
                 throw new ArgumentException(nameof(requestedSize));
 
-            if (requestedSize > _bufferSize)
+            if (_bufferSize == 0)
+            {
+                _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
+            }
+            else if (requestedSize > _bufferSize)
             {
                 _pool.ReturnMemory(_tempBuffer);
                 _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
             }
+            
             actualSize = _bufferSize;
             return _tempBuffer;
         }
@@ -89,6 +98,21 @@ namespace Raven.Server.Json
             return value;
         }
 
+        public byte[] GetUnicodeByteArrayForFieldName(string field)
+        {
+            byte[] returnedByteArray = null;
+
+            if (_fieldNamesAsUnicodeByteArrays.TryGetValue(field, out returnedByteArray))
+            {
+                return returnedByteArray;
+            }
+            returnedByteArray = EncodingUnicode.GetBytes(field);
+            _fieldNamesAsUnicodeByteArrays.Add(field, returnedByteArray);
+            return returnedByteArray;
+        }
+
+        public Encoding EncodingUnicode;
+
         public BlittableJsonWriter Read(JsonTextReader reader, string documentId)
         {
             var writer = new BlittableJsonWriter(reader, this, documentId);
@@ -103,5 +127,6 @@ namespace Raven.Server.Json
                 throw;
             }
         }
+
     }
 }

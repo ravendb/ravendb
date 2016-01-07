@@ -4,22 +4,32 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Raven.Imports.Newtonsoft.Json;
+using NewBlittable;
+using Raven.Server.Json;
 using Voron.Util;
+using Raven.Imports.Newtonsoft.Json;
 
-namespace Raven.Server.Json
+namespace ConsoleApplication4
 {
-    public unsafe class BlittableJsonWriter : IDisposable
+    public unsafe class BlittableJsonWriter : IDisposable, IComparer<BlittableJsonWriter.PropertyTag>
     {
+        private class PropertyName
+        {
+            public LazyStringValue Comparer;
+            public string Value;
+            public int GlobalSortOrder;
+        }
         private readonly RavenOperationContext _context;
-        private readonly List<LazyStringValue> _docPropNames = new List<LazyStringValue>();
-        private readonly Dictionary<string, int> _propertyNameToId = new Dictionary<string, int>();
+        private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
+        private readonly List<PropertyName> _propertiesSortOrder = new List<PropertyName>();
+        private bool _propertiesNeedSorting;
+        private readonly Dictionary<string, int> _propertyNameToId = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly JsonReader _reader;
         private readonly UnmanagedWriteBuffer _stream;
         private int _bufferSize = 128;
         private int _position;
 
-        public BlittableJsonWriter(JsonReader reader, RavenOperationContext context, string documentId)
+        public BlittableJsonWriter(JsonTextReader reader, RavenOperationContext context, string documentId)
         {
             _reader = reader;
             _stream = context.GetStream(documentId);
@@ -41,7 +51,7 @@ namespace Raven.Server.Json
             // enlarge buffer if needed
             if (minSize > _bufferSize)
             {
-                _bufferSize = (int)Utils.GetNextPowerOfTwo(minSize);
+                _bufferSize = (int)Utils.NearestPowerOfTwo(minSize);
             }
             return _context.GetTempBuffer(_bufferSize, out _bufferSize);
         }
@@ -71,7 +81,7 @@ namespace Raven.Server.Json
             for (var index = 0; index < _docPropNames.Count; index++)
             {
                 BlittableJsonToken _;
-                propertyArrayOffset[index] = WriteString((string)_docPropNames[index], out _, compress: false);
+                propertyArrayOffset[index] = WriteString(_docPropNames[index].Value, out _, compress: false);
             }
 
             // Register the position of the properties offsets start
@@ -124,7 +134,15 @@ namespace Raven.Server.Json
                 {
                     propIndex = _propertyNameToId.Count;
                     _propertyNameToId[propName] = propIndex;
-                    _docPropNames.Add(_context.GetComparerFor(propName));
+                    var propertyName = new PropertyName
+                    {
+                        Comparer = _context.GetComparerFor(propName),
+                        Value = propName,
+                        GlobalSortOrder = -1
+                    };
+                    _docPropNames.Add(propertyName);
+                    _propertiesSortOrder.Add(propertyName);
+                    _propertiesNeedSorting = true;
                 }
 
                 maxPropId = Math.Max(maxPropId, propIndex);
@@ -146,7 +164,16 @@ namespace Raven.Server.Json
             }
 
             // Sort object properties metadata by property names
-            properties.Sort(CompareProperties);
+            if (_propertiesNeedSorting)
+            {
+                _propertiesSortOrder.Sort((a1, a2) => a1.Comparer.CompareTo(a2.Comparer));
+                for (int i = 0; i < _propertiesSortOrder.Count; i++)
+                {
+                    _propertiesSortOrder[i].GlobalSortOrder = i;
+                }
+                _propertiesNeedSorting = false;
+            }
+            properties.Sort(this);
 
             var objectMetadataStart = _position;
             var distanceFromFirstProperty = objectMetadataStart - firstWrite;
@@ -216,11 +243,6 @@ namespace Raven.Server.Json
                 }
             }
             return positionSize;
-        }
-
-        private int CompareProperties(PropertyTag x, PropertyTag y)
-        {
-            return _docPropNames[x.PropertyId].CompareTo(_docPropNames[y.PropertyId]);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -410,15 +432,16 @@ namespace Raven.Server.Json
             return count;
         }
 
-        [StructLayout(LayoutKind.Explicit, Size = 9, Pack = 1)]
-        public struct PropertyTag
+        public class PropertyTag
         {
-            [FieldOffset(0)]
             public int Position;
-            [FieldOffset(4)]
             public int PropertyId;
-            [FieldOffset(8)]
             public byte Type;
+        }
+
+        int IComparer<PropertyTag>.Compare(PropertyTag x, PropertyTag y)
+        {
+            return _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
         }
     }
 }
