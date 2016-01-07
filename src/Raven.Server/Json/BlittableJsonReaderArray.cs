@@ -12,7 +12,7 @@ namespace NewBlittable
         private byte* _types;
         private byte* _dataStart;
         private long _currentOffsetSize;
-        private Dictionary<int, object> cache;
+        private Dictionary<int, Tuple<object,BlittableJsonToken>> cache;
 
         public BlittableJsonReaderArray(int pos, BlittableJsonReaderBase parent, BlittableJsonToken type)
         {
@@ -46,6 +46,15 @@ namespace NewBlittable
         public bool TryGetIndex(int index, out object result)
         {
             result = null;
+            Tuple<object, BlittableJsonToken> resultTuple;
+            var found = TryGetValueTokenTupleByIndex(index, out resultTuple);
+            result = resultTuple.Item1;
+            return found;
+        }
+
+        public bool TryGetValueTokenTupleByIndex(int index, out Tuple<object,BlittableJsonToken> result)
+        {
+            result = null;
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
             if (cache != null && cache.TryGetValue(index, out result))
@@ -56,14 +65,14 @@ namespace NewBlittable
 
 
             var offset = ReadNumber(_positions + index * _currentOffsetSize, _currentOffsetSize);
-            result = _parent.GetObject((BlittableJsonToken)_types[index],
-                (int)(_dataStart - _parent._mem - offset));
+            result = Tuple.Create(_parent.GetObject((BlittableJsonToken) _types[index],
+                (int) (_dataStart - _parent._mem - offset)), (BlittableJsonToken) _types[index] & typesMask);
 
-            if (result is BlittableJsonReaderBase)
+            if (result.Item1 is BlittableJsonReaderBase)
             {
                 if (cache == null)
                 {
-                    cache = new Dictionary<int, object>();
+                    cache = new Dictionary<int, Tuple<object,BlittableJsonToken>>();
                 }
                 cache[index] = result;
             }

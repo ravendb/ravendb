@@ -13,14 +13,14 @@ namespace NewBlittable
 {
     public class BlittableJsonReaderObject : BlittableJsonReaderBase
     {
-        private unsafe readonly byte* _propTags;
+        private readonly unsafe byte* _propTags;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
-        private unsafe readonly byte* _objStart;
-        
+        private readonly unsafe byte* _objStart;
 
-        private Dictionary<string, object> cache;
+
+        private Dictionary<string, Tuple<object, BlittableJsonToken>> cache;
 
 
         public unsafe BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context)
@@ -30,9 +30,9 @@ namespace NewBlittable
             _context = context;
 
             // init document level properties
-            var propStartPos = size - sizeof(int) - sizeof(byte); //get start position of properties
-            _propNames = (mem + (*(int*)(mem + propStartPos)));
-            var propNamesOffsetFlag = (BlittableJsonToken )(* (byte*) _propNames);
+            var propStartPos = size - sizeof (int) - sizeof (byte); //get start position of properties
+            _propNames = (mem + (*(int*) (mem + propStartPos)));
+            var propNamesOffsetFlag = (BlittableJsonToken) (*(byte*) _propNames);
             switch (propNamesOffsetFlag)
             {
                 case BlittableJsonToken.OffsetSizeByte:
@@ -51,7 +51,7 @@ namespace NewBlittable
             // get pointer to property names array on document level
 
             // init root level object properties
-            var objStartOffset = *(int*)(mem + (size - sizeof(int) - sizeof(int) - sizeof(byte)));
+            var objStartOffset = *(int*) (mem + (size - sizeof (int) - sizeof (int) - sizeof (byte)));
             // get offset of beginning of data of the main object
             byte propCountOffset = 0;
             _propCount = ReadVariableSizeInt(objStartOffset, out propCountOffset); // get main object properties count
@@ -59,7 +59,7 @@ namespace NewBlittable
             _propTags = objStartOffset + mem + propCountOffset;
             // get pointer to current objects property tags metadata collection
 
-            var currentType = (BlittableJsonToken)(*(mem + size - sizeof(byte)));
+            var currentType = (BlittableJsonToken) (*(mem + size - sizeof (byte)));
             // get current type byte flags
 
             // analyze main object type and it's offset and propertyIds flags
@@ -74,17 +74,17 @@ namespace NewBlittable
             _size = parent._size;
             _propNames = parent._propNames;
 
-            var propNamesOffsetFlag = (BlittableJsonToken)(*(byte*)_propNames);
+            var propNamesOffsetFlag = (BlittableJsonToken) (*(byte*) _propNames);
             switch (propNamesOffsetFlag)
             {
                 case BlittableJsonToken.OffsetSizeByte:
-                    _propNamesDataOffsetSize = sizeof(byte);
+                    _propNamesDataOffsetSize = sizeof (byte);
                     break;
                 case BlittableJsonToken.OffsetSizeShort:
-                    _propNamesDataOffsetSize = sizeof(short);
+                    _propNamesDataOffsetSize = sizeof (short);
                     break;
                 case BlittableJsonToken.PropertyIdSizeInt:
-                    _propNamesDataOffsetSize = sizeof(int);
+                    _propNamesDataOffsetSize = sizeof (int);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(
@@ -110,15 +110,15 @@ namespace NewBlittable
         {
             var idsAndOffsets = new BlittableJsonWriter.PropertyTag[_propCount];
             var sortedNames = new string[_propCount];
-            
-            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-            
+
+            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof (byte));
+
             // Prepare an array of all offsets and property ids
             for (var i = 0; i < _propCount; i++)
             {
-                var propertyIntPtr = (long)_propTags + (i) * metadataSize;
-                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
-                var propertyOffset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
+                var propertyIntPtr = (long) _propTags + (i)*metadataSize;
+                var propertyId = ReadNumber((byte*) propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+                var propertyOffset = ReadNumber((byte*) propertyIntPtr, _currentOffsetSize);
                 idsAndOffsets[i] = new BlittableJsonWriter.PropertyTag
                 {
                     Position = propertyOffset,
@@ -127,12 +127,19 @@ namespace NewBlittable
             }
 
             // sort according to offsets
-            Array.Sort(idsAndOffsets,(tag1, tag2)=> tag2.Position- tag1.Position);
+            Array.Sort(idsAndOffsets, (tag1, tag2) => tag2.Position - tag1.Position);
 
             // generate string array, sorted according to it's offsets
             for (int i = 0; i < _propCount; i++)
             {
-                sortedNames[i] = (string) ReadStringLazily(_propNames[idsAndOffsets[i].PropertyId]);
+                // Get the offset of the property name from the _proprNames position
+                var propertyNameOffsetPtr = _propNames + 1 + idsAndOffsets[i].PropertyId * _propNamesDataOffsetSize;
+                var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
+
+                // Get the relative "In Document" position of the property Name
+                var properyNameRelativePaosition = _propNames - propertyNameOffset - _mem;
+                
+                sortedNames[i] = (string) ReadStringLazily((int)properyNameRelativePaosition);
             }
             return sortedNames;
         }
@@ -156,6 +163,15 @@ namespace NewBlittable
 
         public unsafe bool TryGetMember(string name, out object result)
         {
+            Tuple<object, BlittableJsonToken> res;
+            var found = TryGetMemberAsTypeValueTuple(name, out res);
+            result = res.Item1;
+            return found;
+        }
+
+
+        public unsafe bool TryGetMemberAsTypeValueTuple(string name, out Tuple<object, BlittableJsonToken> result)
+        {
             result = null;
             int min = 0, max = _propCount;
 
@@ -167,16 +183,16 @@ namespace NewBlittable
 
             while (min <= max)
             {
-                var mid = (min + max) / 2;
+                var mid = (min + max)/2;
 
-                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-                var propertyIntPtr = (long)_propTags + (mid) * metadataSize;
+                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof (byte));
+                var propertyIntPtr = (long) _propTags + (mid)*metadataSize;
 
-                var offset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
-                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+                var offset = ReadNumber((byte*) propertyIntPtr, _currentOffsetSize);
+                var propertyId = ReadNumber((byte*) propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var type =
                     (BlittableJsonToken)
-                        ReadNumber((byte*)(propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize),
+                        ReadNumber((byte*) (propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize),
                             _currentPropertyIdSize);
 
 
@@ -184,12 +200,13 @@ namespace NewBlittable
                 if (cmpResult == 0)
                 {
                     // found it...
-                    result = GetObject(type, (int)((long)_objStart - (long)_mem - (long)offset));
-                    if (result is BlittableJsonReaderBase)
+                    result = Tuple.Create(GetObject(type, (int) ((long) _objStart - (long) _mem - (long) offset)),
+                        type & typesMask);
+                    if (result.Item1 is BlittableJsonReaderBase)
                     {
                         if (cache == null)
                         {
-                            cache = new Dictionary<string, object>();
+                            cache = new Dictionary<string, Tuple<object, BlittableJsonToken>>();
                         }
                         cache[name] = result;
                     }
@@ -204,7 +221,7 @@ namespace NewBlittable
                     max = mid - 1;
                 }
             }
-           
+
             return false;
         }
 
@@ -222,13 +239,13 @@ namespace NewBlittable
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
-            var properyNameRelativePaosition = _propNames  - propertyNameOffset;
+            var properyNameRelativePaosition = _propNames - propertyNameOffset;
             var position = properyNameRelativePaosition - _mem;
 
             byte propertyNameLengthDataLength;
 
             // Get the propertu name size
-            var size = ReadVariableSizeInt((int)position, out propertyNameLengthDataLength);
+            var size = ReadVariableSizeInt((int) position, out propertyNameLengthDataLength);
 
             // Return result of comparison between proprty name and received comparer
             return comparer.Compare(properyNameRelativePaosition + propertyNameLengthDataLength, size);
@@ -242,5 +259,160 @@ namespace NewBlittable
             await stream.WriteAsync(bytes, 0, bytes.Length);
         }
 
+        public static class JSONConstantsAsBytes
+        {
+            public static byte[] ObjectStart;
+            public static byte[] ObjectEnd;
+
+            public static byte[] ArrayStart;
+            public static byte[] ArrayEnd;
+
+            public static byte[] StringStart;
+            public static byte[] ValueStart;
+            public static byte[] Comma;
+
+            static JSONConstantsAsBytes()
+            {
+                var encoding = UTF32Encoding.UTF32;
+                ObjectStart = encoding.GetBytes("{");
+                ObjectEnd = encoding.GetBytes("}");
+                ArrayStart = encoding.GetBytes("[");
+                ArrayEnd = encoding.GetBytes("]");
+                StringStart = encoding.GetBytes("");
+                ValueStart = encoding.GetBytes(":");
+                Comma = encoding.GetBytes(",");
+            }
+        }
+
+        public async Task WriteObjectAsJsonStringAsync(Stream stream)
+        {
+            // TODO: implement better!
+            var bufferSize = 8;
+            byte[] numericValueBytes;
+            var propertyNames = GetPropertyNames();
+            stream.WriteAsync(JSONConstantsAsBytes.ObjectStart, 0, JSONConstantsAsBytes.ObjectStart.Length);
+            for (int index   = 0; index < propertyNames.Length; index++)
+            {
+                var propertyName = propertyNames[index];
+                
+                // write field start
+                await stream.WriteAsync(JSONConstantsAsBytes.StringStart, 0, JSONConstantsAsBytes.StringStart.Length);
+                var nameUnicodeByteArray = _context.GetUnicodeByteArrayForFieldName(propertyName);
+                await stream.WriteAsync(nameUnicodeByteArray, 0, nameUnicodeByteArray.Length);
+                await stream.WriteAsync(JSONConstantsAsBytes.StringStart, 0, JSONConstantsAsBytes.StringStart.Length);
+                await stream.WriteAsync(JSONConstantsAsBytes.ValueStart, 0, JSONConstantsAsBytes.ValueStart.Length);
+
+                // get field value
+                Tuple<object, BlittableJsonToken> propertyValueAndType;
+                if (TryGetMemberAsTypeValueTuple(propertyName, out propertyValueAndType) == false)
+                    throw new DataMisalignedException($"Blttable Document could not find field {propertyName}");
+
+                // wrire field value
+                switch (propertyValueAndType.Item2)
+                {
+                    case BlittableJsonToken.StartArray:
+                        await WriteArrayToStreamAsync((BlittableJsonReaderArray) propertyValueAndType.Item1, stream);
+                        break;
+                    case BlittableJsonToken.StartObject:
+                        var obj = (BlittableJsonReaderObject) propertyValueAndType.Item1;
+                        await obj.WriteObjectAsJsonStringAsync(stream);
+                        break;
+                    case BlittableJsonToken.String:
+                    case BlittableJsonToken.CompressedString:
+                        await WriteUnicodeStringToStreamAsync((string) propertyValueAndType.Item1, stream);
+                        break;
+                    // todo: write numbers more efficiently
+                    case BlittableJsonToken.Integer:
+                        numericValueBytes = BitConverter.GetBytes((int) propertyValueAndType.Item2);
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    case BlittableJsonToken.Float:
+                        numericValueBytes = BitConverter.GetBytes((float) propertyValueAndType.Item2);
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    case BlittableJsonToken.Boolean:
+                        numericValueBytes = BitConverter.GetBytes((byte) propertyValueAndType.Item2);
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    case BlittableJsonToken.Null:
+                        // not sure about that
+                        numericValueBytes = new byte[1] {0};
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    default:
+                        throw new DataMisalignedException($"Unidentified Type P{propertyValueAndType.Item2}");
+                }
+
+                if (index < propertyNames.Length - 1)
+                {
+                    stream.WriteAsync(JSONConstantsAsBytes.Comma, 0, JSONConstantsAsBytes.Comma.Length);
+                }
+            }
+            await stream.WriteAsync(JSONConstantsAsBytes.ObjectEnd, 0, JSONConstantsAsBytes.ObjectEnd.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public async Task WriteUnicodeStringToStreamAsync(string value, Stream stream)
+        {
+            // todo: consider implementing receiving LazyString value 
+            var buffer = _context.EncodingUnicode.GetBytes(value);
+            await stream.WriteAsync(buffer, 0, buffer.Length);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public async Task WriteArrayToStreamAsync(BlittableJsonReaderArray blittableArray, Stream stream)
+        {
+            byte[] numericValueBytes;
+            await stream.WriteAsync(JSONConstantsAsBytes.ArrayStart, 0, JSONConstantsAsBytes.ArrayStart.Length);
+            // todo: consider implementing receiving LazyString value 
+            for (var i = 0; i < blittableArray.Length; i++)
+            {
+                Tuple<object, BlittableJsonToken> propertyValueAndType;
+                if (blittableArray.TryGetValueTokenTupleByIndex(i, out propertyValueAndType) == false)
+                    throw new DataMisalignedException($"Index {i} not found in array");
+
+                switch (propertyValueAndType.Item2)
+                {
+                    case BlittableJsonToken.StartArray:
+                        throw new DataMisalignedException($"Cannot have array inside array in a JSON");
+                        break;
+                    case BlittableJsonToken.StartObject:
+                        var obj = (BlittableJsonReaderObject)propertyValueAndType.Item1;
+                        await obj.WriteObjectAsJsonStringAsync(stream);
+                        break;
+                    case BlittableJsonToken.String:
+                    case BlittableJsonToken.CompressedString:
+                        await WriteUnicodeStringToStreamAsync((string)propertyValueAndType.Item1, stream);
+                        break;
+                    // todo: write numbers more efficiently
+                    case BlittableJsonToken.Integer:
+                        numericValueBytes = BitConverter.GetBytes((int)propertyValueAndType.Item2);
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    case BlittableJsonToken.Float:
+                        numericValueBytes = BitConverter.GetBytes((float)propertyValueAndType.Item2);
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    case BlittableJsonToken.Boolean:
+                        numericValueBytes = BitConverter.GetBytes((byte)propertyValueAndType.Item2);
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    case BlittableJsonToken.Null:
+                        // not sure about that
+                        numericValueBytes = new byte[1] { 0 };
+                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
+                        break;
+                    default:
+                        throw new DataMisalignedException($"Unidentified Type P{propertyValueAndType.Item2}");
+                }
+
+                if (i < blittableArray.Length - 1)
+                {
+                    await stream.WriteAsync(JSONConstantsAsBytes.Comma, 0, JSONConstantsAsBytes.Comma.Length);
+                }
+            }
+
+            await stream.WriteAsync(JSONConstantsAsBytes.ArrayEnd, 0, JSONConstantsAsBytes.ArrayEnd.Length);
+        }
     }
 }

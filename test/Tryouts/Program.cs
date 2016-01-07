@@ -6,6 +6,7 @@ using System.Text;
 using ConsoleApplication4;
 using NewBlittable;
 using NewBlittable.Tests;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
@@ -141,7 +142,20 @@ namespace Tryouts
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
                 employee.CopyTo(ptr);
 
-                dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
+                MemoryStream stream = new MemoryStream();
+                BlittableJsonReaderObject reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
+                reader.WriteObjectAsJsonStringAsync(stream).Wait();
+
+                var byteArray = stream.ToArray();
+                var unicodeEncoding = new UnicodeEncoding();
+                //var charCount = unicodeEncoding.GetCharCount(byteArray, 0, byteArray.Length);
+                var chars = unicodeEncoding.GetChars(byteArray);
+                var strsss = new string(chars);
+                var trolo = strsss;
+
+
+                //WriteObjectAsJsonStringAsync
+                /*dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
                 dynamic dynamicBlittableJObject = new DynamicBlittableJson(ptr, employee.SizeInBytes, blittableContext);
                 Assert.Equal(dynamicRavenJObject.Age, (string)dynamicBlittableJObject.Age);
                 Assert.Equal(dynamicRavenJObject.Name, (string)dynamicBlittableJObject.Name);
@@ -152,7 +166,7 @@ namespace Tryouts
                 }
                 Assert.Equal(dynamicRavenJObject.Office.Name, (string)dynamicRavenJObject.Office.Name);
                 Assert.Equal(dynamicRavenJObject.Office.Street, (string)dynamicRavenJObject.Office.Street);
-                Assert.Equal(dynamicRavenJObject.Office.City, (string)dynamicRavenJObject.Office.City);
+                Assert.Equal(dynamicRavenJObject.Office.City, (string)dynamicRavenJObject.Office.City);*/
             }
 
         }

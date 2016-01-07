@@ -23,11 +23,13 @@ namespace Raven.Server.Json
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
         public Transaction Transaction;
+        private Dictionary<string,byte[]> _fieldNamesAsUnicodeByteArrays = new Dictionary<string, byte[]>();
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
             _pool = pool;
             Encoding = new UTF8Encoding();
+            EncodingUnicode = new UnicodeEncoding();
         }
 
 
@@ -95,6 +97,21 @@ namespace Raven.Server.Json
             }
             return value;
         }
+
+        public byte[] GetUnicodeByteArrayForFieldName(string field)
+        {
+            byte[] returnedByteArray = null;
+
+            if (_fieldNamesAsUnicodeByteArrays.TryGetValue(field, out returnedByteArray))
+            {
+                return returnedByteArray;
+            }
+            returnedByteArray = EncodingUnicode.GetBytes(field);
+            _fieldNamesAsUnicodeByteArrays.Add(field, returnedByteArray);
+            return returnedByteArray;
+        }
+
+        public Encoding EncodingUnicode;
 
         public BlittableJsonWriter Read(JsonTextReader reader, string documentId)
         {
