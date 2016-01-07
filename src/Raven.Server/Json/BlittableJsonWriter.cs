@@ -53,7 +53,7 @@ namespace ConsoleApplication4
             {
                 _bufferSize = (int)Utils.NearestPowerOfTwo(minSize);
             }
-            return _context.GetTempBuffer(_bufferSize, out _bufferSize);
+            return _context.GetNativeTempBuffer(_bufferSize, out _bufferSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

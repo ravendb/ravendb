@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using ConsoleApplication4;
 using NewBlittable;
@@ -17,21 +18,25 @@ namespace Raven.Server.Json
         private readonly UnmanagedBuffersPool _pool;
         private byte* _tempBuffer;
         private int _bufferSize;
-        private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>();
+        private Dictionary<string, LazyStringValue> _fieldNames;
+        private Dictionary<string, byte[]> _fieldNamesAsByteArrays;
         private bool _disposed;
 
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
         public Transaction Transaction;
-        private Dictionary<string,byte[]> _fieldNamesAsUnicodeByteArrays = new Dictionary<string, byte[]>();
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
             _pool = pool;
             Encoding = new UTF8Encoding();
-            EncodingUnicode = new UnicodeEncoding();
         }
 
+        public StreamWriter BufferStream(Stream stream)
+        {
+            //TODO: cache the buffer stream here so we wouldn't always allocate the buffer
+           return new StreamWriter(stream);
+        }
 
         /// <summary>
         /// Returns memory buffer to work with, be aware, this buffer is not thread safe
@@ -39,7 +44,7 @@ namespace Raven.Server.Json
         /// <param name="requestedSize"></param>
         /// <param name="actualSize"></param>
         /// <returns></returns>
-        public byte* GetTempBuffer(int requestedSize, out int actualSize)
+        public byte* GetNativeTempBuffer(int requestedSize, out int actualSize)
         {
             if (requestedSize == 0)
                 throw new ArgumentException(nameof(requestedSize));
@@ -53,7 +58,7 @@ namespace Raven.Server.Json
                 _pool.ReturnMemory(_tempBuffer);
                 _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
             }
-            
+
             actualSize = _bufferSize;
             return _tempBuffer;
         }
@@ -74,9 +79,12 @@ namespace Raven.Server.Json
             Lz4.Dispose();
             if (_tempBuffer != null)
                 _pool.ReturnMemory(_tempBuffer);
-            foreach (var stringToByteComparable in _fieldNames.Values)
+            if (_fieldNames != null)
             {
-                _pool.ReturnMemory(stringToByteComparable.Buffer);
+                foreach (var stringToByteComparable in _fieldNames.Values)
+                {
+                    _pool.ReturnMemory(stringToByteComparable.Buffer);
+                }
             }
             _disposed = true;
         }
@@ -84,6 +92,9 @@ namespace Raven.Server.Json
         public LazyStringValue GetComparerFor(string field)
         {
             LazyStringValue value;
+            if (_fieldNames == null)
+                _fieldNames = new Dictionary<string, LazyStringValue>();
+
             if (_fieldNames.TryGetValue(field, out value))
                 return value;
 
@@ -98,20 +109,23 @@ namespace Raven.Server.Json
             return value;
         }
 
-        public byte[] GetUnicodeByteArrayForFieldName(string field)
+        public byte[] GetBytesForFieldName(string field)
         {
-            byte[] returnedByteArray = null;
+            if (_fieldNamesAsByteArrays == null)
+                _fieldNamesAsByteArrays = new Dictionary<string, byte[]>();
 
-            if (_fieldNamesAsUnicodeByteArrays.TryGetValue(field, out returnedByteArray))
+            byte[] returnedByteArray;
+
+            if (_fieldNamesAsByteArrays.TryGetValue(field, out returnedByteArray))
             {
                 return returnedByteArray;
             }
-            returnedByteArray = EncodingUnicode.GetBytes(field);
-            _fieldNamesAsUnicodeByteArrays.Add(field, returnedByteArray);
+            returnedByteArray = Encoding.GetBytes(field);
+            _fieldNamesAsByteArrays.Add(field, returnedByteArray);
             return returnedByteArray;
         }
 
-        public Encoding EncodingUnicode;
+        private MemoryStream _memoryStream;
 
         public BlittableJsonWriter Read(JsonTextReader reader, string documentId)
         {

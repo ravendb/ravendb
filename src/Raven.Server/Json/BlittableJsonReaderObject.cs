@@ -18,7 +18,7 @@ namespace NewBlittable
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
         private readonly unsafe byte* _objStart;
-        private string[] _propertyNames;
+        private Dictionary<int, string> _propertyNames;
 
         private Dictionary<string, Tuple<object, BlittableJsonToken>> _objectsPathCache;
 
@@ -140,9 +140,10 @@ namespace NewBlittable
         private unsafe string GetPropertyName(int propertyId)
         {
             if(_propertyNames == null)
-                _propertyNames = new string[_propCount];
+                _propertyNames = new Dictionary<int, string>();
 
-            if (_propertyNames[propertyId] == null)
+            string value;
+            if (_propertyNames.TryGetValue(propertyId, out value) == false)
             {
                 var propertyNameOffsetPtr = _propNames + 1 + propertyId*_propNamesDataOffsetSize;
                 var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
@@ -150,10 +151,10 @@ namespace NewBlittable
                 // Get the relative "In Document" position of the property Name
                 var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-                _propertyNames[propertyId] = ReadStringLazily((int) propRelativePos);
+                _propertyNames[propertyId] = value = ReadStringLazily((int) propRelativePos);
             }
 
-            return _propertyNames[propertyId];
+            return value;
         }
 
         public RavenJObject GenerateRavenJObject()
@@ -263,168 +264,87 @@ namespace NewBlittable
             return comparer.Compare(properyNameRelativePaosition + propertyNameLengthDataLength, size);
         }
 
-        public async Task WriteAsync(Stream stream)
+
+        public void WriteTo(TextWriter writer)
         {
-            // TODO: implement better!
-
-            var bytes = Encoding.UTF8.GetBytes("Some JSON goes here");
-            await stream.WriteAsync(bytes, 0, bytes.Length);
-        }
-
-        public static class JSONConstantsAsBytes
-        {
-            public static byte[] ObjectStart;
-            public static byte[] ObjectEnd;
-
-            public static byte[] ArrayStart;
-            public static byte[] ArrayEnd;
-
-            public static byte[] StringStart;
-            public static byte[] ValueStart;
-            public static byte[] Comma;
-
-            static JSONConstantsAsBytes()
-            {
-                var encoding = UTF32Encoding.UTF32;
-                ObjectStart = encoding.GetBytes("{");
-                ObjectEnd = encoding.GetBytes("}");
-                ArrayStart = encoding.GetBytes("[");
-                ArrayEnd = encoding.GetBytes("]");
-                StringStart = encoding.GetBytes("");
-                ValueStart = encoding.GetBytes(":");
-                Comma = encoding.GetBytes(",");
-            }
-        }
-
-        public async Task WriteObjectAsJsonStringAsync(Stream stream)
-        {
-            // TODO: implement better!
-            var bufferSize = 8;
-            byte[] numericValueBytes;
             var propertyNames = GetPropertyNames();
-            stream.WriteAsync(JSONConstantsAsBytes.ObjectStart, 0, JSONConstantsAsBytes.ObjectStart.Length);
+            writer.Write('{');
             for (int index   = 0; index < propertyNames.Length; index++)
             {
                 var propertyName = propertyNames[index];
-                
-                // write field start
-                await stream.WriteAsync(JSONConstantsAsBytes.StringStart, 0, JSONConstantsAsBytes.StringStart.Length);
-                var nameUnicodeByteArray = _context.GetUnicodeByteArrayForFieldName(propertyName);
-                await stream.WriteAsync(nameUnicodeByteArray, 0, nameUnicodeByteArray.Length);
-                await stream.WriteAsync(JSONConstantsAsBytes.StringStart, 0, JSONConstantsAsBytes.StringStart.Length);
-                await stream.WriteAsync(JSONConstantsAsBytes.ValueStart, 0, JSONConstantsAsBytes.ValueStart.Length);
+
+                writer.Write('"');
+                writer.Write(propertyName);
+                writer.Write("\":");
 
                 // get field value
                 Tuple<object, BlittableJsonToken> propertyValueAndType;
                 if (TryGetMemberAsTypeValueTuple(propertyName, out propertyValueAndType) == false)
                     throw new DataMisalignedException($"Blttable Document could not find field {propertyName}");
 
-                // wrire field value
-                switch (propertyValueAndType.Item2)
-                {
-                    case BlittableJsonToken.StartArray:
-                        await WriteArrayToStreamAsync((BlittableJsonReaderArray) propertyValueAndType.Item1, stream);
-                        break;
-                    case BlittableJsonToken.StartObject:
-                        var obj = (BlittableJsonReaderObject) propertyValueAndType.Item1;
-                        await obj.WriteObjectAsJsonStringAsync(stream);
-                        break;
-                    case BlittableJsonToken.String:
-                    case BlittableJsonToken.CompressedString:
-                        await WriteUnicodeStringToStreamAsync((string) propertyValueAndType.Item1, stream);
-                        break;
-                    // todo: write numbers more efficiently
-                    case BlittableJsonToken.Integer:
-                        numericValueBytes = BitConverter.GetBytes((int) propertyValueAndType.Item2);
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    case BlittableJsonToken.Float:
-                        numericValueBytes = BitConverter.GetBytes((float) propertyValueAndType.Item2);
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    case BlittableJsonToken.Boolean:
-                        numericValueBytes = BitConverter.GetBytes((byte) propertyValueAndType.Item2);
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    case BlittableJsonToken.Null:
-                        // not sure about that
-                        numericValueBytes = new byte[1] {0};
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    default:
-                        throw new DataMisalignedException($"Unidentified Type P{propertyValueAndType.Item2}");
-                }
+                // write field value
+                WriteValue(writer, propertyValueAndType.Item2, propertyValueAndType.Item1);
 
                 if (index < propertyNames.Length - 1)
                 {
-                    stream.WriteAsync(JSONConstantsAsBytes.Comma, 0, JSONConstantsAsBytes.Comma.Length);
+                    writer.Write(',');
                 }
             }
-            await stream.WriteAsync(JSONConstantsAsBytes.ObjectEnd, 0, JSONConstantsAsBytes.ObjectEnd.Length);
+            writer.Write('}');
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task WriteUnicodeStringToStreamAsync(string value, Stream stream)
+        private void WriteValue(TextWriter writer, BlittableJsonToken token, object val)
         {
-            // todo: consider implementing receiving LazyString value 
-            var buffer = _context.EncodingUnicode.GetBytes(value);
-            await stream.WriteAsync(buffer, 0, buffer.Length);
+            switch (token)
+            {
+                case BlittableJsonToken.StartArray:
+                    WriteArrayToStream((BlittableJsonReaderArray) val, writer);
+                    break;
+                case BlittableJsonToken.StartObject:
+                    ((BlittableJsonReaderObject) val).WriteTo(writer);
+                    break;
+                case BlittableJsonToken.String:
+                    writer.Write((string) (LazyStringValue)val);
+                    break;
+                case BlittableJsonToken.CompressedString:
+                    writer.Write((string)(LazyCompressedStringValue)val);
+                    break;
+                case BlittableJsonToken.Integer:
+                    writer.Write((long) val);
+                    break;
+                case BlittableJsonToken.Float:
+                    writer.Write((double) token);
+                    break;
+                case BlittableJsonToken.Boolean:
+                    writer.Write((bool) val ? "true" : "false");
+                    break;
+                case BlittableJsonToken.Null:
+                    writer.Write("null");
+                    break;
+                default:
+                    throw new DataMisalignedException($"Unidentified Type {token}");
+            }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async Task WriteArrayToStreamAsync(BlittableJsonReaderArray blittableArray, Stream stream)
+        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, TextWriter writer)
         {
-            byte[] numericValueBytes;
-            await stream.WriteAsync(JSONConstantsAsBytes.ArrayStart, 0, JSONConstantsAsBytes.ArrayStart.Length);
-            // todo: consider implementing receiving LazyString value 
-            for (var i = 0; i < blittableArray.Length; i++)
+            writer.Write('[');
+            var length = blittableArray.Length;
+            for (var i = 0; i < length; i++)
             {
                 Tuple<object, BlittableJsonToken> propertyValueAndType;
                 if (blittableArray.TryGetValueTokenTupleByIndex(i, out propertyValueAndType) == false)
                     throw new DataMisalignedException($"Index {i} not found in array");
 
-                switch (propertyValueAndType.Item2)
-                {
-                    case BlittableJsonToken.StartArray:
-                        throw new DataMisalignedException($"Cannot have array inside array in a JSON");
-                        break;
-                    case BlittableJsonToken.StartObject:
-                        var obj = (BlittableJsonReaderObject)propertyValueAndType.Item1;
-                        await obj.WriteObjectAsJsonStringAsync(stream);
-                        break;
-                    case BlittableJsonToken.String:
-                    case BlittableJsonToken.CompressedString:
-                        await WriteUnicodeStringToStreamAsync((string)propertyValueAndType.Item1, stream);
-                        break;
-                    // todo: write numbers more efficiently
-                    case BlittableJsonToken.Integer:
-                        numericValueBytes = BitConverter.GetBytes((int)propertyValueAndType.Item2);
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    case BlittableJsonToken.Float:
-                        numericValueBytes = BitConverter.GetBytes((float)propertyValueAndType.Item2);
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    case BlittableJsonToken.Boolean:
-                        numericValueBytes = BitConverter.GetBytes((byte)propertyValueAndType.Item2);
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    case BlittableJsonToken.Null:
-                        // not sure about that
-                        numericValueBytes = new byte[1] { 0 };
-                        await stream.WriteAsync(numericValueBytes, 0, numericValueBytes.Length);
-                        break;
-                    default:
-                        throw new DataMisalignedException($"Unidentified Type P{propertyValueAndType.Item2}");
-                }
+               // write field value
+                WriteValue(writer, propertyValueAndType.Item2, propertyValueAndType.Item1);
 
-                if (i < blittableArray.Length - 1)
+                if (i < length - 1)
                 {
-                    await stream.WriteAsync(JSONConstantsAsBytes.Comma, 0, JSONConstantsAsBytes.Comma.Length);
+                    writer.Write(',');
                 }
             }
-
-            await stream.WriteAsync(JSONConstantsAsBytes.ArrayEnd, 0, JSONConstantsAsBytes.ArrayEnd.Length);
+            writer.Write(']');
         }
     }
 }
