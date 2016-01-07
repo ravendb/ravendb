@@ -79,11 +79,11 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             return stringWriter.ToString();
         }
 
-        protected static unsafe void AssertComplexEmployee(string str, byte* ptr, BlittableJsonWriter employee,
+        protected static unsafe void AssertComplexEmployee(string str, byte* ptr, int size,
          RavenOperationContext blittableContext)
         {
             dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
-            dynamic dynamicBlittableJObject = new DynamicBlittableJson(ptr, employee.SizeInBytes,
+            dynamic dynamicBlittableJObject = new DynamicBlittableJson(ptr, size,
                 blittableContext);
 
             Assert.Equal(dynamicRavenJObject.Age, dynamicBlittableJObject.Age);
