@@ -40,16 +40,19 @@ namespace Tryouts
             //    Console.WriteLine(stringBuilder);
             //    Console.WriteLine(stringBuilder.ToString()==json);
             //}
+            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
 
+            //var outputFile = Path.GetTempFileName() + ".CSV";
 
-            var outputFile = Path.GetTempFileName() + ".CSV";
-            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", outputFile, 3);
-            
-            Console.WriteLine("Ready...");
-            Console.ReadLine();
-WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", outputFile, int.MaxValue);
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", outputFile, int.MaxValue);
 
-            Console.WriteLine(outputFile);
+            //Console.WriteLine("Real test");
+
+            //outputFile = Path.GetTempFileName() + ".CSV";
+
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", outputFile, int.MaxValue);
+
+            //Console.WriteLine(outputFile);
         }
     }
 

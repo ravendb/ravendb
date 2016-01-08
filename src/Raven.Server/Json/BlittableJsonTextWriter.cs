@@ -1,0 +1,229 @@
+﻿using System;
+using System.Globalization;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Abstractions.Indexing;
+using Sparrow;
+using Voron.Exceptions;
+
+namespace Raven.Server.Json
+{
+    public unsafe class BlittableJsonTextWriter
+    {
+        private readonly RavenOperationContext _context;
+        private readonly Stream _stream;
+
+        private const byte StartObject = (byte)'{';
+        private const byte EndObject = (byte)'}';
+        private const byte StartArray = (byte)'[';
+        private const byte EndArray = (byte)']';
+        private const byte Comma = (byte)',';
+        private const byte Quote = (byte)'"';
+        private const byte Colon = (byte)':';
+        private static readonly byte[] NullBuffer = { (byte)'n', (byte)'u', (byte)'l', (byte)'l', };
+        private static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
+        private static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
+
+        private int _pos;
+        private readonly byte[] _buffer;
+
+        public BlittableJsonTextWriter(RavenOperationContext context, Stream stream)
+        {
+            _context = context;
+            _stream = stream;
+            _buffer = context.GetManagedBuffer();
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteString(LazyStringValue str)
+        {
+            var buffer = str.Buffer;
+            var size = str.Size;
+
+            WriteString(size, buffer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteString(LazyCompressedStringValue str)
+        {
+            var buffer = str.DecompressToTempBuffer();
+
+            WriteString(str.UncompressedSize, buffer);
+        }
+
+        private void WriteString(int size, byte* buffer)
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+
+            if (size < _buffer.Length)
+            {
+                EnsureBuffer(size);
+                fixed (byte* p = _buffer)
+                    Memory.Copy(p + _pos, buffer, size);
+                _pos += size;
+                return;
+            }
+            // need to do this in pieces
+            var posInStr = 0;
+            fixed (byte* p = _buffer)
+            {
+                int amountToCopy = _pos;
+                while (posInStr < size)
+                {
+                    amountToCopy = Math.Min(size - posInStr, _buffer.Length);
+                    Flush();
+                    Memory.Copy(p, buffer + posInStr, amountToCopy);
+                    posInStr += amountToCopy;
+                }
+                _pos = amountToCopy;
+            }
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteStartObject()
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = StartObject;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteEndArray()
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = EndArray;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteStartArray()
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = StartArray;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteEndObject()
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = EndObject;
+        }
+
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureBuffer(int len)
+        {
+            if (_pos + len < _buffer.Length)
+                return;
+            if (len >= _buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(len));
+
+            Flush();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Flush()
+        {
+            if (_pos == 0)
+                return;
+            _stream.Write(_buffer, 0, _pos);
+            _pos = 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteNull()
+        {
+            EnsureBuffer(4);
+            for (int i = 0; i < 4; i++)
+            {
+                _buffer[_pos++] = NullBuffer[i];
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteBool(bool val)
+        {
+            EnsureBuffer(5);
+            var buffer = val ? TrueBuffer : FalseBuffer;
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                _buffer[_pos++] = buffer[i];
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteComma()
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = Comma;
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WritePropertyName(LazyStringValue prop)
+        {
+            WriteString(prop);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Colon;
+        }
+
+
+        public void WriteDouble(double val)
+        {
+            // Because formatting doubles is such a complex matter, we don't try to 
+            // optimize allocations here at this time. We'll accept the small strings
+            // being generated until we have profiler information about the cost and then
+            // consider whatever to move to an unmanaged mode for this.
+            var str = val.ToString("R", CultureInfo.InvariantCulture);
+            fixed (char* chars = str)
+            {
+                var maxByteCount = _context.Encoding.GetMaxByteCount(str.Length);
+                int size;
+                var buffer = _context.GetNativeTempBuffer(maxByteCount, out size);
+                var bytes = _context.Encoding.GetBytes(chars, str.Length, buffer, size);
+                WriteString(bytes, buffer);
+            }
+            if (double.IsNaN(val) || double.IsInfinity(val) || str.IndexOf('.') != -1 || str.IndexOf('E') != -1 ||
+                str.IndexOf('e') != -1)
+            {
+                return;
+            }
+            EnsureBuffer(2);
+            _buffer[_pos++] = (byte)'.';
+            _buffer[_pos++] = (byte)'0';
+        }
+
+        public void WriteInteger(long val)
+        {
+            if (val == 0)
+            {
+                EnsureBuffer(1);
+                _buffer[_pos++] = (byte)'0';
+                return;
+            }
+            int len = 1;
+            if (len < 0)
+            {
+                EnsureBuffer(1);
+                _buffer[_pos++] = (byte)'-';
+            }
+            for (var i = val / 10; i != 0; i /= 10)
+            {
+                len++;
+            }
+            EnsureBuffer(len);
+            for (int i = len - 1; i >= 0; i--)
+            {
+                _buffer[_pos + i] = (byte)('0' + (val % 10));
+                val /= 10;
+            }
+        }
+    }
+
+
+}

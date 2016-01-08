@@ -14,7 +14,7 @@ namespace Raven.Server.Json
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
         private readonly unsafe byte* _objStart;
-        private string[] _propertyNames;
+        private LazyStringValue[] _propertyNames;
 
         private Dictionary<string, Tuple<object, BlittableJsonToken>> _objectsPathCache;
 
@@ -134,7 +134,7 @@ namespace Raven.Server.Json
             return sortedNames;
         }
 
-        private unsafe string GetPropertyName(int propertyId)
+        private unsafe LazyStringValue GetPropertyName(int propertyId)
         {
             if (_parent != null)
                 return _parent.GetPropertyName(propertyId);
@@ -142,7 +142,7 @@ namespace Raven.Server.Json
             if (_propertyNames == null)
             {
                 var totalNumberOfProps = (_size - (_propNames - _mem) - 1)/_propNamesDataOffsetSize;
-                _propertyNames = new string[totalNumberOfProps];
+                _propertyNames = new LazyStringValue[totalNumberOfProps];
             }
 
             var propertyName = _propertyNames[propertyId];
@@ -158,12 +158,6 @@ namespace Raven.Server.Json
             }
 
             return propertyName;
-        }
-
-        public RavenJObject GenerateRavenJObject()
-        {
-            // TODO: Implement!
-            return null;
         }
 
         public object this[string name]
@@ -267,12 +261,67 @@ namespace Raven.Server.Json
             return comparer.Compare(properyNameRelativePaosition + propertyNameLengthDataLength, size);
         }
 
+        public void WriteTo(Stream stream)
+        {
+            var writer = new BlittableJsonTextWriter(_context, stream);
+            WriteTo(writer);
+            writer.Flush();
+        }
 
-        public unsafe void WriteTo(JsonWriter writer)
+        private struct PropertyPos : IComparable<PropertyPos>
+        {
+            public int PropertyId;
+            public int PropertyOffset;
+            public BlittableJsonToken Type;
+            public int CompareTo(PropertyPos other)
+            {
+                return PropertyOffset - other.PropertyOffset;
+            }
+        }
+
+        // keeping this here because we aren't sure whatever it is worth it to 
+        // get the same order of the documents for the perf cost
+        private unsafe void WriteToOrdered(BlittableJsonTextWriter writer)
+        {
+            writer.WriteStartObject();
+            var props = new PropertyPos[_propCount];
+            for (int i = 0; i < _propCount; i++)
+            {
+                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+                var propertyIntPtr = (long)_propTags + (i) * metadataSize;
+                var propertyOffset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
+                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+                var type = (BlittableJsonToken)(*((byte*)propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize));
+                props[i].PropertyOffset = propertyOffset;
+                props[i].Type = type;
+                props[i].PropertyId = propertyId;
+            }
+            Array.Sort(props);
+            for (int i = 0; i < _propCount; i++)
+            {
+                if (i != 0)
+                {
+                    writer.WriteComma();
+                }
+
+                writer.WritePropertyName(GetPropertyName(props[i].PropertyId));
+
+                var val = GetObject(props[i].Type, (int) ((long) _objStart - (long) _mem - (long)props[i].PropertyOffset));
+                WriteValue(writer, props[i].Type & typesMask, val);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private unsafe void WriteTo(BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
             for (int i = 0; i < _propCount; i++)
             {
+                if (i != 0)
+                {
+                    writer.WriteComma();
+                }
                 var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
                 var propertyIntPtr = (long)_propTags + (i) * metadataSize;
                 var propertyOffset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
@@ -288,7 +337,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private void WriteValue(JsonWriter writer, BlittableJsonToken token, object val)
+        private void WriteValue(BlittableJsonTextWriter writer, BlittableJsonToken token, object val)
         {
             switch (token)
             {
@@ -299,19 +348,19 @@ namespace Raven.Server.Json
                     ((BlittableJsonReaderObject)val).WriteTo(writer);
                     break;
                 case BlittableJsonToken.String:
-                    writer.WriteValue((string)(LazyStringValue)val);
+                    writer.WriteString((LazyStringValue)val);
                     break;
                 case BlittableJsonToken.CompressedString:
-                    writer.WriteValue((string)(LazyCompressedStringValue)val);
+                    writer.WriteString((LazyCompressedStringValue)val);
                     break;
                 case BlittableJsonToken.Integer:
-                    writer.WriteValue((long)val);
+                    writer.WriteInteger((long)val);
                     break;
                 case BlittableJsonToken.Float:
-                    writer.WriteValue((double)token);
+                    writer.WriteDouble((double)token);
                     break;
                 case BlittableJsonToken.Boolean:
-                    writer.WriteValue((bool)val );
+                    writer.WriteBool((bool)val );
                     break;
                 case BlittableJsonToken.Null:
                     writer.WriteNull();
@@ -321,7 +370,7 @@ namespace Raven.Server.Json
             }
         }
 
-        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, JsonWriter writer)
+        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, BlittableJsonTextWriter writer)
         {
             writer.WriteStartArray();
             var length = blittableArray.Length;
@@ -331,6 +380,10 @@ namespace Raven.Server.Json
                 if (blittableArray.TryGetValueTokenTupleByIndex(i, out propertyValueAndType) == false)
                     throw new DataMisalignedException($"Index {i} not found in array");
 
+                if (i != 0)
+                {
+                    writer.WriteComma();
+                }
                 // write field value
                 WriteValue(writer, propertyValueAndType.Item2, propertyValueAndType.Item1);
 

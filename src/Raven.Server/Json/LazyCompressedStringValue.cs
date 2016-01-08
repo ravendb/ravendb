@@ -7,14 +7,14 @@ namespace Raven.Server.Json
     {
         private readonly RavenOperationContext _context;
         public readonly byte* Buffer;
-        public readonly int _uncompressedSize;
+        public readonly int UncompressedSize;
         private readonly int _compressedSize;
         public string String;
 
         public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, RavenOperationContext context)
         {
             String = str;
-            _uncompressedSize = uncompressedSize;
+            UncompressedSize = uncompressedSize;
             _compressedSize = compressedSize;
             _context = context;
             Buffer = buffer;
@@ -25,25 +25,31 @@ namespace Raven.Server.Json
             if (self.String != null)
                 return self.String;
 
-            int bufferSize;
-            var tempBuffer = self._context.GetNativeTempBuffer(self._uncompressedSize, out bufferSize);
-            var uncompressedSize = LZ4.Decode64(self.Buffer, 
-                self._compressedSize, 
-                tempBuffer, 
-                self._uncompressedSize,
-                true);
+            var tempBuffer = self.DecompressToTempBuffer();
 
-            if (uncompressedSize != self._uncompressedSize)
-                throw new FormatException("Wrong size detected on decompression");
-
-            var charCount = self._context.Encoding.GetCharCount(tempBuffer, self._uncompressedSize);
+            var charCount = self._context.Encoding.GetCharCount(tempBuffer, self.UncompressedSize);
             var str = new string(' ', charCount);
             fixed (char* pStr = str)
             {
-                self._context.Encoding.GetChars(tempBuffer, self._uncompressedSize, pStr, charCount);
+                self._context.Encoding.GetChars(tempBuffer, self.UncompressedSize, pStr, charCount);
                 self.String = str;
                 return str;
             }
+        }
+
+        public byte* DecompressToTempBuffer()
+        {
+            int bufferSize;
+            var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize, out bufferSize);
+            var uncompressedSize = LZ4.Decode64(Buffer,
+                _compressedSize,
+                tempBuffer,
+                UncompressedSize,
+                true);
+
+            if (uncompressedSize != UncompressedSize)
+                throw new FormatException("Wrong size detected on decompression");
+            return tempBuffer;
         }
 
         public override string ToString()

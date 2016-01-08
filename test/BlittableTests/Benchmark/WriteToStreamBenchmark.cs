@@ -14,9 +14,53 @@ namespace BlittableTests.Benchmark
 {
     public class WriteToStreamBenchmark
     {
+        public static void ManySmallDocs(string directory)
+        {
+            var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length);
+            foreach (var jsonFile in files)
+            {
+                Console.Write(Path.GetFileName(jsonFile));
+                var sp = Stopwatch.StartNew();
+                int lines = 0;
+                using (var reader = File.OpenText(jsonFile))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        lines++;
+                        JObject.Load(new JsonTextReader(new StringReader(line)));
+                    }
+                }
+                Console.Write(" lines {1:#,#} json - {0:#,#}ms ", sp.ElapsedMilliseconds, lines);
+                GC.Collect(2);
+
+                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024*1024*1024))
+                using (var blittableContext = new RavenOperationContext(unmanagedPool))
+                {
+                    sp.Restart();
+
+                    using (var reader = File.OpenText(jsonFile))
+                    {
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(line)),
+                                blittableContext,
+                                "doc1"))
+                            {
+                                employee.Write();
+                            }
+                        }
+                    }
+                    Console.WriteLine(" blit - {0:#,#}ms", sp.ElapsedMilliseconds);
+
+
+                }
+            }
+        }
+
         public unsafe static void PerformanceAnalysis(string directory, string outputFile, int size)
         {
-            Console.WriteLine(IntPtr.Size);
             using (var fileStream = new FileStream(outputFile, FileMode.Create))
             using (var streamWriter = new StreamWriter(fileStream))
             {
@@ -59,13 +103,11 @@ namespace BlittableTests.Benchmark
                             var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
                             employee.CopyTo(ptr);
                             using (var stream = new FileStream("output2.junk", FileMode.Create))
-                            using (var writer = new StreamWriter(stream))
-                            using (var jsonWriter = new Raven.Imports.Newtonsoft.Json.JsonTextWriter(writer))
                             {
                                 sp.Restart();
                                 var obj = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
-                                obj.WriteTo(jsonWriter);
-                                streamWriter.Write(stream.Length + "," + sp.ElapsedMilliseconds + ",");
+                                obj.WriteTo(stream);
+                                streamWriter.Write(employee.SizeInBytes + "," + sp.ElapsedMilliseconds + ",");
                             }
                             Marshal.FreeHGlobal((IntPtr)ptr);
                             Console.WriteLine(" blit - {0:#,#} ms, Props: {1}, Compressed: {2:#,#}/{3:#,#}",

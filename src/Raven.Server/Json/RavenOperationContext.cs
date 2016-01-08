@@ -21,6 +21,9 @@ namespace Raven.Server.Json
         private Dictionary<string, byte[]> _fieldNamesAsByteArrays;
         private bool _disposed;
 
+        private char[] _charBuffer;
+        private byte[] _bytesBuffer;
+
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
         public Transaction Transaction;
@@ -31,10 +34,18 @@ namespace Raven.Server.Json
             Encoding = new UTF8Encoding();
         }
 
-        public StreamWriter BufferStream(Stream stream)
+        public char[] GetcharBuffer()
         {
-            //TODO: cache the buffer stream here so we wouldn't always allocate the buffer
-           return new StreamWriter(stream);
+            if(_charBuffer == null)
+                _charBuffer = new char[128];
+            return _charBuffer;
+        }
+
+        public byte[] GetManagedBuffer()
+        {
+            if(_bytesBuffer == null)
+                _bytesBuffer = new byte[4096];
+            return _bytesBuffer;
         }
 
         /// <summary>

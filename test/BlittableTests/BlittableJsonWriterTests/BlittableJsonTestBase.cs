@@ -103,10 +103,10 @@ namespace BlittableTests.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.MegaDevices[i].Usages,
                     dynamicBlittableJObject.MegaDevices[i].Usages);
             }
-            var stringBuilder = new StringBuilder();
+            var ms = new MemoryStream();
             new BlittableJsonReaderObject(ptr, size,
-                blittableContext).WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
-            Assert.Equal(str, stringBuilder.ToString());
+                blittableContext).WriteTo(ms);
+            Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
         }
     }
 }

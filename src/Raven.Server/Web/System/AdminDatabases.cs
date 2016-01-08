@@ -37,7 +37,7 @@ namespace Raven.Server.Web.System
                     return Task.CompletedTask;
                 }
                 ctx.Response.StatusCode = 200;
-                obj.WriteTo(new JsonTextWriter(new StreamWriter(ctx.Response.Body)));
+                obj.WriteTo(ctx.Response.Body);
                 return Task.CompletedTask;
             }
         }

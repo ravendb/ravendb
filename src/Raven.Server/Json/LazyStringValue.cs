@@ -58,9 +58,9 @@ namespace Raven.Server.Json
 
         public static bool operator ==(LazyStringValue self, string str)
         {
-            if (self == null && str == null)
+            if (ReferenceEquals(self, null) && str == null)
                 return true;
-            if (self == null || str == null)
+            if (ReferenceEquals(self, null) || str == null)
                 return false;
             return self.Equals(str);
         }
@@ -72,6 +72,9 @@ namespace Raven.Server.Json
 
         public static implicit operator string(LazyStringValue self)
         {
+            if(self == null)
+                throw new ArgumentNullException(nameof(self));
+
             if (self.String != null)
                 return self.String;
 

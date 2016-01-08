@@ -45,9 +45,9 @@ namespace BlittableTests.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.Office.Name, dynamicRavenJObject.Office.Name);
                 Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
                 Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
-                var stringBuilder = new StringBuilder();
-                new BlittableJsonReaderObject(ptr, employee.SizeInBytes,blittableContext).WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
-                Assert.Equal(str, stringBuilder.ToString());
+                var ms = new MemoryStream();
+                new BlittableJsonReaderObject(ptr, employee.SizeInBytes,blittableContext).WriteTo(ms);
+                Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 
@@ -179,9 +179,9 @@ namespace BlittableTests.BlittableJsonWriterTests
                 Assert.Equal(sampleObject.SomeObject.SomeArray.Length, dynamicObject.SomeObject.SomeArray.Length);
                 Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
                 Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
-                var stringBuilder = new StringBuilder();
-                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
-                Assert.Equal(str, stringBuilder.ToString());
+                var ms = new MemoryStream();
+                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(ms);
+                Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
 
             }
         }
@@ -211,10 +211,10 @@ namespace BlittableTests.BlittableJsonWriterTests
                 size = obj.CopyTo(buffer);
                 var r = new BlittableJsonReaderObject(buffer, size, ctx);
 
-                var stringBuilder = new StringBuilder();
-                r.WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
+                var ms = new MemoryStream();
+                r.WriteTo(ms);
 
-                Assert.Equal(stringBuilder.ToString(), json);
+                Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
             }
         }
 
