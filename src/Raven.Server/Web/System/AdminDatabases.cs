@@ -24,7 +24,7 @@ namespace Raven.Server.Web.System
             _serverStore = serverStore;
         }
 
-        public override async Task Get(HttpContext ctx)
+        public override  Task Get(HttpContext ctx)
         {
             RavenOperationContext context;
             using (_serverStore.AllocateRequestContext(out context))
@@ -34,10 +34,11 @@ namespace Raven.Server.Web.System
                 if (obj == null)
                 {
                     ctx.Response.StatusCode = 404;
-                    return;
+                    return Task.CompletedTask;
                 }
                 ctx.Response.StatusCode = 200;
                 obj.WriteTo(new JsonTextWriter(new StreamWriter(ctx.Response.Body)));
+                return Task.CompletedTask;
             }
         }
 

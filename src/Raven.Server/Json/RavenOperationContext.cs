@@ -124,8 +124,6 @@ namespace Raven.Server.Json
             return returnedByteArray;
         }
 
-        private MemoryStream _memoryStream;
-
         public BlittableJsonWriter Read(JsonTextReader reader, string documentId)
         {
             var writer = new BlittableJsonWriter(reader, this, documentId);
@@ -134,7 +132,7 @@ namespace Raven.Server.Json
                 writer.Write();
                 return writer;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 writer.Dispose();
                 throw;
