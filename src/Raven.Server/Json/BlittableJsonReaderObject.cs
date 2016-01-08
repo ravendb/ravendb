@@ -62,8 +62,9 @@ namespace Raven.Server.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
         }
 
-        public unsafe BlittableJsonReaderObject(int pos, BlittableJsonReaderBase parent, BlittableJsonToken type)
+        public unsafe BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
         {
+            _parent = parent;
             _context = parent._context;
             _mem = parent._mem;
             _size = parent._size;
@@ -134,6 +135,9 @@ namespace Raven.Server.Json
 
         private unsafe string GetPropertyName(int propertyId)
         {
+            if (_parent != null)
+                return _parent.GetPropertyName(propertyId);
+
             if (_propertyNames == null)
                 _propertyNames = new Dictionary<int, string>();
 
@@ -344,5 +348,32 @@ namespace Raven.Server.Json
             }
             writer.Write(']');
         }
+
+        internal unsafe object GetObject(BlittableJsonToken type, int position)
+        {
+
+            switch (type & typesMask)
+            {
+                case BlittableJsonToken.StartObject:
+                    return new BlittableJsonReaderObject(position, _parent ?? this, type);
+                case BlittableJsonToken.StartArray:
+                    return new BlittableJsonReaderArray(position, _parent ?? this, type);
+                case BlittableJsonToken.Integer:
+                    return ReadVariableSizeInteger(position);
+                case BlittableJsonToken.String:
+                    return ReadStringLazily(position);
+                case BlittableJsonToken.CompressedString:
+                    return ReadCompressStringLazily(position);
+                case BlittableJsonToken.Boolean:
+                    return ReadNumber(_mem + position, 1) == 0;
+                case BlittableJsonToken.Null:
+                    return null;
+                case BlittableJsonToken.Float:
+                    return (double)ReadVariableSizeInteger(position);
+                default:
+                    throw new ArgumentOutOfRangeException((type).ToString());
+            }
+        }
+
     }
 }

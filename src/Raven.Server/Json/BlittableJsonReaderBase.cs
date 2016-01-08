@@ -4,6 +4,7 @@ namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonReaderBase
     {
+        internal BlittableJsonReaderObject _parent;
         internal byte* _mem;
         internal int _size;
         internal byte* _propNames;
@@ -60,32 +61,6 @@ namespace Raven.Server.Json
                 BlittableJsonToken.StartObject |
                 BlittableJsonToken.String |
                 BlittableJsonToken.CompressedString;
-
-        internal object GetObject(BlittableJsonToken type, int position)
-        {
-            
-            switch (type & typesMask)
-            {
-                case BlittableJsonToken.StartObject:
-                    return new BlittableJsonReaderObject(position, this, type);
-                case BlittableJsonToken.StartArray:
-                    return new BlittableJsonReaderArray(position, this, type);
-                case BlittableJsonToken.Integer:
-                    return ReadVariableSizeInteger(position);
-                case BlittableJsonToken.String:
-                    return ReadStringLazily(position);
-                case BlittableJsonToken.CompressedString:
-                    return ReadCompressStringLazily(position);
-                case BlittableJsonToken.Boolean:
-                    return ReadNumber(_mem + position, 1) == 0;
-                case BlittableJsonToken.Null:
-                    return null;
-                case BlittableJsonToken.Float:
-                    return (double)ReadVariableSizeInteger(position);
-                default:
-                    throw new ArgumentOutOfRangeException((type).ToString());
-            }
-        }
 
         public int ReadNumber(byte* value, long sizeOfValue)
         {

@@ -5,7 +5,6 @@ namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase
     {
-        private BlittableJsonReaderBase _parent;
         private int _count;
         private byte* _positions;
         private byte* _types;
@@ -13,7 +12,7 @@ namespace Raven.Server.Json
         private long _currentOffsetSize;
         private Dictionary<int, Tuple<object,BlittableJsonToken>> cache;
 
-        public BlittableJsonReaderArray(int pos, BlittableJsonReaderBase parent, BlittableJsonToken type)
+        public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
         {
             _parent = parent;
             byte arraySizeOffset;
