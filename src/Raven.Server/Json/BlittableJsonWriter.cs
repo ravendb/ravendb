@@ -375,7 +375,7 @@ namespace Raven.Server.Json
                     var compressedSize = _context.Lz4.Encode64(buffer, buffer + byteLen, byteLen, _bufferSize - byteLen);
                     Compressed++;
                     // only if we actually save more than space
-                    if (strByteCount > compressedSize + sizeof(int)*2/*overhead of the compressed legnth*/)
+                    if (strByteCount > compressedSize + sizeof(int) * 2/*overhead of the compressed legnth*/)
                     {
                         token = BlittableJsonToken.CompressedString;
                         buffer += byteLen;
@@ -386,7 +386,7 @@ namespace Raven.Server.Json
                     {
                         DiscardedCompressions++;
                     }
-                   
+
                 }
 
                 _stream.Write(buffer, byteLen);

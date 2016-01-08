@@ -14,7 +14,7 @@ namespace Raven.Server.Json
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
         private readonly unsafe byte* _objStart;
-        private Dictionary<int, string> _propertyNames;
+        private string[] _propertyNames;
 
         private Dictionary<string, Tuple<object, BlittableJsonToken>> _objectsPathCache;
 
@@ -140,21 +140,24 @@ namespace Raven.Server.Json
                 return _parent.GetPropertyName(propertyId);
 
             if (_propertyNames == null)
-                _propertyNames = new Dictionary<int, string>();
-
-            string value;
-            if (_propertyNames.TryGetValue(propertyId, out value) == false)
             {
-                var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
+                var totalNumberOfProps = (_size - (_propNames - _mem) - 1)/_propNamesDataOffsetSize;
+                _propertyNames = new string[totalNumberOfProps];
+            }
+
+            var propertyName = _propertyNames[propertyId];
+            if (propertyName == null)
+            {
+                var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
                 var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
                 // Get the relative "In Document" position of the property Name
                 var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-                _propertyNames[propertyId] = value = ReadStringLazily((int)propRelativePos);
+                _propertyNames[propertyId] = propertyName = ReadStringLazily((int)propRelativePos);
             }
 
-            return value;
+            return propertyName;
         }
 
         public RavenJObject GenerateRavenJObject()
