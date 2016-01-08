@@ -47,7 +47,7 @@ namespace Tryouts
             
             Console.WriteLine("Ready...");
             Console.ReadLine();
-            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", outputFile, int.MaxValue);
+WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", outputFile, int.MaxValue);
 
             Console.WriteLine(outputFile);
         }
