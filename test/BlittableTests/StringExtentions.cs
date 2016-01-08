@@ -1,11 +1,8 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using Raven.Abstractions.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using MemberInfoExtensions = Raven.Abstractions.Extensions.MemberInfoExtensions;
+﻿using System.IO;
+using Newtonsoft.Json;
 
-namespace NewBlittable.Tests
+
+namespace BlittableTests
 {
     public static class StringExtentions
     {

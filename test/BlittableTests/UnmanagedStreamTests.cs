@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Json;
 using Xunit;
 
-namespace NewBlittable.Tests
+namespace BlittableTests
 {
     public unsafe class UnmanagedStreamTests
     {

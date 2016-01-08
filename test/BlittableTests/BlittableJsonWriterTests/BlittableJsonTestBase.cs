@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Text;
-using System.Threading.Tasks;
-using ConsoleApplication4;
+using Microsoft.AspNet.Mvc.ViewFeatures;
 using Raven.Abstractions.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server.Json;
 using Xunit;
 
-namespace NewBlittable.Tests.BlittableJsonWriterTests
+namespace BlittableTests.BlittableJsonWriterTests
 {
     public class BlittableJsonTestBase
     {
@@ -107,6 +103,10 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.MegaDevices[i].Usages,
                     dynamicBlittableJObject.MegaDevices[i].Usages);
             }
+            var stringBuilder = new StringBuilder();
+            new BlittableJsonReaderObject(ptr, size,
+                blittableContext).WriteTo(new StringWriter(stringBuilder));
+            Assert.Equal(str, stringBuilder.ToString());
         }
     }
 }

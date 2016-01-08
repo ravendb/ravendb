@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
-using Voron.Util;
 
-namespace NewBlittable
+namespace Raven.Server.Json
 {
     public unsafe class UnmanagedBuffersPool : IDisposable
     {
@@ -122,7 +120,7 @@ namespace NewBlittable
         public byte* GetMemory(int size, string documentId, out int actualSize)
         {
             Interlocked.Increment(ref _allocateMemoryCalls);
-            actualSize = (int)Utils.NearestPowerOfTwo(size);
+            actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
 
             AllocatedMemoryData memoryDataForLength;
             ConcurrentStack<AllocatedMemoryData> existingQueue;

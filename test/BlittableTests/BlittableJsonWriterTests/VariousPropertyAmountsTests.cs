@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
-using ConsoleApplication4;
+using System.Text;
 using Newtonsoft.Json;
-//using Raven.Imports.Newtonsoft.Json;
+
 using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Server.Json;
 using Xunit;
@@ -101,6 +101,36 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
                     Assert.True(dynamicBlittableJObject.TryGetMember(new CustomMemberBinder("Field" + i, true), out curVal));
                     Assert.Equal(curVal.ToString(), i.ToString());
                 }
+            }
+        }
+
+        [Theory]
+        [InlineData(byte.MaxValue)]
+        [InlineData(short.MaxValue)]
+        [InlineData(short.MaxValue + 1)]
+        public unsafe void FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
+        {
+
+            var str = GetJsonString(1, maxValue);
+
+            byte* ptr;
+            int size = 0;
+            var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024);
+
+            using (var blittableContext = new RavenOperationContext(unmanagedPool))
+            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(str)), blittableContext,
+                "doc1"))
+            {
+                employee.Write();
+                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                employee.CopyTo(ptr);
+                var reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
+
+                var stringBuilder = new StringBuilder();
+                reader.WriteTo(new StringWriter(stringBuilder));
+                Assert.Equal(stringBuilder.ToString(), str);
+
+
             }
         }
     }

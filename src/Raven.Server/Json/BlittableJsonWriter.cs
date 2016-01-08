@@ -2,15 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using NewBlittable;
 using Newtonsoft.Json;
-using Raven.Server.Json;
 using Voron.Util;
+
 //using Raven.Imports.Newtonsoft.Json;
 
-namespace ConsoleApplication4
+namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonWriter : IDisposable, IComparer<BlittableJsonWriter.PropertyTag>
     {
@@ -52,9 +49,9 @@ namespace ConsoleApplication4
             // enlarge buffer if needed
             if (minSize > _bufferSize)
             {
-                _bufferSize = (int)Utils.NearestPowerOfTwo(minSize);
+                _bufferSize = (int)Voron.Util.Utils.NearestPowerOfTwo(minSize);
             }
-            return _context.GetTempBuffer(_bufferSize, out _bufferSize);
+            return _context.GetNativeTempBuffer(_bufferSize, out _bufferSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

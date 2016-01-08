@@ -1,9 +1,8 @@
 using System;
 using System.Text;
-using Raven.Server.Json;
 using Sparrow;
 
-namespace NewBlittable
+namespace Raven.Server.Json
 {
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>
@@ -24,7 +23,7 @@ namespace NewBlittable
         public int CompareTo(string other)
         {
             var sizeInBytes = Encoding.UTF8.GetMaxByteCount(other.Length);
-            var tmp = _context.GetTempBuffer(sizeInBytes, out sizeInBytes);
+            var tmp = _context.GetNativeTempBuffer(sizeInBytes, out sizeInBytes);
             fixed (char* pOther = other)
             {
                 var tmpSize = _context.Encoding.GetBytes(pOther, other.Length, tmp, sizeInBytes);

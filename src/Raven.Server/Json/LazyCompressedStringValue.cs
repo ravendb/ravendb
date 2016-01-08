@@ -1,12 +1,9 @@
 using System;
-using System.Text;
-using Raven.Server.Json;
-using Sparrow;
 using Voron.Util;
 
-namespace NewBlittable
+namespace Raven.Server.Json
 {
-    public unsafe class CompressedStringToByteComparer 
+    public unsafe class LazyCompressedStringValue 
     {
         private readonly RavenOperationContext _context;
         public readonly byte* Buffer;
@@ -14,7 +11,7 @@ namespace NewBlittable
         private readonly int _compressedSize;
         public string String;
 
-        public CompressedStringToByteComparer(string str, byte* buffer, int uncompressedSize, int compressedSize, RavenOperationContext context)
+        public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, RavenOperationContext context)
         {
             String = str;
             _uncompressedSize = uncompressedSize;
@@ -23,13 +20,13 @@ namespace NewBlittable
             Buffer = buffer;
         }
 
-        public static implicit operator string(CompressedStringToByteComparer self)
+        public static implicit operator string(LazyCompressedStringValue self)
         {
             if (self.String != null)
                 return self.String;
 
             int bufferSize;
-            var tempBuffer = self._context.GetTempBuffer(self._uncompressedSize, out bufferSize);
+            var tempBuffer = self._context.GetNativeTempBuffer(self._uncompressedSize, out bufferSize);
             var uncompressedSize = LZ4.Decode64(self.Buffer, 
                 self._compressedSize, 
                 tempBuffer, 

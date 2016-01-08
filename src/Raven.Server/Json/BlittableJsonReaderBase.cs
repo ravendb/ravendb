@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Runtime.InteropServices;
-using System.Text;
-using ConsoleApplication4;
-using Raven.Server.Json;
-using Sparrow;
 
-namespace NewBlittable
+namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonReaderBase
     {
@@ -123,14 +118,14 @@ namespace NewBlittable
             return new LazyStringValue(null, _mem + pos + offset, size, _context);
         }
 
-        public CompressedStringToByteComparer ReadCompressStringLazily(int pos)
+        public LazyCompressedStringValue ReadCompressStringLazily(int pos)
         {
             byte offset;
             var uncompressedSize = ReadVariableSizeInt(pos, out offset);
             pos += offset;
             var compressedSize = ReadVariableSizeInt(pos, out offset);
             pos += offset;
-            return new CompressedStringToByteComparer(null, _mem + pos, uncompressedSize, compressedSize, _context);
+            return new LazyCompressedStringValue(null, _mem + pos, uncompressedSize, compressedSize, _context);
         }
 
         public int ReadVariableSizeInt(int pos, out byte offset)

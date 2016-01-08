@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using ConsoleApplication4;
 using Newtonsoft.Json;
 using Raven.Server.Json;
-/*using Raven.Imports.Newtonsoft.Json;
-using Raven.Server.Json;*/
 using Xunit;
 
-namespace NewBlittable.Tests.BlittableJsonWriterTests
+
+namespace BlittableTests.BlittableJsonWriterTests
 {
     public unsafe class ConcurrentAccessTests: BlittableJsonTestBase
     {

@@ -36,7 +36,7 @@ namespace Raven.Server.Web.System
                     return;
                 }
                 ctx.Response.StatusCode = 200;
-                await obj.WriteAsync(ctx.Response.Body);
+                obj.WriteTo(new StreamWriter(ctx.Response.Body));
             }
         }
 

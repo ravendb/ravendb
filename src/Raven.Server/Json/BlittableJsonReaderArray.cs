@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using ConsoleApplication4;
 
-namespace NewBlittable
+namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase
     {

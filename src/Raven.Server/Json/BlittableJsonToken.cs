@@ -1,6 +1,6 @@
 using System;
 
-namespace ConsoleApplication4
+namespace Raven.Server.Json
 {
     [Flags]
     public enum BlittableJsonToken : byte

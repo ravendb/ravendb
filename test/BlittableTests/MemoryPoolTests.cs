@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Raven.Server.Json;
 using Xunit;
 
-namespace NewBlittable.Tests
+namespace BlittableTests
 {
     public unsafe class MemoryPoolTests
     {
