@@ -39,7 +39,7 @@ using System.Linq;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
-    internal static class JavaScriptUtils
+    public static class JavaScriptUtils
     {
         internal static readonly bool[] SingleQuoteCharEscapeFlags = new bool[128];
         internal static readonly bool[] DoubleQuoteCharEscapeFlags = new bool[128];

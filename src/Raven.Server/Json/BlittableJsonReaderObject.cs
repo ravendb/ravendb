@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Server.Json
@@ -154,7 +155,10 @@ namespace Raven.Server.Json
                 // Get the relative "In Document" position of the property Name
                 var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-                _propertyNames[propertyId] = propertyName = ReadStringLazily((int)propRelativePos);
+                var unescapedProperty = ReadStringLazily((int)propRelativePos);
+
+                _propertyNames[propertyId] =
+                    propertyName = JavaScriptUtils.ToEscapedJavaScriptString(unescapedProperty, '"', true);
             }
 
             return propertyName;
@@ -279,7 +283,10 @@ namespace Raven.Server.Json
                 var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var type = (BlittableJsonToken)(*((byte*)propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize));
 
-                writer.WritePropertyName(GetPropertyName(propertyId));
+                writer.WriteRaw("\"");
+                writer.WriteRaw(GetPropertyName(propertyId));
+                writer.WriteRaw("\"");
+                writer.AutoComplete(JsonToken.PropertyName);
 
                 var val = GetObject(type, (int)((long)_objStart - (long)_mem - (long)propertyOffset));
                 WriteValue(writer, type & typesMask, val);

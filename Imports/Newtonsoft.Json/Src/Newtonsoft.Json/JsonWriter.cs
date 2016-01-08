@@ -751,7 +751,7 @@ namespace Raven.Imports.Newtonsoft.Json
         {
         }
 
-        internal void AutoComplete(JsonToken tokenBeingWritten)
+        public void AutoComplete(JsonToken tokenBeingWritten)
         {
             // gets new state based on the current state and what is being written
             State newState = StateArray[(int)tokenBeingWritten][(int)_currentState];

@@ -16,7 +16,6 @@ namespace BlittableTests.Benchmark
     {
         public unsafe static void PerformanceAnalysis(string directory, string outputFile, int size)
         {
-            Console.WriteLine(IntPtr.Size);
             using (var fileStream = new FileStream(outputFile, FileMode.Create))
             using (var streamWriter = new StreamWriter(fileStream))
             {
