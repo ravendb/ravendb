@@ -27,6 +27,9 @@ namespace Raven.Server.Json
         private int _bufferSize = 128;
         private int _position;
 
+        public int DiscardedCompressions, Compressed;
+        public int TotalNumberOfProperties => _docPropNames.Count;
+
         public BlittableJsonWriter(JsonTextReader reader, RavenOperationContext context, string documentId)
         {
             _reader = reader;
@@ -370,16 +373,20 @@ namespace Raven.Server.Json
                 if (shouldCompress)
                 {
                     var compressedSize = _context.Lz4.Encode64(buffer, buffer + byteLen, byteLen, _bufferSize - byteLen);
-
-                    // only if we actually save more than 10% in space will 
-                    // we agree to do this
-                    if (strByteCount - compressedSize > strByteCount / 10)
+                    Compressed++;
+                    // only if we actually save more than space
+                    if (strByteCount > compressedSize + sizeof(int)*2/*overhead of the compressed legnth*/)
                     {
                         token = BlittableJsonToken.CompressedString;
                         buffer += byteLen;
                         byteLen = compressedSize;
                         _position += WriteVariableSizeNumber(compressedSize);
                     }
+                    else
+                    {
+                        DiscardedCompressions++;
+                    }
+                   
                 }
 
                 _stream.Write(buffer, byteLen);

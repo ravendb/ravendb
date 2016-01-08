@@ -260,31 +260,30 @@ namespace Raven.Server.Json
         }
 
 
-        public void WriteTo(TextWriter writer)
+        public unsafe void WriteTo(TextWriter writer)
         {
-            var propertyNames = GetPropertyNames();
             writer.Write('{');
-            for (int index   = 0; index < propertyNames.Length; index++)
+            for (int i = 0; i < _propCount; i++)
             {
-                var propertyName = propertyNames[index];
+                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof (byte));
+                var propertyIntPtr = (long) _propTags + (i)*metadataSize;
+                var propertyOffset = ReadNumber((byte*) propertyIntPtr, _currentOffsetSize);
+                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+                var type = (BlittableJsonToken) (*((byte*) propertyIntPtr + _currentOffsetSize*2)) ;
 
                 writer.Write('"');
-                writer.Write(propertyName);
+                writer.Write(GetPropertyName(propertyId));
                 writer.Write("\":");
 
-                // get field value
-                Tuple<object, BlittableJsonToken> propertyValueAndType;
-                if (TryGetMemberAsTypeValueTuple(propertyName, out propertyValueAndType) == false)
-                    throw new DataMisalignedException($"Blttable Document could not find field {propertyName}");
+                var val = GetObject(type, (int)((long)_objStart - (long)_mem - (long)propertyOffset));
+                WriteValue(writer, type & typesMask, val);
 
-                // write field value
-                WriteValue(writer, propertyValueAndType.Item2, propertyValueAndType.Item1);
-
-                if (index < propertyNames.Length - 1)
+                if (i < _propCount - 1)
                 {
                     writer.Write(',');
                 }
             }
+           
             writer.Write('}');
         }
 
