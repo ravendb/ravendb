@@ -35,7 +35,18 @@ using System.Runtime.InteropServices;
 [AttributeUsage(AttributeTargets.Assembly)]
 public class RavenVersionAttribute : Attribute
 {
+    private string build;
     public string CommitHash { get; set; }
-    public string Build { get; set; }
+    public string Build
+    {
+        get
+        {
+            int _;
+            if (int.TryParse(build, out _) == false)
+                return "13";
+            return build;
+        }
+        set { build = value; }
+    }
     public string Version { get; set; }
 }
