@@ -71,7 +71,6 @@ namespace Raven.Server.Json
         }
 
         public static implicit operator string(LazyStringValue self)
-
         {
             if (self.String != null)
                 return self.String;
