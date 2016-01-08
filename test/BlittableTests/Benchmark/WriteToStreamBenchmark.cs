@@ -14,13 +14,13 @@ namespace BlittableTests.Benchmark
 {
     public class WriteToStreamBenchmark
     {
-        public unsafe static void PerformanceAnalysis(string directory, string outputFile)
+        public unsafe static void PerformanceAnalysis(string directory, string outputFile, int size)
         {
             Console.WriteLine(IntPtr.Size);
             using (var fileStream = new FileStream(outputFile, FileMode.Create))
             using (var streamWriter = new StreamWriter(fileStream))
             {
-                var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length);
+                var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length).Take(size);
 
                 streamWriter.WriteLine("Name,Json Parse Time,Json Size, Json Time, Blit Parse Time,Blit Size, Blit Time");
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
