@@ -1,10 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading.Tasks;
+using ConsoleApplication4;
 using Raven.Json.Linq;
+using Raven.Server.Json;
 
-namespace Raven.Server.Json
+namespace NewBlittable
 {
     public class BlittableJsonReaderObject : BlittableJsonReaderBase
     {
@@ -299,14 +304,14 @@ namespace Raven.Server.Json
                     ((BlittableJsonReaderObject) val).WriteTo(writer);
                     break;
                 case BlittableJsonToken.String:
-                    writer.Write("\"");
+                    writer.Write('"');
                     writer.Write((string) (LazyStringValue)val);
-                    writer.Write("\"");
+                    writer.Write('"');
                     break;
                 case BlittableJsonToken.CompressedString:
-                    writer.Write("\"");
+                    writer.Write('"');
                     writer.Write((string)(LazyCompressedStringValue)val);
-                    writer.Write("\"");
+                    writer.Write('"');
                     break;
                 case BlittableJsonToken.Integer:
                     writer.Write((long) val);
