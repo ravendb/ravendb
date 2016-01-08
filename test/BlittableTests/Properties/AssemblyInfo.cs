@@ -8,7 +8,7 @@ using Xunit;
 // associated with an assembly.
 [assembly: AssemblyTitle("BlittableTests")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
+
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("BlittableTests")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]

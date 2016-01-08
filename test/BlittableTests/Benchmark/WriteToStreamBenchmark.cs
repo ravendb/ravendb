@@ -30,9 +30,14 @@ namespace BlittableTests.Benchmark
                         var jsonFileText = File.ReadAllText(jsonFile);
                         streamWriter.Write(new FileInfo(jsonFile).Length + ",");
                         GC.Collect(2);
-                        var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(jsonFileText)));
+                        //var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(jsonFileText)));
                         var inMemoryStream = new MemoryStream();
-                        var result = JsonProcessorRunner(() => jsonOjbect.WriteTo(new JsonTextWriter(new StreamWriter(inMemoryStream))));
+                        var result = JsonProcessorRunner(() =>
+                        {
+                            var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(jsonFileText)));
+                            jsonOjbect.WriteTo(
+                                new JsonTextWriter(new StreamWriter(new FileStream("output.junk", FileMode.Create))));
+                        });
                         
                         GC.Collect(2);
                         Console.WriteLine(result.Duration);
@@ -50,9 +55,10 @@ namespace BlittableTests.Benchmark
                             employee.Write();
                             var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
                             employee.CopyTo(ptr);
+                            inMemoryStream = new MemoryStream();
                             result = JsonProcessorRunner(() =>
                             {
-                                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(new StreamWriter(inMemoryStream));
+                                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(new StreamWriter(new FileStream("output2.junk",FileMode.Create)));
                             });
                             Marshal.FreeHGlobal((IntPtr)ptr);
                         }

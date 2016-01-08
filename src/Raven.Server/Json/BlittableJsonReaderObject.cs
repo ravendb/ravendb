@@ -1,15 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using ConsoleApplication4;
 using Raven.Json.Linq;
-using Raven.Server.Json;
 
-namespace NewBlittable
+namespace Raven.Server.Json
 {
     public class BlittableJsonReaderObject : BlittableJsonReaderBase
     {
