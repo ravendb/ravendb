@@ -24,12 +24,9 @@ namespace NewBlittable.Tests.Benchmark
                 foreach (var file in files.OrderBy(x=> new FileInfo(x).Length).Take(take))
                 {
                     var v = File.ReadAllBytes(file);
-                    using (var employee =
-                                   new BlittableJsonWriter(new JsonTextReader(new StreamReader(new MemoryStream(v))),
-                                       blittableContext,
+                    using (blittableContext.Read(new JsonTextReader(new StreamReader(new MemoryStream(v))),
                                        "doc1"))
                     {
-                        employee.Write();
                     }
                 }
             }

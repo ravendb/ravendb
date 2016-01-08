@@ -27,11 +27,13 @@ namespace Raven.Server.Json
         public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
         public Transaction Transaction;
+        public CachedProperties CachedProperties;
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
             _pool = pool;
             Encoding = new UTF8Encoding();
+            CachedProperties = new CachedProperties(this);
         }
 
         public char[] GetcharBuffer()
@@ -140,7 +142,8 @@ namespace Raven.Server.Json
             var writer = new BlittableJsonWriter(reader, this, documentId);
             try
             {
-                writer.Write();
+                CachedProperties.NewDocument();
+                writer.Run();
                 return writer;
             }
             catch (Exception)

@@ -44,11 +44,9 @@ namespace BlittableTests.Benchmark
                         string line;
                         while ((line = reader.ReadLine()) != null)
                         {
-                            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(line)),
-                                blittableContext,
-                                "doc1"))
+                            using (blittableContext.Read(new JsonTextReader(new StringReader(line)),
+                                line))
                             {
-                                employee.Write();
                             }
                         }
                     }
@@ -94,11 +92,9 @@ namespace BlittableTests.Benchmark
                         sp.Restart();
                         using (
                             var employee =
-                                new BlittableJsonWriter(new JsonTextReader(File.OpenText(jsonFile)),
-                                    blittableContext,
+                               blittableContext.Read(new JsonTextReader(File.OpenText(jsonFile)),
                                     "doc1"))
                         {
-                            employee.Write();
                             streamWriter.Write(sp.ElapsedMilliseconds + ",");
                             var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
                             employee.CopyTo(ptr);
@@ -112,7 +108,7 @@ namespace BlittableTests.Benchmark
                             Marshal.FreeHGlobal((IntPtr)ptr);
                             Console.WriteLine(" blit - {0:#,#} ms, Props: {1}, Compressed: {2:#,#}/{3:#,#}",
                                 sp.ElapsedMilliseconds,
-                                employee.TotalNumberOfProperties,
+                                blittableContext.CachedProperties.PropertiesDiscovered,
                                 employee.DiscardedCompressions,
                                 employee.Compressed);
                         }

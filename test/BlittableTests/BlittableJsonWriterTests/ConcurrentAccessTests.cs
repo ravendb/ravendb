@@ -19,10 +19,9 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(str)), blittableContext,
+            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)), 
                 "doc1"))
             {
-                employee.Write();
                 var sizeInBytes = employee.SizeInBytes;
                 ptr = unmanagedPool.GetMemory(sizeInBytes, string.Empty, out size);
                 employee.CopyTo(ptr);

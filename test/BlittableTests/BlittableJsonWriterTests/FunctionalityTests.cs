@@ -26,10 +26,9 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             var str = GenerateSimpleEntityForFunctionalityTest();
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(str)), blittableContext,
+            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
                 "doc1"))
             {
-                employee.Write();
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
                 employee.CopyTo(ptr);
 
@@ -60,10 +59,9 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(str)), blittableContext,
+            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
                 "doc1"))
             {
-                employee.Write();
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
                 employee.CopyTo(ptr);
 
@@ -80,10 +78,9 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             var str = "{\"Alias\":\"Jimmy\",\"Data\":[],\"Name\":\"Trolo\",\"SubData\":{\"SubArray\":[]}}";
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(str)), blittableContext,
+            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
                 "doc1"))
             {
-                employee.Write();
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
                 employee.CopyTo(ptr);
 
@@ -159,10 +156,9 @@ namespace BlittableTests.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024*1024*1024);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = new BlittableJsonWriter(new JsonTextReader(new StringReader(str)), blittableContext,
+            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)), 
                 "doc1"))
             {
-                employee.Write();
                 int size;
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
                 employee.CopyTo(ptr);

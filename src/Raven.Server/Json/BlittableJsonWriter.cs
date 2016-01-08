@@ -9,38 +9,27 @@ using Voron.Util;
 
 namespace Raven.Server.Json
 {
-    public unsafe class BlittableJsonWriter : IDisposable, IComparer<BlittableJsonWriter.PropertyTag>
+    public unsafe class BlittableJsonWriter : IDisposable
     {
-        private class PropertyName
-        {
-            public LazyStringValue Comparer;
-            public string Value;
-            public int GlobalSortOrder;
-        }
+       
         private readonly RavenOperationContext _context;
-        private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
-        private readonly List<PropertyName> _propertiesSortOrder = new List<PropertyName>();
-        private bool _propertiesNeedSorting;
-        private readonly Dictionary<string, int> _propertyNameToId = new Dictionary<string, int>(StringComparer.Ordinal);
+
         private readonly JsonReader _reader;
         private readonly UnmanagedWriteBuffer _stream;
-        private int _bufferSize = 128;
+        private int _bufferSize;
+        private byte* _buffer;
         private int _position;
 
         public int DiscardedCompressions, Compressed;
-        public int TotalNumberOfProperties => _docPropNames.Count;
 
-        public BlittableJsonWriter(JsonTextReader reader, RavenOperationContext context, string documentId)
+        internal BlittableJsonWriter(JsonTextReader reader, RavenOperationContext context, string documentId)
         {
             _reader = reader;
             _stream = context.GetStream(documentId);
             _context = context;
         }
 
-        public int SizeInBytes
-        {
-            get { return _stream.SizeInBytes; }
-        }
+        public int SizeInBytes => _stream.SizeInBytes;
 
         public void Dispose()
         {
@@ -53,8 +42,9 @@ namespace Raven.Server.Json
             if (minSize > _bufferSize)
             {
                 _bufferSize = (int)Voron.Util.Utils.NearestPowerOfTwo(minSize);
+                _buffer = _context.GetNativeTempBuffer(_bufferSize, out _bufferSize);
             }
-            return _context.GetNativeTempBuffer(_bufferSize, out _bufferSize);
+            return _buffer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,7 +56,7 @@ namespace Raven.Server.Json
         /// <summary>
         /// Writes the json object from  reader received in the ctor into the received UnmanangedWriteBuffer
         /// </summary>
-        public void Write()
+        public void Run()
         {
             if (_reader.Read() == false)
                 throw new EndOfStreamException("Expected start of object, but got EOF");
@@ -78,11 +68,11 @@ namespace Raven.Server.Json
             var rootOffset = WriteObject(out token);
 
             // Write the property names and register it's positions
-            var propertyArrayOffset = new int[_docPropNames.Count];
-            for (var index = 0; index < _docPropNames.Count; index++)
+            var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
+            for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
                 BlittableJsonToken _;
-                propertyArrayOffset[index] = WriteString(_docPropNames[index].Value, out _, compress: false);
+                propertyArrayOffset[index] = WriteString(_context.CachedProperties.GetProperty(index), out _, compress: false);
             }
 
             // Register the position of the properties offsets start
@@ -128,23 +118,7 @@ namespace Raven.Server.Json
                 if (_reader.TokenType != JsonToken.PropertyName)
                     throw new InvalidDataException("Expected start of object, but got " + _reader.TokenType);
 
-                // Get property index by name
-                var propName = (string)_reader.Value;
-                int propIndex;
-                if (_propertyNameToId.TryGetValue(propName, out propIndex) == false)
-                {
-                    propIndex = _propertyNameToId.Count;
-                    _propertyNameToId[propName] = propIndex;
-                    var propertyName = new PropertyName
-                    {
-                        Comparer = _context.GetComparerFor(propName),
-                        Value = propName,
-                        GlobalSortOrder = -1
-                    };
-                    _docPropNames.Add(propertyName);
-                    _propertiesSortOrder.Add(propertyName);
-                    _propertiesNeedSorting = true;
-                }
+                var propIndex = _context.CachedProperties.GetPropertyId((string)_reader.Value);
 
                 maxPropId = Math.Max(maxPropId, propIndex);
 
@@ -164,17 +138,7 @@ namespace Raven.Server.Json
                 });
             }
 
-            // Sort object properties metadata by property names
-            if (_propertiesNeedSorting)
-            {
-                _propertiesSortOrder.Sort((a1, a2) => a1.Comparer.CompareTo(a2.Comparer));
-                for (int i = 0; i < _propertiesSortOrder.Count; i++)
-                {
-                    _propertiesSortOrder[i].GlobalSortOrder = i;
-                }
-                _propertiesNeedSorting = false;
-            }
-            properties.Sort(this);
+            _context.CachedProperties.Sort(properties);
 
             var objectMetadataStart = _position;
             var distanceFromFirstProperty = objectMetadataStart - firstWrite;
@@ -197,6 +161,7 @@ namespace Raven.Server.Json
 
             return objectMetadataStart;
         }
+
 
         private static int SetPropertyIdSizeFlag(ref BlittableJsonToken objectToken, int maxPropId)
         {
@@ -444,9 +409,5 @@ namespace Raven.Server.Json
             public byte Type;
         }
 
-        int IComparer<PropertyTag>.Compare(PropertyTag x, PropertyTag y)
-        {
-            return _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
-        }
     }
 }
