@@ -55,10 +55,10 @@ task NuGet {
 task Init -depends Verify40, Clean, NuGet {
 
     $commit = Get-Git-Commit
-
     if( $env:buildlabel -ne 13){
         (Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
-            Foreach-Object { $_ -replace ".13.", ".$($env:buildlabel)." } |
+            Foreach-Object { $_ -replace "\.13\.", ".$($env:buildlabel)." } |
+            Foreach-Object { $_ -replace "{build-label}", "$($env:buildlabel)" } |
             Foreach-Object { $_ -replace "{commit}", $commit } |
             Foreach-Object { $_ -replace "{stable}", $global:uploadMode } |
             Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8

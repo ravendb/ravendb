@@ -758,11 +758,12 @@ namespace Raven.Storage.Esent
 
             if (disposerLock.IsReadLockHeld && batchNestingAllowed) // we are currently in a nested Batch call and allow to nest batches
             {
-                if (current.Value != null) // check again, just to be sure
+                var storageActionsAccessor = current.Value;
+                if (storageActionsAccessor != null) // check again, just to be sure
                 {
-                    current.Value.IsNested = true;
-                    action(current.Value);
-                    current.Value.IsNested = false;
+                    storageActionsAccessor.IsNested = true;
+                    action(storageActionsAccessor);
+                    storageActionsAccessor.IsNested = false;
                     return;
                 }
             }

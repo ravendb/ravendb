@@ -113,7 +113,7 @@ namespace Raven.Abstractions.Smuggler
 
             try
             {
-                using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,leaveOpen: true))
+                using (var gZipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
                 {
                     var jsonWriter = new JsonTextWriter(streamWriter)
@@ -128,7 +128,7 @@ namespace Raven.Abstractions.Smuggler
                         await ExportIndexes(exportOptions.From, jsonWriter);
                     }
                     jsonWriter.WriteEndArray();
-                    
+
                     var lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag();
                     jsonWriter.WritePropertyName("Docs");
                     jsonWriter.WriteStartArray();
@@ -136,8 +136,8 @@ namespace Raven.Abstractions.Smuggler
                     {
                         try
                         {
-                            result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, 
-                                result.LastDocsEtag, 
+                            result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter,
+                                result.LastDocsEtag,
                                 updateLastDocDeleteEtag: () => lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag());
                         }
                         catch (SmugglerExportException e)
@@ -156,7 +156,7 @@ namespace Raven.Abstractions.Smuggler
                     {
                         try
                         {
-                            result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, 
+                            result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter,
                                 result.LastAttachmentsEtag,
                                 updateLastAttachmentsDeleteEtag: () => lastAttachmentsDeleteEtag = Operations.FetchLastAttachmentsDeleteEtag());
                         }
@@ -295,7 +295,7 @@ namespace Raven.Abstractions.Smuggler
 
         public static void ReadLastEtagsFromFile(OperationState result, string etagFileLocation)
         {
-            var log = LogManager.GetCurrentClassLogger();            
+            var log = LogManager.GetCurrentClassLogger();
 
             if (!File.Exists(etagFileLocation))
                 return;
@@ -321,7 +321,7 @@ namespace Raven.Abstractions.Smuggler
         }
 
         public static void ReadLastEtagsFromFile(OperationState result)
-        {            
+        {
             var etagFileLocation = Path.Combine(result.FilePath, IncrementalExportStateFile);
             ReadLastEtagsFromFile(result, etagFileLocation);
         }
@@ -428,7 +428,7 @@ namespace Raven.Abstractions.Smuggler
                         if (Options.ExportDeletions && updateLastAttachmentsDeleteEtag != null)
                             updateLastAttachmentsDeleteEtag();
 
-                        attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);                                                                                                                                                                                                                                                                                                                                   
+                        attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
                     }
                     catch (Exception e)
                     {
@@ -673,9 +673,9 @@ namespace Raven.Abstractions.Smuggler
         {
             var stopwatch = Stopwatch.StartNew();
             var justIndexingWait = Stopwatch.StartNew();
-                       
+
             var stats = await Operations.GetStats();
-            
+
             int tries = 0;
             Etag cutOffEtag = stats.LastDocEtag;
             while (true)
@@ -696,7 +696,7 @@ namespace Raven.Abstractions.Smuggler
             stopwatch.Stop();
             justIndexingWait.Stop();
         }
-        
+
 
         public async Task WaitForIndexing()
         {
@@ -822,62 +822,62 @@ namespace Raven.Abstractions.Smuggler
                 throw new InvalidDataException("StartObject was expected");
 
             var exportCounts = new Dictionary<string, int>();
-            var exportSectionRegistar = new Dictionary<string, Func<int>>();
+            var exportSectionRegistar = new Dictionary<string, Func<Task<int>>>();
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-            exportSectionRegistar.Add("Indexes", () =>
+            exportSectionRegistar.Add("Indexes", async () =>
             {
                 Operations.ShowProgress("Begin reading indexes");
-                var indexCount = ImportIndexes(jsonReader).Result;
+                var indexCount = await ImportIndexes(jsonReader);
                 Operations.ShowProgress(string.Format("Done with reading indexes, total: {0}", indexCount));
                 return indexCount;
             });
 
-            exportSectionRegistar.Add("Docs", () =>
+            exportSectionRegistar.Add("Docs", async () =>
             {
                 Operations.ShowProgress("Begin reading documents");
-                var documentCount = ImportDocuments(jsonReader).Result;
+                var documentCount = await ImportDocuments(jsonReader);
                 Operations.ShowProgress(string.Format("Done with reading documents, total: {0}", documentCount));
                 return documentCount;
             });
 
-            exportSectionRegistar.Add("Attachments", () =>
+            exportSectionRegistar.Add("Attachments", async () =>
             {
                 Operations.ShowProgress("Begin reading attachments");
-                var attachmentCount = ImportAttachments(importOptions.To, jsonReader).Result;
+                var attachmentCount = await ImportAttachments(importOptions.To, jsonReader);
                 Operations.ShowProgress(string.Format("Done with reading attachments, total: {0}", attachmentCount));
                 return attachmentCount;
             });
 
-            exportSectionRegistar.Add("Transformers", () =>
+            exportSectionRegistar.Add("Transformers", async () =>
             {
                 Operations.ShowProgress("Begin reading transformers");
-                var transformersCount = ImportTransformers(jsonReader).Result;
+                var transformersCount = await ImportTransformers(jsonReader);
                 Operations.ShowProgress(string.Format("Done with reading transformers, total: {0}", transformersCount));
                 return transformersCount;
             });
 
-            exportSectionRegistar.Add("DocsDeletions", () =>
+            exportSectionRegistar.Add("DocsDeletions", async () =>
         {
-                Operations.ShowProgress("Begin reading deleted documents");
-                var deletedDocumentsCount = ImportDeletedDocuments(jsonReader).Result;
-                Operations.ShowProgress(string.Format("Done with reading deleted documents, total: {0}", deletedDocumentsCount));
-                return deletedDocumentsCount;
-            });
+            Operations.ShowProgress("Begin reading deleted documents");
+            var deletedDocumentsCount = await ImportDeletedDocuments(jsonReader);
+            Operations.ShowProgress(string.Format("Done with reading deleted documents, total: {0}", deletedDocumentsCount));
+            return deletedDocumentsCount;
+        });
 
-            exportSectionRegistar.Add("AttachmentsDeletions", () =>
+            exportSectionRegistar.Add("AttachmentsDeletions", async () =>
             {
                 Operations.ShowProgress("Begin reading deleted attachments");
-                var deletedAttachmentsCount = ImportDeletedAttachments(jsonReader).Result;
+                var deletedAttachmentsCount = await ImportDeletedAttachments(jsonReader);
                 Operations.ShowProgress(string.Format("Done with reading deleted attachments, total: {0}", deletedAttachmentsCount));
                 return deletedAttachmentsCount;
             });
 
-            exportSectionRegistar.Add("Identities", () =>
+            exportSectionRegistar.Add("Identities", async () =>
             {
                 Operations.ShowProgress("Begin reading identities");
-                var identitiesCount = ImportIdentities(jsonReader).Result;
+                var identitiesCount = await ImportIdentities(jsonReader);
                 Operations.ShowProgress(string.Format("Done with reading identities, total: {0}", identitiesCount));
                 return identitiesCount;
             });
@@ -888,24 +888,24 @@ namespace Raven.Abstractions.Smuggler
             {
                 Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-            if (jsonReader.TokenType != JsonToken.PropertyName)
-                throw new InvalidDataException("PropertyName was expected");
-                Func<int> currentAction;
+                if (jsonReader.TokenType != JsonToken.PropertyName)
+                    throw new InvalidDataException("PropertyName was expected");
+                Func<Task<int>> currentAction;
                 var currentSection = jsonReader.Value.ToString();
                 if (exportSectionRegistar.TryGetValue(currentSection, out currentAction) == false)
                 {
                     throw new InvalidDataException("Unexpected property found: " + jsonReader.Value);
                 }
-            if (jsonReader.Read() == false)
+                if (jsonReader.Read() == false)
                 {
                     exportCounts[currentSection] = 0;
                     continue;
                 }
 
-            if (jsonReader.TokenType != JsonToken.StartArray)
-                throw new InvalidDataException("StartArray was expected");
+                if (jsonReader.TokenType != JsonToken.StartArray)
+                    throw new InvalidDataException("StartArray was expected");
 
-                exportCounts[currentSection] = currentAction();
+                exportCounts[currentSection] = await currentAction();
             }
 
             sw.Stop();
@@ -1064,7 +1064,7 @@ namespace Raven.Abstractions.Smuggler
             return converters;
         }, true);
 
-        private static JsonConverterCollection DefaultConverters 
+        private static JsonConverterCollection DefaultConverters
         {
             get { return defaultConverters.Value; }
         }
@@ -1184,12 +1184,12 @@ namespace Raven.Abstractions.Smuggler
 
                 try
                 {
-                    var document = (RavenJObject) RavenJToken.ReadFrom(jsonReader);
+                    var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
                     var size = DocumentHelpers.GetRoughSize(document);
-                    if (size > 1024*1024)
+                    if (size > 1024 * 1024)
                     {
                         Operations.ShowProgress("Large document warning: {0:#,#.##;;0} kb - {1}",
-                            (double) size/1024,
+                            (double)size / 1024,
                             document["@metadata"].Value<string>("@id"));
                     }
                     if ((Options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
@@ -1257,7 +1257,7 @@ namespace Raven.Abstractions.Smuggler
                 }
                 count++;
 
-                if (count%Options.BatchSize == 0)
+                if (count % Options.BatchSize == 0)
                 {
                     if (Options.UseContinuationFile)
                     {
@@ -1282,7 +1282,7 @@ namespace Raven.Abstractions.Smuggler
 
                 await WriteLastEtagToDatabase(state, lastEtagsDocument);
 
-                Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double) skippedDocumentsSize/1024/1024);
+                Operations.ShowProgress("Documents skipped by continuation {0:#,#;;0} - approx. {1:#,#.##;;0} Mb.", skippedDocuments, (double)skippedDocumentsSize / 1024 / 1024);
             }
 
             //precaution:
@@ -1298,11 +1298,11 @@ namespace Raven.Abstractions.Smuggler
         private static RavenJObject BuildSkipDocument()
         {
             var metadata = new RavenJObject();
-            metadata.Add("@id",Constants.BulkImportHeartbeatDocKey);
+            metadata.Add("@id", Constants.BulkImportHeartbeatDocKey);
             var skipDoc = new JsonDocument
             {
                 Key = Constants.BulkImportHeartbeatDocKey,
-                DataAsJson = RavenJObject.FromObject(new 
+                DataAsJson = RavenJObject.FromObject(new
                 {
                     LastHearbeatSent = SystemTime.UtcNow
                 }),

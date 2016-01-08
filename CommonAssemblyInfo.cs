@@ -30,12 +30,23 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyDelaySign(false)]
 [assembly: NeutralResourcesLanguage("en-US")]
-[assembly: RavenVersion(Build = ".13.", CommitHash = "{commit}", Version = "3.0")]
+[assembly: RavenVersion(Build = "{build-label}", CommitHash = "{commit}", Version = "3.0")]
 
 [AttributeUsage(AttributeTargets.Assembly)]
 public class RavenVersionAttribute : Attribute
 {
+    private string build;
     public string CommitHash { get; set; }
-    public string Build { get; set; }
+    public string Build
+    {
+        get
+        {
+            int _;
+            if (int.TryParse(build, out _) == false)
+                return "13";
+            return build;
+        }
+        set { build = value; }
+    }
     public string Version { get; set; }
 }

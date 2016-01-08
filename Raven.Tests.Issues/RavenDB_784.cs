@@ -237,6 +237,13 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey, 
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>

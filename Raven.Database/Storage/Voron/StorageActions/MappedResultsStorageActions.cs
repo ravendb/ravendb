@@ -140,6 +140,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (value != null)
                 newValue += value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
 
+            if (newValue == 0)
+            {
+                DeleteReduceKeyCount(keySlice, view, viewKey, version);
+                return;
+            }
+
             AddReduceKeyCount(keySlice, view, viewKey, reduceKey, newValue, version);
         }
 
@@ -221,7 +227,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             foreach (var keyAndBucket in removed)
             {
                 token.ThrowIfCancellationRequested();
-                DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
+                IncrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, -keyAndBucket.Value);
             }
         }
 
@@ -925,18 +931,22 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return value == null ? 0 : value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
         }
 
-        public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType reduceType)
+        public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType reduceType, bool skipAdd = false)
         {
             var reduceKeySlice = CreateMappedResultKey(view, reduceKey);
+            var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, reduceKeySlice, writeBatch.Value);
             if (GetNumberOfMappedItemsPerReduceKey(reduceKeySlice) == 0)
             {
-                // the reduce key doesn't exist anymore
-                // no need to update the reduce key type
+                // the reduce key doesn't exist anymore,
+                // we can delete the reduce key type for this reduce key
+                DeleteReduceKeyType(reduceKeySlice, CreateViewKey(view), reduceKeyTypeVersion);
                 return;
             }
 
-            var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, reduceKeySlice, writeBatch.Value);
-            AddReduceKeyType(reduceKeySlice, view, reduceKey, reduceType, version);
+            if (skipAdd)
+                return;
+
+            AddReduceKeyType(reduceKeySlice, view, reduceKey, reduceType, reduceKeyTypeVersion);
         }
 
         private void DeleteReduceKeyCount(Slice key, int view, Slice viewKey, ushort? expectedVersion)

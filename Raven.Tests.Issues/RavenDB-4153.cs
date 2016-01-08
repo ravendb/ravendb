@@ -303,6 +303,13 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey, 
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>
@@ -320,6 +327,13 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/1", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/2", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey,
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>
@@ -375,7 +389,7 @@ Count = g.Sum(x => x.Count)
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions));
 
-            var json = (RavenJObject) request.ReadResponseJson();
+            var json = (RavenJObject)request.ReadResponseJson();
             return json;
         }
 
