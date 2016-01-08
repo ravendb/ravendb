@@ -127,7 +127,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
                 var reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
 
                 var stringBuilder = new StringBuilder();
-                reader.WriteTo(new StringWriter(stringBuilder));
+                reader.WriteTo(new Raven.Imports.Newtonsoft.Json.JsonTextWriter(new StringWriter(stringBuilder)));
                 Assert.Equal(stringBuilder.ToString(), str);
 
 

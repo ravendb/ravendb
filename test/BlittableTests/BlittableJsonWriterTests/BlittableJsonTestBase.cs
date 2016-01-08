@@ -105,7 +105,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             }
             var stringBuilder = new StringBuilder();
             new BlittableJsonReaderObject(ptr, size,
-                blittableContext).WriteTo(new StringWriter(stringBuilder));
+                blittableContext).WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
             Assert.Equal(str, stringBuilder.ToString());
         }
     }

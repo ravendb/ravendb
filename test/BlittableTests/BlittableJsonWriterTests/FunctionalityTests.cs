@@ -10,6 +10,7 @@ using Raven.Json.Linq;
 using Raven.Server.Json;
 using Voron.Util;
 using Xunit;
+using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
 
 namespace BlittableTests.BlittableJsonWriterTests
@@ -45,7 +46,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
                 Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
                 var stringBuilder = new StringBuilder();
-                new BlittableJsonReaderObject(ptr, employee.SizeInBytes,blittableContext).WriteTo(new StringWriter(stringBuilder));
+                new BlittableJsonReaderObject(ptr, employee.SizeInBytes,blittableContext).WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
                 Assert.Equal(str, stringBuilder.ToString());
             }
         }
@@ -179,7 +180,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
                 Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
                 var stringBuilder = new StringBuilder();
-                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(new StringWriter(stringBuilder));
+                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
                 Assert.Equal(str, stringBuilder.ToString());
 
             }
@@ -211,7 +212,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 var r = new BlittableJsonReaderObject(buffer, size, ctx);
 
                 var stringBuilder = new StringBuilder();
-                r.WriteTo(new StringWriter(stringBuilder));
+                r.WriteTo(new JsonTextWriter(new StringWriter(stringBuilder)));
 
                 Assert.Equal(stringBuilder.ToString(), json);
             }

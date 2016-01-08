@@ -7,10 +7,11 @@
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 //using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
+using JsonTextReader = Newtonsoft.Json.JsonTextReader;
 
 namespace Raven.Server.Web.System
 {
@@ -36,7 +37,7 @@ namespace Raven.Server.Web.System
                     return;
                 }
                 ctx.Response.StatusCode = 200;
-                obj.WriteTo(new StreamWriter(ctx.Response.Body));
+                obj.WriteTo(new JsonTextWriter(new StreamWriter(ctx.Response.Body)));
             }
         }
 

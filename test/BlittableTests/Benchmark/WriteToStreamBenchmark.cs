@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Bond;
 using Microsoft.AspNet.Mvc.Razor;
 using NewBlittable;
@@ -13,58 +14,68 @@ namespace BlittableTests.Benchmark
 {
     public class WriteToStreamBenchmark
     {
-        public unsafe static void PerformanceAnalysis(string directory = @"C:\Users\bumax_000\Downloads\JsonExamples", string outputFile = @"C:\Users\bumax_000\Downloads\JsonExamples\output.csv")
+        public unsafe static void PerformanceAnalysis(string directory, string outputFile)
         {
+            Console.WriteLine(IntPtr.Size);
             using (var fileStream = new FileStream(outputFile, FileMode.Create))
             using (var streamWriter = new StreamWriter(fileStream))
             {
-                var files = Directory.GetFiles(directory, "*.json");
+                var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length);
 
-                streamWriter.WriteLine("Name,Size on Disk,Json Write Time,Blit Write Time");
+                streamWriter.WriteLine("Name,Json Parse Time,Json Size, Json Time, Blit Parse Time,Blit Size, Blit Time");
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
                 using (var blittableContext = new RavenOperationContext(unmanagedPool))
                 {
                     foreach (var jsonFile in files)
                     {
+                        Console.Write(Path.GetFileName(jsonFile));
                         streamWriter.Write(Path.GetFileName(jsonFile) + ",");
-                        var jsonFileText = File.ReadAllText(jsonFile);
-                        streamWriter.Write(new FileInfo(jsonFile).Length + ",");
-                        GC.Collect(2);
-                        //var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(jsonFileText)));
-                        var inMemoryStream = new MemoryStream();
-                        var result = JsonProcessorRunner(() =>
+                        var sp = Stopwatch.StartNew();
+                        var jsonOjbect = JObject.Load(new JsonTextReader(File.OpenText(jsonFile)));
+                        streamWriter.Write(sp.ElapsedMilliseconds + ",");
+
+                        using (var stream = new FileStream("output.junk", FileMode.Create))
+                        using (var textWriter = new StreamWriter(stream))
                         {
-                            var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(jsonFileText)));
-                            jsonOjbect.WriteTo(
-                                new JsonTextWriter(new StreamWriter(new FileStream("output.junk", FileMode.Create))));
-                        });
-                        
-                        GC.Collect(2);
-                        Console.WriteLine(result.Duration);
-                        streamWriter.Write(result.Duration + ",");
+                            sp.Restart();
+                            jsonOjbect.WriteTo(new JsonTextWriter(textWriter));
+                            textWriter.Flush();
+                            streamWriter.Write(stream.Length + "," + sp.ElapsedMilliseconds + ",");
+                        }
 
-                        inMemoryStream.Seek(0, SeekOrigin.Begin);
 
+                        Console.Write(" json - {0:#,#}ms", sp.ElapsedMilliseconds);
                         GC.Collect(2);
+
+                        sp.Restart();
                         using (
-                                var employee =
-                                    new BlittableJsonWriter(new JsonTextReader(new StringReader(jsonFileText)),
-                                        blittableContext,
-                                        "doc1"))
+                            var employee =
+                                new BlittableJsonWriter(new JsonTextReader(File.OpenText(jsonFile)),
+                                    blittableContext,
+                                    "doc1"))
                         {
                             employee.Write();
+                            streamWriter.Write(sp.ElapsedMilliseconds + ",");
                             var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
                             employee.CopyTo(ptr);
-                            inMemoryStream = new MemoryStream();
-                            result = JsonProcessorRunner(() =>
+                            using (var stream = new FileStream("output2.junk", FileMode.Create))
+                            using (var writer = new StreamWriter(stream))
+                            using (var jsonWriter = new Raven.Imports.Newtonsoft.Json.JsonTextWriter(writer))
                             {
-                                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(new StreamWriter(new FileStream("output2.junk",FileMode.Create)));
-                            });
+                                sp.Restart();
+                                var obj = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
+                                obj.WriteTo(jsonWriter);
+                                streamWriter.Write(stream.Length + "," + sp.ElapsedMilliseconds + ",");
+                            }
                             Marshal.FreeHGlobal((IntPtr)ptr);
+                            Console.WriteLine(" blit - {0:#,#} ms, Props: {1}, Compressed: {2:#,#}/{3:#,#}",
+                                sp.ElapsedMilliseconds,
+                                employee.TotalNumberOfProperties,
+                                employee.DiscardedCompressions,
+                                employee.Compressed);
                         }
                         GC.Collect(2);
-                        streamWriter.Write(result.Duration );
-                        Console.WriteLine(result.Duration);
+
                         streamWriter.WriteLine();
                     }
                 }
@@ -74,15 +85,17 @@ namespace BlittableTests.Benchmark
         public class OperationResults
         {
             public long Duration;
+            public long Size;
         }
 
-        public static OperationResults JsonProcessorRunner(Action processor)
+        public static OperationResults JsonProcessorRunner(Func<long> processor)
         {
             var sp = Stopwatch.StartNew();
-            var results = new OperationResults();
-            processor();
-            results.Duration = sp.ElapsedMilliseconds;
-            return results;
+            return new OperationResults
+            {
+                Size = processor(),
+                Duration = sp.ElapsedMilliseconds
+            };
         }
     }
 

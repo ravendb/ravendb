@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Server.Json
@@ -264,9 +265,9 @@ namespace Raven.Server.Json
         }
 
 
-        public unsafe void WriteTo(TextWriter writer)
+        public unsafe void WriteTo(JsonWriter writer)
         {
-            writer.Write('{');
+            writer.WriteStartObject();
             for (int i = 0; i < _propCount; i++)
             {
                 var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
@@ -275,23 +276,16 @@ namespace Raven.Server.Json
                 var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var type = (BlittableJsonToken)(*((byte*)propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize));
 
-                writer.Write('"');
-                writer.Write(GetPropertyName(propertyId));
-                writer.Write("\":");
+                writer.WritePropertyName(GetPropertyName(propertyId));
 
                 var val = GetObject(type, (int)((long)_objStart - (long)_mem - (long)propertyOffset));
                 WriteValue(writer, type & typesMask, val);
-
-                if (i < _propCount - 1)
-                {
-                    writer.Write(',');
-                }
             }
 
-            writer.Write('}');
+            writer.WriteEndObject();
         }
 
-        private void WriteValue(TextWriter writer, BlittableJsonToken token, object val)
+        private void WriteValue(JsonWriter writer, BlittableJsonToken token, object val)
         {
             switch (token)
             {
@@ -302,35 +296,31 @@ namespace Raven.Server.Json
                     ((BlittableJsonReaderObject)val).WriteTo(writer);
                     break;
                 case BlittableJsonToken.String:
-                    writer.Write('"');
-                    writer.Write((string)(LazyStringValue)val);
-                    writer.Write('"');
+                    writer.WriteValue((string)(LazyStringValue)val);
                     break;
                 case BlittableJsonToken.CompressedString:
-                    writer.Write('"');
-                    writer.Write((string)(LazyCompressedStringValue)val);
-                    writer.Write('"');
+                    writer.WriteValue((string)(LazyCompressedStringValue)val);
                     break;
                 case BlittableJsonToken.Integer:
-                    writer.Write((long)val);
+                    writer.WriteValue((long)val);
                     break;
                 case BlittableJsonToken.Float:
-                    writer.Write((double)token);
+                    writer.WriteValue((double)token);
                     break;
                 case BlittableJsonToken.Boolean:
-                    writer.Write((bool)val ? "true" : "false");
+                    writer.WriteValue((bool)val );
                     break;
                 case BlittableJsonToken.Null:
-                    writer.Write("null");
+                    writer.WriteNull();
                     break;
                 default:
                     throw new DataMisalignedException($"Unidentified Type {token}");
             }
         }
 
-        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, TextWriter writer)
+        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, JsonWriter writer)
         {
-            writer.Write('[');
+            writer.WriteStartArray();
             var length = blittableArray.Length;
             for (var i = 0; i < length; i++)
             {
@@ -341,12 +331,8 @@ namespace Raven.Server.Json
                 // write field value
                 WriteValue(writer, propertyValueAndType.Item2, propertyValueAndType.Item1);
 
-                if (i < length - 1)
-                {
-                    writer.Write(',');
-                }
             }
-            writer.Write(']');
+            writer.WriteEndArray();
         }
 
         internal unsafe object GetObject(BlittableJsonToken type, int position)
