@@ -1,7 +1,7 @@
 ﻿{
   "version": "4.0.0-*",
   "description": "BlittableTests Class Library",
-  "authors": [ "maxim" ],
+  "authors": [ "Hibernating Rhinos" ],
   "tags": [ "database", "nosql", "doc db" ],
   "projectUrl": "https://ravendb.net",
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],

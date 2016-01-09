@@ -20,7 +20,7 @@ namespace Tryouts
                 Console.WriteLine(sample);
                 try
                 {
-                    f.CheckRoundtrip("BlittableTests.BlittableJsonWriterTests.Jsons.numbers.json");
+                    f.CheckRoundtrip(sample);
                 }
                 catch (Exception e)
                 {

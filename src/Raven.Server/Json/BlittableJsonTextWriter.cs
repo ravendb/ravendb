@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 using Raven.Abstractions.Indexing;
 using Sparrow;
 using Voron.Exceptions;
@@ -45,7 +46,6 @@ namespace Raven.Server.Json
 
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
-
             var escapeSequencePos = size;
             var numberOfEscapeSequences = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
             while (numberOfEscapeSequences > 0)
@@ -85,8 +85,6 @@ namespace Raven.Server.Json
                     return (byte) '\\';
                 case (byte) '"':
                     return (byte) '"';
-                case (byte) '\'':
-                    return (byte) '\'';
                 default:
                     throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
             }
@@ -245,26 +243,30 @@ namespace Raven.Server.Json
 
         public void WriteInteger(long val)
         {
-            if (val == 0)
+            if (val == 0) 
             {
                 EnsureBuffer(1);
                 _buffer[_pos++] = (byte)'0';
                 return;
             }
             int len = 1;
-            if (len < 0)
-            {
-                EnsureBuffer(1);
-                _buffer[_pos++] = (byte)'-';
-            }
+           
             for (var i = val / 10; i != 0; i /= 10)
             {
                 len++;
             }
-            EnsureBuffer(len);
+            if (val < 0)
+            {
+                EnsureBuffer(len + 1);
+                _buffer[_pos++] = (byte) '-';
+            }
+            else
+            {
+                EnsureBuffer(len);
+            }
             for (int i = len - 1; i >= 0; i--)
             {
-                _buffer[_pos + i] = (byte)('0' + (val % 10));
+                _buffer[_pos + i] = (byte)('0' + Math.Abs(val % 10));
                 val /= 10;
             }
             _pos += len;

@@ -107,6 +107,8 @@ namespace Raven.Server.Json
         {
             // Read out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
+            // we assume that the value shouldn't be zero very often
+            // because then we'll always take 5 bytes to store it
             offset = 0;
             int count = 0;
             int shift = 0;
@@ -123,10 +125,11 @@ namespace Raven.Server.Json
             return count;
         }
 
-        protected long ReadVariableSizeInteger(int pos)
+        protected long ReadVariableSizeLong(int pos)
         {
             // Read out an Int64 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
+            
             long count = 0;
             int shift = 0;
             byte b;
@@ -138,7 +141,12 @@ namespace Raven.Server.Json
                 count |= (long)(b & 0x7F) << shift;
                 shift += 7;
             } while ((b & 0x80) != 0);
-            return count;
+
+            // good handling for negative values via:
+            // http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
+
+            long result = (((count << 63) >> 63) ^ count) >> 1;
+            return result ^ (count & (1L << 63));
         }
     }
 }

@@ -150,7 +150,7 @@ namespace Raven.Server.Json
             var positionSize = SetOffsetSizeFlag(ref objectToken, distanceFromFirstProperty);
             var propertyIdSize = SetPropertyIdSizeFlag(ref objectToken, maxPropId);
 
-            _position += WriteVariableSizeNumber(properties.Count);
+            _position += WriteVariableSizeInt(properties.Count);
 
             // Write object metadata
             foreach (var sortedProperty in properties)
@@ -225,7 +225,7 @@ namespace Raven.Server.Json
                 case JsonToken.StartArray:
                     return WriteArray(out token);
                 case JsonToken.Integer:
-                    _position += WriteVariableSizeNumber((long)_reader.Value);
+                    _position += WriteVariableSizeLong((long)_reader.Value);
                     token = BlittableJsonToken.Integer;
                     return start;
                 case JsonToken.Float:
@@ -298,7 +298,7 @@ namespace Raven.Server.Json
             var arrayInfoStart = _position;
             arrayToken = BlittableJsonToken.StartArray;
 
-            _position += WriteVariableSizeNumber(positions.Count);
+            _position += WriteVariableSizeInt(positions.Count);
             if (positions.Count == 0)
             {
                 arrayToken |= BlittableJsonToken.OffsetSizeByte;
@@ -332,7 +332,7 @@ namespace Raven.Server.Json
                 token = BlittableJsonToken.String;
 
                 var strByteCount = _context.Encoding.GetByteCount(pChars, str.Length);
-                _position += WriteVariableSizeNumber(strByteCount);
+                _position += WriteVariableSizeInt(strByteCount);
 
                 int bufferSize = strByteCount;
                 var shouldCompress = compress && strByteCount > 128;
@@ -357,7 +357,7 @@ namespace Raven.Server.Json
                         token = BlittableJsonToken.CompressedString;
                         buffer += byteLen;
                         byteLen = compressedSize;
-                        _position += WriteVariableSizeNumber(compressedSize);
+                        _position += WriteVariableSizeInt(compressedSize);
                     }
                     else
                     {
@@ -370,13 +370,13 @@ namespace Raven.Server.Json
                 _position += byteLen;
                 // we write the number of the escape sequences required
                 // and then we write the distance to the _next_ escape sequence
-                _position += WriteVariableSizeNumber(_escapePositions.Count);
+                _position += WriteVariableSizeInt(_escapePositions.Count);
                 if (_escapePositions.Count > 0)
                 {
-                    _position += WriteVariableSizeNumber(_escapePositions[0]);
+                    _position += WriteVariableSizeInt(_escapePositions[0]);
                     for (int i = 1; i < _escapePositions.Count; i++)
                     {
-                        _position += WriteVariableSizeNumber(_escapePositions[i] - _escapePositions[i - 1] -1);
+                        _position += WriteVariableSizeInt(_escapePositions[i] - _escapePositions[i - 1] - 1);
                     }
                 }
                 return startPos;
@@ -397,7 +397,6 @@ namespace Raven.Server.Json
                     case (byte)'\r':
                     case (byte)'\\':
                     case (byte)'"':
-                    case (byte)'\'':
                         _escapePositions.Add(i);
                         break;
                 }
@@ -431,15 +430,15 @@ namespace Raven.Server.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int WriteVariableSizeNumber(long value)
+        public int WriteVariableSizeLong(long value)
         {
             // see zig zap trick here:
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
             // for negative values
 
-            var buffer = GetTempBuffer(8);
+            var buffer = GetTempBuffer(16 /* we actually need just 10, but let's round it up  nicely*/ );
             var count = 0;
-            var v = (ulong) value;
+            var v = (ulong)((value << 1) ^ (value >> 63));
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
@@ -449,6 +448,25 @@ namespace Raven.Server.Json
             _stream.Write(buffer, count);
             return count;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int WriteVariableSizeInt(int value)
+        {
+            // assume that we don't use negative values very often
+
+            var buffer = GetTempBuffer(8 /* we actually need just 5, but let's round it up  nicely*/ );
+            var count = 0;
+            var v = (uint) value;
+            while (v >= 0x80)
+            {
+                buffer[count++] = (byte)(v | 0x80);
+                v >>= 7;
+            }
+            buffer[count++] = (byte)(v);
+            _stream.Write(buffer, count);
+            return count;
+        }
+
 
         public class PropertyTag
         {
