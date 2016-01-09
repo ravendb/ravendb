@@ -179,32 +179,6 @@ namespace Raven.Server.Json
             _buffer[_pos++] = Colon;
         }
 
-
-        public void WriteDouble(double val)
-        {
-            // Because formatting doubles is such a complex matter, we don't try to 
-            // optimize allocations here at this time. We'll accept the small strings
-            // being generated until we have profiler information about the cost and then
-            // consider whatever to move to an unmanaged mode for this.
-            var str = val.ToString("R", CultureInfo.InvariantCulture);
-            fixed (char* chars = str)
-            {
-                var maxByteCount = _context.Encoding.GetMaxByteCount(str.Length);
-                int size;
-                var buffer = _context.GetNativeTempBuffer(maxByteCount, out size);
-                var bytes = _context.Encoding.GetBytes(chars, str.Length, buffer, size);
-                WriteRawString(buffer, bytes);
-            }
-            if (double.IsNaN(val) || double.IsInfinity(val) || str.IndexOf('.') != -1 || str.IndexOf('E') != -1 ||
-                str.IndexOf('e') != -1)
-            {
-                return;
-            }
-            EnsureBuffer(2);
-            _buffer[_pos++] = (byte)'.';
-            _buffer[_pos++] = (byte)'0';
-        }
-
         public void WriteInteger(long val)
         {
             if (val == 0)
@@ -230,6 +204,12 @@ namespace Raven.Server.Json
                 val /= 10;
             }
             _pos += len;
+        }
+
+        public void WriteDouble(LazyDoubleValue val)
+        {
+            var lazyStringValue = val.Inner;
+            WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
         }
     }
 

@@ -105,7 +105,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             }
             var ms = new MemoryStream();
             new BlittableJsonReaderObject(ptr, size,
-                blittableContext).WriteTo(ms);
+                blittableContext).WriteTo(ms, originalPropertyOrder: true);
             Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
         }
     }

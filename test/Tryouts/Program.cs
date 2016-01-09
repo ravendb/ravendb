@@ -16,17 +16,18 @@ namespace Tryouts
             var json = JsonConvert.SerializeObject(new
             {
                 Name = "Oren",
-                Dogs = new[] { "Arava", "Oscar", "Phoebe" },
+                 Dogs = new[] { "Arava", "Oscar", "Phoebe" },
                 Age = 34,
                 Position = 0.5f,
-                Office = new
-                {
-                    Name = "Hibernating Rhinos",
-                    Street = "Hanais 21",
-                    City = "Hadera"
-                }
+                 Office = new
+                   {
+                       Name = "Hibernating Rhinos",
+                       Street = "Hanais 21",
+                       City = "Hadera"
+                   }
             });
 
+            Console.WriteLine(json);
             using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024))
             using (var ctx = new RavenOperationContext(pool))
             using (var obj = ctx.Read(new JsonTextReader(new StringReader(json)), "test/1"))
@@ -37,9 +38,10 @@ namespace Tryouts
                 var r = new BlittableJsonReaderObject(buffer, size, ctx);
 
                 var ms = new MemoryStream();
-                r.WriteTo(ms);
-                Console.WriteLine(Encoding.UTF8.GetString(ms.ToArray()));
-                Console.WriteLine(ms.ToString() == json);
+                r.WriteTo(ms, originalPropertyOrder: true);
+                var format = Encoding.UTF8.GetString(ms.ToArray());
+                Console.WriteLine(format);
+                Console.WriteLine(format == json);
             }
 
             //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");

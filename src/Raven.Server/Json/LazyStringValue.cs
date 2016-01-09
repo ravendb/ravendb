@@ -123,6 +123,5 @@ namespace Raven.Server.Json
         {
             return (string)this; // invoke the implicit string conversion
         }
-
     }
 }

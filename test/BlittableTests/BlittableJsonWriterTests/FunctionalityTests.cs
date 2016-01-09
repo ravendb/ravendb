@@ -45,7 +45,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
                 Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
                 var ms = new MemoryStream();
-                new BlittableJsonReaderObject(ptr, employee.SizeInBytes,blittableContext).WriteTo(ms);
+                new BlittableJsonReaderObject(ptr, employee.SizeInBytes,blittableContext).WriteTo(ms, originalPropertyOrder:true);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
@@ -176,7 +176,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
                 Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
                 var ms = new MemoryStream();
-                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(ms);
+                new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(ms, originalPropertyOrder: true);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
 
             }
@@ -208,7 +208,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 var r = new BlittableJsonReaderObject(buffer, size, ctx);
 
                 var ms = new MemoryStream();
-                r.WriteTo(ms);
+                r.WriteTo(ms, originalPropertyOrder: true);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
             }

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
+using Raven.Abstractions.Extensions;
 using Voron.Util;
 
 //using Raven.Imports.Newtonsoft.Json;
@@ -227,8 +229,8 @@ namespace Raven.Server.Json
                     token = BlittableJsonToken.Integer;
                     return start;
                 case JsonToken.Float:
-                    //TODO: this is probably not very efficient, space wise
-                    _position += WriteVariableSizeNumber((long)(double)_reader.Value);
+                    BlittableJsonToken ignored;
+                    WriteString(((double) _reader.Value).ToString("r",CultureInfo.InvariantCulture), out ignored, compress: false);
                     token = BlittableJsonToken.Float;
                     return start;
                 case JsonToken.String:
@@ -247,8 +249,8 @@ namespace Raven.Server.Json
                     token = BlittableJsonToken.Null;
                     return start; // nothing to do here, we handle that with the token
                 case JsonToken.Date:
-                    //TODO: Use the optimized version
-                    WriteString(((DateTime)_reader.Value).ToString("r"), out token);
+                    var dateStr = ((DateTime)_reader.Value).GetDefaultRavenFormat();
+                    WriteString(dateStr, out token);
                     return start;
                 case JsonToken.Bytes:
                     throw new NotImplementedException("Writing bytes is not supported");
