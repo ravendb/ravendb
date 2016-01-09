@@ -13,7 +13,7 @@ namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonWriter : IDisposable
     {
-       
+
         private readonly RavenOperationContext _context;
 
         private readonly JsonReader _reader;
@@ -21,7 +21,7 @@ namespace Raven.Server.Json
         private int _bufferSize;
         private byte* _buffer;
         private int _position;
-
+        private List<int> _escapePositions = new List<int>();
         public int DiscardedCompressions, Compressed;
 
         internal BlittableJsonWriter(JsonTextReader reader, RavenOperationContext context, string documentId)
@@ -230,7 +230,9 @@ namespace Raven.Server.Json
                     return start;
                 case JsonToken.Float:
                     BlittableJsonToken ignored;
-                    WriteString(((double) _reader.Value).ToString("r",CultureInfo.InvariantCulture), out ignored, compress: false);
+                    var d = ((double)_reader.Value);
+                    var str = d.ToString("r", CultureInfo.InvariantCulture);
+                    WriteString(EnsureDecimalPlace(d, str), out ignored, compress: false);
                     token = BlittableJsonToken.Float;
                     return start;
                 case JsonToken.String:
@@ -269,6 +271,13 @@ namespace Raven.Server.Json
             }
         }
 
+        private static string EnsureDecimalPlace(double value, string text)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || text.IndexOf('.') != -1 || text.IndexOf('E') != -1 || text.IndexOf('e') != -1)
+                return text;
+
+            return text + ".0";
+        }
         private int WriteArray(out BlittableJsonToken arrayToken)
         {
             var positions = new List<int>();
@@ -337,6 +346,7 @@ namespace Raven.Server.Json
                 if (byteLen != strByteCount)
                     throw new FormatException("Calculated and real byte length did not match, should not happen");
 
+                CheckStringEscapeSequences(buffer, byteLen);
                 if (shouldCompress)
                 {
                     var compressedSize = _context.Lz4.Encode64(buffer, buffer + byteLen, byteLen, _bufferSize - byteLen);
@@ -358,7 +368,39 @@ namespace Raven.Server.Json
 
                 _stream.Write(buffer, byteLen);
                 _position += byteLen;
+                // we write the number of the escape sequences required
+                // and then we write the distance to the _next_ escape sequence
+                _position += WriteVariableSizeNumber(_escapePositions.Count);
+                if (_escapePositions.Count > 0)
+                {
+                    _position += WriteVariableSizeNumber(_escapePositions[0]);
+                    for (int i = 1; i < _escapePositions.Count; i++)
+                    {
+                        _position += WriteVariableSizeNumber(_escapePositions[i] - _escapePositions[i - 1] -1);
+                    }
+                }
                 return startPos;
+            }
+        }
+
+        private void CheckStringEscapeSequences(byte* ptr, int len)
+        {
+            _escapePositions.Clear();
+            for (int i = 0; i < len; i++)
+            {
+                switch (ptr[i])
+                {
+                    case (byte)'\b':
+                    case (byte)'\t':
+                    case (byte)'\n':
+                    case (byte)'\f':
+                    case (byte)'\r':
+                    case (byte)'\\':
+                    case (byte)'"':
+                    case (byte)'\'':
+                        _escapePositions.Add(i);
+                        break;
+                }
             }
         }
 
@@ -391,9 +433,13 @@ namespace Raven.Server.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteVariableSizeNumber(long value)
         {
+            // see zig zap trick here:
+            // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
+            // for negative values
+
             var buffer = GetTempBuffer(8);
             var count = 0;
-            var v = (ulong)value;
+            var v = (ulong) value;
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
