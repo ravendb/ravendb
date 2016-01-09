@@ -1,0 +1,16 @@
+﻿{
+  "Name": "RavenDB",
+  "Started": 2008,
+  "Area": [
+    "nosql",
+    {
+      "ACID": true,
+      "State": "Mature"
+    }
+  ],
+  "Modules": {
+    "Indexing": "Lucene",
+    "Storage": "Voron",
+    "Format":  "Blit"
+  }
+}

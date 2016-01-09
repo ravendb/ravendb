@@ -6,6 +6,7 @@
   "projectUrl": "https://ravendb.net",
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
   "compilationOptions": { "allowUnsafe": true },
+  "resource": ["**/*.json"],
   "commands": {
     "test": "xunit.runner.dnx"
   },

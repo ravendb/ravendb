@@ -1,0 +1,30 @@
+﻿{
+  "NaN": "NaN",
+  "Simple": 4.0,
+  "Half": 0.5,
+  "MaxF": 3.40282347E+38,
+  "MinF": -3.40282347E+38,
+  "ArrayOfFloats": [ 129321.123214, 0.543543, 1293213.4321 ],
+  "ArrayOfInts": [ 1231312, 12432, 324, 99393 ],
+  "Object": {
+    "Here": true,
+    "Location": null,
+    "Found": false
+  },
+  "ArrayOfObjects": [
+    {
+      "Are": "אתה",
+      "Here": "לא"
+    },
+    {
+      "what": "about\r\nthat",
+      "this": true,
+      "format": false
+    },
+  ],
+  "Quote": "string ' with \" quotes in it",
+  "Break":  "\b",
+  "Prop with space": "in it",
+  "תפריט": 1234,
+  "There\t\r\nAre":  "you"
+}

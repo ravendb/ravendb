@@ -1,0 +1,15 @@
+﻿{
+  "NaN": "NaN",
+  "NegativeInfinity": "-Infinity",
+  "Infinity": "Infinity",
+  "Simple": 4.0,
+  "Half": 0.5,
+  "MaxF": 3.40282347E+38,
+  "MinF": -3.40282347E+38,
+  "Negative": -392.18231,
+  "Positive": 102932131.2132,
+  "MinD": -1.7976931348623157E+308,
+  "MaxD": 1.7976931348623157E+308,
+  "MaxDecimcal": 7.9228162514264338E+28,
+  "MinDecimal": -7.9228162514264338E+28
+}
