@@ -40,10 +40,74 @@ namespace Raven.Server.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteString(LazyStringValue str)
         {
-            var buffer = str.Buffer;
+            var strBuffer = str.Buffer;
             var size = str.Size;
 
-            WriteString(buffer, size);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+
+            var escapeSequencePos = size;
+            var numberOfEscapeSequences = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                var bytesToSkip = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                WriteRawString(strBuffer, bytesToSkip);
+                strBuffer += bytesToSkip;
+                size -= bytesToSkip + 1 /*for the escaped char we skip*/;
+                var b = *(strBuffer++);
+                EnsureBuffer(2);
+                _buffer[_pos++] = (byte)'\\';
+                _buffer[_pos++] = GetEscapeCharacter(b);
+            }
+            // write remaining (or full string) to the buffer in one shot
+            WriteRawString(strBuffer, size);
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+        }
+
+        private byte GetEscapeCharacter(byte b)
+        {
+            switch (b)
+            {
+                case (byte) '\b':
+                     return (byte) 'b';
+                case (byte) '\t':
+                    return (byte) 't';
+                case (byte) '\n':
+                    return (byte) 'n';
+                case (byte) '\f':
+                    return (byte) 'f';
+                case (byte) '\r':
+                    return (byte) 'r';
+                case (byte) '\\':
+                    return (byte) '\\';
+                case (byte) '"':
+                    return (byte) '"';
+                case (byte) '\'':
+                    return (byte) '\'';
+                default:
+                    throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
+            }
+        }
+
+        private static int ReadVariableSizeInt(byte* buffer ,ref int pos)
+        {
+            // Read out an Int32 7 bits at a time.  The high bit 
+            // of the byte when on means to continue reading more bytes.
+            int count = 0;
+            int shift = 0;
+            byte b;
+            do
+            {
+                if (shift == 35)
+                    throw new FormatException("Bad variable size int");
+                b = buffer[pos++];
+                count |= (b & 0x7F) << shift;
+                shift += 7;
+            } while ((b & 0x80) != 0);
+            return count;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
