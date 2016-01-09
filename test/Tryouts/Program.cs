@@ -14,23 +14,10 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            var f = new BlittableFormatTests();
-            foreach (var sample in BlittableFormatTests.Samples())
+            for (int i = 0; i < 3; i++)
             {
-                var s = (string)sample[0];
-
-                Console.WriteLine(s);
-                try
-                {
-                    f.CheckRoundtrip(s);
-                }
-                catch (Exception e)
-                {
-                    Console.ForegroundColor=ConsoleColor.Red;
-                    Console.WriteLine(e);
-                    Console.ResetColor();
-                    break;
-                }
+                WriteToStreamBenchmark.Indexing(@"C:\Work\JSON\Lines");
+                GC.Collect(2);
             }
 
         }
