@@ -24,11 +24,12 @@ namespace Raven.Server.Json
             public LazyStringValue Comparer;
             public string Value;
             public int GlobalSortOrder;
+            public int PropertyId;
         }
 
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
         private readonly List<PropertyName> _propertiesSortOrder = new List<PropertyName>();
-        private readonly Dictionary<string, int> _propertyNameToId = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, PropertyName> _propertyNameToId = new Dictionary<string, PropertyName>(StringComparer.Ordinal);
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;
@@ -40,25 +41,27 @@ namespace Raven.Server.Json
 
         public int GetPropertyId(string propName)
         {
-            int propIndex;
-            if (_propertyNameToId.TryGetValue(propName, out propIndex) == false)
+            PropertyName prop;
+            if (_propertyNameToId.TryGetValue(propName, out prop) == false)
             {
                 PropertiesDiscovered++;
-                propIndex = _propertyNameToId.Count;
-                _propertyNameToId[propName] = propIndex;
+                var propIndex = _propertyNameToId.Count;
                 var propertyName = new PropertyName
                 {
                     Comparer = _context.GetComparerFor(propName),
                     Value = propName,
-                    GlobalSortOrder = -1
+                    GlobalSortOrder = -1,
+                    PropertyId = propIndex
                 };
                 _docPropNames.Add(propertyName);
                 _propertiesSortOrder.Add(propertyName);
+                _propertyNameToId[propName] = propertyName;
                 _propertiesNeedSorting = true;
+                return propIndex;
             }
-            if (propIndex >= PropertiesDiscovered)
+            if (prop.PropertyId >= PropertiesDiscovered)
             {
-                if (propIndex != PropertiesDiscovered)
+                if (prop.PropertyId != PropertiesDiscovered)
                 {
                     // this property doesn't match the order that we previously saw the properties.
                     // it is possible that this is a completely new format, or just properties
@@ -67,14 +70,15 @@ namespace Raven.Server.Json
                     // do because we ignore the properties showing up after the PropertiesDiscovered
 
                     var old = _docPropNames[PropertiesDiscovered];
-                    _docPropNames[PropertiesDiscovered] = _docPropNames[propIndex];
-                    _propertyNameToId[old.Value] = propIndex;
-                    _propertyNameToId[propName] = PropertiesDiscovered;
-                    propIndex = PropertiesDiscovered;
+                    _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
+                    old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
+                    _docPropNames[old.PropertyId] = old;
+                    prop = _docPropNames[PropertiesDiscovered];
+                    prop.PropertyId = PropertiesDiscovered;
                 }
                 PropertiesDiscovered++;
             }
-            return propIndex;
+            return prop.PropertyId;
         }
 
         public void Sort(List<BlittableJsonWriter.PropertyTag> properties)

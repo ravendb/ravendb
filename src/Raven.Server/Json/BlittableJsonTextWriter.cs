@@ -43,7 +43,7 @@ namespace Raven.Server.Json
             var buffer = str.Buffer;
             var size = str.Size;
 
-            WriteString(size, buffer);
+            WriteString(buffer, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -51,14 +51,22 @@ namespace Raven.Server.Json
         {
             var buffer = str.DecompressToTempBuffer();
 
-            WriteString(str.UncompressedSize, buffer);
+            WriteString(buffer, str.UncompressedSize);
         }
 
-        private void WriteString(int size, byte* buffer)
+        private void WriteString(byte* buffer, int size)
         {
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
 
+            WriteRawString(buffer, size);
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+        }
+
+        private void WriteRawString(byte* buffer, int size)
+        {
             if (size < _buffer.Length)
             {
                 EnsureBuffer(size);
@@ -67,6 +75,7 @@ namespace Raven.Server.Json
                 _pos += size;
                 return;
             }
+            
             // need to do this in pieces
             var posInStr = 0;
             fixed (byte* p = _buffer)
@@ -81,8 +90,6 @@ namespace Raven.Server.Json
                 }
                 _pos = amountToCopy;
             }
-            EnsureBuffer(1);
-            _buffer[_pos++] = Quote;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -186,7 +193,7 @@ namespace Raven.Server.Json
                 int size;
                 var buffer = _context.GetNativeTempBuffer(maxByteCount, out size);
                 var bytes = _context.Encoding.GetBytes(chars, str.Length, buffer, size);
-                WriteString(bytes, buffer);
+                WriteRawString(buffer, bytes);
             }
             if (double.IsNaN(val) || double.IsInfinity(val) || str.IndexOf('.') != -1 || str.IndexOf('E') != -1 ||
                 str.IndexOf('e') != -1)
@@ -222,6 +229,7 @@ namespace Raven.Server.Json
                 _buffer[_pos + i] = (byte)('0' + (val % 10));
                 val /= 10;
             }
+            _pos += len;
         }
     }
 

@@ -279,40 +279,6 @@ namespace Raven.Server.Json
             }
         }
 
-        // keeping this here because we aren't sure whatever it is worth it to 
-        // get the same order of the documents for the perf cost
-        private unsafe void WriteToOrdered(BlittableJsonTextWriter writer)
-        {
-            writer.WriteStartObject();
-            var props = new PropertyPos[_propCount];
-            for (int i = 0; i < _propCount; i++)
-            {
-                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-                var propertyIntPtr = (long)_propTags + (i) * metadataSize;
-                var propertyOffset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
-                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
-                var type = (BlittableJsonToken)(*((byte*)propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize));
-                props[i].PropertyOffset = propertyOffset;
-                props[i].Type = type;
-                props[i].PropertyId = propertyId;
-            }
-            Array.Sort(props);
-            for (int i = 0; i < _propCount; i++)
-            {
-                if (i != 0)
-                {
-                    writer.WriteComma();
-                }
-
-                writer.WritePropertyName(GetPropertyName(props[i].PropertyId));
-
-                var val = GetObject(props[i].Type, (int) ((long) _objStart - (long) _mem - (long)props[i].PropertyOffset));
-                WriteValue(writer, props[i].Type & typesMask, val);
-            }
-
-            writer.WriteEndObject();
-        }
-
         private unsafe void WriteTo(BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();

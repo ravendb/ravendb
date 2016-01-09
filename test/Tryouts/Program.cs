@@ -13,34 +13,36 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //var json = JsonConvert.SerializeObject(new
-            //{
-            //    Name = "Oren",
-            //    Dogs = new[] { "Arava", "Oscar", "Phoebe" },
-            //    Age = "34",
-            //    Office = new
-            //    {
-            //        Name = "Hibernating Rhinos",
-            //        Street = "Hanais 21",
-            //        City = "Hadera"
-            //    }
-            //});
+            var json = JsonConvert.SerializeObject(new
+            {
+                Name = "Oren",
+                Dogs = new[] { "Arava", "Oscar", "Phoebe" },
+                Age = 34,
+                Position = 0.5f,
+                Office = new
+                {
+                    Name = "Hibernating Rhinos",
+                    Street = "Hanais 21",
+                    City = "Hadera"
+                }
+            });
 
-            //using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024))
-            //using (var ctx = new RavenOperationContext(pool))
-            //using (var obj = ctx.Read(new JsonTextReader(new StringReader(json)), "test/1"))
-            //{
-            //    int size;
-            //    var buffer = ctx.GetNativeTempBuffer(obj.SizeInBytes, out size);
-            //    size = obj.CopyTo(buffer);
-            //    var r = new BlittableJsonReaderObject(buffer, size, ctx);
+            using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024))
+            using (var ctx = new RavenOperationContext(pool))
+            using (var obj = ctx.Read(new JsonTextReader(new StringReader(json)), "test/1"))
+            {
+                int size;
+                var buffer = ctx.GetNativeTempBuffer(obj.SizeInBytes, out size);
+                size = obj.CopyTo(buffer);
+                var r = new BlittableJsonReaderObject(buffer, size, ctx);
 
-            //    var stringBuilder = new StringBuilder();
-            //    r.WriteTo(new StringWriter(stringBuilder));
-            //    Console.WriteLine(stringBuilder);
-            //    Console.WriteLine(stringBuilder.ToString()==json);
-            //}
-            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
+                var ms = new MemoryStream();
+                r.WriteTo(ms);
+                Console.WriteLine(Encoding.UTF8.GetString(ms.ToArray()));
+                Console.WriteLine(ms.ToString() == json);
+            }
+
+            //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
 
             //var outputFile = Path.GetTempFileName() + ".CSV";
 
