@@ -3,14 +3,12 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using NewBlittable.Tests;
 using Newtonsoft.Json;
 using Raven.Abstractions.Linq;
 using Raven.Json.Linq;
 using Raven.Server.Json;
 using Voron.Util;
 using Xunit;
-using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
 
 namespace BlittableTests.BlittableJsonWriterTests

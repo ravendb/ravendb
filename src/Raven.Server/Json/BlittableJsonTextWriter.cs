@@ -111,21 +111,33 @@ namespace Raven.Server.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteString(LazyCompressedStringValue str)
         {
-            var buffer = str.DecompressToTempBuffer();
+            var strBuffer = str.DecompressToTempBuffer();
 
-            WriteString(buffer, str.UncompressedSize);
-        }
-
-        private void WriteString(byte* buffer, int size)
-        {
-            EnsureBuffer(1);
-            _buffer[_pos++] = Quote;
-
-            WriteRawString(buffer, size);
+            var size = str.UncompressedSize;
 
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
+            var escapeSequencePos = str.CompressedSize;
+            var numberOfEscapeSequences = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                var bytesToSkip = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                WriteRawString(strBuffer, bytesToSkip);
+                strBuffer += bytesToSkip;
+                size -= bytesToSkip + 1 /*for the escaped char we skip*/;
+                var b = *(strBuffer++);
+                EnsureBuffer(2);
+                _buffer[_pos++] = (byte)'\\';
+                _buffer[_pos++] = GetEscapeCharacter(b);
+            }
+            // write remaining (or full string) to the buffer in one shot
+            WriteRawString(strBuffer, size);
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
         }
+
 
         private void WriteRawString(byte* buffer, int size)
         {
@@ -142,15 +154,14 @@ namespace Raven.Server.Json
             var posInStr = 0;
             fixed (byte* p = _buffer)
             {
-                int amountToCopy = _pos;
                 while (posInStr < size)
                 {
-                    amountToCopy = Math.Min(size - posInStr, _buffer.Length);
+                    var amountToCopy = Math.Min(size - posInStr, _buffer.Length);
                     Flush();
                     Memory.Copy(p, buffer + posInStr, amountToCopy);
                     posInStr += amountToCopy;
+                    _pos = amountToCopy;
                 }
-                _pos = amountToCopy;
             }
         }
 

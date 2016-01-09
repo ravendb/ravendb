@@ -8,14 +8,14 @@ namespace Raven.Server.Json
         private readonly RavenOperationContext _context;
         public readonly byte* Buffer;
         public readonly int UncompressedSize;
-        private readonly int _compressedSize;
+        public readonly int CompressedSize;
         public string String;
 
         public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, RavenOperationContext context)
         {
             String = str;
             UncompressedSize = uncompressedSize;
-            _compressedSize = compressedSize;
+            CompressedSize = compressedSize;
             _context = context;
             Buffer = buffer;
         }
@@ -42,7 +42,7 @@ namespace Raven.Server.Json
             int bufferSize;
             var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize, out bufferSize);
             var uncompressedSize = LZ4.Decode64(Buffer,
-                _compressedSize,
+                CompressedSize,
                 tempBuffer,
                 UncompressedSize,
                 true);

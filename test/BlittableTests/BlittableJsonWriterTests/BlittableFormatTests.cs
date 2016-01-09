@@ -42,7 +42,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             }
         }
 
-        public IEnumerable<string> Samples()
+        public static IEnumerable<object[]> Samples()
         {
             var assembly = typeof(BlittableFormatTests).GetTypeInfo().Assembly;
 
@@ -50,7 +50,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             {
                 if (Path.GetExtension(name) == ".json")
                 {
-                    yield return name;
+                    yield return new object[] { name };
                 }
             }
         }
