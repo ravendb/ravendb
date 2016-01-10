@@ -25,6 +25,11 @@ namespace Raven.Server.Json
             public string Value;
             public int GlobalSortOrder;
             public int PropertyId;
+
+            public override string ToString()
+            {
+                return $"Value: {Value}, GlobalSortOrder: {GlobalSortOrder}, PropertyId: {PropertyId}";
+            }
         }
 
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
@@ -44,41 +49,51 @@ namespace Raven.Server.Json
             PropertyName prop;
             if (_propertyNameToId.TryGetValue(propName, out prop) == false)
             {
-                PropertiesDiscovered++;
-                var propIndex = _propertyNameToId.Count;
-                var propertyName = new PropertyName
+                var propIndex = _docPropNames.Count;
+                prop = new PropertyName
                 {
                     Comparer = _context.GetComparerFor(propName),
                     Value = propName,
                     GlobalSortOrder = -1,
                     PropertyId = propIndex
                 };
-                _docPropNames.Add(propertyName);
-                _propertiesSortOrder.Add(propertyName);
-                _propertyNameToId[propName] = propertyName;
+
+                _docPropNames.Add(prop);
+                _propertiesSortOrder.Add(prop);
+                _propertyNameToId[propName] = prop; 
                 _propertiesNeedSorting = true;
-                return propIndex;
+                if (_docPropNames.Count > PropertiesDiscovered+1)
+                {
+                    prop = SwapPropertyIds(prop);
+                }
+                PropertiesDiscovered++;
             }
-            if (prop.PropertyId >= PropertiesDiscovered)
+            else if (prop.PropertyId >= PropertiesDiscovered)
             {
                 if (prop.PropertyId != PropertiesDiscovered)
                 {
-                    // this property doesn't match the order that we previously saw the properties.
-                    // it is possible that this is a completely new format, or just properties
-                    // in different order. 
-                    // we'll assume the later and move the property around, this is safe to 
-                    // do because we ignore the properties showing up after the PropertiesDiscovered
-
-                    var old = _docPropNames[PropertiesDiscovered];
-                    _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
-                    old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
-                    _docPropNames[old.PropertyId] = old;
-                    prop = _docPropNames[PropertiesDiscovered];
-                    prop.PropertyId = PropertiesDiscovered;
+                    prop = SwapPropertyIds(prop);
                 }
                 PropertiesDiscovered++;
             }
             return prop.PropertyId;
+        }
+
+        private PropertyName SwapPropertyIds(PropertyName prop)
+        {
+            // this property doesn't match the order that we previously saw the properties.
+            // it is possible that this is a completely new format, or just properties
+            // in different order. 
+            // we'll assume the later and move the property around, this is safe to 
+            // do because we ignore the properties showing up after the PropertiesDiscovered
+
+            var old = _docPropNames[PropertiesDiscovered];
+            _docPropNames[PropertiesDiscovered] = _docPropNames[prop.PropertyId];
+            old.PropertyId = _docPropNames[PropertiesDiscovered].PropertyId;
+            _docPropNames[old.PropertyId] = old;
+            prop = _docPropNames[PropertiesDiscovered];
+            prop.PropertyId = PropertiesDiscovered;
+            return prop;
         }
 
         public void Sort(List<BlittableJsonWriter.PropertyTag> properties)

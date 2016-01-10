@@ -21,7 +21,7 @@ namespace Raven.Server.Json
         private int _bufferSize;
         private byte* _buffer;
         private int _position;
-        private List<int> _escapePositions = new List<int>();
+        private readonly List<int> _escapePositions = new List<int>();
         public int DiscardedCompressions, Compressed;
 
         internal BlittableJsonWriter(JsonTextReader reader, RavenOperationContext context, string documentId)
@@ -120,10 +120,11 @@ namespace Raven.Server.Json
                 if (_reader.TokenType != JsonToken.PropertyName)
                     throw new InvalidDataException("Expected start of object, but got " + _reader.TokenType);
 
-                var propIndex = _context.CachedProperties.GetPropertyId((string)_reader.Value);
+                var propName = (string)_reader.Value;
+                var propIndex = _context.CachedProperties.GetPropertyId(propName);
 
                 maxPropId = Math.Max(maxPropId, propIndex);
-
+                 
                 if (_reader.Read() == false)
                     throw new EndOfStreamException("Expected value, but got EOF");
 
@@ -217,7 +218,7 @@ namespace Raven.Server.Json
         private int WriteValue(out BlittableJsonToken token)
         {
             var start = _position;
-            switch (_reader.TokenType)
+                switch (_reader.TokenType)
             {
                 case JsonToken.StartObject:
                     return WriteObject(out token);
@@ -245,10 +246,10 @@ namespace Raven.Server.Json
                     token = BlittableJsonToken.Boolean;
                     return start;
                 case JsonToken.Null:
-                    token = BlittableJsonToken.Null;
-                    return start; // nothing to do here, we handle that with the token
                 case JsonToken.Undefined:
                     token = BlittableJsonToken.Null;
+                    _stream.WriteByte(0);
+                    _position ++; 
                     return start; // nothing to do here, we handle that with the token
                 case JsonToken.Date:
                     var dateStr = ((DateTime)_reader.Value).GetDefaultRavenFormat();

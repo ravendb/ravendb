@@ -14,7 +14,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            WriteToStreamBenchmark.Indexing(@"C:\Work\JSON\Lines");
+            
+            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON", "junk.json", 10);
+            new BlittableFormatTests().ShouldNotCrashForManyDifferentProperties();
         }
     }
 
