@@ -409,7 +409,7 @@ namespace Raven.Server.Json
                 case BlittableJsonToken.StartArray:
                     return new BlittableJsonReaderArray(position, _parent ?? this, type);
                 case BlittableJsonToken.Integer:
-                    return ReadVariableSizeInteger(position);
+                    return ReadVariableSizeLong(position);
                 case BlittableJsonToken.String:
                     return ReadStringLazily(position);
                 case BlittableJsonToken.CompressedString:

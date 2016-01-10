@@ -63,7 +63,12 @@ namespace Raven.Server.Json
 
         private void AllocateNextSegment(int required)
         {
-            var nextSegmentSize = Math.Max(_current.ActualSize*2, (int)Voron.Util.Utils.NearestPowerOfTwo(required));
+            // grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
+            // otherwise a document with 17 MB will waste 15 MB and require very big allocations
+            var nextSegmentSize = Math.Min(
+                1024 * 1024 * 1024,
+                Math.Max(_current.ActualSize * 2, (int)Voron.Util.Utils.NearestPowerOfTwo(required))
+                );
             _current = new Segment
             {
                 Prev = _current,
