@@ -1410,6 +1410,9 @@ namespace Raven.Client.Connection.Async
 
                         var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
 
+                        if (request.ResponseStatusCode == HttpStatusCode.NotModified)
+                            queryResult.DurationMilliseconds = -1;
+
                         var docResults = queryResult.Results.Concat(queryResult.Includes);
                         return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult, () =>
                             QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly, token), conflictedResultId =>
