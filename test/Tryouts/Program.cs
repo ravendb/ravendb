@@ -14,12 +14,7 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 3; i++)
-            {
-                WriteToStreamBenchmark.Indexing(@"C:\Work\JSON\Lines");
-                GC.Collect(2);
-            }
-
+            WriteToStreamBenchmark.Indexing(@"C:\Work\JSON\Lines");
         }
     }
 

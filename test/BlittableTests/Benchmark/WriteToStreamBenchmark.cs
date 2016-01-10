@@ -96,23 +96,32 @@ namespace BlittableTests.Benchmark
             Console.WriteLine($"Loaded {jsonCache.Count:#,#}");
 
             var sp = Stopwatch.StartNew();
-            foreach (var line in jsonCache)
-            {
-                var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(line)));
-                jsonOjbect.Value<string>("name");
-                jsonOjbect.Value<string>("overview");
-                jsonOjbect.Value<JArray>("video_embeds");
-            }
+            //foreach (var line in jsonCache)
+            //{
+            //    var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(line)));
+            //    jsonOjbect.Value<string>("name");
+            //    jsonOjbect.Value<string>("overview");
+            //    jsonOjbect.Value<JArray>("video_embeds");
+            //}
             Console.WriteLine($"Json indexing time {sp.ElapsedMilliseconds:#,#;;0}");
             sp.Restart();
-            using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+            for (int i = 0; i < 30; i++)
+            {
+                BlitIndexing(blitCache);
+            }
+            Console.WriteLine($"Blit indexing time {sp.ElapsedMilliseconds:#,#;;0}");
+        }
+
+        private static unsafe void BlitIndexing(List<Tuple<IntPtr, int>> blitCache)
+        {
+            using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024*1024*1024))
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             {
                 foreach (var tuple in blitCache)
                 {
-                    var doc = new BlittableJsonReaderObject((byte*)tuple.Item1, tuple.Item2, blittableContext);
+                    var doc = new BlittableJsonReaderObject((byte*) tuple.Item1, tuple.Item2, blittableContext);
                     object result;
-                    if(doc.TryGetMember("name", out result) == false)
+                    if (doc.TryGetMember("name", out result) == false)
                         throw new InvalidOperationException();
                     if (doc.TryGetMember("overview", out result) == false)
                         throw new InvalidOperationException();
@@ -120,7 +129,6 @@ namespace BlittableTests.Benchmark
                         throw new InvalidOperationException();
                 }
             }
-            Console.WriteLine($"Blit indexing time {sp.ElapsedMilliseconds:#,#;;0}");
         }
 
 

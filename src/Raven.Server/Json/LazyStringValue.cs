@@ -20,6 +20,8 @@ namespace Raven.Server.Json
             Buffer = buffer;
         }
 
+        public int? LastFoundAt ;
+
         public int CompareTo(string other)
         {
             var sizeInBytes = Encoding.UTF8.GetMaxByteCount(other.Length);
