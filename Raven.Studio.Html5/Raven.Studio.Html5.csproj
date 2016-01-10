@@ -670,12 +670,6 @@
     <Content Include="App\views\trafficWatch.html" />
     <Content Include="App\views\watchTrafficConfigDialog.html" />
     <Content Include="App\views\windowsAuth.html" />
-    <Content Include="Content\app.css">
-      <DependentUpon>app.less</DependentUpon>
-    </Content>
-    <Content Include="Content\app.min.css">
-      <DependentUpon>app.less</DependentUpon>
-    </Content>
     <Content Include="Content\bootstrap-datetimepicker.css" />
     <Content Include="Content\bootstrap-multiselect.css" />
     <Content Include="Content\bootstrap-select.css" />
@@ -959,9 +953,6 @@
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
-    <Content Include="Content\app.css.map">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
     <Content Include="readme-optimized-build.md" />
     <Content Include="Content\bootstrap.less" />
     <Content Include="Content\variables.less" />
@@ -1023,10 +1014,6 @@
     <Content Include="Content\bootstrap.css.map">
       <DependentUpon>bootstrap.css</DependentUpon>
     </Content>
-    <None Include="compilerconfig.json" />
-    <None Include="compilerconfig.json.defaults">
-      <DependentUpon>compilerconfig.json</DependentUpon>
-    </None>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
       <SubType>Designer</SubType>
