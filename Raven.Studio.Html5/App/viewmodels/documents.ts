@@ -27,10 +27,10 @@ import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand")
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
+import enableResizeBindingHandler = require("common/enableResizeBindingHandler");
 
 import generateClassCommand = require("commands/generateClassCommand");
 import showDataDialog = require("viewmodels/showDataDialog");
-
 
 class documents extends viewModelBase {
 
@@ -122,6 +122,7 @@ class documents extends viewModelBase {
             }
             return "";
         });
+        
     }
 
     activate(args) {

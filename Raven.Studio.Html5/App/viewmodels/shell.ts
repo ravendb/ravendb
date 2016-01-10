@@ -23,6 +23,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/autoCompleteBindingHandler");
+import enableResizeBindingHandler = require("common/enableResizeBindingHandler");
 import helpBindingHandler = require("common/helpBindingHandler");
 import changesApi = require("common/changesApi");
 import changesContext = require("common/changesContext");
@@ -173,6 +174,7 @@ class shell extends viewModelBase {
         this.goToDocumentSearch.throttle(250).subscribe(search => this.fetchGoToDocSearchResults(search));
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
+        enableResizeBindingHandler.install();
         helpBindingHandler.install();
 
         this.isSystemConnected = ko.computed(() => {
