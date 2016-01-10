@@ -26,7 +26,10 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024))
             using (var context = new RavenOperationContext(pool))
             {
-                var writer = context.Read(new JsonTextReader(new StringReader(origin)), "docs/1");
+                var writer = context.Read(new JsonTextReader(new StringReader(origin))
+                {
+                    DateParseHandling = DateParseHandling.None
+                }, "docs/1");
 
                 int size;
                 var ptr = pool.GetMemory(writer.SizeInBytes, string.Empty, out size);
