@@ -13,20 +13,20 @@ namespace BlittableTests
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
             {
                 List<Tuple<long, int>> allocatedMemory = new List<Tuple<long, int>>();
-                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool, "trolo");
+                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool);
                 var totalSize = 0;
                 var rand = new Random();
                 var curSize = 0;
                 for (var i = 1; i < 5000; i++)
                 {
-                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i*7), string.Empty, out curSize);
+                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i*7), out curSize);
                     totalSize += curSize;
                     FillData(pointer, curSize);
                     allocatedMemory.Add(Tuple.Create((long) pointer, curSize));
                     newStream.Write(pointer, curSize);
                 }
 
-                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, string.Empty, out curSize);
+                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, out curSize);
 
                 var copiedSize = newStream.CopyTo(buffer);
                 Assert.Equal(copiedSize, newStream.SizeInBytes);
@@ -53,20 +53,20 @@ namespace BlittableTests
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty,1024*1024*1024))
             {
                 List<Tuple<long, int>> allocatedMemory = new List<Tuple<long, int>>();
-                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool, "trolo");
+                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool);
                 var totalSize = 0;
                 var rand = new Random();
                 var curSize = 0;
                 for (var i = 5000; i > 1; i--)
                 {
-                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i * 7), string.Empty, out curSize);
+                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i * 7), out curSize);
                     totalSize += curSize;
                     FillData(pointer, curSize);
                     allocatedMemory.Add(Tuple.Create((long)pointer, curSize));
                     newStream.Write(pointer, curSize);
                 }
 
-                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, string.Empty, out curSize);
+                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, out curSize);
 
                 var copiedSize = newStream.CopyTo(buffer);
                 Assert.Equal(copiedSize, newStream.SizeInBytes);
@@ -93,13 +93,13 @@ namespace BlittableTests
             using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
             {
                 List<Tuple<long, int>> allocatedMemory = new List<Tuple<long, int>>();
-                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool, "trolo");
+                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool);
                 var totalSize = 0;
                 var rand = new Random();
                 var curSize = 0;
                 for (var i = 1; i < 5000; i++)
                 {
-                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i*7), string.Empty, out curSize);
+                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i*7), out curSize);
                     totalSize += curSize;
                     FillData(pointer, curSize);
                     allocatedMemory.Add(Tuple.Create((long) pointer, curSize));
@@ -109,7 +109,7 @@ namespace BlittableTests
                     }
                 }
 
-                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, string.Empty, out curSize);
+                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, out curSize);
 
                 try
                 {

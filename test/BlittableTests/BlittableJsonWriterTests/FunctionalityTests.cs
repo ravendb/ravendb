@@ -27,7 +27,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
                 "doc1"))
             {
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
 
                 dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
@@ -60,7 +60,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
                 "doc1"))
             {
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
 
                 AssertComplexEmployee(str, ptr, employee.SizeInBytes, blittableContext);
@@ -79,7 +79,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
                 "doc1"))
             {
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
 
                 dynamic dynamicObject = new DynamicBlittableJson(ptr, employee.SizeInBytes, blittableContext);
@@ -158,7 +158,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 "doc1"))
             {
                 int size;
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
 
                 dynamic dynamicObject = new DynamicBlittableJson(ptr, employee.SizeInBytes, blittableContext);

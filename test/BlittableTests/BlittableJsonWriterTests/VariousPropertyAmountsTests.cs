@@ -88,7 +88,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
                 "doc1"))
             {
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
 
                 System.Dynamic.DynamicObject dynamicBlittableJObject = new DynamicBlittableJson(ptr,
@@ -120,7 +120,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)), 
                 "doc1"))
             {
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, string.Empty, out size);
+                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
                 var reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
 

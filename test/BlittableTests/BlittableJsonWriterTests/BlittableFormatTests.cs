@@ -32,7 +32,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 }, "docs/1");
 
                 int size;
-                var ptr = pool.GetMemory(writer.SizeInBytes, string.Empty, out size);
+                var ptr = pool.GetMemory(writer.SizeInBytes, out size);
                 writer.CopyTo(ptr);
                 var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
 
@@ -70,7 +70,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                     }, "docs/1 ");
 
                     int size;
-                    var ptr = pool.GetMemory(writer.SizeInBytes, string.Empty, out size);
+                    var ptr = pool.GetMemory(writer.SizeInBytes, out size);
                     writer.CopyTo(ptr);
                     var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
 

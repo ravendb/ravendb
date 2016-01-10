@@ -14,7 +14,7 @@ namespace Raven.Server.Json
     /// </summary>
     public unsafe class RavenOperationContext : IDisposable
     {
-        private readonly UnmanagedBuffersPool _pool;
+        public readonly UnmanagedBuffersPool Pool;
         private byte* _tempBuffer;
         private int _bufferSize;
         private Dictionary<string, LazyStringValue> _fieldNames;
@@ -31,7 +31,7 @@ namespace Raven.Server.Json
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
-            _pool = pool;
+            Pool = pool;
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
         }
@@ -63,12 +63,12 @@ namespace Raven.Server.Json
 
             if (_bufferSize == 0)
             {
-                _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
+                _tempBuffer = Pool.GetMemory(requestedSize, out _bufferSize);
             }
             else if (requestedSize > _bufferSize)
             {
-                _pool.ReturnMemory(_tempBuffer);
-                _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
+                Pool.ReturnMemory(_tempBuffer);
+                _tempBuffer = Pool.GetMemory(requestedSize, out _bufferSize);
             }
 
             actualSize = _bufferSize;
@@ -81,7 +81,7 @@ namespace Raven.Server.Json
         /// <param name="documentId"></param>
         public UnmanagedWriteBuffer GetStream(string documentId)
         {
-            return new UnmanagedWriteBuffer(_pool, documentId);
+            return new UnmanagedWriteBuffer(Pool);
         }
 
         public void Dispose()
@@ -90,12 +90,12 @@ namespace Raven.Server.Json
                 return;
             Lz4.Dispose();
             if (_tempBuffer != null)
-                _pool.ReturnMemory(_tempBuffer);
+                Pool.ReturnMemory(_tempBuffer);
             if (_fieldNames != null)
             {
                 foreach (var stringToByteComparable in _fieldNames.Values)
                 {
-                    _pool.ReturnMemory(stringToByteComparable.Buffer);
+                    Pool.ReturnMemory(stringToByteComparable.Buffer);
                 }
             }
             _disposed = true;
@@ -112,7 +112,7 @@ namespace Raven.Server.Json
 
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
             int actualSize;
-            var memory = _pool.GetMemory(maxByteCount, field, out actualSize);
+            var memory = Pool.GetMemory(maxByteCount, out actualSize);
             fixed (char* pField = field)
             {
                 actualSize = Encoding.GetBytes(pField, field.Length, memory, actualSize);

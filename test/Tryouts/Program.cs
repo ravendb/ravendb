@@ -14,9 +14,22 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            
-            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON", "junk.json", 10);
-            new BlittableFormatTests().ShouldNotCrashForManyDifferentProperties();
+
+            foreach (var sample in UnmanageJsonReaderTests.Samples())
+            {
+                var f = (string) sample[0];
+                Console.WriteLine(f);
+                try
+                {
+                    new UnmanageJsonReaderTests().CanReadAll(f);
+                }
+                catch (Exception e)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(e.Message);
+                    Console.ResetColor();
+                }
+            }
         }
     }
 

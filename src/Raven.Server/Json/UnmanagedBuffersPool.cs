@@ -34,7 +34,6 @@ namespace Raven.Server.Json
         public class AllocatedMemoryData
         {
             public IntPtr Address;
-            public string DocumentId;
             public int SizeInBytes;
         }
 
@@ -114,10 +113,9 @@ namespace Raven.Server.Json
         ///     Allocates memory with the size that is the closes power of 2 to the given size
         /// </summary>
         /// <param name="size">Size to be allocated in bytes</param>
-        /// <param name="documentId">Document id to which that memory belongs</param>
         /// <param name="actualSize">The real size of the returned buffer</param>
         /// <returns></returns>
-        public byte* GetMemory(int size, string documentId, out int actualSize)
+        public byte* GetMemory(int size, out int actualSize)
         {
             Interlocked.Increment(ref _allocateMemoryCalls);
             actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
@@ -148,7 +146,6 @@ namespace Raven.Server.Json
                 };
                 Interlocked.Add(ref _currentSize, actualSize);
             }
-            memoryDataForLength.DocumentId = documentId;
 
             // document the allocated memory
             if (!_allocatedSegments.TryAdd(memoryDataForLength.Address, memoryDataForLength))
@@ -176,8 +173,6 @@ namespace Raven.Server.Json
                     $"The returned memory pointer {(IntPtr) pointer} was not allocated from this pool, or was already freed",
                     "pointer");
             }
-
-            memoryDataForPointer.DocumentId = null;
 
             var q = _freeSegments.GetOrAdd(memoryDataForPointer.SizeInBytes, size => new ConcurrentStack<AllocatedMemoryData>());
             q.Push(memoryDataForPointer);

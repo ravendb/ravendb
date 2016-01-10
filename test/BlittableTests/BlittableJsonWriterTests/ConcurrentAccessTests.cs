@@ -23,7 +23,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 "doc1"))
             {
                 var sizeInBytes = employee.SizeInBytes;
-                ptr = unmanagedPool.GetMemory(sizeInBytes, string.Empty, out size);
+                ptr = unmanagedPool.GetMemory(sizeInBytes, out size);
                 employee.CopyTo(ptr);
 
                 Parallel.ForEach(Enumerable.Range(0, 100), x =>
