@@ -52,6 +52,7 @@ namespace Raven.Server.Json
         }
 
         private static readonly byte[] NaN = { (byte)'N', (byte)'a', (byte)'N' };
+        private int _currentStrStart;
 
         public void Read()
         {
@@ -241,7 +242,7 @@ namespace Raven.Server.Json
             StringBuffer.Clear();
             while (true)
             {
-                var start = _pos;
+                _currentStrStart = _pos;
                 while (_pos < _bufSize)
                 {
                     var b = _buffer[_pos++];
@@ -249,17 +250,17 @@ namespace Raven.Server.Json
                     if (b == quote)
                     {
                         Current = Tokens.String;
-                        StringBuffer.Write(_bufferPtr + start, _pos - start - 1 /*don't include the last quote*/);
+                        StringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1 /*don't include the last quote*/);
                         return;
                     }
                     if (b == (byte)'\\')
                     {
-                        StringBuffer.Write(_bufferPtr + start, _pos - start - 1);
+                        StringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1);
                         
                         EnsureBuffer();
 
                         b = _buffer[_pos++];
-                        start = _pos;
+                        _currentStrStart = _pos;
                         _charPos++;
                         if (b != (byte)'u')
                             EscapePositions.Add(StringBuffer.SizeInBytes);
@@ -290,6 +291,7 @@ namespace Raven.Server.Json
                                 EnsureBuffer();// flush the buffer, but skip the \,\r chars
                                 _line++;
                                 _charPos = 1;
+                                EnsureBuffer();
                                 if (_buffer[_pos] == (byte)'\n')
                                     _pos++; // consume the \,\r,\n
                                 break;
@@ -299,7 +301,7 @@ namespace Raven.Server.Json
                                 break;// line continuation, skip
                             case (byte)'u':// unicode value
                                 ParseUnicodeValue();
-                                start += 4;
+                                _currentStrStart += 4;
                                 break;
                             default:
                                 throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
@@ -308,7 +310,7 @@ namespace Raven.Server.Json
                     }
                 }
                 // copy the buffer to the native code, then refill
-                StringBuffer.Write(_bufferPtr + start, _pos - start);
+                StringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart);
                 EnsureBuffer();
             }
         }
@@ -319,7 +321,7 @@ namespace Raven.Server.Json
             int val = 0;
             for (int i = 0; i < 4; i++)
             {
-                EnsureBuffer(); 
+                EnsureBuffer();
             
                 b = _buffer[_pos++];
                 if (b >= (byte)'0' && b <= (byte)'9')
@@ -328,11 +330,11 @@ namespace Raven.Server.Json
                 }
                 else if (b >= 'a' && b <= (byte)'f')
                 {
-                    val = (val << 4) | (b- (byte)'a');
+                    val = (val << 4) | (10+(b- (byte)'a'));
                 }
                 else if (b >= 'A' && b <= (byte)'F')
                 {
-                    val = (val << 4) | (b- (byte)'A');
+                    val = (val << 4) | (10 + (b - (byte) 'A'));
                 }
                 else
                 {
@@ -380,8 +382,10 @@ namespace Raven.Server.Json
                 LoadBufferFromStream();
         }
 
+
         private void LoadBufferFromStream()
         {
+            _currentStrStart = 0;
             _pos = 0;
             _bufSize = 0;
             var read = _stream.Read(_buffer, _bufSize, _buffer.Length - _bufSize);
