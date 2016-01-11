@@ -758,7 +758,7 @@ namespace Raven.Bundles.Replication.Tasks
             }
 
             RecordSuccess(destination.ConnectionStringOptions.Url,
-                lastReplicatedEtag: tuple.Item2, forDocuments: false);
+            lastReplicatedEtag: tuple.Item2, forDocuments: false);
             lastAttachmentEtag = tuple.Item2;
 
             return true;
@@ -948,7 +948,7 @@ namespace Raven.Bundles.Replication.Tasks
             if (lastReplicatedEtag != null)
             {
                 stats.LastEtagCheckedForReplication = lastReplicatedEtag;
-                if(forDocuments)
+                if (forDocuments)
                 stats.LastReplicatedEtag = lastReplicatedEtag;
                 else
                     stats.LastReplicatedAttachmentEtag = lastReplicatedEtag;

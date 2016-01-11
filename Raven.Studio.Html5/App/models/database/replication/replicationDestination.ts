@@ -153,7 +153,7 @@ class replicationDestination {
 
     static empty(databaseName: string): replicationDestination {
         return new replicationDestination({
-            Url: null,
+            Url: location.protocol + "//" + location.host,
             Username: null,
             Password: null,
             Domain: null,

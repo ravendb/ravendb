@@ -872,7 +872,7 @@ namespace Raven.Abstractions.Smuggler
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
 
-            exportSectionRegistar.Add("Indexes", async() =>
+            exportSectionRegistar.Add("Indexes", async () =>
             {
                 Operations.ShowProgress("Begin reading indexes");
                 var indexCount = await ImportIndexes(jsonReader).ConfigureAwait(false);
@@ -880,7 +880,7 @@ namespace Raven.Abstractions.Smuggler
                 return indexCount;
             });
 
-            exportSectionRegistar.Add("Docs", async() =>
+            exportSectionRegistar.Add("Docs", async () =>
             {
                 Operations.ShowProgress("Begin reading documents");
                 var documentCount = await ImportDocuments(jsonReader).ConfigureAwait(false);
@@ -888,7 +888,7 @@ namespace Raven.Abstractions.Smuggler
                 return documentCount;
             });
 
-            exportSectionRegistar.Add("Attachments", async() =>
+            exportSectionRegistar.Add("Attachments", async () =>
             {
                 Operations.ShowProgress("Begin reading attachments");
                 var attachmentCount = await ImportAttachments(importOptions.To, jsonReader).ConfigureAwait(false);
@@ -896,7 +896,7 @@ namespace Raven.Abstractions.Smuggler
                 return attachmentCount;
             });
 
-            exportSectionRegistar.Add("Transformers", async() =>
+            exportSectionRegistar.Add("Transformers", async () =>
             {
                 Operations.ShowProgress("Begin reading transformers");
                 var transformersCount = await ImportTransformers(jsonReader).ConfigureAwait(false);
@@ -904,7 +904,7 @@ namespace Raven.Abstractions.Smuggler
                 return transformersCount;
             });
 
-            exportSectionRegistar.Add("DocsDeletions", async() =>
+            exportSectionRegistar.Add("DocsDeletions", async () =>
         {
                 Operations.ShowProgress("Begin reading deleted documents");
                 var deletedDocumentsCount = await ImportDeletedDocuments(jsonReader).ConfigureAwait(false);
@@ -912,7 +912,7 @@ namespace Raven.Abstractions.Smuggler
                 return deletedDocumentsCount;
             });
 
-            exportSectionRegistar.Add("AttachmentsDeletions", async() =>
+            exportSectionRegistar.Add("AttachmentsDeletions", async () =>
             {
                 Operations.ShowProgress("Begin reading deleted attachments");
                 var deletedAttachmentsCount = await ImportDeletedAttachments(jsonReader).ConfigureAwait(false);
@@ -920,7 +920,7 @@ namespace Raven.Abstractions.Smuggler
                 return deletedAttachmentsCount;
             });
 
-            exportSectionRegistar.Add("Identities", async() =>
+            exportSectionRegistar.Add("Identities", async () =>
             {
                 Operations.ShowProgress("Begin reading identities");
                 var identitiesCount = await ImportIdentities(jsonReader).ConfigureAwait(false);
@@ -952,7 +952,8 @@ namespace Raven.Abstractions.Smuggler
             if (jsonReader.TokenType != JsonToken.StartArray)
                 throw new InvalidDataException("StartArray was expected");
 
-                if (currentAction != null) exportCounts[currentSection] = await currentAction().ConfigureAwait(false);
+                if (currentAction != null) 
+                    exportCounts[currentSection] = await currentAction().ConfigureAwait(false);
             }
 
             sw.Stop();
@@ -1472,12 +1473,11 @@ namespace Raven.Abstractions.Smuggler
                 return GetLegacyModeFeatures();
             }
 
-            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerDatabaseApiBase>()).ProductVersion;
 
-            var subServerVersion = serverVersion.Substring(0, 3);
-            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
+            var customAttributes = typeof(SmugglerDatabaseApiBase).Assembly.GetCustomAttributes(false);
+            dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+            var intServerVersion = int.Parse(versionAtt.Version.Replace(".", ""));
 
-            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
 
             if (intServerVersion < 25)
             {
@@ -1493,7 +1493,7 @@ namespace Raven.Abstractions.Smuggler
 
             if (intServerVersion == 25)
             {
-                ops.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                ops.ShowProgress("Running in legacy mode, importing/exporting identities is not supported. Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version);
 
                 return new ServerSupportedFeatures
                 {

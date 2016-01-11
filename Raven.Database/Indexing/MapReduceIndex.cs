@@ -262,14 +262,35 @@ namespace Raven.Database.Indexing
                                          .Select(g => new { g.Key, Count = g.Sum(x => x.Value) })
                                          .ToList();
 
+            var reduceKeyToCount = new ConcurrentDictionary<string, int>();
+            foreach (var singleDeleted in deleted)
+            {
+                var reduceKey = singleDeleted.Key.ReduceKey;
+                reduceKeyToCount[reduceKey] = reduceKeyToCount.GetOrDefault(reduceKey) + singleDeleted.Value;
+            }
+
             context.Database.ReducingThreadPool.ExecuteBatch(reduceKeyStats, enumerator => context.TransactionalStorage.Batch(accessor =>
             {
                 while (enumerator.MoveNext())
                 {
                     var reduceKeyStat = enumerator.Current;
-                    accessor.MapReduce.IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, reduceKeyStat.Count);
+                    var value = 0;
+                    reduceKeyToCount.TryRemove(reduceKeyStat.Key, out value);
+
+                    var changeValue = reduceKeyStat.Count - value;
+                    if (changeValue == 0)
+                    {
+                        // nothing to change
+                        continue;
                 }
             }), description: string.Format("Incrementing Reducing key counter fo index {0} for operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
+
+            foreach (var keyValuePair in reduceKeyToCount)
+            {
+                // those are the remaining keys that weren't used,
+                // reduce keys that were replaced
+                actions.MapReduce.IncrementReduceKeyCounter(indexId, keyValuePair.Key, -keyValuePair.Value);
+            }
 
             actions.General.MaybePulseTransaction();
 
@@ -494,12 +515,14 @@ namespace Raven.Database.Indexing
                 foreach (var key in keys)
                 {
                     actions.MapReduce.DeleteMappedResultsForDocumentId(key, indexId, reduceKeyAndBuckets);
+                    context.CancellationToken.ThrowIfCancellationRequested();
                 }
 
-                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets);
+                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, reduceKeyAndBuckets, context.CancellationToken);
                 foreach (var reduceKeyAndBucket in reduceKeyAndBuckets)
                 {
                     actions.MapReduce.ScheduleReductions(indexId, 0, reduceKeyAndBucket.Key);
+                    context.CancellationToken.ThrowIfCancellationRequested();
                 }
             });
         }

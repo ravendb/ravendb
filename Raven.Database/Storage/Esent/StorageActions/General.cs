@@ -216,10 +216,20 @@ namespace Raven.Database.Storage.Esent.StorageActions
         }
 
         private int maybePulseCount;
-        public bool MaybePulseTransaction()
+        private int totalMaybePulseCount;
+        public bool MaybePulseTransaction(int addToPulseCount = 1, Action beforePulseTransaction = null)
         {
-            if (Interlocked.Increment(ref maybePulseCount)%1000 != 0)
+            Interlocked.Add(ref totalMaybePulseCount, addToPulseCount);
+            var increment = Interlocked.Add(ref maybePulseCount, addToPulseCount);
+            if (increment < 1024)
+            {
                 return false;
+            }
+
+            if (Interlocked.CompareExchange(ref maybePulseCount, 0, increment) != increment)
+            {
+                return false;
+            }
 
             lock (maybePulseLock)
             {
@@ -227,23 +237,36 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 const int maxNumberOfCallsBeforePulsingIsForced = 50*1000;
                 if (sizeInBytes <= 0) // there has been an error
                 {
-                    if (maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
+                    if (totalMaybePulseCount >= maxNumberOfCallsBeforePulsingIsForced)
                     {
+                        Interlocked.Exchange(ref totalMaybePulseCount, 0);
+
+                        if (beforePulseTransaction != null)
+                            beforePulseTransaction();
+
                         if (logger.IsDebugEnabled)
                             logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
                         PulseTransaction();
-                    }
                     return true;
                 }
-                var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
-                if (eightyPrecentOfMax <= sizeInBytes || maybePulseCount%maxNumberOfCallsBeforePulsingIsForced == 0)
-                {
-                    if (logger.IsDebugEnabled)
-                        logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
-                    PulseTransaction();
+                    return false;
                 }
+
+                var eightyPrecentOfMax = (transactionalStorage.MaxVerPagesValueInBytes*0.8);
+                if (eightyPrecentOfMax <= sizeInBytes ||
+                    totalMaybePulseCount >= maxNumberOfCallsBeforePulsingIsForced)
+                {
+                    Interlocked.Exchange(ref totalMaybePulseCount, 0);
+
+                    if (beforePulseTransaction != null)
+                        beforePulseTransaction();
+
+                    if (logger.IsDebugEnabled)                        logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
+                    PulseTransaction();
                 return true;
             }
+                return false;
+        }
         }
 
         public bool UsingLazyCommit { get; set; }

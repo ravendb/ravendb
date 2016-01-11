@@ -33,6 +33,9 @@ class collection implements ICollectionBase {
         ko.postbox.publish("ActivateCollection", this);
     }
 
+    prettyLabel(text: string) {
+        return text.replace(/__/g, '/');
+    }
     getDocuments(): pagedList {
         if (!this.documentsList) {
             this.documentsList = this.createPagedList();

@@ -14,7 +14,22 @@ namespace Raven.Database.Tasks
 {
     public class RemoveFromIndexTask : DatabaseTask
     {
-        public HashSet<string> Keys { get; set; }
+        private HashSet<string> Keys { get; set; }
+
+        public RemoveFromIndexTask(int indexId) : base(indexId)
+        {
+            Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public override int NumberOfKeys
+        {
+            get
+            {
+                if (Keys == null)
+                    return 0;
+                return Keys.Count;
+            }
+        }
 
         public override bool SeparateTasksByIndex
         {
@@ -24,11 +39,6 @@ namespace Raven.Database.Tasks
         public override string ToString()
         {
             return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
-        }
-
-        public RemoveFromIndexTask()
-        {
-            Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public override void Merge(DatabaseTask task)
@@ -47,6 +57,7 @@ namespace Raven.Database.Tasks
                     keysToRemove = new HashSet<string>(Keys.Where(key=>FilterDocuments(context, accessor, key)));
                     accessor.Indexing.TouchIndexEtag(Index);
                 });
+
                 if (keysToRemove.Count == 0)
                     return;
                 context.IndexStorage.RemoveFromIndex(Index, keysToRemove.ToArray(), context);
@@ -82,11 +93,15 @@ namespace Raven.Database.Tasks
 
         public override DatabaseTask Clone()
         {
-            return new RemoveFromIndexTask
+            return new RemoveFromIndexTask(Index)
             {
-                Keys = new HashSet<string>(Keys),
-                Index = Index,
+                Keys = new HashSet<string>(Keys, StringComparer.OrdinalIgnoreCase)
             };
+        }
+
+        public void AddKey(string key)
+        {
+            Keys.Add(key);
         }
     }
 }

@@ -23,8 +23,10 @@ namespace Raven.Abstractions.Json
         {
             var enumerable = (IEnumerable) value;
             writer.WriteStartArray();
-            foreach(var item in enumerable)
-                writer.WriteValue(item);
+            foreach (var item in enumerable)
+            {
+                serializer.Serialize(writer, item);
+            }
             writer.WriteEndArray();
         }
 

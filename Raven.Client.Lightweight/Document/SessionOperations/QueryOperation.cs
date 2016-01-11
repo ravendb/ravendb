@@ -235,12 +235,21 @@ namespace Raven.Client.Document.SessionOperations
 
         private T DeserializedResult<T>(RavenJObject result)
         {
-            if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
+            var type = typeof(T);
+            if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
             {
-                var type = typeof(T);
-                if (type == typeof(string) || typeof(T).IsValueType() || typeof(T).IsEnum())
+                if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
                 {
                     return result.Value<T>(projectionFields[0]);
+                }
+                switch (result.Count)
+                {
+                    case 1:
+                        return result.Value<T>(result.Keys.First());
+                    case 2:
+                        if(result.ContainsKey(Constants.Metadata))
+                            return result.Value<T>(result.Keys.First(x=>x!=Constants.Metadata));
+                        break;
                 }
             }
 
