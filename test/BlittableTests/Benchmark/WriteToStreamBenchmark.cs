@@ -35,9 +35,8 @@ namespace BlittableTests.Benchmark
                     }
                 }
                 Console.Write(" lines {1:#,#} json - {0:#,#}ms ", sp.ElapsedMilliseconds, lines);
-                GC.Collect(2);
 
-                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024*1024*1024))
+                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
                 using (var blittableContext = new RavenOperationContext(unmanagedPool))
                 {
                     sp.Restart();
@@ -47,16 +46,15 @@ namespace BlittableTests.Benchmark
                         string line;
                         while ((line = reader.ReadLine()) != null)
                         {
-                            using (blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)), 
+                            using (blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)),
                                 line))
                             {
                             }
                         }
                     }
                     Console.WriteLine(" blit - {0:#,#}ms", sp.ElapsedMilliseconds);
-
-
                 }
+
             }
         }
 

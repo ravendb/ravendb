@@ -64,7 +64,7 @@ namespace Raven.Server.Json
             return IncreaseTempBufferSize(minSize);
         }
 
-        private unsafe byte* IncreaseTempBufferSize(int minSize)
+        private byte* IncreaseTempBufferSize(int minSize)
         {
             if (_buffer != null)
                 _context.Pool.ReturnMemory(_buffer);

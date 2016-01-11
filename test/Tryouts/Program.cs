@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
@@ -11,16 +12,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-
-            //File.WriteAllText(@"C:\Work\JSON\Big\JEOPARDY_QUESTIONS2.json", JObject.Parse(File.ReadAllText(@"C:\Work\JSON\Big\JEOPARDY_QUESTIONS1.json")).ToString(Formatting.Indented));
-
-            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
-            //Console.WriteLine("Reallying starting now...");
-           //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
+            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
+            Console.WriteLine("Reallying starting now...");
+            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
 
             WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
-            //Console.WriteLine("Reallying starting now...");
-            //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
+            Console.WriteLine("Reallying starting now...");
+            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
 
             //new FunctionalityTests().LongStringsTest(1000);
 
@@ -40,6 +38,11 @@ namespace Tryouts
             //        Console.ResetColor();
             //    }
             //}
+
+            Console.WriteLine();
+
+            Console.WriteLine("{0:#,#}", Process.GetCurrentProcess().PeakWorkingSet64 / 1024);
+            Console.ReadLine();
         }
     }
 }
