@@ -110,18 +110,7 @@ namespace Raven.Server.Json
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                const uint fnvPrime = (16777619);
-                const uint fnvOffsetBasis = (2166136261);
-                uint hash = fnvOffsetBasis;
-                for (var i = 0; i < Size; i++)
-                {
-                    hash ^= Buffer[i];
-                    hash *= fnvPrime;
-                }
-                return (int)hash;
-            }
+            return (int)Hashing.XXHash64.CalculateInline(Buffer, Size);
         }
 
         public override string ToString()
