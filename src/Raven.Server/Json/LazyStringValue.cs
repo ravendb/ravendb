@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Sparrow;
 
@@ -11,16 +12,18 @@ namespace Raven.Server.Json
         public readonly byte* Buffer;
         public readonly int Size;
         public string String;
+        public int[] EscapePositions;
+
 
         public LazyStringValue(string str, byte* buffer, int size, RavenOperationContext context)
         {
-           // String = str;
+            String = str;
             Size = size;
             _context = context;
             Buffer = buffer;
         }
 
-        public int? LastFoundAt ;
+        public int? LastFoundAt;
 
         public int CompareTo(string other)
         {
@@ -74,7 +77,7 @@ namespace Raven.Server.Json
 
         public static implicit operator string(LazyStringValue self)
         {
-            if(self == null)
+            if (self == null)
                 throw new ArgumentNullException(nameof(self));
 
             if (self.String != null)

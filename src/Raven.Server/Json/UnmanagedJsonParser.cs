@@ -75,8 +75,8 @@ namespace Raven.Server.Json
                 switch (b)
                 {
                     case (byte)'\r':
-                        EnsureBuffer(1);
-                        if(_buffer[_pos+1]== (byte)'\n')
+                        EnsureBuffer(0);
+                        if(_buffer[_pos]== (byte)'\n')
                             continue;
                         goto case (byte) '\n';
                     case (byte)'\n':
@@ -86,15 +86,16 @@ namespace Raven.Server.Json
                     case (byte)' ': case (byte)'\t': case (byte)'\v': case (byte)'\f':
                         //white space, we can safely ignore
                         break;
+                    case (byte)':':
                     case (byte)',':
                         switch (Current)
                         {
-                            case Tokens.Comma:
+                            case Tokens.Separator:
                             case Tokens.StartObject:
                             case Tokens.StartArray:
-                                throw CreateException("Cannot have a comma in this position");
+                                throw CreateException("Cannot have a '"+(char)b +"' in this position");
                         }
-                        Current = Tokens.Comma;
+                        Current = Tokens.Separator;
                         break;
                     case (byte)'N':
                         EnsureRestOfToken(NaN, "NaN");
@@ -134,7 +135,7 @@ namespace Raven.Server.Json
                         return;
                     //numbers
 
-                    //case (byte)'0':// we don't support numbers starting with 0 (0x for hex or 0 for octal)
+                    case (byte)'0':
                     case (byte)'1':case (byte)'2':case (byte)'3':case (byte)'4':case (byte)'5':
                     case (byte)'6':case (byte)'7':case (byte)'8':case (byte)'9':case (byte)'-':// negative number
                         ParseNumber(b);
@@ -149,6 +150,7 @@ namespace Raven.Server.Json
             EscapePositions.Clear();
             Long = 0;
 
+            var zeroPrefix = b == '0';
             var isNegative = false;
             var isDouble = false;
             var isExponent = false;
@@ -159,8 +161,11 @@ namespace Raven.Server.Json
                     case (byte)'.':
                         if (isDouble)
                             throw CreateException("Already got '.' in this number value");
+                        zeroPrefix = false; // 0.5, frex
                         isDouble = true;
                         break;
+                    case (byte)'+':
+                        break; // just record, appears in 1.4e+3
                     case (byte)'e':
                     case (byte)'E':
                         if (isExponent)
@@ -199,14 +204,11 @@ namespace Raven.Server.Json
                             case (byte)'\v':
                             case (byte)'\f':
                             case (byte)',':
-                                if (isDouble)
-                                {
-                                    Current = Tokens.Float;
-                                    return;
-                                }
-                                Current = Tokens.Integer;
+                                if (zeroPrefix && StringBuffer.SizeInBytes != 1)
+                                    throw CreateException("Invalid number with zero prefix");
                                 if (isNegative)
-                                    Long ^= -1;
+                                    Long *= -1;
+                                Current = isDouble ? Tokens.Float : Tokens.Integer;
                                 return;
                             default:
                                 throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
@@ -237,8 +239,8 @@ namespace Raven.Server.Json
                     }
                     if (b == (byte)'\\')
                     {
-                        StringBuffer.Write(_bufferPtr + start, _pos - start);
-                        start = _pos;
+                        StringBuffer.Write(_bufferPtr + start, _pos - start-1);
+                        start = _pos + 1;
                         EnsureBuffer(1);
 
                         b = _buffer[_pos++];
@@ -281,6 +283,7 @@ namespace Raven.Server.Json
                                 break;// line continuation, skip
                             case (byte)'u':// unicode value
                                 ParseUnicodeValue();
+                                start += 4;
                                 break;
                             default:
                                 throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
@@ -339,7 +342,7 @@ namespace Raven.Server.Json
             String,
             Float,
             Integer,
-            Comma,
+            Separator,
             StartObject,
             StartArray,
             EndArray,

@@ -84,7 +84,7 @@ namespace Raven.Server.Json
                 case (byte) '"':
                     return (byte) '"';
                 default:
-                    throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
+                    throw new InvalidOperationException("Invalid escape char '"+(char)b +"' numeric value is: " + b);
             }
         }
 

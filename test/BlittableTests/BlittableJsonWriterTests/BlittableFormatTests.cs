@@ -21,7 +21,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             {
                 var compacted = JObject.Parse(new StreamReader(stream).ReadToEnd()).ToString(Formatting.None);
                 stream.Position = 0;
-                using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024))
+                using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024) )
                 using (var context = new RavenOperationContext(pool))
                 {
                     var writer = context.Read(stream, "docs/1");

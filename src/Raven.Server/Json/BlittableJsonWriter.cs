@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Voron.Util;
 
@@ -104,7 +105,7 @@ namespace Raven.Server.Json
             for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
                 BlittableJsonToken _;
-                propertyArrayOffset[index] = WriteString(_context.CachedProperties.GetProperty(index), out _, compress: false);
+                propertyArrayOffset[index] = WritePropertyString(_context.CachedProperties.GetProperty(index));
             }
 
             // Register the position of the properties offsets start
@@ -125,6 +126,29 @@ namespace Raven.Server.Json
             WriteNumber(rootOffset, sizeof(int));
             WriteNumber(propertiesStart, sizeof(int));
             WriteNumber((int)token, sizeof(byte));
+        }
+
+        private int WritePropertyString(LazyStringValue prop)
+        {
+            BlittableJsonToken token;
+            var startPos = WriteString(prop, out token, false);
+            if (prop.EscapePositions == null)
+            {
+                _position += WriteVariableSizeInt(0);
+                return startPos;
+            }
+            // we write the number of the escape sequences required
+            // and then we write the distance to the _next_ escape sequence
+            _position += WriteVariableSizeInt(prop.EscapePositions.Length);
+            if (prop.EscapePositions.Length > 0)
+            {
+                _position += WriteVariableSizeInt(prop.EscapePositions[0]);
+                for (int i = 1; i < prop.EscapePositions.Length; i++)
+                {
+                    _position += WriteVariableSizeInt(prop.EscapePositions[i] - prop.EscapePositions[i - 1] - 1);
+                }
+            }
+            return startPos;
         }
 
         /// <summary>
@@ -153,8 +177,12 @@ namespace Raven.Server.Json
                 _reader.StringBuffer.CopyTo(buffer);
 
                 var property = new LazyStringValue(null, buffer, _reader.StringBuffer.SizeInBytes, _context);
+                if (_reader.EscapePositions.Count > 0)
+                {
+                    property.EscapePositions = _reader.EscapePositions.ToArray();
+                }
                 var propIndex = _context.CachedProperties.GetPropertyId(property);
-          
+              
                 maxPropId = Math.Max(maxPropId, propIndex);
 
                 _reader.Read();
@@ -285,13 +313,24 @@ namespace Raven.Server.Json
             }
         }
 
-        private unsafe void WriteStringFromReader(out BlittableJsonToken token)
+        private void WriteStringFromReader(out BlittableJsonToken token)
         {
             var unmanagedWriteBuffer = _reader.StringBuffer;
             var buffer = GetTempBuffer(unmanagedWriteBuffer.SizeInBytes);
             unmanagedWriteBuffer.CopyTo(buffer);
             var str = new LazyStringValue(null, buffer, unmanagedWriteBuffer.SizeInBytes, _context);
             WriteString(str, out token);
+            // we write the number of the escape sequences required
+            // and then we write the distance to the _next_ escape sequence
+            _position += WriteVariableSizeInt(_reader.EscapePositions.Count);
+            if (_reader.EscapePositions.Count > 0)
+            {
+                _position += WriteVariableSizeInt(_reader.EscapePositions[0]);
+                for (int i = 1; i < _reader.EscapePositions.Count; i++)
+                {
+                    _position += WriteVariableSizeInt(_reader.EscapePositions[i] - _reader.EscapePositions[i - 1] - 1);
+                }
+            }
         }
 
         private static string EnsureDecimalPlace(double value, string text)
@@ -376,17 +415,6 @@ namespace Raven.Server.Json
 
             _stream.Write(buffer, size);
             _position += size;
-            // we write the number of the escape sequences required
-            // and then we write the distance to the _next_ escape sequence
-            _position += WriteVariableSizeInt(_reader.EscapePositions.Count);
-            if (_reader.EscapePositions.Count > 0)
-            {
-                _position += WriteVariableSizeInt(_reader.EscapePositions[0]);
-                for (int i = 1; i < _reader.EscapePositions.Count; i++)
-                {
-                    _position += WriteVariableSizeInt(_reader.EscapePositions[i] - _reader.EscapePositions[i - 1] - 1);
-                }
-            }
             return startPos;
         }
 

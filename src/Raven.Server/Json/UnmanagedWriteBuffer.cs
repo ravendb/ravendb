@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Sparrow;
 
 namespace Raven.Server.Json
@@ -8,14 +9,15 @@ namespace Raven.Server.Json
     public unsafe class UnmanagedWriteBuffer : IDisposable
     {
         private readonly UnmanagedBuffersPool _buffersPool;
-        private readonly string _documentId;
 
         private class Segment
         {
-            public Segment Prev;
+            public Segment Previous;
             public byte* Address;
             public int ActualSize;
             public int Used;
+
+            public string DebugInfo => Encoding.UTF8.GetString(Address, Used);
         }
 
         private Segment _current;
@@ -38,6 +40,9 @@ namespace Raven.Server.Json
 
         public void Write(byte* buffer, int length)
         {
+            if (length == 0)
+                return;
+
             var bufferPosition = 0;
             var lengthLeft = length;
             do
@@ -70,7 +75,7 @@ namespace Raven.Server.Json
                 );
             _current = new Segment
             {
-                Prev = _current,
+                Previous = _current,
                 Address = _buffersPool.GetMemory(nextSegmentSize, out nextSegmentSize),
                 ActualSize = nextSegmentSize,
             };
@@ -98,7 +103,7 @@ namespace Raven.Server.Json
                 whereToWrite -= cur.Used;
                 copiedBytes += cur.Used;
                 Memory.Copy(whereToWrite, cur.Address, cur.Used);
-                cur = cur.Prev;
+                cur = cur.Previous;
             }
             Debug.Assert(copiedBytes == _sizeInBytes);
             return copiedBytes;
@@ -107,11 +112,11 @@ namespace Raven.Server.Json
         public void Clear()
         {
             // this releases everything but the current item
-            var prev = _current.Prev;
+            var prev = _current.Previous;
             while (prev != null)
             {
                 _buffersPool.ReturnMemory(prev.Address);
-                prev = _current.Prev;
+                prev = _current.Previous;
             }
             _current.Used = 0;
             _sizeInBytes = 0;
@@ -126,7 +131,7 @@ namespace Raven.Server.Json
             while (cur != null)
             {
                 _buffersPool.ReturnMemory(cur.Address);
-                cur = cur.Prev;
+                cur = cur.Previous;
             }
             _disposed = true;
         }

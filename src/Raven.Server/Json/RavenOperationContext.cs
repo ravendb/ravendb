@@ -143,7 +143,10 @@ namespace Raven.Server.Json
             int actualSize;
             var memory = Pool.GetMemory(val.Size, out actualSize);
             Memory.Copy(memory, val.Buffer, val.Size);
-            value = new LazyStringValue(null, memory, val.Size, this);
+            value = new LazyStringValue(null, memory, val.Size, this)
+            {
+                EscapePositions = val.EscapePositions
+            };
             _internedFieldNames[value] = value;
             return value;
         }
