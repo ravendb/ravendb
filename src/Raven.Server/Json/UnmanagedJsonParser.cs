@@ -18,8 +18,6 @@ namespace Raven.Server.Json
 
         private readonly Stream _stream;
         private readonly byte[] _buffer;
-        private char[] _charBuffer;
-        private byte[] _smallBuffer;
         private int _pos;
         private int _bufSize;
         public Tokens Current;
@@ -341,22 +339,18 @@ namespace Raven.Server.Json
                     throw CreateException("Invalid hex value , numeric value is: " + b);
                 }
             }
-            if (_charBuffer == null)
-                _charBuffer = new char[1];
+            var chars = stackalloc char[1];
             try
             {
-                _charBuffer[0] = Convert.ToChar(val);
+                chars[0] = Convert.ToChar(val);
             }
             catch (Exception e)
             {
                 throw new FormatException("Could not convert value " + val + " to char", e);
             }
-            if (_smallBuffer == null)
-                _smallBuffer = new byte[32]; // more than big enough for any single utf8 character
-            var byteCount = Encoding.UTF8.GetBytes(_charBuffer, 0, 1,
-                _smallBuffer, 0);
-            fixed (byte* p = _smallBuffer)
-                StringBuffer.Write(p, byteCount);
+            var smallBuffer = stackalloc byte[8];
+            var byteCount = Encoding.UTF8.GetBytes(chars, 1, smallBuffer, 8);
+            StringBuffer.Write(smallBuffer, byteCount);
         }
 
         public enum Tokens

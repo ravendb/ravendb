@@ -15,7 +15,7 @@ namespace Raven.Server.Json
         private readonly UnmanagedJsonParser _reader;
         private readonly UnmanagedWriteBuffer _stream;
         private int _bufferSize, _compressionBufferSize;
-        private byte* _buffer, _compressionBuffer, _smallBuffer;
+        private byte* _buffer, _compressionBuffer;
 
         private int _position;
         public int DiscardedCompressions, Compressed;
@@ -41,11 +41,7 @@ namespace Raven.Server.Json
                 _context.Pool.ReturnMemory(_compressionBuffer);
                 _compressionBuffer = null;
             }
-            if (_smallBuffer != null)
-            {
-                _context.Pool.ReturnMemory(_smallBuffer);
-                _smallBuffer = null;
-            }
+        
             _stream.Dispose();
         }
 
@@ -69,16 +65,6 @@ namespace Raven.Server.Json
                 _buffer = _context.Pool.GetMemory(_bufferSize, out _bufferSize);
             }
             return _buffer;
-        }
-
-        private byte* GetSmallBuffer()
-        {
-            if(_smallBuffer == null)
-            {
-                int size;
-                _smallBuffer = _context.Pool.GetMemory(16, out size);
-            }
-            return _smallBuffer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -421,20 +407,21 @@ namespace Raven.Server.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteNumber(int value, int sizeOfValue)
         {
-            var buffer = GetSmallBuffer();
             switch (sizeOfValue)
             {
                 case sizeof(int):
-                    buffer[0] = (byte)value;
-                    buffer[1] = (byte)(value >> 8);
-                    buffer[2] = (byte)(value >> 16);
-                    buffer[3] = (byte)(value >> 24);
-                    _stream.Write(buffer, 4);
+                    var intBuffer = stackalloc byte[4];
+                    intBuffer[0] = (byte)value;
+                    intBuffer[1] = (byte)(value >> 8);
+                    intBuffer[2] = (byte)(value >> 16);
+                    intBuffer[3] = (byte)(value >> 24);
+                    _stream.Write(intBuffer, 4);
                     break;
                 case sizeof(short):
-                    buffer[0] = (byte)value;
-                    buffer[1] = (byte)(value >> 8);
-                    _stream.Write(buffer, 2);
+                    var shortBuffer = stackalloc byte[2];
+                    shortBuffer[0] = (byte)value;
+                    shortBuffer[1] = (byte)(value >> 8);
+                    _stream.Write(shortBuffer, 2);
                     break;
                 case sizeof(byte):
                     _stream.WriteByte((byte)value);
@@ -451,7 +438,7 @@ namespace Raven.Server.Json
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
             // for negative values
 
-            var buffer = GetSmallBuffer();
+            var buffer = stackalloc byte[10];
             var count = 0;
             var v = (ulong)((value << 1) ^ (value >> 63));
             while (v >= 0x80)
@@ -468,8 +455,7 @@ namespace Raven.Server.Json
         public int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
-
-            var buffer = GetSmallBuffer( );
+            var buffer = stackalloc byte[5];
             var count = 0;
             var v = (uint)value;
             while (v >= 0x80)
