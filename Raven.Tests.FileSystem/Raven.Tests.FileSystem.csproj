@@ -27,6 +27,7 @@
     <Prefer32Bit>false</Prefer32Bit>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
