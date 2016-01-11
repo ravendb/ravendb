@@ -324,15 +324,15 @@ namespace Raven.Server.Json
                 b = _buffer[_pos++];
                 if (b >= (byte)'0' && b <= (byte)'9')
                 {
-                    val = (val << 4) | ((byte)'0' - b);
+                    val = (val << 4) | ( b- (byte)'0');
                 }
                 else if (b >= 'a' && b <= (byte)'f')
                 {
-                    val = (val << 4) | ((byte)'a' - b);
+                    val = (val << 4) | (b- (byte)'a');
                 }
                 else if (b >= 'A' && b <= (byte)'F')
                 {
-                    val = (val << 4) | ((byte)'A' - b);
+                    val = (val << 4) | (b- (byte)'A');
                 }
                 else
                 {
@@ -341,7 +341,14 @@ namespace Raven.Server.Json
             }
             if (_charBuffer == null)
                 _charBuffer = new char[1];
-            _charBuffer[0] = Convert.ToChar(val);
+            try
+            {
+                _charBuffer[0] = Convert.ToChar(val);
+            }
+            catch (Exception e)
+            {
+                throw new FormatException("Could not convert value " + val + " to char", e);
+            }
             if (_smallBuffer == null)
                 _smallBuffer = new byte[32]; // more than big enough for any single utf8 character
             var byteCount = Encoding.UTF8.GetBytes(_charBuffer, 0, 1,
