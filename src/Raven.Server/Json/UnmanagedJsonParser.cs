@@ -59,7 +59,7 @@ namespace Raven.Server.Json
             {
                 // first time, need to check preamble
                 _line++;
-                EnsureBuffer(1);
+                LoadBufferFromStream();
                 if (_buffer[_pos] == Utf8Preamble[0])
                 {
                     _pos++;
@@ -69,13 +69,13 @@ namespace Raven.Server.Json
 
             while (true)
             {
-                EnsureBuffer(0);
+                EnsureBuffer();
                 var b = _buffer[_pos++];
                 _charPos++;
                 switch (b)
                 {
                     case (byte)'\r':
-                        EnsureBuffer(0);
+                        EnsureBuffer();
                         if (_buffer[_pos] == (byte)'\n')
                             continue;
                         goto case (byte)'\n';
@@ -229,7 +229,7 @@ namespace Raven.Server.Json
                         }
                 }
                 StringBuffer.WriteByte(b);
-                EnsureBuffer(0);
+                EnsureBuffer();
                 b = _buffer[_pos++];
                 _charPos++;
             } while (true);
@@ -256,7 +256,7 @@ namespace Raven.Server.Json
                     {
                         StringBuffer.Write(_bufferPtr + start, _pos - start - 1);
                         
-                        EnsureBuffer(1);
+                        EnsureBuffer();
 
                         b = _buffer[_pos++];
                         start = _pos;
@@ -287,7 +287,7 @@ namespace Raven.Server.Json
                                 StringBuffer.WriteByte(b);
                                 break;
                             case (byte)'\r':// line continuation, skip
-                                EnsureBuffer(1);// flush the buffer, but skip the \,\r chars
+                                EnsureBuffer();// flush the buffer, but skip the \,\r chars
                                 _line++;
                                 _charPos = 1;
                                 if (_buffer[_pos] == (byte)'\n')
@@ -309,18 +309,19 @@ namespace Raven.Server.Json
                 }
                 // copy the buffer to the native code, then refill
                 StringBuffer.Write(_bufferPtr + start, _pos - start);
-                EnsureBuffer(1);
+                EnsureBuffer();
             }
         }
 
         private void ParseUnicodeValue()
         {
             byte b;
-            EnsureBuffer(4); // flush the buffer, but skip the \,u chars
             int val = 0;
             for (int i = 0; i < 4; i++)
             {
-                b = _buffer[_pos + i];
+                EnsureBuffer(); 
+            
+                b = _buffer[_pos++];
                 if (b >= (byte)'0' && b <= (byte)'9')
                 {
                     val = (val << 4) | ((byte)'0' - b);
@@ -347,7 +348,6 @@ namespace Raven.Server.Json
                 _smallBuffer, 0);
             fixed (byte* p = _smallBuffer)
                 StringBuffer.Write(p, byteCount);
-            _pos += 4;
         }
 
         public enum Tokens
@@ -367,24 +367,20 @@ namespace Raven.Server.Json
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureBuffer(int minRead)
+        private void EnsureBuffer()
         {
-            if (_pos + minRead >= _bufSize)
-                LoadBufferFromStream(minRead);
+            if (_pos >= _bufSize)
+                LoadBufferFromStream();
         }
 
-        private void LoadBufferFromStream(int minRead)
+        private void LoadBufferFromStream()
         {
             _pos = 0;
             _bufSize = 0;
-            do
-            {
-                var read = _stream.Read(_buffer, _bufSize, _buffer.Length - _bufSize);
-                if (read == 0)
-                    throw new EndOfStreamException();
-                _bufSize += read;
-                minRead -= read;
-            } while (minRead > 0);
+            var read = _stream.Read(_buffer, _bufSize, _buffer.Length - _bufSize);
+            if (read == 0)
+                throw new EndOfStreamException();
+            _bufSize += read;
         }
 
         private void EnsureRestOfToken(byte[] buffer, string expected)
@@ -401,6 +397,7 @@ namespace Raven.Server.Json
                 if (_bufSize == 0)
                     throw new EndOfStreamException();
                 _bufSize += lenToMove;
+                _pos = 0;
             }
             for (int i = 0; i < size; i++)
             {
@@ -411,9 +408,10 @@ namespace Raven.Server.Json
 
         private InvalidDataException CreateException(string message)
         {
-            return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " +
-                                            Encoding.UTF8.GetString(_buffer, Math.Max(0, _pos - 50), _pos)
-                );
+            var start = Math.Max(0, _pos - 25);
+            var count = Math.Min(_pos, _buffer.Length) - start;
+            var s = Encoding.UTF8.GetString(_buffer, start, count);
+            return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " + s );
         }
 
         public void Dispose()
