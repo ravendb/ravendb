@@ -415,7 +415,7 @@ namespace Raven.Server.Json
                 case BlittableJsonToken.CompressedString:
                     return ReadCompressStringLazily(position);
                 case BlittableJsonToken.Boolean:
-                    return ReadNumber(_mem + position, 1) == 0;
+                    return ReadNumber(_mem + position, 1) == 1;
                 case BlittableJsonToken.Null:
                     return null;
                 case BlittableJsonToken.Float:

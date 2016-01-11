@@ -17,7 +17,7 @@ namespace Tryouts
             foreach (var sample in UnmanageJsonReaderTests.Samples())
             {
                 var f = (string) sample[0];
-                //if(f.Contains("nested")==false)continue;
+                if(f.Contains("project")==false)continue;
                 Console.WriteLine(f);
                 try
                 {
