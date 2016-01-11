@@ -138,7 +138,7 @@ namespace BlittableTests.Benchmark
             using (var fileStream = new FileStream(outputFile, FileMode.Create))
             using (var streamWriter = new StreamWriter(fileStream))
             {
-                var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length).Take(size);
+                var files = Directory.GetFiles(directory, "test*.json").OrderBy(f => new FileInfo(f).Length).Take(size);
 
                 streamWriter.WriteLine("Name,Json Parse Time,Json Size, Json Time, Blit Parse Time,Blit Size, Blit Time");
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))

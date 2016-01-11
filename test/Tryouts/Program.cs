@@ -1,24 +1,23 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
-using NewBlittable;
-using Newtonsoft.Json;
-using Raven.Server.Json;
 
 namespace Tryouts
 {
-    public unsafe class Program
+    public class Program
     {
         public static void Main(string[] args)
         {
-            new FunctionalityTests().LongStringsTest(1000);
+            WriteToStreamBenchmark.PerformanceAnalysis(@"D:\json\Big", "output.csv", 2);
+            Console.WriteLine("Reallying starting now...");
+            WriteToStreamBenchmark.PerformanceAnalysis(@"D:\json\Big", "output.csv", int.MaxValue);
+
+            //new FunctionalityTests().LongStringsTest(1000);
+
             //foreach (var sample in UnmanageJsonReaderTests.Samples())
             //{
             //    var f = (string) sample[0];
-            //    //if (f.Contains("escape-str") == false) continue;
+            //    if (f.Contains("escape-str") == false) continue;
             //    Console.WriteLine(f);
             //    try
             //    {
@@ -33,5 +32,4 @@ namespace Tryouts
             //}
         }
     }
-
 }
