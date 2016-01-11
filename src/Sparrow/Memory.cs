@@ -150,12 +150,12 @@ namespace Sparrow
         /// faster to call .Copy() directly.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void BulkCopy(byte* dest, byte* src, int n)
+        public static void BulkCopy(byte* dest, byte* src, int n)
         {
             UnmanagedMemory.Copy(dest, src, n);            
         }
 
-        public unsafe static void Copy(byte* dest, byte* src, int n)
+        public static void Copy(byte* dest, byte* src, int n)
         {
             CopyInline(dest, src, n);
         }
@@ -227,9 +227,10 @@ namespace Sparrow
                     return;
                 case 0:
                     return;
-                default:
-                    break;
             }
+
+            if (n < 0)
+                throw new ArgumentOutOfRangeException(nameof(n), "Cannot be less than zero");
 
             if (n <= 512)
             {
