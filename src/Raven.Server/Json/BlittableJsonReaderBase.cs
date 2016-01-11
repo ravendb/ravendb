@@ -130,7 +130,7 @@ namespace Raven.Server.Json
             // Read out an Int64 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             
-            long count = 0;
+            ulong count = 0;
             int shift = 0;
             byte b;
             do
@@ -138,15 +138,14 @@ namespace Raven.Server.Json
                 if (shift == 69)
                     throw new FormatException("Bad variable size int");
                 b = _mem[pos++];
-                count |= (long)(b & 0x7F) << shift;
+                count |= (ulong)(b & 0x7F) << shift;
                 shift += 7;
             } while ((b & 0x80) != 0);
 
             // good handling for negative values via:
             // http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
 
-            long result = (((count << 63) >> 63) ^ count) >> 1;
-            return result ^ (count & (1L << 63));
+            return (long)(count >> 1) ^ -(long)(count & 1);
         }
     }
 }
