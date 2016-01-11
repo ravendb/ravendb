@@ -1,5 +1,5 @@
 ﻿{
-  "Test\": "\n",
-  "Url": "http://foo",
+  "Test\"": "\n",
+  "Url": "http: //foo",
   "TwoEscapes": "\r\n"
 }
