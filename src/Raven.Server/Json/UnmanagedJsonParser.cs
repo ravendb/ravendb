@@ -60,8 +60,9 @@ namespace Raven.Server.Json
                 // first time, need to check preamble
                 _line++;
                 EnsureBuffer(1);
-                if (_buffer[_pos++] == Utf8Preamble[0])
+                if (_buffer[_pos] == Utf8Preamble[0])
                 {
+                    _pos++;
                     EnsureRestOfToken(Utf8Preamble, "UTF8 Preamble");
                 }
             }
@@ -183,7 +184,7 @@ namespace Raven.Server.Json
                     case (byte)'8':
                     case (byte)'9':
                         Long *= 10;
-                        Long += (byte)'0' - b;
+                        Long += b- (byte)'0';
                         break;
                     default:
                         switch (b)
@@ -204,6 +205,8 @@ namespace Raven.Server.Json
                                     return;
                                 }
                                 Current = Tokens.Integer;
+                                if (isNegative)
+                                    Long ^= -1;
                                 return;
                             default:
                                 throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
