@@ -49,9 +49,10 @@ namespace Raven.Server.Json
             if (_propertyNameToId.TryGetValue(propName, out prop) == false)
             {
                 var propIndex = _docPropNames.Count;
+                propName = _context.Intern(propName);
                 prop = new PropertyName
                 {
-                    Comparer = _context.Intern(propName),
+                    Comparer = propName,
                     GlobalSortOrder = -1,
                     PropertyId = propIndex
                 };
