@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -385,7 +386,7 @@ Count = g.Sum(x => x.Count)
             var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null,
                     store.Url + string.Format("/databases/{0}/indexes/{1}?debug=keys", store.DefaultDatabase, IndexName),
-                    "GET",
+                    HttpMethod.Get, 
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions));
 

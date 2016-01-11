@@ -1140,6 +1140,11 @@ class shell extends viewModelBase {
         this.navigate(this.appUrls.adminSettingsCluster());
     }
 
+    selectNone() {
+        this.activateDatabase(null);
+        this.activeFilesystem(null);
+    }
+
     private spinnerOptions = {
         lines: 17, // The number of lines to draw
         length: 28, // The length of each line
@@ -1169,10 +1174,6 @@ class shell extends viewModelBase {
             var resourcesNames = shell.resources().map((rs: resource) => rs.name);
             return resourcesNames.distinct();
         });
-
-    selectNone() {
-        this.activateDatabase(null);
-        this.activeFilesystem(null);
     }
 }
 

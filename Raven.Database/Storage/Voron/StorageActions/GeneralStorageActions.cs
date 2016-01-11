@@ -142,8 +142,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                 if (beforePulseTransaction != null)
                     beforePulseTransaction();
-
-                logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
+                if (logger.IsDebugEnabled)
+                    logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
                 PulseTransaction();
                 return true;
             }

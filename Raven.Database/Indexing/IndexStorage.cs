@@ -1381,13 +1381,13 @@ namespace Raven.Database.Indexing
                      where index.Value.PublicName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
                      orderby lastQueryTime
                      select new UnusedIndexState
-                         {
-                             LastQueryTime = lastQueryTime,
-                             Index = index.Value,
-                             Name = index.Value.PublicName,
-                             Priority = stats.Priority,
-                             CreationDate = stats.CreatedTimestamp
-                         }).ToArray();
+                     {
+                         LastQueryTime = lastQueryTime,
+                         Index = index.Value,
+                         Name = index.Value.PublicName,
+                         Priority = stats.Priority,
+                         CreationDate = stats.CreatedTimestamp
+                     }).ToArray();
 
                 var timeToWaitBeforeMarkingAutoIndexAsIdle = documentDatabase.Configuration.TimeToWaitBeforeMarkingAutoIndexAsIdle;
                 var timeToWaitForIdleMinutes = timeToWaitBeforeMarkingAutoIndexAsIdle.TotalMinutes * 10;
@@ -1557,11 +1557,13 @@ namespace Raven.Database.Indexing
         {
             var sp = Stopwatch.StartNew();
 
+            try
+            {
                 value.Flush(value.GetLastEtagFromStats());
             }
             catch (Exception e)
             {
-                value.IncrementWriteErrors(e);
+                value.HandleWriteError(e);
                 log.WarnException(string.Format("Failed to flush {0} index: {1} (id: {2})",
                     GetIndexType(value.IsMapReduce), value.PublicName, value.IndexId), e);
                 throw;

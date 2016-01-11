@@ -1482,7 +1482,7 @@ namespace Raven.Abstractions.Smuggler
             if (intServerVersion < 25)
             {
                 
-                ops.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                ops.ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", serverVersion, versionAtt.Version);
                 return new ServerSupportedFeatures
                 {
                     IsTransformersSupported = false,

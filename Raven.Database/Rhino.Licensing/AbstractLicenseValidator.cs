@@ -292,7 +292,8 @@ namespace Rhino.Licensing
         {
             try
             {
-                Logger.Debug("Validating license...");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug("Validating license...");
                 if (TryLoadingLicenseValuesFromValidatedXml() == false)
                 {
                     Logger.Warn("Failed validating license:\r\n{0}", License);
