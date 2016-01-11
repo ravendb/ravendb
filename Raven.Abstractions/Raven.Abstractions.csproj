@@ -30,6 +30,7 @@
     <NoWarn>1591, 618</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
