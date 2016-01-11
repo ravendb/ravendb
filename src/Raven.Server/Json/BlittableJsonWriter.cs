@@ -432,41 +432,40 @@ namespace Raven.Server.Json
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteVariableSizeLong(long value)
         {
             // see zig zap trick here:
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
             // for negative values
 
-            var count = 1;
+            var buffer = stackalloc byte[10];
+            var count = 0;
             var v = (ulong)((value << 1) ^ (value >> 63));
             while (v >= 0x80)
             {
-                count++;
-                _stream.WriteByte((byte)(v | 0x80));
+                buffer[count++] = (byte)(v | 0x80);
                 v >>= 7;
             }
-            _stream.WriteByte((byte) v);
+            buffer[count++] = (byte)(v);
+            _stream.Write(buffer, count);
             return count;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
-            var count = 1;
+            var buffer = stackalloc byte[5];
+            var count = 0;
             var v = (uint)value;
             while (v >= 0x80)
             {
-                _stream.WriteByte((byte)(v | 0x80));
+                buffer[count++] = (byte)(v | 0x80);
                 v >>= 7;
-                count++;
             }
-            _stream.WriteByte((byte)v);
+            buffer[count++] = (byte)(v);
+            _stream.Write(buffer, count);
             return count;
         }
-
 
         public class PropertyTag
         {
