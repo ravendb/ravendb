@@ -255,10 +255,11 @@ namespace Raven.Server.Json
                     if (b == (byte)'\\')
                     {
                         StringBuffer.Write(_bufferPtr + start, _pos - start - 1);
-                        start = _pos + 1;
+                        
                         EnsureBuffer(1);
 
                         b = _buffer[_pos++];
+                        start = _pos;
                         _charPos++;
                         if (b != (byte)'u')
                             EscapePositions.Add(StringBuffer.SizeInBytes);
