@@ -415,18 +415,14 @@ namespace Raven.Server.Json
             switch (sizeOfValue)
             {
                 case sizeof(int):
-                    var intBuffer = stackalloc byte[4];
-                    intBuffer[0] = (byte)value;
-                    intBuffer[1] = (byte)(value >> 8);
-                    intBuffer[2] = (byte)(value >> 16);
-                    intBuffer[3] = (byte)(value >> 24);
-                    _stream.Write(intBuffer, 4);
+                    _stream.WriteByte((byte)value);
+                    _stream.WriteByte((byte)(value >> 8));
+                    _stream.WriteByte((byte)(value >> 16));
+                    _stream.WriteByte((byte)(value >> 24));
                     break;
                 case sizeof(short):
-                    var shortBuffer = stackalloc byte[2];
-                    shortBuffer[0] = (byte)value;
-                    shortBuffer[1] = (byte)(value >> 8);
-                    _stream.Write(shortBuffer, 2);
+                    _stream.WriteByte((byte)value);
+                    _stream.WriteByte((byte)(value >> 8));
                     break;
                 case sizeof(byte):
                     _stream.WriteByte((byte)value);
@@ -443,16 +439,15 @@ namespace Raven.Server.Json
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
             // for negative values
 
-            var buffer = stackalloc byte[10];
-            var count = 0;
+            var count = 1;
             var v = (ulong)((value << 1) ^ (value >> 63));
             while (v >= 0x80)
             {
-                buffer[count++] = (byte)(v | 0x80);
+                count++;
+                _stream.WriteByte((byte)(v | 0x80));
                 v >>= 7;
             }
-            buffer[count++] = (byte)(v);
-            _stream.Write(buffer, count);
+            _stream.WriteByte((byte) v);
             return count;
         }
 
@@ -460,12 +455,13 @@ namespace Raven.Server.Json
         public int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
-            var count = 0;
+            var count = 1;
             var v = (uint)value;
             while (v >= 0x80)
             {
                 _stream.WriteByte((byte)(v | 0x80));
                 v >>= 7;
+                count++;
             }
             _stream.WriteByte((byte)v);
             return count;
