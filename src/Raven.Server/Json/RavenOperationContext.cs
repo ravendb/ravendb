@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
+using Sparrow;
 //using Raven.Imports.Newtonsoft.Json;
 using Voron.Impl;
 using Voron.Util;
@@ -14,10 +15,11 @@ namespace Raven.Server.Json
     /// </summary>
     public unsafe class RavenOperationContext : IDisposable
     {
-        private readonly UnmanagedBuffersPool _pool;
+        public readonly UnmanagedBuffersPool Pool;
         private byte* _tempBuffer;
         private int _bufferSize;
         private Dictionary<string, LazyStringValue> _fieldNames;
+        private Dictionary<LazyStringValue, LazyStringValue> _internedFieldNames;
         private Dictionary<string, byte[]> _fieldNamesAsByteArrays;
         private bool _disposed;
 
@@ -31,7 +33,7 @@ namespace Raven.Server.Json
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
-            _pool = pool;
+            Pool = pool;
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
         }
@@ -63,12 +65,12 @@ namespace Raven.Server.Json
 
             if (_bufferSize == 0)
             {
-                _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
+                _tempBuffer = Pool.GetMemory(requestedSize, out _bufferSize);
             }
             else if (requestedSize > _bufferSize)
             {
-                _pool.ReturnMemory(_tempBuffer);
-                _tempBuffer = _pool.GetMemory(requestedSize, string.Empty, out _bufferSize);
+                Pool.ReturnMemory(_tempBuffer);
+                _tempBuffer = Pool.GetMemory(requestedSize, out _bufferSize);
             }
 
             actualSize = _bufferSize;
@@ -81,7 +83,7 @@ namespace Raven.Server.Json
         /// <param name="documentId"></param>
         public UnmanagedWriteBuffer GetStream(string documentId)
         {
-            return new UnmanagedWriteBuffer(_pool, documentId);
+            return new UnmanagedWriteBuffer(Pool);
         }
 
         public void Dispose()
@@ -90,12 +92,20 @@ namespace Raven.Server.Json
                 return;
             Lz4.Dispose();
             if (_tempBuffer != null)
-                _pool.ReturnMemory(_tempBuffer);
+                Pool.ReturnMemory(_tempBuffer);
             if (_fieldNames != null)
             {
-                foreach (var stringToByteComparable in _fieldNames.Values)
+                foreach (var kvp in _fieldNames.Values)
                 {
-                    _pool.ReturnMemory(stringToByteComparable.Buffer);
+                    Pool.ReturnMemory(kvp.Buffer);
+                }
+            }
+            if (_internedFieldNames != null)
+            {
+                foreach (var key in _internedFieldNames.Keys)
+                {
+                    Pool.ReturnMemory(key.Buffer);
+
                 }
             }
             _disposed = true;
@@ -112,12 +122,29 @@ namespace Raven.Server.Json
 
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
             int actualSize;
-            var memory = _pool.GetMemory(maxByteCount, field, out actualSize);
+            var memory = Pool.GetMemory(maxByteCount, out actualSize);
             fixed (char* pField = field)
             {
                 actualSize = Encoding.GetBytes(pField, field.Length, memory, actualSize);
                 _fieldNames[field] = value = new LazyStringValue(field, memory, actualSize, this);
             }
+            return value;
+        }
+
+        public LazyStringValue Intern(LazyStringValue val)
+        {
+            LazyStringValue value;
+            if (_internedFieldNames == null)
+                _internedFieldNames = new Dictionary<LazyStringValue, LazyStringValue>();
+
+            if (_internedFieldNames.TryGetValue(val, out value))
+                return value;
+
+            int actualSize;
+            var memory = Pool.GetMemory(val.Size, out actualSize);
+            Memory.Copy(memory, val.Buffer, val.Size);
+            value = new LazyStringValue(null, memory, val.Size, this);
+            _internedFieldNames[value] = value;
             return value;
         }
 
@@ -137,19 +164,22 @@ namespace Raven.Server.Json
             return returnedByteArray;
         }
 
-        public BlittableJsonWriter Read(JsonTextReader reader, string documentId)
+        public BlittableJsonWriter Read(Stream stream, string documentId)
         {
-            var writer = new BlittableJsonWriter(reader, this, documentId);
-            try
+            using (var parser = new UnmanagedJsonParser(stream, this))
             {
-                CachedProperties.NewDocument();
-                writer.Run();
-                return writer;
-            }
-            catch (Exception)
-            {
-                writer.Dispose();
-                throw;
+                var writer = new BlittableJsonWriter(parser, this, documentId);
+                try
+                {
+                    CachedProperties.NewDocument();
+                    writer.Run();
+                    return writer;
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
             }
         }
 

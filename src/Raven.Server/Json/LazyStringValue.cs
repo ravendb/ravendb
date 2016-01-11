@@ -14,7 +14,7 @@ namespace Raven.Server.Json
 
         public LazyStringValue(string str, byte* buffer, int size, RavenOperationContext context)
         {
-            String = str;
+           // String = str;
             Size = size;
             _context = context;
             Buffer = buffer;

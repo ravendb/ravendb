@@ -14,7 +14,22 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            WriteToStreamBenchmark.Indexing(@"C:\Work\JSON\Lines");
+            foreach (var sample in UnmanageJsonReaderTests.Samples())
+            {
+                var f = (string) sample[0];
+                //if(f.Contains("nested")==false)continue;
+                Console.WriteLine(f);
+                try
+                {
+                    new BlittableFormatTests().CheckRoundtrip(f);
+                }
+                catch (Exception e)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(e);
+                    Console.ResetColor();
+                }
+            }
         }
     }
 

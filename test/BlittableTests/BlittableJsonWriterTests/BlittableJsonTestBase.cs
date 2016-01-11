@@ -9,7 +9,7 @@ using Xunit;
 
 namespace BlittableTests.BlittableJsonWriterTests
 {
-    public abstract class BlittableJsonTestBase
+    public abstract class BlittableJsonTestBase 
     {
         public string GenerateSimpleEntityForFunctionalityTest()
         {

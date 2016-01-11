@@ -13,7 +13,6 @@ namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonTextWriter
     {
-        private readonly RavenOperationContext _context;
         private readonly Stream _stream;
 
         private const byte StartObject = (byte)'{';
@@ -23,16 +22,15 @@ namespace Raven.Server.Json
         private const byte Comma = (byte)',';
         private const byte Quote = (byte)'"';
         private const byte Colon = (byte)':';
-        private static readonly byte[] NullBuffer = { (byte)'n', (byte)'u', (byte)'l', (byte)'l', };
-        private static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
-        private static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
+        public static readonly byte[] NullBuffer = { (byte)'n', (byte)'u', (byte)'l', (byte)'l', };
+        public static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
+        public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
 
         private int _pos;
         private readonly byte[] _buffer;
 
         public BlittableJsonTextWriter(RavenOperationContext context, Stream stream)
         {
-            _context = context;
             _stream = stream;
             _buffer = context.GetManagedBuffer();
         }

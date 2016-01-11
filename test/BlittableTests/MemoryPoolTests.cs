@@ -19,7 +19,7 @@ namespace BlittableTests
                 {
                     int curSize = 0;
                     ulong curAddress = 0;
-                    curAddress = (ulong) pool.GetMemory(i, string.Empty, out curSize);
+                    curAddress = (ulong) pool.GetMemory(i, out curSize);
                     allocatedMemory.Add(Tuple.Create(curSize,curAddress));
                 }
                 foreach (var tuple in allocatedMemory)
@@ -41,7 +41,7 @@ namespace BlittableTests
                     {
                         int curSize = 0;
                         ulong curAddress = 0;
-                        curAddress = (ulong) pool.GetMemory(i, string.Empty, out curSize);
+                        curAddress = (ulong) pool.GetMemory(i, out curSize);
                         allocatedMemory.Add(Tuple.Create(curSize, curAddress));
                     }
                 });
@@ -65,7 +65,7 @@ namespace BlittableTests
                     {
                         int curSize = 0;
                         ulong curAddress = 0;
-                        curAddress = (ulong)pool.GetMemory(i, string.Empty, out curSize);
+                        curAddress = (ulong)pool.GetMemory(i, out curSize);
                         allocatedMemory.Add(Tuple.Create(curSize, curAddress));
                     }
                     allocatedMemory.CompleteAdding();

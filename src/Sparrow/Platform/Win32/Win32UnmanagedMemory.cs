@@ -16,7 +16,7 @@ namespace Sparrow.Platform
 
         [DllImport("msvcrt.dll", EntryPoint = "memmove", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
         [SecurityCritical]
-        public static extern int Move(byte* b1, byte* b2, int count);
+        public static extern int Move(byte* dest, byte* src, int count);
 
         [DllImport("msvcrt.dll", EntryPoint = "memset", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
         [SecurityCritical]

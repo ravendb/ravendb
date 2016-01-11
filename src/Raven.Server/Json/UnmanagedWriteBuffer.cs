@@ -25,14 +25,13 @@ namespace Raven.Server.Json
 
         public int SizeInBytes => _sizeInBytes;
 
-        public UnmanagedWriteBuffer(UnmanagedBuffersPool buffersPool, string documentId)
+        public UnmanagedWriteBuffer(UnmanagedBuffersPool buffersPool)
         {
             _buffersPool = buffersPool;
-            _documentId = documentId;
             int size;
             _current = new Segment
             {
-                Address = _buffersPool.GetMemory(4096, documentId, out size),
+                Address = _buffersPool.GetMemory(4096, out size),
                 ActualSize = size,
             };
         }
@@ -72,7 +71,7 @@ namespace Raven.Server.Json
             _current = new Segment
             {
                 Prev = _current,
-                Address = _buffersPool.GetMemory(nextSegmentSize, _documentId, out nextSegmentSize),
+                Address = _buffersPool.GetMemory(nextSegmentSize, out nextSegmentSize),
                 ActualSize = nextSegmentSize,
             };
         }
@@ -103,6 +102,19 @@ namespace Raven.Server.Json
             }
             Debug.Assert(copiedBytes == _sizeInBytes);
             return copiedBytes;
+        }
+
+        public void Clear()
+        {
+            // this releases everything but the current item
+            var prev = _current.Prev;
+            while (prev != null)
+            {
+                _buffersPool.ReturnMemory(prev.Address);
+                prev = _current.Prev;
+            }
+            _current.Used = 0;
+            _sizeInBytes = 0;
         }
 
         public void Dispose()
