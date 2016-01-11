@@ -1,4 +1,4 @@
-@font-face {
+﻿@font-face {
   font-family: 'WebRoboto';
   font-style: normal;
   font-weight: 400;
@@ -6605,6 +6605,7 @@ label {
 html,
 body {
   height: 100%;
+  overflow-y: scroll;
 }
 .not-implemented-yet {
   position: relative;
@@ -7095,6 +7096,10 @@ div.btn-group[data-toggle=buttons-radio] button.active {
   background-color: #2F96B4;
   color: rgba(255, 255, 255, 0.75);
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+#documents-page-container {
+  border-right: solid 3px rgba(0, 0, 0, 0.73);
+  overflow-y: hidden;
 }
 .document-collections li {
   outline: none;
