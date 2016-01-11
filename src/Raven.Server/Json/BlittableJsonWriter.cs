@@ -56,15 +56,20 @@ namespace Raven.Server.Json
             return _compressionBuffer;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte* GetTempBuffer(int minSize)
         {
-            // enlarge buffer if needed
-            if (minSize > _bufferSize)
-            {
-                _bufferSize = (int)Voron.Util.Utils.NearestPowerOfTwo(minSize);
-                _buffer = _context.Pool.GetMemory(_bufferSize, out _bufferSize);
-            }
-            return _buffer;
+            if (minSize <= _bufferSize)
+                return _buffer;
+            return IncreaseTempBufferSize(minSize);
+        }
+
+        private unsafe byte* IncreaseTempBufferSize(int minSize)
+        {
+            if (_buffer != null)
+                _context.Pool.ReturnMemory(_buffer);
+            _bufferSize = (int) Voron.Util.Utils.NearestPowerOfTwo(minSize);
+            return _buffer = _context.Pool.GetMemory(_bufferSize, out _bufferSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -455,16 +460,14 @@ namespace Raven.Server.Json
         public int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
-            var buffer = stackalloc byte[5];
             var count = 0;
             var v = (uint)value;
             while (v >= 0x80)
             {
-                buffer[count++] = (byte)(v | 0x80);
+                _stream.WriteByte((byte)(v | 0x80));
                 v >>= 7;
             }
-            buffer[count++] = (byte)(v);
-            _stream.Write(buffer, count);
+            _stream.WriteByte((byte)v);
             return count;
         }
 

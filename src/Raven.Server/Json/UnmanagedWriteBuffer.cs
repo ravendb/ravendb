@@ -111,16 +111,17 @@ namespace Raven.Server.Json
 
         public void Clear()
         {
+            _current.Used = 0;
+            _sizeInBytes = 0;
+
             // this releases everything but the current item
             var prev = _current.Previous;
-            _current.Previous = null;
             while (prev != null)
             {
                 _buffersPool.ReturnMemory(prev.Address);
                 prev = _current.Previous;
             }
-            _current.Used = 0;
-            _sizeInBytes = 0;
+            _current.Previous = null;
         }
 
         public void Dispose()

@@ -157,7 +157,8 @@ namespace Raven.Server.Json
         private void ParseNumber(byte b)
         {
             StringBuffer.Clear();
-            EscapePositions.Clear();
+            if (EscapePositions.Count > 0)
+                EscapePositions.Clear();
             Long = 0;
 
             var zeroPrefix = b == '0';
@@ -236,7 +237,8 @@ namespace Raven.Server.Json
 
         private void ParseString(byte quote)
         {
-            EscapePositions.Clear();
+            if (EscapePositions.Count > 0)
+                EscapePositions.Clear();
             StringBuffer.Clear();
             while (true)
             {
