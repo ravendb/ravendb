@@ -13,15 +13,15 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
 {
     public unsafe class VariousPropertyAmountsTests
     {
-        public ExpandoObject GenerateExpandoObject(int depth=1, int width=8, bool reuseFieldNames = true)
+        public ExpandoObject GenerateExpandoObject(int depth = 1, int width = 8, bool reuseFieldNames = true)
         {
-            if (depth <= 0 || width<=0)
+            if (depth <= 0 || width <= 0)
                 throw new ArgumentException("Illegal depth or width");
-            
+
             if (depth == 1)
             {
                 var curExpando = new ExpandoObject();
-                var cuExpandoAsDictionary = (IDictionary<string, object>) curExpando;
+                var cuExpandoAsDictionary = (IDictionary<string, object>)curExpando;
                 for (var i = 0; i < width; i++)
                 {
                     cuExpandoAsDictionary["Field" + i] = i.ToString();
@@ -30,7 +30,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
                 return curExpando;
             }
 
-           
+
 
             var expando = new ExpandoObject();
             var expandoAsDictionary = (IDictionary<string, object>)expando;
@@ -41,10 +41,10 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
 
             return expando;
         }
-        
-        public string GetJsonString(int depth=1, int width=8, bool reuseFieldNames=true)
+
+        public string GetJsonString(int depth = 1, int width = 8, bool reuseFieldNames = true)
         {
-            var expando = GenerateExpandoObject(depth,width,reuseFieldNames);
+            var expando = GenerateExpandoObject(depth, width, reuseFieldNames);
 
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings();
             serializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
@@ -70,11 +70,11 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             }
         }
 
-      
+
         [Theory]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
-        [InlineData(short.MaxValue+1)]
+        [InlineData(short.MaxValue + 1)]
         public void FlatBoundarySizeFieldsAmount(int maxValue)
         {
             //var maxValue = short.MaxValue + 1000;
@@ -83,10 +83,9 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             byte* ptr;
             int size = 0;
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024);
-            
+
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
-                "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
@@ -117,8 +116,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)), 
-                "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);

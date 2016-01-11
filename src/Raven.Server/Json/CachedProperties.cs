@@ -22,19 +22,18 @@ namespace Raven.Server.Json
         private class PropertyName
         {
             public LazyStringValue Comparer;
-            public string Value;
             public int GlobalSortOrder;
             public int PropertyId;
 
             public override string ToString()
             {
-                return $"Value: {Value}, GlobalSortOrder: {GlobalSortOrder}, PropertyId: {PropertyId}";
+                return $"Value: {Comparer}, GlobalSortOrder: {GlobalSortOrder}, PropertyId: {PropertyId}";
             }
         }
 
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
         private readonly List<PropertyName> _propertiesSortOrder = new List<PropertyName>();
-        private readonly Dictionary<string, PropertyName> _propertyNameToId = new Dictionary<string, PropertyName>(StringComparer.Ordinal);
+        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>();
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;
@@ -44,7 +43,7 @@ namespace Raven.Server.Json
             _context = context;
         }
 
-        public int GetPropertyId(string propName)
+        public int GetPropertyId(LazyStringValue propName)
         {
             PropertyName prop;
             if (_propertyNameToId.TryGetValue(propName, out prop) == false)
@@ -52,8 +51,7 @@ namespace Raven.Server.Json
                 var propIndex = _docPropNames.Count;
                 prop = new PropertyName
                 {
-                    Comparer = _context.GetComparerFor(propName),
-                    Value = propName,
+                    Comparer = _context.Intern(propName),
                     GlobalSortOrder = -1,
                     PropertyId = propIndex
                 };
@@ -118,9 +116,9 @@ namespace Raven.Server.Json
             return _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
         }
 
-        public string GetProperty(int index)
+        public LazyStringValue GetProperty(int index)
         {
-            return _docPropNames[index].Value;
+            return _docPropNames[index].Comparer;
         }
 
         public void NewDocument()

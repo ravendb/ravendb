@@ -49,7 +49,7 @@ namespace Raven.Server.Web.System
             {
                 var dbId = "db/" + ctx.Request.Query["id"];
 
-                var writer = context.Read(new JsonTextReader(new StreamReader(ctx.Request.Body)),  dbId);
+                var writer = context.Read(ctx.Request.Body,  dbId);
 
                 _serverStore.Write(dbId, writer);
 

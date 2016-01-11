@@ -14,6 +14,8 @@ namespace Raven.Server.Json
 {
     public unsafe class UnmanagedJsonParser : IDisposable
     {
+        public static readonly byte[] Utf8Preamble = System.Text.Encoding.UTF8.GetPreamble();
+
         private readonly Stream _stream;
         private readonly byte[] _buffer;
         private char[] _charBuffer;
@@ -21,17 +23,16 @@ namespace Raven.Server.Json
         private int _pos;
         private int _bufSize;
         public Tokens Current;
-        private readonly UnmanagedWriteBuffer _strBuffer;
+        public readonly UnmanagedWriteBuffer StringBuffer;
         private GCHandle _bufferHandle;
         private readonly byte* _bufferPtr;
 
-        private int _line = 1;
+        private int _line;
         private int _charPos = 1;
 
         public readonly List<int> EscapePositions = new List<int>(); 
 
         public long Long;
-        public double Double;
 
         public UnmanagedJsonParser(Stream stream, RavenOperationContext ctx)
         {
@@ -41,7 +42,7 @@ namespace Raven.Server.Json
             try
             {
                 _bufferPtr = (byte*)_bufferHandle.AddrOfPinnedObject();
-                _strBuffer = new UnmanagedWriteBuffer(ctx.Pool);
+                StringBuffer = new UnmanagedWriteBuffer(ctx.Pool);
             }
             catch (Exception)
             {
@@ -54,97 +55,100 @@ namespace Raven.Server.Json
 
         public void Read()
         {
-            EnsureBuffer(0);
-            var b = _buffer[_pos++];
-            _charPos++;
-            switch (b)
+            if (_line == 0)
             {
-                case (byte)'\r':
-                case (byte)'\n':
-                    _line++;
-                    _charPos = 1;
-                    break;
-                case (byte)' ':
-                case (byte)'\t':
-                case (byte)'\v':
-                case (byte)'\f':
-                    //white space, we can safely ignore
-                    break;
+                // first time, need to check preamble
+                _line++;
+                EnsureBuffer(1);
+                if (_buffer[_pos++] == Utf8Preamble[0])
+                {
+                    EnsureRestOfToken(Utf8Preamble, "UTF8 Preamble");
+                }
+            }
 
-                case (byte)',':
-                    switch (Current)
-                    {
-                        case Tokens.Comma:
-                        case Tokens.StartObject:
-                        case Tokens.StartArray:
-                            throw CreateException("Cannot have a comma in this position");
-                    }
-                    Current = Tokens.Comma;
-                    break;
-                case (byte)'N':
-                    EnsureRestOfToken(NaN, "NaN");
-                    Current = Tokens.NaN;
-                    _pos += 2;
-                    _charPos += 2;
-                    break;
-                case (byte)'n':
-                    EnsureRestOfToken(BlittableJsonTextWriter.NullBuffer, "null");
-                    Current = Tokens.Null;
-                    _pos += 3;
-                    _charPos += 3;
-                    break;
-                case (byte)'t':
-                    EnsureRestOfToken(BlittableJsonTextWriter.TrueBuffer, "true");
-                    Current = Tokens.True;
-                    _pos += 3;
-                    _charPos += 3;
-                    break;
-                case (byte)'f':
-                    EnsureRestOfToken(BlittableJsonTextWriter.FalseBuffer, "false");
-                    Current = Tokens.False;
-                    _pos += 4;
-                    _charPos += 4;
-                    break;
-                case (byte)'"':
-                case (byte)'\'':
-                    ParseString(b);
-                    break;
-                case (byte)'{':
-                    Current = Tokens.StartObject;
-                    break;
-                case (byte)'[':
-                    Current = Tokens.StartArray;
-                    break;
-                case (byte)'}':
-                    Current = Tokens.EndObject;
-                    break;
-                case (byte)']':
-                    Current = Tokens.EndArray;
-                    break;
-                //numbers
+            while (true)
+            {
+                EnsureBuffer(0);
+                var b = _buffer[_pos++];
+                _charPos++;
+                switch (b)
+                {
+                    case (byte)'\r':
+                        EnsureBuffer(1);
+                        if(_buffer[_pos+1]== (byte)'\n')
+                            continue;
+                        goto case (byte) '\n';
+                    case (byte)'\n':
+                        _line++;
+                        _charPos = 1;
+                        break;
+                    case (byte)' ': case (byte)'\t': case (byte)'\v': case (byte)'\f':
+                        //white space, we can safely ignore
+                        break;
+                    case (byte)',':
+                        switch (Current)
+                        {
+                            case Tokens.Comma:
+                            case Tokens.StartObject:
+                            case Tokens.StartArray:
+                                throw CreateException("Cannot have a comma in this position");
+                        }
+                        Current = Tokens.Comma;
+                        break;
+                    case (byte)'N':
+                        EnsureRestOfToken(NaN, "NaN");
+                        Current = Tokens.Float;
+                        _charPos += 2;
+                        return;
+                    case (byte)'n':
+                        EnsureRestOfToken(BlittableJsonTextWriter.NullBuffer, "null");
+                        Current = Tokens.Null;
+                        _charPos += 3;
+                        return;
+                    case (byte)'t':
+                        EnsureRestOfToken(BlittableJsonTextWriter.TrueBuffer, "true");
+                        Current = Tokens.True;
+                        _charPos += 3;
+                        return;
+                    case (byte)'f':
+                        EnsureRestOfToken(BlittableJsonTextWriter.FalseBuffer, "false");
+                        Current = Tokens.False;
+                        _charPos += 4;
+                        return;
+                    case (byte)'"':
+                    case (byte)'\'':
+                        ParseString(b);
+                        return;
+                    case (byte)'{':
+                        Current = Tokens.StartObject;
+                        return;
+                    case (byte)'[':
+                        Current = Tokens.StartArray;
+                        return;
+                    case (byte)'}':
+                        Current = Tokens.EndObject;
+                        return;
+                    case (byte)']':
+                        Current = Tokens.EndArray;
+                        return;
+                    //numbers
 
-                //case (byte)'0':// we don't support numbers starting with 0 (0x for hex or 0 for octal)
-                case (byte)'1':
-                case (byte)'2':
-                case (byte)'3':
-                case (byte)'4':
-                case (byte)'5':
-                case (byte)'6':
-                case (byte)'7':
-                case (byte)'8':
-                case (byte)'9':
-                case (byte)'-':// negative number
-                    ParseNumber(b);
-                    break;
+                    //case (byte)'0':// we don't support numbers starting with 0 (0x for hex or 0 for octal)
+                    case (byte)'1':case (byte)'2':case (byte)'3':case (byte)'4':case (byte)'5':
+                    case (byte)'6':case (byte)'7':case (byte)'8':case (byte)'9':case (byte)'-':// negative number
+                        ParseNumber(b);
+                        return;
+                }
             }
         }
 
         private void ParseNumber(byte b)
         {
-            if (_smallBuffer == null)
-                _smallBuffer = new byte[32];//max decimal size in chars is 29, max double is 23
+            StringBuffer.Clear();
+            EscapePositions.Clear();
+            Long = 0;
 
-            var numLen = 0;
+            var isNegative = false;
             var isDouble = false;
             var isExponent = false;
             do
@@ -164,6 +168,10 @@ namespace Raven.Server.Json
                         isDouble = true;
                         break;
                     case (byte)'-':
+                        if(isNegative)
+                            throw CreateException("Already got '-' in this number value");
+                        isNegative = true;
+                        break;
                     case (byte)'0':
                     case (byte)'1':
                     case (byte)'2':
@@ -174,6 +182,8 @@ namespace Raven.Server.Json
                     case (byte)'7':
                     case (byte)'8':
                     case (byte)'9':
+                        Long *= 10;
+                        Long += (byte)'0' - b;
                         break;
                     default:
                         switch (b)
@@ -190,33 +200,16 @@ namespace Raven.Server.Json
                             case (byte)',':
                                 if (isDouble)
                                 {
-                                    Current = Tokens.Double;
-                                    var s = Encoding.UTF8.GetString(_smallBuffer, 0, numLen);
-                                    if (double.TryParse(s, NumberStyles.Float | NumberStyles.AllowThousands,
-                                        CultureInfo.InvariantCulture, out Double))
-                                        return;
-                                    throw CreateException("Value is not a valid number");
+                                    Current = Tokens.Float;
+                                    return;
                                 }
-                                Current = Tokens.Number;
-                                Long = 0;
-                                var i = _smallBuffer[0] == (byte)'-' ? 1 : 0;
-                                for (; i < numLen; i++)
-                                {
-                                    Long *= 10;
-                                    Long += '0' - _smallBuffer[i];
-                                }
-                                if (_smallBuffer[0] == (byte)'-')
-                                {
-                                    if (numLen == 1)
-                                        throw CreateException("Number cannot be a single minus sign");
-                                    Long ^= -1;//switch the sign
-                                }
+                                Current = Tokens.Integer;
                                 return;
                             default:
                                 throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
                         }
                 }
-                _smallBuffer[numLen++] = b;
+                StringBuffer.WriteByte(b);
                 EnsureBuffer(1);
                 b = _buffer[_pos++];
                 _charPos++;
@@ -226,7 +219,7 @@ namespace Raven.Server.Json
         private void ParseString(byte quote)
         {
             EscapePositions.Clear();
-            _strBuffer.Clear();
+            StringBuffer.Clear();
             while (true)
             {
                 var start = _pos;
@@ -236,40 +229,41 @@ namespace Raven.Server.Json
                     if (b == quote)
                     {
                         Current = Tokens.String;
+                        StringBuffer.Write(_bufferPtr + start, _pos - start-1 /*don't include the last quote*/);
                         return;
                     }
                     if (b == (byte)'\\')
                     {
-                        _strBuffer.Write(_bufferPtr + start, _pos - start);
+                        StringBuffer.Write(_bufferPtr + start, _pos - start);
                         start = _pos;
                         EnsureBuffer(1);
 
                         b = _buffer[_pos++];
 
                         if (b != (byte) 'u')
-                            EscapePositions.Add(_strBuffer.SizeInBytes);
+                            EscapePositions.Add(StringBuffer.SizeInBytes);
 
                         switch (b)
                         {
                             case (byte)'r':
-                                _strBuffer.WriteByte((byte)'\r');
+                                StringBuffer.WriteByte((byte)'\r');
                                 break;
                             case (byte)'n':
-                                _strBuffer.WriteByte((byte)'\n');
+                                StringBuffer.WriteByte((byte)'\n');
                                 break;
                             case (byte)'b':
-                                _strBuffer.WriteByte((byte)'\b');
+                                StringBuffer.WriteByte((byte)'\b');
                                 break;
                             case (byte)'f':
-                                _strBuffer.WriteByte((byte)'\f');
+                                StringBuffer.WriteByte((byte)'\f');
                                 break;
                             case (byte)'t':
-                                _strBuffer.WriteByte((byte)'\t');
+                                StringBuffer.WriteByte((byte)'\t');
                                 break;
                             case (byte)'"':
                             case (byte)'\\':
                             case (byte)'/':
-                                _strBuffer.WriteByte(b);
+                                StringBuffer.WriteByte(b);
                                 break;
                             case (byte)'\r':// line continuation, skip
                                 EnsureBuffer(1);// flush the buffer, but skip the \,\r chars
@@ -292,7 +286,7 @@ namespace Raven.Server.Json
                     }
                 }
                 // copy the buffer to the native code, then refill
-                _strBuffer.Write(_bufferPtr + start, _pos - start);
+                StringBuffer.Write(_bufferPtr + start, _pos - start);
                 EnsureBuffer(1);
             }
         }
@@ -330,7 +324,7 @@ namespace Raven.Server.Json
             var byteCount = Encoding.UTF8.GetBytes(_charBuffer, 0, 1,
                 _smallBuffer, 0);
             fixed (byte* p = _smallBuffer)
-                _strBuffer.Write(p, byteCount);
+                StringBuffer.Write(p, byteCount);
             _pos += 4;
         }
 
@@ -340,9 +334,8 @@ namespace Raven.Server.Json
             False,
             True,
             String,
-            Double,
-            Number,
-            NaN,
+            Float,
+            Integer,
             Comma,
             StartObject,
             StartArray,
@@ -354,8 +347,12 @@ namespace Raven.Server.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureBuffer(int minRead)
         {
-            if (_pos + minRead < _bufSize)
-                return;
+            if (_pos + minRead >= _bufSize)
+                LoadBufferFromStream(minRead);
+        }
+
+        private void LoadBufferFromStream(int minRead)
+        {
             _pos = 0;
             _bufSize = 0;
             do
@@ -400,7 +397,7 @@ namespace Raven.Server.Json
         public void Dispose()
         {
             _bufferHandle.Free();
-            _strBuffer?.Dispose();
+            StringBuffer?.Dispose();
         }
     }
 }

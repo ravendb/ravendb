@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
+using Sparrow;
 //using Raven.Imports.Newtonsoft.Json;
 using Voron.Impl;
 using Voron.Util;
@@ -18,6 +19,7 @@ namespace Raven.Server.Json
         private byte* _tempBuffer;
         private int _bufferSize;
         private Dictionary<string, LazyStringValue> _fieldNames;
+        private Dictionary<LazyStringValue, LazyStringValue> _internedFieldNames;
         private Dictionary<string, byte[]> _fieldNamesAsByteArrays;
         private bool _disposed;
 
@@ -93,9 +95,17 @@ namespace Raven.Server.Json
                 Pool.ReturnMemory(_tempBuffer);
             if (_fieldNames != null)
             {
-                foreach (var stringToByteComparable in _fieldNames.Values)
+                foreach (var kvp in _fieldNames.Values)
                 {
-                    Pool.ReturnMemory(stringToByteComparable.Buffer);
+                    Pool.ReturnMemory(kvp.Buffer);
+                }
+            }
+            if (_internedFieldNames != null)
+            {
+                foreach (var key in _internedFieldNames.Keys)
+                {
+                    Pool.ReturnMemory(key.Buffer);
+
                 }
             }
             _disposed = true;
@@ -121,6 +131,23 @@ namespace Raven.Server.Json
             return value;
         }
 
+        public LazyStringValue Intern(LazyStringValue val)
+        {
+            LazyStringValue value;
+            if (_internedFieldNames == null)
+                _internedFieldNames = new Dictionary<LazyStringValue, LazyStringValue>();
+
+            if (_internedFieldNames.TryGetValue(val, out value))
+                return value;
+
+            int actualSize;
+            var memory = Pool.GetMemory(val.Size, out actualSize);
+            Memory.Copy(memory, val.Buffer, val.Size);
+            value = new LazyStringValue(null, memory, val.Size, this);
+            _internedFieldNames[value] = value;
+            return value;
+        }
+
         public byte[] GetBytesForFieldName(string field)
         {
             if (_fieldNamesAsByteArrays == null)
@@ -137,19 +164,22 @@ namespace Raven.Server.Json
             return returnedByteArray;
         }
 
-        public BlittableJsonWriter Read(JsonTextReader reader, string documentId)
+        public BlittableJsonWriter Read(Stream stream, string documentId)
         {
-            var writer = new BlittableJsonWriter(reader, this, documentId);
-            try
+            using (var parser = new UnmanagedJsonParser(stream, this))
             {
-                CachedProperties.NewDocument();
-                writer.Run();
-                return writer;
-            }
-            catch (Exception)
-            {
-                writer.Dispose();
-                throw;
+                var writer = new BlittableJsonWriter(parser, this, documentId);
+                try
+                {
+                    CachedProperties.NewDocument();
+                    writer.Run();
+                    return writer;
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
             }
         }
 

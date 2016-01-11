@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Bond;
 using Microsoft.AspNet.Mvc.Razor;
 using NewBlittable;
@@ -46,7 +47,7 @@ namespace BlittableTests.Benchmark
                         string line;
                         while ((line = reader.ReadLine()) != null)
                         {
-                            using (blittableContext.Read(new JsonTextReader(new StringReader(line)),
+                            using (blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)), 
                                 line))
                             {
                             }
@@ -82,8 +83,8 @@ namespace BlittableTests.Benchmark
                 {
                     foreach (var line in jsonCache)
                     {
-                        using (var doc = blittableContext.Read(new JsonTextReader(new StringReader(line)),
-                            line))
+
+                        using (var doc = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)), "doc1"))
                         {
                             var ptr = Marshal.AllocHGlobal(doc.SizeInBytes);
                             doc.CopyTo((byte*) ptr);
@@ -165,10 +166,7 @@ namespace BlittableTests.Benchmark
                         GC.Collect(2);
 
                         sp.Restart();
-                        using (
-                            var employee =
-                               blittableContext.Read(new JsonTextReader(File.OpenText(jsonFile)),
-                                    "doc1"))
+                        using (var employee = blittableContext.Read(File.OpenRead(jsonFile), "doc1"))
                         {
                             streamWriter.Write(sp.ElapsedMilliseconds + ",");
                             var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);

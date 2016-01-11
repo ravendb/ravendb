@@ -14,19 +14,19 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-
             foreach (var sample in UnmanageJsonReaderTests.Samples())
             {
                 var f = (string) sample[0];
+                //if(f.Contains("nested")==false)continue;
                 Console.WriteLine(f);
                 try
                 {
-                    new UnmanageJsonReaderTests().CanReadAll(f);
+                    new BlittableFormatTests().CheckRoundtrip(f);
                 }
                 catch (Exception e)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine(e);
                     Console.ResetColor();
                 }
             }

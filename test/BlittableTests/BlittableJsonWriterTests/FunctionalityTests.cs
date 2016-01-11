@@ -24,8 +24,7 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             var str = GenerateSimpleEntityForFunctionalityTest();
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
-                "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
@@ -57,8 +56,7 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
-                "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
@@ -76,8 +74,7 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             var str = "{\"Alias\":\"Jimmy\",\"Data\":[],\"Name\":\"Trolo\",\"SubData\":{\"SubArray\":[]}}";
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)),
-                "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
                 employee.CopyTo(ptr);
@@ -154,8 +151,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024*1024*1024);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new JsonTextReader(new StringReader(str)), 
-                "doc1"))
+            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 int size;
                 ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
@@ -198,7 +194,7 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024))
             using (var ctx = new RavenOperationContext(pool))
-            using (var obj = ctx.Read(new JsonTextReader(new StringReader(json)), "test/1"))
+            using (var obj = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 int size;
                 var buffer = ctx.GetNativeTempBuffer(obj.SizeInBytes, out size);
