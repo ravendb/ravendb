@@ -81,6 +81,8 @@ namespace Raven.Server.Json
                     return (byte) 'r';
                 case (byte) '\\':
                     return (byte) '\\';
+                case (byte)'/':
+                    return (byte)'/';
                 case (byte) '"':
                     return (byte) '"';
                 default:
