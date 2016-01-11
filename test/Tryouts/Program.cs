@@ -14,22 +14,23 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            foreach (var sample in UnmanageJsonReaderTests.Samples())
-            {
-                var f = (string) sample[0];
-                //if (f.Contains("escape-str") == false) continue;
-                Console.WriteLine(f);
-                try
-                {
-                    new BlittableFormatTests().CheckRoundtrip(f);
-                }
-                catch (Exception e)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e);
-                    Console.ResetColor();
-                }
-            }
+            new FunctionalityTests().LongStringsTest(1000);
+            //foreach (var sample in UnmanageJsonReaderTests.Samples())
+            //{
+            //    var f = (string) sample[0];
+            //    //if (f.Contains("escape-str") == false) continue;
+            //    Console.WriteLine(f);
+            //    try
+            //    {
+            //        new BlittableFormatTests().CheckRoundtrip(f);
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        Console.ForegroundColor = ConsoleColor.Red;
+            //        Console.WriteLine(e);
+            //        Console.ResetColor();
+            //    }
+            //}
         }
     }
 

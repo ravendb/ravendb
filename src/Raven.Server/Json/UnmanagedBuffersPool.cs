@@ -170,7 +170,7 @@ namespace Raven.Server.Json
             if (_allocatedSegments.TryRemove((IntPtr) pointer, out memoryDataForPointer) == false)
             {
                 throw new ArgumentException(
-                    $"The returned memory pointer {(IntPtr) pointer} was not allocated from this pool, or was already freed",
+                    $"The returned memory pointer {(IntPtr) pointer:X} was not allocated from this pool, or was already freed",
                     "pointer");
             }
 

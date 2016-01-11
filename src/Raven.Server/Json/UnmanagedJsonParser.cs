@@ -30,7 +30,7 @@ namespace Raven.Server.Json
         private int _line;
         private int _charPos = 1;
 
-        public readonly List<int> EscapePositions = new List<int>(); 
+        public readonly List<int> EscapePositions = new List<int>();
 
         public long Long;
 
@@ -76,14 +76,17 @@ namespace Raven.Server.Json
                 {
                     case (byte)'\r':
                         EnsureBuffer(0);
-                        if(_buffer[_pos]== (byte)'\n')
+                        if (_buffer[_pos] == (byte)'\n')
                             continue;
-                        goto case (byte) '\n';
+                        goto case (byte)'\n';
                     case (byte)'\n':
                         _line++;
                         _charPos = 1;
                         break;
-                    case (byte)' ': case (byte)'\t': case (byte)'\v': case (byte)'\f':
+                    case (byte)' ':
+                    case (byte)'\t':
+                    case (byte)'\v':
+                    case (byte)'\f':
                         //white space, we can safely ignore
                         break;
                     case (byte)':':
@@ -93,7 +96,7 @@ namespace Raven.Server.Json
                             case Tokens.Separator:
                             case Tokens.StartObject:
                             case Tokens.StartArray:
-                                throw CreateException("Cannot have a '"+(char)b +"' in this position");
+                                throw CreateException("Cannot have a '" + (char)b + "' in this position");
                         }
                         Current = Tokens.Separator;
                         break;
@@ -136,8 +139,16 @@ namespace Raven.Server.Json
                     //numbers
 
                     case (byte)'0':
-                    case (byte)'1':case (byte)'2':case (byte)'3':case (byte)'4':case (byte)'5':
-                    case (byte)'6':case (byte)'7':case (byte)'8':case (byte)'9':case (byte)'-':// negative number
+                    case (byte)'1':
+                    case (byte)'2':
+                    case (byte)'3':
+                    case (byte)'4':
+                    case (byte)'5':
+                    case (byte)'6':
+                    case (byte)'7':
+                    case (byte)'8':
+                    case (byte)'9':
+                    case (byte)'-':// negative number
                         ParseNumber(b);
                         return;
                 }
@@ -174,7 +185,7 @@ namespace Raven.Server.Json
                         isDouble = true;
                         break;
                     case (byte)'-':
-                        if(isNegative)
+                        if (isNegative)
                             throw CreateException("Already got '-' in this number value");
                         isNegative = true;
                         break;
@@ -189,7 +200,7 @@ namespace Raven.Server.Json
                     case (byte)'8':
                     case (byte)'9':
                         Long *= 10;
-                        Long += b- (byte)'0';
+                        Long += b - (byte)'0';
                         break;
                     default:
                         switch (b)
@@ -204,18 +215,21 @@ namespace Raven.Server.Json
                             case (byte)'\v':
                             case (byte)'\f':
                             case (byte)',':
+                            case (byte)']':
+                            case (byte)'}':
                                 if (zeroPrefix && StringBuffer.SizeInBytes != 1)
                                     throw CreateException("Invalid number with zero prefix");
                                 if (isNegative)
                                     Long *= -1;
                                 Current = isDouble ? Tokens.Float : Tokens.Integer;
+                                _pos--; _charPos--;// need to re-read this char
                                 return;
                             default:
                                 throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
                         }
                 }
                 StringBuffer.WriteByte(b);
-                EnsureBuffer(1);
+                EnsureBuffer(0);
                 b = _buffer[_pos++];
                 _charPos++;
             } while (true);
@@ -231,21 +245,22 @@ namespace Raven.Server.Json
                 while (_pos < _bufSize)
                 {
                     var b = _buffer[_pos++];
+                    _charPos++;
                     if (b == quote)
                     {
                         Current = Tokens.String;
-                        StringBuffer.Write(_bufferPtr + start, _pos - start-1 /*don't include the last quote*/);
+                        StringBuffer.Write(_bufferPtr + start, _pos - start - 1 /*don't include the last quote*/);
                         return;
                     }
                     if (b == (byte)'\\')
                     {
-                        StringBuffer.Write(_bufferPtr + start, _pos - start-1);
+                        StringBuffer.Write(_bufferPtr + start, _pos - start - 1);
                         start = _pos + 1;
                         EnsureBuffer(1);
 
                         b = _buffer[_pos++];
-
-                        if (b != (byte) 'u')
+                        _charPos++;
+                        if (b != (byte)'u')
                             EscapePositions.Add(StringBuffer.SizeInBytes);
 
                         switch (b)
@@ -288,7 +303,7 @@ namespace Raven.Server.Json
                             default:
                                 throw new InvalidOperationException("Invalid escape char, numeric value is " + b);
                         }
-                        
+
                     }
                 }
                 // copy the buffer to the native code, then refill
