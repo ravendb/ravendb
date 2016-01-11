@@ -123,7 +123,7 @@ namespace Raven.Database.FileSystem
 
         public SynchronizationActions Synchronizations { get; private set; }
 
-        public ResourceTimerManager TimerManager { get; }
+        public ResourceTimerManager TimerManager { get; private set; }
 
         public void Initialize()
         {
