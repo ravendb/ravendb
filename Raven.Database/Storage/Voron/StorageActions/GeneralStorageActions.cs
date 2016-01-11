@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.Impl;
 
@@ -15,12 +16,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
     internal class GeneralStorageActions : StorageActionsBase, IGeneralStorageActions
     {
         private const int PulseTreshold = 16 * 1024 * 1024; // 16 MB
-
+        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         private readonly TableStorage storage;
         private readonly Reference<WriteBatch> writeBatch;
         private readonly Reference<SnapshotReader> snapshot;
         private readonly StorageActionsAccessor storageActionsAccessor;
-
         private int maybePulseCount;
 
         public GeneralStorageActions(TableStorage storage, Reference<WriteBatch> writeBatch, Reference<SnapshotReader> snapshot, IBufferPool bufferPool, StorageActionsAccessor storageActionsAccessor)
@@ -122,24 +122,37 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public bool MaybePulseTransaction(IIterator before)
+        public bool MaybePulseTransaction(IIterator before, int addToPulseCount = 1, Action beforePulseTransaction = null)
         {
-            if (Interlocked.Increment(ref maybePulseCount)%1000 != 0)
+            var increment = Interlocked.Add(ref maybePulseCount, addToPulseCount);
+            if (increment < 1024)
+            {
                 return false;
+            }
+
+            if (Interlocked.CompareExchange(ref maybePulseCount, 0, increment) != increment)
+            {
+                return false;
+            }
 
             if (writeBatch.Value.Size() >= PulseTreshold)
             {
-                if (before != null)
+               if (before != null)
                     before.Dispose();
+
+                if (beforePulseTransaction != null)
+                    beforePulseTransaction();
+                if (logger.IsDebugEnabled)
+                    logger.Debug("MaybePulseTransaction() --> PulseTransaction()");
                 PulseTransaction();
                 return true;
             }
             return false;
         }
 
-        public bool MaybePulseTransaction()
+        public bool MaybePulseTransaction(int addToPulseCount = 1, Action beforePulseTransaction = null)
         {
-            return MaybePulseTransaction(null);
+            return MaybePulseTransaction(null, addToPulseCount, beforePulseTransaction);
         }
     }
 }

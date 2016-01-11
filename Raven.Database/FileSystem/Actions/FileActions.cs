@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
@@ -29,6 +30,8 @@ namespace Raven.Database.FileSystem.Actions
 {
     public class FileActions : ActionsBase
     {
+        internal const int MaxNumberOfFilesToDeleteByCleanupTaskRun = 1024;
+
         private readonly ConcurrentDictionary<string, Task> deleteFileTasks = new ConcurrentDictionary<string, Task>();
         private readonly ConcurrentDictionary<string, Task> renameFileTasks = new ConcurrentDictionary<string, Task>();
         private readonly ConcurrentDictionary<string, Task> copyFileTasks = new ConcurrentDictionary<string, Task>();
@@ -436,9 +439,11 @@ namespace Raven.Database.FileSystem.Actions
 
         public Task CleanupDeletedFilesAsync()
         {
+            const int MaxNumberOfConcurrentDeletions = 10;
+
             var filesToDelete = new List<DeleteFileOperation>();
 
-            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, 10)
+            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun)
                                                               .Select(config => config.JsonDeserialization<DeleteFileOperation>())
                                                               .ToList());
 
@@ -447,6 +452,8 @@ namespace Raven.Database.FileSystem.Actions
 
             var tasks = new List<Task>();
 
+            using (var semaphore = new SemaphoreSlim(MaxNumberOfConcurrentDeletions))
+            {
             foreach (var fileToDelete in filesToDelete)
             {
                 var deletingFileName = fileToDelete.CurrentFileName;
@@ -469,7 +476,7 @@ namespace Raven.Database.FileSystem.Actions
                 if (Log.IsDebugEnabled)
                 Log.Debug("Starting to delete file '{0}' from storage", deletingFileName);
 
-                var deleteTask = Task.Run(() =>
+                    var deleteTask = new Task(() =>
                 {
                     try
                     {
@@ -496,9 +503,21 @@ namespace Raven.Database.FileSystem.Actions
                     Log.Debug("File '{0}' was deleted from storage", deletingFileName);
                 });
 
+                    deleteTask.ContinueWith(x =>
+                    {
+                        Task _;
+                        deleteFileTasks.TryRemove(deletingFileName, out _);
+                        semaphore.Release();
+                    });
+
+                    semaphore.Wait();
+
+                    deleteTask.Start();
+
                 deleteFileTasks.AddOrUpdate(deletingFileName, deleteTask, (file, oldTask) => deleteTask);
 
                 tasks.Add(deleteTask);
+            }
             }
 
             return Task.WhenAll(tasks);

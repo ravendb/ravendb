@@ -535,6 +535,7 @@ namespace Raven.Client.Shard
                 EntityType = typeof(TResult),
                 Keys = { keyPrefix }
             });
+            var queryOperation = new QueryOperation(this, "Load/StartingWith", null, null, false, TimeSpan.Zero, null, null, false);
 
             return shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
             {
@@ -543,7 +544,7 @@ namespace Raven.Client.Shard
             }, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude, transformer: transformer,
                                                          transformerParameters: configuration.TransformerParameters,
                                                          skipAfter: skipAfter, token: token))
-                                .ContinueWith(task => (IEnumerable<TResult>)task.Result.SelectMany(x => x).Select(TrackEntity<TResult>).ToList())
+                                .ContinueWith(task => (IEnumerable<TResult>)task.Result.SelectMany(x => x).Select(x=> queryOperation.Deserialize<TResult>(x.ToJson())).ToList())
                                 .WithCancellation(token);
         }
 

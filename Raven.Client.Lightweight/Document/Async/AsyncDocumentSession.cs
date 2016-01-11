@@ -375,13 +375,14 @@ namespace Raven.Client.Document.Async
             {
                 configure(configuration);
             }
+            var queryOperation = new QueryOperation(this, "Load/StartingWith", null, null, false, TimeSpan.Zero, null, null, false);
 
             return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
                                                          pagingInformation: pagingInformation, transformer: transformer,
                                                          transformerParameters: configuration.TransformerParameters,
                                                          skipAfter: skipAfter, token: token)
                                         .ContinueWith(
-                                            task => (IEnumerable<TResult>) task.Result.Select(TrackEntity<TResult>).ToList(), token);
+                                            task => (IEnumerable<TResult>) task.Result.Select(x=> queryOperation.Deserialize<TResult>(x.ToJson())).ToList(), token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default (CancellationToken))

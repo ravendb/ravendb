@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -14,9 +13,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
-using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
-using Raven.Tests.FileSystem.Synchronization.IO;
 
 using Xunit;
 using Xunit.Extensions;

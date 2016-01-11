@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-
 using Jint;
 using Jint.Native;
 using Jint.Runtime;
-
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -15,10 +13,27 @@ namespace Raven.Database.Json
     {
         private Dictionary<string, KeyValuePair<RavenJValue, JsValue>> propertiesByValue = new Dictionary<string, KeyValuePair<RavenJValue, JsValue>>();
 
+        private static readonly List<string> InheritedProperties = new List<string>
+        {
+            "length",
+            "Map",
+            "Where",
+            "RemoveWhere",
+            "Remove"
+        };
+
         public RavenJObject ToRavenJObject(JsValue jsObject, string propertyKey = null, bool recursiveCall = false)
         {
+            var objectInstance = jsObject.AsObject();
+            if (objectInstance.Class == "Function")
+            {
+                // getting a Function instance here,
+                // means that we couldn't evaulate it using Jint
+                return null;
+            }
+
             var rjo = new RavenJObject();
-            foreach (var property in jsObject.AsObject().GetOwnProperties())
+            foreach (var property in objectInstance.GetOwnProperties())
             {
                 if (property.Key == Constants.ReduceKeyFieldName || property.Key == Constants.DocumentIdFieldName)
                     continue;
@@ -96,7 +111,7 @@ namespace Raven.Database.Json
 
                 foreach (var property in jsArray.GetOwnProperties())
                 {
-                    if (property.Key == "length")
+                    if (InheritedProperties.Contains(property.Key))
                         continue;
 
                     var jsInstance = property.Value.Value;

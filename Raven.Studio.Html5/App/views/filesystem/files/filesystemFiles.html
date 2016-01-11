@@ -72,7 +72,7 @@
             </div>
 
             <div class="files-select" data-bind="visible: hasAnyFilesSelected() && !hasAllFilesSelected() && isAnyFilesAutoSelected()">
-                <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: selectedFilesIndices().length"></strong> <span data-bind="text: selectedFilesText"></span>.
+                <i class="fa fa-info-circle"></i> You have selected <strong data-bind="text: selectedFilesIndices().length.toLocaleString()"></strong> <span data-bind="text: selectedFilesText"></span>.
                 <span class="select-link" data-bind="click: selectAll.bind($root)">
                     Select all <strong data-bind="text: filesCount"></strong> files in <span data-bind="text: selectedFolderName"></span>
                 </span>

@@ -14,6 +14,7 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Async;
 using Raven.Client.Document.Batches;
+using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Spatial;
 using Raven.Json.Linq;
@@ -29,7 +30,7 @@ namespace Raven.Client.Document
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
         public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, IDatabaseCommands databaseCommands,
-            IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool  isMapReduce)
+            IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners, bool isMapReduce)
             : base(session, databaseCommands, asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners, isMapReduce)
         {
         }
@@ -560,7 +561,7 @@ namespace Raven.Client.Document
         {
             OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
             return this;
-        }		
+        }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight(
             string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
@@ -584,8 +585,8 @@ namespace Raven.Client.Document
         }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Highlight<TValue>(
-            Expression<Func<T, TValue>> propertySelector, 
-            int fragmentLength, 
+            Expression<Func<T, TValue>> propertySelector,
+            int fragmentLength,
             int fragmentCount,
             Expression<Func<T, IEnumerable>> fragmentsPropertySelector)
         {
@@ -613,7 +614,7 @@ namespace Raven.Client.Document
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetHighlighterTags(string preTag, string postTag)
         {
-            this.SetHighlighterTags(new[]{preTag}, new[]{postTag});
+            this.SetHighlighterTags(new[] { preTag }, new[] { postTag });
             return this;
         }
 
@@ -771,45 +772,45 @@ namespace Raven.Client.Document
                                                                          theAsyncDatabaseCommands,
                                                                          indexName, fields, projections, queryListeners,
                                                                          isMapReduce)
-                                        {
-                                            pageSize = pageSize,
-                                            queryText = new StringBuilder(queryText.ToString()),
-                                            start = start,
-                                            timeout = timeout,
-                                            cutoff = cutoff,
-                                            cutoffEtag = cutoffEtag,
-                                            queryStats = queryStats,
-                                            theWaitForNonStaleResults = theWaitForNonStaleResults,
-                                            theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
-                                            sortByHints = sortByHints,
-                                            orderByFields = orderByFields,
-                                            isDistinct = isDistinct,
-                                            allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                                            negate = negate,
-                                            transformResultsFunc = transformResultsFunc,
-                                            includes = new HashSet<string>(includes),
-                                            isSpatialQuery = isSpatialQuery,
-                                            spatialFieldName = spatialFieldName,
-                                            queryShape = queryShape,
-                                            spatialRelation = spatialRelation,
-                                            spatialUnits = spatialUnits,
-                                            distanceErrorPct = distanceErrorPct,
-                                            rootTypes = { typeof(T) },
-                                            defaultField = defaultField,
-                                            beforeQueryExecutionAction = beforeQueryExecutionAction,
-                                            afterQueryExecutedCallback = afterQueryExecutedCallback,
-                                            afterStreamExecutedCallback = afterStreamExecutedCallback,
-                                            highlightedFields = new List<HighlightedField>(highlightedFields),
-                                            highlighterPreTags = highlighterPreTags,
-                                            highlighterPostTags = highlighterPostTags,
-                                            resultsTransformer = resultsTransformer,
-                                            transformerParameters = transformerParameters,
-                                            disableEntitiesTracking = disableEntitiesTracking,
-                                            disableCaching = disableCaching,
-                                            showQueryTimings = showQueryTimings,
-                                            lastEquality = lastEquality,
-                                            shouldExplainScores = shouldExplainScores
-                                        };
+            {
+                pageSize = pageSize,
+                queryText = new StringBuilder(queryText.ToString()),
+                start = start,
+                timeout = timeout,
+                cutoff = cutoff,
+                cutoffEtag = cutoffEtag,
+                queryStats = queryStats,
+                theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
+                sortByHints = sortByHints,
+                orderByFields = orderByFields,
+                isDistinct = isDistinct,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                negate = negate,
+                transformResultsFunc = transformResultsFunc,
+                includes = new HashSet<string>(includes),
+                isSpatialQuery = isSpatialQuery,
+                spatialFieldName = spatialFieldName,
+                queryShape = queryShape,
+                spatialRelation = spatialRelation,
+                spatialUnits = spatialUnits,
+                distanceErrorPct = distanceErrorPct,
+                rootTypes = { typeof(T) },
+                defaultField = defaultField,
+                beforeQueryExecutionAction = beforeQueryExecutionAction,
+                afterQueryExecutedCallback = afterQueryExecutedCallback,
+                afterStreamExecutedCallback = afterStreamExecutedCallback,
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags,
+                resultsTransformer = resultsTransformer,
+                transformerParameters = transformerParameters,
+                disableEntitiesTracking = disableEntitiesTracking,
+                disableCaching = disableCaching,
+                showQueryTimings = showQueryTimings,
+                lastEquality = lastEquality,
+                shouldExplainScores = shouldExplainScores
+            };
             asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
             return asyncDocumentQuery;
         }
@@ -840,7 +841,7 @@ namespace Raven.Client.Document
         /// Register the query as a lazy-count query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
-        public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default (CancellationToken))
+        public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken))
         {
             if (queryOperation == null)
             {
@@ -851,7 +852,7 @@ namespace Raven.Client.Document
 
             var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes, AsyncDatabaseCommands.OperationsHeaders);
 
-            return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);
+            return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation, token);
         }
 
         /// <summary>
@@ -1031,7 +1032,7 @@ namespace Raven.Client.Document
             return this;
         }
 
-        IAsyncDocumentQuery<T>  IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
         {
             Distinct();
             return this;
@@ -1052,11 +1053,66 @@ namespace Raven.Client.Document
             shouldExplainScores = true;
             return this;
 
-    }
+        }
 
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {
             base.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
             return this;
-}	}
+        }
+
+
+        public IAsyncDocumentQuery<TTransformerResult> SetResultTransformer<TTransformer, TTransformerResult>()
+            where TTransformer : AbstractTransformerCreationTask, new()
+        {
+            var documentQuery = new AsyncDocumentQuery<TTransformerResult>(theSession,
+                                                                     theDatabaseCommands,
+                                                                     theAsyncDatabaseCommands,
+                                                                     indexName,
+                                                                     fieldsToFetch,
+                                                                     projectionFields,
+                                                                     queryListeners,
+                                                                     isMapReduce)
+            {
+                pageSize = pageSize,
+                queryText = new StringBuilder(queryText.ToString()),
+                start = start,
+                timeout = timeout,
+                cutoff = cutoff,
+                cutoffEtag = cutoffEtag,
+                queryStats = queryStats,
+                theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
+                sortByHints = sortByHints,
+                orderByFields = orderByFields,
+                isDistinct = isDistinct,
+                allowMultipleIndexEntriesForSameDocumentToResultTransformer = allowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                negate = negate,
+                transformResultsFunc = transformResultsFunc,
+                includes = new HashSet<string>(includes),
+                isSpatialQuery = isSpatialQuery,
+                spatialFieldName = spatialFieldName,
+                queryShape = queryShape,
+                spatialRelation = spatialRelation,
+                spatialUnits = spatialUnits,
+                distanceErrorPct = distanceErrorPct,
+                rootTypes = { typeof(T) },
+                defaultField = defaultField,
+                beforeQueryExecutionAction = beforeQueryExecutionAction,
+                highlightedFields = new List<HighlightedField>(highlightedFields),
+                highlighterPreTags = highlighterPreTags,
+                highlighterPostTags = highlighterPostTags,
+                resultsTransformer = new TTransformer().TransformerName,
+                transformerParameters = transformerParameters,
+                disableEntitiesTracking = disableEntitiesTracking,
+                disableCaching = disableCaching,
+                showQueryTimings = showQueryTimings,
+                lastEquality = lastEquality,
+                defaultOperator = defaultOperator,
+                shouldExplainScores = shouldExplainScores
+            };
+            return documentQuery;
+        }
+
+    }
 }

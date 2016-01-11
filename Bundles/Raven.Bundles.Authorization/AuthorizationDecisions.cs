@@ -174,14 +174,26 @@ namespace Raven.Bundles.Authorization
 
         private static bool OperationMatches(string op1, string op2)
         {
-            return op2.StartsWith(op1, StringComparison.InvariantCultureIgnoreCase);
+            return IsHierarchicPrefix(op2,op1);
         }
 
         private static bool TagsMatch(IEnumerable<string> permissionTags, IEnumerable<string> documentTags)
         {
-            return permissionTags.All(p => documentTags.Any(d => d.StartsWith(p, StringComparison.InvariantCultureIgnoreCase)));
+            return permissionTags.All(p => documentTags.Any(d => IsHierarchicPrefix(d,p)));
         }
 
+        private static bool IsHierarchicPrefix(string fullPath,string prefix)
+        {
+            if (!fullPath.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase))
+                return false;
+            //strings are equal
+            if (fullPath.Length == prefix.Length)
+                return true;
+            //strings are hierarchic to one another
+            if (fullPath[prefix.Length] == '/')
+                return true;
+            return false;
+        }
         private T GetDocumentAsEntity<T>(string documentId) where T : class
         {
             var document = database.Documents.Get(documentId, null);

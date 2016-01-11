@@ -29,10 +29,7 @@ namespace Raven.Tests.Issues
                 var date1 = DateTime.Now;
                 var date2 = date1.AddMinutes(1);
 
-                storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask()
-                                                                 {
-                                                                     Index = 1
-                                                                 }, date1));
+                storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask(1), date1));
 
                 storage.Batch(accessor =>
                 {
@@ -47,10 +44,7 @@ namespace Raven.Tests.Issues
                     AssertTask(task, task.Id is Etag ? (object)Etag.Parse("08000000-0000-0000-0000-000000000001") : 1, date1,  1, typeof(RemoveFromIndexTask));
                 });
 
-                storage.Batch(accessor => accessor.Tasks.AddTask(new TouchReferenceDocumentIfChangedTask
-                                                                 {
-                                                                     Index = 2
-                                                                 }, date2));
+                storage.Batch(accessor => accessor.Tasks.AddTask(new TouchReferenceDocumentIfChangedTask(2), date2));
 
                 storage.Batch(accessor =>
                 {

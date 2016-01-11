@@ -196,13 +196,17 @@ namespace Raven.Database.Commercial
             if (licenseValidator != null)
                 licenseValidator.Dispose();
 
-            if (string.IsNullOrEmpty(value) == false)
+            if (File.Exists(fullPath))
             {
-                licenseValidator = new StringLicenseValidator(publicKey, value);
-            }
-            else if (File.Exists(fullPath))
-            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Creating new license validator for file: {0}", fullPath);
                 licenseValidator = new LicenseValidator(publicKey, fullPath);
+            }
+            else if (string.IsNullOrEmpty(value) == false)
+            {
+                if(logger.IsDebugEnabled)
+                    logger.Debug("Creating new license validator for string: {0}", value.Substring(0, Math.Min(100, value.Length)));
+                licenseValidator = new StringLicenseValidator(publicKey, value);
             }
             else
             {
