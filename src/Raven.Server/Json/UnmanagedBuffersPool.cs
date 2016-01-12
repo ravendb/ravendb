@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
+using Sparrow.Binary;
 
 namespace Raven.Server.Json
 {
@@ -118,7 +119,7 @@ namespace Raven.Server.Json
         public byte* GetMemory(int size, out int actualSize)
         {
             Interlocked.Increment(ref _allocateMemoryCalls);
-            actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
+            actualSize = Bits.NextPowerOf2(size);
 
             AllocatedMemoryData memoryDataForLength;
             ConcurrentStack<AllocatedMemoryData> existingQueue;

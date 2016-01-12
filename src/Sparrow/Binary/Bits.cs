@@ -200,6 +200,19 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long NextPowerOf2(long v)
+        {
+            if (v < nextPowerOf2Table.Length)
+            {
+                return nextPowerOf2Table[v];
+            }
+            else
+            {
+                return NextPowerOf2Internal(v);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int NextPowerOf2Internal(int v)
         {
             v--;
@@ -208,6 +221,21 @@ namespace Sparrow.Binary
             v |= v >> 4;
             v |= v >> 8;
             v |= v >> 16;
+            v++;
+
+            return v;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long NextPowerOf2Internal(long v)
+        {
+            v--;
+            v |= v >> 1;
+            v |= v >> 2;
+            v |= v >> 4;
+            v |= v >> 8;
+            v |= v >> 16;
+            v |= v >> 32;
             v++;
 
             return v;

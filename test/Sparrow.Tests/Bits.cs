@@ -93,5 +93,21 @@ namespace Sparrow.Tests
             Assert.Equal(32, Bits.CeilLog2((uint)0xFFFF0000));
             Assert.Equal(31, Bits.CeilLog2((uint)0x40B79DF0));
         }
+
+        [Fact]
+        public void Bits_NextPowerOf2()
+        {
+            for (int i = 1; i < 31; i++)
+            {
+                int v = 1 << i;
+                Assert.Equal(v << 1, Bits.NextPowerOf2(v + 1));
+            }
+
+            for (int i = 1; i < 62; i++)
+            {
+                long v = 1L << i;
+                Assert.Equal(v << 1, Bits.NextPowerOf2(v + 1));
+            }
+        }
     }
 }
