@@ -455,8 +455,10 @@ for(var customFunction in customFunctions) {{
                 using (var response = request.GetResponse())
                 using (var stream = response.GetResponseStream())
                 {
-                    var result = int.Parse(new StreamReader(stream).ReadToEnd());
-                    return GetMessageWithObject(new { LatestBuild = result });
+                    var result = new StreamReader(stream).ReadToEnd();
+                    var parts = result.Split('-');
+                    var build = int.Parse(parts[0]);
+                    return GetMessageWithObject(new { LatestBuild = build });
                 }
             }
             catch (Exception e)
