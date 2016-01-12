@@ -227,7 +227,7 @@ namespace Voron.Impl.Journal
 	    
 	    public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId, bool forceToFreeAllPages = false)
 	    {
-		    if (tx == null) throw new ArgumentNullException("tx");
+		    if (tx == null) throw new ArgumentNullException(nameof(tx));
 		    var unusedPages = new List<PagePosition>();
 
             List<PagePosition> unusedAndFree;

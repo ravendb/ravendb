@@ -266,8 +266,9 @@ namespace Voron.Tests
                     {
                         d.Dispose();
                     }
-                    catch (Exception)
+                    catch
                     {
+                        // We are killing all disposables here. They are dead anyways, so we dont care what it happens inside.                         
                     }
                 }
             }

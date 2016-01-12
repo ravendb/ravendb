@@ -138,7 +138,7 @@ namespace Voron
 					throw new InvalidOperationException("Uninitialized slice!");
 
 				if(index < 0 || index > Size)
-					throw new ArgumentOutOfRangeException("index");
+					throw new ArgumentOutOfRangeException(nameof(index));
 
 				return *(Pointer + (sizeof (byte)*index));
 			}			
@@ -288,9 +288,9 @@ namespace Voron
 		public void CopyTo(int from, byte[] dest, int offset, int count)
 		{
 			if (from + count > Size)
-				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the slice");
+				throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the slice");
 			if(offset + count > dest.Length)
-				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the buffer" +
+				throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the buffer" +
 				                                              "");
 			if (Array == null)
 			{
@@ -304,7 +304,7 @@ namespace Voron
 		public void CopyTo(int from, byte* dest, int offset, int count)
 		{
 			if (from + count > Size)
-				throw new ArgumentOutOfRangeException("from", "Cannot copy data after the end of the slice");
+				throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the slice");
 
 			if (Array == null)
 			{

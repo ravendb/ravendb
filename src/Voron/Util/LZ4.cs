@@ -183,15 +183,17 @@ namespace Voron.Util
         private const int HASHHC_ADJUST = (MINMATCH * 8) - HASHHC_LOG;
         //private const int HASHHC_MASK = HASHHC_TABLESIZE - 1;
 
-        private static readonly int[] DECODER_TABLE_32 = new[] { 0, 3, 2, 3, 0, 0, 0, 0 };
-        private static readonly int[] DECODER_TABLE_64 = new[] { 0, 0, 0, -1, 0, 1, 2, 3 };
+        private static readonly int[] DECODER_TABLE_32 = { 0, 3, 2, 3, 0, 0, 0, 0 };
+        private static readonly int[] DECODER_TABLE_64 = { 0, 0, 0, -1, 0, 1, 2, 3 };
 
-        private static readonly int[] DEBRUIJN_TABLE_32 = new[] {
+        private static readonly int[] DEBRUIJN_TABLE_32 = 
+        {
             0, 0, 3, 0, 3, 1, 3, 0, 3, 2, 2, 1, 3, 2, 0, 1,
             3, 3, 1, 2, 2, 2, 2, 0, 3, 1, 2, 0, 1, 0, 1, 1
         };
 
-        private static readonly int[] DEBRUIJN_TABLE_64 = new[] {
+        private static readonly int[] DEBRUIJN_TABLE_64 = 
+        {
             0, 0, 0, 0, 0, 1, 1, 2, 0, 3, 1, 3, 1, 4, 2, 7,
             0, 2, 3, 6, 1, 5, 3, 5, 1, 3, 4, 4, 2, 5, 6, 7,
             7, 0, 1, 2, 3, 3, 4, 6, 2, 6, 5, 5, 3, 4, 5, 6,

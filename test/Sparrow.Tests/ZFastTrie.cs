@@ -12,7 +12,7 @@ using Xunit.Extensions;
 
 namespace Sparrow.Tests
 {
-    public partial class ZFastTrieTest
+    public class ZFastTrieTest
     {
         private readonly Func<string, BitVector> binarize = x => BitVector.Of(x, true);
 
