@@ -726,7 +726,7 @@ namespace Raven.Database.Server.Controllers
 
         protected void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
         {
-            AddHeader(Constants.RavenServerBuild, DocumentDatabase.BuildVersion, msg);
+            AddHeader(Constants.RavenServerBuild, DocumentDatabase.BuildVersion.ToInvariantString(), msg);
             AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
         }
 
