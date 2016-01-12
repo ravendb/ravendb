@@ -50,7 +50,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
         private readonly ServerClient operationClient;
 #else
-		private readonly AsyncServerClient operationClient;
+        private readonly AsyncServerClient operationClient;
 #endif
         private readonly IDatabaseChanges operationChanges;
         private readonly MemoryStream bufferedStream = new MemoryStream();
@@ -63,7 +63,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
         public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
 #else
-		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
+        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
         {
             using (NoSynchronizationContext.Scope())
@@ -144,27 +144,27 @@ namespace Raven.Client.Document
         private Task<RavenJToken> GetAuthToken()
         {
 #if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken",
+            var request = operationClient.CreateRequest("GET", "/singleAuthToken",
                                                         disableRequestCompression: true);
 
             return new CompletedTask<RavenJToken>(request.ReadResponseJson());
 #else
-			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
-														disableRequestCompression: true);
-			request.webRequest.ContentLength = 0;
+            var request = operationClient.CreateRequest("/singleAuthToken", "GET",
+                                                        disableRequestCompression: true);
+            request.webRequest.ContentLength = 0;
 
-			return request.ReadResponseJsonAsync();
+            return request.ReadResponseJsonAsync();
 #endif
-		}
+        }
 
         private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
 #if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
+            var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
 #else
-			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+            var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 #endif
-			request.DisableAuthentication();
+            request.DisableAuthentication();
             request.webRequest.ContentLength = 0;
             request.AddOperationHeader("Single-Use-Auth-Token", token);
             var result = await request.ReadResponseJsonAsync();
@@ -176,7 +176,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
             var request = operationClient.CreateRequest("POST", operationUrl, disableRequestCompression: true);
 #else
-			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
+            var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
 #endif
             request.DisableAuthentication();
             // the request may take a long time to process, so we need to set a large timeout value
@@ -264,7 +264,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
             return new CompletedTask<RavenJToken>(operationClient.GetOperationStatus(operationId));
 #else
-			return operationClient.GetOperationStatusAsync(operationId);
+            return operationClient.GetOperationStatusAsync(operationId);
 #endif
         }
 
@@ -326,12 +326,21 @@ namespace Raven.Client.Document
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
         {
-            if (localBatch.Count == 0)
-                return;
+            BinaryWriter requestBinaryWriter;
             bufferedStream.SetLength(0);
             WriteToBuffer(localBatch);
 
-            var requestBinaryWriter = new BinaryWriter(requestStream);
+            if (localBatch.Count == 0)
+            {
+                requestBinaryWriter = new BinaryWriter(requestStream);
+                requestBinaryWriter.Write((int)bufferedStream.Position);
+                bufferedStream.WriteTo(requestStream);
+                requestStream.Flush();
+
+                return;
+            }
+
+            requestBinaryWriter = new BinaryWriter(requestStream);
             requestBinaryWriter.Write((int)bufferedStream.Position);
             bufferedStream.WriteTo(requestStream);
             requestStream.Flush();
