@@ -10,7 +10,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -36,8 +35,6 @@ namespace Raven.Database.FileSystem.Actions
         private readonly ConcurrentDictionary<string, Task> copyFileTasks = new ConcurrentDictionary<string, Task>();
         private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
 
-        private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(15));
-
         public FileActions(RavenFileSystem fileSystem, ILog log)
             : base(fileSystem, log)
         {
@@ -46,12 +43,12 @@ namespace Raven.Database.FileSystem.Actions
 
         private void InitializeTimer()
         {
-            timer.Subscribe(tick =>
+            FileSystem.TimerManager.NewTimer(state =>
             {
                 ResumeFileRenamingAsync();
                 ResumeFileCopyingAsync();
                 CleanupDeletedFilesAsync();
-            });
+            }, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(15));
         }
 
         public async Task PutAsync(string name, Etag etag, RavenJObject metadata, Func<Task<Stream>> streamAsync, PutOperationOptions options)

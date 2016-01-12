@@ -207,6 +207,7 @@
     <Compile Include="Metrics\VolatileDouble.cs" />
     <Compile Include="FileSystem\SynchronizationServerClient.cs" />
     <Compile Include="Helpers\EnvironmentHelper.cs" />
+    <Compile Include="Util\Auth\SingleAuthTokenRetriever.cs" />
     <Compile Include="Indexes\AbstractScriptedIndexCreationTask.cs" />
     <Compile Include="Util\DisposableStream.cs" />
     <Compile Include="Util\HttpClientCache.cs" />

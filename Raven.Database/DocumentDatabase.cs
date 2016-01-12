@@ -57,7 +57,7 @@ namespace Raven.Database
     {
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
-        private static string buildVersion;
+        private static int buildVersion = -1;
 
         private static string productVersion;
 
@@ -259,9 +259,18 @@ namespace Raven.Database
 
         public Action<DiskSpaceNotification> OnDiskSpaceChanged = delegate { };
 
-        public static string BuildVersion
+        public static int BuildVersion
         {
-            get { return buildVersion ?? (buildVersion = GetBuildVersion().ToString(CultureInfo.InvariantCulture)); }
+            get
+            {
+                if (buildVersion == -1)
+                {
+                    var customAttributes = typeof (DocumentDatabase).Assembly.GetCustomAttributes(false);
+                    dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+                    buildVersion = int.Parse(versionAtt.Build);
+                }
+                return buildVersion;
+            }
         }
 
         public static string ProductVersion
@@ -273,7 +282,10 @@ namespace Raven.Database
                     return productVersion;
                 }
 
-                productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
+                var customAttributes = typeof (DocumentDatabase).Assembly.GetCustomAttributes(false);
+                dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
+
+                productVersion = versionAtt.CommitHash;
                 return productVersion;
             }
         }
@@ -1032,17 +1044,6 @@ namespace Raven.Database
             OnIndexingWiringComplete = null; // we can only init once, release all actions
             if (indexingWiringComplete != null)
                 indexingWiringComplete();
-        }
-
-        private static int GetBuildVersion()
-        {
-            string location = AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>();
-
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
-            if (fileVersionInfo.FilePrivatePart != 0)
-                return fileVersionInfo.FilePrivatePart;
-
-            return fileVersionInfo.FileBuildPart;
         }
 
         private BatchResult[] BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(IList<ICommandData> commands, CancellationToken token)
