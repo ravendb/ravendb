@@ -46,7 +46,7 @@ namespace Voron
 
         public ValueReader(byte[] array, int len)
         {
-            if (array == null) throw new ArgumentNullException("array");
+            if (array == null) throw new ArgumentNullException(nameof(array));
             _buffer = array;
             _len = len;
             _pos = 0;

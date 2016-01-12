@@ -24,7 +24,7 @@ namespace Voron.Util
         static MemberInfo InfoOf<T, TResult>(Expression<Func<T, TResult>> expression)
         {
             if (expression == null)
-                throw new ArgumentNullException("expression");
+                throw new ArgumentNullException(nameof(expression));
 
             return InfoOf(expression.Body);
         }
@@ -107,7 +107,7 @@ namespace Voron.Util
         static MemberInfo InfoOf<TResult>(Expression<Func<TResult>> expression)
         {
             if (expression == null)
-                throw new ArgumentNullException("expression");
+                throw new ArgumentNullException(nameof(expression));
 
             return InfoOf(expression.Body);
         }
@@ -156,7 +156,7 @@ namespace Voron.Util
         static MemberInfo InfoOf<T>(Expression<Action<T>> expression)
         {
             if (expression == null)
-                throw new ArgumentNullException("expression");
+                throw new ArgumentNullException(nameof(expression));
 
             return InfoOf(expression.Body);
         }
@@ -200,7 +200,7 @@ namespace Voron.Util
         static MemberInfo InfoOf(Expression expression)
         {
             if (expression == null)
-                throw new ArgumentNullException("expression");
+                throw new ArgumentNullException(nameof(expression));
 
             MethodCallExpression mce;
             MemberExpression me;

@@ -83,7 +83,6 @@ namespace Voron.Data.Tables
                 case BondDataType.BT_INT16:
                     {
                         expectedSize = 2;
-                        ;
 
                         var action = WriteAction(exp, Util.Reflection.MethodInfoOf((SliceWriter w) => w.WriteBigEndian(default(short))));
                         writing.Add(action);

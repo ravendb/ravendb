@@ -80,7 +80,7 @@ namespace Voron.Impl.Scratch
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages)
         {
             if (tx == null)
-                throw new ArgumentNullException("tx");
+                throw new ArgumentNullException(nameof(tx));
             var size = (int)Utils.NearestPowerOfTwo(numberOfPages);
 
             PageFromScratchBuffer result;
