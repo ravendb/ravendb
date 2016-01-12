@@ -12,7 +12,7 @@ namespace Sparrow.Binary
 
         // Code taken from http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn
 
-        private static readonly int[] MultiplyDeBruijnBitPosition = new int[]
+        private static readonly int[] MultiplyDeBruijnBitPosition = 
                 {
                     0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
                     8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
@@ -165,7 +165,7 @@ namespace Sparrow.Binary
                 return pos;
         }
 
-        private static readonly int[] nextPowerOf2Table = new int[]
+        private static readonly int[] nextPowerOf2Table =
         {
               0,   1,   2,   4,   4,   8,   8,   8,   8,  16,  16,  16,  16,  16,  16,  16, 
              16,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,  32,
@@ -187,7 +187,7 @@ namespace Sparrow.Binary
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int NextPowerOf2(int v)
+        public static int NextPowerOf2(int v)
         {
             if (v < nextPowerOf2Table.Length)
             {

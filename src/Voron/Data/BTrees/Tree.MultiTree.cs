@@ -40,11 +40,10 @@ namespace Voron.Data.BTrees
 
 		public void MultiAdd(Slice key, Slice value, ushort? version = null)
 		{
-			if (value == null) throw new ArgumentNullException("value");
+			if (value == null) throw new ArgumentNullException(nameof(value));
 			int maxNodeSize = Llt.DataPager.NodeMaxSize;
 			if (value.Size > maxNodeSize)
-				throw new ArgumentException(
-					"Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", "value");
+				throw new ArgumentException("Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", nameof(value));
 			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value to child tree");
 

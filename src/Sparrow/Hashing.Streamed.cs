@@ -10,7 +10,7 @@ namespace Sparrow
 {
     partial class Hashing
     {
-        public static partial class Streamed
+        public static class Streamed
         {
             #region XXHash32 & XXHash64
 
@@ -348,7 +348,7 @@ namespace Sparrow
                     h64 *= XXHash64Constants.PRIME64_2;
                     h64 ^= h64 >> 29;
                     h64 *= XXHash64Constants.PRIME64_3;
-                    h64 ^= h64 >> 32; ;
+                    h64 ^= h64 >> 32;
 
                     return h64;
                 }

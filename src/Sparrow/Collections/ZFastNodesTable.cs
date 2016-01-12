@@ -476,10 +476,10 @@ namespace Sparrow.Collections
                 public void CopyTo(BitVector[] array, int index)
                 {
                     if (array == null)
-                        throw new ArgumentNullException("The array cannot be null", "array");
+                        throw new ArgumentNullException(nameof(array), "The array cannot be null");
 
                     if (index < 0 || index > array.Length)
-                        throw new ArgumentOutOfRangeException("index");
+                        throw new ArgumentOutOfRangeException(nameof(index));
 
                     if (array.Length - index < dictionary.Count)
                         throw new ArgumentException("The array plus the offset is too small.");
@@ -597,10 +597,10 @@ namespace Sparrow.Collections
                 public void CopyTo(Internal[] array, int index)
                 {
                     if (array == null)
-                        throw new ArgumentNullException("The array cannot be null", "array");
+                        throw new ArgumentNullException(nameof(array), "The array cannot be null");
 
                     if (index < 0 || index > array.Length)
-                        throw new ArgumentOutOfRangeException("index");
+                        throw new ArgumentOutOfRangeException(nameof(index));
 
                     if (array.Length - index < dictionary.Count)
                         throw new ArgumentException("The array plus the offset is too small.");

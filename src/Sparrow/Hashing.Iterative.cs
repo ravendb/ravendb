@@ -11,7 +11,7 @@ namespace Sparrow
 {
     partial class Hashing
     {
-        public static partial class Iterative
+        public static class Iterative
         {
             public class XXHash32Block
             {
