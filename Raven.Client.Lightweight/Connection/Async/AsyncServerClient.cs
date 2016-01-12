@@ -2200,17 +2200,6 @@ namespace Raven.Client.Connection.Async
             return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
         }
 
-        public HttpJsonRequest CreateRequest(OperationMetadata operationMetadata, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
-        {
-            var metadata = new RavenJObject();
-            AddTransactionInformation(metadata);
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + requestUrl), method, metadata, operationMetadata.Credentials, convention, timeout)
-                .AddOperationHeaders(OperationsHeaders);
-            createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
-            createHttpJsonRequestParams.DisableAuthentication = disableAuthentication;
-            return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
-        }
-
         public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false, bool disableAuthentication = false, TimeSpan? timeout = null)
         {
             var metadata = new RavenJObject();
