@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 [assembly: CLSCompliant(false)]
 [assembly: AssemblyTitle("RavenDB")]
 [assembly: AssemblyVersion("4.0.0")]
-[assembly: AssemblyFileVersion("4.0.13.0")]
+[assembly: AssemblyFileVersion("4.0.40.0")]
 [assembly: AssemblyInformationalVersion("4.0.0 / {commit} / ")]
 [assembly: AssemblyProduct("RavenDB")]
 [assembly: AssemblyDescription("RavenDB is a second generation LINQ enabled document database for .NET")]
@@ -43,7 +43,7 @@ public class RavenVersionAttribute : Attribute
         {
             int _;
             if (int.TryParse(build, out _) == false)
-                return "13";
+                return "40";
             return build;
         }
         set { build = value; }
