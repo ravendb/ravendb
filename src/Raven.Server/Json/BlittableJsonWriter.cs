@@ -1,3 +1,4 @@
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -50,7 +51,7 @@ namespace Raven.Server.Json
             // enlarge buffer if needed
             if (minSize > _compressionBufferSize)
             {
-                _compressionBufferSize = (int)Voron.Util.Utils.NearestPowerOfTwo(minSize);
+                _compressionBufferSize = Bits.NextPowerOf2(minSize);
                 _compressionBuffer = _context.Pool.GetMemory(_compressionBufferSize, out _compressionBufferSize);
             }
             return _compressionBuffer;
@@ -68,7 +69,7 @@ namespace Raven.Server.Json
         {
             if (_buffer != null)
                 _context.Pool.ReturnMemory(_buffer);
-            _bufferSize = (int) Voron.Util.Utils.NearestPowerOfTwo(minSize);
+            _bufferSize = Bits.NextPowerOf2(minSize);
             return _buffer = _context.Pool.GetMemory(_bufferSize, out _bufferSize);
         }
 
@@ -95,7 +96,6 @@ namespace Raven.Server.Json
             var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
             for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
-                BlittableJsonToken _;
                 propertyArrayOffset[index] = WritePropertyString(_context.CachedProperties.GetProperty(index));
             }
 

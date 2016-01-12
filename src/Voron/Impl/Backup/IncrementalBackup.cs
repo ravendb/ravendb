@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -181,7 +182,7 @@ namespace Voron.Impl.Backup
 			{
 				using (var pager = env.Options.OpenJournalPager(journalNum))
 				{
-					long journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * env.Options.PageSize);
+					long journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * env.Options.PageSize);
 					journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
 					journalFile.AddRef();
 					return journalFile;

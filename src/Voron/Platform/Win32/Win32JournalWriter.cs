@@ -9,6 +9,7 @@ using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Util;
+using Sparrow.Binary;
 
 namespace Voron.Platform.Win32
 {
@@ -99,7 +100,7 @@ namespace Voron.Platform.Win32
             if (_segmentsSize >= pages.Length + 1)
                 return;
 
-            _segmentsSize = (int) Utils.NearestPowerOfTwo(pages.Length + 1);
+            _segmentsSize = Bits.NextPowerOf2(pages.Length + 1);
 
             if (_segments != null)
                 Marshal.FreeHGlobal((IntPtr) _segments);

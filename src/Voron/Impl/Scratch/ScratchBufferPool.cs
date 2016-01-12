@@ -1,4 +1,5 @@
 ﻿using Sparrow;
+using Sparrow.Binary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -81,7 +82,7 @@ namespace Voron.Impl.Scratch
         {
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
-            var size = (int)Utils.NearestPowerOfTwo(numberOfPages);
+            var size = (int)Bits.NextPowerOf2(numberOfPages);
 
             PageFromScratchBuffer result;
             var current = _current;
