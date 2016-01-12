@@ -78,12 +78,13 @@ namespace Raven.Client.Document.SessionOperations
                 }
 
                 EnsureNotReadVetoed(result);
+                var queryOperation = new QueryOperation(this.documentSession, "Load/Transformer", null, null, false, TimeSpan.Zero, null, null, false);
 
                 var values = result.Value<RavenJArray>("$values").ToArray();
                 foreach (var value in values)
                 {
                     var ravenJObject = JsonExtensions.ToJObject(value);
-                    var obj = (T) documentSession.ProjectionToInstance(ravenJObject, typeof (T));
+                    var obj = queryOperation.Deserialize<T>(ravenJObject);
                     yield return obj;
                 }
             }
