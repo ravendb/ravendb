@@ -216,8 +216,8 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.PutMappedResult(a, "a/3", "b", new RavenJObject());
                     accessor.MapReduce.PutMappedResult(a, "a/4", "b", new RavenJObject());
 
-                    accessor.MapReduce.IncrementReduceKeyCounter(a, "a", 2);
-                    accessor.MapReduce.IncrementReduceKeyCounter(a, "b", 2);
+                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "a", 2);
+                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "b", 2);
                 });
 
                 storage.Batch(accessor =>
@@ -279,8 +279,8 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.PutMappedResult(a, "a/3", "b", new RavenJObject());
                     accessor.MapReduce.PutMappedResult(a, "a/4", "b", new RavenJObject());
 
-                    accessor.MapReduce.IncrementReduceKeyCounter(a, "a", 2);
-                    accessor.MapReduce.IncrementReduceKeyCounter(a, "b", 2);
+                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "a", 2);
+                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "b", 2);
                 });
 
                 storage.Batch(accessor =>
@@ -304,6 +304,12 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/3", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    foreach (var reduceKey in removed.Keys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey,
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>
@@ -321,6 +327,12 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/1", a, removed);
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/2", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
+
+                    foreach (var reduceKey in removed.Keys)
+                    {
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey,
+                            ReduceType.SingleStep, skipAdd: true);
+                    }
                 });
 
                 storage.Batch(accessor =>

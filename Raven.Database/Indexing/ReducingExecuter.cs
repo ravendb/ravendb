@@ -174,6 +174,8 @@ namespace Raven.Database.Indexing
         private ReducingPerformanceStats MultiStepReduce(IndexToWorkOn index, List<string> keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete, CancellationToken token)
         {
             var needToMoveToMultiStep = new HashSet<string>();
+            var alreadyMultiStep = new HashSet<string>();
+
             transactionalStorage.Batch(actions =>
             {
                 foreach (var localReduceKey in keysToReduce)
@@ -184,6 +186,9 @@ namespace Raven.Database.Indexing
 
                     if (lastPerformedReduceType != ReduceType.MultiStep)
                         needToMoveToMultiStep.Add(localReduceKey);
+
+                    if (lastPerformedReduceType == ReduceType.MultiStep)
+                        alreadyMultiStep.Add(localReduceKey);
 
                     if (lastPerformedReduceType != ReduceType.SingleStep)
                         continue;
@@ -354,15 +359,13 @@ namespace Raven.Database.Indexing
                 reducePerformance.LevelStats.Add(reduceLevelStats);
             }
 
-            foreach (var reduceKey in needToMoveToMultiStep)
-            {
-                token.ThrowIfCancellationRequested();
+            // update new preformed multi step
+            UpdatePerformedReduceType(index.IndexId, needToMoveToMultiStep, ReduceType.MultiStep, token);
 
-                string localReduceKey = reduceKey;
-                transactionalStorage.Batch(actions =>
-                                           actions.MapReduce.UpdatePerformedReduceType(index.IndexId, localReduceKey,
-                                                                                       ReduceType.MultiStep));
-            }
+            // already multi step,
+            // if the multi step keys were already removed,
+            // the reduce types for those keys need to be removed as well
+            UpdatePerformedReduceType(index.IndexId, alreadyMultiStep, ReduceType.MultiStep, token, skipAdd: true);
 
             return reducePerformance;
         }
@@ -371,8 +374,9 @@ namespace Raven.Database.Indexing
                                                           ConcurrentSet<object> itemsToDelete, CancellationToken token)
         {
             var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
+            var alreadySingleStepQueue = new ConcurrentQueue<HashSet<string>>();
 
-            if ( Log.IsDebugEnabled )
+            if (Log.IsDebugEnabled)
                 Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Count, string.Join(", ", keysToReduce)));
 
             var batchTimeWatcher = Stopwatch.StartNew();
@@ -400,6 +404,9 @@ namespace Raven.Database.Indexing
 
                     var localNeedToMoveToSingleStep = new HashSet<string>();
                     needToMoveToSingleStepQueue.Enqueue(localNeedToMoveToSingleStep);
+                    var localAlreadySingleStep = new HashSet<string>();
+                    alreadySingleStepQueue.Enqueue(localAlreadySingleStep);
+
                     var localKeys = new HashSet<string>();
                     while (enumerator.MoveNext())
                     {
@@ -470,6 +477,9 @@ namespace Raven.Database.Indexing
 
                             if (lastPerformedReduceType != ReduceType.SingleStep)
                                 localNeedToMoveToSingleStep.Add(reduceKey);
+
+                            if (lastPerformedReduceType == ReduceType.SingleStep)
+                                localAlreadySingleStep.Add(reduceKey);
 
                             if (lastPerformedReduceType != ReduceType.MultiStep)
                                 continue;
@@ -550,20 +560,13 @@ namespace Raven.Database.Indexing
                     autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
                 }
 
-                var needToMoveToSingleStep = new HashSet<string>();
+                // update new preformed single step
+                UpdatePerformedSingleStep(index.IndexId, needToMoveToSingleStepQueue, token);
 
-                HashSet<string> set;
-                while (needToMoveToSingleStepQueue.TryDequeue(out set))
-                {
-                    needToMoveToSingleStep.UnionWith(set);
-                }
-
-                foreach (var reduceKey in needToMoveToSingleStep)
-                {
-                    string localReduceKey = reduceKey;
-                    transactionalStorage.Batch(actions =>
-                        actions.MapReduce.UpdatePerformedReduceType(index.IndexId, localReduceKey, ReduceType.SingleStep));
-                }
+                // already single step,
+                // if the single step keys were already removed,
+                // the reduce types for those keys need to be removed as well
+                UpdatePerformedSingleStep(index.IndexId, alreadySingleStepQueue, token, skipAdd: true);
 
                 reduceLevelStats.Completed = SystemTime.UtcNow;
                 reduceLevelStats.Duration = reduceLevelStats.Completed - reduceLevelStats.Started;
@@ -584,6 +587,35 @@ namespace Raven.Database.Indexing
             }
 
             return reducePerformanceStats;
+        }
+
+        private void UpdatePerformedSingleStep(int indexId, 
+            ConcurrentQueue<HashSet<string>> queue, 
+            CancellationToken token, bool skipAdd = false)
+        {
+            HashSet<string> needToMoveToSingleStep;
+            var reduceKeys = new HashSet<string>();
+            while (queue.TryDequeue(out needToMoveToSingleStep))
+            {
+                reduceKeys.UnionWith(needToMoveToSingleStep);
+            }
+
+            UpdatePerformedReduceType(indexId, reduceKeys, ReduceType.SingleStep, token, skipAdd);
+        }
+
+        private void UpdatePerformedReduceType(int indexId,
+            HashSet<string> reduceKeys, ReduceType reduceType,
+            CancellationToken token, bool skipAdd = false)
+        {
+            foreach (var reduceKey in reduceKeys)
+            {
+                token.ThrowIfCancellationRequested();
+
+                string localReduceKey = reduceKey;
+                transactionalStorage.Batch(actions =>
+                    actions.MapReduce.UpdatePerformedReduceType(indexId, localReduceKey,
+                        reduceType, skipAdd: skipAdd));
+            }
         }
 
         protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
