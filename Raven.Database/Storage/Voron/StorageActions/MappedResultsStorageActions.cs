@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Raven.Abstractions.Logging;
 using Raven.Database.Config.Settings;
 using Sparrow;
 using Voron.Trees;
@@ -31,16 +32,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
     internal class MappedResultsStorageActions : StorageActionsBase, IMappedResultsStorageAction
     {
         private readonly TableStorage tableStorage;
-
         private readonly IUuidGenerator generator;
-
         private readonly Reference<WriteBatch> writeBatch;
         private readonly IStorageActionsAccessor storageActionsAccessor;
-
         private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
-
         private readonly ConcurrentDictionary<int, RemainingReductionPerLevel> scheduledReductionsPerViewAndLevel;
         private readonly GeneralStorageActions generalStorageActions;
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         public MappedResultsStorageActions(TableStorage tableStorage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Reference<SnapshotReader> snapshot, Reference<WriteBatch> writeBatch, IBufferPool bufferPool, IStorageActionsAccessor storageActionsAccessor, ConcurrentDictionary<int, RemainingReductionPerLevel> ScheduledReductionsPerViewAndLevel, GeneralStorageActions generalStorageActions)
             : base(snapshot, bufferPool)
@@ -126,10 +124,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
             mappedResultsByViewAndReduceKeyAndSourceBucket.MultiAdd(writeBatch.Value,CreateMappedResultWithBucketKey(view, reduceKey, bucket), idSlice);
         }
 
-        public void IncrementReduceKeyCounter(int view, string reduceKey, int val)
+        public void ChangeReduceKeyCounterValue(int view, string reduceKey, int val)
         {
             var viewKey = CreateViewKey(view);
-
             var keySlice = CreateMappedResultKey(view, reduceKey);
 
             ushort version;
@@ -139,34 +136,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (value != null)
                 newValue += value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
 
-            AddReduceKeyCount(keySlice, view, viewKey, reduceKey, newValue, version);
-        }
-
-        private void DecrementReduceKeyCounter(int view, string reduceKey, int val)
-        {
-            var viewKeySlice = CreateViewKey(view);
-            var keySlice = CreateMappedResultKey(view, reduceKey);
-
-            ushort reduceKeyCountVersion;
-            var reduceKeyCount = LoadStruct(tableStorage.ReduceKeyCounts, keySlice, writeBatch.Value, out reduceKeyCountVersion);
-
-            var newValue = -val;
-            if (reduceKeyCount != null)
+            if (newValue == 0)
             {
-                var currentValue = reduceKeyCount.ReadInt(ReduceKeyCountFields.MappedItemsCount);
-                if (currentValue == val)
-                {
-                    var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, keySlice, writeBatch.Value);
-
-                    DeleteReduceKeyCount(keySlice, view, viewKeySlice, reduceKeyCountVersion);
-                    DeleteReduceKeyType(keySlice, viewKeySlice, reduceKeyTypeVersion);
-                    return;
-                }
-
-                newValue += currentValue;
+                DeleteReduceKeyCount(keySlice, view, viewKey, version);
+                return;
             }
 
-            AddReduceKeyCount(keySlice, view, viewKeySlice, reduceKey, newValue, reduceKeyCountVersion);
+            AddReduceKeyCount(keySlice, view, viewKey, reduceKey, newValue, version);
         }
 
         public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)
@@ -215,12 +191,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed, CancellationToken token)
+        public void UpdateRemovedMapReduceStats(int view, 
+            Dictionary<ReduceKeyAndBucket, int> removed, CancellationToken token)
         {
             foreach (var keyAndBucket in removed)
             {
                 token.ThrowIfCancellationRequested();
-                DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
+                ChangeReduceKeyCounterValue(view, keyAndBucket.Key.ReduceKey, -keyAndBucket.Value);
             }
         }
 
@@ -280,15 +257,46 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
             finally
             {
-                if(iterator!=null)
+                if(iterator != null)
                     iterator.Dispose();
             }
 
             foreach (var g in deletedReduceKeys.GroupBy(x => x, StringComparer.InvariantCultureIgnoreCase))
             {
                 token.ThrowIfCancellationRequested();
-                DecrementReduceKeyCounter(view, g.Key, g.Count());
+                DeleteReduceKeyCountAndType(view, g.Key, g.Count());
             }
+        }
+
+        private void DeleteReduceKeyCountAndType(int view, string reduceKey, int val)
+        {
+            var viewKeySlice = CreateViewKey(view);
+            var keySlice = CreateMappedResultKey(view, reduceKey);
+
+            ushort reduceKeyCountVersion;
+            var reduceKeyCount = LoadStruct(tableStorage.ReduceKeyCounts, keySlice, writeBatch.Value, out reduceKeyCountVersion);
+
+            var newValue = -val;
+            if (reduceKeyCount != null)
+            {
+                var currentValue = reduceKeyCount.ReadInt(ReduceKeyCountFields.MappedItemsCount);
+                if (currentValue == val)
+                {
+                    var reduceKeyTypeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, keySlice, writeBatch.Value);
+
+                    DeleteReduceKeyCount(keySlice, view, viewKeySlice, reduceKeyCountVersion);
+                    DeleteReduceKeyType(keySlice, viewKeySlice, reduceKeyTypeVersion);
+                    return;
+                }
+
+                newValue += currentValue;
+            }
+
+            if (Log.IsDebugEnabled)
+                Log.Warn("Couldn't delete all reduce key count " +
+                         "for reduce key: {0}, leaving a count of: {1}", reduceKey, newValue);
+
+            AddReduceKeyCount(keySlice, view, viewKeySlice, reduceKey, newValue, reduceKeyCountVersion);
         }
 
         public IEnumerable<string> GetKeysForIndexForDebug(int view, string startsWith, string sourceId, int start, int take)
@@ -925,18 +933,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
             return value == null ? 0 : value.ReadInt(ReduceKeyCountFields.MappedItemsCount);
         }
 
-        public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType reduceType)
+        public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType reduceType, bool skipAdd = false)
         {
-            var key = CreateMappedResultKey(view, reduceKey);
-            if (GetNumberOfMappedItemsPerReduceKey(key) == 0)
+            var reduceKeySlice = CreateMappedResultKey(view, reduceKey);
+            if (GetNumberOfMappedItemsPerReduceKey(reduceKeySlice) == 0)
             {
                 // the reduce key doesn't exist anymore
-                // no need to update the reduce key type
+                // we can delete the reduce key type for this reduce key
+                var typeVersion = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, reduceKeySlice, writeBatch.Value);
+                DeleteReduceKeyType(reduceKeySlice, CreateViewKey(view), typeVersion);
                 return;
             }
 
-            var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key, writeBatch.Value);
-            AddReduceKeyType(key, view, reduceKey, reduceType, version);
+            if (skipAdd)
+                return;
+
+            var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, reduceKeySlice, writeBatch.Value);
+            AddReduceKeyType(reduceKeySlice, view, reduceKey, reduceType, version);
         }
 
         private void DeleteReduceKeyCount(Slice key, int view, Slice viewKey, ushort? expectedVersion)

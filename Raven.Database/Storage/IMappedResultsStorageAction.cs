@@ -23,7 +23,7 @@ namespace Raven.Database.Storage
         IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize);
 
         void PutMappedResult(int indexId, string docId, string reduceKey, RavenJObject data);
-        void IncrementReduceKeyCounter(int indexId, string reduceKey, int val);
+        void ChangeReduceKeyCounterValue(int indexId, string reduceKey, int val);
         void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed);
         void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed, CancellationToken token);
         void DeleteMappedResultsForView(int indexId, CancellationToken token);
@@ -43,7 +43,7 @@ namespace Raven.Database.Storage
         void PutReducedResult(int index, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
         void RemoveReduceResults(int index, int level, string reduceKey, int sourceBucket);
         IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int index, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken);
-        void UpdatePerformedReduceType(int index, string reduceKey, ReduceType performedReduceType);
+        void UpdatePerformedReduceType(int index, string reduceKey, ReduceType performedReduceType, bool skipAdd = false);
         ReduceType GetLastPerformedReduceType(int index, string reduceKey);
         IEnumerable<int> GetMappedBuckets(int index, string reduceKey, CancellationToken cancellationToken);
 
