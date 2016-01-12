@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using Voron.Data.BTrees;
+using Voron.Data.Compact;
 using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Impl.FileHeaders;
@@ -221,6 +222,11 @@ namespace Voron.Impl
         public FixedSizeTree FixedTreeFor(Slice treeName, ushort valSize)
         {
             return new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName, valSize);
+        }
+
+        public PrefixTree PrefixTreeFor(Slice treeName)
+        {
+            return PrefixTree.Open(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName);
         }
 
 

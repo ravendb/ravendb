@@ -13,99 +13,71 @@ namespace Voron.Data.BTrees
 {
     public unsafe class TreePage
     {
-        private readonly byte* _base;
-        private readonly int _pageSize;
-        private readonly string _source;
-        private TreePageHeader* Header
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                return (TreePageHeader*)_base;
-            }
-        }
-
-        public string Source
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return _source; }
-        }
+        public readonly int PageSize;
+        public readonly string Source;
+        public readonly byte* Base;
 
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
 
-        public TreePage(byte* b, string source, int pageSize)
+        public TreePage(byte* basePtr, string source, int pageSize)
         {
-            _base = b;
-            _source = source;
-            _pageSize = pageSize;
+            Base = basePtr;
+            Source = source;
+            PageSize = pageSize;
         }
 
+        private TreePageHeader* Header
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (TreePageHeader*)Base; }
+        }
 
         public long PageNumber
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return Header->PageNumber; }
+            get { return Header->PageNumber; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set
-            { Header->PageNumber = value; }
+            set { Header->PageNumber = value; }
         }
 
         public TreePageFlags TreeFlags
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return Header->TreeFlags; }
+            get { return Header->TreeFlags; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set
-            { Header->TreeFlags = value; }
+            set { Header->TreeFlags = value; }
         }
 
         public ushort Lower
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return Header->Lower; }
+            get { return Header->Lower; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set
-            { Header->Lower = value; }
+            set { Header->Lower = value; }
         }
 
         public ushort Upper
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return Header->Upper; }
+            get { return Header->Upper; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set
-            { Header->Upper = value; }
+            set { Header->Upper = value; }
         }
 
         public int OverflowSize
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return Header->OverflowSize; }
+            get { return Header->OverflowSize; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set
-            { Header->OverflowSize = value; }
-        }
-
-        public int PageSize
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return _pageSize; }
+            set { Header->OverflowSize = value; }
         }
 
         public ushort* KeysOffsets
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return (ushort*)(_base + Constants.TreePageHeaderSize); }
+            get { return (ushort*)(Base + Constants.TreePageHeaderSize); }
         }
 
 
@@ -144,7 +116,7 @@ namespace Voron.Data.BTrees
                         {
                             position = (low + high) >> 1;
 
-                            var node = (TreeNodeHeader*)(_base + KeysOffsets[position]);
+                            var node = (TreeNodeHeader*)(Base + KeysOffsets[position]);
 
                             SetNodeKey(node, ref pageKey);
 
@@ -194,7 +166,7 @@ namespace Voron.Data.BTrees
             Debug.Assert(n >= 0 && n < NumberOfEntries);
 
             var nodeOffset = KeysOffsets[n];
-            var nodeHeader = (TreeNodeHeader*)(_base + nodeOffset);
+            var nodeHeader = (TreeNodeHeader*)(Base + nodeOffset);
 
             return nodeHeader;
         }
@@ -202,22 +174,19 @@ namespace Voron.Data.BTrees
         public bool IsLeaf
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return (Header->TreeFlags & TreePageFlags.Leaf) == TreePageFlags.Leaf; }
+            get { return (Header->TreeFlags & TreePageFlags.Leaf) == TreePageFlags.Leaf; }
         }
 
         public bool IsBranch
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return (Header->TreeFlags & TreePageFlags.Branch) == TreePageFlags.Branch; }
+            get { return (Header->TreeFlags & TreePageFlags.Branch) == TreePageFlags.Branch; }
         }
 
         public bool IsOverflow
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return (Header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
+            get{ return (Header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
         }
 
         public ushort NumberOfEntries
@@ -363,7 +332,7 @@ namespace Voron.Data.BTrees
             Header->Upper = newNodeOffset;
             Header->Lower += (ushort)Constants.NodeOffsetSize;
 
-            var node = (TreeNodeHeader*)(_base + newNodeOffset);
+            var node = (TreeNodeHeader*)(Base + newNodeOffset);
             node->Flags = 0;
             node->Version = ++previousNodeVersion;
             return node;
@@ -372,22 +341,13 @@ namespace Voron.Data.BTrees
         public int SizeLeft
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return Header->Upper - Header->Lower; }
+            get { return Header->Upper - Header->Lower; }
         }
 
         public int SizeUsed
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return _pageSize - SizeLeft; }
-        }
-
-        public byte* Base
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            { return _base; }
+            get { return PageSize - SizeLeft; }
         }
 
         public int LastSearchPositionOrLastEntry
@@ -424,9 +384,9 @@ namespace Voron.Data.BTrees
                     copy.CopyNodeDataToEndOfPage(node, slice);
                 }
 
-                Memory.Copy(_base + Constants.TreePageHeaderSize,
-                                     copy._base + Constants.TreePageHeaderSize,
-                                     _pageSize - Constants.TreePageHeaderSize);
+                Memory.Copy(Base + Constants.TreePageHeaderSize,
+                                     copy.Base + Constants.TreePageHeaderSize,
+                                     PageSize - Constants.TreePageHeaderSize);
 
                 Upper = copy.Upper;
                 Lower = copy.Lower;
@@ -478,11 +438,11 @@ namespace Voron.Data.BTrees
             using (tx.Environment.GetTemporaryPage(tx, out tmp))
             {
                 var tempPage = tmp.GetTempPage();
-                Memory.Copy(tempPage.Base, Base, _pageSize);
+                Memory.Copy(tempPage.Base, Base, PageSize);
 
                 var numberOfEntries = NumberOfEntries;
 
-                Upper = (ushort)_pageSize;
+                Upper = (ushort)PageSize;
 
                 for (int i = 0; i < numberOfEntries; i++)
                 {
@@ -524,7 +484,7 @@ namespace Voron.Data.BTrees
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
-            { return _pageSize - Constants.TreePageHeaderSize; }
+            { return PageSize - Constants.TreePageHeaderSize; }
         }
 
         public PageFlags Flags
@@ -638,7 +598,7 @@ namespace Voron.Data.BTrees
                 size += nodeSize + (nodeSize & 1);
             }
 
-            Debug.Assert(size <= _pageSize);
+            Debug.Assert(size <= PageSize);
             Debug.Assert(SizeUsed >= size);
 
             return size;

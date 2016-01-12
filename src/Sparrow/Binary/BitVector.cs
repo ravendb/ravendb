@@ -84,7 +84,7 @@ namespace Sparrow.Binary
         protected BitVector(int size, params ulong[] values)
         {
             if (size / BitVector.BitsPerWord > values.Length)
-                throw new ArgumentException("The values passed as parameters does not have enough bits to fill the vector size.", "values");
+                throw new ArgumentException("The values passed as parameters does not have enough bits to fill the vector size.", nameof(values));
 
             this.Count = size;    
             this.Bits = values;

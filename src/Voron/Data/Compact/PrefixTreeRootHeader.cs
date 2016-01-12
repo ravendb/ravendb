@@ -2,22 +2,34 @@
 
 namespace Voron.Data.Compact
 {
-    [StructLayout(LayoutKind.Explicit, Pack = 1)]
+    //TODO: Change this when we are ready to go.
+    //[StructLayout(LayoutKind.Explicit, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct PrefixTreeRootHeader
     {
-        [FieldOffset(0)]
-        public long RootPageNumber;
-        [FieldOffset(8)]
-        public long BranchPages;
-        [FieldOffset(16)]
-        public long LeafPages;
-        [FieldOffset(40)]
-        public long PageCount;
-        [FieldOffset(48)]
-        public long NumberOfEntries;
-        [FieldOffset(56)]
-        public int Depth;
-        [FieldOffset(60)]
-        public PrefixTreeFlags Flags;
+        /// <summary>
+        /// The root page for the tree. The first element in the root page is the actual Root Node.
+        /// </summary>
+        public long RootPage;
+
+        /// <summary>
+        /// The table header page for the tree.
+        /// </summary>
+        public long Table;
+
+        /// <summary>
+        /// This is the amount of elements already stored in the tree. 
+        /// </summary>
+        public long Items;
+
+        /// <summary>
+        /// The head node pointer for the tree. 
+        /// </summary>
+        public PrefixTree.Leaf Head;
+
+        /// <summary>
+        /// The tail node pointer for the tree. 
+        /// </summary>
+        public PrefixTree.Leaf Tail;
     }
 }
