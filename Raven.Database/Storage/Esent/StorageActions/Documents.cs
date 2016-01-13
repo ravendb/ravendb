@@ -461,7 +461,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
         {
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
                 return etag;
 
             if (TryMoveTableRecords(Documents, take, false))
@@ -476,9 +476,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 do
                 {
                     needPrev = false;
-                    if (take <= 0)
+                    if (--take <= 0)
                         break;
-                    take--;
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     needPrev = true;
