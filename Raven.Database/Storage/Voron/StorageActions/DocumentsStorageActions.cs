@@ -98,14 +98,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
         }
 
-        public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
+        public Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped)
         {
-            if (take < 0)
-                throw new ArgumentException("must have zero or positive value", "take");
+            if (skip < 0)
+                throw new ArgumentException("must have zero or positive value", "skip");
 
-            if (take == 0)
+            if (skip == 0)
+            {
+                skipped = 0;
                 return etag;
-
+            }
+                
             if (string.IsNullOrEmpty(etag))
                 throw new ArgumentNullException("etag");
 
@@ -114,22 +117,37 @@ namespace Raven.Database.Storage.Voron.StorageActions
             {
                 var slice = (Slice)etag.ToString();
                 if (iterator.Seek(slice) == false)
+                {
+                    skipped = 0;
                     return etag;
+                }
 
+                var count = 0;
                 if (iterator.CurrentKey.Equals(slice) || etag == Etag.Empty) // need gt, not ge
                 {
                     if (iterator.MoveNext() == false)
+                    {
+                        skipped = 0;
                         return etag;
+                    }
+
+                    count++;
                 }
-                
+
                 Slice etagSlice;
                 do
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     etagSlice = iterator.CurrentKey;
-                }
-                while (iterator.MoveNext() && --take > 0);
 
+                    if (count >= skip)
+                        break;
+
+                    count++;
+                }
+                while (iterator.MoveNext());
+
+                skipped = count;
                 return Etag.Parse(etagSlice.ToString());
             }
         }

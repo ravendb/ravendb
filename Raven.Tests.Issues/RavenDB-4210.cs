@@ -29,7 +29,9 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(actions =>
                 {
-                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 3, CancellationToken.None);
+                    int skipped;
+                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 3, CancellationToken.None, out skipped);
+                    Assert.Equal(3, skipped);
                     var docC = actions.Documents.DocumentByKey("c");
                     Assert.Equal(docC.Etag, etag);
                 });
@@ -51,11 +53,14 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(actions =>
                 {
-                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 5, CancellationToken.None);
+                    int count;
+                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 5, CancellationToken.None, out count);
+                    Assert.Equal(3, count);
                     var docC = actions.Documents.DocumentByKey("c");
                     Assert.Equal(docC.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(etag, 5, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(etag, 5, CancellationToken.None, out count);
+                    Assert.Equal(0, count);
                     Assert.Equal(docC.Etag, etag);
                 });
             }
@@ -76,15 +81,19 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(actions =>
                 {
-                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 1, CancellationToken.None);
+                    int count;
+                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 1, CancellationToken.None, out count);
+                    Assert.Equal(1, count);
                     var docB = actions.Documents.DocumentByKey("b");
                     Assert.Equal(docB.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docB.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docB.Etag, 1, CancellationToken.None, out count);
+                    Assert.Equal(1, count);
                     var docC = actions.Documents.DocumentByKey("c");
                     Assert.Equal(docC.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None, out count);
+                    Assert.Equal(0, count);
                     Assert.Equal(docC.Etag, etag);
                 });
             }
@@ -107,24 +116,30 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(actions =>
                 {
+                    int count;
                     var docA = actions.Documents.DocumentByKey("a");
-                    var etag = actions.Documents.GetEtagAfterSkip(docA.Etag, 1, CancellationToken.None);
+                    var etag = actions.Documents.GetEtagAfterSkip(docA.Etag, 1, CancellationToken.None, out count);
+                    Assert.Equal(1, count);
                     var docB = actions.Documents.DocumentByKey("b");
                     Assert.Equal(docB.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docB.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docB.Etag, 1, CancellationToken.None, out count);
+                    Assert.Equal(1, count);
                     var docC = actions.Documents.DocumentByKey("c");
                     Assert.Equal(docC.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None, out count);
+                    Assert.Equal(1, count);
                     var docD = actions.Documents.DocumentByKey("d");
                     Assert.Equal(docD.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docD.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docD.Etag, 1, CancellationToken.None, out count);
+                    Assert.Equal(1, count);
                     var docE = actions.Documents.DocumentByKey("e");
                     Assert.Equal(docE.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docE.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docE.Etag, 1, CancellationToken.None, out count);
+                    Assert.Equal(0, count);
                     Assert.Equal(docE.Etag, etag);
                 });
             }
@@ -149,11 +164,14 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(actions =>
                 {
-                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 1, CancellationToken.None);
+                    int skipped;
+                    var etag = actions.Documents.GetEtagAfterSkip(Etag.Empty, 1, CancellationToken.None, out skipped);
                     var docC = actions.Documents.DocumentByKey("c");
+                    Assert.Equal(1, skipped);
                     Assert.Equal(docC.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None, out skipped);
+                    Assert.Equal(0, skipped);
                     Assert.Equal(docC.Etag, etag);
                 });
             }
@@ -178,11 +196,14 @@ namespace Raven.Tests.Issues
 
                 storage.Batch(actions =>
                 {
-                    var etag = actions.Documents.GetEtagAfterSkip(etagB, 1, CancellationToken.None);
+                    int skipped;
+                    var etag = actions.Documents.GetEtagAfterSkip(etagB, 1, CancellationToken.None, out skipped);
+                    Assert.Equal(1, skipped);
                     var docC = actions.Documents.DocumentByKey("c");
                     Assert.Equal(docC.Etag, etag);
 
-                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None);
+                    etag = actions.Documents.GetEtagAfterSkip(docC.Etag, 1, CancellationToken.None, out skipped);
+                    Assert.Equal(0, skipped);
                     Assert.Equal(docC.Etag, etag);
                 });
             }
