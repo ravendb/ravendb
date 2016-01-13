@@ -8,7 +8,7 @@ namespace Raven.Tryouts
         private static void Main(string[] args)
         {
             using (var test = new LargeObjectsWithJsonTextReader())
-                test.MultipleAttachmentsImportShouldWork();
+                test.MultipleAttachmentsImportShouldWork(1024 * 1024 * 500,4);
         }
     }
 }

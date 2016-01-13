@@ -16,164 +16,167 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Server.Responders
 {
-	public class BulkInsert : AbstractRequestResponder
-	{
-		public override string UrlPattern
-		{
-			get { return "^/bulkInsert$"; }
-		}
-		public override string[] SupportedVerbs
-		{
-			get { return new[] { "POST" }; }
-		}
-		public override void Respond(IHttpContext context)
-		{
-			if (string.IsNullOrEmpty(context.Request.QueryString["no-op"]) == false)
-			{
-				// this is a no-op request which is there just to force the client HTTP layer to handle the authentication
-				// only used for legacy clients
-				return; 
-			}
+    public class BulkInsert : AbstractRequestResponder
+    {
+        public override string UrlPattern
+        {
+            get { return "^/bulkInsert$"; }
+        }
+        public override string[] SupportedVerbs
+        {
+            get { return new[] { "POST" }; }
+        }
+        public override void Respond(IHttpContext context)
+        {
+            if (string.IsNullOrEmpty(context.Request.QueryString["no-op"]) == false)
+            {
+                // this is a no-op request which is there just to force the client HTTP layer to handle the authentication
+                // only used for legacy clients
+                return; 
+            }
 
-			if (HttpContext.Current != null)
-			{
-				HttpContext.Current.Server.ScriptTimeout = 60*60*6; // six hours should do it, I think.
-			}
-			var options = new BulkInsertOptions
-			{
-				CheckForUpdates = context.GetCheckForUpdates(),
-				CheckReferencesInIndexes = context.GetCheckReferencesInIndexes()
-			};
+            if (HttpContext.Current != null)
+            {
+                HttpContext.Current.Server.ScriptTimeout = 60*60*6; // six hours should do it, I think.
+            }
+            var options = new BulkInsertOptions
+            {
+                CheckForUpdates = context.GetCheckForUpdates(),
+                CheckReferencesInIndexes = context.GetCheckReferencesInIndexes()
+            };
 
-			var operationId = ExtractOperationId(context);
-			var sp = Stopwatch.StartNew();
+            var operationId = ExtractOperationId(context);
+            var sp = Stopwatch.StartNew();
 
-			var status = new BulkInsertStatus();
+            var status = new BulkInsertStatus();
 
-			int documents = 0;
-			var mre = new ManualResetEventSlim(false);
+            int documents = 0;
+            var mre = new ManualResetEventSlim(false);
 
-			var currentDatbase = Database;
-			var task = Task.Factory.StartNew(() =>
-			{
-				currentDatbase.BulkInsert(options, YieldBatches(context, mre, batchSize => documents += batchSize), operationId);
-			    status.Documents = documents;
-			    status.Completed = true;
-			});
+            var currentDatbase = Database;
+            var task = Task.Factory.StartNew(() =>
+            {
+                currentDatbase.BulkInsert(options, YieldBatches(context, mre, batchSize => documents += batchSize), operationId);
+                status.Documents = documents;
+                status.Completed = true;
+            });
 
-			long id;
-			Database.AddTask(task, status, out id);
+            long id;
+            Database.AddTask(task, status, out id);
 
-			mre.Wait(Database.WorkContext.CancellationToken);
+            mre.Wait(Database.WorkContext.CancellationToken);
 
-			context.Log(log => log.Debug("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
+            context.Log(log => log.Debug("\tBulk inserted received {0:#,#;;0} documents in {1}, task #: {2}", documents, sp.Elapsed, id));
 
-			if (task.IsFaulted && task.Exception != null)
-			{
-				var exception = task.Exception.InnerException;
-				if (exception.Data.Contains("serializationError"))
-					context.SetSerializationException(exception);
-			}
+            if (task.IsFaulted && task.Exception != null)
+            {
+                var exception = task.Exception.InnerException;
+                if (exception.Data.Contains("serializationError"))
+                    context.SetSerializationException(exception);
+            }
 
 
-			context.WriteJson(new
-			{
-				OperationId = id
-			});
-		}
+            context.WriteJson(new
+            {
+                OperationId = id
+            });
+        }
 
-		private static Guid ExtractOperationId(IHttpContext context)
-		{
-			Guid result;
-			Guid.TryParse(context.Request.QueryString["operationId"], out result);
-			return result;
-		}
+        private static Guid ExtractOperationId(IHttpContext context)
+        {
+            Guid result;
+            Guid.TryParse(context.Request.QueryString["operationId"], out result);
+            return result;
+        }
 
-		private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context, ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
-		{
-			try
-			{
-				using (var inputStream = context.Request.GetBufferLessInputStream())
-				{
-					var binaryReader = new BinaryReader(inputStream);
-					while (true)
-					{
-						int size;
-						try
-						{
-							size = binaryReader.ReadInt32();
-						}
-						catch (EndOfStreamException)
-						{
-							break;
-						}
-						using (var stream = new PartialStream(inputStream, size))
-						{
-							yield return YieldDocumentsInBatch(stream, increaseDocumentsCount);
-						}
-					}
-				}
-			}
-			finally
-			{
-				mre.Set();
-			}
-		}
+        private static IEnumerable<IEnumerable<JsonDocument>> YieldBatches(IHttpContext context, ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
+        {
+            try
+            {
+                using (var inputStream = context.Request.GetBufferLessInputStream())
+                {
+                    var binaryReader = new BinaryReader(inputStream);
+                    while (true)
+                    {
+                        int size;
+                        try
+                        {
+                            size = binaryReader.ReadInt32();
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            break;
+                        }
+                        using (var stream = new PartialStream(inputStream, size))
+                        {
+                            yield return YieldDocumentsInBatch(stream, increaseDocumentsCount);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                mre.Set();
+            }
+        }
 
-		private static IEnumerable<JsonDocument> YieldDocumentsInBatch(Stream partialStream, Action<int> increaseDocumentsCount)
-		{
-			using(var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen:true))
-			{
-				var reader = new BinaryReader(stream);
-				var count = reader.ReadInt32();
+        private static IEnumerable<JsonDocument> YieldDocumentsInBatch(Stream partialStream, Action<int> increaseDocumentsCount)
+        {
+            using(var stream = new GZipStream(partialStream, CompressionMode.Decompress, leaveOpen:true))
+            {
+                var reader = new BinaryReader(stream);
+                var count = reader.ReadInt32();
 
-				for (int i = 0; i < count; i++)
-				{
-					RavenJObject doc;
+                for (int i = 0; i < count; i++)
+                {
+                    RavenJObject doc;
 
-					try
-					{
-						doc = (RavenJObject) RavenJToken.ReadFrom(new BsonReader(reader));
-					}
-					catch (InvalidDataException e)
-					{
-						e.Data.Add("serializationError", true);
-						throw e;
-					}
-					catch (InvalidOperationException e)
-					{
-						e.Data.Add("serializationError",true);
-						throw e;
-					}
+                    try
+                    {
+                        doc = (RavenJObject) RavenJToken.ReadFrom(new BsonReader(reader)
+                        {
+                            DateTimeKindHandling = DateTimeKind.Unspecified
+                        });
+                    }
+                    catch (InvalidDataException e)
+                    {
+                        e.Data.Add("serializationError", true);
+                        throw e;
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        e.Data.Add("serializationError",true);
+                        throw e;
+                    }
 
-					var metadata = doc.Value<RavenJObject>("@metadata");
+                    var metadata = doc.Value<RavenJObject>("@metadata");
 
-					if (metadata == null)
-						throw new InvalidOperationException("Could not find metadata for document");
+                    if (metadata == null)
+                        throw new InvalidOperationException("Could not find metadata for document");
 
-					var id = metadata.Value<string>("@id");
-					if (string.IsNullOrEmpty(id))
-						throw new InvalidOperationException("Could not get id from metadata");
+                    var id = metadata.Value<string>("@id");
+                    if (string.IsNullOrEmpty(id))
+                        throw new InvalidOperationException("Could not get id from metadata");
 
-					doc.Remove("@metadata");
+                    doc.Remove("@metadata");
 
-					yield return new JsonDocument
-					{
-						Key = id,
-						DataAsJson = doc,
-						Metadata = metadata
-					};
-				}
+                    yield return new JsonDocument
+                    {
+                        Key = id,
+                        DataAsJson = doc,
+                        Metadata = metadata
+                    };
+                }
 
-				increaseDocumentsCount(count);
-			}
-		}
+                increaseDocumentsCount(count);
+            }
+        }
 
         public class BulkInsertStatus
         {
             public int Documents { get; set; }
             public bool Completed { get; set; }
         }
-	}
+    }
 
 }

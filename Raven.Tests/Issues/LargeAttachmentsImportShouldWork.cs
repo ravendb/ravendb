@@ -310,31 +310,36 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public void MultipleAttachmentsImportShouldWork()
+        public void MultipleAttachmentsImportShouldWork_Rigorous()
         {
-            //test specials
-            InternalMultipleAttachmentsImportShouldWork(1024 * 1024 * 500, 3);
-            InternalMultipleAttachmentsImportShouldWork(0, 1);
-            InternalMultipleAttachmentsImportShouldWork(5164, 12);
-
-            for (int size = 1; size < 1024 * 1024; size++)
-                for (int itemCount = 1; itemCount < 4; itemCount++)
+            for (int size = 1; size < 1024 * 1024; size += 128)
+                for (int itemCount = 1; itemCount <3; itemCount++)
                 {
                     try
                     {
-                        InternalMultipleAttachmentsImportShouldWork(size, itemCount);
+                        MultipleAttachmentsImportShouldWork(size, itemCount);
                     }
                     catch (Exception e)
                     {
-                        var message = string.Format("Failed test at size: {0}, itemCount: {1}. Reason: {2}", size, itemCount,e);
-                        Assert.True(false,message);
+                        var message = string.Format("Failed test at size: {0}, itemCount: {1}. Reason: {2}", size, itemCount, e);
+                        Assert.True(false, message);
                     }
                 }
-
         }
 
-        public void InternalMultipleAttachmentsImportShouldWork(int size, int itemCount)
+        //MultipleAttachmentsImportShouldWork
+        [Theory]
+        [InlineData(0,1)]
+        [InlineData(5164, 3)]
+        [InlineData(1024, 3)]
+        [InlineData(2048, 3)]
+        [InlineData(4096, 3)]
+        [InlineData(5164, 4)]
+        [InlineData(1024, 4)]
+        [InlineData(2048, 4)]
+        [InlineData(4096, 4)]
+        [InlineData(1024 * 1024, 3)]
+        public void MultipleAttachmentsImportShouldWork(int size, int itemCount)
         {
             var buffer = new byte[size];
             var random = new Random(size);
@@ -348,7 +353,7 @@ namespace Raven.Tests.Issues
                 });
             }
 
-            using (var source = NewRemoteDocumentStore(databaseName: "fooDB"))
+            using (var source = NewRemoteDocumentStore(databaseName: "fooDB",fiddler:true))
             {
                 source.DatabaseCommands.ForSystemDatabase().CreateDatabase(new DatabaseDocument
                 {
@@ -358,6 +363,11 @@ namespace Raven.Tests.Issues
                         {"Raven/DataDir", "FooData" }
                     }
                 });
+
+                source.DatabaseCommands.ForDatabase("fooDB").Put("foobar/1", null, RavenJObject.FromObject(new { Foo = "Bar1" }),
+                    new RavenJObject());
+                source.DatabaseCommands.ForDatabase("fooDB").Put("foobar/2", null, RavenJObject.FromObject(new { Foo = "Bar2" }),
+                    new RavenJObject());
 
                 int id = 1;
                 foreach (var dataItem in dataList)
@@ -404,6 +414,15 @@ namespace Raven.Tests.Issues
                         OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments | ItemType.Transformers
                     }).Wait();
                 }
+
+                //make sure documents also were imported/exported correctly
+                Assert.Equal("Bar1", source.DatabaseCommands.ForDatabase("fooDB2")
+                    .Get("foobar/1")
+                    .DataAsJson.Value<string>("Foo"));
+
+                Assert.Equal("Bar2", source.DatabaseCommands.ForDatabase("fooDB2")
+                    .Get("foobar/2")
+                    .DataAsJson.Value<string>("Foo"));
 
                 id = 1;
                 foreach (var dataItem in dataList)
