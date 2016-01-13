@@ -295,6 +295,7 @@
     <Compile Include="JsonNetRequiresUsToHaveTheDynamicSnkFileAsAnEmbeddedResource.cs" />
     <Compile Include="JustFacetSearch.cs" />
     <Compile Include="Justin.cs" />
+    <Compile Include="Kamran.cs" />
     <Compile Include="kendaleiv.cs" />
     <Compile Include="Kijana.cs" />
     <Compile Include="Kushnir.cs" />

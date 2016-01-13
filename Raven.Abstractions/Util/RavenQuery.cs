@@ -94,10 +94,9 @@ namespace Raven.Abstractions.Util
                     case ' ':
                     case '\t':
                         {
-                            if (makePhrase)
+                            if (makePhrase == false)
                             {
-                                //If it is a phrase there is no need to double escape just escape the original term.
-                                return new StringBuilder(term).Insert(0,"\"").Append("\"").ToString();								
+                                goto case '\\';
                             }
                             break;
                         }
@@ -126,6 +125,13 @@ namespace Raven.Abstractions.Util
             {
                 // append any trailing substring
                 buffer.Append(term, start, length - start);
+            }
+
+
+            if (makePhrase)
+            {
+                buffer.Insert(0, '\"');
+                buffer.Append('"');
             }
 
             return buffer.ToString();
