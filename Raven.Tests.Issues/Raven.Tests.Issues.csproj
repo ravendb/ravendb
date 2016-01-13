@@ -558,7 +558,6 @@
     <Compile Include="RavenDB_3106.cs" />
     <Compile Include="RavenDB-3225.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
-    <Compile Include="windowsAuthGetUserInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj">

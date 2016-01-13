@@ -1,3 +1,4 @@
+#if !DNXCORE50
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
@@ -7,6 +8,8 @@ using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Extensions;
 using Raven.Tests.Common.Attributes;
+using Raven.Tests.Helpers.Util;
+
 using Xunit;
 
 namespace Raven.Tests.Core.Auth
@@ -22,15 +25,15 @@ namespace Raven.Tests.Core.Auth
         public void GetUserInfoAndPermissionsWindowsAuthentication()
         {
             Raven.Database.Server.Security.Authentication.EnableOnce();
-            this.Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-            this.Server.SystemDatabase.Documents.Put(
+            Server.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            Server.SystemDatabase.Documents.Put(
                 "Raven/Authorization/WindowsSettings",
                 null,
                 RavenJObject.FromObject(new WindowsAuthDocument
                 {
                     RequiredUsers = new List<WindowsAuthData>
                     {
-                        new WindowsAuthData()
+                        new WindowsAuthData
                         {
                             Name = string.Format("{0}\\{1}", FactIfWindowsAuthenticationIsAvailable.Admin.Domain, FactIfWindowsAuthenticationIsAvailable.Admin.UserName),
                             Enabled = true,
@@ -46,11 +49,14 @@ namespace Raven.Tests.Core.Auth
 
             using (var store = new DocumentStore
             {
-
                 Credentials = new NetworkCredential(FactIfWindowsAuthenticationIsAvailable.Admin.UserName, FactIfWindowsAuthenticationIsAvailable.Admin.Password, FactIfWindowsAuthenticationIsAvailable.Admin.Domain),
-                Url = this.Server.SystemDatabase.ServerUrl
-            }.Initialize())
+                Url = Server.SystemDatabase.ServerUrl
+            })
             {
+                ConfigurationHelper.ApplySettingsToConventions(store.Conventions);
+
+                store.Initialize();
+
                 store
                     .DatabaseCommands
                     .GlobalAdmin
@@ -95,8 +101,8 @@ namespace Raven.Tests.Core.Auth
                 var res3 = per3.Reason;
                 Assert.True(isGrant3);
                 Assert.Equal("PUT allowed on " + "db3" + " because user " + info.User + "has ReadWrite permissions", res3);
-
             }
         }
     }
 }
+#endif
