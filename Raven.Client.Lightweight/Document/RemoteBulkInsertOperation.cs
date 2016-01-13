@@ -325,28 +325,19 @@ namespace Raven.Client.Document
         }
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
-        {
-            BinaryWriter requestBinaryWriter;
-            bufferedStream.SetLength(0);
-            WriteToBuffer(localBatch);
+        {            
+            WriteToTempBuffer(localBatch);
+            WriteTempBufferTo(requestStream);
 
+            //if the local batch is empty, this means
+            //that the bulk insert operation is empty and there is
+            //no need to continue with reporting how much stuff was written
+            //-> essentially it is a "keep-alive" message
             if (localBatch.Count == 0)
-            {
-                requestBinaryWriter = new BinaryWriter(requestStream);
-                requestBinaryWriter.Write((int)bufferedStream.Position);
-                bufferedStream.WriteTo(requestStream);
-                requestStream.Flush();
-
                 return;
-            }
-
-            requestBinaryWriter = new BinaryWriter(requestStream);
-            requestBinaryWriter.Write((int)bufferedStream.Position);
-            bufferedStream.WriteTo(requestStream);
-            requestStream.Flush();
 
             total += localBatch.Count;
-            Action<string> report = Report;
+            var report = Report;
             if (report != null)
             {
                 report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
@@ -356,8 +347,17 @@ namespace Raven.Client.Document
             }
         }
 
-        private void WriteToBuffer(ICollection<RavenJObject> localBatch)
+        private void WriteTempBufferTo(Stream requestStream)
         {
+            var requestBinaryWriter = new BinaryWriter(requestStream);
+            requestBinaryWriter.Write((int) bufferedStream.Position);
+            bufferedStream.WriteTo(requestStream);
+            requestStream.Flush();
+        }
+
+        private void WriteToTempBuffer(ICollection<RavenJObject> localBatch)
+        {
+            bufferedStream.SetLength(0);
             using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
             {
                 var binaryWriter = new BinaryWriter(gzip);
