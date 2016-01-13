@@ -419,6 +419,9 @@ namespace Raven.Database.FileSystem
             if (TimerManager != null)
                 exceptionAggregator.Execute(TimerManager.Dispose);
 
+            if (Files != null)
+                exceptionAggregator.Execute(Files.Dispose);
+
             exceptionAggregator.ThrowIfNeeded();
         }
 
