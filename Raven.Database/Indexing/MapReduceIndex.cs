@@ -283,6 +283,8 @@ namespace Raven.Database.Indexing
                         // nothing to change
                         continue;
                     }
+
+                    accessor.MapReduce.IncrementReduceKeyCounter(indexId, reduceKeyStat.Key, changeValue);
                 }
             }), description: string.Format("Incrementing Reducing key counter fo index {0} for operation from Etag {1} to Etag {2}", this.PublicName, this.GetLastEtagFromStats(), batch.HighestEtagBeforeFiltering));
 
