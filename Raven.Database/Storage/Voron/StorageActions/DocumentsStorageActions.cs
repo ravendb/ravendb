@@ -116,28 +116,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 if (iterator.Seek(slice) == false)
                     return etag;
 
-                if (iterator.CurrentKey.Equals(slice)) // need gt, not ge
+                if (iterator.CurrentKey.Equals(slice) || etag == Etag.Empty) // need gt, not ge
                 {
                     if (iterator.MoveNext() == false)
                         return etag;
                 }
                 
-                ValueReader etagReader;
-                long totalSize = 0;
-
+                Slice etagSlice;
                 do
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    etagReader = iterator.CurrentKey.CreateReader();
-                    /*var docKey = GetKeyFromCurrent(iterator);
-                    var readResult = tableStorage.Documents.Read(Snapshot, docKey, null);
-                    totalSize += readResult.Reader.Length;
-                    if (maxSize.HasValue && totalSize >= maxSize)
-                        break;*/
+                    etagSlice = iterator.CurrentKey;
                 }
                 while (iterator.MoveNext() && --take > 0);
 
-                return Etag.Parse(etagReader.ReadBytes(16, out take));
+                return Etag.Parse(etagSlice.ToString());
             }
         }
 
