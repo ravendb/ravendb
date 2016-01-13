@@ -326,7 +326,7 @@ namespace Raven.Client.Document
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
         {            
-            WriteToTempBuffer(localBatch);
+            WriteBatchToTempBuffer(localBatch);
             WriteTempBufferTo(requestStream);
 
             //if the local batch is empty, this means
@@ -355,7 +355,7 @@ namespace Raven.Client.Document
             requestStream.Flush();
         }
 
-        private void WriteToTempBuffer(ICollection<RavenJObject> localBatch)
+        private void WriteBatchToTempBuffer(ICollection<RavenJObject> localBatch)
         {
             bufferedStream.SetLength(0);
             using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
