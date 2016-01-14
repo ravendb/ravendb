@@ -13,6 +13,7 @@ import messagePublisher = require("common/messagePublisher");
 import confirmationDialog = require("viewmodels/confirmationDialog");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import document = require("models/document");
+import downloader = require("common/downloader")
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -25,6 +26,8 @@ class viewModelBase {
         .subscribeTo("ActivateDatabase", true)
         .subscribeTo("ActivateFilesystem", true)
         .subscribeTo("ActivateCounterStorage", true);
+
+    public downloader = new downloader();
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
@@ -55,6 +58,8 @@ class viewModelBase {
      */
     canActivate(args: any): any {
         setTimeout(() => viewModelBase.showSplash(this.isAttached === false), 700);
+
+        this.downloader.reset();
 
         var resource = appUrl.getResource();
         if (resource instanceof filesystem) {

@@ -156,6 +156,7 @@
     <TypeScriptCompile Include="App\common\enableResizeBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\optional.ts" />
     <TypeScriptCompile Include="App\common\queryUtil.ts" />
+    <TypeScriptCompile Include="App\common\downloader.ts" />
     <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
     <TypeScriptCompile Include="App\models\environmentColor.ts" />
     <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
