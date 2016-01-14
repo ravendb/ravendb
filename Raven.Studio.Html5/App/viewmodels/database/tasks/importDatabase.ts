@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import messagePublisher = require("common/messagePublisher");
 import importDatabaseCommand = require("commands/database/studio/importDatabaseCommand");
+import checksufficientdiskspaceCommand = require("commands/database/studio/checksufficientdiskspaceCommand");
 
 class importDatabase extends viewModelBase {
     showAdvancedOptions = ko.observable(false);
@@ -89,12 +90,26 @@ class importDatabase extends viewModelBase {
     }
 
     fileSelected(fileName: string) {
-        var isFileSelected = !!$.trim(fileName);
-        this.hasFileSelected(isFileSelected);
-        this.importedFileName($(this.filePickerTag).val().split(/(\\|\/)/g).pop());
-
         var db: database = this.activeDatabase();
-        db.importStatus("");
+        var isFileSelected = !!$.trim(fileName);
+        var importFileName = $(this.filePickerTag).val().split(/(\\|\/)/g).pop();
+        if (isFileSelected) {
+            var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
+            new checksufficientdiskspaceCommand(fileInput.files[0].size, this.activeDatabase())
+                .execute()
+                .done(() => {
+                    this.hasFileSelected(isFileSelected);
+                    this.importedFileName(importFileName);
+                    db.importStatus("");
+                })
+                .fail(
+                () => {
+                    db.importStatus("No sufficient diskspace for import, consider using Raven.Smuggler.exe directly.");
+                    this.hasFileSelected(false);
+                    this.importedFileName("");
+                }
+                )
+        }
     }
 
     importDb() {

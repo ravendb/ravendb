@@ -127,7 +127,22 @@ for(var customFunction in customFunctions) {{
 }};", document.Value<string>("Functions")));
 
         }
-    
+
+        [HttpGet]
+        [RavenRoute("studio-tasks/check-sufficient-diskspace")]
+        [RavenRoute("databases/{databaseName}/studio-tasks/check-sufficient-diskspace")]
+        public async Task<HttpResponseMessage> CheckSufficientDiskspaceBeforeImport(long fileSize)
+        {
+            string tempRoot = Path.GetPathRoot(Database.Configuration.Core.TempPath);
+            var rootPathToDriveInfo = new Dictionary<string, DriveInfo>();
+            DriveInfo.GetDrives().ForEach(drive => rootPathToDriveInfo[drive.RootDirectory.FullName] = drive);
+            DriveInfo tempFolderDrive;
+            if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) ||
+                tempFolderDrive.AvailableFreeSpace - (long)(tempFolderDrive.TotalSize * 0.1) < fileSize)
+                throw new HttpResponseException(HttpStatusCode.BadRequest);
+
+            return GetEmptyMessage();
+        }
 
         [HttpPost]
         [RavenRoute("studio-tasks/import")]
