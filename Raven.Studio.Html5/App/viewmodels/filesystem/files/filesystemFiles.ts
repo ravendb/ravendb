@@ -22,9 +22,6 @@ import getFileSystemStatsCommand = require("commands/filesystem/getFileSystemSta
 import filesystemEditFile = require("viewmodels/filesystem/files/filesystemEditFile");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
 
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import messagePublisher = require('common/messagePublisher'); 
-
 class filesystemFiles extends viewModelBase {
 
     static revisionsFolderId = "/$$revisions$$";
@@ -340,14 +337,8 @@ class filesystemFiles extends viewModelBase {
 
             var fs = this.activeFilesystem();
             var fileName = selectedItem.getId();
-            new getSingleAuthTokenCommand(fs).execute().done((token: singleAuthToken) => {
-                var url = appUrl.forResourceQuery(fs) + "/files" + selectedFolder + "/" + encodeURIComponent(fileName) + "?singleUseAuthToken=" + token.Token;
-
-                $("<iframe>")
-                    .attr("src", url)
-                    .appendTo("body")
-                    .load(() => $(this).remove());
-            }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for download.", errorThrown));
+            var url = appUrl.forResourceQuery(fs) + "/files" + selectedFolder + "/" + encodeURIComponent(fileName);
+            this.downloader.download(fs, url);
         }
     }
 
