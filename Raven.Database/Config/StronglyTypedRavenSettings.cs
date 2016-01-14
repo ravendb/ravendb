@@ -169,6 +169,8 @@ namespace Raven.Database.Config
 			ConcurrentDatabaseLoadTimeout = new TimeSpanSetting(settings[Constants.ConcurrentDatabaseLoadTimeout],
 				TimeSpan.FromSeconds(15),
 				TimeSpanArgumentType.FromParse);
+
+			UseNullDocumentCacher = new BooleanSetting(settings["Raven/UseNullDocumentCacher"],false);
         }
 
 		private string GetDefaultWebDir()
@@ -320,5 +322,6 @@ namespace Raven.Database.Config
 		public IntegerSetting FlushIndexToDiskSizeInMb { get; set; }
 
 		public IntegerSetting FetchingDocumentsFromDiskTimeoutInSeconds { get; set; }
+		public BooleanSetting UseNullDocumentCacher { get; set; }
 	}
 }

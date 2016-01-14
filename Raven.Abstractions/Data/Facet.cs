@@ -186,9 +186,15 @@ namespace Raven.Abstractions.Data
 			//i.e. new DateTime(10, 4, 2001) || dateTimeVar.AddDays(2) || val +100
 			if (operation.Right is NewExpression || operation.Right is MethodCallExpression || operation.Right is BinaryExpression)
 			{
-                var invoke = Expression.Lambda(operation.Right).Compile();
-				var result = invoke.DynamicInvoke();
-				return result;
+			    try
+			    {
+			        var invoke = Expression.Lambda(operation.Right).Compile();
+			        return invoke.DynamicInvoke();
+			    }
+			    catch (Exception e)
+			    {
+			        throw new InvalidOperationException("Could not understand expression " + operation.Right, e);
+			    }
 			}
 
 			throw new InvalidOperationException(String.Format("Unable to parse expression: {0} {1} {2}",
