@@ -102,14 +102,8 @@ class filesystemEditFile extends viewModelBase {
     downloadFile() {
         var fs = this.activeFilesystem();
         var fileName = this.fileName();
-        new getSingleAuthTokenCommand(fs).execute().done((token: singleAuthToken) => {
-            var url = appUrl.forResourceQuery(fs) + "/files/" + encodeURIComponent(fileName) + "?singleUseAuthToken=" + token.Token;
-
-            $("<iframe>")
-                .attr("src", url)
-                .appendTo("body")
-                .load(() => $(this).remove());
-        }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for download.", errorThrown));
+        var url = appUrl.forResourceQuery(fs) + "/files/" + encodeURIComponent(fileName);
+        this.downloader.download(fs, url);
     }
 
     refreshFile() {
