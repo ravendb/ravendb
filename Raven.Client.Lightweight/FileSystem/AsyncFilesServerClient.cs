@@ -363,6 +363,39 @@ namespace Raven.Client.FileSystem
                 return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
             }
 
+        private async Task<IAsyncEnumerator<FileHeader>> StreamQueryAsyncImpl(string query, string[] sortFields, int start, int pageSize, OperationMetadata operationMetadata)
+        {
+            var path = new StringBuilder(operationMetadata.Url)
+                .Append("/streams/query?query=")
+                .Append(Uri.EscapeUriString(query))
+                .Append("&start=")
+                .Append(start)
+                .Append("&pageSize=")
+                .Append(pageSize);
+
+            if (sortFields != null)
+            {
+                foreach (var sortField in sortFields)
+                {
+                    path.Append("&sort=").Append(sortField);
+                }
+            }
+
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.ToString().Trim(), HttpMethods.Get, operationMetadata.Credentials,  Conventions)
+                                            .AddOperationHeaders(OperationsHeaders));
+
+            var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+
+            await response.AssertNotFailingResponse().ConfigureAwait(false);
+
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+        }
+
+        public Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(string query, string[] sortFields = null, int start = 0, int pageSize = int.MaxValue)
+        {
+            return ExecuteWithReplication(HttpMethod.Get, operation => StreamQueryAsyncImpl(query, sortFields, start, pageSize, operation));
+        }
+
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
         {
             private readonly HttpJsonRequest request;
