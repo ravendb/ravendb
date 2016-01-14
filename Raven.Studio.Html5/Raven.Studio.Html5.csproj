@@ -34,8 +34,10 @@
     <TypeScriptCompile Include="App\commands\database\debug\getFilteredOutIndexStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\index\forceIndexReplace.ts" />
+    <TypeScriptCompile Include="App\commands\database\studio\checksufficientdiskspaceCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\subscriptions\getSubscriptionCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\subscriptions\setSubscriptionAckEtagCommand.ts" />
+    <TypeScriptCompile Include="App\commands\filesystem\fsCheckSufficientDiskSpaceCommand.ts" />
     <TypeScriptCompile Include="App\commands\resources\getGlobalReplicationTopology.ts" />
     <TypeScriptCompile Include="App\commands\database\studio\checkEncryptionKey.ts" />
     <TypeScriptCompile Include="App\commands\auth\forceLicenseUpdate.ts" />
