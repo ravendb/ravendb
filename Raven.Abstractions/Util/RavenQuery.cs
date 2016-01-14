@@ -94,9 +94,9 @@ namespace Raven.Abstractions.Util
                     case ' ':
                     case '\t':
                         {
-                            if (makePhrase == false)
+                            if (makePhrase)
                             {
-                                goto case '\\';
+                                return new StringBuilder(Escape(term, false, false)).Insert(0,"\"").Append("\"").ToString();								
                             }
                             break;
                         }
@@ -125,13 +125,6 @@ namespace Raven.Abstractions.Util
             {
                 // append any trailing substring
                 buffer.Append(term, start, length - start);
-            }
-
-
-            if (makePhrase)
-            {
-                buffer.Insert(0, '\"');
-                buffer.Append('"');
             }
 
             return buffer.ToString();

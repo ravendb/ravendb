@@ -26,7 +26,7 @@ namespace Raven.Tests.MailingList
             {
                 using (var s = store.OpenSession())
                 {
-                    Assert.Equal("Name:(\\\"Foo\\\"\\:\\ Test)", s.Query<Foo>()
+                    Assert.Equal("Name:(\\\"Foo\\\"\\: Test)", s.Query<Foo>()
                         .Search(x => x.Name , "\"Foo\": Test").ToString());
                     Assert.Equal("Name:\"\\\"Foo\\\"\\: Test\"", s.Query<Foo>()
                         .Where(x => x.Name == "\"Foo\": Test").ToString());
