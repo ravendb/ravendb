@@ -263,6 +263,8 @@ namespace Voron
                     *(long*)tmpBuffer = *(long*)(_val + _pos);
                 }
 
+                _pos += sizeof(long);
+
                 if (BitConverter.IsLittleEndian)
                     return SwapBitShift(*(long*)tmpBuffer);
 
