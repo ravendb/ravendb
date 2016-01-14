@@ -325,9 +325,16 @@ namespace Raven.Database.Prefetching
 
                 docsLoaded = TryGetDocumentsFromQueue(nextEtagToIndex, result, take);
 
-                // we removed some documents from the queue
-                // we'll try to create a new future batch, if possible
-                MaybeAddFutureBatch(result.LastOrDefault());
+                // we don't need to add a future batch to a prefetcher that
+                // gets the documents after commit -> the default o,
+                // except when we disabled collecting documents after commit
+                if (ShouldHandleUnusedDocumentsAddedAfterCommit == false || 
+                    DisableCollectingDocumentsAfterCommit)
+                {
+                    // we removed some documents from the queue
+                    // we'll try to create a new future batch, if possible
+                    MaybeAddFutureBatch(result.LastOrDefault());
+                }
 
                 if (docsLoaded)
                 {
