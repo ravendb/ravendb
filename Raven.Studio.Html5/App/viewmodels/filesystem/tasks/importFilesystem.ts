@@ -3,6 +3,7 @@ import filesystem = require("models/filesystem/filesystem");
 import messagePublisher = require("common/messagePublisher");
 import importFilesystemCommand = require("commands/filesystem/importFilesystemCommand");
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
+import fsCheckSufficientDiskSpaceCommand = require("commands/filesystem/fsCheckSufficientDiskSpaceCommand");
 
 class importDatabase extends viewModelBase {
     batchSize = ko.observable(1024);
@@ -46,12 +47,26 @@ class importDatabase extends viewModelBase {
     }
 
     fileSelected(fileName: string) {
-        var isFileSelected = !!$.trim(fileName);
-        this.hasFileSelected(isFileSelected);
-        this.importedFileName($(this.filePickerTag).val().split(/(\\|\/)/g).pop());
-
         var fs: filesystem = this.activeFilesystem();
-        fs.importStatus("");
+        var isFileSelected = !!$.trim(fileName);
+        var importFileName = $(this.filePickerTag).val().split(/(\\|\/)/g).pop();
+        if (isFileSelected) {
+            var fileInput = <HTMLInputElement>document.querySelector(this.filePickerTag);
+            new fsCheckSufficientDiskSpaceCommand(fileInput.files[0].size, this.activeFilesystem())
+                .execute()
+                .done(() => {
+                    this.hasFileSelected(isFileSelected);
+                    this.importedFileName(importFileName);
+                    fs.importStatus("");
+                })
+                .fail(
+                () => {
+                    fs.importStatus("No sufficient diskspace for import, consider using Raven.Smuggler.exe directly.");
+                    this.hasFileSelected(false);
+                    this.importedFileName("");
+                }
+                )
+        }
     }
 
     importFs() {

@@ -134,7 +134,8 @@ for(var customFunction in customFunctions) {{
             var rootPathToDriveInfo = new Dictionary<string,DriveInfo>();
             DriveInfo.GetDrives().ForEach(drive => rootPathToDriveInfo[drive.RootDirectory.FullName] = drive);
             DriveInfo tempFolderDrive;
-            if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) || tempFolderDrive.AvailableFreeSpace< fileSize)
+            if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) || 
+                tempFolderDrive.AvailableFreeSpace + (long)(tempFolderDrive.TotalSize * 0.1) < fileSize)
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
 
             return GetEmptyMessage();
