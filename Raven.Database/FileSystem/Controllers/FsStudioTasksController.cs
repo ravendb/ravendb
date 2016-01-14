@@ -43,7 +43,7 @@ namespace Raven.Database.FileSystem.Controllers
             DriveInfo.GetDrives().ForEach(drive => rootPathToDriveInfo[drive.RootDirectory.FullName] = drive);
             DriveInfo tempFolderDrive;
             if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) ||
-                tempFolderDrive.AvailableFreeSpace + (long)(tempFolderDrive.TotalSize*0.1) < fileSize)
+                tempFolderDrive.AvailableFreeSpace - (long)(tempFolderDrive.TotalSize*0.1) < fileSize)
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
 
             return GetEmptyMessage();
