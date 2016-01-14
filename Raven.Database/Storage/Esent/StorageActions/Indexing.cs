@@ -331,8 +331,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
             Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
             Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) == false)
-                throw new IndexDoesNotExistsException("There is no reduce index named: " + id);
-
+            {
+                // index doesn't exist
+                return;
+            }
+                
             Api.EscrowUpdate(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"], 1);
         }
 
