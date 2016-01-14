@@ -11,6 +11,9 @@ import deleteItems = require("viewmodels/common/deleteItems");
 import fileRenameDialog = require("viewmodels/filesystem/files/fileRenameDialog");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import messagePublisher = require("common/messagePublisher"); 
+
 class filesystemEditFile extends viewModelBase {
 
     metadataEditor: AceAjax.Editor;
@@ -97,8 +100,16 @@ class filesystemEditFile extends viewModelBase {
     }
 
     downloadFile() {
-        var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + encodeURIComponent(this.fileName());
-        window.location.assign(url);
+        var fs = this.activeFilesystem();
+        var fileName = this.fileName();
+        new getSingleAuthTokenCommand(fs).execute().done((token: singleAuthToken) => {
+            var url = appUrl.forResourceQuery(fs) + "/files/" + encodeURIComponent(fileName) + "?singleUseAuthToken=" + token.Token;
+
+            $("<iframe>")
+                .attr("src", url)
+                .appendTo("body")
+                .load(() => $(this).remove());
+        }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for download.", errorThrown));
     }
 
     refreshFile() {
