@@ -83,8 +83,17 @@ namespace Raven.Client.Document.SessionOperations
                 var values = result.Value<RavenJArray>("$values").ToArray();
                 foreach (var value in values)
                 {
+                  
                     var ravenJObject = JsonExtensions.ToJObject(value);
+                    foreach (var documentConversionListener in documentSession.Listeners.ConversionListeners)
+                    {
+                        documentConversionListener.BeforeConversionToEntity(null, ravenJObject, null);
+                    }
                     var obj = queryOperation.Deserialize<T>(ravenJObject);
+                    foreach (var documentConversionListener in documentSession.Listeners.ConversionListeners)
+                    {
+                        documentConversionListener.AfterConversionToEntity(null, ravenJObject, null, obj);
+                    }
                     yield return obj;
                 }
             }

@@ -2049,7 +2049,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (strValue != null)
             {
                 strValue = RavenQuery.Escape(strValue,
-                        whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+                        whereParams.AllowWildcards && whereParams.IsAnalyzed, whereParams.IsAnalyzed);
 
                 return whereParams.IsAnalyzed ? strValue : String.Concat("[[", strValue, "]]");
             }
