@@ -19,7 +19,7 @@ namespace Raven.Server.Json
     /// </summary>
     public unsafe class RavenOperationContext : IDisposable
     {
-        private LinkedList<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory; 
+        private LinkedList<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
 
         public readonly UnmanagedBuffersPool Pool;
         private UnmanagedBuffersPool.AllocatedMemoryData _tempBuffer;
@@ -44,7 +44,7 @@ namespace Raven.Server.Json
 
         public byte[] GetManagedBuffer()
         {
-            if(_bytesBuffer == null)
+            if (_bytesBuffer == null)
                 _bytesBuffer = new byte[4096];
             return _bytesBuffer;
         }
@@ -76,10 +76,26 @@ namespace Raven.Server.Json
 
         public UnmanagedBuffersPool.AllocatedMemoryData GetMemory(int requestedSize)
         {
+            if (requestedSize == 0)
+                return new UnmanagedBuffersPool.AllocatedMemoryData
+                {
+                    Address = IntPtr.Zero,
+                    SizeInBytes = 0
+                };
+
             var actualSize = Bits.NextPowerOf2(requestedSize);
             var index = UnmanagedBuffersPool.GetIndexFromSize(actualSize);
-            var count = _allocatedMemory?[index]?.Count;
-            if (count == null || count == 0)
+            if (index == -1)
+            {
+                return new UnmanagedBuffersPool.AllocatedMemoryData
+                {
+                    SizeInBytes = requestedSize,
+                    Address = Marshal.AllocHGlobal(requestedSize)
+                };
+            }
+
+            if (_allocatedMemory?[index] == null ||
+                _allocatedMemory[index].Count == 0)
                 return Pool.Allocate(actualSize);
             var last = _allocatedMemory[index].Last.Value;
             _allocatedMemory[index].RemoveLast();
@@ -88,7 +104,10 @@ namespace Raven.Server.Json
 
         public void ReturnMemory(UnmanagedBuffersPool.AllocatedMemoryData buffer)
         {
-            if(_allocatedMemory == null)
+            if (buffer.SizeInBytes == 0)
+                return;
+
+            if (_allocatedMemory == null)
                 _allocatedMemory = new LinkedList<UnmanagedBuffersPool.AllocatedMemoryData>[16];
             var index = UnmanagedBuffersPool.GetIndexFromSize(buffer.SizeInBytes);
             if (index == -1)
@@ -147,11 +166,23 @@ namespace Raven.Server.Json
 
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
             var memory = GetMemory(maxByteCount);
-            fixed (char* pField = field)
+            try
             {
-                var address = (byte*)memory.Address;
-                var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
-                _fieldNames[field] = value = new LazyStringValue(field, address, actualSize, this);
+                fixed (char* pField = field)
+                {
+                    var address = (byte*)memory.Address;
+                    var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
+                    _fieldNames[field] = value = new LazyStringValue(field, address, actualSize, this)
+                    {
+                        AllocatedMemoryData = memory
+                    };
+                }
+
+            }
+            catch (Exception)
+            {
+                ReturnMemory(memory);
+                throw;
             }
             return value;
         }
@@ -166,15 +197,24 @@ namespace Raven.Server.Json
                 return value;
 
             var memory = GetMemory(val.Size);
-            var address = (byte*)memory.Address;
-            Memory.Copy(address, val.Buffer, val.Size);
-            value = new LazyStringValue(null, address, val.Size, this)
+            try
             {
-                EscapePositions = val.EscapePositions,
-                AllocatedMemoryData = memory
-            };
-            _internedFieldNames[value] = value;
-            return value;
+                var address = (byte*)memory.Address;
+                Memory.Copy(address, val.Buffer, val.Size);
+                value = new LazyStringValue(null, address, val.Size, this)
+                {
+                    EscapePositions = val.EscapePositions,
+                    AllocatedMemoryData = memory
+                };
+                _internedFieldNames[value] = value;
+                return value;
+
+            }
+            catch (Exception)
+            {
+                ReturnMemory(memory);
+                throw;
+            }
         }
 
         public byte[] GetBytesForFieldName(string field)

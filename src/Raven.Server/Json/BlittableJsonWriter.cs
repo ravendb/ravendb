@@ -48,8 +48,12 @@ namespace Raven.Server.Json
         private byte* GetCompressionBuffer(int minSize)
         {
             // enlarge buffer if needed
-            if (minSize > _compressionBuffer.SizeInBytes)
+            if (_compressionBuffer == null || 
+                minSize > _compressionBuffer.SizeInBytes)
             {
+                if(_compressionBuffer != null)
+                    _context.ReturnMemory(_compressionBuffer);
+
                  _compressionBuffer = _context.GetMemory(minSize);
             }
              return (byte*)_compressionBuffer.Address;
@@ -61,7 +65,6 @@ namespace Raven.Server.Json
             if (_buffer != null && minSize <= _buffer.SizeInBytes)
                 return (byte*)_buffer.Address;
             if (_buffer != null)
-          
                 _context.ReturnMemory(_buffer);
             _buffer = _context.GetMemory(minSize);
             return (byte*) _buffer.Address;

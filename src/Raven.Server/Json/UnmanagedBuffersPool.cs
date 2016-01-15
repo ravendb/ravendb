@@ -179,6 +179,7 @@ namespace Raven.Server.Json
 
         public void Return(AllocatedMemoryData returned)
         {
+            if (returned == null) throw new ArgumentNullException(nameof(returned));
             var index = GetIndexFromSize(returned.SizeInBytes);
             if (index == -1)
             {

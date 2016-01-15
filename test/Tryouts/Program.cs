@@ -15,22 +15,24 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //new FunctionalityTests().LongStringsTest(1000);
+            new BlittableFormatTests().CheckRoundtrip(name: "BlittableTests.project.lock.json");
 
-            //force loading of assemblyes
-            Console.WriteLine(typeof(UnmanageJsonReaderTests));
-            Console.WriteLine(typeof(BlittableJsonWriter));
-            Console.WriteLine(typeof(Hashing));
-            Console.WriteLine(typeof(StorageEnvironment));
+            return;
 
-            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
-            Console.WriteLine("Reallying starting now...");
-            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
+            ////force loading of assemblyes
+            //Console.WriteLine(typeof(UnmanageJsonReaderTests));
+            //Console.WriteLine(typeof(BlittableJsonWriter));
+            //Console.WriteLine(typeof(Hashing));
+            //Console.WriteLine(typeof(StorageEnvironment));
 
-            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
-            Console.WriteLine("Reallying starting now...");
-            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
-            Console.ReadLine();
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
+            //Console.WriteLine("Reallying starting now...");
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
+
+            //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
+            //Console.WriteLine("Reallying starting now...");
+            //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
+            //Console.ReadLine();
 
         }
     }
