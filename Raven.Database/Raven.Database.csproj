@@ -685,7 +685,6 @@
     <Compile Include="Bundles\Replication\Responders\Behaviors\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\Behaviors\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
-    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
     <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsIndexTrigger.cs" />
     <Compile Include="Bundles\SqlReplication\ConversionScriptResult.cs" />
     <Compile Include="Bundles\SqlReplication\ItemToReplicate.cs" />
@@ -962,7 +961,7 @@
     <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\PreventConflictDocumentsPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
-    <Compile Include="Bundles\Replication\Triggers\VirtualDeleteTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\VirtualDeleteAndRemoveConflictsTrigger.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
     <Compile Include="Data\QueryResultWithIncludes.cs" />
