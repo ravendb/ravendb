@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Voron.Data.BTrees;
 using Voron.Impl.Backup;
 using Voron.Impl.Journal;
 

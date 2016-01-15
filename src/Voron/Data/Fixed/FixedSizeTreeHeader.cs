@@ -11,6 +11,10 @@ namespace Voron.Data.Fixed
 {
     public class FixedSizeTreeHeader
     {
+        /// <summary>
+        /// The Embedded Fixed Size Tree Root Header.
+        /// </summary>    
+        /// <remarks>This header extends the <see cref="RootHeader"/> structure.</remarks>
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
         public struct Embedded
         {
@@ -24,6 +28,10 @@ namespace Voron.Data.Fixed
             public ushort NumberOfEntries;
         }
 
+        /// <summary>
+        /// The Large Fixed Size Tree Root Header.
+        /// </summary>    
+        /// <remarks>This header extends the <see cref="RootHeader"/> structure.</remarks>
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
         public struct Large
         {

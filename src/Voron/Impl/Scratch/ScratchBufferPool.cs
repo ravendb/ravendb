@@ -82,7 +82,7 @@ namespace Voron.Impl.Scratch
         {
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
-            var size = (int)Bits.NextPowerOf2(numberOfPages);
+            var size = Bits.NextPowerOf2(numberOfPages);
 
             PageFromScratchBuffer result;
             var current = _current;

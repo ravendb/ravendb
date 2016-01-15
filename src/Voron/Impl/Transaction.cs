@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Compact;
 using Voron.Data.Fixed;
@@ -236,7 +237,7 @@ namespace Voron.Impl
             if (val == null)
                 return RootObjectType.None;
 
-            return ((TreeRootHeader*) val)->RootObjectType;
+            return ((RootHeader*) val)->RootObjectType;
         }
     }
 

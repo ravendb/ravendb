@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Runtime.InteropServices;
-using Voron.Impl.FileHeaders;
+using Voron.Data.BTrees;
 
 namespace Voron.Impl.Journal
 {

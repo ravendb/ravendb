@@ -1,6 +1,6 @@
 using System;
 
-namespace Voron.Impl.FileHeaders
+namespace Voron.Data.BTrees
 {
     [Flags]
     public enum TreeFlags : byte
