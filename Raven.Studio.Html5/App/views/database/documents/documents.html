@@ -46,9 +46,9 @@
                 </button>
             </div>
             <div class="btn-group">
-                <a href="#" target="_blank" data-bind="attr: { href: currentExportUrl }, visible: isRegularCollection, click: exportCsv" class="btn btn-default" title="Export CSV" download>
+                <button data-bind="visible: isRegularCollection, click: exportCsv" class="btn btn-default" title="Export CSV">
                     <i class="fa fa-file-excel-o"></i>
-                </a>
+                </button>
             </div>
             <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
                 <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc, enable: selectedDocumentIndices().length == 1" title="Edit selected document (F2)">

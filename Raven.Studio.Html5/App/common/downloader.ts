@@ -8,7 +8,8 @@ class downloader {
 
     download(resource : resource, url : string) {
         new getSingleAuthTokenCommand(resource).execute().done((token: singleAuthToken) => {
-            this.$downloadFrame.attr("src", url + "?singleUseAuthToken=" + token.Token);
+            var authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
+            this.$downloadFrame.attr("src", url + authToken);
         }).fail((qXHR, textStatus, errorThrown) => messagePublisher.reportError("Could not get Single Auth Token for download.", errorThrown));
     }
 

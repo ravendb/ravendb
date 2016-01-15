@@ -8,7 +8,6 @@ import dataExplorationCommand = require("commands/database/query/dataExploration
 import pagedResultSet = require("common/pagedResultSet");
 import pagedList = require("common/pagedList");
 import document = require("models/database/documents/document");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher");
 
 class exploration extends viewModelBase {
@@ -20,10 +19,8 @@ class exploration extends viewModelBase {
     queryResults = ko.observable<pagedList>();
     isLoading = ko.observable<boolean>(false);
     dataLoadingXhr = ko.observable<any>();
-    token = ko.observable<singleAuthToken>();
 
     selectedCollectionLabel = ko.computed(() => this.explorationRequest.collection() || "Select a collection");
-    exportUrl = ko.observable<string>();
 
     runEnabled = ko.computed(() => !!this.explorationRequest.collection());
 
@@ -31,18 +28,6 @@ class exploration extends viewModelBase {
         super();
         this.appUrls = appUrl.forCurrentDatabase();
         aceEditorBindingHandler.install();
-        this.explorationRequest.linq.subscribe(() => this.updateExportUrl());
-        this.explorationRequest.collection.subscribe(() => this.updateExportUrl());
-    }
-
-    updateExportUrl() {
-        this.exportUrl(new dataExplorationCommand(this.explorationRequest.toDto(), this.activeDatabase()).getCsvUrl());
-    }
-
-    updateAuthToken() {
-        new getSingleAuthTokenCommand(this.activeDatabase())
-            .execute()
-            .done(token => this.token(token));
     }
 
     canActivate(args): any {
@@ -60,13 +45,12 @@ class exploration extends viewModelBase {
 
     activate(args?: string) {
         super.activate(args);
-        this.updateAuthToken();
     }
 
     exportCsv() {
-        // schedule token update (to properly handle subseqent downloads)
-        setTimeout(() => this.updateAuthToken(), 50);
-        return true;
+        var db = this.activeDatabase();
+        var url = new dataExplorationCommand(this.explorationRequest.toDto(), db).getCsvUrl();
+        this.downloader.download(db, url);
     }
 
     runExploration() {
