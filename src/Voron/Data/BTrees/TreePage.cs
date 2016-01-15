@@ -269,7 +269,7 @@ namespace Voron.Data.BTrees
                 KeysOffsets[i] = KeysOffsets[i - 1];
             }
 
-            var nodeSize = SizeOf.NodeEntry(PageMaxSpace, key, len);
+            var nodeSize = TreeSizeOf.NodeEntry(PageMaxSpace, key, len);
             var node = AllocateNewNode(index, nodeSize, previousNodeVersion);
 
             node->KeySize = key.Size;
@@ -290,9 +290,9 @@ namespace Voron.Data.BTrees
         {
             var index = NumberOfEntries;
 
-            Debug.Assert(HasSpaceFor(SizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize));
+            Debug.Assert(HasSpaceFor(TreeSizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize));
 
-            var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, key);
+            var nodeSize = TreeSizeOf.NodeEntryWithAnotherKey(other, key);
 
             Debug.Assert(IsBranch == false || index != 0 || key.KeyLength == 0);// branch page's first item must be the implicit ref
 
@@ -477,7 +477,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetRequiredSpace(Slice key, int len)
         {
-            return SizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
+            return TreeSizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
         }
 
         public int PageMaxSpace

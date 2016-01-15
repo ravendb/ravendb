@@ -294,7 +294,7 @@ namespace Voron.Data.BTrees
         {
             var pos = _parentPage.NodePositionFor(separatorKey); // select the appropriate place for this
 
-            if (_parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKey) + Constants.NodeOffsetSize) == false)
+            if (_parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separatorKey) + Constants.NodeOffsetSize) == false)
             {
                 var pageSplitter = new TreePageSplitter(_tx, _tree, separatorKey, -1, pageNumber, TreeNodeFlags.PageRef,
                     0, _cursor);
@@ -308,7 +308,7 @@ namespace Voron.Data.BTrees
         {
             Slice keyToInsert = _newKey;
 
-            int pageSize = SizeOf.NodeEntry(_tx.DataPager.PageMaxSpace, keyToInsert, _len) + Constants.NodeOffsetSize;
+            int pageSize = TreeSizeOf.NodeEntry(_tx.DataPager.PageMaxSpace, keyToInsert, _len) + Constants.NodeOffsetSize;
 
             if (toRight == false)
             {
