@@ -7,8 +7,10 @@ namespace Raven.Tryouts
     {
         private static void Main(string[] args)
         {
-            using (var test = new LargeObjectsWithJsonTextReader())
-                test.MultipleAttachmentsImportShouldWork(1024 * 1024 * 500,4);
+            using (var test = new RavenDB_4103())
+            {
+                test.DeleteConflitDocumentsFirstMainAfter();
+            }
         }
     }
 }

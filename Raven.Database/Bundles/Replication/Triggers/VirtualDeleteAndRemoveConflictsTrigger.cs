@@ -50,7 +50,7 @@ namespace Raven.Bundles.Replication.Triggers
 					return;
 
                 JsonDocument docWithBody;
-				if (IsConflictDocument(document, transactionInformation, out docWithBody))
+				if (IsConflictedDocument(document, transactionInformation, out docWithBody))
 				{
 
 					HandleConflictedDocument(docWithBody, transactionInformation);
@@ -60,9 +60,8 @@ namespace Raven.Bundles.Replication.Triggers
 				HandleDocument(document);
 			}
 		}
-
-
-        private bool IsConflictDocument(JsonDocumentMetadata document, TransactionInformation transactionInformation, out JsonDocument docWithBody)
+                
+        private bool IsConflictedDocument(JsonDocumentMetadata document, TransactionInformation transactionInformation, out JsonDocument docWithBody)
         {
 	        var IsConflictsPositive = true;
             docWithBody = null;
@@ -74,7 +73,7 @@ namespace Raven.Bundles.Replication.Triggers
 
             docWithBody = Database.Get(document.Key, transactionInformation);
 
-	        return true;
+            return docWithBody.DataAsJson.Value<RavenJArray>("Conflicts") != null;            
         }
         public override void AfterDelete(string key, TransactionInformation transactionInformation)
 		{
@@ -100,7 +99,8 @@ namespace Raven.Bundles.Replication.Triggers
 			foreach (var c in conflicts)
 			{
                 RavenJObject conflict;
-                Database.Delete(c.Value<string>(), null, transactionInformation, out conflict);
+                if (Database.Delete(c.Value<string>(), null, transactionInformation, out conflict) == false)
+                    continue;
 
 				var conflictSource = conflict.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
