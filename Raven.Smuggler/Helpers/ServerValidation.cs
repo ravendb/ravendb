@@ -99,16 +99,15 @@ namespace Raven.Smuggler.Helpers
         {
             using (var store = CreateDocumentStore(connectionOptions))
             {
-                var serverVersion = (await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false)).ProductVersion;
+                var serverVersion = (await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync().ConfigureAwait(false)).BuildVersion;
 
                 if (string.IsNullOrEmpty(serverVersion))
                     throw new SmugglerException("Server version is not available.");
 
                 var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<Program>()).ProductVersion;
-                var subServerVersion = serverVersion.Substring(0, 4);
                 var subSmugglerVersion = smugglerVersion.Substring(0, 4);
 
-                var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+                var intServerVersion = int.Parse(serverVersion);
                 if (intServerVersion < 40)
                     throw new SmugglerException(string.Format("This smuggler version requires a v4.0 or higher server. Smuggler version: {0}.", subSmugglerVersion));
             }
