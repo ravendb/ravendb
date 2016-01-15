@@ -107,12 +107,12 @@ namespace Raven.Tests.Helpers
         {
             var messages = GetAsyncVoidMethods(assembly)
                 .Select(method =>
-                    String.Format("'{0}.{1}' is an async Task method.",
+                    String.Format("'{0}.{1}' is an async void method.",
                         method.DeclaringType.FullName,
                         method.Name))
                 .ToList();
             if (messages.Any())
-                throw new InvalidConstraintException("async Task methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
+                throw new InvalidConstraintException("async void methods found!" + Environment.NewLine + String.Join(Environment.NewLine, messages));
         }
 
         ~RavenTestBase()

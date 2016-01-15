@@ -460,38 +460,52 @@ namespace Raven.Database.Storage.Esent.StorageActions
             return true;
         }
 
-        public Etag GetEtagAfterSkip(Etag etag, int take, CancellationToken cancellationToken)
+        public Etag GetEtagAfterSkip(Etag etag, int skip, CancellationToken cancellationToken, out int skipped)
         {
+            
             Api.JetSetCurrentIndex(session, Documents, "by_etag");
             Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+            if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
+            {
+                skipped = 0;
                 return etag;
+            }
 
-            if (TryMoveTableRecords(Documents, take, false))
+            if (TryMoveTableRecords(Documents, skip, false))
             {
                 //skipping failed, will try to move one by one
                 Api.JetSetCurrentIndex(session, Documents, "by_etag");
                 Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
                 if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
+                {
+                    skipped = 0;
                     return etag;
+                }
 
+                var documentCount = 0;
                 bool needPrev;
                 do
                 {
                     needPrev = false;
-                    if (take <= 0)
+                    documentCount++;
+                    if (--skip <= 0)
                         break;
-                    take--;
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     needPrev = true;
                 } while (Api.TryMoveNext(session, Documents));
 
+                skipped = documentCount;
                 if (needPrev)
                 {
                     if (Api.TryMovePrevious(session, Documents) == false)
                         return etag;
                 }
+            }
+            else
+            {
+                skipped = skip;
             }
 
             return Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));

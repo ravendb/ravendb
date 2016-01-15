@@ -2,9 +2,9 @@
 
 @selectionColor: #ffc;
 /*@selectionColor: black;*/
-
 html, body {
     height: 100%;
+    overflow-y: scroll;
 }
 
 .not-implemented-yet {
@@ -646,8 +646,12 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 
+#documents-page-container {
+    border-right: solid 3px rgba(0, 0,0, .73);
+    overflow-y: hidden;
+}
 .document-collections {
-
+    
     li {
         outline: none;
     }

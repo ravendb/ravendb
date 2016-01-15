@@ -451,7 +451,7 @@ for(var customFunction in customFunctions) {{
 
         [HttpGet]
         [RavenRoute("studio-tasks/latest-server-build-version")]
-        public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 3000, int max = 3999)
+        public HttpResponseMessage GetLatestServerBuildVersion(bool stableOnly = true, int min = 3000, int max = 34999)
         {
             var args = string.Format("stableOnly={0}&min={1}&max={2}", stableOnly, min, max);
             var request = (HttpWebRequest)WebRequest.Create("http://hibernatingrhinos.com/downloads/ravendb/latestVersion?" + args);
@@ -462,12 +462,14 @@ for(var customFunction in customFunctions) {{
                 using (var stream = response.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();
-                    return GetMessageWithObject(new {LatestBuild = result});
+                    var parts = result.Split('-');
+                    var build = int.Parse(parts[0]);
+                    return GetMessageWithObject(new { LatestBuild = build });
                 }
             }
             catch (Exception e)
             {
-                return GetMessageWithObject(new {Exception = e.Message});
+                return GetMessageWithObject(new { Exception = e.Message });
             }
         }
 

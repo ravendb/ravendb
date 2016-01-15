@@ -91,6 +91,18 @@
     <TypeScriptCompile Include="App\models\database\debug\statusDebugQueriesQuery.ts" />
     <TypeScriptCompile Include="App\models\database\subscription\subscription.ts" />
     <TypeScriptCompile Include="App\models\resources\environmentColor.ts" />
+    <TypeScriptCompile Include="App\common\enableResizeBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\optional.ts" />
+    <TypeScriptCompile Include="App\common\queryUtil.ts" />
+    <TypeScriptCompile Include="App\common\downloader.ts" />
+    <TypeScriptCompile Include="App\models\databaseStatistics.ts" />
+    <TypeScriptCompile Include="App\models\environmentColor.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\fileSystemStatistics.ts" />
+    <TypeScriptCompile Include="App\models\filesystem\synchronizationConfig.ts" />
+    <TypeScriptCompile Include="App\models\license.ts" />
+    <TypeScriptCompile Include="App\models\databaseCollectionStyleMap.ts" />
+    <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\idGenerator.ts" />
     <TypeScriptCompile Include="App\common\extensionInterfaces.ts" />
     <TypeScriptCompile Include="App\common\mergedIndexesStorage.ts" />
     <TypeScriptCompile Include="App\common\trafficWatchClient.ts" />
@@ -670,9 +682,6 @@
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
     <Content Include="fonts\glyphicons-halflings-regular.ttf" />
     <Content Include="fonts\glyphicons-halflings-regular.eot" />
-    <Content Include="Content\app.css.map">
-      <DependentUpon>app.css</DependentUpon>
-    </Content>
     <Content Include="readme-optimized-build.md" />
     <Content Include="Content\bootstrap.less" />
     <Content Include="Content\variables.less" />
@@ -1357,6 +1366,7 @@
     <TypeScriptRemoveComments>false</TypeScriptRemoveComments>
     <TypeScriptSourceMap>True</TypeScriptSourceMap>
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptTarget>ES5</TypeScriptTarget>

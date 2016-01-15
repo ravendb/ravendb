@@ -10,7 +10,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -20,6 +19,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Storage.Exceptions;
@@ -28,7 +28,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Actions
 {
-    public class FileActions : ActionsBase
+    public class FileActions : ActionsBase, IDisposable
     {
         internal const int MaxNumberOfFilesToDeleteByCleanupTaskRun = 1024;
 
@@ -36,8 +36,7 @@ namespace Raven.Database.FileSystem.Actions
         private readonly ConcurrentDictionary<string, Task> renameFileTasks = new ConcurrentDictionary<string, Task>();
         private readonly ConcurrentDictionary<string, Task> copyFileTasks = new ConcurrentDictionary<string, Task>();
         private readonly ConcurrentDictionary<string, FileHeader> uploadingFiles = new ConcurrentDictionary<string, FileHeader>();
-
-        private readonly IObservable<long> timer = Observable.Interval(TimeSpan.FromMinutes(15));
+        private readonly SemaphoreSlim maxNumberOfConcurrentDeletionsInBackground = new SemaphoreSlim(10);
 
         public FileActions(RavenFileSystem fileSystem, ILog log)
             : base(fileSystem, log)
@@ -47,12 +46,12 @@ namespace Raven.Database.FileSystem.Actions
 
         private void InitializeTimer()
         {
-            timer.Subscribe(tick =>
+            FileSystem.TimerManager.NewTimer(state =>
             {
                 ResumeFileRenamingAsync();
                 ResumeFileCopyingAsync();
                 CleanupDeletedFilesAsync();
-            });
+            }, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(15));
         }
 
         public async Task PutAsync(string name, Etag etag, RavenJObject metadata, Func<Task<Stream>> streamAsync, PutOperationOptions options)
@@ -439,7 +438,8 @@ namespace Raven.Database.FileSystem.Actions
 
         public Task CleanupDeletedFilesAsync()
         {
-            const int MaxNumberOfConcurrentDeletions = 10;
+            if (maxNumberOfConcurrentDeletionsInBackground.CurrentCount == 0)
+                return new CompletedTask();
 
             var filesToDelete = new List<DeleteFileOperation>();
 
@@ -448,12 +448,10 @@ namespace Raven.Database.FileSystem.Actions
                                                               .ToList());
 
             if (filesToDelete.Count == 0)
-                return Task.FromResult<object>(null);
+                return new CompletedTask();
 
             var tasks = new List<Task>();
 
-            using (var semaphore = new SemaphoreSlim(MaxNumberOfConcurrentDeletions))
-            {
             foreach (var fileToDelete in filesToDelete)
             {
                 var deletingFileName = fileToDelete.CurrentFileName;
@@ -507,17 +505,17 @@ namespace Raven.Database.FileSystem.Actions
                     {
                         Task _;
                         deleteFileTasks.TryRemove(deletingFileName, out _);
-                        semaphore.Release();
+
+                    maxNumberOfConcurrentDeletionsInBackground.Release();
                     });
 
-                    semaphore.Wait();
+                maxNumberOfConcurrentDeletionsInBackground.Wait();
 
                     deleteTask.Start();
 
                 deleteFileTasks.AddOrUpdate(deletingFileName, deleteTask, (file, oldTask) => deleteTask);
 
                 tasks.Add(deleteTask);
-            }
             }
 
             return Task.WhenAll(tasks);
@@ -734,5 +732,10 @@ namespace Raven.Database.FileSystem.Actions
 
             public bool TransferEncodingChunked { get; set; }
         }
+
+        public void Dispose()
+        {
+            maxNumberOfConcurrentDeletionsInBackground.Dispose();
     }
+}
 }

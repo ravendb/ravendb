@@ -25,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>5</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -306,6 +307,7 @@
     <Compile Include="JsonNetRequiresUsToHaveTheDynamicSnkFileAsAnEmbeddedResource.cs" />
     <Compile Include="JustFacetSearch.cs" />
     <Compile Include="Justin.cs" />
+    <Compile Include="Kamran.cs" />
     <Compile Include="kendaleiv.cs" />
     <Compile Include="Kijana.cs" />
     <Compile Include="Kushnir.cs" />

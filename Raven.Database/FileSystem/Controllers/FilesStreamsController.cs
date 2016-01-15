@@ -34,7 +34,7 @@ namespace Raven.Database.FileSystem.Controllers
         public HttpResponseMessage Get()
         {
             var etag = GetEtagFromQueryString();
-            var pageSize = GetPageSize(FileSystem.Configuration.MaxPageSize);
+            var pageSize = GetPageSize(int.MaxValue);
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -57,17 +57,39 @@ namespace Raven.Database.FileSystem.Controllers
 
                 Storage.Batch(accessor =>
                 {
-                    var files = accessor.GetFilesAfter(etag, pageSize);
-                    foreach (var file in files)
+                    var returnedCount = 0;
+
+                    while (true)
                     {
-                        if (readTriggers.CanReadFile(file.FullPath, file.Metadata, ReadOperation.Load) == false)
-                            continue;
+                        var files = accessor.GetFilesAfter(etag, pageSize);
 
-                        timeout.Delay();
-                        var doc = RavenJObject.FromObject(file);
-                        doc.WriteTo(writer);
+                        var fileCount = 0;
 
-                        writer.WriteRaw(Environment.NewLine);
+                        foreach (var file in files)
+                        {
+                            fileCount++;
+
+                            cts.Token.ThrowIfCancellationRequested();
+
+                            etag = file.Etag;
+
+                            if (readTriggers.CanReadFile(file.FullPath, file.Metadata, ReadOperation.Load) == false)
+                                continue;
+
+                            timeout.Delay();
+
+                            var doc = RavenJObject.FromObject(file);
+                            doc.WriteTo(writer);
+                            writer.WriteRaw(Environment.NewLine);
+
+                            returnedCount++;
+                        }
+
+                        if (fileCount == 0)
+                            break;
+
+                        if (returnedCount == pageSize)
+                            break;
                     }
                 });
 

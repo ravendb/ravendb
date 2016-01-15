@@ -126,6 +126,7 @@ class documents extends viewModelBase {
             }
             return "";
         });
+        
     }
 
     activate(args) {
