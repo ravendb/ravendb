@@ -485,11 +485,11 @@ namespace Raven.Database.FileSystem.Search
 
                 if (long.TryParse(value, out longValue))
                 {
-                    doc.Add(new NumericField($"{key.ToLower(CultureInfo.InvariantCulture)}_numeric", Field.Store.NO, true).SetLongValue(longValue));
+                    doc.Add(new NumericField($"{key}_numeric", Field.Store.NO, true).SetLongValue(longValue));
                 }
                 else if (double.TryParse(value, out doubleValue))
                 {
-                    doc.Add(new NumericField($"{key.ToLower(CultureInfo.InvariantCulture)}_numeric", Field.Store.NO, true).SetDoubleValue(doubleValue));
+                    doc.Add(new NumericField($"{key}_numeric", Field.Store.NO, true).SetDoubleValue(doubleValue));
                 }				
             }
         }
