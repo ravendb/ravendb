@@ -17,11 +17,11 @@ namespace BlittableTests
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 for (var i = 0; i < 1000; i++)
                 {
-                    allocatedMemory.Add(pool.GetMemory2(i));
+                    allocatedMemory.Add(pool.Allocate(i));
                 }
                 foreach (var data in allocatedMemory)
                 {
-                    pool.ReturnMemory2(data);
+                    pool.Return(data);
                 }
             }
         }
@@ -36,13 +36,13 @@ namespace BlittableTests
                 {
                     for (var i = 0; i < 1000; i++)
                     {
-                        allocatedMemory.Add(pool.GetMemory2(i));
+                        allocatedMemory.Add(pool.Allocate(i));
                     }
                 });
 
                 Parallel.ForEach(allocatedMemory, item =>
                 {
-                    pool.ReturnMemory2(item);
+                    pool.Return(item);
                 });
             }
         }
@@ -57,7 +57,7 @@ namespace BlittableTests
                 {
                     for (var i = 0; i < 10000; i++)
                     {
-                        allocatedMemory.Add(pool.GetMemory2(i));
+                        allocatedMemory.Add(pool.Allocate(i));
                     }
                     allocatedMemory.CompleteAdding();
                 });
@@ -66,7 +66,7 @@ namespace BlittableTests
                 {
                     UnmanagedBuffersPool.AllocatedMemoryData tuple;
                     if (allocatedMemory.TryTake(out tuple, 100))
-                        pool.ReturnMemory2(tuple);
+                        pool.Return(tuple);
                 }
             }
         }

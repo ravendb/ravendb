@@ -42,9 +42,9 @@ namespace BlittableTests
                         curIndex++;
                     }
 
-                    unmanagedByteArrayPool.ReturnMemory2(tuple);
+                    unmanagedByteArrayPool.Return(tuple);
                 }
-                unmanagedByteArrayPool.ReturnMemory2(buffer);
+                unmanagedByteArrayPool.Return(buffer);
             }
         }
 

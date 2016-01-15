@@ -80,7 +80,7 @@ namespace Raven.Server.Json
             var index = UnmanagedBuffersPool.GetIndexFromSize(actualSize);
             var count = _allocatedMemory?[index]?.Count;
             if (count == null || count == 0)
-                return Pool.GetMemory2(actualSize);
+                return Pool.Allocate(actualSize);
             var last = _allocatedMemory[index].Last.Value;
             _allocatedMemory[index].RemoveLast();
             return last;
@@ -117,19 +117,19 @@ namespace Raven.Server.Json
                 return;
             Lz4.Dispose();
             if (_tempBuffer != null)
-                Pool.ReturnMemory2(_tempBuffer);
+                Pool.Return(_tempBuffer);
             if (_fieldNames != null)
             {
                 foreach (var kvp in _fieldNames.Values)
                 {
-                    Pool.ReturnMemory2(kvp.AllocatedMemoryData);
+                    Pool.Return(kvp.AllocatedMemoryData);
                 }
             }
             if (_internedFieldNames != null)
             {
                 foreach (var key in _internedFieldNames.Keys)
                 {
-                    Pool.ReturnMemory2(key.AllocatedMemoryData);
+                    Pool.Return(key.AllocatedMemoryData);
 
                 }
             }
