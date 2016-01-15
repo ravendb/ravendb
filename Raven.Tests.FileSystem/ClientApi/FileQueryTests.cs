@@ -852,31 +852,31 @@ namespace Raven.Tests.FileSystem.ClientApi
                 {
                     var metadata = new RavenJObject();
 
-                    metadata.Add("int", 5);
-                    metadata.Add("long", 5L);
-                    metadata.Add("float", 5.0f);
-                    metadata.Add("double", 5.0);
+                    metadata.Add("Int", 5);
+                    metadata.Add("Long", 5L);
+                    metadata.Add("Float", 5.0f);
+                    metadata.Add("Double", 5.0);
 
-                    metadata.Add("uint", 5u);
-                    metadata.Add("ulong", 5UL);
-                    metadata.Add("short", (short) 5);
-                    metadata.Add("ushort", (ushort) 5);
-                    metadata.Add("decimal", 5m);
+                    metadata.Add("Uint", 5u);
+                    metadata.Add("Ulong", 5UL);
+                    metadata.Add("Short", (short) 5);
+                    metadata.Add("Ushort", (ushort) 5);
+                    metadata.Add("Decimal", 5m);
 
                     session.RegisterUpload("test-1.file", CreateRandomFileStream(10), metadata);
 
                     var metadata2 = new RavenJObject();
 
-                    metadata2.Add("int", 10);
-                    metadata2.Add("long", 10L);
-                    metadata2.Add("float", 10.0f);
-                    metadata2.Add("double", 10.0);
+                    metadata2.Add("Int", 10);
+                    metadata2.Add("Long", 10L);
+                    metadata2.Add("Float", 10.0f);
+                    metadata2.Add("Double", 10.0);
 
-                    metadata2.Add("uint", 10u);
-                    metadata2.Add("ulong", 10UL);
-                    metadata2.Add("short", (short) 10);
-                    metadata2.Add("ushort", (ushort) 10);
-                    metadata2.Add("decimal", 10m);
+                    metadata2.Add("Uint", 10u);
+                    metadata2.Add("Ulong", 10UL);
+                    metadata2.Add("Short", (short) 10);
+                    metadata2.Add("Ushort", (ushort) 10);
+                    metadata2.Add("Decimal", 10m);
 
                     session.RegisterUpload("test-2.file", CreateRandomFileStream(10), metadata2);
 
@@ -885,7 +885,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 var metadataKeys = new[]
                 {
-                    "int", "long", "float", "double", "uint", "ulong", "short", "ushort", "decimal"
+                    "Int", "Long", "Float", "Double", "Uint", "Ulong", "Short", "Ushort", "Decimal"
                 };
 
                 foreach (var key in metadataKeys)
