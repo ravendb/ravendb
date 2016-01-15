@@ -12,19 +12,16 @@ namespace BlittableTests
         [Fact]
         public void SerialAllocationAndRelease()
         {
-            using (var pool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+            using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
-                var allocatedMemory = new List<Tuple<int, ulong>>();
+                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 for (var i = 0; i < 1000; i++)
                 {
-                    int curSize = 0;
-                    ulong curAddress = 0;
-                    curAddress = (ulong) pool.GetMemory(i, out curSize);
-                    allocatedMemory.Add(Tuple.Create(curSize,curAddress));
+                    allocatedMemory.Add(pool.GetMemory2(i));
                 }
-                foreach (var tuple in allocatedMemory)
+                foreach (var data in allocatedMemory)
                 {
-                    pool.ReturnMemory((byte*)tuple.Item2);
+                    pool.ReturnMemory2(data);
                 }
             }
         }
@@ -32,23 +29,20 @@ namespace BlittableTests
         [Fact]
         public void ParallelAllocationAndReleaseSeperately()
         {
-            using (var pool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+            using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
-                var allocatedMemory = new Sparrow.Collections.ConcurrentSet<Tuple<int, ulong>>();
+                var allocatedMemory = new Sparrow.Collections.ConcurrentSet<UnmanagedBuffersPool.AllocatedMemoryData>();
                 Parallel.For(0, 1000, x =>
                 {
                     for (var i = 0; i < 1000; i++)
                     {
-                        int curSize = 0;
-                        ulong curAddress = 0;
-                        curAddress = (ulong) pool.GetMemory(i, out curSize);
-                        allocatedMemory.Add(Tuple.Create(curSize, curAddress));
+                        allocatedMemory.Add(pool.GetMemory2(i));
                     }
                 });
 
-                Parallel.ForEach(allocatedMemory, tuple =>
+                Parallel.ForEach(allocatedMemory, item =>
                 {
-                    pool.ReturnMemory((byte*) tuple.Item2);
+                    pool.ReturnMemory2(item);
                 });
             }
         }
@@ -56,26 +50,23 @@ namespace BlittableTests
         [Fact]
         public void ParallelSerialAllocationAndRelease()
         {
-            using (var pool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+            using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
-                var allocatedMemory = new BlockingCollection<Tuple<int, ulong>>();
+                var allocatedMemory = new BlockingCollection<UnmanagedBuffersPool.AllocatedMemoryData>();
                 Task.Run(() =>
                 {
                     for (var i = 0; i < 10000; i++)
                     {
-                        int curSize = 0;
-                        ulong curAddress = 0;
-                        curAddress = (ulong)pool.GetMemory(i, out curSize);
-                        allocatedMemory.Add(Tuple.Create(curSize, curAddress));
+                        allocatedMemory.Add(pool.GetMemory2(i));
                     }
                     allocatedMemory.CompleteAdding();
                 });
                 
                 while (allocatedMemory.IsCompleted == false)
                 {
-                    Tuple<int, ulong> tuple;
+                    UnmanagedBuffersPool.AllocatedMemoryData tuple;
                     if (allocatedMemory.TryTake(out tuple, 100))
-                        pool.ReturnMemory((byte*) tuple.Item2);
+                        pool.ReturnMemory2(tuple);
                 }
             }
         }

@@ -40,7 +40,7 @@ namespace Raven.Server.Json
             try
             {
                 _bufferPtr = (byte*)_bufferHandle.AddrOfPinnedObject();
-                StringBuffer = new UnmanagedWriteBuffer(ctx.Pool);
+                StringBuffer = new UnmanagedWriteBuffer(ctx);
             }
             catch (Exception)
             {

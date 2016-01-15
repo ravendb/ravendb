@@ -36,7 +36,7 @@ namespace BlittableTests.Benchmark
                 }
                 Console.Write(" lines {1:#,#} json - {0:#,#}ms ", sp.ElapsedMilliseconds, lines);
 
-                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
                 using (var blittableContext = new RavenOperationContext(unmanagedPool))
                 {
                     sp.Restart();
@@ -76,7 +76,7 @@ namespace BlittableTests.Benchmark
                     }
                 }
             
-                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
                 using (var blittableContext = new RavenOperationContext(unmanagedPool))
                 {
                     foreach (var line in jsonCache)
@@ -113,7 +113,7 @@ namespace BlittableTests.Benchmark
 
         private static unsafe void BlitIndexing(List<Tuple<IntPtr, int>> blitCache)
         {
-            using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024*1024*1024))
+            using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             {
                 foreach (var tuple in blitCache)
@@ -139,7 +139,7 @@ namespace BlittableTests.Benchmark
                 var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length).Take(size);
 
                 streamWriter.WriteLine("Name,Json Parse Time,Json Size, Json Time, Blit Parse Time,Blit Size, Blit Time");
-                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+                using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
                 using (var blittableContext = new RavenOperationContext(unmanagedPool))
                 {
                     foreach (var jsonFile in files)

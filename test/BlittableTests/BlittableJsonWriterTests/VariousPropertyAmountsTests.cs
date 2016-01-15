@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
 
@@ -80,24 +81,30 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             //var maxValue = short.MaxValue + 1000;
             var str = GetJsonString(1, maxValue);
 
-            byte* ptr;
-            int size = 0;
-            var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024);
+            var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
-                employee.CopyTo(ptr);
-
-                System.Dynamic.DynamicObject dynamicBlittableJObject = new DynamicBlittableJson(ptr,
-                    employee.SizeInBytes, blittableContext);
-
-                for (var i = 0; i < maxValue; i++)
+                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
+                try
                 {
-                    object curVal;
-                    Assert.True(dynamicBlittableJObject.TryGetMember(new CustomMemberBinder("Field" + i, true), out curVal));
-                    Assert.Equal(curVal.ToString(), i.ToString());
+                    employee.CopyTo(ptr);
+
+                    System.Dynamic.DynamicObject dynamicBlittableJObject = new DynamicBlittableJson(ptr,
+                        employee.SizeInBytes, blittableContext);
+
+                    for (var i = 0; i < maxValue; i++)
+                    {
+                        object curVal;
+                        Assert.True(dynamicBlittableJObject.TryGetMember(new CustomMemberBinder("Field" + i, true), out curVal));
+                        Assert.Equal(curVal.ToString(), i.ToString());
+                    }
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal((IntPtr)ptr);
+
                 }
             }
         }
@@ -111,23 +118,28 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
 
             var str = GetJsonString(1, maxValue);
 
-            byte* ptr;
-            int size = 0;
-            var unmanagedPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024);
+            var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                ptr = unmanagedPool.GetMemory(employee.SizeInBytes, out size);
-                employee.CopyTo(ptr);
-                var reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
+                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
+                try
+                {
+                    employee.CopyTo(ptr);
+                    var reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
 
-                var ms = new MemoryStream();
-                reader.WriteTo(ms, originalPropertyOrder: true);
+                    var ms = new MemoryStream();
+                    reader.WriteTo(ms, originalPropertyOrder: true);
 
-                Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
+                    Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
 
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal((IntPtr)ptr);
 
+                }
             }
         }
     }

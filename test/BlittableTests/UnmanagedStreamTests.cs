@@ -10,25 +10,25 @@ namespace BlittableTests
         [Fact]
         public void BulkWriteAscendingSizeTest()
         {
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
+                using(var ctx = new RavenOperationContext(unmanagedByteArrayPool))
             {
-                List<Tuple<long, int>> allocatedMemory = new List<Tuple<long, int>>();
-                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool);
+                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var newStream = new UnmanagedWriteBuffer(ctx);
                 var totalSize = 0;
                 var rand = new Random();
-                var curSize = 0;
                 for (var i = 1; i < 5000; i++)
                 {
-                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i*7), out curSize);
-                    totalSize += curSize;
-                    FillData(pointer, curSize);
-                    allocatedMemory.Add(Tuple.Create((long) pointer, curSize));
-                    newStream.Write(pointer, curSize);
+                    var pointer = ctx.GetMemory(rand.Next(1, i * 7));
+                    totalSize += pointer.SizeInBytes;
+                    FillData((byte*)pointer.Address, pointer.SizeInBytes);
+                    allocatedMemory.Add(pointer);
+                    newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
                 }
 
-                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, out curSize);
+                var buffer = ctx.GetMemory(newStream.SizeInBytes);
 
-                var copiedSize = newStream.CopyTo(buffer);
+                var copiedSize = newStream.CopyTo((byte*)buffer.Address);
                 Assert.Equal(copiedSize, newStream.SizeInBytes);
 
                 var curIndex = 0;
@@ -36,39 +36,40 @@ namespace BlittableTests
                 foreach (var tuple in allocatedMemory)
                 {
                     curTuple++;
-                    for (var i = 0; i < tuple.Item2; i++)
+                    for (var i = 0; i < tuple.SizeInBytes; i++)
                     {
-                        Assert.Equal(*(buffer + curIndex), *((byte*) (tuple.Item1 + i)));
+                        Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address + i)));
                         curIndex++;
                     }
 
-                    unmanagedByteArrayPool.ReturnMemory((byte*) tuple.Item1);
+                    unmanagedByteArrayPool.ReturnMemory2(tuple);
                 }
+                unmanagedByteArrayPool.ReturnMemory2(buffer);
             }
         }
 
         [Fact]
         public void BulkWriteDescendingSizeTest()
         {
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty,1024*1024*1024))
+            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
+            using(var ctx = new RavenOperationContext(unmanagedByteArrayPool))
             {
-                List<Tuple<long, int>> allocatedMemory = new List<Tuple<long, int>>();
-                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool);
+                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var newStream = new UnmanagedWriteBuffer(ctx);
                 var totalSize = 0;
                 var rand = new Random();
-                var curSize = 0;
                 for (var i = 5000; i > 1; i--)
                 {
-                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i * 7), out curSize);
-                    totalSize += curSize;
-                    FillData(pointer, curSize);
-                    allocatedMemory.Add(Tuple.Create((long)pointer, curSize));
-                    newStream.Write(pointer, curSize);
+                    var pointer = ctx.GetMemory(rand.Next(1, i * 7));
+                    totalSize += pointer.SizeInBytes;
+                    FillData((byte*)pointer.Address, pointer.SizeInBytes);
+                    allocatedMemory.Add(pointer);
+                    newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
                 }
 
-                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, out curSize);
+                var buffer = ctx.GetMemory(newStream.SizeInBytes);
 
-                var copiedSize = newStream.CopyTo(buffer);
+                var copiedSize = newStream.CopyTo((byte*)buffer.Address);
                 Assert.Equal(copiedSize, newStream.SizeInBytes);
 
                 var curIndex = 0;
@@ -76,44 +77,43 @@ namespace BlittableTests
                 foreach (var tuple in allocatedMemory)
                 {
                     curTuple++;
-                    for (var i = 0; i < tuple.Item2; i++)
+                    for (var i = 0; i < tuple.SizeInBytes; i++)
                     {
-                        Assert.Equal(*(buffer + curIndex), *((byte*)(tuple.Item1 + i)));
+                        Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address+ i)));
                         curIndex++;
                     }
 
-                    unmanagedByteArrayPool.ReturnMemory((byte*)tuple.Item1);
+                    ctx.ReturnMemory(tuple);
                 }
+                ctx.ReturnMemory(buffer);
             }
         }
 
         [Fact]
         public void SingleByteWritesTest()
         {
-            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty, 1024 * 1024 * 1024))
+            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
+            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool))
             {
-                List<Tuple<long, int>> allocatedMemory = new List<Tuple<long, int>>();
-                var newStream = new UnmanagedWriteBuffer(unmanagedByteArrayPool);
-                var totalSize = 0;
+                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var newStream = new UnmanagedWriteBuffer(ctx);
                 var rand = new Random();
-                var curSize = 0;
                 for (var i = 1; i < 5000; i++)
                 {
-                    var pointer = unmanagedByteArrayPool.GetMemory(rand.Next(1, i*7), out curSize);
-                    totalSize += curSize;
-                    FillData(pointer, curSize);
-                    allocatedMemory.Add(Tuple.Create((long) pointer, curSize));
-                    for (var j = 0; j < curSize; j++)
+                    var pointer = ctx.GetMemory(rand.Next(1, i*7));
+                    FillData((byte*)pointer.Address, pointer.SizeInBytes);
+                    allocatedMemory.Add(pointer);
+                    for (var j = 0; j < pointer.SizeInBytes; j++)
                     {
-                        newStream.WriteByte(*(byte*) (pointer + j));
+                        newStream.WriteByte(*((byte*)pointer.Address + j));
                     }
                 }
 
-                var buffer = unmanagedByteArrayPool.GetMemory(newStream.SizeInBytes, out curSize);
+                var buffer = ctx.GetMemory(newStream.SizeInBytes);
 
                 try
                 {
-                    var copiedSize = newStream.CopyTo(buffer);
+                    var copiedSize = newStream.CopyTo((byte*)buffer.Address);
                     Assert.Equal(copiedSize, newStream.SizeInBytes);
                 }
                 catch (Exception e)
@@ -125,11 +125,11 @@ namespace BlittableTests
                 foreach (var tuple in allocatedMemory)
                 {
                     curTuple++;
-                    for (var i = 0; i < tuple.Item2; i++)
+                    for (var i = 0; i < tuple.SizeInBytes; i++)
                     {
                         try
                         {
-                            Assert.Equal(*(buffer + curIndex), *((byte*) (tuple.Item1 + i)));
+                            Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*) ((byte*)tuple.Address+ i)));
                             curIndex++;
                         }
                         catch (Exception e)
@@ -138,8 +138,9 @@ namespace BlittableTests
                         }
                     }
 
-                    unmanagedByteArrayPool.ReturnMemory((byte*) tuple.Item1);
+                    ctx.ReturnMemory(tuple);
                 }
+                ctx.ReturnMemory(buffer);
             }
         }
 

@@ -13,6 +13,8 @@ namespace Raven.Server.Json
         public readonly int Size;
         public string String;
         public int[] EscapePositions;
+        public UnmanagedBuffersPool.AllocatedMemoryData AllocatedMemoryData;
+        public int? LastFoundAt;
 
 
         public LazyStringValue(string str, byte* buffer, int size, RavenOperationContext context)
@@ -23,7 +25,6 @@ namespace Raven.Server.Json
             Buffer = buffer;
         }
 
-        public int? LastFoundAt;
 
         public int CompareTo(string other)
         {

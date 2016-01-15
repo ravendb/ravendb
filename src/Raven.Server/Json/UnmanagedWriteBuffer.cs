@@ -8,13 +8,13 @@ namespace Raven.Server.Json
 {
     public unsafe class UnmanagedWriteBuffer : IDisposable
     {
-        private readonly UnmanagedBuffersPool _buffersPool;
+        private readonly RavenOperationContext _context;
 
         private class Segment
         {
             public Segment Previous;
+            public UnmanagedBuffersPool.AllocatedMemoryData Allocation;
             public byte* Address;
-            public int ActualSize;
             public int Used;
 
             public string DebugInfo => Encoding.UTF8.GetString(Address, Used);
@@ -27,14 +27,16 @@ namespace Raven.Server.Json
 
         public int SizeInBytes => _sizeInBytes;
 
-        public UnmanagedWriteBuffer(UnmanagedBuffersPool buffersPool)
+        public UnmanagedWriteBuffer(RavenOperationContext context)
         {
-            _buffersPool = buffersPool;
-            int size;
+            _context = context;
+            var allocatedMemoryData = _context.GetMemory(4096);
             _current = new Segment
             {
-                Address = _buffersPool.GetMemory(4096, out size),
-                ActualSize = size,
+                Address = (byte*)allocatedMemoryData.Address,
+                Allocation = allocatedMemoryData,
+                Used = 0,
+                Previous = null
             };
         }
 
@@ -48,12 +50,12 @@ namespace Raven.Server.Json
             do
             {
                 // Create next, bigger segment if needed
-                if (_current.ActualSize == _current.Used)
+                if (_current.Allocation.SizeInBytes == _current.Used)
                 {
                     AllocateNextSegment(lengthLeft);
                 }
 
-                var bytesToWrite = Math.Min(lengthLeft, _current.ActualSize - _current.Used);
+                var bytesToWrite = Math.Min(lengthLeft, _current.Allocation.SizeInBytes - _current.Used);
 
                 Memory.Copy(_current.Address + _current.Used, buffer, bytesToWrite);
                 _sizeInBytes += bytesToWrite;
@@ -71,20 +73,22 @@ namespace Raven.Server.Json
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
             var nextSegmentSize = Math.Min(
                 1024 * 1024 * 1024,
-                Math.Max(_current.ActualSize * 2, (int)Voron.Util.Utils.NearestPowerOfTwo(required))
+                Math.Max(_current.Allocation.SizeInBytes * 2, (int)Voron.Util.Utils.NearestPowerOfTwo(required))
                 );
+            var allocatedMemoryData = _context.GetMemory(nextSegmentSize);
             _current = new Segment
             {
-                Previous = _current,
-                Address = _buffersPool.GetMemory(nextSegmentSize, out nextSegmentSize),
-                ActualSize = nextSegmentSize,
+                Address = (byte*)allocatedMemoryData.Address,
+                Allocation = allocatedMemoryData,
+                Used = 0,
+                Previous = _current
             };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
         {
-            if (_current.Used == _current.ActualSize)
+            if (_current.Used == _current.Allocation.SizeInBytes)
             {
                 AllocateNextSegment(1);
             }
@@ -119,7 +123,7 @@ namespace Raven.Server.Json
             _current.Previous = null;
             while (prev != null)
             {
-                _buffersPool.ReturnMemory(prev.Address);
+                _context.ReturnMemory(prev.Allocation);
                 prev = prev.Previous;
             }
         }
@@ -132,7 +136,7 @@ namespace Raven.Server.Json
             var cur = _current;
             while (cur != null)
             {
-                _buffersPool.ReturnMemory(cur.Address);
+                _context.ReturnMemory(cur.Allocation);
                 cur = cur.Previous;
             }
             _disposed = true;

@@ -1,35 +1,25 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
+using Sparrow.Binary;
 
 namespace Raven.Server.Json
 {
     public unsafe class UnmanagedBuffersPool : IDisposable
     {
         private readonly string _databaseName;
-        private readonly int _maxSize;
 
-        private readonly ConcurrentDictionary<IntPtr, AllocatedMemoryData> _allocatedSegments =
-            new ConcurrentDictionary<IntPtr, AllocatedMemoryData>();
+        private static readonly ILog _log = LogManager.GetLogger(typeof(UnmanagedBuffersPool));
 
-        private readonly ConcurrentDictionary<int, ConcurrentStack<AllocatedMemoryData>> _freeSegments =
-            new ConcurrentDictionary<int, ConcurrentStack<AllocatedMemoryData>>();
+        private readonly ConcurrentStack<AllocatedMemoryData>[] _freeSegments;
 
-        private static readonly ILog log = LogManager.GetLogger(typeof(UnmanagedBuffersPool));
-
-        private int _allocateMemoryCalls;
         private bool _isDisposed;
-        private int _returnMemoryCalls;
-        private long _currentSize;
-
-        public long CurrentSize
-        {
-            get { return _currentSize; }
-        }
 
         public class AllocatedMemoryData
         {
@@ -37,49 +27,67 @@ namespace Raven.Server.Json
             public int SizeInBytes;
         }
 
-        public UnmanagedBuffersPool(string databaseName, int maxSize)
+        public UnmanagedBuffersPool(string databaseName)
         {
             _databaseName = databaseName;
-            _maxSize = maxSize;
+            _freeSegments = new ConcurrentStack<AllocatedMemoryData>[16];
+            for (int i = 0; i < _freeSegments.Length; i++)
+            {
+                _freeSegments[i] = new ConcurrentStack<AllocatedMemoryData>();
+            }
         }
 
         // todo: add test that test concurrent handle low memory and allocations
         public void HandleLowMemory()
         {
-            foreach (var key in _freeSegments.Keys)
+            _log.Info("HandleLowMemory was called, will release all pooled memory for: {0}", _databaseName);
+            var size = FreeAllPooledMemory();
+            _log.Info("HandleLowMemory freed {1:#,#} bytes in {0}", _databaseName, size);
+
+        }
+
+        private long FreeAllPooledMemory()
+        {
+            long size = 0;
+            foreach (var stack in _freeSegments)
             {
-                ConcurrentStack<AllocatedMemoryData> curKeyStack;
-                if (_freeSegments.TryRemove(key, out curKeyStack))
+                AllocatedMemoryData allocatedMemoryDatas;
+                while (stack.TryPop(out allocatedMemoryDatas))
                 {
-                    AllocatedMemoryData curAllocatedMemoryData;
-                    while (curKeyStack.TryPop(out curAllocatedMemoryData))
-                    {
-                        Marshal.FreeHGlobal(curAllocatedMemoryData.Address);
-                        Interlocked.Add(ref _currentSize, curAllocatedMemoryData.SizeInBytes * -1);
-                    }
+                    size += allocatedMemoryDatas.SizeInBytes;
+                    Marshal.FreeHGlobal(allocatedMemoryDatas.Address);
                 }
             }
+            return size;
         }
 
         public void SoftMemoryRelease()
         {
-            
+
         }
 
         public LowMemoryHandlerStatistics GetStats()
         {
+            long size = 0;
+            foreach (var stack in _freeSegments)
+            {
+                foreach (var allocatedMemoryData in stack)
+                {
+                    size += allocatedMemoryData.SizeInBytes;
+                }
+            }
             return new LowMemoryHandlerStatistics
             {
                 DatabaseName = _databaseName,
-                EstimatedUsedMemory = _currentSize,
-                Name = "UnmanagedBufferPool"
+                EstimatedUsedMemory = size,
+                Name = "UnmanagedBufferPool for " + _databaseName
             };
         }
 
         ~UnmanagedBuffersPool()
         {
-         //   if (_isDisposed==false)
-       //         log.Warn("UnmanagedBuffersPool being finalized before it was disposed");
+            if (_isDisposed == false)
+                _log.Warn("UnmanagedBuffersPool for {0} wasn't propertly disposed", _databaseName);
             Dispose();
         }
 
@@ -88,105 +96,97 @@ namespace Raven.Server.Json
             if (_isDisposed)
                 return;
 
-            foreach (var allocationQueue in _freeSegments)
-            {
-                foreach (var mem in allocationQueue.Value)
-                {
-                    Marshal.FreeHGlobal(mem.Address);
-                    Interlocked.Add(ref _currentSize, mem.SizeInBytes*-1);
-                }
-            }
+            FreeAllPooledMemory();
 
-            foreach (var allocatedMemory in _allocatedSegments.Values)
-            {
-                Marshal.FreeHGlobal(allocatedMemory.Address);
-                Interlocked.Add(ref _currentSize, allocatedMemory.SizeInBytes * -1);
-            }
-            _freeSegments.Clear();
-            _allocatedSegments.Clear();
             _isDisposed = true;
             GC.SuppressFinalize(this);
-            
+
         }
 
-        /// <summary>
-        ///     Allocates memory with the size that is the closes power of 2 to the given size
-        /// </summary>
-        /// <param name="size">Size to be allocated in bytes</param>
-        /// <param name="actualSize">The real size of the returned buffer</param>
-        /// <returns></returns>
-        public byte* GetMemory(int size, out int actualSize)
+        public AllocatedMemoryData GetMemory2(int size)
         {
-            Interlocked.Increment(ref _allocateMemoryCalls);
-            actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
+            var actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
 
-            AllocatedMemoryData memoryDataForLength;
-            ConcurrentStack<AllocatedMemoryData> existingQueue;
+            var index = GetIndexFromSize(actualSize);
 
-            // try get allocated objects queue according to desired size, allocate memory if nothing was not found
-            if (_freeSegments.TryGetValue(actualSize, out existingQueue))
+            if (index == -1)
             {
-                // try de-queue from the allocated memory queue, allocate memory if nothing was returned
-                if (existingQueue.TryPop(out memoryDataForLength) == false)
+                return new AllocatedMemoryData
                 {
-                    memoryDataForLength = new AllocatedMemoryData
-                    {
-                        SizeInBytes = actualSize,
-                        Address = Marshal.AllocHGlobal(actualSize)
-                    };
-                    Interlocked.Add(ref _currentSize, actualSize);
-                }
-            }
-            else
-            {
-                memoryDataForLength = new AllocatedMemoryData
-                {
-                    SizeInBytes = actualSize,
-                    Address = Marshal.AllocHGlobal(actualSize)
+                    SizeInBytes = size,
+                    Address = Marshal.AllocHGlobal(size)
                 };
-                Interlocked.Add(ref _currentSize, actualSize);
             }
 
-            // document the allocated memory
-            if (!_allocatedSegments.TryAdd(memoryDataForLength.Address, memoryDataForLength))
+            AllocatedMemoryData list;
+            if (_freeSegments[index].TryPop(out list))
             {
-                throw new InvalidOperationException(
-                    $"Allocated memory at address {memoryDataForLength.Address} was already allocated");
+                return list;
             }
-            if (_currentSize >= _maxSize)
-                HandleLowMemory();
-            return (byte*) memoryDataForLength.Address;
-        }
-
-        /// <summary>
-        ///     Returns allocated memory, which will be stored in the free memory storage
-        /// </summary>
-        /// <param name="pointer">Pointer to the allocated memory</param>
-        public void ReturnMemory(byte* pointer)
-        {
-            Interlocked.Increment(ref _returnMemoryCalls);
-            AllocatedMemoryData memoryDataForPointer;
-
-            if (_allocatedSegments.TryRemove((IntPtr) pointer, out memoryDataForPointer) == false)
+            return new AllocatedMemoryData
             {
-                throw new ArgumentException(
-                    $"The returned memory pointer {(IntPtr) pointer:X} was not allocated from this pool, or was already freed",
-                    "pointer");
-            }
-
-            var q = _freeSegments.GetOrAdd(memoryDataForPointer.SizeInBytes, size => new ConcurrentStack<AllocatedMemoryData>());
-            q.Push(memoryDataForPointer);
-   
-        }
-
-        public object GetAllocatedSegments()
-        {
-            return new
-            {
-                AllocatedObjects = _allocatedSegments.Values.ToArray(),
-                FreeSegments = _freeSegments.SelectMany(x => x.Value.ToArray()).ToArray()
+                SizeInBytes = actualSize,
+                Address = Marshal.AllocHGlobal(actualSize)
             };
         }
 
+        public static int GetIndexFromSize(int size)
+        {
+            Debug.Assert(size == Bits.NextPowerOf2(size));
+            switch (size)
+            {
+                case 1:
+                case 2:
+                case 4:
+                case 8:
+                case 16:
+                    return 0;
+                case 32:
+                    return 1;
+                case 64:
+                    return 2;
+                case 128:
+                    return 3;
+                case 256:
+                    return 4;
+                case 512:
+                    return 5;
+                case 1024:
+                    return 6;
+                case 2048:
+                case 4096:
+                    return 7;
+                case 8192:
+                    return 8;
+                case 16384:
+                    return 9;
+                case 32768:
+                    return 10;
+                case 65536:
+                    return 11;
+                case 131072:
+                    return 12;
+                case 262144:
+                    return 13;
+                case 524288:
+                    return 14;
+                case 1048576:
+                    return 15;
+                default:
+                    return -1;// not pooled, just alloc / free as is
+            }
+        }
+
+        public void ReturnMemory2(AllocatedMemoryData returned)
+        {
+            var index = GetIndexFromSize(returned.SizeInBytes);
+            if (index == -1)
+            {
+                Marshal.FreeHGlobal(returned.Address);
+
+                return; // strange size, just free it
+            }
+            _freeSegments[index].Push(returned);
+        }
     }
 }

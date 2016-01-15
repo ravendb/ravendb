@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using Bond;
 using Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 using Xunit;
 using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
+using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace BlittableTests.BlittableJsonWriterTests
 {
@@ -21,23 +23,29 @@ namespace BlittableTests.BlittableJsonWriterTests
             {
                 var compacted = JObject.Parse(new StreamReader(stream).ReadToEnd()).ToString(Formatting.None);
                 stream.Position = 0;
-                using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024) )
+                using (var pool = new UnmanagedBuffersPool("test") )
                 using (var context = new RavenOperationContext(pool))
                 {
                     var writer = context.Read(stream, "docs/1");
                      
-                    int size;
-                    var ptr = pool.GetMemory(writer.SizeInBytes, out size);
-                    writer.CopyTo(ptr);
-                    var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
+                    var ptr = (byte*)Marshal.AllocHGlobal(writer.SizeInBytes);
+                    try
+                    {
+                        writer.CopyTo(ptr);
+                        var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
 
-                    var memoryStream = new MemoryStream();
-                    reader.WriteTo(memoryStream, originalPropertyOrder: true);
-                    var s = Encoding.UTF8.GetString(memoryStream.ToArray());
+                        var memoryStream = new MemoryStream();
+                        reader.WriteTo(memoryStream, originalPropertyOrder: true);
+                        var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
-                    JObject.Parse(s); // can parse the output
+                        JObject.Parse(s); // can parse the output
 
-                    Assert.Equal(compacted, s);
+                        Assert.Equal(compacted, s);
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal((IntPtr) ptr);
+                    }
                 }
             }
         }
@@ -47,7 +55,7 @@ namespace BlittableTests.BlittableJsonWriterTests
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })
             {
-                using (var pool = new UnmanagedBuffersPool("test", 1024 * 1024))
+                using (var pool = new UnmanagedBuffersPool("test"))
                 using (var context = new RavenOperationContext(pool))
                 {
                     string origin;
@@ -63,17 +71,25 @@ namespace BlittableTests.BlittableJsonWriterTests
                         var writer = context.Read(stream, "docs/1 ");
 
                         int size;
-                        var ptr = pool.GetMemory(writer.SizeInBytes, out size);
-                        writer.CopyTo(ptr);
-                        var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
+                        var ptr = (byte*)Marshal.AllocHGlobal(writer.SizeInBytes);
+                        try
+                        {
+                            writer.CopyTo(ptr);
+                            var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
 
-                        var memoryStream = new MemoryStream();
-                        reader.WriteTo(memoryStream, originalPropertyOrder: true);
-                        var s = Encoding.UTF8.GetString(memoryStream.ToArray());
+                            var memoryStream = new MemoryStream();
+                            reader.WriteTo(memoryStream, originalPropertyOrder: true);
+                            var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
-                        JObject.Parse(s); // can parse the output
+                            JObject.Parse(s); // can parse the output
 
-                        Assert.Equal(compacted, s);
+                            Assert.Equal(compacted, s);
+                        }
+                        finally
+                        {
+                            Marshal.FreeHGlobal((IntPtr)ptr);
+                        }
+                        
                     }
                 }
             }

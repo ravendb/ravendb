@@ -47,6 +47,13 @@ namespace Voron.Benchmark
             Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
             Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
+
+            Time("iterate parallel 1", sw => IterateAllKeysInOneTransaction_Parallel(sw, 1), delete: false);
+            Time("iterate parallel 2", sw => IterateAllKeysInOneTransaction_Parallel(sw, 2), delete: false);
+            Time("iterate parallel 4", sw => IterateAllKeysInOneTransaction_Parallel(sw, 4), delete: false);
+            Time("iterate parallel 8", sw => IterateAllKeysInOneTransaction_Parallel(sw, 8), delete: false);
+            Time("iterate parallel 16", sw => IterateAllKeysInOneTransaction_Parallel(sw, 16), delete: false);
+
             Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
             Time("fill seq non then read parallel 8", stopwatch => ReadAndWriteOneTransaction(stopwatch, 8));
             Time("fill seq non then read parallel 16", stopwatch => ReadAndWriteOneTransaction(stopwatch, 16));
@@ -273,6 +280,44 @@ namespace Voron.Benchmark
                 sw.Stop();
             }
         }
+
+        private static void IterateAllKeysInOneTransaction_Parallel(Stopwatch sw, int concurrency)
+        {
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
+            {
+                var countdownEvent = new CountdownEvent(concurrency);
+
+                sw.Start();
+                for (int i = 0; i < concurrency; i++)
+                {
+                    var currentBase = i;
+                    ThreadPool.QueueUserWorkItem(state =>
+                    {
+                        var local = 0;
+                        using (var tx = env.ReadTransaction())
+                        {
+                            var tree = tx.ReadTree("test");
+                            using (var it = tree.Iterate())
+                            {
+                                if (it.Seek(Slice.BeforeAllKeys))
+                                {
+                                    do
+                                    {
+                                        local += it.CurrentKey.Size;
+                                    } while (it.MoveNext());
+                                }
+                            }
+                            tx.Commit();
+                        }
+
+                        countdownEvent.Signal();
+                    });
+                }
+                countdownEvent.Wait();
+                sw.Stop();
+            }
+        }
+
 
         private static void ReadOneTransaction(Stopwatch sw)
         {

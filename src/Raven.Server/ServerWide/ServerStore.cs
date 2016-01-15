@@ -69,7 +69,7 @@ namespace Raven.Server.ServerWide
                 throw;
             }
 
-            _pool = new UnmanagedBuffersPool("ServerStore", 1024 * 1024 * 128);// 128MB should be more than big enough for the server store
+            _pool = new UnmanagedBuffersPool("ServerStore");// 128MB should be more than big enough for the server store
             _contextPool = new ConcurrentStack<RavenOperationContext>();
         }
 

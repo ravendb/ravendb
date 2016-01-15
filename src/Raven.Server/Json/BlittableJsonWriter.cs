@@ -14,8 +14,7 @@ namespace Raven.Server.Json
         private readonly RavenOperationContext _context;
         private readonly UnmanagedJsonParser _reader;
         private readonly UnmanagedWriteBuffer _stream;
-        private int _bufferSize, _compressionBufferSize;
-        private byte* _buffer, _compressionBuffer;
+        private UnmanagedBuffersPool.AllocatedMemoryData _buffer, _compressionBuffer;
 
         private int _position;
         public int DiscardedCompressions, Compressed;
@@ -33,12 +32,12 @@ namespace Raven.Server.Json
         {
             if (_buffer != null)
             {
-                _context.Pool.ReturnMemory(_buffer);
+                _context.ReturnMemory(_buffer);
                 _buffer = null;
             }
             if (_compressionBuffer != null)
             {
-                _context.Pool.ReturnMemory(_compressionBuffer);
+                _context.ReturnMemory(_compressionBuffer);
                 _compressionBuffer = null;
             }
         
@@ -48,28 +47,22 @@ namespace Raven.Server.Json
         private byte* GetCompressionBuffer(int minSize)
         {
             // enlarge buffer if needed
-            if (minSize > _compressionBufferSize)
+            if (minSize > _compressionBuffer.SizeInBytes)
             {
-                _compressionBufferSize = (int)Voron.Util.Utils.NearestPowerOfTwo(minSize);
-                _compressionBuffer = _context.Pool.GetMemory(_compressionBufferSize, out _compressionBufferSize);
+                _compressionBuffer = _context.GetMemory(minSize);
             }
-            return _compressionBuffer;
+            return (byte*)_compressionBuffer.Address;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private byte* GetTempBuffer(int minSize)
         {
-            if (minSize <= _bufferSize)
-                return _buffer;
-            return IncreaseTempBufferSize(minSize);
-        }
-
-        private byte* IncreaseTempBufferSize(int minSize)
-        {
+            if (_buffer != null && minSize <= _buffer.SizeInBytes)
+                return (byte*)_buffer.Address;
             if (_buffer != null)
-                _context.Pool.ReturnMemory(_buffer);
-            _bufferSize = (int) Voron.Util.Utils.NearestPowerOfTwo(minSize);
-            return _buffer = _context.Pool.GetMemory(_bufferSize, out _bufferSize);
+                _context.ReturnMemory(_buffer);
+            _buffer = _context.GetMemory(minSize);
+            return (byte*) _buffer.Address;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
