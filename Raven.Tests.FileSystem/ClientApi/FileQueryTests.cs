@@ -990,31 +990,31 @@ namespace Raven.Tests.FileSystem.ClientApi
                 {
                     var metadata = new RavenJObject();
 
-                    metadata.Add("int", 5);
-                    metadata.Add("long", 5L);
-                    metadata.Add("float", 5.0f);
-                    metadata.Add("double", 5.0);
+                    metadata.Add("Int", 5);
+                    metadata.Add("Long", 5L);
+                    metadata.Add("Float", 5.0f);
+                    metadata.Add("Double", 5.0);
 
-                    metadata.Add("uint", 5u);
-                    metadata.Add("ulong", 5UL);
-                    metadata.Add("short", (short)5);
-                    metadata.Add("ushort", (ushort)5);
-                    metadata.Add("decimal", 5m);
+                    metadata.Add("Uint", 5u);
+                    metadata.Add("Ulong", 5UL);
+                    metadata.Add("Short", (short) 5);
+                    metadata.Add("Ushort", (ushort) 5);
+                    metadata.Add("Decimal", 5m);
 
                     session.RegisterUpload("test-1.file", CreateRandomFileStream(10), metadata);
 
                     var metadata2 = new RavenJObject();
 
-                    metadata2.Add("int", 10);
-                    metadata2.Add("long", 10L);
-                    metadata2.Add("float", 10.0f);
-                    metadata2.Add("double", 10.0);
+                    metadata2.Add("Int", 10);
+                    metadata2.Add("Long", 10L);
+                    metadata2.Add("Float", 10.0f);
+                    metadata2.Add("Double", 10.0);
 
-                    metadata2.Add("uint", 10u);
-                    metadata2.Add("ulong", 10UL);
-                    metadata2.Add("short", (short)10);
-                    metadata2.Add("ushort", (ushort)10);
-                    metadata2.Add("decimal", 10m);
+                    metadata2.Add("Uint", 10u);
+                    metadata2.Add("Ulong", 10UL);
+                    metadata2.Add("Short", (short) 10);
+                    metadata2.Add("Ushort", (ushort) 10);
+                    metadata2.Add("Decimal", 10m);
 
                     session.RegisterUpload("test-2.file", CreateRandomFileStream(10), metadata2);
 
@@ -1023,7 +1023,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 var metadataKeys = new[]
                 {
-                    "int", "long", "float", "double", "uint", "ulong", "short", "ushort", "decimal"
+                    "Int", "Long", "Float", "Double", "Uint", "Ulong", "Short", "Ushort", "Decimal"
                 };
 
                 foreach (var key in metadataKeys)
@@ -1053,7 +1053,7 @@ namespace Raven.Tests.FileSystem.ClientApi
             {
                 var metadata = new RavenJObject
                 {
-                    {"test", new RavenJArray { 1, 2 } }
+                    {"Test", new RavenJArray { 1, 2 } }
                 };
                 session.RegisterUpload("test.file", CreateUniformFileStream(10), metadata);
                 await session.SaveChangesAsync();
@@ -1061,7 +1061,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 FilesQueryStatistics stats;
                 var query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 1)
+                                       .WhereEquals("Test", 1)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
@@ -1071,7 +1071,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 2)
+                                       .WhereEquals("Test", 2)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
@@ -1090,13 +1090,13 @@ namespace Raven.Tests.FileSystem.ClientApi
             {
                 var metadata1 = new RavenJObject
                 {
-                    {"test", new RavenJArray { 1, 2 } }
+                    {"Test", new RavenJArray { 1, 2 } }
                 };
                 session.RegisterUpload("test1.file", CreateUniformFileStream(10), metadata1);
 
                 var metadata2 = new RavenJObject
                 {
-                    {"test", new RavenJArray { 1, 3 } }
+                    {"Test", new RavenJArray { 1, 3 } }
                 };
                 session.RegisterUpload("test2.file", CreateUniformFileStream(10), metadata2);
                 await session.SaveChangesAsync();
@@ -1104,7 +1104,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 FilesQueryStatistics stats;
                 var query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 1)
+                                       .WhereEquals("Test", 1)
                                        .ToListAsync();
 
                 Assert.Equal(2, stats.TotalResults);
@@ -1115,7 +1115,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 2)
+                                       .WhereEquals("Test", 2)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
@@ -1125,7 +1125,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 3)
+                                       .WhereEquals("Test", 3)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
