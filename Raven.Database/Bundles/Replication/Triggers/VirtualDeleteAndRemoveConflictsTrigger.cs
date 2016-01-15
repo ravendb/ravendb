@@ -99,7 +99,8 @@ namespace Raven.Bundles.Replication.Triggers
 			foreach (var c in conflicts)
 			{
                 RavenJObject conflict;
-                Database.Delete(c.Value<string>(), null, transactionInformation, out conflict);
+                if (Database.Delete(c.Value<string>(), null, transactionInformation, out conflict) == false)
+                    continue;
 
 				var conflictSource = conflict.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
