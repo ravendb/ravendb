@@ -120,6 +120,8 @@
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\OperationMetadata.cs" />
     <Compile Include="Connection\ReplicationInformer.cs" />
+    <Compile Include="FileSystem\FilesQuery.cs" />
+    <Compile Include="Helpers\EnvironmentHelper.cs" />
     <Compile Include="QueryConvention.cs" />
     <Compile Include="ConventionBase.cs" />
     <Compile Include="TimeSeries\Changes\TimeSeriesChangesClient.cs" />
