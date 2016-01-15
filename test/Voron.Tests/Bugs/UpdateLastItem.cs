@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Xunit;

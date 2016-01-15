@@ -36,7 +36,8 @@ namespace Sparrow.Tests
         public void Constants()
         {
             Assert.Equal(64, BitVector.BitsPerWord);
-            Assert.Equal((uint)Math.Log(BitVector.BitsPerWord, 2), BitVector.Log2BitsPerWord);
+            // Workaround for https://github.com/dotnet/coreclr/issues/2683
+            Assert.Equal((uint) (Math.Log(BitVector.BitsPerWord) / Math.Log(2)), BitVector.Log2BitsPerWord);
         }
 
         [Fact]

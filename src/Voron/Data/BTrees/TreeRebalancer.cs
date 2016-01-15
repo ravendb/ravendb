@@ -142,7 +142,7 @@ namespace Voron.Data.BTrees
 					var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
 					var node = right.GetNode(i);
 
-					if (mergedPage.HasSpaceFor(_tx, SizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize ) == false)
+					if (mergedPage.HasSpaceFor(_tx, TreeSizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize ) == false)
 					{
 						right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
 						return false;
@@ -240,7 +240,7 @@ namespace Voron.Data.BTrees
 
 		private void AddSeparatorToParentPage(TreePage parentPage, long pageNumber, Slice separatorKey, int separatorKeyPosition)
 		{
-			if (parentPage.HasSpaceFor(_tx, SizeOf.BranchEntry(separatorKey) + Constants.NodeOffsetSize) == false)
+			if (parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separatorKey) + Constants.NodeOffsetSize) == false)
 			{
 				var pageSplitter = new TreePageSplitter(_tx, _tree, separatorKey, -1, pageNumber, TreeNodeFlags.PageRef, 0, _cursor);
 				pageSplitter.Execute();

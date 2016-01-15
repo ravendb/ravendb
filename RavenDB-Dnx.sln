@@ -89,4 +89,7 @@ Global
 		{BE39FC8A-4668-43A0-972C-73827DE07CC1} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
 		{FB4ACC78-7620-4C29-A46E-C1620409B3F2} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 	EndGlobalSection
+	GlobalSection(CodealikeProperties) = postSolution
+		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57
+	EndGlobalSection
 EndGlobal

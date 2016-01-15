@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using Voron.Data;
 using Voron.Impl.FileHeaders;
 
 namespace Voron.Debugging

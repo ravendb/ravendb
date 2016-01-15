@@ -172,7 +172,7 @@ namespace Voron.Data.BTrees
 		{
 			Slice valueToInsert = value;
 
-			var requiredPageSize = Constants.TreePageHeaderSize + SizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
+			var requiredPageSize = Constants.TreePageHeaderSize + TreeSizeOf.LeafEntry(-1, valueToInsert, 0) + Constants.NodeOffsetSize;
 			if (requiredPageSize > maxNodeSize)
 			{
 				// no choice, very big value, we might as well just put it in its own tree from the get go...

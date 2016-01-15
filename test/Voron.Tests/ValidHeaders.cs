@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;

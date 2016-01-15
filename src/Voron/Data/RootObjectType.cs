@@ -1,4 +1,4 @@
-﻿namespace Voron.Impl.FileHeaders
+﻿namespace Voron.Data
 {
     public enum RootObjectType : byte
     {

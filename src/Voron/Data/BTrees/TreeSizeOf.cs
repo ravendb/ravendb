@@ -5,7 +5,7 @@ using Voron.Data.BTrees;
 
 namespace Voron.Impl
 {
-    internal unsafe class SizeOf
+    internal unsafe class TreeSizeOf
     {
         /// <summary>
         /// Calculate the size of a leaf node.
