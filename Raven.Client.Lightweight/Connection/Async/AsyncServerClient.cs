@@ -25,6 +25,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Metrics;
+using Raven.Client.Util.Auth;
 using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -41,7 +42,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 
 namespace Raven.Client.Connection.Async
 {

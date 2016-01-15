@@ -25,7 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>5</LangVersion>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -135,6 +135,7 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB-3460.cs" />
     <Compile Include="RavenDB-3736_2.cs" />
     <Compile Include="RavenDB-3973.cs" />
     <Compile Include="RavenDB-3979.cs" />
@@ -182,7 +183,6 @@
     <Compile Include="RavenDB-3530.cs" />
     <Compile Include="RavenDB-3632.cs" />
     <Compile Include="RavenDB_3230.cs" />
-    <Compile Include="RavenDB_3460.cs" />
     <Compile Include="RavenDB_3573.cs" />
     <Compile Include="RavenDB_3400.cs" />
     <Compile Include="RavenDB_3543.cs" />

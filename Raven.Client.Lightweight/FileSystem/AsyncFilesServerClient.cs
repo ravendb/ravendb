@@ -51,7 +51,7 @@ namespace Raven.Client.FileSystem
                 FileSystemName = fileSystemName;
                 ApiKey = credentials.ApiKey;
                 this.conflictListeners = conflictListeners ?? new IFilesConflictListener[0];
-                if (replicationInformerGetter != null && ReplicationInformer!= null)
+                if (replicationInformerGetter != null && ReplicationInformer != null)
                     ReplicationInformer.UpdateReplicationInformationIfNeeded(this);
             }
             catch (Exception)
@@ -326,14 +326,14 @@ namespace Raven.Client.FileSystem
 
             var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
 
-                var sb = new StringBuilder(operationMetadata.Url)
-                    .Append("/streams/files?etag=")
-                    .Append(fromEtag)
-                    .Append("&pageSize=")
-                    .Append(pageSize);
+            var sb = new StringBuilder(operationMetadata.Url)
+                .Append("/streams/files?etag=")
+                .Append(fromEtag)
+                .Append("&pageSize=")
+                .Append(pageSize);
 
-                var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions)
-                                            .AddOperationHeaders(OperationsHeaders));
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions)
+                                        .AddOperationHeaders(OperationsHeaders));
 
             request.RemoveAuthorizationHeader();
 
@@ -345,7 +345,7 @@ namespace Raven.Client.FileSystem
                 token = await tokenRetriever.ValidateThatWeCanUseToken(token).ConfigureAwait(false);
             }
             catch (Exception e)
-        {
+            {
                 request.Dispose();
 
                 throw new InvalidOperationException(
@@ -355,13 +355,13 @@ namespace Raven.Client.FileSystem
 
             request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-                var response = await request.ExecuteRawResponseAsync()
-                                            .ConfigureAwait(false);
+            var response = await request.ExecuteRawResponseAsync()
+                                        .ConfigureAwait(false);
 
-                await response.AssertNotFailingResponse().ConfigureAwait(false);
+            await response.AssertNotFailingResponse().ConfigureAwait(false);
 
             return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
-            }
+        }
 
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
         {
@@ -695,8 +695,8 @@ namespace Raven.Client.FileSystem
                         files = await this.GetAsync(new[] { filename }).ConfigureAwait(false);
                         files.ApplyIfNotNull(x =>
                       {
-                            // We notify the listeners.
-                            foreach (var conflictListener in conflictListeners)
+                          // We notify the listeners.
+                          foreach (var conflictListener in conflictListeners)
                               conflictListener.ConflictResolved(x);
                       });
 
@@ -1410,7 +1410,7 @@ namespace Raven.Client.FileSystem
                     return;
 
                 await CreateOrUpdateFileSystemAsync(MultiDatabase.CreateFileSystemDocument(fileSystem), fileSystem).ConfigureAwait(false);
-                        }
+            }
 
             public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)
             {

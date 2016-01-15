@@ -26,7 +26,7 @@ import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
-import enableResizeBindingHandler = require("common/enableResizeBindingHandler");
+import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import changesApi = require("common/changesApi");
 import changesContext = require("common/changesContext");
@@ -1047,7 +1047,7 @@ class shell extends viewModelBase {
 
                 var currentBuildVersion = serverBuildResult.BuildVersion;
                 if (serverBuildReminder.isReminderNeeded() && currentBuildVersion !== 13) {
-                    new getLatestServerBuildVersionCommand(true, 3000, 34999) //pass false as a parameter to get the latest unstable
+                    new getLatestServerBuildVersionCommand(true, 35000, 39999) //pass false as a parameter to get the latest unstable
                         .execute()
                         .done((latestServerBuildResult: latestServerBuildVersionDto) => {
                             if (latestServerBuildResult.LatestBuild > currentBuildVersion) { //

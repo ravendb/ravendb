@@ -1,7 +1,7 @@
-import getSingleAuthTokenCommand = require("commands/getSingleAuthTokenCommand");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher"); 
 
-import resource = require("models/resource");
+import resource = require("models/resources/resource");
 
 class downloader {
     $downloadFrame = $('#downloadFrame');

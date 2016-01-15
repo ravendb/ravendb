@@ -22,12 +22,13 @@ html, body {
     left: 0;
     right: 0;
 }
-#longTimeoutMessage
-{
-    background :yellow;
+
+#longTimeoutMessage {
+    background: yellow;
     font-size: 1em;
     text-align: center;
 }
+
 .alert-warning h2 {
     color: white;
 }
@@ -284,30 +285,29 @@ html, body {
 }
 
 
-  @media(max-device-height:1024px) {
-      .query-stats {
-        width: 80vw!important;}    }
-    @media(min-device-height:1025px) {
-        .query-stats {
-        width: 50vw!important;
-        }
+@media(max-device-height:1024px) {
+    .query-stats {
+        width: 80vw !important;
     }
+}
+
+@media(min-device-height:1025px) {
+    .query-stats {
+        width: 50vw !important;
+    }
+}
 
 .query-stats {
-  
-   
-    
     //margin: -250px 0 0 -450px;
-    .row {       
-            padding-left: 10px;
-            padding-right: 10px;
-       
+    .row {
+        padding-left: 10px;
+        padding-right: 10px;
+
 
         span {
             -ms-word-break: break-all;
             word-break: break-all;
         }
-       
     }
 }
 
@@ -462,25 +462,28 @@ html, body {
                 }
             }
 
-            .indexing-disabled{
+            .indexing-disabled {
                 position: absolute;
                 top: 30px;
                 right: 11px;
             }
-            .clients-rejected{
+
+            .clients-rejected {
                 position: absolute;
                 top: 30px;
                 right: 28px;
             }
+
             .btn-group {
                 float: right;
                 margin-left: 39.3px;
                 margin-top: 50px;
 
                 .dropdown-menu {
-                    .fa-arrow-down{
-                        color:@alert-danger-bg;
+                    .fa-arrow-down {
+                        color: @alert-danger-bg;
                     }
+
                     .fa-trash-o {
                         color: lighten(@disabledColor, 20%);
                     }
@@ -488,53 +491,55 @@ html, body {
                     .delete-resource:hover .fa-trash-o {
                         color: white;
                     }
-                }.dropdown-submenu {
-    position: relative;
-}
+                }
 
-.dropdown-submenu>.dropdown-menu {
-    top: 0;
-    left: 100%;
-    margin-top: -6px;
-    margin-left: -1px;
-    -webkit-border-radius: 0 6px 6px 6px;
-    -moz-border-radius: 0 6px 6px;
-    border-radius: 0 6px 6px 6px;
-}
+                .dropdown-submenu {
+                    position: relative;
+                }
 
-.dropdown-submenu:hover>.dropdown-menu {
-    display: block;
-}
+                .dropdown-submenu > .dropdown-menu {
+                    top: 0;
+                    left: 100%;
+                    margin-top: -6px;
+                    margin-left: -1px;
+                    -webkit-border-radius: 0 6px 6px 6px;
+                    -moz-border-radius: 0 6px 6px;
+                    border-radius: 0 6px 6px 6px;
+                }
 
-.dropdown-submenu>a:after {
-    display: block;
-    content: " ";
-    float: right;
-    width: 0;
-    height: 0;
-    border-color: transparent;
-    border-style: solid;
-    border-width: 5px 0 5px 5px;
-    border-left-color: #ccc;
-    margin-top: 5px;
-    margin-right: -10px;
-}
+                .dropdown-submenu:hover > .dropdown-menu {
+                    display: block;
+                }
 
-.dropdown-submenu:hover>a:after {
-    border-left-color: #fff;
-}
+                .dropdown-submenu > a:after {
+                    display: block;
+                    content: " ";
+                    float: right;
+                    width: 0;
+                    height: 0;
+                    border-color: transparent;
+                    border-style: solid;
+                    border-width: 5px 0 5px 5px;
+                    border-left-color: #ccc;
+                    margin-top: 5px;
+                    margin-right: -10px;
+                }
 
-.dropdown-submenu.pull-left {
-    float: none;
-}
+                .dropdown-submenu:hover > a:after {
+                    border-left-color: #fff;
+                }
 
-.dropdown-submenu.pull-left>.dropdown-menu {
-    left: -100%;
-    margin-left: 10px;
-    -webkit-border-radius: 6px 0 6px 6px;
-    -moz-border-radius: 6px 0 6px 6px;
-    border-radius: 6px 0 6px 6px;
-}
+                .dropdown-submenu.pull-left {
+                    float: none;
+                }
+
+                .dropdown-submenu.pull-left > .dropdown-menu {
+                    left: -100%;
+                    margin-left: 10px;
+                    -webkit-border-radius: 6px 0 6px 6px;
+                    -moz-border-radius: 6px 0 6px 6px;
+                    border-radius: 6px 0 6px 6px;
+                }
             }
 
             .btn-default {
@@ -564,6 +569,7 @@ html, body {
             &.selected {
                 box-shadow: 0 0 20px 0 @selectColor;
             }
+
             &.isLoaded {
                 border-left: solid 5px @brand-success;
             }
@@ -592,20 +598,20 @@ html, body {
     }
 }
 
-.index-lock-mode-disabled{
+.index-lock-mode-disabled {
     pointer-events: none;
     cursor: default;
     opacity: 0.5;
 }
 
-#tenantNameLink{
+#tenantNameLink {
     padding-left: 5px;
 }
 
 .resource-link {
     display: inline-block;
     padding-right: 2px;
-    overflow: hidden!important;
+    overflow: hidden !important;
     max-width: 250px;
     -ms-text-overflow: ellipsis;
     -o-text-overflow: ellipsis;
@@ -613,7 +619,7 @@ html, body {
     white-space: nowrap;
 }
 
-.resource-caret{
+.resource-caret {
     padding-top: 10px;
 }
 
@@ -650,8 +656,9 @@ div.btn-group[data-toggle=buttons-radio] button.active {
     border-right: solid 3px rgba(0, 0,0, .73);
     overflow-y: hidden;
 }
+
 .document-collections {
-    
+
     li {
         outline: none;
     }
@@ -1102,11 +1109,11 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 .collection-resize {
-    position: absolute; 
-    right: 0; 
-    height: 100%; 
-    width: 10px; 
-    top: 0; 
+    position: absolute;
+    right: 0;
+    height: 100%;
+    width: 10px;
+    top: 0;
     cursor: col-resize;
 }
 
@@ -1186,18 +1193,18 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 
     .breadcrumb {
         width: 100%;
-        .dropdown-menu{
-            li{
-                overflow-x:visible!important;
-                max-width:none!important;
+
+        .dropdown-menu {
+            li {
+                overflow-x: visible !important;
+                max-width: none !important;
             }
         }
     }
 
-    .breadcrumb > li {            
-            overflow: visible !important;
-            
-        }
+    .breadcrumb > li {
+        overflow: visible !important;
+    }
 
 
     .editor {
@@ -1471,7 +1478,7 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 
 #shellHeader {
-    #enviroment-header{
+    #enviroment-header {
         position: fixed;
         z-index: -1;
         margin-left: 45%;
@@ -1625,7 +1632,8 @@ div.btn-group[data-toggle=buttons-radio] button.active {
         padding: 10px;
         overflow-y: auto;
         overflow-x: hidden;
-        .exceptionText{
+
+        .exceptionText {
             white-space: pre-wrap;
         }
     }
@@ -2271,10 +2279,11 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .topBorder td {
     border-top: solid 1px #ddd !important;
 }
-.confirmationMessage{
-     -ms-word-break: break-all;
-     word-break: break-all;
-     white-space:pre-line;
+
+.confirmationMessage {
+    -ms-word-break: break-all;
+    word-break: break-all;
+    white-space: pre-line;
 }
 
 .scrollable-resource-menu {
@@ -2292,6 +2301,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
         -webkit-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
         -moz-box-shadow: 0 0 5px 0 lighten(#7109AA, 20%);
     }
+
     &.selected {
         box-shadow: 0 0 20px 0 #7109AA;
         -webkit-box-shadow: 0 0 20px 0 #7109AA;
@@ -2307,23 +2317,26 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     &:hover {
         box-shadow: 0 0 5px 0 lighten(#0f6716, 20%);
     }
+
     &.selected {
         box-shadow: 0 0 20px 0 #0f6716;
     }
 }
 
 .form-checkbox-control {
-    width:35px; 
-    height:35px; 
-    margin-top:10px; 
-    margin-bottom:10px
+    width: 35px;
+    height: 35px;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
-.help_link, a.global_help_link  {
+.help_link, a.global_help_link {
     color: #152894;
+
     &:hover {
         color: darken(#152894, 10%);
     }
+
     &:focus {
         color: #152894;
     }
@@ -2342,12 +2355,15 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 .negative-margin {
     margin-top: -10px;
 }
+
 .padd-top-10 {
     padding-top: 10px;
 }
+
 .padd-right-10 {
     padding-right: 10px;
 }
+
 #indexingPerformance {
     background-color: white;
 }
@@ -2358,16 +2374,18 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
 
 .handle {
     float: left;
-     pointer-events: all;
-     cursor: move;
-     font-size: 14px;
-     font-weight: bold;
-     padding-left: 10px;
+    pointer-events: all;
+    cursor: move;
+    font-size: 14px;
+    font-weight: bold;
+    padding-left: 10px;
 }
+
 .tight {
     margin-top: 3px;
     margin-bottom: 3px;
 }
+
 .text-height-fix {
     line-height: 34px;
 }
@@ -2380,6 +2398,7 @@ Don't use remove-icon. Instead, use Bootstrap's built-in close/remove button:
     color: white;
     text-decoration: underline;
 }
+
 }
 
 .experimental {

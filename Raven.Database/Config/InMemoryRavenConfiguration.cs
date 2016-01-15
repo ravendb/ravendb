@@ -1181,6 +1181,7 @@ namespace Raven.Database.Config
         /// Use memory cache as document cacher
         /// </summary>
         public bool CacheDocumentsInMemory { get; set; }
+
         /// <summary>
         /// Path to temporary directory used by server.
         /// Default: Current user's temporary directory
