@@ -335,8 +335,11 @@ class filesystemFiles extends viewModelBase {
             if (selectedFolder == null)
                 selectedFolder = "";
 
-            var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files" + selectedFolder + "/" + encodeURIComponent(selectedItem.getId());
-            window.location.assign(url);
+            var fs = this.activeFilesystem();
+            var fileName = selectedItem.getId();
+
+            var url = appUrl.forResourceQuery(fs) + "/files" + selectedFolder + "/" + encodeURIComponent(fileName);
+            this.downloader.download(fs, url);
         }
     }
 

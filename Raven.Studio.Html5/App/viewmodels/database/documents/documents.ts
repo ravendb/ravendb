@@ -25,7 +25,6 @@ import getEffectiveCustomFunctionsCommand = require("commands/database/globalCon
 import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import getOperationAlertsCommand = require("commands/operations/getOperationAlertsCommand");
 import dismissAlertCommand = require("commands/operations/dismissAlertCommand");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 class documents extends viewModelBase {
@@ -45,7 +44,6 @@ class documents extends viewModelBase {
     currentCollection = ko.observable<collection>();
     showLoadingIndicator = ko.observable<boolean>(false);
     showLoadingIndicatorThrottled = this.showLoadingIndicator.throttle(250);
-    currentExportUrl: KnockoutComputed<string>;
     isSystemDocumentsCollection: KnockoutComputed<boolean>;
     isRegularCollection: KnockoutComputed<boolean>;
 
@@ -57,7 +55,6 @@ class documents extends viewModelBase {
 
     lastCollectionCountUpdate = ko.observable<string>();
     alerts = ko.observable<alert[]>([]);
-    token = ko.observable<singleAuthToken>();
     static gridSelector = "#documentsGrid";
     static isInitialized = ko.observable<boolean>(false);
     isInitialized = documents.isInitialized;
@@ -107,15 +104,6 @@ class documents extends viewModelBase {
             return !!collection && !collection.isAllDocuments && !collection.isSystemDocuments;
         });
 
-        this.updateAuthToken();
-        this.currentExportUrl = ko.computed(() => {
-            var collection: collection = this.selectedCollection();
-            if (this.isRegularCollection()) {
-                return appUrl.forExportCollectionCsv(collection, collection.ownerDatabase) + (!!this.token() ? "&singleUseAuthToken=" + this.token().Token : "");
-            }
-            return null;
-        });
-
         this.selectedDocumentsText = ko.computed(() => {
             if (!!this.selectedDocumentIndices()) {
                 var documentsText = "document";
@@ -126,6 +114,7 @@ class documents extends viewModelBase {
             }
             return "";
         });
+        
     }
 
     activate(args) {
@@ -227,16 +216,13 @@ class documents extends viewModelBase {
         ];
     }
 
-    private updateAuthToken() {
-        new getSingleAuthTokenCommand(this.activeDatabase())
-            .execute()
-            .done(token => this.token(token));
-    }
-
     exportCsv() {
-        // schedule token update (to properly handle subseqent downloads)
-        setTimeout(() => this.updateAuthToken(), 50);
-        return true;
+        if (this.isRegularCollection()) {
+            var collection: collection = this.selectedCollection();
+            var db = this.activeDatabase();
+            var url = appUrl.forExportCollectionCsv(collection, collection.ownerDatabase);
+            this.downloader.download(db, url);
+        }
     }
 
     private fetchAlerts() {

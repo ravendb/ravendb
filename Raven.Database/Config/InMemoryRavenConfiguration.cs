@@ -179,6 +179,7 @@ namespace Raven.Database.Config
 
             MaxNumberOfItemsToProcessInSingleBatch = ravenSettings.MaxNumberOfItemsToProcessInSingleBatch.Value;
             FlushIndexToDiskSizeInMb = ravenSettings.FlushIndexToDiskSizeInMb.Value;
+            CacheDocumentsInMemory = ravenSettings.CacheDocumentsInMemory.Value;
 
             var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToProcessInSingleBatch"] ?? Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
             if (initialNumberOfItemsToIndexInSingleBatch != null)
@@ -1175,6 +1176,11 @@ namespace Raven.Database.Config
         ///     Exception (an exception is thrown if we need to fetch fields from the document itself)
         /// </summary>
         public ImplicitFetchFieldsMode ImplicitFetchFieldsFromDocumentMode { get; set; }
+
+        /// <summary>
+        /// Use memory cache as document cacher
+        /// </summary>
+        public bool CacheDocumentsInMemory { get; set; }
 
         /// <summary>
         /// Path to temporary directory used by server.

@@ -49,6 +49,7 @@
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>618</NoWarn>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -206,6 +207,14 @@
     <ProjectReference Include="..\Raven.Tests.Helpers\Raven.Tests.Helpers.csproj">
       <Project>{14F2D508-8E06-407B-9451-97E99538E26B}</Project>
       <Name>Raven.Tests.Helpers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Issues\Raven.Tests.Issues.csproj">
+      <Project>{d8bdd718-6e21-41b7-9c41-d0fbe0532df4}</Project>
+      <Name>Raven.Tests.Issues</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.MailingList\Raven.Tests.MailingList.csproj">
+      <Project>{ea32fd05-8537-4a31-879e-20a0f2c87479}</Project>
+      <Name>Raven.Tests.MailingList</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Raft\Raven.Tests.Raft.csproj">
       <Project>{99d596eb-a15d-4407-bd28-da46d5635773}</Project>

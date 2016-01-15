@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="StronglyTypedRavenSettings.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -317,6 +317,7 @@ namespace Raven.Database.Config
                 TimeSpan.FromSeconds(15),
                 TimeSpanArgumentType.FromParse);
 
+            CacheDocumentsInMemory = new BooleanSetting(settings["Raven/CacheDocumentsInMemory"], true);
             TempPath = new StringSetting(settings[Constants.TempPath], Path.GetTempPath());
 
             FillMonitoringSettings();
@@ -348,6 +349,8 @@ namespace Raven.Database.Config
 
             return val;
         }
+
+        public BooleanSetting CacheDocumentsInMemory { get; set; }
 
         public IntegerSetting MaxConcurrentResourceLoads { get; private set; }
 

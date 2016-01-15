@@ -97,8 +97,11 @@ class filesystemEditFile extends viewModelBase {
     }
 
     downloadFile() {
-        var url = appUrl.forResourceQuery(this.activeFilesystem()) + "/files/" + encodeURIComponent(this.fileName());
-        window.location.assign(url);
+        var fs = this.activeFilesystem();
+        var fileName = this.fileName();
+
+        var url = appUrl.forResourceQuery(fs) + "/files/" + encodeURIComponent(fileName);
+        this.downloader.download(fs, url);
     }
 
     refreshFile() {

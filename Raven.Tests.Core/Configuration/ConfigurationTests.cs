@@ -314,6 +314,9 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.FileSystem.PreventSchemaUpdate.Value, actual => actual.Storage.PreventSchemaUpdate);
             configurationComparer.Assert(expected => FilePathTools.MakeSureEndsWithSlash(expected.WorkingDir.Value.ToFullPath(null)), actual => actual.WorkingDirectory);
             configurationComparer.Assert(expected => expected.MaxClauseCount.Value, actual => actual.MaxClauseCount);
+
+            configurationComparer.Assert(expected => expected.CacheDocumentsInMemory.Value, actual => actual.CacheDocumentsInMemory);
+
             configurationComparer.Assert(expected => expected.Cluster.HeartbeatTimeout.Value, actual => actual.Cluster.HeartbeatTimeout);
             configurationComparer.Assert(expected => expected.Cluster.ElectionTimeout.Value, actual => actual.Cluster.ElectionTimeout);
             configurationComparer.Assert(expected => expected.Cluster.MaxEntriesPerRequest.Value, actual => actual.Cluster.MaxEntriesPerRequest);

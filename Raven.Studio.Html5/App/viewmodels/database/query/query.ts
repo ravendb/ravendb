@@ -26,8 +26,6 @@ import customColumns = require("models/database/documents/customColumns");
 import selectColumns = require("viewmodels/common/selectColumns");
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import getDocumentsByEntityNameCommand = require("commands/database/documents/getDocumentsByEntityNameCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
-import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
 import customFunctions = require("models/database/documents/customFunctions");
 import transformerType = require("models/database/index/transformer");
@@ -36,8 +34,6 @@ import getIndexSuggestionsCommand = require("commands/database/index/getIndexSug
 import recentQueriesStorage = require("common/recentQueriesStorage");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import queryUtil = require("common/queryUtil");
-
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
 class query extends viewModelBase {
     isTestIndex = ko.observable<boolean>(false);
@@ -66,7 +62,6 @@ class query extends viewModelBase {
     indexEntries = ko.observable(false);
     recentQueries = ko.observableArray<storedQueryDto>();
     rawJsonUrl = ko.observable<string>();
-    exportUrl: KnockoutComputed<string>;
     collections = ko.observableArray<collection>([]);
     collectionNames = ko.observableArray<string>();
     collectionNamesExceptCurrent: KnockoutComputed<string[]>;
@@ -77,7 +72,6 @@ class query extends viewModelBase {
     isLoading = ko.observable<boolean>(false);
     isCacheDisable = ko.observable<boolean>(false);
     enableDeleteButton: KnockoutComputed<boolean>;
-    token = ko.observable<singleAuthToken>();
     warningText = ko.observable<string>();
     isWarning = ko.observable<boolean>(false);
     containsAsterixQuery: KnockoutComputed<boolean>;
@@ -216,7 +210,6 @@ class query extends viewModelBase {
         super.activate(indexNameOrRecentQueryHash);
 
         this.updateHelpLink('KCIMJK');
-        this.updateAuthToken();
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
         var db = this.activeDatabase();
         return $.when(this.fetchAllCollections(db), this.fetchAllIndexes(db))
@@ -226,12 +219,6 @@ class query extends viewModelBase {
     detached() {
         super.detached();
         aceEditorBindingHandler.detached();
-    }
-
-    updateAuthToken() {
-        new getSingleAuthTokenCommand(this.activeDatabase())
-            .execute()
-            .done(token => this.token(token));
     }
 
     attached() {
@@ -443,7 +430,6 @@ class query extends viewModelBase {
 
             this.rawJsonUrl(appUrl.forResourceQuery(database) + queryCommand.getUrl());
             this.csvUrl(queryCommand.getCsvUrl());
-            this.exportUrl = ko.computed(() => (appUrl.forResourceQuery(database) + this.csvUrl() + (this.token() ? "&singleUseAuthToken=" + this.token().Token : "")));
 
             var resultsFetcher = (skip: number, take: number) => {
                 var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, sorts, transformer, showFields, indexEntries, useAndOperator, this.isCacheDisable());
@@ -778,9 +764,9 @@ class query extends viewModelBase {
     }
 
     exportCsv() {
-        // schedule token update (to properly handle subseqent downloads)
-        setTimeout(() => this.updateAuthToken(), 50);
-        return true;
+        var db = this.activeDatabase();
+        var url = appUrl.forResourceQuery(db) + this.csvUrl();
+        this.downloader.download(db, url);
     }
 
     fieldNameStartsWith() {
