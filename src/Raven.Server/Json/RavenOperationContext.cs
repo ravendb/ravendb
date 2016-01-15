@@ -87,11 +87,7 @@ namespace Raven.Server.Json
             var index = UnmanagedBuffersPool.GetIndexFromSize(actualSize);
             if (index == -1)
             {
-                return new UnmanagedBuffersPool.AllocatedMemoryData
-                {
-                    SizeInBytes = requestedSize,
-                    Address = Marshal.AllocHGlobal(requestedSize)
-                };
+                return Pool.Allocate(requestedSize);
             }
 
             if (_allocatedMemory?[index] == null ||
@@ -112,8 +108,7 @@ namespace Raven.Server.Json
             var index = UnmanagedBuffersPool.GetIndexFromSize(buffer.SizeInBytes);
             if (index == -1)
             {
-                //strange size, just release
-                Marshal.FreeHGlobal(buffer.Address);
+                Pool.Return(buffer);
                 return;
             }
             if (_allocatedMemory[index] == null)

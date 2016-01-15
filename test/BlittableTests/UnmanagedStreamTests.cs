@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Raven.Server.Json;
 using Xunit;
 
@@ -25,7 +26,6 @@ namespace BlittableTests
                     allocatedMemory.Add(pointer);
                     newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
                 }
-
                 var buffer = ctx.GetMemory(newStream.SizeInBytes);
 
                 var copiedSize = newStream.CopyTo((byte*)buffer.Address);
@@ -48,6 +48,20 @@ namespace BlittableTests
             }
         }
 
+
+        [Fact]
+        public void BigAlloc()
+        {
+            var size = 3917701;
+           
+            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
+            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool))
+            {
+                var data = ctx.GetMemory(size);
+                ctx.ReturnMemory(data);
+            }
+        }
+
         [Fact]
         public void BulkWriteDescendingSizeTest()
         {
@@ -56,12 +70,10 @@ namespace BlittableTests
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = new UnmanagedWriteBuffer(ctx);
-                var totalSize = 0;
                 var rand = new Random();
                 for (var i = 5000; i > 1; i--)
                 {
                     var pointer = ctx.GetMemory(rand.Next(1, i * 7));
-                    totalSize += pointer.SizeInBytes;
                     FillData((byte*)pointer.Address, pointer.SizeInBytes);
                     allocatedMemory.Add(pointer);
                     newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
@@ -73,10 +85,8 @@ namespace BlittableTests
                 Assert.Equal(copiedSize, newStream.SizeInBytes);
 
                 var curIndex = 0;
-                var curTuple = 0;
                 foreach (var tuple in allocatedMemory)
                 {
-                    curTuple++;
                     for (var i = 0; i < tuple.SizeInBytes; i++)
                     {
                         Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address+ i)));

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
@@ -123,6 +124,7 @@ namespace Raven.Server.Json
             {
                 return list;
             }
+            actualSize = GetActualSize(size); // when we request 7 bytes, we want to get 16 bytes
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
@@ -130,9 +132,27 @@ namespace Raven.Server.Json
             };
         }
 
+
+        public static int GetActualSize(int size)
+        {
+            switch (size)
+            {
+                case 1:
+                case 2:
+                case 4:
+                case 8:
+                case 16:
+                    return 16;
+                case 2048:
+                case 4096:
+                    return 4096;
+                default:
+                    return size;
+            }
+        }
+
         public static int GetIndexFromSize(int size)
         {
-            Debug.Assert(size == Bits.NextPowerOf2(size));
             switch (size)
             {
                 case 1:
