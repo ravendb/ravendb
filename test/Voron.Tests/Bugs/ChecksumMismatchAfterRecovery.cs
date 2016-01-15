@@ -10,21 +10,8 @@ using Xunit;
 
 namespace Voron.Tests.Bugs
 {
-    public class ChecksumMismatchAfterRecovery : IDisposable
+    public class ChecksumMismatchAfterRecovery : StorageTest
     {
-        private const string _dataPath = "test-checksum-mismatch.data";
-
-        public ChecksumMismatchAfterRecovery()
-        {
-            DeleteDir();
-        }
-
-        private void DeleteDir()
-        {
-            if (Directory.Exists(_dataPath))
-                Directory.Delete(_dataPath, true);
-        }
-
         [Fact]
         public void ShouldNotThrowChecksumMismatch()
         {
@@ -37,7 +24,7 @@ namespace Voron.Tests.Bugs
                 buffer[i] = 13;
             }
 
-            var options = StorageEnvironmentOptions.ForPath(_dataPath);
+            var options = StorageEnvironmentOptions.ForPath(DataDir);
 
             using (var env = new StorageEnvironment(options))
             {
@@ -64,7 +51,7 @@ namespace Voron.Tests.Bugs
                 }
             }
 
-            options = StorageEnvironmentOptions.ForPath(_dataPath);
+            options = StorageEnvironmentOptions.ForPath(DataDir);
 
             using (var env = new StorageEnvironment(options))
             {
@@ -81,11 +68,6 @@ namespace Voron.Tests.Bugs
                     }
                 }
             }
-        }
-
-        public void Dispose()
-        {
-            DeleteDir();
         }
     }
 }
