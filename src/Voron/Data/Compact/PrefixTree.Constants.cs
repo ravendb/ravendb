@@ -14,6 +14,8 @@ namespace Voron.Data.Compact
             public const long InvalidNodeName = -1;
             public const long RootNodeName = 0;
 
+            public const long InvalidPage = -1;
+
             public const int L1CacheSize = 16 * 1024;
 
             public static int NodesPerPage = 4096 * 1024 / sizeof(PrefixTree.Node);

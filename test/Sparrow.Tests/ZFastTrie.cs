@@ -1,4 +1,3 @@
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using System;
@@ -11,9 +10,9 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Extensions;
 
-namespace FastTests.Sparrow
+namespace Sparrow.Tests
 {
-    public class ZFastTrieTests
+    public class ZFastTrieTest
     {
         private readonly Func<string, BitVector> binarize = x => BitVector.Of(true, x);
 

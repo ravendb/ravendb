@@ -12,7 +12,10 @@ namespace Voron.Data.Compact
     public unsafe class PrefixTreeRootMutableState
     {
         private readonly LowLevelTransaction _tx;
-        private readonly PrefixTreeRootHeader* _header;
+        private readonly PrefixTreeRootHeader* _pointer;
+
+        private PrefixTreeRootHeader _innerCopy;
+        private readonly PrefixTreeTranslationTableMutableState _translationTable;
 
         private bool _isModified;
 
@@ -21,22 +24,21 @@ namespace Voron.Data.Compact
             Debug.Assert(tx != null);
 
             this._tx = tx;
-            this._header = header;
+            this._pointer = header;
+            this._innerCopy = *header;
+            this._translationTable = new PrefixTreeTranslationTableMutableState(tx, this);
         }
 
-        /// <summary>
-        /// The root header page for the tree. 
-        /// </summary>
-        public long RootPage
+        internal PrefixTreeRootHeader* Pointer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _header->RootPage; }
+            get { return _pointer; }
+        }
+
+        public PrefixTreeTranslationTableMutableState TranslationTable
+        {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set
-            {
-                _header->RootPage = value;
-                IsModified = true;
-            }
+            get { return _translationTable; }
         }
 
         /// <summary>
@@ -45,11 +47,11 @@ namespace Voron.Data.Compact
         public long Table
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _header->Table; }
+            get { return _innerCopy.Table; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _header->Table = value;
+                _innerCopy.Table = value;
                 IsModified = true;
             }
         }
@@ -60,11 +62,11 @@ namespace Voron.Data.Compact
         public PrefixTree.Leaf Head
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _header->Head; }
+            get { return _innerCopy.Head; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _header->Head = value;
+                _innerCopy.Head = value;
                 IsModified = true;
             }
         }
@@ -75,11 +77,11 @@ namespace Voron.Data.Compact
         public PrefixTree.Leaf Tail
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _header->Tail; }
+            get { return _innerCopy.Tail; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _header->Tail = value;
+                _innerCopy.Tail = value;
                 IsModified = true;
             }
         }
@@ -90,11 +92,11 @@ namespace Voron.Data.Compact
         public long Items
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _header->Items; }
+            get { return _innerCopy.Items; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _header->Items = value;
+                _innerCopy.Items = value;
                 IsModified = true;
             }
         }
@@ -102,7 +104,7 @@ namespace Voron.Data.Compact
         public bool IsModified
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _isModified; }
+            get { return _isModified || _translationTable.IsModified; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
@@ -110,6 +112,13 @@ namespace Voron.Data.Compact
                     throw new InvalidOperationException("Invalid operation outside of a write transaction");
                 _isModified = value;
             }
+        }
+
+        public void CopyTo(PrefixTreeRootHeader* header)
+        {
+            *header = _innerCopy;
+            if (_translationTable.IsModified)
+                _translationTable.CopyTo(header);
         }
     }
 }

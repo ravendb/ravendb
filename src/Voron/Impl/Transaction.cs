@@ -227,7 +227,7 @@ namespace Voron.Impl
 
         public PrefixTree PrefixTreeFor(Slice treeName)
         {
-            return PrefixTree.Open(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName);
+            return PrefixTree.OpenOrCreate(LowLevelTransaction, LowLevelTransaction.RootObjects, treeName);
         }
 
 

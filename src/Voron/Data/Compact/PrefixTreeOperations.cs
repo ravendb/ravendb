@@ -1,6 +1,7 @@
 ﻿using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -15,6 +16,18 @@ namespace Voron.Data.Compact
         /// The name of a node, is the string deprived of the string stored at it. Page 163 of [1]
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static BitVector Name(this PrefixTree tree, Leaf* @this)
+        {
+            Debug.Assert(@this->IsLeaf);
+
+            Slice key = tree.ReadKey(@this->DataPtr);
+            return key.ToBitVector();
+        }
+
+        /// <summary>
+        /// The name of a node, is the string deprived of the string stored at it. Page 163 of [1]
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BitVector Name(this PrefixTree tree, Node* @this)
         {
             if (@this->IsInternal)
@@ -23,10 +36,8 @@ namespace Voron.Data.Compact
                 return tree.Name(refNode);
             }
             else
-            {
-                var ptr = (Leaf*)@this;
-                Slice key = tree.ReadKey(ptr->DataPtr);
-                return key.ToBitVector();
+            {                
+                return tree.Name((Leaf*)@this);
             }
         }
 

@@ -27,6 +27,7 @@ namespace Voron.Data.Compact
         private readonly Tree _parent;
         private readonly InternalTable _table;
         private readonly PrefixTreeRootMutableState _state;
+        private readonly PrefixTreeTranslationTableMutableState _translationTable;
 
         public string Name { get; set; }
 
@@ -36,18 +37,16 @@ namespace Voron.Data.Compact
             _parent = parent;
             _state = state;
             _table = new InternalTable(this, _tx, _state);
+            _translationTable = _state.TranslationTable;
 
             Name = treeName.ToString();
         }
 
         public static PrefixTree Create(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
-            var rootPage = tx.AllocatePage(1);
-
             var header = (PrefixTreeRootHeader*)parent.DirectAdd(treeName, sizeof(PrefixTreeRootHeader));
 
             var state = new PrefixTreeRootMutableState(tx, header);
-            state.RootPage = rootPage.PageNumber;
             state.Head = new Leaf { PreviousPtr = Constants.InvalidNodeName, NextPtr = Constants.InvalidNodeName };
             state.Tail = new Leaf { PreviousPtr = Constants.InvalidNodeName, NextPtr = Constants.InvalidNodeName };
             state.Items = 0;
@@ -58,9 +57,12 @@ namespace Voron.Data.Compact
             return new PrefixTree(tx, parent, state, treeName);    
         }
 
-        public static PrefixTree Open( LowLevelTransaction tx, Tree parent, Slice treeName)
+        public static PrefixTree OpenOrCreate( LowLevelTransaction tx, Tree parent, Slice treeName)
         {
-            var header = (PrefixTreeRootHeader*)parent.DirectRead(treeName);            
+            var header = (PrefixTreeRootHeader*)parent.DirectRead(treeName);
+            if (header == null)
+                return Create(tx, parent, treeName);
+                           
             var state = new PrefixTreeRootMutableState(tx, header);
             return new PrefixTree(tx, parent, state, treeName);            
         }
@@ -105,7 +107,7 @@ namespace Voron.Data.Compact
             if (Count == 0)
             {
                 // We add the leaf after the head.  
-                _state.RootPage = AddAfterHead(key, value, length, version);
+                AddAfterHead(key, value, length, version);
                 _state.Items++;
 
                 return true;
@@ -388,7 +390,7 @@ namespace Voron.Data.Compact
         }
 
         public bool Add<TValue>(Slice key, TValue value, ushort? version = null )
-        { 
+        {             
             /// For now output the data to a buffer then send the proper Add(key, byte*, length)
             throw new NotImplementedException();
         }
@@ -585,8 +587,9 @@ namespace Voron.Data.Compact
         public long Count => _state.Items;
 
         internal Node* Root => this.ReadNodeByName(Constants.RootNodeName);
+        internal PrefixTreeRootMutableState State => _state;
+        internal PrefixTreeTranslationTableMutableState TranslationTable => _translationTable;
         internal InternalTable NodesTable => this._table;
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Leaf* SuccessorInternal(Slice key)
@@ -913,6 +916,7 @@ namespace Voron.Data.Compact
         }
 
 
+
         private Internal* CreateInternal(long nodeName, short nameLength, int extentLength)
         {
             throw new NotImplementedException();
@@ -940,6 +944,7 @@ namespace Voron.Data.Compact
 
         private long AddAfterHead(Slice key, byte* value, int length, ushort? version)
         {
+            // If the page doesnt exist then we allocate it and modify the mutable state.
             throw new NotImplementedException();
         }
 

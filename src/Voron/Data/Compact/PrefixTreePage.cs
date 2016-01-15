@@ -19,6 +19,12 @@ namespace Voron.Data.Compact
             get { return (PrefixTreePageHeader*)Pointer; }
         }
 
+        public byte* DataPointer
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Pointer + sizeof(PrefixTreePageHeader); }
+        }
+
         public PrefixTreePage(byte* pointer, string source, int pageSize)
         {
             Pointer = pointer;
@@ -37,6 +43,26 @@ namespace Voron.Data.Compact
         public override string ToString()
         {
             return $"#{PageNumber}";
+        }
+
+        /// <summary>
+        /// Will return the offset from the <see cref="DataPointer"/> to the Node 
+        /// </summary>
+        /// <param name="nodeNameInTree">the relative name of the node in the tree.</param>
+        /// <returns>the offset in the page memory for that node</returns>
+        public static long GetNodeOffset(long nodeNameInTree)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Will return a pointer to the actual node in the tree
+        /// </summary>
+        /// <param name="nodeNameInTree">the relative name of the node in the tree.</param>
+        /// <returns>the node for that node</returns>
+        public PrefixTree.Node* GetNodeByName(long nodeNameInTree )
+        {
+            throw new NotImplementedException();
         }
     }
 }

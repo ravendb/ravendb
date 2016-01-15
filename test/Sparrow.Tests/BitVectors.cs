@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Extensions;
 
-namespace FastTests.Sparrow
+namespace Sparrow.Tests
 {
-    public class BitVectorsTests
+    public class BitVectorsTest
     {
         public static IEnumerable<object[]> VectorSize
         {

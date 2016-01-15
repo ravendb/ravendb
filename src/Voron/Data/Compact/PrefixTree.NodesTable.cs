@@ -142,7 +142,7 @@ namespace Voron.Data.Compact
 
                 // This is the ammount of pages required to allocate the whole table in contiguous disk space.
                 int entriesPerPage = tx.DataPager.PageMaxSpace / sizeof(Entry);
-                int pages = newCapacity / entriesPerPage;
+                int pages = (newCapacity / entriesPerPage) + 1;
 
                 var page = tx.AllocatePage(pages + 1);
                 tx.BreakLargeAllocationToSeparatePages(page.PageNumber);
