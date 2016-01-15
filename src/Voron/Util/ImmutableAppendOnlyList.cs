@@ -1,3 +1,4 @@
+using Sparrow.Binary;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -108,7 +109,7 @@ namespace Voron.Util
             var tail = _head + _count;
             if (tail == _values.Length)
             {
-                var newArray = GrowTo(Math.Max(8, (int)Utils.NearestPowerOfTwo(newCount)));
+                var newArray = GrowTo(Math.Max(8, Bits.NextPowerOf2(newCount)));
                 newArray[_count] = item;
                 return new ImmutableAppendOnlyList<T>(newArray, 0, newCount);
             }

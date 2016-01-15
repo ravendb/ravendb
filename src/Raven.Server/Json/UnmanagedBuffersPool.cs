@@ -105,7 +105,7 @@ namespace Raven.Server.Json
 
         public AllocatedMemoryData Allocate(int size)
         {
-            var actualSize = (int)Voron.Util.Utils.NearestPowerOfTwo(size);
+            var actualSize = Bits.NextPowerOf2(size);
 
             var index = GetIndexFromSize(actualSize);
 

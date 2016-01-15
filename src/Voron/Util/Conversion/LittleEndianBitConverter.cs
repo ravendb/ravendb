@@ -16,7 +16,7 @@ namespace Voron.Util.Conversion
         /// most significant byte is on the right end of a word.
         /// </remarks>
         /// <returns>true if this converter is little-endian, false otherwise.</returns>
-        public sealed override bool IsLittleEndian()
+        public override bool IsLittleEndian()
         {
             return true;
         }
@@ -24,7 +24,7 @@ namespace Voron.Util.Conversion
         /// <summary>
         /// Indicates the byte order ("endianess") in which data is converted using this class.
         /// </summary>
-        public sealed override Endianness Endianness 
+        public override Endianness Endianness 
         { 
             get { return Endianness.LittleEndian; }
         }
@@ -49,16 +49,16 @@ namespace Voron.Util.Conversion
         /// Returns a value built from the specified number of bytes from the given buffer,
         /// starting at index.
         /// </summary>
-        /// <param name="buffer">The data in byte array format</param>
+        /// <param name="value">The data in byte array format</param>
         /// <param name="startIndex">The first index to use</param>
         /// <param name="bytesToConvert">The number of bytes to use</param>
         /// <returns>The value built from the given bytes</returns>
-        protected override long FromBytes(byte[] buffer, int startIndex, int bytesToConvert)
+        protected override long FromBytes(byte[] value, int startIndex, int bytesToConvert)
         {
             long ret = 0;
             for (int i=0; i < bytesToConvert; i++)
             {
-                ret = unchecked((ret << 8) | buffer[startIndex+bytesToConvert-1-i]);
+                ret = unchecked((ret << 8) | value[startIndex+bytesToConvert-1-i]);
             }
             return ret;
         }

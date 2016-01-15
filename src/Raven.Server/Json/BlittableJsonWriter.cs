@@ -1,3 +1,4 @@
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -49,9 +50,9 @@ namespace Raven.Server.Json
             // enlarge buffer if needed
             if (minSize > _compressionBuffer.SizeInBytes)
             {
-                _compressionBuffer = _context.GetMemory(minSize);
+                 _compressionBuffer = _context.GetMemory(minSize);
             }
-            return (byte*)_compressionBuffer.Address;
+             return (byte*)_compressionBuffer.Address;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -60,6 +61,7 @@ namespace Raven.Server.Json
             if (_buffer != null && minSize <= _buffer.SizeInBytes)
                 return (byte*)_buffer.Address;
             if (_buffer != null)
+          
                 _context.ReturnMemory(_buffer);
             _buffer = _context.GetMemory(minSize);
             return (byte*) _buffer.Address;
@@ -88,7 +90,6 @@ namespace Raven.Server.Json
             var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
             for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
-                BlittableJsonToken _;
                 propertyArrayOffset[index] = WritePropertyString(_context.CachedProperties.GetProperty(index));
             }
 

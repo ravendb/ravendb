@@ -225,12 +225,11 @@ namespace Voron.Util.Conversion
         static void CheckByteArgument(byte[] value, int startIndex, int bytesRequired)
         {
             if (value==null)
-            {
-                throw new ArgumentNullException("value");
-            }
+                throw new ArgumentNullException(nameof(value));
+
             if (startIndex < 0 || startIndex > value.Length-bytesRequired)
             {
-                throw new ArgumentOutOfRangeException("startIndex");
+                throw new ArgumentOutOfRangeException(nameof(startIndex));
             }
         }
 
@@ -492,13 +491,11 @@ namespace Voron.Util.Conversion
         void CopyBytes(long value, int bytes, byte[] buffer, int index)
         {
             if (buffer==null)
-            {
-                throw new ArgumentNullException("buffer", "Byte array must not be null");
-            }
+                throw new ArgumentNullException(nameof(buffer), "Byte array must not be null");
+
             if (buffer.Length < index+bytes)
-            {
-                throw new ArgumentOutOfRangeException("Buffer not big enough for value");
-            }
+                throw new ArgumentOutOfRangeException(nameof(buffer), "Buffer not big enough for value");
+
             CopyBytesImpl(value, bytes, buffer, index);
         }
 

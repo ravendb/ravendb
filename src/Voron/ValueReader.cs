@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
 using Voron.Util;
+using Sparrow.Binary;
 
 namespace Voron
 {
@@ -46,7 +47,7 @@ namespace Voron
 
         public ValueReader(byte[] array, int len)
         {
-            if (array == null) throw new ArgumentNullException("array");
+            if (array == null) throw new ArgumentNullException(nameof(array));
             _buffer = array;
             _len = len;
             _pos = 0;
@@ -278,7 +279,7 @@ namespace Voron
             if (tmpBuf != null && tmpBuf.Length >= size)
                 return tmpBuf;
 
-            return tmpBuf = new byte[Utils.NearestPowerOfTwo(size)];
+            return tmpBuf = new byte[Bits.NextPowerOf2(size)];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

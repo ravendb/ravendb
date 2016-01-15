@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -181,7 +182,7 @@ namespace Voron.Impl.Backup
 			{
 				using (var pager = env.Options.OpenJournalPager(journalNum))
 				{
-					long journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * env.Options.PageSize);
+					long journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * env.Options.PageSize);
 					journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
 					journalFile.AddRef();
 					return journalFile;
@@ -189,7 +190,7 @@ namespace Voron.Impl.Backup
 			}
 			catch (Exception e)
 			{
-				if (backupInfo.LastBackedUpJournal == -1 && journalNum == 0 && e.Message.StartsWith("No such journal"))
+				if (backupInfo.LastBackedUpJournal == -1 && journalNum == 0 && e.Message.StartsWith("No such journal", StringComparison.Ordinal))
 				{
 					throw new InvalidOperationException("The first incremental backup creation failed because the first journal file " +
 					                                    StorageEnvironmentOptions.JournalName(journalNum) + " was not found. " +
@@ -355,9 +356,10 @@ namespace Voron.Impl.Backup
 							{
 								Directory.Delete(tempDir, true);
 							}
-							catch (Exception)
+							catch
 							{
-								// just temp dir - ignore it
+                                // this is just a temporary directory, the worst case scenario is that we dont reclaim the space from the OS temp directory 
+                                // if for some reason we cannot delete it we are safe to ignore it.
 							}
 						}
 					}

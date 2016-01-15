@@ -64,12 +64,12 @@ namespace Voron
             set
             {
                 if (value > ushort.MaxValue)
-                    throw new ArgumentOutOfRangeException("value", "PageSize must be less than " + ushort.MaxValue);
+                    throw new ArgumentOutOfRangeException(nameof(value), "PageSize must be less than " + ushort.MaxValue);
                 if (value < 4096)
-                    throw new ArgumentOutOfRangeException("value", "PageSize must be higher than 4096 bytes");
+                    throw new ArgumentOutOfRangeException(nameof(value), "PageSize must be higher than 4096 bytes");
 
                 if (value % 512 != 0)
-                    throw new ArgumentException("PageSize must be evenly divisible by 512 (sector size)", "value");
+                    throw new ArgumentException("PageSize must be evenly divisible by 512 (sector size)", nameof(value));
                 _pageSize = value;
             }
         }

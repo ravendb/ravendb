@@ -95,7 +95,7 @@ namespace Voron.Data.BTrees
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
             if (value.Length > int.MaxValue)
-                throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
+                throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
 
             State.IsModified = true;
             var pos = DirectAdd(key, (int)value.Length, version: version);
@@ -179,7 +179,7 @@ namespace Voron.Data.BTrees
                 throw new ArgumentException("Cannot add a value in a read only transaction");
 
             if (AbstractPager.IsKeySizeValid(key.Size) == false)
-                throw new ArgumentException("Key size is too big, must be at most " + AbstractPager.GetMaxKeySize() + " bytes, but was " + (key.Size + AbstractPager.RequiredSpaceForNewNode), "key");
+                throw new ArgumentException($"Key size is too big, must be at most {AbstractPager.GetMaxKeySize()} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}", nameof(key));
 
             Lazy<TreeCursor> lazy;
             TreeNodeHeader* node;

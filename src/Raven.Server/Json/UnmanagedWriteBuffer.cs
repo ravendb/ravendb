@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
+using Sparrow.Binary;
 
 namespace Raven.Server.Json
 {
@@ -73,7 +74,7 @@ namespace Raven.Server.Json
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
             var nextSegmentSize = Math.Min(
                 1024 * 1024 * 1024,
-                Math.Max(_current.Allocation.SizeInBytes * 2, (int)Voron.Util.Utils.NearestPowerOfTwo(required))
+                Math.Max(_current.Allocation.SizeInBytes * 2, (int)Bits.NextPowerOf2(required))
                 );
             var allocatedMemoryData = _context.GetMemory(nextSegmentSize);
             _current = new Segment

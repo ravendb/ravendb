@@ -214,7 +214,7 @@ namespace Voron.Data.BTrees
                 }
                 catch (InvalidOperationException e)
                 {
-                    if (e.Message.StartsWith("The page is full and cannot add an entry") == false)
+                    if (e.Message.StartsWith("The page is full and cannot add an entry", StringComparison.Ordinal) == false)
                         throw;
 
                     throw new InvalidOperationException(GatherDetailedDebugInfo(rightPage, currentKey, seperatorKey, currentIndex, splitIndex, toRight), e);

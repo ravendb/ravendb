@@ -50,6 +50,7 @@ namespace Voron.Tests
 		{
 			DeleteDirectory(DataDir);
 		    _options = StorageEnvironmentOptions.CreateMemoryOnly();
+
 			Configure(_options);
 		}
 

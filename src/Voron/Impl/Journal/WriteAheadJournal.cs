@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Platform;
 using System;
 using System.Collections.Generic;
@@ -255,7 +256,7 @@ namespace Voron.Impl.Journal
 
 		private void RecoverCurrentJournalSize(IVirtualPager pager)
 		{
-			var journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * pager.PageSize);
+			var journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * pager.PageSize);
 			if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
 				return;
 

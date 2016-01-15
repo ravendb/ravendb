@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Sparrow;
 using Voron.Util;
+using Sparrow.Binary;
 
 namespace Voron.Impl.Paging
 {
@@ -191,7 +192,7 @@ namespace Voron.Impl.Paging
             var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
-            return current + Utils.NearestPowerOfTwo(actualIncrease);
+            return current + Bits.NextPowerOf2(actualIncrease);
         }
 
         public int WriteDirect(byte* p, long pagePosition, int pagesToWrite)

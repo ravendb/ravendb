@@ -6,6 +6,7 @@ using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
+using Sparrow.Binary;
 // -----------------------------------------------------------------------
 //  <copyright file="Tree.MultiTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -113,7 +114,7 @@ namespace Voron.Data.BTrees
 			if (newRequiredSize <= maxNodeSize)
 			{
 				// we can just expand the current value... no need to create a nested tree yet
-                var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(newRequiredSize), maxNodeSize);
+                var actualPageSize = (ushort) Math.Min(Bits.NextPowerOf2(newRequiredSize), maxNodeSize);
 
                 var currentDataSize = TreeNodeHeader.GetDataSize(_llt, item);
                 ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, actualPageSize, currentDataSize);
@@ -185,7 +186,7 @@ namespace Voron.Data.BTrees
 				return;
 			}
 
-			var actualPageSize = (ushort) Math.Min(Utils.NearestPowerOfTwo(requiredPageSize), maxNodeSize);
+			var actualPageSize = (ushort) Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize);
 
 			var ptr = DirectAdd(key, actualPageSize);
 
