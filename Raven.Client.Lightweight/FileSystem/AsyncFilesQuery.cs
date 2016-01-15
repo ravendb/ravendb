@@ -511,5 +511,10 @@ If you really want to do in memory filtering on the data returned from the query
 
             Session.RegisterDeletionQuery(query);
         }
+
+        public FilesQuery GetFilesQuery()
+        {
+            return new FilesQuery(ToString(), start, pageSizeSet ? pageSize : (int?) null, orderByFields);
+        }
     }
 }
