@@ -18,7 +18,7 @@ namespace Raven.Database.Storage
         long ApproximateTaskCount { get; }
 
         T GetMergedTask<T>(Func<IComparable, MaxTaskIdStatus> maxIdStatus, 
-            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork)
+            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork, List<int> idsToSkip)
             where T : DatabaseTask;
 
         IEnumerable<TaskMetadata> GetPendingTasksForDebug();
