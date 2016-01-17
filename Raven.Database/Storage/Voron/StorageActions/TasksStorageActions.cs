@@ -83,7 +83,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             var type = CreateKey(typeof(T).FullName);
             var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
-            var tasksCount = ApproximateTaskCount;
 
             using (var iterator = tasksByType.MultiRead(Snapshot, (Slice)type))
             {
