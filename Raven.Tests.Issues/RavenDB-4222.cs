@@ -95,6 +95,10 @@ namespace Raven.Tests.Issues
                 {
                     Assert.True(accessor.Tasks.HasTasks);
                     Assert.Equal(1, accessor.Tasks.ApproximateTaskCount);
+
+                    var tasks = accessor.Tasks.GetPendingTasksForDebug();
+                    Assert.Equal(1, tasks.Count());
+                    Assert.Equal(102, tasks.First().IndexId);
                 });
             }
         }
