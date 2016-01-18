@@ -384,6 +384,27 @@ namespace Raven.Client.FileSystem
             var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.ToString().Trim(), HttpMethods.Get, operationMetadata.Credentials,  Conventions)
                                             .AddOperationHeaders(OperationsHeaders));
 
+            request.RemoveAuthorizationHeader();
+
+            var tokenRetriever = new SingleAuthTokenRetriever(this, RequestFactory, Conventions, OperationsHeaders, operationMetadata);
+
+            var token = await tokenRetriever.GetToken().ConfigureAwait(false);
+
+            try
+            {
+                token = await tokenRetriever.ValidateThatWeCanUseToken(token).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                request.Dispose();
+
+                throw new InvalidOperationException(
+                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
+
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+
             HttpResponseMessage response;
 
             try
