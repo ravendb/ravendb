@@ -384,11 +384,22 @@ namespace Raven.Client.FileSystem
             var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.ToString().Trim(), HttpMethods.Get, operationMetadata.Credentials,  Conventions)
                                             .AddOperationHeaders(OperationsHeaders));
 
-            var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+            HttpResponseMessage response;
 
-            await response.AssertNotFailingResponse().ConfigureAwait(false);
+            try
+            {
+                response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
 
-            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+                await response.AssertNotFailingResponse().ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                request.Dispose();
+
+                throw;
+            }
+
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)); 
         }
 
         public Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(string query, string[] sortFields = null, int start = 0, int pageSize = int.MaxValue)
