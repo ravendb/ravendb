@@ -11,6 +11,6 @@ namespace Raven.Client.FileSystem
         ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChangesasync() is called</para>
         /// </summary>
         /// <param name="query">Query to stream results for</param>
-        Task<IAsyncEnumerator<FileHeader>> StreamQuery(IAsyncFilesQuery<FileHeader> query);
+        Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(IAsyncFilesQuery<FileHeader> query);
     }
 }

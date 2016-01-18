@@ -165,7 +165,7 @@ namespace Raven.Client.FileSystem
                 this.conflictCacheRemoval.Dispose();
         }
 
-        public Task<IAsyncEnumerator<FileHeader>> StreamQuery(IAsyncFilesQuery<FileHeader> query)
+        public Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(IAsyncFilesQuery<FileHeader> query)
         {
             IncrementRequestCount();
 
