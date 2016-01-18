@@ -326,42 +326,53 @@ namespace Raven.Client.FileSystem
 
             var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
 
-                var sb = new StringBuilder(operationMetadata.Url)
-                    .Append("/streams/files?etag=")
-                    .Append(fromEtag)
-                    .Append("&pageSize=")
-                    .Append(pageSize);
+            var sb = new StringBuilder(operationMetadata.Url)
+                .Append("/streams/files?etag=")
+                .Append(fromEtag)
+                .Append("&pageSize=")
+                .Append(pageSize);
 
-                var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions)
-                                            .AddOperationHeaders(OperationsHeaders));
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), HttpMethods.Get, operationMetadata.Credentials, this.Conventions)
+                                        .AddOperationHeaders(OperationsHeaders));
 
-                request.RemoveAuthorizationHeader();
+            request.RemoveAuthorizationHeader();
 
-                var tokenRetriever = new SingleAuthTokenRetriever(this, RequestFactory, Conventions, OperationsHeaders, operationMetadata);
+            var tokenRetriever = new SingleAuthTokenRetriever(this, RequestFactory, Conventions, OperationsHeaders, operationMetadata);
 
-                var token = await tokenRetriever.GetToken().ConfigureAwait(false);
-                try
-                {
-                    token = await tokenRetriever.ValidateThatWeCanUseToken(token).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    request.Dispose();
+            var token = await tokenRetriever.GetToken().ConfigureAwait(false);
+            try
+            {
+                token = await tokenRetriever.ValidateThatWeCanUseToken(token).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                request.Dispose();
 
-                    throw new InvalidOperationException(
-                        "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-                        e);
-                }
+                throw new InvalidOperationException(
+                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
 
-                request.AddOperationHeader("Single-Use-Auth-Token", token);
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-                var response = await request.ExecuteRawResponseAsync()
-                                            .ConfigureAwait(false);
+            HttpResponseMessage response;
+
+            try
+            {
+                response = await request.ExecuteRawResponseAsync()
+                                        .ConfigureAwait(false);
 
                 await response.AssertNotFailingResponse().ConfigureAwait(false);
-
-                return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
             }
+            catch (Exception)
+            {
+                request.Dispose();
+
+                throw;
+            }
+
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+        }
 
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
         {
