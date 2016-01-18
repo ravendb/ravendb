@@ -118,7 +118,7 @@ namespace Raven.Database.FileSystem.Controllers
         private void StreamQueryResultsToClient(Stream stream, string[] files, OrderedPartCollection<AbstractFileReadTrigger> readTriggers)
         {
             using (var cts = new CancellationTokenSource())
-            using (var timeout = cts.TimeoutAfter(FileSystemsLandlord.SystemConfiguration.DatabaseOperationTimeout))
+            using (var timeout = cts.TimeoutAfter(FileSystemsLandlord.SystemConfiguration.Core.DatabaseOperationTimeout.AsTimeSpan))
             using (var writer = new JsonTextWriter(new StreamWriter(stream)))
             {
                 writer.WriteStartObject();
