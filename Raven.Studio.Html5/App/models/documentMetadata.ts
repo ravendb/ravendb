@@ -55,7 +55,7 @@ class documentMetadata {
         }
     }
     prettyLabel(text: string) {
-        return text.replace(/__/g, '/');
+        return text !== null ? text.replace(/__/g, '/') : text;
     }
     toDto(): documentMetadataDto {
         var dto: any = {
