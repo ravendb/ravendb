@@ -23,16 +23,17 @@ namespace Raven.Tests.FileSystem.Issues
                     await store.AsyncFilesCommands.UploadAsync("file-" + i, CreateRandomFileStream(2));
                 }
 
-                var reader = await store.AsyncFilesCommands.StreamQueryAsync("");
-
-                int count = 0;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync(""))
                 {
-                    count++;
-                }
+                    int count = 0;
 
-                Assert.Equal(1500, count);
+                    while (await reader.MoveNextAsync())
+                    {
+                        count++;
+                    }
+
+                    Assert.Equal(1500, count);
+                }
             }
         }
 
@@ -47,16 +48,17 @@ namespace Raven.Tests.FileSystem.Issues
                     await store.AsyncFilesCommands.UploadAsync("binary/" + i + ".bin", CreateRandomFileStream(3));
                 }
 
-                var reader = await store.AsyncFilesCommands.StreamQueryAsync("");
-
-                int allFiles = 0;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync(""))
                 {
-                    allFiles++;
-                }
+                    int allFiles = 0;
 
-                Assert.Equal(2000, allFiles);
+                    while (await reader.MoveNextAsync())
+                    {
+                        allFiles++;
+                    }
+
+                    Assert.Equal(2000, allFiles);
+                }
             }
         }
 
@@ -71,18 +73,19 @@ namespace Raven.Tests.FileSystem.Issues
                     await store.AsyncFilesCommands.UploadAsync("binary/" + i + ".bin", CreateRandomFileStream(3));
                 }
 
-                var reader = await store.AsyncFilesCommands.StreamQueryAsync("__directoryName:/binary");
-
-                var allBinaries = 0;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("__directoryName:/binary"))
                 {
-                    Assert.Equal($"/binary/{allBinaries}.bin", reader.Current.FullPath);
+                    var allBinaries = 0;
 
-                    allBinaries++;
+                    while (await reader.MoveNextAsync())
+                    {
+                        Assert.Equal($"/binary/{allBinaries}.bin", reader.Current.FullPath);
+
+                        allBinaries++;
+                    }
+
+                    Assert.Equal(1000, allBinaries);
                 }
-
-                Assert.Equal(1000, allBinaries);
             }
         }
 
@@ -168,42 +171,45 @@ namespace Raven.Tests.FileSystem.Issues
                     await store.AsyncFilesCommands.UploadAsync("file-" + i, CreateRandomFileStream(2));
                 }
 
-                var reader = await store.AsyncFilesCommands.StreamQueryAsync("", start: 0, pageSize: 200);
-
                 var allFiles = new List<FileHeader>();
 
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("", start: 0, pageSize: 200))
                 {
-                    allFiles.Add(reader.Current);
+                    while (await reader.MoveNextAsync())
+                    {
+                        allFiles.Add(reader.Current);
+                    }
+
+                    Assert.Equal(200, allFiles.Count);
                 }
 
-                Assert.Equal(200, allFiles.Count);
-
-                reader = await store.AsyncFilesCommands.StreamQueryAsync("", start: 100, pageSize: 50);
-
-                var count = 0;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("", start: 100, pageSize: 50))
                 {
-                    Assert.Equal(allFiles[100 + count].FullPath, reader.Current.FullPath);
+                    var count = 0;
 
-                    count++;
+                    while (await reader.MoveNextAsync())
+                    {
+                        Assert.Equal(allFiles[100 + count].FullPath, reader.Current.FullPath);
+
+                        count++;
+                    }
+
+                    Assert.Equal(50, count);
                 }
 
-                Assert.Equal(50, count);
-
-                reader = await store.AsyncFilesCommands.StreamQueryAsync("", start: 150, pageSize: 100);
-
-                count = 0;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("", start: 150, pageSize: 100))
                 {
-                    Assert.Equal(allFiles[150 + count].FullPath, reader.Current.FullPath);
+                    var count = 0;
 
-                    count++;
+                    while (await reader.MoveNextAsync())
+                    {
+                        Assert.Equal(allFiles[150 + count].FullPath, reader.Current.FullPath);
+
+                        count++;
+                    }
+
+                    Assert.Equal(50, count);
                 }
-
-                Assert.Equal(50, count);
             }
         }
 
@@ -217,42 +223,45 @@ namespace Raven.Tests.FileSystem.Issues
                     await store.AsyncFilesCommands.UploadAsync("file-" + i, CreateRandomFileStream(2), new RavenJObject() { { "Number", i % 3 }});
                 }
 
-                var reader = await store.AsyncFilesCommands.StreamQueryAsync("Number:2");
-
                 var allFilesMatchingCriteria = new List<FileHeader>();
 
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("Number:2"))
                 {
-                    allFilesMatchingCriteria.Add(reader.Current);
+                    while (await reader.MoveNextAsync())
+                    {
+                        allFilesMatchingCriteria.Add(reader.Current);
+                    }
+
+                    Assert.Equal(66, allFilesMatchingCriteria.Count);
                 }
 
-                Assert.Equal(66, allFilesMatchingCriteria.Count);
-
-                reader = await store.AsyncFilesCommands.StreamQueryAsync("Number:2", start: 10, pageSize: 20);
-
-                var count = 0;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("Number:2", start: 10, pageSize: 20))
                 {
-                    Assert.Equal(allFilesMatchingCriteria[10 + count].FullPath, reader.Current.FullPath);
+                    var count = 0;
 
-                    count++;
+                    while (await reader.MoveNextAsync())
+                    {
+                        Assert.Equal(allFilesMatchingCriteria[10 + count].FullPath, reader.Current.FullPath);
+
+                        count++;
+                    }
+
+                    Assert.Equal(20, count);
                 }
 
-                Assert.Equal(20, count);
-
-                reader = await store.AsyncFilesCommands.StreamQueryAsync("Number:2", start: 50, pageSize: 100);
-
-                count = 0;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("Number:2", start: 50, pageSize: 100))
                 {
-                    Assert.Equal(allFilesMatchingCriteria[50 + count].FullPath, reader.Current.FullPath);
+                    var count = 0;
 
-                    count++;
+                    while (await reader.MoveNextAsync())
+                    {
+                        Assert.Equal(allFilesMatchingCriteria[50 + count].FullPath, reader.Current.FullPath);
+
+                        count++;
+                    }
+
+                    Assert.Equal(16, count);
                 }
-
-                Assert.Equal(16, count);
             }
         }
 
@@ -266,15 +275,16 @@ namespace Raven.Tests.FileSystem.Issues
                     await store.AsyncFilesCommands.UploadAsync($"{i}.bin", CreateRandomFileStream(2));
                 }
 
-                var reader = await store.AsyncFilesCommands.StreamQueryAsync("", sortFields: new string[] {"-__key"});
-
-                var count = 9;
-
-                while (await reader.MoveNextAsync())
+                using (var reader = await store.AsyncFilesCommands.StreamQueryAsync("", sortFields: new string[] {"-__key"}))
                 {
-                    Assert.Equal($"/{count}.bin", reader.Current.FullPath);
+                    var count = 9;
 
-                    count--;
+                    while (await reader.MoveNextAsync())
+                    {
+                        Assert.Equal($"/{count}.bin", reader.Current.FullPath);
+
+                        count--;
+                    }
                 }
             }
         }
