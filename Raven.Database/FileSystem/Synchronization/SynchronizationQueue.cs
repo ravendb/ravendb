@@ -2,15 +2,15 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
     public class SynchronizationQueue
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationWorkItem>>
             activeSynchronizations =
