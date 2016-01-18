@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 
 namespace Raven.Client.FileSystem
@@ -163,6 +164,13 @@ namespace Raven.Client.FileSystem
 
             if (this.conflictCacheRemoval != null)
                 this.conflictCacheRemoval.Dispose();
+        }
+
+        public Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
+        {
+            IncrementRequestCount();
+
+            return Commands.StreamFileHeadersAsync(fromEtag, pageSize);
         }
 
         public Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(IAsyncFilesQuery<FileHeader> query)
