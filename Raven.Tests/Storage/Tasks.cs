@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -41,7 +42,8 @@ namespace Raven.Tests.Storage
                 tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
                     x => MaxTaskIdStatus.Updated,
                     x => { },
-                    new Reference<bool>()
+                    new Reference<bool>(),
+                    new List<int>()
                 )));
                 tx.Batch(viewer => Assert.False(viewer.Staleness.IsIndexStale(test, null, null)));
             }
@@ -75,7 +77,8 @@ namespace Raven.Tests.Storage
                 tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
                     x => MaxTaskIdStatus.Updated,
                     x => { },
-                    new Reference<bool>()
+                    new Reference<bool>(),
+                    new List<int>()
                 )));
             }
         }
@@ -89,12 +92,14 @@ namespace Raven.Tests.Storage
                 tx.Batch(mutator => Assert.NotNull(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
                     x => MaxTaskIdStatus.Updated,
                     x => { },
-                    new Reference<bool>()
+                    new Reference<bool>(),
+                    new List<int>()
                 )));
                 tx.Batch(mutator => Assert.Null(mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
                     x => MaxTaskIdStatus.Updated,
                     x => { },
-                    new Reference<bool>()
+                    new Reference<bool>(),
+                    new List<int>()
                 )));
             }
         }
@@ -116,11 +121,12 @@ namespace Raven.Tests.Storage
                     removeFromIndexTask.AddKey("b");
                     mutator.Tasks.AddTask(removeFromIndexTask, SystemTime.UtcNow);
                 });
-                var foundWork = new Reference<bool>();
+
                 tx.Batch(mutator => Assert.Equal(2, mutator.Tasks.GetMergedTask<RemoveFromIndexTask>(
                     x => MaxTaskIdStatus.Updated,
                     x => { },
-                    foundWork
+                    new Reference<bool>(),
+                    new List<int>()
                 ).NumberOfKeys));
             }
         }
