@@ -539,7 +539,9 @@ namespace Raven.Tests.Helpers
                 ? TimeSpan.FromMinutes(5)
                 : TimeSpan.FromSeconds(20));
 
-            var spinUntil = SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout.Value);
+            var spinUntil = SpinWait.SpinUntil(() =>
+                databaseCommands.GetStatistics().CountOfStaleIndexesExcludingDisabledAndAbandoned == 0, 
+                timeout.Value);
             if (spinUntil)
             {
                 return;

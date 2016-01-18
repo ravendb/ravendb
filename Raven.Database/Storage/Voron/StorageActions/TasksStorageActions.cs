@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util.Streams;
 using Raven.Database.Storage.Voron.StorageActions.StructureSchemas;
@@ -77,7 +78,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
         }
 
         public T GetMergedTask<T>(Func<IComparable, MaxTaskIdStatus> maxIdStatus,
-            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork)
+            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork, List<int> idsToSkip)
             where T : DatabaseTask
         {
             var type = CreateKey(typeof(T).FullName);
@@ -107,6 +108,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
                             e);
                         continue;
                     }
+
+                    if (idsToSkip.Contains(task.Index))
+                        continue;
 
                     var currentId = Etag.Parse(value.ReadBytes(TaskFields.TaskId));
                     switch (maxIdStatus(currentId))
