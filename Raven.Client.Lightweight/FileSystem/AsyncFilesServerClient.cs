@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -331,10 +332,21 @@ namespace Raven.Client.FileSystem
 
             request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-            var response = await request.ExecuteRawResponseAsync()
-                                        .ConfigureAwait(false);
+            HttpResponseMessage response;
 
-            await response.AssertNotFailingResponse().ConfigureAwait(false);
+            try
+            {
+                response = await request.ExecuteRawResponseAsync()
+                    .ConfigureAwait(false);
+
+                await response.AssertNotFailingResponse().ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                request.Dispose();
+
+                throw;
+            }
 
             return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
         }
