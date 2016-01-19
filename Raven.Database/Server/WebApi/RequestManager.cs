@@ -203,6 +203,8 @@ namespace Raven.Database.Server.WebApi
                 LastRequestTime = SystemTime.UtcNow;
                 Interlocked.Increment(ref concurrentRequests);
 
+                IncrementRequestNumberAndLog(controller, controllerContext);
+
                 RequestWebApiEventArgs args = await controller.TrySetupRequestToProperResource().ConfigureAwait(false);
                 if (args != null)
                 {
@@ -228,13 +230,12 @@ namespace Raven.Database.Server.WebApi
                             }
                             else
                             {
-                                IncreamentRequestNumberAndLog(controller, controllerContext);
+                                
                                 response = await action().ConfigureAwait(false);
                             }
                         }
                         else
                         {
-                            IncreamentRequestNumberAndLog(controller, controllerContext);
                             response = await action().ConfigureAwait(false);
                         }
                     }
@@ -273,12 +274,15 @@ namespace Raven.Database.Server.WebApi
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void IncreamentRequestNumberAndLog(IResourceApiController controller, HttpControllerContext controllerContext)
+        private void IncrementRequestNumberAndLog(IResourceApiController controller, HttpControllerContext controllerContext)
         {
+            if (controller is StudioController || controller is HardRouteController || controller is SilverlightController)
+                return;
+
             var curReq = Interlocked.Increment(ref reqNum);
             controllerContext.Request.Properties["requestNum"] = curReq;
 
-            if (Logger.IsDebugEnabled == true)
+            if (Logger.IsDebugEnabled)
             {
                 Logger.Debug(string.Format(CultureInfo.InvariantCulture,
                     "Receive Request #{0,4:#,0}: {1,-7} - {2} - {3}",
@@ -449,10 +453,13 @@ namespace Raven.Database.Server.WebApi
 
             MarkRequestDuration(controller, sw.ElapsedMilliseconds);
 
-            long curReq = controller.InnerRequest.Properties["requestNum"] as long? ?? 0;
+            object requestNumber;
 
-            LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, curReq);
-
+            if (controller.InnerRequest.Properties.TryGetValue("requestNum", out requestNumber) && requestNumber is long)
+            {
+                LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, (long) requestNumber);
+            }
+            
             if (controller.IsInternalRequest == false)
             {
                 TraceTraffic(controller, logHttpRequestStatsParam, controller.ResourceName, response);
