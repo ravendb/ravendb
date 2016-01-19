@@ -959,13 +959,10 @@ namespace Raven.Database
                     {
                         new Action(()=> indexingExecuter.Execute())
                     });
-            ReducingThreadPool = new RavenThreadPool(Configuration.Core.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
-                    {
-                        new Action(()=>ReducingExecuter.Execute())
-                    });
 
             MappingThreadPool.Start();
-            ReducingThreadPool.Start();
+
+            SpinReduceWorker();
 
             RaiseIndexingWiringComplete();
         }
@@ -978,7 +975,6 @@ namespace Raven.Database
                 MappingThreadPool.Dispose();
                 MappingThreadPool = null;
             }
-            MappingThreadPool = null;
         }
 
         private void StopReducingThreadPool()
@@ -1370,15 +1366,31 @@ namespace Raven.Database
 
         public void SpinReduceWorker()
         {
-            throw new NotImplementedException();
+            workContext.StartReducing();
+
+            if (ReducingThreadPool != null)
+                return;
+
+            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+                    {
+                        new Action(() => ReducingExecuter.Execute())
+                    });
+
+            ReducingThreadPool.Start();
         }
 
         public void StopReduceWorkers()
         {
-            throw new NotImplementedException();
+            workContext.StopReducing();
+
+            try
+            {
+                StopReducingThreadPool();
         }
-
-        
-
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background reducing", e);
+    }
+        }
     }
 }

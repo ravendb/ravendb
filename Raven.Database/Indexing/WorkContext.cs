@@ -513,6 +513,11 @@ namespace Raven.Database.Indexing
             }
         }
 
+        public void StartReducing()
+        {
+            doReducing = true;
+        }
+
         public void StartIndexing()
         {
             doIndexing = true;
