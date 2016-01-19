@@ -5,11 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Config;
@@ -25,7 +25,7 @@ namespace Raven.Database.FileSystem.Synchronization
 {
     public class SynchronizationTask : IDisposable
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         internal const int NumberOfFilesToCheckForSynchronization = 100;
 
@@ -85,9 +85,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
             if (activeForDestination.TryAdd(fileName, syncDetails))
             {
-                Log.Debug("File '{0}' with ETag {1} was added to an incoming active synchronization queue for a destination {2}",
-                          fileName,
-                          sourceFileETag, sourceFileSystemInfo.Url);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("File '{0}' with ETag {1} was added to an incoming active synchronization queue for a destination {2}", fileName, sourceFileETag, sourceFileSystemInfo.Url);
             }
         }
 
@@ -104,8 +103,8 @@ namespace Raven.Database.FileSystem.Synchronization
             SynchronizationDetails removingItem;
             if (activeSourceTasks.TryRemove(fileName, out removingItem))
             {
-                Log.Debug("File '{0}' with ETag {1} was removed from an active incoming synchronizations for a source {2}",
-                          fileName, sourceFileETag, sourceFileSystemInfo);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("File '{0}' with ETag {1} was removed from an active incoming synchronizations for a source {2}", fileName, sourceFileETag, sourceFileSystemInfo);
             }
         }
 
@@ -125,7 +124,9 @@ namespace Raven.Database.FileSystem.Synchronization
 
             if (destination == null)
             {
-                Log.Debug("Could not synchronize to {0} because no destination was configured for that url", fileSystemDestination);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Could not synchronize to {0} because no destination was configured for that url", fileSystemDestination);
+
                 throw new ArgumentException("Destination files system does not exist", "fileSystemDestination"); 
             }
 
@@ -137,11 +138,13 @@ namespace Raven.Database.FileSystem.Synchronization
                 };
             }
 
-            Log.Debug("Starting to synchronize a destination server {0}", destination.Url);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Starting to synchronize a destination server {0}", destination.Url);
 
             if (AvailableSynchronizationRequestsTo(destination.Url) <= 0)
             {
-                Log.Debug("Could not synchronize to {0} because no synchronization request was available", destination.Url);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Could not synchronize to {0} because no synchronization request was available", destination.Url);
 
                 throw new SynchronizationException(string.Format("No synchronization request was available for file system '{0}'", destination.FileSystem));
             }
@@ -169,9 +172,9 @@ namespace Raven.Database.FileSystem.Synchronization
 
                     if (successfulSynchronizationsCount > 0 || failedSynchronizationsCount > 0)
                     {
-                        Log.Debug(
-                            "Synchronization to a destination {0} has completed. {1} file(s) were synchronized successfully, {2} synchronization(s) were failed",
-                            destination.Url, successfulSynchronizationsCount, failedSynchronizationsCount);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Synchronization to a destination {0} has completed. {1} file(s) were synchronized successfully, {2} synchronization(s) were failed",
+                                        destination.Url, successfulSynchronizationsCount, failedSynchronizationsCount);
                     }
 
                     destinationSyncResult.Reports = reports;
@@ -196,7 +199,8 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             task = new Task(() =>
             {
-                Log.Debug("Starting the synchronization task");
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Starting the synchronization task");
 
                 var timeToWait = systemConfiguration.FileSystem.MaximumSynchronizationInterval.AsTimeSpan;
 
@@ -237,11 +241,14 @@ namespace Raven.Database.FileSystem.Synchronization
                 if (destination.Enabled == false)
                     continue;
 
-                Log.Debug("Starting to synchronize a destination server {0}", dst.Url);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("Starting to synchronize a destination server {0}", dst.Url);
 
                 if (AvailableSynchronizationRequestsTo(destination.Url) <= 0)
                 {
-                    Log.Debug("Could not synchronize to {0} because no synchronization request was available", dst.Url);
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Could not synchronize to {0} because no synchronization request was available", dst.Url);
+
                     continue;
                 }
 
@@ -285,7 +292,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
             if (work == null)
             {
-                Log.Debug("File '{0}' was not synchronized to {1}. {2}", fileName, destination.Url, reason.GetDescription());
+                if (Log.IsDebugEnabled)
+                    Log.Debug("File '{0}' was not synchronized to {1}. {2}", fileName, destination.Url, reason.GetDescription());
 
                 return new SynchronizationReport(fileName, Guid.Empty, SynchronizationType.Unknown)
                 {
@@ -319,7 +327,9 @@ namespace Raven.Database.FileSystem.Synchronization
                 {
                     if (confirmation.Status == FileStatus.Safe)
                     {
-                        Log.Debug("Destination server {0} said that file '{1}' is safe", destination, confirmation.FileName);
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Destination server {0} said that file '{1}' is safe", destination, confirmation.FileName);
+
                         RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
                     }
                     else
@@ -332,7 +342,8 @@ namespace Raven.Database.FileSystem.Synchronization
                             {
                                 needSyncingAgain.Add(fileHeader);
 
-                                Log.Debug("Destination server {0} said that file '{1}' is {2}.", destination, confirmation.FileName, confirmation.Status);
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug("Destination server {0} said that file '{1}' is {2}.", destination, confirmation.FileName, confirmation.Status);
                             }
                         });
                     }
@@ -418,7 +429,8 @@ namespace Raven.Database.FileSystem.Synchronization
                 var work = synchronizationStrategy.DetermineWork(file, localMetadata, destinationMetadata, FileSystemUrl, out reason);
                 if (work == null)
                 {
-                    Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, destinationUrl, reason.GetDescription());
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("File '{0}' were not synchronized to {1}. {2}", file, destinationUrl, reason.GetDescription());
 
                     if (reason == NoSyncReason.ContainedInDestinationHistory)
                     {
@@ -466,8 +478,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 if (synchronizationQueue.IsDifferentWorkForTheSameFileBeingPerformed(work, destinationUrl))
                 {
-                    Log.Debug("There was an already being performed synchronization of a file '{0}' to {1}", work.FileName,
-                        destinationCommands);
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("There was an already being performed synchronization of a file '{0}' to {1}", work.FileName, destinationCommands);
 
                     if (synchronizationQueue.EnqueueSynchronization(destinationUrl, work)) // add it again at the end of the queue
                     {
@@ -503,13 +515,13 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             var destinationUrl = synchronizationServerClient.BaseUrl;
 
-            Log.Debug("Starting to perform {0} for a file '{1}' and a destination server {2}",
-                       work.GetType().Name, work.FileName, destinationUrl);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Starting to perform {0} for a file '{1}' and a destination server {2}", work.GetType().Name, work.FileName, destinationUrl);
 
             if (AvailableSynchronizationRequestsTo(destinationUrl) <= 0)
             {
-                Log.Debug("The limit of active synchronizations to {0} server has been achieved. Cannot process a file '{1}'.",
-                          destinationUrl, work.FileName);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("The limit of active synchronizations to {0} server has been achieved. Cannot process a file '{1}'.", destinationUrl, work.FileName);
 
                 if (synchronizationQueue.EnqueueSynchronization(destinationUrl, work))
                 {
@@ -574,14 +586,17 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 context.UpdateSuccessfulSynchronizationTime();
 
-                Log.Debug("{0} to {1} has finished successfully{2}", work, destinationUrl, moreDetails);
+                if (Log.IsDebugEnabled)
+                    Log.Debug("{0} to {1} has finished successfully{2}", work, destinationUrl, moreDetails);
             }
             else
             {
                 if (work.IsCancelled || report.Exception is TaskCanceledException)
                 {
                     synchronizationCancelled = true;
-                    Log.DebugException(string.Format("{0} to {1} was canceled", work, destinationUrl), report.Exception);
+
+                    if (Log.IsDebugEnabled)
+                        Log.DebugException(string.Format("{0} to {1} was canceled", work, destinationUrl), report.Exception);
                 }
                 else
                 {
@@ -612,8 +627,8 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             var filesToSynchronization = new List<FileHeader>();
 
-            Log.Debug("Getting files to synchronize with ETag greater than {0} [parameter take = {1}]",
-                      from, take);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Getting files to synchronize with ETag greater than {0} [parameter take = {1}]", from, take);
 
             try
             {
@@ -724,7 +739,8 @@ namespace Raven.Database.FileSystem.Synchronization
             {
                 if (failedAttemptsToGetDestinationsConfig < 3 || failedAttemptsToGetDestinationsConfig % 10 == 0)
                 {
-                    Log.Debug("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations + " does not exist");
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Configuration " + SynchronizationConstants.RavenSynchronizationDestinations + " does not exist");
                 }
 
                 failedAttemptsToGetDestinationsConfig++;
@@ -766,14 +782,16 @@ namespace Raven.Database.FileSystem.Synchronization
 
         public void Cancel(string fileName)
         {
-            Log.Debug("Cancellation of active synchronizations of a file '{0}'", fileName);
+            if (Log.IsDebugEnabled)
+                Log.Debug("Cancellation of active synchronizations of a file '{0}'", fileName);
+
             Queue.CancelActiveSynchronizations(fileName);
         }
 
         private static void LogFilesInfo(string message, ICollection<FileHeader> files)
         {
-            Log.Debug(message, files.Count,
-                      string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.FullPath, x.Metadata.Value<Guid>(Constants.MetadataEtagField)))));
+            if (Log.IsDebugEnabled)
+                Log.Debug(message, files.Count, string.Join(",", files.Select(x => string.Format("{0} [ETag {1}]", x.FullPath, x.Metadata.Value<Guid>(Constants.MetadataEtagField)))));
         }
 
         public void Dispose()
