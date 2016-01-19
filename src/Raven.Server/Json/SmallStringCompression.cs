@@ -151,15 +151,21 @@ namespace Raven.Server.Json
             return outPos;
         }
 
+        private struct CompressionState
+        {
+            public int OutputPosition;
+            public int VerbatimStart;
+            public int VerbatimLength;
+        }
+
         public int Compress(byte* input, byte* output, int inputLen, int outputLen)
         {
-            var outPos = 0;
-            var verbatimStart = 0;
-            var verbatimLength = 0;
-            var verbatimPos = 0;
+            // we use stackalloc here so we can send a single state parameter
+            // to the Flush method, and not have to allocate a value on the heap
+            var state = stackalloc CompressionState[1];
+            int h1, h2 = 0, h3 = 0;
             for (int i = 0; i < inputLen; i++)
             {
-                int h1, h2 = 0, h3 = 0;
                 h1 = input[i] << 3;
                 if (i + 1 < inputLen)
                     h2 = h1 + input[i + 1];
@@ -189,37 +195,40 @@ namespace Raven.Server.Json
                         {
                             continue;
                         }
-                        verbatimPos = outPos;
-                        if (outPos + verbatimLength + 1 > outputLen)
+                        if (state->OutputPosition + state->VerbatimLength + 1 > outputLen)
                             return 0;
-                        outPos += verbatimLength;
-                        output[outPos++] = slot[j][termLegnth + 1]; // get the index to write there
-                        verbatimStart = i + termLegnth;
+                        if (state->VerbatimLength > 0)
+                        {
+                            Flush(input, output, state);
+                        }
+                        output[state->OutputPosition++] = slot[j][termLegnth + 1]; // get the index to write there
+                        state->VerbatimStart = i + termLegnth;
                         i += termLegnth - 1; // skip the length we just compressed
+
                         foundMatch = true;
                         break;
                     }
                 }
-                if (foundMatch || i == inputLen - 1)
-                {
-                    while (verbatimLength > 0)
-                    {
-                        var len = Math.Min(_maxVerbatimLen - 1, verbatimLength);
-                        if (outPos + len > outputLen)
-                            return 0;
-                        output[outPos++] = (byte)(len + TermsTable.Length);
-                        Memory.Copy(output + verbatimPos, input + verbatimStart, verbatimLength);
-                        verbatimStart += len;
-                        verbatimLength -= len;
-                        verbatimPos += len;
-                    }
-                }
-                else
-                {
-                    verbatimLength++;
-                }
+                if (foundMatch == false)
+                    state->VerbatimLength++;
             }
-            return outPos;
+            Flush(input, output, state);
+            return state->OutputPosition;
+        }
+
+        private void Flush(byte* input, byte* output, CompressionState* state)
+        {
+            var verbatimLength = state->VerbatimLength;
+            while (verbatimLength > 0)
+            {
+                var len = Math.Min(_maxVerbatimLen - 1, verbatimLength);
+                output[state->OutputPosition++] = (byte)(len + TermsTable.Length);
+                Memory.Copy(output+state->OutputPosition, input + state->VerbatimStart, len);
+                state->VerbatimStart += len;
+                verbatimLength -= len;
+                state->OutputPosition += len;
+            }
+            state->VerbatimLength = verbatimLength;
         }
     }
 }

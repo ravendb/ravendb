@@ -18,6 +18,7 @@ namespace BlittableTests
         [InlineData("who is here, and who is there, who is everywhere?")]
         [InlineData("https://ravendb.net")]
         [InlineData("noreply@example.com")]
+        [InlineData("See: here")]
         [InlineData("בארזים נפלה שלהבת")]
         public void RoundTrip(string s)
         {
