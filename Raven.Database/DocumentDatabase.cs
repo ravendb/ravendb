@@ -269,7 +269,7 @@ namespace Raven.Database
             {
                 if (buildVersion == -1)
                 {
-                    var customAttributes = typeof (DocumentDatabase).Assembly.GetCustomAttributes(false);
+                    var customAttributes = typeof(DocumentDatabase).Assembly.GetCustomAttributes(false);
                     dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
                     buildVersion = int.Parse(versionAtt.Build);
                 }
@@ -286,7 +286,7 @@ namespace Raven.Database
                     return productVersion;
                 }
 
-                var customAttributes = typeof (DocumentDatabase).Assembly.GetCustomAttributes(false);
+                var customAttributes = typeof(DocumentDatabase).Assembly.GetCustomAttributes(false);
                 dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
 
                 productVersion = versionAtt.CommitHash;
@@ -1031,13 +1031,10 @@ namespace Raven.Database
                     {
                         new Action(()=> indexingExecuter.Execute())
                     });
-            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
-                    {
-                        new Action(()=>ReducingExecuter.Execute())
-                    });
 
             MappingThreadPool.Start();
-            ReducingThreadPool.Start();
+
+            SpinReduceWorker();
 
             RaiseIndexingWiringComplete();
         }
@@ -1050,7 +1047,6 @@ namespace Raven.Database
                 MappingThreadPool.Dispose();
                 MappingThreadPool = null;
             }
-            MappingThreadPool = null;
         }
 
         private void StopReducingThreadPool()
@@ -1271,7 +1267,7 @@ namespace Raven.Database
                     throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
                 }
 
-                if (string.IsNullOrEmpty(configuration.DefaultStorageTypeName) == false && 
+                if (string.IsNullOrEmpty(configuration.DefaultStorageTypeName) == false &&
                     configuration.DefaultStorageTypeName.Equals(storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     throw new Exception(string.Format("The database is configured to use '{0}' storage engine, but it points to '{1}' data", configuration.DefaultStorageTypeName, storageEngineTypeName));
@@ -1460,12 +1456,31 @@ namespace Raven.Database
 
         public void SpinReduceWorker()
         {
-            throw new NotImplementedException();
+            workContext.StartReducing();
+
+            if (ReducingThreadPool != null)
+                return;
+
+            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+                    {
+                        new Action(() => ReducingExecuter.Execute())
+                    });
+
+            ReducingThreadPool.Start();
         }
 
         public void StopReduceWorkers()
         {
-            throw new NotImplementedException();
+            workContext.StopReducing();
+
+            try
+            {
+                StopReducingThreadPool();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background reducing", e);
+            }
         }
     }
 }
