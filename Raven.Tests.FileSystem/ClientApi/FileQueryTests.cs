@@ -1053,7 +1053,7 @@ namespace Raven.Tests.FileSystem.ClientApi
             {
                 var metadata = new RavenJObject
                 {
-                    {"test", new RavenJArray { 1, 2 } }
+                    {"Test", new RavenJArray { 1, 2 } }
                 };
                 session.RegisterUpload("test.file", CreateUniformFileStream(10), metadata);
                 await session.SaveChangesAsync();
@@ -1061,7 +1061,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 FilesQueryStatistics stats;
                 var query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 1)
+                                       .WhereEquals("Test", 1)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
@@ -1071,7 +1071,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 2)
+                                       .WhereEquals("Test", 2)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
@@ -1090,13 +1090,13 @@ namespace Raven.Tests.FileSystem.ClientApi
             {
                 var metadata1 = new RavenJObject
                 {
-                    {"test", new RavenJArray { 1, 2 } }
+                    {"Test", new RavenJArray { 1, 2 } }
                 };
                 session.RegisterUpload("test1.file", CreateUniformFileStream(10), metadata1);
 
                 var metadata2 = new RavenJObject
                 {
-                    {"test", new RavenJArray { 1, 3 } }
+                    {"Test", new RavenJArray { 1, 3 } }
                 };
                 session.RegisterUpload("test2.file", CreateUniformFileStream(10), metadata2);
                 await session.SaveChangesAsync();
@@ -1104,7 +1104,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                 FilesQueryStatistics stats;
                 var query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 1)
+                                       .WhereEquals("Test", 1)
                                        .ToListAsync();
 
                 Assert.Equal(2, stats.TotalResults);
@@ -1115,7 +1115,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 2)
+                                       .WhereEquals("Test", 2)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
@@ -1125,7 +1125,7 @@ namespace Raven.Tests.FileSystem.ClientApi
 
                 query = await session.Query()
                                        .Statistics(out stats)
-                                       .WhereEquals("test", 3)
+                                       .WhereEquals("Test", 3)
                                        .ToListAsync();
 
                 Assert.Equal(1, stats.TotalResults);
