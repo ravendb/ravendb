@@ -12,7 +12,7 @@ using Voron.Util;
 namespace Raven.Server.Json
 {
    
-    public unsafe class BlittableJsonWriter : IDisposable
+    public unsafe class BlittableJsonDocument : IDisposable
     {
         private readonly RavenOperationContext _context;
         private readonly WriteState _state;
@@ -37,7 +37,7 @@ namespace Raven.Server.Json
             ValidatedAndSmallToDisk
         }
 
-        internal BlittableJsonWriter(UnmanagedJsonParser reader, RavenOperationContext context, WriteState state,string documentId)
+        internal BlittableJsonDocument(UnmanagedJsonParser reader, RavenOperationContext context, WriteState state,string documentId)
         {
             _reader = reader;
             _stream = context.GetStream(documentId);

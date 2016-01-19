@@ -40,7 +40,7 @@ namespace Tryouts
 
             //force loading of assemblyes
             Console.WriteLine(typeof(UnmanageJsonReaderTests));
-            Console.WriteLine(typeof(BlittableJsonWriter));
+            Console.WriteLine(typeof(BlittableJsonDocument));
             Console.WriteLine(typeof(Hashing));
             Console.WriteLine(typeof(StorageEnvironment));
 
