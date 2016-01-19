@@ -250,14 +250,15 @@ namespace Raven.Tests.Subscriptions
                 var id = store.Subscriptions.Create(new SubscriptionCriteria());
                 var subscription = store.Subscriptions.Open(id, new SubscriptionConnectionOptions{ BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 25 }});
 
-                var batchSizes = new List<Reference<int>>();
+                var batchSizes = new ConcurrentStack<Reference<int>>();
 
                 subscription.BeforeBatch +=
-                    () => batchSizes.Add(new Reference<int>());
+                    () => batchSizes.Push(new Reference<int>());
 
                 subscription.Subscribe(x =>
                 {
-                    var reference = batchSizes.Last();
+                    Reference<int> reference;
+                    batchSizes.TryPeek(out reference);
                     reference.Value++;
                 });
 
@@ -299,13 +300,14 @@ namespace Raven.Tests.Subscriptions
                     }
                 });
 
-                var batches = new List<List<RavenJObject>>();
+                var batches = new ConcurrentStack<ConcurrentBag<RavenJObject>>();
 
-                subscription.BeforeBatch += () => batches.Add(new List<RavenJObject>());
+                subscription.BeforeBatch += () => batches.Push(new ConcurrentBag<RavenJObject>());
 
                 subscription.Subscribe(x =>
                 {
-                    var list = batches.Last();
+                    ConcurrentBag<RavenJObject> list;
+                    batches.TryPeek(out list);
                     list.Add(x);
                 });
 
@@ -342,7 +344,7 @@ namespace Raven.Tests.Subscriptions
                     BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 31 }
                 });
 
-                var docs = new List<RavenJObject>();
+                var docs = new ConcurrentBag<RavenJObject>();
 
                 subscription.Subscribe(docs.Add);
 
@@ -384,7 +386,7 @@ namespace Raven.Tests.Subscriptions
                     }
                 });
 
-                var docs = new List<RavenJObject>();
+                var docs = new ConcurrentBag<RavenJObject>();
 
                 subscription.Subscribe(docs.Add);
 
@@ -433,7 +435,7 @@ namespace Raven.Tests.Subscriptions
 
                 var carolines = store.Subscriptions.Open(id, new SubscriptionConnectionOptions { BatchOptions = new SubscriptionBatchOptions { MaxDocCount = 5 }});
 
-                var docs = new List<RavenJObject>();
+                var docs = new ConcurrentBag<RavenJObject>();
 
                 carolines.Subscribe(docs.Add);
 
@@ -488,7 +490,7 @@ namespace Raven.Tests.Subscriptions
                     }
                 });
 
-                var docs = new List<RavenJObject>();
+                var docs = new ConcurrentBag<RavenJObject>();
 
                 subscription.Subscribe(docs.Add);
 
@@ -523,7 +525,7 @@ namespace Raven.Tests.Subscriptions
 
                 var subscription = store.Subscriptions.Open(subscriptionDocuments[0].SubscriptionId, new SubscriptionConnectionOptions());
 
-                var docs = new List<RavenJObject>();
+                var docs = new ConcurrentBag<RavenJObject>();
                 subscription.Subscribe(docs.Add);
 
                 using (var session = store.OpenSession())
@@ -549,12 +551,12 @@ namespace Raven.Tests.Subscriptions
 
                 long allId = store.Subscriptions.Create(new SubscriptionCriteria());
                 var allSubscription = store.Subscriptions.Open(allId, new SubscriptionConnectionOptions());
-                var allDocs = new List<RavenJObject>();
+                var allDocs = new ConcurrentBag<RavenJObject>();
                 allSubscription.Subscribe(allDocs.Add);
 
                 long usersId = store.Subscriptions.Create(new SubscriptionCriteria { KeyStartsWith = "users/" }); 
                 var usersSubscription = store.Subscriptions.Open(usersId, new SubscriptionConnectionOptions());
-                var usersDocs = new List<RavenJObject>();
+                var usersDocs = new ConcurrentBag<RavenJObject>();
                 usersSubscription.Subscribe(usersDocs.Add);
 
                 using (var session = store.OpenSession())
@@ -597,12 +599,12 @@ namespace Raven.Tests.Subscriptions
 
                 long allId = store.Subscriptions.Create(new SubscriptionCriteria());
                 var allSubscription = store.Subscriptions.Open(allId, new SubscriptionConnectionOptions());
-                var allDocs = new List<RavenJObject>();
+                var allDocs = new ConcurrentBag<RavenJObject>();
                 allSubscription.Subscribe(allDocs.Add);
 
                 long usersId = store.Subscriptions.Create(new SubscriptionCriteria { KeyStartsWith = "users/" });
                 var usersSubscription = store.Subscriptions.Open(usersId, new SubscriptionConnectionOptions());
-                var usersDocs = new List<RavenJObject>();
+                var usersDocs = new ConcurrentBag<RavenJObject>();
                 usersSubscription.Subscribe(usersDocs.Add);
 
                 using (var session = store.OpenSession())
