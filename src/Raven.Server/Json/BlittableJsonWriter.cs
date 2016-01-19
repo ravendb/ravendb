@@ -41,22 +41,22 @@ namespace Raven.Server.Json
                 _context.ReturnMemory(_compressionBuffer);
                 _compressionBuffer = null;
             }
-        
+
             _stream.Dispose();
         }
 
         private byte* GetCompressionBuffer(int minSize)
         {
             // enlarge buffer if needed
-            if (_compressionBuffer == null || 
+            if (_compressionBuffer == null ||
                 minSize > _compressionBuffer.SizeInBytes)
             {
-                if(_compressionBuffer != null)
+                if (_compressionBuffer != null)
                     _context.ReturnMemory(_compressionBuffer);
 
-                 _compressionBuffer = _context.GetMemory(minSize);
+                _compressionBuffer = _context.GetMemory(minSize);
             }
-             return (byte*)_compressionBuffer.Address;
+            return (byte*)_compressionBuffer.Address;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -67,7 +67,7 @@ namespace Raven.Server.Json
             if (_buffer != null)
                 _context.ReturnMemory(_buffer);
             _buffer = _context.GetMemory(minSize);
-            return (byte*) _buffer.Address;
+            return (byte*)_buffer.Address;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -170,7 +170,7 @@ namespace Raven.Server.Json
                     property.EscapePositions = _reader.EscapePositions.ToArray();
                 }
                 var propIndex = _context.CachedProperties.GetPropertyId(property);
-              
+
                 maxPropId = Math.Max(maxPropId, propIndex);
 
                 _reader.Read();
@@ -380,15 +380,32 @@ namespace Raven.Server.Json
             _position += WriteVariableSizeInt(str.Size);
             var buffer = str.Buffer;
             var size = str.Size;
-            if (compress && str.Size > 128)
+            if (compress && size > 0)
             {
-                var compressionBufferSize = LZ4.MaximumOutputLength(str.Size);
-                var compressionBuffer = GetCompressionBuffer(compressionBufferSize);
-                var compressedSize = _context.Lz4.Encode64(str.Buffer, compressionBuffer, str.Size,
-                    compressionBufferSize);
                 Compressed++;
-                // only if we actually save more than space
-                if (str.Size > compressedSize + sizeof(int) * 2 /*overhead of the compressed legnth*/)
+
+                var compressionBuffer = GetCompressionBuffer(str.Size);
+                var maxGoodCompressionSize =
+                      // if we are more than this size, we want to abort the compression early and just use
+                      // the verbatim string
+                      str.Size - sizeof(int) * 2;
+                int compressedSize;
+
+                if (str.Size > 128)
+                {
+                    compressedSize = _context.Lz4.Encode64(str.Buffer,
+                        compressionBuffer,
+                        str.Size,
+                        maxGoodCompressionSize);
+                }
+                else
+                {
+                    compressedSize = SmallStringCompression.Instance.Compress(str.Buffer,
+                        compressionBuffer,
+                        str.Size,
+                        maxGoodCompressionSize);
+                }
+                if (compressedSize > 0)// only if we actually save more than space
                 {
                     token = BlittableJsonToken.CompressedString;
                     buffer = compressionBuffer;
