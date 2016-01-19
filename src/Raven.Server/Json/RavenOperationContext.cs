@@ -230,25 +230,25 @@ namespace Raven.Server.Json
 
         public BlittableJsonDocument ReadForDisk(Stream stream, string documentId)
         {
-            return ParseToMemory(stream, documentId, BlittableJsonDocument.WriteState.ValidatedAndSmallToDisk);
+            return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.ToDisk);
         }
 
         public BlittableJsonDocument ReadForMemory(Stream stream, string documentId)
         {
-            return ParseToMemory(stream, documentId, BlittableJsonDocument.WriteState.FastAndLooseToMemory);
+            return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.None);
         }
 
         public BlittableJsonDocument Read(Stream stream, string documentId)
         {
-            var state = BlittableJsonDocument.WriteState.ValidatedAndSmallToDisk;
+            var state = BlittableJsonDocument.UsageMode.ToDisk;
             return ParseToMemory(stream, documentId, state);
         }
 
-        private BlittableJsonDocument ParseToMemory(Stream stream, string documentId, BlittableJsonDocument.WriteState state)
+        private BlittableJsonDocument ParseToMemory(Stream stream, string documentId, BlittableJsonDocument.UsageMode mode)
         {
             using (var parser = new UnmanagedJsonParser(stream, this))
             {
-                var writer = new BlittableJsonDocument(parser, this, state, documentId);
+                var writer = new BlittableJsonDocument(parser, this, mode, documentId);
                 try
                 {
                     CachedProperties.NewDocument();

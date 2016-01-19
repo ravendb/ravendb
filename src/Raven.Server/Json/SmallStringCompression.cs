@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow;
@@ -212,6 +213,8 @@ namespace Raven.Server.Json
                 if (foundMatch == false)
                     state->VerbatimLength++;
             }
+            if (state->OutputPosition + state->VerbatimLength  > outputLen)
+                return 0;
             Flush(input, output, state);
             return state->OutputPosition;
         }

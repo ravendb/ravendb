@@ -241,15 +241,16 @@ namespace Raven.Server.Json
         {
             if (_doubleStringBuffer == null)
                 _doubleStringBuffer = new string(' ', 25);
+            var tmpBuff = stackalloc byte[StringBuffer.SizeInBytes];
             // here we assume a clear char <- -> byte conversion, we only support
             // utf8, and those cleanly transfer
             fixed (char* pChars = _doubleStringBuffer)
             {
                 int i = 0;
-                StringBuffer.CopyTo(_bufferPtr);
+                StringBuffer.CopyTo(tmpBuff);
                 for (; i < StringBuffer.SizeInBytes; i++)
                 {
-                    pChars[i] = (char)_bufferPtr[i];
+                    pChars[i] = (char)tmpBuff[i];
                 }
                 for (; i < _doubleStringBuffer.Length; i++)
                 {

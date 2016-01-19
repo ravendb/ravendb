@@ -23,12 +23,6 @@ namespace Tryouts
 
         public unsafe static void Main(string[] args)
         {
-            var s = "1.233     ";
-            var d = double.Parse(s,NumberStyles.Any);
-            Console.WriteLine(d);
-            return;
-            //new SmallStringCompressionTests().RoundTrip(s: "See: here");
-
 
             //Console.WriteLine("start");
             //var blittableFormatTests = new UnmanagedStreamTests();
@@ -44,15 +38,14 @@ namespace Tryouts
             Console.WriteLine(typeof(Hashing));
             Console.WriteLine(typeof(StorageEnvironment));
 
-            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
-            Console.WriteLine("Really starting now...");
-            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
+            //Console.WriteLine("Really starting now...");
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
 
-            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", 2);
+            //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", 2);
             Console.WriteLine("Really starting now...");
             WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", int.MaxValue);
             Console.WriteLine("done!");
-            Console.ReadLine();
         }
     }
 }

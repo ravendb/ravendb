@@ -11,11 +11,11 @@ using Voron.Util;
 
 namespace Raven.Server.Json
 {
-   
+
     public unsafe class BlittableJsonDocument : IDisposable
     {
         private readonly RavenOperationContext _context;
-        private readonly WriteState _state;
+        private readonly UsageMode _mode;
         private readonly UnmanagedJsonParser _reader;
         private readonly UnmanagedWriteBuffer _stream;
         private UnmanagedBuffersPool.AllocatedMemoryData _buffer, _compressionBuffer;
@@ -23,26 +23,22 @@ namespace Raven.Server.Json
         private int _position;
         public int DiscardedCompressions, Compressed;
 
-        public enum WriteState
+        [Flags]
+        public enum UsageMode
         {
-            /// <summary>
-            /// Skip checks & compressions in favor of fast parsing of the data
-            /// This isn't saved, and errors will occur when you access the data.
-            /// </summary>
-            FastAndLooseToMemory,
-            /// <summary>
-            /// Validate the data and compress as much as possible, errors will happen
-            /// as soon as the data is parsed.
-            /// </summary>
-            ValidatedAndSmallToDisk
+            None = 0,
+            ValidateDouble = 1,
+            CompressStrings = 2,
+            CompressSmallStrings = 4,
+            ToDisk = ValidateDouble | CompressStrings |  CompressSmallStrings
         }
 
-        internal BlittableJsonDocument(UnmanagedJsonParser reader, RavenOperationContext context, WriteState state,string documentId)
+        internal BlittableJsonDocument(UnmanagedJsonParser reader, RavenOperationContext context, UsageMode mode, string documentId)
         {
             _reader = reader;
             _stream = context.GetStream(documentId);
             _context = context;
-            _state = state;
+            _mode = mode;
         }
 
         public int SizeInBytes => _stream.SizeInBytes;
@@ -137,7 +133,7 @@ namespace Raven.Server.Json
         private int WritePropertyString(LazyStringValue prop)
         {
             BlittableJsonToken token;
-            var startPos = WriteString(prop, out token, false);
+            var startPos = WriteString(prop, out token, UsageMode.None);
             if (prop.EscapePositions == null)
             {
                 _position += WriteVariableSizeInt(0);
@@ -294,7 +290,7 @@ namespace Raven.Server.Json
                     token = BlittableJsonToken.Integer;
                     return start;
                 case UnmanagedJsonParser.Tokens.Float:
-                    if (_state == WriteState.ValidatedAndSmallToDisk)
+                    if ((_mode & UsageMode.ValidateDouble) == UsageMode.ValidateDouble)
                         _reader.ValidateFloat();
 
                     BlittableJsonToken ignored;
@@ -328,7 +324,7 @@ namespace Raven.Server.Json
             var buffer = GetTempBuffer(unmanagedWriteBuffer.SizeInBytes);
             unmanagedWriteBuffer.CopyTo(buffer);
             var str = new LazyStringValue(null, buffer, unmanagedWriteBuffer.SizeInBytes, _context);
-            WriteString(str, out token, compress: _state == WriteState.ValidatedAndSmallToDisk);
+            WriteString(str, out token, _mode);
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence
             _position += WriteVariableSizeInt(_reader.EscapePositions.Count);
@@ -393,7 +389,7 @@ namespace Raven.Server.Json
             return arrayInfoStart;
         }
 
-        public int WriteString(LazyStringValue str, out BlittableJsonToken token, bool compress = true)
+        public int WriteString(LazyStringValue str, out BlittableJsonToken token, UsageMode state)
         {
             var startPos = _position;
             token = BlittableJsonToken.String;
@@ -401,16 +397,20 @@ namespace Raven.Server.Json
             _position += WriteVariableSizeInt(str.Size);
             var buffer = str.Buffer;
             var size = str.Size;
-            if (compress && size > 0)
+            var maxGoodCompressionSize =
+                     // if we are more than this size, we want to abort the compression early and just use
+                     // the verbatim string
+                     str.Size - sizeof(int) * 2;
+            var shouldCompress =
+                ((state & UsageMode.CompressStrings) == UsageMode.CompressStrings && size > 128) ||
+                (state & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings;
+            if (maxGoodCompressionSize > 0  && shouldCompress)
             {
                 Compressed++;
 
                 var compressionBuffer = GetCompressionBuffer(str.Size);
-                var maxGoodCompressionSize =
-                      // if we are more than this size, we want to abort the compression early and just use
-                      // the verbatim string
-                      str.Size - sizeof(int) * 2;
-                int compressedSize;
+               
+                int compressedSize ;
 
                 if (str.Size > 128)
                 {

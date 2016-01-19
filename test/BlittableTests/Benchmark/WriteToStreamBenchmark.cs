@@ -19,23 +19,26 @@ namespace BlittableTests.Benchmark
     {
         public static void ManySmallDocs(string directory, int take)
         {
-            var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length).Take(take);
+            var files = Directory.GetFiles(directory, "c*.json").OrderBy(f => new FileInfo(f).Length).Take(take);
             foreach (var jsonFile in files)
             {
                 Console.Write(Path.GetFileName(jsonFile));
                 var sp = Stopwatch.StartNew();
                 int lines = 0;
+                int size = 0;
                 using (var reader = File.OpenText(jsonFile))
                 {
                     string line;
                     while ((line = reader.ReadLine()) != null)
                     {
                         lines++;
+                        size += line.Length;
                         JObject.Load(new JsonTextReader(new StringReader(line)));
                     }
                 }
-                Console.Write(" lines {1:#,#} json - {0:#,#}ms ", sp.ElapsedMilliseconds, lines);
+                Console.Write(" lines {1:#,#} json - {0:#,#}ms - {2:#,#} ", sp.ElapsedMilliseconds, lines, size);
 
+                size = 0;
                 using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
                 using (var blittableContext = new RavenOperationContext(unmanagedPool))
                 {
@@ -46,13 +49,14 @@ namespace BlittableTests.Benchmark
                         string line;
                         while ((line = reader.ReadLine()) != null)
                         {
-                            using (blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)),
+                            using (var a = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)),
                                 line))
                             {
+                                size += a.SizeInBytes;
                             }
                         }
                     }
-                    Console.WriteLine(" blit - {0:#,#}ms", sp.ElapsedMilliseconds);
+                    Console.WriteLine(" blit - {0:#,#}ms - {1:#,#}", sp.ElapsedMilliseconds, size);
                 }
 
             }
