@@ -361,7 +361,7 @@ namespace Raven.Client.Linq
             return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, afterStreamExecuted, indexName,
                 FieldsToFetch, 
                 FieldsToRename,
-                isMapReduce, ResultTransformer, transformerParamaters);
+                isMapReduce, ResultTransformer, transformerParamaters, null);
         }
 
         /// <summary>
