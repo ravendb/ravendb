@@ -132,7 +132,7 @@ namespace Raven.Server.Json
                     // verbatim entry
                     var len = slot - TermsTable.Length;
                     if (outPos+len > outputLen)
-                        return outputLen + 1;
+                        return 0;
                     Memory.Copy(output, input + i + 1, len);
                     outPos += len;
                     output += len;
@@ -142,7 +142,7 @@ namespace Raven.Server.Json
                 {
                     var len = _termsTableBytes[slot][0];
                     if (outPos + len > outputLen)
-                        return outputLen + 1;
+                        return 0;
                     Memory.Copy(output, _termsTableBytes[slot] + 1, len);
                     output += len;
                     outPos += len;
@@ -151,7 +151,7 @@ namespace Raven.Server.Json
             return outPos;
         }
 
-        public int Compress(byte* input, int inputLen, byte* output, int outputLen)
+        public int Compress(byte* input, byte* output, int inputLen, int outputLen)
         {
             var outPos = 0;
             var verbatimStart = 0;
@@ -191,7 +191,7 @@ namespace Raven.Server.Json
                         }
                         verbatimPos = outPos;
                         if (outPos + verbatimLength + 1 > outputLen)
-                            return outputLen + 1;
+                            return 0;
                         outPos += verbatimLength;
                         output[outPos++] = slot[j][termLegnth + 1]; // get the index to write there
                         verbatimStart = i + termLegnth;
@@ -206,7 +206,7 @@ namespace Raven.Server.Json
                     {
                         var len = Math.Min(_maxVerbatimLen - 1, verbatimLength);
                         if (outPos + len > outputLen)
-                            return outputLen + 1;
+                            return 0;
                         output[outPos++] = (byte)(len + TermsTable.Length);
                         Memory.Copy(output + verbatimPos, input + verbatimStart, verbatimLength);
                         verbatimStart += len;

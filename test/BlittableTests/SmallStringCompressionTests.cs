@@ -30,7 +30,7 @@ namespace BlittableTests
                 {
                     fixed (byte* output = buffer)
                     {
-                        var size = SmallStringCompression.Instance.Compress(input, bytes.Length, output, buffer.Length);
+                        var size = SmallStringCompression.Instance.Compress(input, output, bytes.Length, buffer.Length);
                         size = SmallStringCompression.Instance.Decompress(output, size, final, results.Length);
                         var actual = Encoding.UTF8.GetString(results, 0, size);
                         Assert.Equal(s, actual);
@@ -58,9 +58,9 @@ namespace BlittableTests
                 {
                     fixed (byte* output = buffer)
                     {
-                        var size = SmallStringCompression.Instance.Compress(input, bytes.Length, output, buffer.Length);
+                        var size = SmallStringCompression.Instance.Compress(input, output, bytes.Length, buffer.Length);
                         size = SmallStringCompression.Instance.Decompress(output, size, final, 4);
-                        Assert.Equal(5, size);
+                        Assert.Equal(0, size);
                         Assert.Equal(111, results[4]);
                     }
                 }
@@ -80,8 +80,8 @@ namespace BlittableTests
             {
                 fixed (byte* output = buffer)
                 {
-                    var size = SmallStringCompression.Instance.Compress(input, bytes.Length, output, 4);
-                    Assert.Equal(5, size);
+                    var size = SmallStringCompression.Instance.Compress(input, output, bytes.Length, 4);
+                    Assert.Equal(0, size);
                     Assert.Equal(111, buffer[4]);
                 }
             }
@@ -101,7 +101,7 @@ namespace BlittableTests
             {
                 fixed (byte* output = buffer)
                 {
-                    var size = SmallStringCompression.Instance.Compress(input, bytes.Length, output, buffer.Length);
+                    var size = SmallStringCompression.Instance.Compress(input, output, bytes.Length, buffer.Length);
                     Assert.True(size < bytes.Length);
                 }
             }

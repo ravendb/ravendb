@@ -41,14 +41,27 @@ namespace Raven.Server.Json
         {
             int bufferSize;
             var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize, out bufferSize);
-            var uncompressedSize = LZ4.Decode64(Buffer,
-                CompressedSize,
-                tempBuffer,
-                UncompressedSize,
-                true);
+            int uncompressedSize;
+
+            if (UncompressedSize > 128)
+            {
+                uncompressedSize = LZ4.Decode64(Buffer,
+                    CompressedSize,
+                    tempBuffer,
+                    UncompressedSize,
+                    true);
+            }
+            else
+            {
+                uncompressedSize = SmallStringCompression.Instance.Decompress(Buffer,
+                    CompressedSize,
+                    tempBuffer,
+                    UncompressedSize);
+            }
 
             if (uncompressedSize != UncompressedSize)
                 throw new FormatException("Wrong size detected on decompression");
+
             return tempBuffer;
         }
 

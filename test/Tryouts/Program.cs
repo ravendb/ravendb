@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 using BlittableTests;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
@@ -10,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 using Sparrow;
 using Voron;
+using Voron.Util;
 
 namespace Tryouts
 {
@@ -17,10 +20,19 @@ namespace Tryouts
     {
 
 
-        public static void Main(string[] args)
+        public unsafe static void Main(string[] args)
         {
+            var lz4 = new LZ4();
+            var bytes = Encoding.UTF8.GetBytes("1237123712");
+            fixed (byte* p = bytes)
+            {
+                byte* a = (byte*)Marshal.AllocHGlobal(128);
+                var encode64 = lz4.Encode64(p,a,bytes.Length,10);
+                Console.WriteLine(encode64);
+            }
+            //new SmallStringCompressionTests().RoundTrip(s: "this is a sample string");
 
-            new SmallStringCompressionTests().RoundTrip(s: "this is a sample string");
+
             //Console.WriteLine("start");
             //var blittableFormatTests = new UnmanagedStreamTests();
             //blittableFormatTests.BigAlloc();
@@ -43,7 +55,6 @@ namespace Tryouts
             //Console.WriteLine("Reallying starting now...");
             //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
             //Console.ReadLine();
-
         }
     }
 }
