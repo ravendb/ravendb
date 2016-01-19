@@ -163,6 +163,8 @@
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
     <Compile Include="Issues\RavenDB_3887.cs" />
+    <Compile Include="Issues\RavenDB_3904_Commands.cs" />
+    <Compile Include="Issues\RavenDB_3904_Session.cs" />
     <Compile Include="Issues\RavenDB_3920.cs" />
     <Compile Include="Issues\RavenDB_3955.cs" />
     <Compile Include="Issues\RavenDB_4059.cs" />
@@ -174,6 +176,7 @@
     <Compile Include="Issues\RavenDB_4208.cs" />
     <Compile Include="Issues\RavenDB_4219.cs" />
     <Compile Include="Issues\RavenDB_4217.cs" />
+    <Compile Include="Issues\RavenDB_4224.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />
     <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />

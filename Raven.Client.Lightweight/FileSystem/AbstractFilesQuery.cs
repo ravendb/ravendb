@@ -69,6 +69,7 @@ namespace Raven.Client.FileSystem
             private set;
         }
 
+        protected bool pageSizeSet = false;
         protected int pageSize = 1024;
         protected int start = 0;
 
@@ -774,6 +775,7 @@ namespace Raven.Client.FileSystem
         public void Take(int count)
         {
             pageSize = count;
+            pageSizeSet = true;
         }
 
         /// <summary>

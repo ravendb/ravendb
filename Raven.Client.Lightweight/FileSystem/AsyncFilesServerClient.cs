@@ -374,6 +374,71 @@ namespace Raven.Client.FileSystem
             return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
         }
 
+        private async Task<IAsyncEnumerator<FileHeader>> StreamQueryAsyncImpl(string query, string[] sortFields, int start, int pageSize, OperationMetadata operationMetadata)
+        {
+            var path = new StringBuilder(operationMetadata.Url)
+                .Append("/streams/query?query=")
+                .Append(Uri.EscapeUriString(query))
+                .Append("&start=")
+                .Append(start)
+                .Append("&pageSize=")
+                .Append(pageSize);
+
+            if (sortFields != null)
+            {
+                foreach (var sortField in sortFields)
+                {
+                    path.Append("&sort=").Append(sortField);
+                }
+            }
+
+            var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.ToString().Trim(), HttpMethods.Get, operationMetadata.Credentials,  Conventions)
+                                            .AddOperationHeaders(OperationsHeaders));
+
+            request.RemoveAuthorizationHeader();
+
+            var tokenRetriever = new SingleAuthTokenRetriever(this, RequestFactory, Conventions, OperationsHeaders, operationMetadata);
+
+            var token = await tokenRetriever.GetToken().ConfigureAwait(false);
+
+            try
+            {
+                token = await tokenRetriever.ValidateThatWeCanUseToken(token).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                request.Dispose();
+
+                throw new InvalidOperationException(
+                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
+
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+            HttpResponseMessage response;
+
+            try
+            {
+                response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
+
+                await response.AssertNotFailingResponse().ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                request.Dispose();
+
+                throw;
+            }
+
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false)); 
+        }
+
+        public Task<IAsyncEnumerator<FileHeader>> StreamQueryAsync(string query, string[] sortFields = null, int start = 0, int pageSize = int.MaxValue)
+        {
+            return ExecuteWithReplication(HttpMethod.Get, operation => StreamQueryAsyncImpl(query, sortFields, start, pageSize, operation));
+        }
+
         internal class YieldStreamResults : IAsyncEnumerator<FileHeader>
         {
             private readonly HttpJsonRequest request;
