@@ -1,19 +1,93 @@
 import stopIndexingCommand = require("commands/database/index/stopIndexingCommand");
 import startIndexingCommand = require("commands/database/index/startIndexingCommand");
+import stopReducingCommand = require("commands/database/index/stopReducingCommand");
+import startReducingCommand = require("commands/database/index/startReducingCommand");
 import getIndexingStatusCommand = require("commands/database/index/getIndexingStatusCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 
 class toggleIndexing extends viewModelBase {
 
-    indexingStatus = ko.observable<string>();
+    indexingStatus = ko.observable<any>();
+    text = ko.observable();
+    indexingStatusText: KnockoutComputed<string>;
+    isMappingEnabled: KnockoutComputed<boolean>;
+    isReducingEnabled: KnockoutComputed<boolean>;
     isIndexingEnabled: KnockoutComputed<boolean>;
-    isIndexingDisabled: KnockoutComputed<boolean>;
+    canDisableIndexing: KnockoutComputed<boolean>;
 
     constructor() {
         super();
-        this.isIndexingEnabled = ko.computed(() => !!this.indexingStatus() && this.indexingStatus() !== "Paused");
-        this.isIndexingDisabled = ko.computed(() => !!this.indexingStatus() && this.indexingStatus() !== "Indexing" && this.indexingStatus() !== "Started");
+
+        this.isMappingEnabled = ko.computed(() => {
+            var status = this.indexingStatus();
+            if (!status) {
+                return false;
+            }
+
+            return status.MappingStatus === "Mapping";
+        });
+
+        this.isReducingEnabled = ko.computed(() => {
+            var status = this.indexingStatus();
+            if (!status) {
+                return false;
+            }
+
+            return status.ReducingStatus === "Reducing";
+        });
+
+        this.isIndexingEnabled = ko.computed(() => {
+            var status = this.indexingStatus();
+            var isMappingEnabled = this.isMappingEnabled();
+            var isReducingEnabled = this.isReducingEnabled();
+
+            if (!status) {
+                return false;
+            }
+
+            return isMappingEnabled && isReducingEnabled;
+        });
+
+        this.canDisableIndexing = ko.computed(() => {
+            var status = this.indexingStatus();
+            var isMappingEnabled = this.isMappingEnabled();
+            var isReducingEnabled = this.isReducingEnabled();
+
+            if (!status) {
+                return false;
+            }
+
+            return isMappingEnabled || isReducingEnabled;
+        });
+
+        this.indexingStatusText = ko.computed(() => {
+            var status = this.indexingStatus();
+            var isMappingEnabled = this.isMappingEnabled();
+            var isReducingEnabled = this.isReducingEnabled();
+
+            if (!status) {
+                return "None";
+            }
+
+            if (isMappingEnabled && isReducingEnabled) {
+                return "Mapping & Reducing";
+            }
+
+            if (isMappingEnabled) {
+                return "Mapping only";
+            }
+
+            if (isReducingEnabled) {
+                return "Reducing only";
+            }
+
+            if (status.MappingStatus === "Disabled" && status.ReducingStatus === "Disabled") {
+                return "Disabled";
+            }
+
+            return "Paused";
+        });
     }
 
     canActivate(args): any {
@@ -43,13 +117,25 @@ class toggleIndexing extends viewModelBase {
             .done(() => this.getIndexStatus());
     }
 
+    disableReducing() {
+        new stopReducingCommand(this.activeDatabase())
+            .execute()
+            .done(() => this.getIndexStatus());
+    }
+
+    enableReducing() {
+        new startReducingCommand(this.activeDatabase())
+            .execute()
+            .done(() => this.getIndexStatus());
+    }
+
     getIndexStatus() {
         var deferred = $.Deferred();
 
         new getIndexingStatusCommand(this.activeDatabase())
             .execute()
             .done(result => {
-                this.indexingStatus(result.IndexingStatus);
+                this.indexingStatus(result);
                 deferred.resolve();
             })
             .fail(() => deferred.reject());

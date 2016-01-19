@@ -805,7 +805,7 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         ///     Get the indexing status
         /// </summary>
-        Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
+        Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Enables indexing.
