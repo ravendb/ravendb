@@ -20,13 +20,14 @@ namespace Tryouts
         public static void Main(string[] args)
         {
 
-            Console.WriteLine("start");
-            var blittableFormatTests = new UnmanagedStreamTests();
-            blittableFormatTests.BigAlloc();
-            GC.Collect(2);
-            GC.WaitForPendingFinalizers();
-            Console.WriteLine("Done");
-            return;
+            new SmallStringCompressionTests().RoundTrip(s: "this is a sample string");
+            //Console.WriteLine("start");
+            //var blittableFormatTests = new UnmanagedStreamTests();
+            //blittableFormatTests.BigAlloc();
+            //GC.Collect(2);
+            //GC.WaitForPendingFinalizers();
+            //Console.WriteLine("Done");
+            //return;
 
             ////force loading of assemblyes
             //Console.WriteLine(typeof(UnmanageJsonReaderTests));
