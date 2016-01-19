@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -22,6 +23,10 @@ namespace Tryouts
 
         public unsafe static void Main(string[] args)
         {
+            var s = "1.233     ";
+            var d = double.Parse(s,NumberStyles.Any);
+            Console.WriteLine(d);
+            return;
             //new SmallStringCompressionTests().RoundTrip(s: "See: here");
 
 
@@ -40,12 +45,12 @@ namespace Tryouts
             Console.WriteLine(typeof(StorageEnvironment));
 
             WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
-            Console.WriteLine("Reallying starting now...");
+            Console.WriteLine("Really starting now...");
             WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
 
-            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
-            Console.WriteLine("Reallying starting now...");
-            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines");
+            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", 2);
+            Console.WriteLine("Really starting now...");
+            WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", int.MaxValue);
             Console.WriteLine("done!");
             Console.ReadLine();
         }

@@ -52,7 +52,7 @@ namespace NewBlittable.Tests.Benchmark
                         {
                             using (
                                 var employee =
-                                    new BlittableJsonWriter(new JsonTextReader(new StringReader(jsonFileText)),
+                                    new BlittableJsonDocument(new JsonTextReader(new StringReader(jsonFileText)),
                                         blittableContext,
                                         "doc1"))
                             {
@@ -74,7 +74,7 @@ namespace NewBlittable.Tests.Benchmark
                         fs.Write(size+",");
                         using (
                                 var employee =
-                                    new BlittableJsonWriter(new JsonTextReader(new StringReader(jsonFileText)),
+                                    new BlittableJsonDocument(new JsonTextReader(new StringReader(jsonFileText)),
                                         blittableContext,
                                         "doc1"))
                         {

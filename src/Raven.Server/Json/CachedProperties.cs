@@ -15,7 +15,7 @@ namespace Raven.Server.Json
     /// This is done so we'll not write properties that don't belong to that document, but to 
     /// previous documents handled in the same batch
     /// </summary>
-    public class CachedProperties : IComparer<BlittableJsonWriter.PropertyTag>
+    public class CachedProperties : IComparer<BlittableJsonDocument.PropertyTag>
     {
         private readonly RavenOperationContext _context;
 
@@ -95,7 +95,7 @@ namespace Raven.Server.Json
             return prop;
         }
 
-        public void Sort(List<BlittableJsonWriter.PropertyTag> properties)
+        public void Sort(List<BlittableJsonDocument.PropertyTag> properties)
         {
             // Sort object properties metadata by property names
             if (_propertiesNeedSorting)
@@ -112,7 +112,7 @@ namespace Raven.Server.Json
         }
 
 
-        int IComparer<BlittableJsonWriter.PropertyTag>.Compare(BlittableJsonWriter.PropertyTag x, BlittableJsonWriter.PropertyTag y)
+        int IComparer<BlittableJsonDocument.PropertyTag>.Compare(BlittableJsonDocument.PropertyTag x, BlittableJsonDocument.PropertyTag y)
         {
             return _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
         }

@@ -228,11 +228,27 @@ namespace Raven.Server.Json
             return returnedByteArray;
         }
 
-        public BlittableJsonWriter Read(Stream stream, string documentId)
+        public BlittableJsonDocument ReadForDisk(Stream stream, string documentId)
+        {
+            return ParseToMemory(stream, documentId, BlittableJsonDocument.WriteState.ValidatedAndSmallToDisk);
+        }
+
+        public BlittableJsonDocument ReadForMemory(Stream stream, string documentId)
+        {
+            return ParseToMemory(stream, documentId, BlittableJsonDocument.WriteState.FastAndLooseToMemory);
+        }
+
+        public BlittableJsonDocument Read(Stream stream, string documentId)
+        {
+            var state = BlittableJsonDocument.WriteState.ValidatedAndSmallToDisk;
+            return ParseToMemory(stream, documentId, state);
+        }
+
+        private BlittableJsonDocument ParseToMemory(Stream stream, string documentId, BlittableJsonDocument.WriteState state)
         {
             using (var parser = new UnmanagedJsonParser(stream, this))
             {
-                var writer = new BlittableJsonWriter(parser, this, documentId);
+                var writer = new BlittableJsonDocument(parser, this, state, documentId);
                 try
                 {
                     CachedProperties.NewDocument();
@@ -246,6 +262,5 @@ namespace Raven.Server.Json
                 }
             }
         }
-
     }
 }

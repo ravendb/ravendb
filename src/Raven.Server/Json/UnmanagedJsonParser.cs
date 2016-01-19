@@ -24,6 +24,7 @@ namespace Raven.Server.Json
         public readonly UnmanagedWriteBuffer StringBuffer;
         private GCHandle _bufferHandle;
         private readonly byte* _bufferPtr;
+        private string _doubleStringBuffer;
 
         private int _line;
         private int _charPos = 1;
@@ -235,6 +236,38 @@ namespace Raven.Server.Json
             } while (true);
         }
 
+
+        public void ValidateFloat()
+        {
+            if (_doubleStringBuffer == null)
+                _doubleStringBuffer = new string(' ', 25);
+            // here we assume a clear char <- -> byte conversion, we only support
+            // utf8, and those cleanly transfer
+            fixed (char* pChars = _doubleStringBuffer)
+            {
+                int i = 0;
+                StringBuffer.CopyTo(_bufferPtr);
+                for (; i < StringBuffer.SizeInBytes; i++)
+                {
+                    pChars[i] = (char)_bufferPtr[i];
+                }
+                for (; i < _doubleStringBuffer.Length; i++)
+                {
+                    pChars[i] = ' ';
+                }
+            }
+            try
+            {
+                // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                double.Parse(_doubleStringBuffer, NumberStyles.Any);
+            }
+            catch (Exception e)
+            {
+                throw CreateException("Could not parse double", e);
+            }
+        }
+
+
         private void ParseString(byte quote)
         {
             if (EscapePositions.Count > 0)
@@ -413,12 +446,12 @@ namespace Raven.Server.Json
             }
         }
 
-        private InvalidDataException CreateException(string message)
+        private InvalidDataException CreateException(string message, Exception inner = null)
         {
             var start = Math.Max(0, _pos - 25);
             var count = Math.Min(_pos, _buffer.Length) - start;
             var s = Encoding.UTF8.GetString(_buffer, start, count);
-            return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " + s );
+            return new InvalidDataException(message + " at (" + _line + "," + _charPos + ") around: " + s, inner);
         }
 
         public void Dispose()

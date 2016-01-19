@@ -1,6 +1,7 @@
 using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -10,9 +11,11 @@ using Voron.Util;
 
 namespace Raven.Server.Json
 {
+   
     public unsafe class BlittableJsonWriter : IDisposable
     {
         private readonly RavenOperationContext _context;
+        private readonly WriteState _state;
         private readonly UnmanagedJsonParser _reader;
         private readonly UnmanagedWriteBuffer _stream;
         private UnmanagedBuffersPool.AllocatedMemoryData _buffer, _compressionBuffer;
@@ -20,11 +23,26 @@ namespace Raven.Server.Json
         private int _position;
         public int DiscardedCompressions, Compressed;
 
-        internal BlittableJsonWriter(UnmanagedJsonParser reader, RavenOperationContext context, string documentId)
+        public enum WriteState
+        {
+            /// <summary>
+            /// Skip checks & compressions in favor of fast parsing of the data
+            /// This isn't saved, and errors will occur when you access the data.
+            /// </summary>
+            FastAndLooseToMemory,
+            /// <summary>
+            /// Validate the data and compress as much as possible, errors will happen
+            /// as soon as the data is parsed.
+            /// </summary>
+            ValidatedAndSmallToDisk
+        }
+
+        internal BlittableJsonWriter(UnmanagedJsonParser reader, RavenOperationContext context, WriteState state,string documentId)
         {
             _reader = reader;
             _stream = context.GetStream(documentId);
             _context = context;
+            _state = state;
         }
 
         public int SizeInBytes => _stream.SizeInBytes;
@@ -276,6 +294,9 @@ namespace Raven.Server.Json
                     token = BlittableJsonToken.Integer;
                     return start;
                 case UnmanagedJsonParser.Tokens.Float:
+                    if (_state == WriteState.ValidatedAndSmallToDisk)
+                        _reader.ValidateFloat();
+
                     BlittableJsonToken ignored;
                     WriteStringFromReader(out ignored);
                     token = BlittableJsonToken.Float;
@@ -307,7 +328,7 @@ namespace Raven.Server.Json
             var buffer = GetTempBuffer(unmanagedWriteBuffer.SizeInBytes);
             unmanagedWriteBuffer.CopyTo(buffer);
             var str = new LazyStringValue(null, buffer, unmanagedWriteBuffer.SizeInBytes, _context);
-            WriteString(str, out token);
+            WriteString(str, out token, compress: _state == WriteState.ValidatedAndSmallToDisk);
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence
             _position += WriteVariableSizeInt(_reader.EscapePositions.Count);

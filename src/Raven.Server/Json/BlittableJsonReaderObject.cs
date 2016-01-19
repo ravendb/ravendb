@@ -105,7 +105,7 @@ namespace Raven.Server.Json
         /// <returns></returns>
         public unsafe string[] GetPropertyNames()
         {
-            var idsAndOffsets = new BlittableJsonWriter.PropertyTag[_propCount];
+            var idsAndOffsets = new BlittableJsonDocument.PropertyTag[_propCount];
             var sortedNames = new string[_propCount];
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
@@ -116,7 +116,7 @@ namespace Raven.Server.Json
                 var propertyIntPtr = (long)_propTags + (i) * metadataSize;
                 var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var propertyOffset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
-                idsAndOffsets[i] = new BlittableJsonWriter.PropertyTag
+                idsAndOffsets[i] = new BlittableJsonDocument.PropertyTag
                 {
                     Position = propertyOffset,
                     PropertyId = propertyId
