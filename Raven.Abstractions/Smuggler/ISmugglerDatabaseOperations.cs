@@ -33,10 +33,6 @@ namespace Raven.Abstractions.Smuggler
 
         LastEtagsInfo FetchCurrentMaxEtags();
 
-        Etag FetchLastDocDeleteEtag();
-
-        Etag FetchLastAttachmentsDeleteEtag();
-
         [Obsolete("Use RavenFS instead.")]
         Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords);
 
