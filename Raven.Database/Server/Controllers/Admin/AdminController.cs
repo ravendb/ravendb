@@ -668,7 +668,7 @@ namespace Raven.Database.Server.Controllers.Admin
         {
             string mappingDisableStatus;
             string reducingDisableStatus;
-            if (Database.IsIndexingDisabled())
+            if (Database.Configuration.Indexing.Disabled)
             {
                 mappingDisableStatus = reducingDisableStatus = "Disabled";
             }
