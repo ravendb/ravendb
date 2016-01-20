@@ -129,16 +129,13 @@ namespace Raven.Abstractions.Smuggler
                     }
                     jsonWriter.WriteEndArray();
 
-                    var lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag();
                     jsonWriter.WritePropertyName("Docs");
                     jsonWriter.WriteStartArray();
                     if (Options.OperateOnTypes.HasFlag(ItemType.Documents))
                     {
                         try
                         {
-                            result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter,
-                                result.LastDocsEtag,
-                                updateLastDocDeleteEtag: () => lastDocDeleteEtag = Operations.FetchLastDocDeleteEtag());
+                            result.LastDocsEtag = await ExportDocuments(exportOptions.From, jsonWriter, result.LastDocsEtag);
                         }
                         catch (SmugglerExportException e)
                         {
@@ -149,16 +146,13 @@ namespace Raven.Abstractions.Smuggler
                     }
                     jsonWriter.WriteEndArray();
 
-                    var lastAttachmentsDeleteEtag = Operations.FetchLastAttachmentsDeleteEtag();
                     jsonWriter.WritePropertyName("Attachments");
                     jsonWriter.WriteStartArray();
                     if (Options.OperateOnTypes.HasFlag(ItemType.Attachments) && lastException == null)
                     {
                         try
                         {
-                            result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter,
-                                result.LastAttachmentsEtag,
-                                updateLastAttachmentsDeleteEtag: () => lastAttachmentsDeleteEtag = Operations.FetchLastAttachmentsDeleteEtag());
+                            result.LastAttachmentsEtag = await ExportAttachments(exportOptions.From, jsonWriter, result.LastAttachmentsEtag);
                         }
                         catch (SmugglerExportException e)
                         {
@@ -179,12 +173,9 @@ namespace Raven.Abstractions.Smuggler
 
                     if (Options.ExportDeletions)
                     {
-                        var maxEtagsToFetch = new LastEtagsInfo
-                        {
-                            LastDocDeleteEtag = lastDocDeleteEtag,
-                            LastAttachmentsDeleteEtag = lastAttachmentsDeleteEtag
-                        };
-                        await ExportDeletions(jsonWriter, result, maxEtagsToFetch);
+                        var maxEtags = Operations.FetchCurrentMaxEtags();
+
+                        await ExportDeletions(jsonWriter, result, maxEtags);
                     }
 
                     await ExportIdentities(jsonWriter, Options.OperateOnTypes);
@@ -404,7 +395,7 @@ namespace Raven.Abstractions.Smuggler
         public abstract Task ExportDeletions(JsonTextWriter jsonWriter, OperationState result, LastEtagsInfo maxEtagsToFetch);
 
         [Obsolete("Use RavenFS instead.")]
-        protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag = null, Action updateLastAttachmentsDeleteEtag = null)
+        protected virtual async Task<Etag> ExportAttachments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag = null)
         {
             var totalCount = 0;
             var retries = RetriesCount;
@@ -425,9 +416,6 @@ namespace Raven.Abstractions.Smuggler
 
                     try
                     {
-                        if (Options.ExportDeletions && updateLastAttachmentsDeleteEtag != null)
-                            updateLastAttachmentsDeleteEtag();
-
                         attachments = await Operations.GetAttachments(totalCount, lastEtag, maxRecords);
                     }
                     catch (Exception e)
@@ -522,7 +510,7 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag = null, Action updateLastDocDeleteEtag = null)
+        protected async Task<Etag> ExportDocuments(RavenConnectionStringOptions src, JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag = null)
         {
             var now = SystemTime.UtcNow;
             var totalCount = 0;
@@ -555,8 +543,6 @@ namespace Raven.Abstractions.Smuggler
                                     lastForcedFlush = SystemTime.UtcNow;
                                     numberOfSkippedDocs = 0;
                                 }
-                                if (Options.ExportDeletions && updateLastDocDeleteEtag != null)
-                                    updateLastDocDeleteEtag();
 
                                 hasDocs = true;
                                 var document = documents.Current;
