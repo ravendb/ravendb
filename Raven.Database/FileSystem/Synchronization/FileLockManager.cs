@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using NLog;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
@@ -10,7 +10,7 @@ namespace Raven.Database.FileSystem.Synchronization
 {
     public class FileLockManager
     {
-        private readonly Logger log = LogManager.GetCurrentClassLogger();
+        private readonly ILog log = LogManager.GetCurrentClassLogger();
 
         public void LockByCreatingSyncConfiguration(string fileName, FileSystemInfo sourceFileSystem, IStorageActionsAccessor accessor)
         {
@@ -22,13 +22,16 @@ namespace Raven.Database.FileSystem.Synchronization
 
             accessor.SetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName), JsonExtensions.ToJObject(syncLock));
 
-            log.Debug("File '{0}' was locked", fileName);
+            if (log.IsDebugEnabled)
+                log.Debug("File '{0}' was locked", fileName);
         }
 
         public void UnlockByDeletingSyncConfiguration(string fileName, IStorageActionsAccessor accessor)
         {
             accessor.DeleteConfig(RavenFileNameHelper.SyncLockNameForFile(fileName));
-            log.Debug("File '{0}' was unlocked", fileName);
+
+            if (log.IsDebugEnabled)
+                log.Debug("File '{0}' was unlocked", fileName);
         }
 
         public bool TimeoutExceeded(string fileName, IStorageActionsAccessor accessor)

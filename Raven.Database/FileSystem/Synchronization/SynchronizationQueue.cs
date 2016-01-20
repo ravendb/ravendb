@@ -2,15 +2,15 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
     public class SynchronizationQueue
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationWorkItem>>
             activeSynchronizations =
@@ -118,7 +118,8 @@ namespace Raven.Database.FileSystem.Synchronization
                     // if there is a file in pending synchronizations do not add it again
                     if (pendingWork.Equals(workItem))
                     {
-                        Log.Debug("{0} for a file {1} and a destination {2} was already existed in a pending queue",
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("{0} for a file {1} and a destination {2} was already existed in a pending queue",
                                   workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
                         return false;
                     }
@@ -129,7 +130,8 @@ namespace Raven.Database.FileSystem.Synchronization
                         Buffers.Compare(workItem.FileETag.ToByteArray(), pendingWork.FileETag.ToByteArray()) > 0)
                     {
                         pendingWork.RefreshMetadata();
-                        Log.Debug(
+                        if (Log.IsDebugEnabled)
+                            Log.Debug(
                             "{0} for a file {1} and a destination {2} was already existed in a pending queue but with older ETag, it's metadata has been refreshed",
                             workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
                         return false;
@@ -143,13 +145,15 @@ namespace Raven.Database.FileSystem.Synchronization
                 // if there is a work in an active synchronizations do not add it again
                 if (activeForDestination.ContainsKey(workItem.FileName) && activeForDestination[workItem.FileName].Equals(workItem))
                 {
-                    Log.Debug("{0} for a file {1} and a destination {2} was already existed in an active queue",
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("{0} for a file {1} and a destination {2} was already existed in an active queue",
                               workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
                     return false;
                 }
 
                 pendingForDestination.Enqueue(workItem);
-                Log.Debug("{0} for a file {1} and a destination {2} was enqueued", workItem.GetType().Name, workItem.FileName,
+                if (Log.IsDebugEnabled)
+                    Log.Debug("{0} for a file {1} and a destination {2} was enqueued", workItem.GetType().Name, workItem.FileName,
                           destinationFileSystemUrl);
             }
             finally
@@ -198,7 +202,8 @@ namespace Raven.Database.FileSystem.Synchronization
 
             if (activeForDestination.TryAdd(work.FileName, work))
             {
-                Log.Debug("File '{0}' with ETag {1} was added to an active synchronization queue for a destination {2}",
+                if (Log.IsDebugEnabled)
+                    Log.Debug("File '{0}' with ETag {1} was added to an active synchronization queue for a destination {2}",
                           work.FileName,
                           work.FileETag, destinationFileSystemUrl);
             }
@@ -217,7 +222,8 @@ namespace Raven.Database.FileSystem.Synchronization
             SynchronizationWorkItem removingItem;
             if (activeDestinationTasks.TryRemove(work.FileName, out removingItem))
             {
-                Log.Debug("File '{0}' with ETag {1} was removed from an active synchronization queue for a destination {2}",
+                if (Log.IsDebugEnabled)
+                    Log.Debug("File '{0}' with ETag {1} was removed from an active synchronization queue for a destination {2}",
                           work.FileName,
                           work.FileETag, destinationFileSystemUrl);
             }

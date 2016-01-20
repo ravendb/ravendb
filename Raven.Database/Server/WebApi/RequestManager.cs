@@ -230,7 +230,7 @@ namespace Raven.Database.Server.WebApi
                             }
                             else
                             {
-                                
+
                                 response = await action().ConfigureAwait(false);
                             }
                         }
@@ -457,9 +457,9 @@ namespace Raven.Database.Server.WebApi
 
             if (controller.InnerRequest.Properties.TryGetValue("requestNum", out requestNumber) && requestNumber is long)
             {
-                LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, (long) requestNumber);
+                LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, (long)requestNumber);
             }
-            
+
             if (controller.IsInternalRequest == false)
             {
                 TraceTraffic(controller, logHttpRequestStatsParam, controller.ResourceName, response);
@@ -515,7 +515,7 @@ namespace Raven.Database.Server.WebApi
             return queue.ToArray().Reverse();
         }
 
-        private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
+        private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string resourceName, HttpResponseMessage response)
         {
             if (HasAnyHttpTraceEventTransport() == false)
                 return;
@@ -532,18 +532,19 @@ namespace Raven.Database.Server.WebApi
             }
 
             NotifyTrafficWatch(
-            new TrafficWatchNotification()
-            {
-                RequestUri = logHttpRequestStatsParams.RequestUri,
-                ElapsedMilliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-                CustomInfo = logHttpRequestStatsParams.CustomInfo,
-                HttpMethod = logHttpRequestStatsParams.HttpMethod,
-                ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
-                TenantName = NormalizeTennantName(databaseName),
-                TimeStamp = SystemTime.UtcNow,
-                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
-                QueryTimings = timingsJson
-            }
+                string.IsNullOrEmpty(resourceName) == false ? resourceName : Constants.SystemDatabase,
+                new TrafficWatchNotification()
+                {
+                    RequestUri = logHttpRequestStatsParams.RequestUri,
+                    ElapsedMilliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+                    CustomInfo = logHttpRequestStatsParams.CustomInfo,
+                    HttpMethod = logHttpRequestStatsParams.HttpMethod,
+                    ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
+                    TenantName = NormalizeTennantName(resourceName),
+                    TimeStamp = SystemTime.UtcNow,
+                    InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
+                    QueryTimings = timingsJson
+                }
             );
         }
 
@@ -591,7 +592,8 @@ namespace Raven.Database.Server.WebApi
         {
             return serverHttpTrace.Count > 0 || resourceHttpTraces.Count > 0;
         }
-        private void NotifyTrafficWatch(TrafficWatchNotification trafficWatchNotification)
+
+        private void NotifyTrafficWatch(string resourceName, TrafficWatchNotification trafficWatchNotification)
         {
             object notificationMessage = new
             {
@@ -611,7 +613,7 @@ namespace Raven.Database.Server.WebApi
             {
                 ConcurrentSet<IEventsTransport> resourceEventTransports;
 
-                if (!resourceHttpTraces.TryGetValue(trafficWatchNotification.TenantName, out resourceEventTransports) || resourceEventTransports.Count == 0)
+                if (!resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports) || resourceEventTransports.Count == 0)
                     return;
 
                 foreach (var eventTransport in resourceEventTransports)
