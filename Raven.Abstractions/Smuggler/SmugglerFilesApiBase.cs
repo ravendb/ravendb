@@ -183,14 +183,12 @@ namespace Raven.Abstractions.Smuggler
 
             Exception exceptionHappened = null;
 
-            CancellationTokenSource cts = new CancellationTokenSource();
+            var cts = new CancellationTokenSource();
+            var fileHeaders = new BlockingCollection<FileHeader>();
+            var getFilesTask = Task.Run(async() => await GetFilesTask(lastEtag, maxEtag, cts, fileHeaders));
 
             try
             {
-                var fileHeaders = new BlockingCollection<FileHeader>();
-
-                Task task = Task.Run(() => GetFilesTask(lastEtag, maxEtag, cts, fileHeaders));
-
                 while (true)
                 {
                     FileHeader fileHeader = null;
@@ -245,7 +243,10 @@ namespace Raven.Abstractions.Smuggler
                 };
             }
 
+            getFilesTask.Wait();
+
             cts.Dispose();
+
 
             var metadataEntry = archive.CreateEntry(MetadataEntry);
             using (var metadataStream = metadataEntry.Open())
@@ -266,13 +267,14 @@ namespace Raven.Abstractions.Smuggler
         {
             while (true)
             {
-                if (cts.IsCancellationRequested == true)
-                    break;
                 try
                 {
+                    if (cts.IsCancellationRequested == true)
+                        break;
+
                     using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
                     {
-                        bool hasDocs = false;
+                        var hasDocs = false;
                         while (await files.MoveNextAsync())
                         {
                             if (cts.IsCancellationRequested == true)
@@ -308,6 +310,7 @@ namespace Raven.Abstractions.Smuggler
                 {
                     cts.Cancel();
                     fileHeaders.CompleteAdding();
+                    throw;
                 }
             }
         }
