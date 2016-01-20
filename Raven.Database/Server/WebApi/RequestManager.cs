@@ -230,7 +230,7 @@ namespace Raven.Database.Server.WebApi
                             }
                             else
                             {
-                                
+
                                 response = await action().ConfigureAwait(false);
                             }
                         }
@@ -457,9 +457,9 @@ namespace Raven.Database.Server.WebApi
 
             if (controller.InnerRequest.Properties.TryGetValue("requestNum", out requestNumber) && requestNumber is long)
             {
-                LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, (long) requestNumber);
+                LogHttpRequestStats(controller, logHttpRequestStatsParam, controller.ResourceName, (long)requestNumber);
             }
-            
+
             if (controller.IsInternalRequest == false)
             {
                 TraceTraffic(controller, logHttpRequestStatsParam, controller.ResourceName, response);
@@ -531,19 +531,20 @@ namespace Raven.Database.Server.WebApi
                 }
             }
 
-            NotifyTrafficWatch(string.IsNullOrEmpty(resourceName) == false ? resourceName : Constants.SystemDatabase,
-            new TrafficWatchNotification()
-            {
-                RequestUri = logHttpRequestStatsParams.RequestUri,
-                ElapsedMilliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-                CustomInfo = logHttpRequestStatsParams.CustomInfo,
-                HttpMethod = logHttpRequestStatsParams.HttpMethod,
-                ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
-                TenantName = NormalizeTennantName(resourceName),
-                TimeStamp = SystemTime.UtcNow,
-                InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
-                QueryTimings = timingsJson
-            }
+            NotifyTrafficWatch(
+                string.IsNullOrEmpty(resourceName) == false ? resourceName : Constants.SystemDatabase,
+                new TrafficWatchNotification()
+                {
+                    RequestUri = logHttpRequestStatsParams.RequestUri,
+                    ElapsedMilliseconds = logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
+                    CustomInfo = logHttpRequestStatsParams.CustomInfo,
+                    HttpMethod = logHttpRequestStatsParams.HttpMethod,
+                    ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
+                    TenantName = NormalizeTennantName(resourceName),
+                    TimeStamp = SystemTime.UtcNow,
+                    InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
+                    QueryTimings = timingsJson
+                }
             );
         }
 
@@ -591,6 +592,7 @@ namespace Raven.Database.Server.WebApi
         {
             return serverHttpTrace.Count > 0 || resourceHttpTraces.Count > 0;
         }
+
         private void NotifyTrafficWatch(string resourceName, TrafficWatchNotification trafficWatchNotification)
         {
             object notificationMessage = new

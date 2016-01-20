@@ -22,13 +22,16 @@ namespace Raven.Database.FileSystem.Synchronization
 
             accessor.SetConfig(RavenFileNameHelper.SyncLockNameForFile(fileName), JsonExtensions.ToJObject(syncLock));
 
-            log.Debug("File '{0}' was locked", fileName);
+            if (log.IsDebugEnabled)
+                log.Debug("File '{0}' was locked", fileName);
         }
 
         public void UnlockByDeletingSyncConfiguration(string fileName, IStorageActionsAccessor accessor)
         {
             accessor.DeleteConfig(RavenFileNameHelper.SyncLockNameForFile(fileName));
-            log.Debug("File '{0}' was unlocked", fileName);
+
+            if (log.IsDebugEnabled)
+                log.Debug("File '{0}' was unlocked", fileName);
         }
 
         public bool TimeoutExceeded(string fileName, IStorageActionsAccessor accessor)
