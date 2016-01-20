@@ -65,7 +65,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncAdminServerClient.StartRestoreAsync(restoreRequest));
         }
 
-        public string GetIndexingStatus()
+        public IndexingStatus GetIndexingStatus()
         {
             return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetIndexingStatusAsync());
         }

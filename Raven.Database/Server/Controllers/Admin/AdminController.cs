@@ -660,17 +660,23 @@ namespace Raven.Database.Server.Controllers.Admin
         [RavenRoute("databases/{databaseName}/admin/indexingStatus")]
         public HttpResponseMessage IndexingStatus()
         {
-            string indexDisableStatus;
-            bool result;
-            if (bool.TryParse(Database.Configuration.Settings[Constants.IndexingDisabled], out result) && result)
+            string mappingDisableStatus;
+            string reducingDisableStatus;
+            if (Database.IsIndexingDisabled())
             {
-                indexDisableStatus = "Disabled";
+                mappingDisableStatus = reducingDisableStatus = "Disabled";
             }
             else
             {
-                indexDisableStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused";
+                mappingDisableStatus = Database.WorkContext.RunIndexing ? "Mapping" : "Paused";
+                reducingDisableStatus = Database.WorkContext.RunReducing ? "Reducing" : "Paused";
             }
-            return GetMessageWithObject(new { IndexingStatus = indexDisableStatus });
+
+            return GetMessageWithObject(new IndexingStatus
+            {
+                MappingStatus = mappingDisableStatus,
+                ReducingStatus = reducingDisableStatus
+            });
         }
 
         [HttpPost]

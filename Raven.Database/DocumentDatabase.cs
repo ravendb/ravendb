@@ -82,8 +82,6 @@ namespace Raven.Database
 
         private readonly WorkContext workContext;
 
-        private volatile bool backgroundWorkersSpun;
-
         private volatile bool indexingWorkersStoppedManually;
 
         private volatile bool disposed;
@@ -269,7 +267,7 @@ namespace Raven.Database
             {
                 if (buildVersion == -1)
                 {
-                    var customAttributes = typeof (DocumentDatabase).Assembly.GetCustomAttributes(false);
+                    var customAttributes = typeof(DocumentDatabase).Assembly.GetCustomAttributes(false);
                     dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
                     buildVersion = int.Parse(versionAtt.Build);
                 }
@@ -286,7 +284,7 @@ namespace Raven.Database
                     return productVersion;
                 }
 
-                var customAttributes = typeof (DocumentDatabase).Assembly.GetCustomAttributes(false);
+                var customAttributes = typeof(DocumentDatabase).Assembly.GetCustomAttributes(false);
                 dynamic versionAtt = customAttributes.Single(x => x.GetType().Name == "RavenVersionAttribute");
 
                 productVersion = versionAtt.CommitHash;
@@ -1011,33 +1009,16 @@ namespace Raven.Database
             if (manualStart == false && indexingWorkersStoppedManually)
                 return;
 
-            if (backgroundWorkersSpun)
-                throw new InvalidOperationException("The background workers has already been spun and cannot be spun again");
-            var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
-            if (disableIndexing != null)
-            {
-                bool disableIndexingStatus;
-                var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
-                if (res && disableIndexingStatus)
-                    return; //indexing were set to disable 
-            }
+            if (IsIndexingDisabled())
+                return;
 
-            backgroundWorkersSpun = true;
             indexingWorkersStoppedManually = false;
 
             workContext.StartWork();
 
-            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
-                    {
-                        new Action(()=> indexingExecuter.Execute())
-                    });
-            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
-                    {
-                        new Action(()=>ReducingExecuter.Execute())
-                    });
+            SpinMappingWorker();
 
-            MappingThreadPool.Start();
-            ReducingThreadPool.Start();
+            SpinReduceWorker();
 
             RaiseIndexingWiringComplete();
         }
@@ -1050,7 +1031,6 @@ namespace Raven.Database
                 MappingThreadPool.Dispose();
                 MappingThreadPool = null;
             }
-            MappingThreadPool = null;
         }
 
         private void StopReducingThreadPool()
@@ -1068,13 +1048,6 @@ namespace Raven.Database
             workContext.StopWork();
             StopMappingThreadPool();
             StopReducingThreadPool();
-
-            backgroundWorkersSpun = false;
-        }
-
-        public void StartIndexingWorkers()
-        {
-            workContext.StartIndexing();
         }
 
         public void StopIndexingWorkers(bool manualStop)
@@ -1101,7 +1074,6 @@ namespace Raven.Database
                 Log.WarnException("Error while trying to stop background reducing", e);
             }
 
-            backgroundWorkersSpun = false;
             indexingWorkersStoppedManually = manualStop;
         }
 
@@ -1271,7 +1243,7 @@ namespace Raven.Database
                     throw new Exception("Voron is prone to failure in 32-bits mode. Use " + Constants.Voron.AllowOn32Bits + " to force voron in 32-bit process.");
                 }
 
-                if (string.IsNullOrEmpty(configuration.DefaultStorageTypeName) == false && 
+                if (string.IsNullOrEmpty(configuration.DefaultStorageTypeName) == false &&
                     configuration.DefaultStorageTypeName.Equals(storageEngineTypeName, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     throw new Exception(string.Format("The database is configured to use '{0}' storage engine, but it points to '{1}' data", configuration.DefaultStorageTypeName, storageEngineTypeName));
@@ -1421,8 +1393,7 @@ namespace Raven.Database
 
                     if (freeSpaceInMb <= thresholdInMb)
                     {
-                        if (database.backgroundWorkersSpun)
-                            database.StopIndexingWorkers(false);
+                        database.StopIndexingWorkers(false);
 
                         database.AddAlert(new Alert
                         {
@@ -1445,8 +1416,7 @@ namespace Raven.Database
                             });
                         }
 
-                        if (database.backgroundWorkersSpun == false)
-                            database.SpinBackgroundWorkers(false);
+                        database.SpinBackgroundWorkers(false);
                     }
                 };
             }
@@ -1458,14 +1428,68 @@ namespace Raven.Database
             if (onOnBackupComplete != null) onOnBackupComplete(this);
         }
 
+        private void SpinMappingWorker()
+        {
+            if (IsIndexingDisabled())
+                return;
+
+            workContext.StartMapping();
+
+            if (MappingThreadPool != null)
+                return;
+
+            MappingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Map Thread Pool", new[]
+            {
+                new Action(() => indexingExecuter.Execute())
+            });
+
+            MappingThreadPool.Start();
+        }
+
         public void SpinReduceWorker()
         {
-            throw new NotImplementedException();
+            if (IsIndexingDisabled())
+                return;
+
+            workContext.StartReducing();
+
+            if (ReducingThreadPool != null)
+                return;
+
+            ReducingThreadPool = new RavenThreadPool(Configuration.MaxNumberOfParallelProcessingTasks * 2, _tpCts.Token, "Reduce Thread Pool", new[]
+            {
+                new Action(() => ReducingExecuter.Execute())
+            });
+
+            ReducingThreadPool.Start();
         }
 
         public void StopReduceWorkers()
         {
-            throw new NotImplementedException();
+            workContext.StopReducing();
+
+            try
+            {
+                StopReducingThreadPool();
+            }
+            catch (Exception e)
+            {
+                Log.WarnException("Error while trying to stop background reducing", e);
+            }
+        }
+
+        public bool IsIndexingDisabled()
+        {
+            var disableIndexing = Configuration.Settings[Constants.IndexingDisabled];
+            if (disableIndexing != null)
+            {
+                bool disableIndexingStatus;
+                var res = bool.TryParse(disableIndexing, out disableIndexingStatus);
+                if (res && disableIndexingStatus)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

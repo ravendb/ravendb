@@ -90,7 +90,7 @@ namespace Raven.Database.Indexing
         }
 
         //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
-        public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
+        public ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
 
         private int nextQueryId = 0;
 
@@ -109,7 +109,7 @@ namespace Raven.Database.Indexing
         {
             get
             {
-                var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks*BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
+                var currentNumberOfParallelTasks = Configuration.MaxNumberOfParallelProcessingTasks * BackgroundTaskExecuter.Instance.MaxNumberOfParallelProcessingTasksRatio;
                 var numberOfParallelTasks = Math.Min((int)currentNumberOfParallelTasks, Configuration.MaxNumberOfParallelProcessingTasks);
                 return Math.Max(numberOfParallelTasks, 1);
             }
@@ -142,7 +142,7 @@ namespace Raven.Database.Indexing
                 }
             });
 
-            if(storedIndexingErrors.Count == 0)
+            if (storedIndexingErrors.Count == 0)
                 return;
 
             var errors = storedIndexingErrors.Select(x => x.Data.JsonDeserialization<IndexingError>()).OrderBy(x => x.Timestamp);
@@ -240,7 +240,7 @@ namespace Raven.Database.Indexing
                 if (doWork == false)
                 {
                     // need to clear this anyway
-                    if(disposed == false)
+                    if (disposed == false)
                         notifications.Clear();
                     return;
                 }
@@ -274,7 +274,7 @@ namespace Raven.Database.Indexing
                 Monitor.PulseAll(waitForWork);
             }
             ReplicationResetEvent.Set();
-        }       
+        }
         public AutoResetEvent ReplicationResetEvent = new AutoResetEvent(false);
         public void AddError(int index, string indexName, string key, Exception exception)
         {
@@ -470,7 +470,7 @@ namespace Raven.Database.Indexing
                 if (lastActualIndexingBatchInfo == null)
                 {
                     lastActualIndexingBatchInfo = new SizeLimitedConcurrentSet<IndexingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
-        }
+                }
                 return lastActualIndexingBatchInfo;
             }
         }
@@ -482,7 +482,7 @@ namespace Raven.Database.Indexing
                 if (lastActualReducingBatchInfo == null)
                 {
                     lastActualReducingBatchInfo = new SizeLimitedConcurrentSet<ReducingBatchInfo>(Configuration.Indexing.MaxNumberOfStoredIndexingBatchInfoElements);
-        }
+                }
                 return lastActualReducingBatchInfo;
             }
         }
@@ -525,10 +525,20 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void StartIndexing()
+        public void StartReducing()
+        {
+            doReducing = true;
+        }
+
+        public void StartMapping()
         {
             doIndexing = true;
-            doReducing = true;
+        }
+
+        public void StartIndexing()
+        {
+            StartMapping();
+            StartReducing();
         }
 
         public void MarkAsRemovedFromIndex(HashSet<string> keys)

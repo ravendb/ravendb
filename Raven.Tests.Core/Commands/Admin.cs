@@ -55,19 +55,22 @@ namespace Raven.Tests.Core.Commands
 
                 var indexingStatus = adminCommands.GetIndexingStatus();
 
-                Assert.Equal("Indexing", indexingStatus);
+                Assert.Equal("Mapping", indexingStatus.MappingStatus);
+                Assert.Equal("Reducing", indexingStatus.ReducingStatus);
 
                 adminCommands.StopIndexing();
 
                 indexingStatus = adminCommands.GetIndexingStatus();
 
-                Assert.Equal("Paused", indexingStatus);
+                Assert.Equal("Paused", indexingStatus.MappingStatus);
+                Assert.Equal("Paused", indexingStatus.ReducingStatus);
 
                 adminCommands.StartIndexing();
 
                 indexingStatus = adminCommands.GetIndexingStatus();
 
-                Assert.Equal("Indexing", indexingStatus);
+                Assert.Equal("Mapping", indexingStatus.MappingStatus);
+                Assert.Equal("Reducing", indexingStatus.ReducingStatus);
             }
         }
 
