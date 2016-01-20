@@ -10,6 +10,7 @@ using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -17,6 +18,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Smuggler
@@ -36,9 +38,9 @@ namespace Raven.Abstractions.Smuggler
             [JsonIgnore]
             public bool IsTombstone
             {
-                get 
+                get
                 {
-                    if ( Metadata.ContainsKey( Constants.RavenDeleteMarker ))
+                    if (Metadata.ContainsKey(Constants.RavenDeleteMarker))
                         return Metadata[Constants.RavenDeleteMarker].Value<bool>();
 
                     return false;
@@ -77,7 +79,7 @@ namespace Raven.Abstractions.Smuggler
 
             if (result.FilePath != null)
             {
-                result.FilePath = Path.GetFullPath(result.FilePath);    
+                result.FilePath = Path.GetFullPath(result.FilePath);
             }
 
             if (Options.Incremental)
@@ -181,58 +183,53 @@ namespace Raven.Abstractions.Smuggler
 
             Exception exceptionHappened = null;
 
+            CancellationTokenSource cts = new CancellationTokenSource();
+
             try
             {
+                var fileHeaders = new BlockingCollection<FileHeader>();
+
+                Task task = Task.Run(() => GetFilesTask(lastEtag, maxEtag, cts, fileHeaders));
+
                 while (true)
                 {
-                    bool hasDocs = false;
-                    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
+                    FileHeader fileHeader = null;
+                    try
                     {
-                        while (await files.MoveNextAsync())
-                        {
-                            hasDocs = true;
-                            var file = files.Current;
-                            if (file.IsTombstone)
-                            {
-                                lastEtag = file.Etag;
-                                continue;
-                            }
-
-                            var tempLastEtag = file.Etag;
-                            if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
-                                break;
-
-                            // Write the metadata (which includes the stream size and file container name)
-                            var fileContainer = new FileContainer
-                            {
-                                Key = Path.Combine(file.Directory.TrimStart('/'), file.Name),
-                                Metadata = file.Metadata,
-                            };
-
-                            ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
-
-                            using (var fileStream = await Operations.DownloadFile(file))
-                            using (var zipStream = fileToStore.Open())
-                            {
-                                await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
-                            }
-
-                            metadataList.Add(fileContainer);
-
-                            lastEtag = tempLastEtag;
-
-                            totalCount++;
-                            if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                            {
-                                //TODO: Show also the MB/sec and total GB exported.
-                                Operations.ShowProgress("Exported {0} files. ", totalCount);
-                                lastReport = SystemTime.UtcNow;
-                            }
-                        }
+                        fileHeader = fileHeaders.Take(cts.Token);
                     }
-                    if (!hasDocs)
+                    catch (InvalidOperationException ioe) // CompleteAdding Called
+                    {
+                        Operations.ShowProgress("Files List Retrieval Completed");
                         break;
+                    }
+                    
+                    cts.Token.ThrowIfCancellationRequested();
 
+                    // Write the metadata (which includes the stream size and file container name)
+                    var fileContainer = new FileContainer
+                    {
+                        Key = Path.Combine(fileHeader.Directory.TrimStart('/'), fileHeader.Name),
+                        Metadata = fileHeader.Metadata,
+                    };
+
+                    ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
+
+                    using (var fileStream = await Operations.DownloadFile(fileHeader))
+                    using (var zipStream = fileToStore.Open())
+                    {
+                        await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
+                    }
+
+                    metadataList.Add(fileContainer);
+
+                    totalCount++;
+                    if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                    {
+                        //TODO: Show also the MB/sec and total GB exported.
+                        Operations.ShowProgress("Exported {0} files. ", totalCount);
+                        lastReport = SystemTime.UtcNow;
+                    }
                 }
             }
             catch (Exception e)
@@ -240,11 +237,15 @@ namespace Raven.Abstractions.Smuggler
                 Operations.ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
                 Operations.ShowProgress("Done with reading files, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 
+                cts.Cancel();
+
                 exceptionHappened = new SmugglerExportException(e.Message, e)
                 {
                     LastEtag = lastEtag,
                 };
             }
+
+            cts.Dispose();
 
             var metadataEntry = archive.CreateEntry(MetadataEntry);
             using (var metadataStream = metadataEntry.Open())
@@ -259,6 +260,56 @@ namespace Raven.Abstractions.Smuggler
 
             Operations.ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
             return lastEtag;
+        }
+
+        private async Task GetFilesTask(Etag lastEtag, Etag maxEtag, CancellationTokenSource cts, BlockingCollection<FileHeader> fileHeaders)
+        {
+            while (true)
+            {
+                if (cts.IsCancellationRequested == true)
+                    break;
+                try
+                {
+                    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
+                    {
+                        bool hasDocs = false;
+                        while (await files.MoveNextAsync())
+                        {
+                            if (cts.IsCancellationRequested == true)
+                                break;
+
+                            var file = files.Current;
+
+                            hasDocs = true;
+
+                            if (file.IsTombstone)
+                            {
+                                lastEtag = file.Etag;
+                                continue;
+                            }
+
+                            var tempLastEtag = file.Etag;
+                            if (maxEtag != null && tempLastEtag.CompareTo(maxEtag) > 0)
+                                break;
+
+                            fileHeaders.Add(files.Current);
+
+                            lastEtag = tempLastEtag;
+                        }
+
+                        if (hasDocs == false)
+                        {
+                            fileHeaders.CompleteAdding();
+                            break;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    cts.Cancel();
+                    fileHeaders.CompleteAdding();
+                }
+            }
         }
 
         private async Task ExportConfigurations(ZipArchive archive)
