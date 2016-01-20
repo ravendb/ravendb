@@ -54,7 +54,9 @@ class documentMetadata {
             }
         }
     }
-
+    prettyLabel(text: string) {
+        return text !== null ? text.replace(/__/g, '/') : text;
+    }
     toDto(): documentMetadataDto {
         var dto: any = {
             'Raven-Entity-Name': this.ravenEntityName,

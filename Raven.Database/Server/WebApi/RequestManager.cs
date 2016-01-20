@@ -515,7 +515,7 @@ namespace Raven.Database.Server.WebApi
             return queue.ToArray().Reverse();
         }
 
-        private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName, HttpResponseMessage response)
+        private void TraceTraffic(IResourceApiController controller, LogHttpRequestStatsParams logHttpRequestStatsParams, string resourceName, HttpResponseMessage response)
         {
             if (HasAnyHttpTraceEventTransport() == false)
                 return;
@@ -531,7 +531,7 @@ namespace Raven.Database.Server.WebApi
                 }
             }
 
-            NotifyTrafficWatch(
+            NotifyTrafficWatch(string.IsNullOrEmpty(resourceName) == false ? resourceName : Constants.SystemDatabase,
             new TrafficWatchNotification()
             {
                 RequestUri = logHttpRequestStatsParams.RequestUri,
@@ -539,7 +539,7 @@ namespace Raven.Database.Server.WebApi
                 CustomInfo = logHttpRequestStatsParams.CustomInfo,
                 HttpMethod = logHttpRequestStatsParams.HttpMethod,
                 ResponseStatusCode = logHttpRequestStatsParams.ResponseStatusCode,
-                TenantName = NormalizeTennantName(databaseName),
+                TenantName = NormalizeTennantName(resourceName),
                 TimeStamp = SystemTime.UtcNow,
                 InnerRequestsCount = logHttpRequestStatsParams.InnerRequestsCount,
                 QueryTimings = timingsJson
@@ -591,7 +591,7 @@ namespace Raven.Database.Server.WebApi
         {
             return serverHttpTrace.Count > 0 || resourceHttpTraces.Count > 0;
         }
-        private void NotifyTrafficWatch(TrafficWatchNotification trafficWatchNotification)
+        private void NotifyTrafficWatch(string resourceName, TrafficWatchNotification trafficWatchNotification)
         {
             object notificationMessage = new
             {
@@ -611,7 +611,7 @@ namespace Raven.Database.Server.WebApi
             {
                 ConcurrentSet<IEventsTransport> resourceEventTransports;
 
-                if (!resourceHttpTraces.TryGetValue(trafficWatchNotification.TenantName, out resourceEventTransports) || resourceEventTransports.Count == 0)
+                if (!resourceHttpTraces.TryGetValue(resourceName, out resourceEventTransports) || resourceEventTransports.Count == 0)
                     return;
 
                 foreach (var eventTransport in resourceEventTransports)
