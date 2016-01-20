@@ -513,10 +513,20 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void StartIndexing()
+        public void StartReducing()
+        {
+            doReducing = true;
+        }
+
+        public void StartMapping()
         {
             doIndexing = true;
-            doReducing = true;
+        }
+
+        public void StartIndexing()
+        {
+            StartMapping();
+            StartReducing();
         }
 
         public void MarkAsRemovedFromIndex(HashSet<string> keys)

@@ -94,7 +94,7 @@ namespace Raven.Database.Indexing
                             autoTuner.HandleOutOfMemory();
                         }
                     }
-                    if (foundWork == false && context.RunIndexing)
+                    if (foundWork == false && ShouldRun)
                     {
                         isIdle = context.WaitForWork(context.Configuration.Indexing.TimeToWaitBeforeRunningIdleIndexes.AsTimeSpan, ref workCounter, () =>
                         {

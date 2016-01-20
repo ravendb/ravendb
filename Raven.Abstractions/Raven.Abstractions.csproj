@@ -206,6 +206,8 @@
     <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\IndexingPerformanceStatistics.cs" />
     <Compile Include="Data\IndexingPerformanceStats.cs" />
+    <Compile Include="Data\IndexingStatus.cs" />
+    <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\SideBySideIndexes.cs" />
     <Compile Include="Data\IndexToAdd.cs" />
     <Compile Include="Data\IOperationState.cs" />
@@ -254,7 +256,6 @@
     <Compile Include="Data\PatchResult.cs" />
     <Compile Include="Data\PutResult.cs" />
     <Compile Include="Data\IndexingError.cs" />
-    <Compile Include="Data\SimulateSqlReplicationResult.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\StopWordsSetup.cs" />

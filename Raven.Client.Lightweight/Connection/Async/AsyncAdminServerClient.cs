@@ -122,14 +122,14 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public Task<string> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken))
+        public Task<IndexingStatus> GetIndexingStatusAsync(CancellationToken token = default (CancellationToken))
         {
             return innerAsyncServerClient.ExecuteWithReplication(HttpMethods.Get, async operationMetadata =>
             {
                 using (var request = adminRequest.IndexingStatus(operationMetadata.Url))
                 {
-                    var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    return result.Value<string>("IndexingStatus");
+                    var result = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    return result.Deserialize<IndexingStatus>(innerAsyncServerClient.convention);
                 }
             }, token);
         }
