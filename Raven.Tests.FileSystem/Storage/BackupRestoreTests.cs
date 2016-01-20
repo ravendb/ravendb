@@ -82,10 +82,10 @@ namespace Raven.Tests.FileSystem.Storage
         [PropertyData("Storages")]
         public async Task CanRestoreIncrementalBackupToDifferentFilesystem(string requestedStorage)
         {
-            using (var store = (FilesStore)NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
+            using (var store = NewStore(requestedStorage: requestedStorage, runInMemory: false, customConfig:config =>
             {
                 config.Modify(x => x.Storage.AllowIncrementalBackups, true);
-            }))
+            }, fileSystemName: "FS1"))
             {
                 await CreateSampleData(store);
                 // create backup
