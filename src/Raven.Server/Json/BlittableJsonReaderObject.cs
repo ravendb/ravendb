@@ -192,6 +192,8 @@ namespace Raven.Server.Json
             var comparer = _context.GetComparerFor(name);
 
             int mid = comparer.LastFoundAt ?? (min + max)/2;
+            if (mid > max)
+                mid = max;
             do
             {
                 var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof (byte));
