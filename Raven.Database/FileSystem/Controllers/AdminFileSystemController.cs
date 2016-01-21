@@ -8,13 +8,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
 using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System;
@@ -28,7 +26,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-using Voron.Impl.Backup;
 
 
 namespace Raven.Database.FileSystem.Controllers
@@ -64,13 +61,13 @@ namespace Raven.Database.FileSystem.Controllers
         {
             get
             {
-                var filesystem = FileSystemsLandlord.GetFileSystemInternal(FilesystemName);
+                var filesystem = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternalAsync(FilesystemName));
                 if (filesystem == null)
                 {
                     throw new InvalidOperationException("Could not find a filesystem named: " + FilesystemName);
                 }
 
-                return filesystem.Result;
+                return filesystem;
             }
         }
 
@@ -281,6 +278,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (bool.TryParse(incrementalString, out incrementalBackup) == false)
                 incrementalBackup = false;
 
+
             if (backupRequest.FileSystemDocument == null && FileSystem.Name != null)
             {
                 var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/FileSystems/" + FileSystem.Name, null);
@@ -364,7 +362,7 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     // as we perform compact async we don't catch exceptions here - they will be propagated to operation
-                    var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternal(fs));
+                    var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternalAsync(fs));
                     FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
                     {
                         bool skipProgressReport = false;
