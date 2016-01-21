@@ -1068,7 +1068,7 @@ namespace Raven.Database.Indexing
                 return null;
             }
             using (CultureHelper.EnsureInvariantCulture())
-            using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+            using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
             {
                 var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
                 context.RaiseIndexChangeNotification(new IndexChangeNotification

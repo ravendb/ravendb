@@ -545,7 +545,6 @@ namespace Raven.Database.Storage.Esent.StorageActions
             }
 
             cacher.RemoveCachedDocument(key, preTouchEtag);
-            //TODO: write a test for that
             etagTouches.Add(preTouchEtag, afterTouchEtag);
         }
 
@@ -637,7 +636,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
                                key, isUpdate);
 
-                cacher.RemoveCachedDocument(key, existingEtag);
+                if (existingEtag != null)
+                    cacher.RemoveCachedDocument(key, existingEtag);
+
                 return new AddDocumentResult
                 {
                     Etag = newEtag,
@@ -705,7 +706,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
 
                     update.Save();
 
-                    cacher.RemoveCachedDocument(key, existingETag);
+                    if (existingETag != null)
+                        cacher.RemoveCachedDocument(key, existingETag);
+
                     return new AddDocumentResult
                     {
                         Etag = newEtag,

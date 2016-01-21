@@ -457,7 +457,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             if (logger.IsDebugEnabled) { logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key); }
 
-            documentCacher.RemoveCachedDocument(normalizedKey, existingEtag);
+            if (existingEtag != null)
+                documentCacher.RemoveCachedDocument(normalizedKey, existingEtag);
+
             return new AddDocumentResult
             {
                 Etag = newEtag,
@@ -529,7 +531,6 @@ namespace Raven.Database.Storage.Voron.StorageActions
             keyByEtagIndex.Add(writeBatch.Value, newEtag, normalizedKey);
 
             documentCacher.RemoveCachedDocument(normalizedKey, preTouchEtag);
-            //TODO: write a test for that
             etagTouches.Add(preTouchEtag, afterTouchEtag);
 
             if (logger.IsDebugEnabled) { logger.Debug("TouchDocument() - document with key = '{0}'", key); }

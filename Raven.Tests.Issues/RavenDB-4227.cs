@@ -3,7 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Common;
@@ -321,7 +323,106 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private static int GetCachedItemsCount(DocumentStore store)
+        [Theory]
+        [PropertyData("Storages")]
+        public void touch_document(string requestedStorage)
+        {
+            using (var store = NewRemoteDocumentStore(true, requestedStorage: requestedStorage))
+            {
+                Assert.Equal(0, GetCachedItemsCount(store));
+
+                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                {
+                    Map = @"
+                        from i in docs.Items
+                        select new
+                        {
+                            RefName = LoadDocument(i.Ref).Name,
+                        }"
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+                    session.Store(new Item { Id = "items/2", Ref = null, Name = "1" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<Item>("items/2");
+                    Assert.Equal(1, GetCachedItemsCount(store));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item { Id = "items/2", Ref = null, Name = "2" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                Assert.Equal(0, GetCachedItemsCount(store));
+            }
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
+        public void cache_leftovers_after_path_load_index(string requestedStorage)
+        {
+            using (var store = NewRemoteDocumentStore(true, requestedStorage: requestedStorage))
+            {
+                Assert.Equal(0, GetCachedItemsCount(store));
+
+                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                {
+                    Map = @"
+                        from i in docs.Items
+                        select new
+                        {
+                            RefName = LoadDocument(i.Ref).Name,
+                        }"
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item { Id = "items/1", Ref = "items/2", Name = "oren" });
+                    session.Store(new Item { Id = "items/2", Ref = null, Name = "1" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                Assert.Equal(0, GetCachedItemsCount(store));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item { Id = "items/2", Ref = null, Name = "2" });
+                    session.SaveChanges();
+                    
+                }
+
+                WaitForIndexing(store);
+                Assert.Equal(0, GetCachedItemsCount(store));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<Item>("items/2");
+                    Assert.Equal(1, GetCachedItemsCount(store));
+                }
+            }
+        }
+
+        public class Item
+        {
+            public string Id { get; set; }
+            public string Ref { get; set; }
+            public string Name { get; set; }
+        }
+
+        private static
+            int GetCachedItemsCount(DocumentStore store)
         {
             var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null,
