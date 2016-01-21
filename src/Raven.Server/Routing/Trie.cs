@@ -23,8 +23,18 @@ namespace Raven.Server.Routing
         public T Value;
         public Trie<T>[] Children = new Trie<T>[127];
 
-        public bool TryGetValue(string route, out T value)
+        public struct Match
         {
+            public T Value;
+            public bool Success;
+            public int CaptureStart;
+            public int CaptureLength;
+            public int MatchLength;
+        }
+
+        public Match GetValue(string route)
+        {
+            var match = new Match();
             var current = this;
             var currentIndex = 0;
             for (int i = 0; i < route.Length; i++)
@@ -35,11 +45,12 @@ namespace Raven.Server.Routing
                     {
                         if (current.Key[currentIndex] == '$')
                         {
-                            value = current.Value;
-                            return true;
+                            match.Success = true;
+                            match.MatchLength = i;
+                            match.Value = current.Value;
+                            return match;
                         }
-                        value = default(T);
-                        return false;
+                        return match;
                     }
                     currentIndex++;
                     continue;
@@ -53,6 +64,7 @@ namespace Raven.Server.Routing
                     maybe = current.Children['*'];
                     if (maybe != null)
                     {
+                        match.CaptureStart = i;
                         for (; i < route.Length; i++)
                         {
                             if (route[i] == '/')
@@ -61,18 +73,19 @@ namespace Raven.Server.Routing
                                 break;
                             }
                         }
+                        match.CaptureLength = i - match.CaptureStart;
                     }
                 }
                 current = maybe;
                 currentIndex = 1;
                 if (current == null)
                 {
-                    value = default(T);
-                    return false;
+                    return match;
                 }
             }
-            value = current.Value;
-            return true;
+            match.Value = current.Value;
+            match.MatchLength = route.Length;
+            return match;
 
         }
 

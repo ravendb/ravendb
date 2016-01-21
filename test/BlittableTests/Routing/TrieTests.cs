@@ -26,8 +26,7 @@ namespace BlittableTests.Routing
                 "admin/debug-info",
             }.ToDictionary(x => x, x => 1));
 
-            int value;
-            Assert.True(trie.TryGetValue("admin/databases", out value));
+            Assert.True(trie.GetValue("admin/databases").Success);
         }
 
         [Theory]
@@ -48,8 +47,7 @@ namespace BlittableTests.Routing
                 "admin/debug-info",
             }.ToDictionary(x => x, x => 1));
 
-            int value;
-            Assert.True(trie.TryGetValue(url, out value));
+            Assert.True(trie.GetValue(url).Success);
         }
     }
 }
