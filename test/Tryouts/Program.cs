@@ -24,7 +24,7 @@ namespace Tryouts
 
         public unsafe static void Main(string[] args)
         {
-            new TrieTests().CanQueryTrie();
+            new TrieTests().CanQueryTrieWithParams("Databases/רוח-צפונית/Docs");
 
             ////Console.WriteLine("start");
             ////var blittableFormatTests = new UnmanagedStreamTests();

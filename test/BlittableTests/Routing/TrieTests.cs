@@ -30,27 +30,26 @@ namespace BlittableTests.Routing
             Assert.True(trie.TryGetValue("admin/databases", out value));
         }
 
-        [Fact]
-        public void CanBuildTrie()
+        [Theory]
+        [InlineData("databases/northwind/docs")]
+        [InlineData("databases/northwind/indexes/Raven/DocumentsByEntityName")]
+        [InlineData("Databases/northwind/Docs")]
+        [InlineData("Databases/רוח-צפונית/Docs")]
+        public void CanQueryTrieWithParams(string url)
         {
+            // /databases/northwind/indexes/Raven/DocumentsByEntityName
             var trie = Trie<int>.Build(new[]
             {
                 "admin/databases",
                 "databases/*/docs",
                 "databases/*/queries",
+                "databases/*/indexes/$",
                 "fs/*/files",
                 "admin/debug-info",
             }.ToDictionary(x => x, x => 1));
 
-            Assert.Equal("", trie.Key);
-            Assert.Equal(3, trie.Children.Length);
-
-            Assert.Equal("admin/", trie.Children[0].Key);
-            Assert.Equal(2, trie.Children[0].Children.Length);
-            Assert.Equal("admin/", trie.Children[0].Children[0].Key);
-            Assert.Equal("admin/", trie.Children[0].Children[0].Key);
-            Assert.Equal("databases/*/docs", trie.Children[1].Key);
-            Assert.Equal("fs/*/files", trie.Children[2].Key);
-        } 
+            int value;
+            Assert.True(trie.TryGetValue(url, out value));
+        }
     }
 }

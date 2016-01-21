@@ -171,7 +171,7 @@ namespace Raven.Server.Json
             }
         }
 
-        public unsafe bool TryGetMember(string name, out object result)
+        public bool TryGetMember(string name, out object result)
         {
             Tuple<object, BlittableJsonToken> res;
             var found = TryGetMemberAsTypeValueTuple(name, out res);
@@ -239,7 +239,7 @@ namespace Raven.Server.Json
         }
 
         /// <summary>
-        /// Compares property names between received StringToByteComparer and the string stored in the document's propery names storage
+        /// Compares property names between received StringToByteComparer and the string stored in the document's property names storage
         /// </summary>
         /// <param name="propertyId">Position of the string in the property ids storage</param>
         /// <param name="comparer">Comparer of a specific string value</param>
@@ -252,16 +252,16 @@ namespace Raven.Server.Json
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
-            var properyNameRelativePaosition = _propNames - propertyNameOffset;
-            var position = properyNameRelativePaosition - _mem;
+            var propertyNameRelativePosition = _propNames - propertyNameOffset;
+            var position = propertyNameRelativePosition - _mem;
 
             byte propertyNameLengthDataLength;
 
-            // Get the propertu name size
+            // Get the property name size
             var size = ReadVariableSizeInt((int)position, out propertyNameLengthDataLength);
 
-            // Return result of comparison between proprty name and received comparer
-            return comparer.Compare(properyNameRelativePaosition + propertyNameLengthDataLength, size);
+            // Return result of comparison between property name and received comparer
+            return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
         public void WriteTo(Stream stream, bool originalPropertyOrder = false)

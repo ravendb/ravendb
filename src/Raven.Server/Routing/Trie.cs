@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Routing
 {
@@ -20,7 +21,7 @@ namespace Raven.Server.Routing
     {
         public string Key;
         public T Value;
-        public Trie<T>[] Children;
+        public Trie<T>[] Children = new Trie<T>[127];
 
         public bool TryGetValue(string route, out T value)
         {
@@ -30,34 +31,44 @@ namespace Raven.Server.Routing
             {
                 if (currentIndex < current.Key.Length)
                 {
-                    if (current.Key[currentIndex] == route[i])
+                    if (CharEqualsAt(current.Key, currentIndex, route, i) == false)
                     {
-                        currentIndex++;
-                        continue;
-                    }
-                    value = default(T);
-                    return false;
-                }
-                // end of node, need to search children
-                if (current.Children.Length == 0)
-                {
-                    value = default(T);
-                    return false;
-                }
-                //TODO: Optimize this to binary search?
-                for (int j = 0; j < current.Children.Length; j++)
-                {
-                    if (current.Children[j].Key[0] == route[i])
-                    {
-                        current = current.Children[j];
-                        currentIndex = 1;
-                        break;
-                    }
-                    if (j == current.Children.Length - 1)
-                    {
+                        if (current.Key[currentIndex] == '$')
+                        {
+                            value = current.Value;
+                            return true;
+                        }
                         value = default(T);
                         return false;
                     }
+                    currentIndex++;
+                    continue;
+                }
+                // end of node, need to search children
+                var maybe = (route[i] <= current.Children.Length)
+                    ? current.Children[route[i]]
+                    : null;
+                if (maybe == null)
+                {
+                    maybe = current.Children['*'];
+                    if (maybe != null)
+                    {
+                        for (; i < route.Length; i++)
+                        {
+                            if (route[i] == '/')
+                            {
+                                i--;
+                                break;
+                            }
+                        }
+                    }
+                }
+                current = maybe;
+                currentIndex = 1;
+                if (current == null)
+                {
+                    value = default(T);
+                    return false;
                 }
             }
             value = current.Value;
@@ -67,19 +78,33 @@ namespace Raven.Server.Routing
 
         public override string ToString()
         {
-            return $"Key: {Key}, Children: {Children?.Length ?? 0}";
+            return $"Key: {Key}, Children: {Children.Count(x=>x!=null)}";
         }
 
         public static Trie<T> Build(Dictionary<string, T> source)
         {
             var sortedKeys = source.Keys.ToArray();
             Array.Sort(sortedKeys, StringComparer.OrdinalIgnoreCase);
+            // to simplify things, we require that the routs be in ASCII only
+            EnsureRoutsAreOnlyUsingASCII(sortedKeys);
 
             var trie = new Trie<T>();
 
             Build(trie, source, sortedKeys, 0, 0, sortedKeys.Length);
 
             return trie;
+        }
+
+        private static void EnsureRoutsAreOnlyUsingASCII(string[] sortedKeys)
+        {
+            foreach (var sortedKey in sortedKeys)
+            {
+                for (int i = 0; i < sortedKey.Length; i++)
+                {
+                    if (sortedKey[i] >= 127)
+                        throw new InvalidOperationException("Cannot use non ASCII chars in routes, but got: " + sortedKey);
+                }
+            }
         }
 
         private static void Build(Trie<T> current, Dictionary<string, T> source, string[] sortedKeys, int matchStart, int start, int count)
@@ -101,7 +126,8 @@ namespace Raven.Server.Routing
             {
                 for (int i = matchingIndex; i < Math.Min(minKey.Length, maxKey.Length); i++)
                 {
-                    if (minKey[i] == maxKey[i] && minKey[i] != '*')
+                    if (minKey[i] == maxKey[i] && 
+                        minKey[i] != '*')
                         continue;
                     matchingIndex = i;
                     break;
@@ -109,7 +135,6 @@ namespace Raven.Server.Routing
             }
 
             current.Key = minKey.Substring(matchStart, matchingIndex - matchStart);
-            var children = new List<Trie<T>>();
 
             var childStart = start;
             var childCount = 1;
@@ -117,7 +142,7 @@ namespace Raven.Server.Routing
             while (childStart + childCount < start + count)
             {
                 var nextKey = sortedKeys[childStart + childCount];
-                if (matchingIndex < nextKey.Length && CharEqualsAt(nextKey, minKey, matchingIndex))
+                if (matchingIndex < nextKey.Length && CharEqualsAt(nextKey, matchingIndex, minKey, matchingIndex))
                 {
                     childCount++;
                     continue;
@@ -125,20 +150,25 @@ namespace Raven.Server.Routing
                 minKey = nextKey;
                 child = new Trie<T>();
                 Build(child, source, sortedKeys, matchingIndex, childStart, childCount);
-                children.Add(child);
+                current.Children[char.ToUpper(child.Key[0])] = child;
+                current.Children[char.ToLower(child.Key[0])] = child;
                 childStart += childCount;
                 childCount = 1;
             }
             child = new Trie<T>();
             Build(child, source, sortedKeys, matchingIndex, childStart, childCount);
-            children.Add(child);
-
-            current.Children = children.ToArray();
+            current.Children[char.ToUpper(child.Key[0])] = child;
+            current.Children[char.ToLower(child.Key[0])] = child;
         }
 
-        private static bool CharEqualsAt(string x, string y, int matchingIndex)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool CharEqualsAt(string x, int xIndex,string y, int yIndex)
         {
-            return string.Compare(x, matchingIndex, y, matchingIndex, 1, StringComparison.OrdinalIgnoreCase) == 0;
+            if (x[xIndex] == y[yIndex])
+                return true;
+            if (x[xIndex] > 'Z')
+                return (x[xIndex] - 'A' + 'a') == y[yIndex];
+            return x[xIndex] == (y[yIndex] - 'A' + 'a');
         }
     }
 }
