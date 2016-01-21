@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -12,6 +13,7 @@ using BlittableTests.Routing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Sparrow;
 using Voron;
 using Voron.Util;
@@ -24,7 +26,22 @@ namespace Tryouts
 
         public unsafe static void Main(string[] args)
         {
-            new TrieTests().CanQueryTrieWithParams("Databases/רוח-צפונית/Docs");
+            var trie = Trie<int>.Build(new[]
+           {
+                "admin/databases",
+                "db/*/docs",
+                "databases/*/queries",
+                "fs/*/stats",
+                "databases/*/indexes/$",
+                "fs/*/files",
+                "admin/debug-info",
+            }.ToDictionary(x => x, x => 1));
+
+            var tryMatch = trie.TryMatch("Db/רוח-צפונית/Docs");
+            if (tryMatch.Success)
+            {
+                Console.WriteLine(tryMatch.Url.Substring(tryMatch.CaptureStart, tryMatch.CaptureLength));
+            }
 
             ////Console.WriteLine("start");
             ////var blittableFormatTests = new UnmanagedStreamTests();

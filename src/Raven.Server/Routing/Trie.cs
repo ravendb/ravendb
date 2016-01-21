@@ -22,26 +22,32 @@ namespace Raven.Server.Routing
         public string Key;
         public T Value;
         public Trie<T>[] Children = new Trie<T>[127];
-
+        public Trie<T>[] FilteredChildren => Children.Where(x => x != null).Distinct().ToArray();
+         
         public struct Match
         {
             public T Value;
+            public string Url;
             public bool Success;
             public int CaptureStart;
             public int CaptureLength;
             public int MatchLength;
         }
 
-        public Match GetValue(string route)
+        public Match TryMatch(string url)
         {
-            var match = new Match();
+            var match = new Match
+            {
+                Url = url
+            };
             var current = this;
             var currentIndex = 0;
-            for (int i = 0; i < route.Length; i++)
+            for (int i = 0; i < url.Length; i++)
             {
                 if (currentIndex < current.Key.Length)
                 {
-                    if (CharEqualsAt(current.Key, currentIndex, route, i) == false)
+                    // if(current.Key[currentIndex] != url[i])
+                    if (CharEqualsAt(current.Key, currentIndex, url, i) == false)
                     {
                         if (current.Key[currentIndex] == '$')
                         {
@@ -56,24 +62,25 @@ namespace Raven.Server.Routing
                     continue;
                 }
                 // end of node, need to search children
-                var maybe = (route[i] <= current.Children.Length)
-                    ? current.Children[route[i]]
+                var maybe = (url[i] <= current.Children.Length)
+                    ? current.Children[url[i]]
                     : null;
+
                 if (maybe == null)
                 {
                     maybe = current.Children['*'];
                     if (maybe != null)
                     {
                         match.CaptureStart = i;
-                        for (; i < route.Length; i++)
+                        for (; i < url.Length; i++)
                         {
-                            if (route[i] == '/')
+                            if (url[i] == '/')
                             {
-                                i--;
                                 break;
                             }
                         }
                         match.CaptureLength = i - match.CaptureStart;
+                        i--;
                     }
                 }
                 current = maybe;
@@ -84,14 +91,14 @@ namespace Raven.Server.Routing
                 }
             }
             match.Value = current.Value;
-            match.MatchLength = route.Length;
+            match.MatchLength = url.Length;
+            match.Success = true;
             return match;
-
         }
 
         public override string ToString()
         {
-            return $"Key: {Key}, Children: {Children.Count(x=>x!=null)}";
+            return $"Key: {Key}, Children: {Children.Distinct().Count(x=>x!=null)}";
         }
 
         public static Trie<T> Build(Dictionary<string, T> source)

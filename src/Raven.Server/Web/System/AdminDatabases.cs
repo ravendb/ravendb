@@ -24,7 +24,7 @@ namespace Raven.Server.Web.System
             _serverStore = serverStore;
         }
 
-        public override  Task Get(HttpContext ctx)
+        public override Task Get(HttpContext ctx)
         {
             RavenOperationContext context;
             using (_serverStore.AllocateRequestContext(out context))

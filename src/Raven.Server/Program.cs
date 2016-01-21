@@ -24,7 +24,6 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
-            //app.UseMvc();
             app.Run(async context =>
             {
                 await context.Response.WriteAsync("Hello there");

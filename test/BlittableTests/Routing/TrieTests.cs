@@ -26,7 +26,7 @@ namespace BlittableTests.Routing
                 "admin/debug-info",
             }.ToDictionary(x => x, x => 1));
 
-            Assert.True(trie.GetValue("admin/databases").Success);
+            Assert.True(trie.TryMatch("admin/databases").Success);
         }
 
         [Theory]
@@ -47,7 +47,7 @@ namespace BlittableTests.Routing
                 "admin/debug-info",
             }.ToDictionary(x => x, x => 1));
 
-            Assert.True(trie.GetValue(url).Success);
+            Assert.True(trie.TryMatch(url).Success);
         }
     }
 }
