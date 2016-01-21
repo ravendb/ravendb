@@ -138,5 +138,6 @@ namespace Raven.Client.Linq
         /// <param name="value"></param>
         void AddTransformerParameter(string input, RavenJToken value);
 
+        Type OriginalQueryType { get; set; }
     }
 }

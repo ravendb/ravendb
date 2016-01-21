@@ -35,7 +35,7 @@ namespace Raven.Client.Linq
         private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
         private readonly bool isMapReduce;
         private readonly Dictionary<string, RavenJToken> transformerParamaters = new Dictionary<string, RavenJToken>();
-    
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
         /// </summary>
@@ -113,7 +113,9 @@ namespace Raven.Client.Linq
             transformerParamaters[name] = value;
         }
 
-       
+        public Type OriginalQueryType { get; set; }
+
+
         /// <summary>
         /// Set the fields to rename
         /// </summary>
@@ -358,9 +360,9 @@ namespace Raven.Client.Linq
         protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
         {
             return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, afterStreamExecuted, indexName,
-                FieldsToFetch, 
+                FieldsToFetch,
                 FieldsToRename,
-                isMapReduce, ResultTransformer, transformerParamaters);
+                isMapReduce, ResultTransformer, transformerParamaters, OriginalQueryType);
         }
 
         /// <summary>
