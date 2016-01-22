@@ -127,8 +127,18 @@ namespace Raven.Database.Prefetching
         {
             foreach (var futureIndexBatch in futureIndexBatches)
             {
-                if (futureIndexBatch.Value.CancellationTokenSource != null)
-                    futureIndexBatch.Value.CancellationTokenSource.Cancel();
+                var cts = futureIndexBatch.Value.CancellationTokenSource;
+                if (cts != null)
+                {
+                    try
+                    {
+                        cts.Cancel();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // this is expected because we are racing with the future batch completion
+                    }
+                }
             }
 
             Task.WaitAll(futureIndexBatches.Values.Select(ObserveDiscardedTask).ToArray());
