@@ -1065,9 +1065,10 @@ namespace Raven.Database.Prefetching
                 .ContinueWith(t =>
                 {
                     t.AssertNotFailed();
-                    linkedToken = null;
+                    cts.Dispose();
+                    linkedToken.Dispose();
                     return t.Result;
-                }, linkedToken.Token)
+                })
             };
 
             futureIndexBatch.Task.ContinueWith(t =>
