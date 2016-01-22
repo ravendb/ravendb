@@ -16,6 +16,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Config.Settings;
+using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Util;
 
@@ -437,6 +438,7 @@ namespace Raven.Database.Prefetching
             // Taking the snapshot should be safe enough. 
             var currentlyUsedBatchSizesInBytes = Size.Sum(autoTuner.CurrentlyUsedBatchSizesInBytes.Values);
 
+            using (DocumentCacher.SkipSetDocumentsInDocumentCache())
             context.TransactionalStorage.Batch(actions =>
             {
                 //limit how much data we load from disk --> better adhere to memory limits
