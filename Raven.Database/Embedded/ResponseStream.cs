@@ -160,8 +160,8 @@ namespace Raven.Database.Embedded
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             VerifyBuffer(buffer, offset, count, allowEmpty: false);
-
-            var linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(abort.Token, cancellationToken).Token;
+            var linkedCancelationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(abort.Token, cancellationToken);
+            var linkedCancelToken = linkedCancelationTokenSource.Token;
 
             var bytesRead = 0;
 
@@ -207,6 +207,7 @@ namespace Raven.Database.Embedded
                     finally
                     {
                         tryTakeDataLock.Release();
+                        linkedCancelationTokenSource.Dispose();
                     }
                 }
                 catch (OperationCanceledException)
