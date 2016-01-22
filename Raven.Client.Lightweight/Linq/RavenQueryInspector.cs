@@ -134,7 +134,10 @@ namespace Raven.Client.Linq
             var transformer = new TTransformer();
             provider.TransformWith(transformer.TransformerName);
             var res = (IRavenQueryable<TResult>)this.As<TResult>();
-            res.OriginalQueryType = res.OriginalQueryType ?? typeof (T);
+            res.OriginalQueryType = res.OriginalQueryType ?? typeof(T);
+            var p = res.Provider as IRavenQueryProvider;
+            if (null != p)
+                p.OriginalQueryType = res.OriginalQueryType;
             return res;
         }
 
@@ -143,6 +146,9 @@ namespace Raven.Client.Linq
             provider.TransformWith(transformerName);
             var res = (IRavenQueryable<TResult>)this.As<TResult>();
             res.OriginalQueryType = res.OriginalQueryType ?? typeof(T);
+            var p = res.Provider as IRavenQueryProvider;
+            if (null != p)
+                p.OriginalQueryType = res.OriginalQueryType;
             return res;
         }
 
