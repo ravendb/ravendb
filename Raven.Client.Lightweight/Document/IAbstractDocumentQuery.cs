@@ -375,5 +375,12 @@ namespace Raven.Client.Document
         void ContainsAll(string fieldName, IEnumerable<object> values);
 
         void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
+
+        
+        /// <summary>
+        /// Sets the original query type incase of TransforWith usage.
+        /// </summary>
+        /// <param name="originalType"></param>
+        void SetOriginalQueryType(Type originalType);
     }
 }
