@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Caching;
 using Raven.Abstractions.Data;
@@ -18,7 +19,10 @@ namespace Raven.Database.Impl
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
         
         [ThreadStatic]
-        private static bool skipSettingDocumentInCache;
+        private static bool skipSetAndGetDocumentInCache;
+
+        [ThreadStatic]
+        private static bool skipSetDocumentInCache;
 
         public DocumentCacher(InMemoryRavenConfiguration configuration)
         {
@@ -81,17 +85,25 @@ namespace Raven.Database.Impl
             };
         }
 
-        public static IDisposable SkipSettingDocumentsInDocumentCache()
+        public static IDisposable SkipSetAndGetDocumentsInDocumentCache()
         {
-            var old = skipSettingDocumentInCache;
-            skipSettingDocumentInCache = true;
+            var old = skipSetAndGetDocumentInCache;
+            skipSetAndGetDocumentInCache = true;
 
-            return new DisposableAction(() => skipSettingDocumentInCache = old);
+            return new DisposableAction(() => skipSetAndGetDocumentInCache = old);
+        }
+
+        public static IDisposable SkipSetDocumentsInDocumentCache()
+        {
+            var old = skipSetDocumentInCache;
+            skipSetDocumentInCache = true;
+
+            return new DisposableAction(() => skipSetDocumentInCache = old);
         }
 
         public CachedDocument GetCachedDocument(string key, Etag etag)
         {
-            if (skipSettingDocumentInCache)
+            if (skipSetAndGetDocumentInCache)
                 return null;
 
             CachedDocument cachedDocument;
@@ -118,7 +130,10 @@ namespace Raven.Database.Impl
 
         public void SetCachedDocument(string key, Etag etag, RavenJObject doc, RavenJObject metadata, int size)
         {
-            if (skipSettingDocumentInCache)
+            if (skipSetAndGetDocumentInCache)
+                return;
+
+            if (skipSetDocumentInCache)
                 return;
 
             var documentClone = ((RavenJObject)doc.CloneToken());
