@@ -36,11 +36,11 @@ namespace Voron.Platform.Posix
             _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
                 
-            // File.AppendAllText("/tmp/adilog", $"TmpPager {_fd} open\n");
-            MemLog.Log($"TmpPager {_fd} open\n");
-            
             if (_fd == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
             DeleteOnClose = true;
 
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
@@ -71,20 +71,17 @@ namespace Voron.Platform.Posix
             return "shm_open mmap: " + _fd + " " + _file;
         }
 
-	    protected override PagerState AllocateMorePages(long newLength)
-		{
-			ThrowObjectDisposedIfNeeded();
+        protected override PagerState AllocateMorePages(long newLength)
+        {
+            ThrowObjectDisposedIfNeeded();
 
-			var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
+            var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
-	        if (newLengthAfterAdjustment <= _totalAllocationSize) //nothing to do
-	            return null;
+            if (newLengthAfterAdjustment <= _totalAllocationSize) //nothing to do
+                return null;
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            // File.AppendAllText("/tmp/adilog", $"TmpPager {_fd} AllocateFileSace\n");
-            MemLog.Log($"TmpPager {_fd} AllocateFileSace\n");
-            
             PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
             _totalAllocationSize += allocationSize;
 
@@ -116,7 +113,10 @@ namespace Voron.Platform.Posix
                                                       MmapFlags.MAP_SHARED, _fd, 0);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -158,14 +158,14 @@ namespace Voron.Platform.Posix
         {
             var result = Syscall.munmap(new IntPtr(baseAddress), (ulong)size);
             if (result == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
         }
 
         public override void Dispose()
         {
-            // File.AppendAllText("/tmp/adilog", $"TmpPager {_fd} Dispose\n");
-            MemLog.Log($"TmpPager {_fd} Dispose\n");
-            
             base.Dispose();
             if (_fd != -1)
             {

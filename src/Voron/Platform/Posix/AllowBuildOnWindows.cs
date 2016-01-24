@@ -5,45 +5,21 @@ using System.Collections.Generic;
 
 namespace Voron.Platform.Posix
 {
-    public static class MemLog
-    {
-        private static object listLockObj = new object();
-        private static List<string> Buf = new List<string>();
-        public static void Log(string txt)
-        {            
-           // lock(listLockObj)
-            //    Buf.Add(txt);            
-        }
-        
-        public static void DumpLog()
-        {
-            //lock(listLockObj)
-               // File.AppendAllLines("/tmp/adilog", Buf);
-        }
-    }
     // Take from https://github.com/mono/mono/blob/master/mcs/class/Mono.Posix/Mono.Unix.Native/Syscall.cs
     // Used this way to avoid taking a hard dependency on the Mono.Posix.dll
-	public static class Syscall
-	{
+    public static class Syscall
+    {
         internal const string LIBC_6 = "libc.so.6";
 
-		[DllImport(LIBC_6, SetLastError = true)]
-		public static extern int sysinfo(ref sysinfo_t info);
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int sysinfo(ref sysinfo_t info);
 
-		[DllImport(LIBC_6, SetLastError = true)]
-		public static extern int mkdir ([MarshalAs (UnmanagedType.LPStr)] string filename, [MarshalAs (UnmanagedType.U4)] uint mode);
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int mkdir ([MarshalAs (UnmanagedType.LPStr)] string filename, [MarshalAs (UnmanagedType.U4)] uint mode);
 
-        [DllImport(LIBC_6, EntryPoint ="close", SetLastError = true)]
-        public static extern int close_(int fd);
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int close(int fd);
         
-        public static int close(int fd)
-        {
-                
-            // System.IO.File.AppendAllText("/tmp/adilog", $"Closing {fd}\n");
-            MemLog.Log($"Closing {fd}\n");
-            // Environment.StackTrace
-            return close_(fd);
-        }
         // pread(2)
         //    ssize_t pread(int fd, void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
@@ -78,34 +54,34 @@ namespace Voron.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int unlink(
-				IntPtr pathname);
+                IntPtr pathname);
 
-	    public unsafe static int unlink(string pathname)
-	    {
+        public unsafe static int unlink(string pathname)
+        {
             byte[] pathNameBytes = System.Text.Encoding.UTF8.GetBytes(pathname);
             fixed(byte* pPath = pathNameBytes)
             {
                 return unlink((IntPtr)pPath);
             }
-	    }
+        }
         // open(2)
         //    int open(const char *pathname, int flags, mode_t mode);
         [DllImport(LIBC_6, SetLastError = true)]
         private static extern int open(
-				IntPtr pathname, OpenFlags flags, FilePermissions mode);
+                IntPtr pathname, OpenFlags flags, FilePermissions mode);
 
-	    public unsafe static int open(
-	        string pathname, OpenFlags flags, FilePermissions mode)
-	    {
-	        byte[] pathNameBytes = System.Text.Encoding.UTF8.GetBytes(pathname);
+        public unsafe static int open(
+            string pathname, OpenFlags flags, FilePermissions mode)
+        {
+            byte[] pathNameBytes = System.Text.Encoding.UTF8.GetBytes(pathname);
             fixed(byte* pPath = pathNameBytes)
             {
                 return open((IntPtr)pPath, flags, mode);
             }
-	    }
+        }
 
 
-	    [DllImport(LIBC_6, SetLastError = true)]
+        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int fsync(int fd);
 
 
@@ -166,7 +142,7 @@ namespace Voron.Platform.Posix
         [DllImport(LIBC_6, EntryPoint = "__fxstat", SetLastError = true)]
         public static extern int fstat(int version, int filedes, out Stat buf);
 
-	}
+    }
 
     [Flags]
     public enum MmapProts
@@ -211,116 +187,116 @@ namespace Voron.Platform.Posix
     }
 
     public struct Iovec
-	{
-		public IntPtr iov_base; // Starting address
-		
-		public ulong iov_len;  // Number of bytes to transfer
-	}
+    {
+        public IntPtr iov_base; // Starting address
+        
+        public ulong iov_len;  // Number of bytes to transfer
+    }
 
-	// Use manually written To/From methods to handle fields st_atime_nsec etc.
-	public struct Stat : IEquatable<Stat>
-	{
-		
-		public ulong st_dev;     // device
-		
-		public ulong st_ino;     // inode
-		
-		public FilePermissions st_mode;    // protection
+    // Use manually written To/From methods to handle fields st_atime_nsec etc.
+    public struct Stat : IEquatable<Stat>
+    {
+        
+        public ulong st_dev;     // device
+        
+        public ulong st_ino;     // inode
+        
+        public FilePermissions st_mode;    // protection
 #pragma warning disable 169
-		private uint _padding_;  // padding for structure alignment
+        private uint _padding_;  // padding for structure alignment
 #pragma warning restore 169
-		
-		public ulong st_nlink;   // number of hard links
-		
-		public uint st_uid;     // user ID of owner
-		
-		public uint st_gid;     // group ID of owner
-		
-		public ulong st_rdev;    // device type (if inode device)
-		public long st_size;    // total size, in bytes
-		public long st_blksize; // blocksize for filesystem I/O
-		public long st_blocks;  // number of blocks allocated
-		public long st_atime;   // time of last access
-		public long st_mtime;   // time of last modification
-		public long st_ctime;   // time of last status change
-		public long st_atime_nsec; // Timespec.tv_nsec partner to st_atime
-		public long st_mtime_nsec; // Timespec.tv_nsec partner to st_mtime
-		public long st_ctime_nsec; // Timespec.tv_nsec partner to st_ctime
+        
+        public ulong st_nlink;   // number of hard links
+        
+        public uint st_uid;     // user ID of owner
+        
+        public uint st_gid;     // group ID of owner
+        
+        public ulong st_rdev;    // device type (if inode device)
+        public long st_size;    // total size, in bytes
+        public long st_blksize; // blocksize for filesystem I/O
+        public long st_blocks;  // number of blocks allocated
+        public long st_atime;   // time of last access
+        public long st_mtime;   // time of last modification
+        public long st_ctime;   // time of last status change
+        public long st_atime_nsec; // Timespec.tv_nsec partner to st_atime
+        public long st_mtime_nsec; // Timespec.tv_nsec partner to st_mtime
+        public long st_ctime_nsec; // Timespec.tv_nsec partner to st_ctime
 
-		public override int GetHashCode()
-		{
-			return st_dev.GetHashCode() ^
-				st_ino.GetHashCode() ^
-				st_mode.GetHashCode() ^
-				st_nlink.GetHashCode() ^
-				st_uid.GetHashCode() ^
-				st_gid.GetHashCode() ^
-				st_rdev.GetHashCode() ^
-				st_size.GetHashCode() ^
-				st_blksize.GetHashCode() ^
-				st_blocks.GetHashCode() ^
-				st_atime.GetHashCode() ^
-				st_mtime.GetHashCode() ^
-				st_ctime.GetHashCode() ^
-				st_atime_nsec.GetHashCode() ^
-				st_mtime_nsec.GetHashCode() ^
-				st_ctime_nsec.GetHashCode();
-		}
+        public override int GetHashCode()
+        {
+            return st_dev.GetHashCode() ^
+                st_ino.GetHashCode() ^
+                st_mode.GetHashCode() ^
+                st_nlink.GetHashCode() ^
+                st_uid.GetHashCode() ^
+                st_gid.GetHashCode() ^
+                st_rdev.GetHashCode() ^
+                st_size.GetHashCode() ^
+                st_blksize.GetHashCode() ^
+                st_blocks.GetHashCode() ^
+                st_atime.GetHashCode() ^
+                st_mtime.GetHashCode() ^
+                st_ctime.GetHashCode() ^
+                st_atime_nsec.GetHashCode() ^
+                st_mtime_nsec.GetHashCode() ^
+                st_ctime_nsec.GetHashCode();
+        }
 
-		public override bool Equals(object obj)
-		{
-			if (obj == null || obj.GetType() != GetType())
-				return false;
+        public override bool Equals(object obj)
+        {
+            if (obj == null || obj.GetType() != GetType())
+                return false;
 
-			Stat value = (Stat)obj;
-			return value.st_dev == st_dev &&
-				value.st_ino == st_ino &&
-				value.st_mode == st_mode &&
-				value.st_nlink == st_nlink &&
-				value.st_uid == st_uid &&
-				value.st_gid == st_gid &&
-				value.st_rdev == st_rdev &&
-				value.st_size == st_size &&
-				value.st_blksize == st_blksize &&
-				value.st_blocks == st_blocks &&
-				value.st_atime == st_atime &&
-				value.st_mtime == st_mtime &&
-				value.st_ctime == st_ctime &&
-				value.st_atime_nsec == st_atime_nsec &&
-				value.st_mtime_nsec == st_mtime_nsec &&
-				value.st_ctime_nsec == st_ctime_nsec;
-		}
+            Stat value = (Stat)obj;
+            return value.st_dev == st_dev &&
+                value.st_ino == st_ino &&
+                value.st_mode == st_mode &&
+                value.st_nlink == st_nlink &&
+                value.st_uid == st_uid &&
+                value.st_gid == st_gid &&
+                value.st_rdev == st_rdev &&
+                value.st_size == st_size &&
+                value.st_blksize == st_blksize &&
+                value.st_blocks == st_blocks &&
+                value.st_atime == st_atime &&
+                value.st_mtime == st_mtime &&
+                value.st_ctime == st_ctime &&
+                value.st_atime_nsec == st_atime_nsec &&
+                value.st_mtime_nsec == st_mtime_nsec &&
+                value.st_ctime_nsec == st_ctime_nsec;
+        }
 
-		public bool Equals(Stat value)
-		{
-			return value.st_dev == st_dev &&
-				value.st_ino == st_ino &&
-				value.st_mode == st_mode &&
-				value.st_nlink == st_nlink &&
-				value.st_uid == st_uid &&
-				value.st_gid == st_gid &&
-				value.st_rdev == st_rdev &&
-				value.st_size == st_size &&
-				value.st_blksize == st_blksize &&
-				value.st_blocks == st_blocks &&
-				value.st_atime == st_atime &&
-				value.st_mtime == st_mtime &&
-				value.st_ctime == st_ctime &&
-				value.st_atime_nsec == st_atime_nsec &&
-				value.st_mtime_nsec == st_mtime_nsec &&
-				value.st_ctime_nsec == st_ctime_nsec;
-		}
+        public bool Equals(Stat value)
+        {
+            return value.st_dev == st_dev &&
+                value.st_ino == st_ino &&
+                value.st_mode == st_mode &&
+                value.st_nlink == st_nlink &&
+                value.st_uid == st_uid &&
+                value.st_gid == st_gid &&
+                value.st_rdev == st_rdev &&
+                value.st_size == st_size &&
+                value.st_blksize == st_blksize &&
+                value.st_blocks == st_blocks &&
+                value.st_atime == st_atime &&
+                value.st_mtime == st_mtime &&
+                value.st_ctime == st_ctime &&
+                value.st_atime_nsec == st_atime_nsec &&
+                value.st_mtime_nsec == st_mtime_nsec &&
+                value.st_ctime_nsec == st_ctime_nsec;
+        }
 
-		public static bool operator ==(Stat lhs, Stat rhs)
-		{
-			return lhs.Equals(rhs);
-		}
+        public static bool operator ==(Stat lhs, Stat rhs)
+        {
+            return lhs.Equals(rhs);
+        }
 
-		public static bool operator !=(Stat lhs, Stat rhs)
-		{
-			return !lhs.Equals(rhs);
-		}
-	}
+        public static bool operator !=(Stat lhs, Stat rhs)
+        {
+            return !lhs.Equals(rhs);
+        }
+    }
 
     public enum Errno
     {
@@ -485,82 +461,82 @@ namespace Voron.Platform.Posix
     }
 
     [Flags]
-	
-	public enum OpenFlags : int
-	{
-		//
-		// One of these
-		//
-		O_RDONLY = 0x00000000,
-		O_WRONLY = 0x00000001,
-		O_RDWR = 0x00000002,
+    
+    public enum OpenFlags : int
+    {
+        //
+        // One of these
+        //
+        O_RDONLY = 0x00000000,
+        O_WRONLY = 0x00000001,
+        O_RDWR = 0x00000002,
 
-		//
-		// Or-ed with zero or more of these
-		//
-		O_CREAT = 0x00000040,
-		O_EXCL = 0x00000080,
-		O_NOCTTY = 0x00000100,
-		O_TRUNC = 0x00000200,
-		O_APPEND = 0x00000400,
-		O_NONBLOCK = 0x00000800,
-		O_SYNC = 0x00001000,
+        //
+        // Or-ed with zero or more of these
+        //
+        O_CREAT = 0x00000040,
+        O_EXCL = 0x00000080,
+        O_NOCTTY = 0x00000100,
+        O_TRUNC = 0x00000200,
+        O_APPEND = 0x00000400,
+        O_NONBLOCK = 0x00000800,
+        O_SYNC = 0x00001000,
 
-		//
-		// These are non-Posix.  Using them will result in errors/exceptions on
-		// non-supported platforms.
-		//
-		// (For example, "C-wrapped" system calls -- calls with implementation in
-		// MonoPosixHelper -- will return -1 with errno=EINVAL.  C#-wrapped system
-		// calls will generate an exception in NativeConvert, as the value can't be
-		// converted on the target platform.)
-		//
+        //
+        // These are non-Posix.  Using them will result in errors/exceptions on
+        // non-supported platforms.
+        //
+        // (For example, "C-wrapped" system calls -- calls with implementation in
+        // MonoPosixHelper -- will return -1 with errno=EINVAL.  C#-wrapped system
+        // calls will generate an exception in NativeConvert, as the value can't be
+        // converted on the target platform.)
+        //
 
-		O_NOFOLLOW = 0x00020000,
-		O_DIRECTORY = 0x00010000,
-		O_DIRECT = 0x00004000,
-		O_ASYNC = 0x00002000,
-		O_LARGEFILE = 0x00008000,
-		O_CLOEXEC = 0x00080000,
-		O_PATH = 0x00200000
-	}
+        O_NOFOLLOW = 0x00020000,
+        O_DIRECTORY = 0x00010000,
+        O_DIRECT = 0x00004000,
+        O_ASYNC = 0x00002000,
+        O_LARGEFILE = 0x00008000,
+        O_CLOEXEC = 0x00080000,
+        O_PATH = 0x00200000
+    }
 
-	// mode_t
-	[Flags]
-	
-	public enum FilePermissions : uint
-	{
-		S_ISUID = 0x0800, // Set user ID on execution
-		S_ISGID = 0x0400, // Set group ID on execution
-		S_ISVTX = 0x0200, // Save swapped text after use (sticky).
-		S_IRUSR = 0x0100, // Read by owner
-		S_IWUSR = 0x0080, // Write by owner
-		S_IXUSR = 0x0040, // Execute by owner
-		S_IRGRP = 0x0020, // Read by group
-		S_IWGRP = 0x0010, // Write by group
-		S_IXGRP = 0x0008, // Execute by group
-		S_IROTH = 0x0004, // Read by other
-		S_IWOTH = 0x0002, // Write by other
-		S_IXOTH = 0x0001, // Execute by other
+    // mode_t
+    [Flags]
+    
+    public enum FilePermissions : uint
+    {
+        S_ISUID = 0x0800, // Set user ID on execution
+        S_ISGID = 0x0400, // Set group ID on execution
+        S_ISVTX = 0x0200, // Save swapped text after use (sticky).
+        S_IRUSR = 0x0100, // Read by owner
+        S_IWUSR = 0x0080, // Write by owner
+        S_IXUSR = 0x0040, // Execute by owner
+        S_IRGRP = 0x0020, // Read by group
+        S_IWGRP = 0x0010, // Write by group
+        S_IXGRP = 0x0008, // Execute by group
+        S_IROTH = 0x0004, // Read by other
+        S_IWOTH = 0x0002, // Write by other
+        S_IXOTH = 0x0001, // Execute by other
 
-		S_IRWXG = (S_IRGRP | S_IWGRP | S_IXGRP),
-		S_IRWXU = (S_IRUSR | S_IWUSR | S_IXUSR),
-		S_IRWXO = (S_IROTH | S_IWOTH | S_IXOTH),
-		ACCESSPERMS = (S_IRWXU | S_IRWXG | S_IRWXO), // 0777
-		ALLPERMS = (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO), // 07777
-		DEFFILEMODE = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH), // 0666
+        S_IRWXG = (S_IRGRP | S_IWGRP | S_IXGRP),
+        S_IRWXU = (S_IRUSR | S_IWUSR | S_IXUSR),
+        S_IRWXO = (S_IROTH | S_IWOTH | S_IXOTH),
+        ACCESSPERMS = (S_IRWXU | S_IRWXG | S_IRWXO), // 0777
+        ALLPERMS = (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO), // 07777
+        DEFFILEMODE = (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH), // 0666
 
-		// Device types
-		// Why these are held in "mode_t" is beyond me...
-		S_IFMT = 0xF000, // Bits which determine file type
-		S_IFDIR = 0x4000, // Directory
-		S_IFCHR = 0x2000, // Character device
-		S_IFBLK = 0x6000, // Block device
-		S_IFREG = 0x8000, // Regular file
-		S_IFIFO = 0x1000, // FIFO
-		S_IFLNK = 0xA000, // Symbolic link
-		S_IFSOCK = 0xC000, // Socket
-	}
+        // Device types
+        // Why these are held in "mode_t" is beyond me...
+        S_IFMT = 0xF000, // Bits which determine file type
+        S_IFDIR = 0x4000, // Directory
+        S_IFCHR = 0x2000, // Character device
+        S_IFBLK = 0x6000, // Block device
+        S_IFREG = 0x8000, // Regular file
+        S_IFIFO = 0x1000, // FIFO
+        S_IFLNK = 0xA000, // Symbolic link
+        S_IFSOCK = 0xC000, // Socket
+    }
 
 
     public enum SysconfName
@@ -602,7 +578,7 @@ namespace Voron.Platform.Posix
         _SC_SIGQUEUE_MAX,
         _SC_TIMER_MAX,
         /* Values for the argument to `sysconf'
-			 corresponding to _POSIX2_* symbols.  */
+             corresponding to _POSIX2_* symbols.  */
         _SC_BC_BASE_MAX,
         _SC_BC_DIM_MAX,
         _SC_BC_SCALE_MAX,
@@ -772,26 +748,26 @@ namespace Voron.Platform.Posix
     }
 
     [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-	public struct sysinfo_t
-	{
-		public System.UIntPtr  uptime;             /* Seconds since boot */
-		[System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=3)]
-		public System.UIntPtr [] loads;  /* 1, 5, and 15 minute load averages */
-		public System.UIntPtr totalram;  /* Total usable main memory size */
+    public struct sysinfo_t
+    {
+        public System.UIntPtr  uptime;             /* Seconds since boot */
+        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=3)]
+        public System.UIntPtr [] loads;  /* 1, 5, and 15 minute load averages */
+        public System.UIntPtr totalram;  /* Total usable main memory size */
 
-		public System.UIntPtr freeram;   /* Available memory size */
-		public ulong AvailableRam {
-			get { return (ulong)freeram; }
-			set { freeram = new UIntPtr (value); }
-		}
+        public System.UIntPtr freeram;   /* Available memory size */
+        public ulong AvailableRam {
+            get { return (ulong)freeram; }
+            set { freeram = new UIntPtr (value); }
+        }
 
-		public System.UIntPtr sharedram; /* Amount of shared memory */
-		public System.UIntPtr bufferram; /* Memory used by buffers */
-		public System.UIntPtr totalswap; /* Total swap space size */
-		public System.UIntPtr freeswap;  /* swap space still available */
-		public ushort procs;    /* Number of current processes */
-		[System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=22)]
-		public char[] _f; /* Pads structure to 64 bytes */
-	}
+        public System.UIntPtr sharedram; /* Amount of shared memory */
+        public System.UIntPtr bufferram; /* Memory used by buffers */
+        public System.UIntPtr totalswap; /* Total swap space size */
+        public System.UIntPtr freeswap;  /* swap space still available */
+        public ushort procs;    /* Number of current processes */
+        [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValArray, SizeConst=22)]
+        public char[] _f; /* Pads structure to 64 bytes */
+    }
 
 }

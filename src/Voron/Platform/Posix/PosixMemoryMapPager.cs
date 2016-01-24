@@ -25,10 +25,10 @@ namespace Voron.Platform.Posix
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
-                
-            // File.AppendAllText("/tmp/adilog", $"MapPager {_fd} open\n");
-            MemLog.Log($"MapPager {_fd} open\n");
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
 
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
@@ -86,9 +86,6 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            // File.AppendAllText("/tmp/adilog", $"MapPager {_fd} AllocateFileSace\n");
-            MemLog.Log($"MapPager {_fd} AllocateFileSace\n");
-            
             PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize));
             PagerState newPagerState = CreatePagerState();
             if (newPagerState == null)
@@ -121,7 +118,10 @@ namespace Voron.Platform.Posix
                                                       MmapFlags.MAP_SHARED, _fd, 0);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -155,7 +155,10 @@ namespace Voron.Platform.Posix
             {
                 var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (ulong)alloc.Size, MsyncFlags.MS_SYNC);
                 if (result == -1)
-                    PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    PosixHelper.ThrowLastError(err);
+                }
             }
         }
 
@@ -169,13 +172,14 @@ namespace Voron.Platform.Posix
         {
             var result = Syscall.munmap(new IntPtr(baseAddress), (ulong)size);
             if (result == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
         }
 
         public override void Dispose()
         {
-            // File.AppendAllText("/tmp/adilog", $"MapPager {_fd} Dispose\n");
-            MemLog.Log($"MapPager {_fd} Dispose\n");
             base.Dispose();
             if (_fd != -1)
             {
