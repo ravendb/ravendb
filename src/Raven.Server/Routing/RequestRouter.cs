@@ -24,14 +24,14 @@ namespace Raven.Server.Routing
             var tryMatch = _trie.TryMatch(context.Request.Path);
             if (tryMatch.Success == false)
             {
-                context.Response.StatusCode = 404;
+                context.Response.StatusCode = 400;
                 return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path);
             }
 
             var handler = tryMatch.Value.CreateHandler(context);
             if (handler == null)
             {
-                context.Response.StatusCode = 404;
+                context.Response.StatusCode = 400;
                 return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
             }
             return handler(context);

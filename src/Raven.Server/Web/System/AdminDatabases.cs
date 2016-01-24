@@ -21,7 +21,7 @@ namespace Raven.Server.Web.System
             _serverStore = serverStore;
         }
 
-        [Route("/databases", "GET")]
+        [Route("/admin/databases", "GET")]
         public Task Get(HttpContext ctx)
         {
             RavenOperationContext context;
@@ -40,7 +40,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [Route("/databases", "PUT")]
+        [Route("/admin/databases", "PUT")]
         public Task Put(HttpContext ctx)
         {
             RavenOperationContext context;

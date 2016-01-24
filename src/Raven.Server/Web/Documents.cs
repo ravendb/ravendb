@@ -33,10 +33,10 @@ namespace Raven.Server.Web
             throw new NotImplementedException();
         }
 
-        [Route("/databases", "DELETE")]
-        public Task Delete(HttpContext ctx)
-        {
-            throw new NotImplementedException();
-        }
+        //[Route("/databases", "DELETE")]
+        //public Task Delete(HttpContext ctx)
+        //{
+        //    throw new NotImplementedException();
+        //}
     }
 }

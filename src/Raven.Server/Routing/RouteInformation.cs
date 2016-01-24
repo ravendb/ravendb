@@ -37,6 +37,8 @@ namespace Raven.Server.Routing
             var requestDelegate = Expression.Lambda<Func<HttpContext, ServerStore, Task>>(handleExpr, ctx, serverStore).Compile();
 
             RequestDelegate handler = context => requestDelegate(context, _serverStore);
+            
+            //TODO: Verify we don't have two methods on the same path & method!
             switch (method)
             {
                 case "GET":
