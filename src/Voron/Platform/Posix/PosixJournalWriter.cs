@@ -27,10 +27,19 @@ namespace Voron.Platform.Posix
             _options = options;
             _filename = filename;
 
+            
+
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+                
+            // File.AppendAllText("/tmp/adilog", $"WrGather {_fd} open {filename}\n");
+            MemLog.Log($"WrGather {_fd} open {filename}\n");
+            
             if (_fd == -1)
             {
+                // File.AppendAllText("/tmp/adilog", $"ERROR-PosixJournalWriter {_fd} open {filename}\n");
+                MemLog.Log($"ERROR-PosixJournalWriter {_fd} open {filename}\n");
+                MemLog.DumpLog();
                 PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
             }
 
@@ -43,11 +52,17 @@ namespace Voron.Platform.Posix
 
         public void Dispose()
         {
+            // File.AppendAllText("/tmp/adilog", $"WrGather {_fd} dispose\n");
+            MemLog.Log($"WrGather {_fd} dispose\n");
             Disposed = true;
             GC.SuppressFinalize(this);
             if (_fdReads != -1)
+            {                
                 Syscall.close(_fdReads);
+                _fdReads = -1;
+            }
             Syscall.close(_fd);
+            _fd = -1;
             if (DeleteOnClose)
             {
                 try
@@ -104,10 +119,25 @@ namespace Voron.Platform.Posix
                         });
                     }
                 }
+                
+                // File.AppendAllText("/tmp/adilog", $"WrGather {_fd} pwritev\n");
+                MemLog.Log($"WrGather {_fd} pwritev\n");
+                
                 var result = Syscall.pwritev(_fd, locs.ToArray(), position);
                 position += byteLen;
                 if (result == -1)
-                    PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+                {
+                    var err =Marshal.GetLastWin32Error();
+                    // File.AppendAllText("/tmp/adilog", $"ERROR-pwritev {_fd}, {_filename} {err}\n");
+                    MemLog.Log($"ERROR-pwritev {_fd}, {_filename} {err}\n");
+                    MemLog.DumpLog();
+                    // while(result < 0)
+                    // {
+                    //     System.Threading.Thread.Sleep(1000);
+                    //     result--;
+                    // }
+                    PosixHelper.ThrowLastError(err);
+                }
             }
         }
 

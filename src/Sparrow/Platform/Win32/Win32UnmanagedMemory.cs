@@ -4,7 +4,7 @@ using System.Security;
 
 namespace Sparrow.Platform
 {
-    public static unsafe partial class UnmanagedMemory
+    public static unsafe class Win32UnmanagedMemory
     {
         [DllImport("msvcrt.dll", EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, SetLastError = false)]
         [SecurityCritical]

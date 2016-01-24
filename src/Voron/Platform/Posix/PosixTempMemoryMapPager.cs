@@ -5,6 +5,7 @@ using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Sparrow;
+using System.IO;
 
 namespace Voron.Platform.Posix
 {
@@ -34,6 +35,10 @@ namespace Voron.Platform.Posix
             _file = file;
             _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+                
+            // File.AppendAllText("/tmp/adilog", $"TmpPager {_fd} open\n");
+            MemLog.Log($"TmpPager {_fd} open\n");
+            
             if (_fd == -1)
                 PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
             DeleteOnClose = true;
@@ -77,6 +82,9 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
+            // File.AppendAllText("/tmp/adilog", $"TmpPager {_fd} AllocateFileSace\n");
+            MemLog.Log($"TmpPager {_fd} AllocateFileSace\n");
+            
             PosixHelper.AllocateFileSpace(_fd, (ulong)(_totalAllocationSize + allocationSize));
             _totalAllocationSize += allocationSize;
 
@@ -155,6 +163,9 @@ namespace Voron.Platform.Posix
 
         public override void Dispose()
         {
+            // File.AppendAllText("/tmp/adilog", $"TmpPager {_fd} Dispose\n");
+            MemLog.Log($"TmpPager {_fd} Dispose\n");
+            
             base.Dispose();
             if (_fd != -1)
             {

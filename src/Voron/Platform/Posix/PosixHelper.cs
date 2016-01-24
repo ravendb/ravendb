@@ -64,7 +64,10 @@ namespace Voron.Platform.Posix
             finally
             {
                 if (fd != -1)
+                {
                     Syscall.close(fd);
+                    fd = -1;
+                }
             }
         }
 
@@ -99,7 +102,10 @@ namespace Voron.Platform.Posix
             finally
             {
                 if (fd != -1)
+                {
                     Syscall.close(fd);
+                    fd = -1;
+                }
             }
         }
     }

@@ -16,6 +16,8 @@ namespace Voron.Platform.Posix
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
+        
+        private static object lockObj = new object();
 
         public PosixMemoryMapPager(int pageSize,string file, long? initialFileSize = null):base(pageSize)
         {
@@ -24,10 +26,14 @@ namespace Voron.Platform.Posix
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
                 PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+                
+            // File.AppendAllText("/tmp/adilog", $"MapPager {_fd} open\n");
+            MemLog.Log($"MapPager {_fd} open\n");
 
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = GetFileSize();
+            
             if (_totalAllocationSize == 0 && initialFileSize.HasValue)
             {
                 _totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
@@ -38,7 +44,7 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
                 PosixHelper.AllocateFileSpace(_fd, (ulong) _totalAllocationSize);
             }
-
+            
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
             PagerState.Release();
             PagerState = CreatePagerState();
@@ -59,13 +65,10 @@ namespace Voron.Platform.Posix
         }
 
         private long GetFileSize()
-        {
-            Stat buf;
-            var result = Syscall.fstat(_fd, out buf);
-            if (result == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
-            var fileSize = buf.st_size;
-            return fileSize;
+        {            
+            FileInfo fi = new FileInfo(_file);
+            return fi.Length;
+            
         }
 
         protected override string GetSourceName()
@@ -83,6 +86,9 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
+            // File.AppendAllText("/tmp/adilog", $"MapPager {_fd} AllocateFileSace\n");
+            MemLog.Log($"MapPager {_fd} AllocateFileSace\n");
+            
             PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize));
             PagerState newPagerState = CreatePagerState();
             if (newPagerState == null)
@@ -168,6 +174,8 @@ namespace Voron.Platform.Posix
 
         public override void Dispose()
         {
+            // File.AppendAllText("/tmp/adilog", $"MapPager {_fd} Dispose\n");
+            MemLog.Log($"MapPager {_fd} Dispose\n");
             base.Dispose();
             if (_fd != -1)
             {
