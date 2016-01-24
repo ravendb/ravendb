@@ -61,9 +61,17 @@ namespace Raven.Server.Routing
         {
             var tryMatch = trie.TryMatch(context.Request.Path);
             if (tryMatch.Success == false)
-                throw new NotImplementedException();
+            {
+                context.Response.StatusCode = 404;
+                return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path);
+            }
 
             var handler = tryMatch.Value.CreateHandler(context);
+            if (handler == null)
+            {
+                context.Response.StatusCode = 404;
+                return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
+            }
             return handler(context);
         }
     }
@@ -84,24 +92,25 @@ namespace Raven.Server.Routing
 
         public void Build(MemberInfo memberInfo, string method)
         {
+            // HttpContext ctx
+            var ctx = Expression.Parameter(typeof (HttpContext), "ctx");
+            // ServerStore serverStore
+            var serverStore = Expression.Parameter(typeof (ServerStore), "serverStore");
+            // new Handler(serverStore)
+            var constructorInfo = memberInfo.DeclaringType.GetConstructors().Single();
+            var newExpression = Expression.New(constructorInfo, serverStore);
+            // .Handle(ctx);
+            var handleExpr = Expression.Call(newExpression, memberInfo.Name, new Type[0], ctx);
+            var requestDelegate = Expression.Lambda<Func<HttpContext, ServerStore, Task>>(handleExpr, ctx, serverStore).Compile();
 
-            //HttpContext ctx
-            var ctx = Expression.Parameter(typeof(HttpContext), "ctx");
-            //new Handler()
-            var newExpression = Expression.New(memberInfo.DeclaringType.GetConstructors().Single());
-            //.Init(serverStore);
-            var initExpr = Expression.Call(newExpression, "Init", new[] { typeof(ServerStore) }, Expression.Constant(_serverStore));
-            //.Handle(ctx);
-            var handleExpr = Expression.Call(initExpr, "Handle", new[] { typeof(HttpContext) }, ctx);
-            var requestDelegate = Expression.Lambda<RequestDelegate>(handleExpr).Compile();
-
+            RequestDelegate handler = context => requestDelegate(context, _serverStore);
             switch (method)
             {
                 case "GET":
-                    Get = requestDelegate;
+                    Get = handler;
                     break;
                 case "PUT":
-                    Put = requestDelegate;
+                    Put = handler;
                     break;
                 default:
                     throw new NotSupportedException("There is no handler for " + method);

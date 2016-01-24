@@ -90,6 +90,9 @@ namespace Raven.Server.Routing
                     return match;
                 }
             }
+            if (currentIndex != current.Key.Length)
+                return match;
+
             match.Value = current.Value;
             match.MatchLength = url.Length;
             match.Success = true;
