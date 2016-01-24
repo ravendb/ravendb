@@ -64,9 +64,10 @@ namespace Raven.Database.Commercial
 
         public void Execute(RavenConfiguration config)
         {
-            timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15));
+            //We defer GettingNewLeaseSubscription the first time we run, we will run again with 1 minute so not to delay startup.
+            timer = new Timer(state => ExecuteInternal(config), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(15));
 
-            ExecuteInternal(config);
+            ExecuteInternal(config,true);
         }
 
         public void ForceExecute(RavenConfiguration config)
@@ -74,7 +75,7 @@ namespace Raven.Database.Commercial
             ExecuteInternal(config);
         }
 
-        private void ExecuteInternal(RavenConfiguration config)
+        private void ExecuteInternal(RavenConfiguration config, bool firstTime = false)
         {
             var licensePath = GetLicensePath(config);
             var licenseText = GetLicenseText(config);
@@ -108,7 +109,7 @@ namespace Raven.Database.Commercial
                                 config.Catalog.Catalogs.Remove(catalog);
                             }
                         }
-                    }, config.Core.TurnOffDiscoveryClient);
+                    }, config.Core.TurnOffDiscoveryClient, firstTime);
                 }
                 catch (LicenseExpiredException ex)
                 {
