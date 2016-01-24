@@ -20,8 +20,7 @@ namespace Raven.Server
 
         public void ConfigureServices(IServiceCollection services)
         {
-            // TODO (fitzchak): remove dependency of Microsoft.AspNet.Mvc
-            // services.AddMvc();
+            //services.AddMvc();
         }
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)

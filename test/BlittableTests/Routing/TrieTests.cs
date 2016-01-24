@@ -31,6 +31,7 @@ namespace BlittableTests.Routing
 
         [Theory]
         [InlineData("databases/northwind/docs")]
+        [InlineData("databases")]
         [InlineData("databases/northwind/indexes/Raven/DocumentsByEntityName")]
         [InlineData("Databases/northwind/Docs")]
         [InlineData("Databases/רוח-צפונית/Docs")]
@@ -41,6 +42,7 @@ namespace BlittableTests.Routing
             {
                 "admin/databases",
                 "databases/*/docs",
+                "databases",
                 "databases/*/queries",
                 "databases/*/indexes/$",
                 "fs/*/files",

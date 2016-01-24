@@ -21,8 +21,8 @@ namespace Raven.Server.Routing
     {
         public string Key;
         public T Value;
-        public Trie<T>[] Children = new Trie<T>[127];
-        public Trie<T>[] FilteredChildren => Children.Where(x => x != null).Distinct().ToArray();
+        public Trie<T>[] Children;
+        public Trie<T>[] FilteredChildren =>  Children?.Where(x => x != null).Distinct().ToArray();
          
         public struct Match
         {
@@ -101,7 +101,7 @@ namespace Raven.Server.Routing
 
         public override string ToString()
         {
-            return $"Key: {Key}, Children: {Children.Distinct().Count(x=>x!=null)}";
+            return $"Key: {Key}, Children: {Children?.Distinct().Count(x=>x!=null)}";
         }
 
         public static Trie<T> Build(Dictionary<string, T> source)
@@ -139,17 +139,15 @@ namespace Raven.Server.Routing
                 current.Value = source[sortedKeys[start]];
                 return;
             }
+            current.Children = new Trie<T>[127];
             var minKey = sortedKeys[start];
             var maxKey = sortedKeys[start + count - 1];
             var matchingIndex = matchStart == 0 ? matchStart : matchStart + 1;
-            if (matchStart > 0 && minKey[matchStart] == '*')
-            {
-            }
-            else
+            if (matchStart <= 0 || minKey[matchStart] != '*')
             {
                 for (int i = matchingIndex; i < Math.Min(minKey.Length, maxKey.Length); i++)
                 {
-                    if (minKey[i] == maxKey[i] && 
+                    if (minKey[i] == maxKey[i] &&
                         minKey[i] != '*')
                         continue;
                     matchingIndex = i;
@@ -157,11 +155,19 @@ namespace Raven.Server.Routing
                 }
             }
 
-            current.Key = minKey.Substring(matchStart, matchingIndex - matchStart);
 
+            if (maxKey.StartsWith(minKey))
+            {
+                current.Value = source[minKey];
+                current.Key = minKey.Substring(matchStart, minKey.Length - matchStart);
+                AddChild(current, source, sortedKeys, minKey.Length, start + 1, count - 1);
+                return;
+            }
+
+            current.Key = minKey.Substring(matchStart, matchingIndex - matchStart);
             var childStart = start;
             var childCount = 1;
-            Trie<T> child;
+
             while (childStart + childCount < start + count)
             {
                 var nextKey = sortedKeys[childStart + childCount];
@@ -171,13 +177,17 @@ namespace Raven.Server.Routing
                     continue;
                 }
                 minKey = nextKey;
-                child = new Trie<T>();
-                Build(child, source, sortedKeys, matchingIndex, childStart, childCount);
-                current.Children[char.ToUpper(child.Key[0])] = child;
-                current.Children[char.ToLower(child.Key[0])] = child;
+                AddChild(current, source, sortedKeys, matchingIndex, childStart, childCount);
                 childStart += childCount;
                 childCount = 1;
             }
+            AddChild(current, source, sortedKeys, matchingIndex, childStart, childCount);
+        }
+
+        private static void AddChild(Trie<T> current, Dictionary<string, T> source, string[] sortedKeys, int matchingIndex, int childStart,
+            int childCount)
+        {
+            Trie<T> child;
             child = new Trie<T>();
             Build(child, source, sortedKeys, matchingIndex, childStart, childCount);
             current.Children[char.ToUpper(child.Key[0])] = child;
