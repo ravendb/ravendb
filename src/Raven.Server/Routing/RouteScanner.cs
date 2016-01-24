@@ -7,12 +7,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net.Http;
 using System.Reflection;
-using System.Threading.Tasks;
-using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Server.ServerWide;
 using Raven.Server.Web.System;
@@ -26,14 +22,13 @@ namespace Raven.Server.Routing
     public class RouteScanner
     {
         private readonly ServerStore _serverStore;
-        private Trie<RouteInformation> trie;
 
         public RouteScanner(ServerStore serverStore)
         {
             _serverStore = serverStore;
         }
 
-        public void Scan()
+        public Dictionary<string, RouteInformation> Scan()
         {
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
 
@@ -54,80 +49,7 @@ namespace Raven.Server.Routing
                 routeInfo.Build(memberInfo, route.Method);
             }
 
-            trie = Trie<RouteInformation>.Build(routes);
-        }
-
-        public Task HandlePath(HttpContext context)
-        {
-            var tryMatch = trie.TryMatch(context.Request.Path);
-            if (tryMatch.Success == false)
-            {
-                context.Response.StatusCode = 404;
-                return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path);
-            }
-
-            var handler = tryMatch.Value.CreateHandler(context);
-            if (handler == null)
-            {
-                context.Response.StatusCode = 404;
-                return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
-            }
-            return handler(context);
-        }
-    }
-
-    public class RouteInformation
-    {
-        public readonly string Path;
-        private readonly ServerStore _serverStore;
-
-        public RequestDelegate Get;
-        public RequestDelegate Put;
-
-        public RouteInformation(string path, ServerStore serverStore)
-        {
-            Path = path;
-            _serverStore = serverStore;
-        }
-
-        public void Build(MemberInfo memberInfo, string method)
-        {
-            // HttpContext ctx
-            var ctx = Expression.Parameter(typeof (HttpContext), "ctx");
-            // ServerStore serverStore
-            var serverStore = Expression.Parameter(typeof (ServerStore), "serverStore");
-            // new Handler(serverStore)
-            var constructorInfo = memberInfo.DeclaringType.GetConstructors().Single();
-            var newExpression = Expression.New(constructorInfo, serverStore);
-            // .Handle(ctx);
-            var handleExpr = Expression.Call(newExpression, memberInfo.Name, new Type[0], ctx);
-            var requestDelegate = Expression.Lambda<Func<HttpContext, ServerStore, Task>>(handleExpr, ctx, serverStore).Compile();
-
-            RequestDelegate handler = context => requestDelegate(context, _serverStore);
-            switch (method)
-            {
-                case "GET":
-                    Get = handler;
-                    break;
-                case "PUT":
-                    Put = handler;
-                    break;
-                default:
-                    throw new NotSupportedException("There is no handler for " + method);
-            }
-        }
-
-        public RequestDelegate CreateHandler(HttpContext context)
-        {
-            switch (context.Request.Method)
-            {
-                case "GET":
-                    return Get;
-                case "PUT":
-                    return Put;
-                default:
-                    throw new NotSupportedException("There is no handler for " + context.Request.Method);
-            }
+            return routes;
         }
     }
 }

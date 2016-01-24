@@ -25,9 +25,10 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
-            var route = new RouteScanner(app.ApplicationServices.GetRequiredService<ServerStore>());
-            route.Scan();
-            app.Run(context => route.HandlePath(context));
+            var scanner = new RouteScanner(app.ApplicationServices.GetRequiredService<ServerStore>());
+            var routes = scanner.Scan();
+            var router = new RequestRouter(routes);
+            app.Run(context => router.HandlePath(context));
         }
 
         public static int Main(string[] args)
