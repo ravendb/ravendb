@@ -347,7 +347,8 @@ namespace Voron
             {
                 tempPath = configTempPath;
                 _instanceId = Interlocked.Increment(ref _counter);
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager";
+                var guid = Guid.NewGuid();
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
 
                 if (RunningOnPosix)
 			    {
@@ -439,7 +440,8 @@ namespace Voron
 
             public override IVirtualPager CreateScratchPager(string name)
             {
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}";
+                var guid = Guid.NewGuid();
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
 
                 if (RunningOnPosix)
 				    return new PosixTempMemoryMapPager(PageSize, Path.Combine(tempPath, filename), InitialFileSize);

@@ -45,26 +45,39 @@ namespace Voron.Platform.Posix
             try
             {
                 if (fd == -1)
-                    ThrowLastError(Marshal.GetLastWin32Error());
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    ThrowLastError(err);
+                }
+                    
                 int remaining = sizeof(FileHeader);
                 var ptr = ((byte*)header);
                 while (remaining > 0)
                 {
                     var written = Syscall.write(fd, ptr, (ulong)remaining);
                     if (written == -1)
-                        ThrowLastError(Marshal.GetLastWin32Error());
+                    {
+                        var err = Marshal.GetLastWin32Error();
+                        ThrowLastError(err);
+                    }
 
                     remaining -= (int) written;
                     ptr += written;
                 }
                 if(Syscall.fsync(fd) == -1)
-                    ThrowLastError(Marshal.GetLastWin32Error());
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    ThrowLastError(err);
+                }
 
             }
             finally
             {
                 if (fd != -1)
+                {
                     Syscall.close(fd);
+                    fd = -1;
+                }
             }
         }
 
@@ -86,7 +99,10 @@ namespace Voron.Platform.Posix
                 {
                     var read = Syscall.read(fd, ptr, (ulong)remaining);
                     if (read == -1)
-                        ThrowLastError(Marshal.GetLastWin32Error());
+                    {
+                        var err = Marshal.GetLastWin32Error();
+                        ThrowLastError(err);
+                    }
 
                     if (read == 0)
                         return false;// truncated file?
@@ -99,7 +115,10 @@ namespace Voron.Platform.Posix
             finally
             {
                 if (fd != -1)
+                {
                     Syscall.close(fd);
+                    fd = -1;
+                }
             }
         }
     }

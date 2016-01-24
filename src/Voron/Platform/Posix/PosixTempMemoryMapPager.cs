@@ -5,6 +5,7 @@ using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Sparrow;
+using System.IO;
 
 namespace Voron.Platform.Posix
 {
@@ -34,8 +35,12 @@ namespace Voron.Platform.Posix
             _file = file;
             _fd = Syscall.open(_file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_EXCL,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+                
             if (_fd == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
             DeleteOnClose = true;
 
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
@@ -66,14 +71,14 @@ namespace Voron.Platform.Posix
             return "shm_open mmap: " + _fd + " " + _file;
         }
 
-	    protected override PagerState AllocateMorePages(long newLength)
-		{
-			ThrowObjectDisposedIfNeeded();
+        protected override PagerState AllocateMorePages(long newLength)
+        {
+            ThrowObjectDisposedIfNeeded();
 
-			var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
+            var newLengthAfterAdjustment = NearestSizeToPageSize(newLength);
 
-	        if (newLengthAfterAdjustment <= _totalAllocationSize) //nothing to do
-	            return null;
+            if (newLengthAfterAdjustment <= _totalAllocationSize) //nothing to do
+                return null;
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
@@ -108,7 +113,10 @@ namespace Voron.Platform.Posix
                                                       MmapFlags.MAP_SHARED, _fd, 0);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -150,7 +158,10 @@ namespace Voron.Platform.Posix
         {
             var result = Syscall.munmap(new IntPtr(baseAddress), (ulong)size);
             if (result == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
         }
 
         public override void Dispose()

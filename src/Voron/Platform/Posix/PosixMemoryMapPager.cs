@@ -16,6 +16,8 @@ namespace Voron.Platform.Posix
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
+        
+        private static object lockObj = new object();
 
         public PosixMemoryMapPager(int pageSize,string file, long? initialFileSize = null):base(pageSize)
         {
@@ -23,11 +25,15 @@ namespace Voron.Platform.Posix
             _fd = Syscall.open(file, OpenFlags.O_RDWR | OpenFlags.O_CREAT | OpenFlags.O_SYNC,
                               FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
             if (_fd == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
 
             SysPageSize = Syscall.sysconf(SysconfName._SC_PAGESIZE);
 
             _totalAllocationSize = GetFileSize();
+            
             if (_totalAllocationSize == 0 && initialFileSize.HasValue)
             {
                 _totalAllocationSize = NearestSizeToPageSize(initialFileSize.Value);
@@ -38,7 +44,7 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
                 PosixHelper.AllocateFileSpace(_fd, (ulong) _totalAllocationSize);
             }
-
+            
             NumberOfAllocatedPages = _totalAllocationSize / PageSize;
             PagerState.Release();
             PagerState = CreatePagerState();
@@ -59,13 +65,10 @@ namespace Voron.Platform.Posix
         }
 
         private long GetFileSize()
-        {
-            Stat buf;
-            var result = Syscall.fstat(_fd, out buf);
-            if (result == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
-            var fileSize = buf.st_size;
-            return fileSize;
+        {            
+            FileInfo fi = new FileInfo(_file);
+            return fi.Length;
+            
         }
 
         protected override string GetSourceName()
@@ -115,7 +118,10 @@ namespace Voron.Platform.Posix
                                                       MmapFlags.MAP_SHARED, _fd, 0);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
 
             var allocationInfo = new PagerState.AllocationInfo
             {
@@ -149,7 +155,10 @@ namespace Voron.Platform.Posix
             {
                 var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (ulong)alloc.Size, MsyncFlags.MS_SYNC);
                 if (result == -1)
-                    PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    PosixHelper.ThrowLastError(err);
+                }
             }
         }
 
@@ -163,7 +172,10 @@ namespace Voron.Platform.Posix
         {
             var result = Syscall.munmap(new IntPtr(baseAddress), (ulong)size);
             if (result == -1)
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
         }
 
         public override void Dispose()

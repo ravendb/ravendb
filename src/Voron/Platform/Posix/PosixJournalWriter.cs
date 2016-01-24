@@ -27,11 +27,15 @@ namespace Voron.Platform.Posix
             _options = options;
             _filename = filename;
 
+            
+
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | OpenFlags.O_SYNC | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+            
             if (_fd == -1)
             {
-                PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
             }
 
             var result = Syscall.posix_fallocate(_fd, 0, (ulong)journalSize);
@@ -46,8 +50,12 @@ namespace Voron.Platform.Posix
             Disposed = true;
             GC.SuppressFinalize(this);
             if (_fdReads != -1)
+            {                
                 Syscall.close(_fdReads);
+                _fdReads = -1;
+            }
             Syscall.close(_fd);
+            _fd = -1;
             if (DeleteOnClose)
             {
                 try
@@ -104,10 +112,14 @@ namespace Voron.Platform.Posix
                         });
                     }
                 }
+                
                 var result = Syscall.pwritev(_fd, locs.ToArray(), position);
                 position += byteLen;
                 if (result == -1)
-                    PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    PosixHelper.ThrowLastError(err);
+                }
             }
         }
 
@@ -128,7 +140,10 @@ namespace Voron.Platform.Posix
             {
                 _fdReads = Syscall.open(_filename, OpenFlags.O_RDONLY,FilePermissions.S_IRUSR);
                 if (_fdReads == -1)
-                    PosixHelper.ThrowLastError(Marshal.GetLastWin32Error());
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    PosixHelper.ThrowLastError(err);
+                }
             }
             long position = pageNumber * _options.PageSize;
 
