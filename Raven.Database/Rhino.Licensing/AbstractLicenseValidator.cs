@@ -243,10 +243,10 @@ namespace Rhino.Licensing
         /// <summary>
         /// Validates loaded license
         /// </summary>
-        public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false)
+        public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false)
         {
             LicenseAttributes.Clear();
-            if (IsLicenseValid())
+            if (IsLicenseValid(firstTime))
             {
                 onValidLicense();
 
@@ -285,7 +285,7 @@ namespace Rhino.Licensing
             throw new LicenseNotFoundException("Could not find a valid license.");
         }
 
-        private bool IsLicenseValid()
+        private bool IsLicenseValid(bool firstTime = false)
         {
             try
             {
@@ -302,12 +302,12 @@ namespace Rhino.Licensing
 
                 bool result;
                 if (LicenseType == LicenseType.Subscription)
-                    result = ValidateLicense();
+                    result = ValidateLicense(firstTime);
                 else
                 {
                     result = SystemTime.UtcNow < ExpirationDate;
                     if (result)
-                        result = ValidateLicense();
+                        result = ValidateLicense(firstTime);
                 }
 
                 if (result && IsOemLicense()) 
@@ -330,12 +330,12 @@ namespace Rhino.Licensing
             }
         }
 
-        private bool ValidateLicense()
+        private bool ValidateLicense(bool firstTime = false)
         {
             if ((ExpirationDate - SystemTime.UtcNow).TotalDays > 4)
                 return true;
 
-            if (currentlyValidatingLicense)
+            if (currentlyValidatingLicense || firstTime)
                 return IsOemLicense() || SystemTime.UtcNow < ExpirationDate;
 
             if (SubscriptionEndpoint == null)
