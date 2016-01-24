@@ -31,7 +31,7 @@ namespace Raven.Server.Json
         public UnmanagedBuffersPool(string databaseName)
         {
             _databaseName = databaseName;
-            _freeSegments = new ConcurrentStack<AllocatedMemoryData>[16];
+            _freeSegments = new ConcurrentStack<AllocatedMemoryData>[32];
             for (int i = 0; i < _freeSegments.Length; i++)
             {
                 _freeSegments[i] = new ConcurrentStack<AllocatedMemoryData>();
@@ -124,7 +124,7 @@ namespace Raven.Server.Json
             {
                 return list;
             }
-            actualSize = GetActualSize(size); // when we request 7 bytes, we want to get 16 bytes
+            actualSize = GetIndexSize(index, size); // when we request 7 bytes, we want to get 16 bytes
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
@@ -133,18 +133,18 @@ namespace Raven.Server.Json
         }
 
 
-        public static int GetActualSize(int size)
+        private static int GetIndexSize(int index, int size)
         {
-            switch (size)
+            switch (index)
             {
                 case 1:
                 case 2:
+                case 3:
                 case 4:
-                case 8:
-                case 16:
+                case 5:
                     return 16;
-                case 2048:
-                case 4096:
+                case 12:
+                case 13:
                     return 4096;
                 default:
                     return size;
@@ -153,48 +153,16 @@ namespace Raven.Server.Json
 
         public static int GetIndexFromSize(int size)
         {
-            switch (size)
+            if (size > 1024*1024)
+                return -1;
+
+            var c = 0;
+            while (size > 0)
             {
-                case 1:
-                case 2:
-                case 4:
-                case 8:
-                case 16:
-                    return 0;
-                case 32:
-                    return 1;
-                case 64:
-                    return 2;
-                case 128:
-                    return 3;
-                case 256:
-                    return 4;
-                case 512:
-                    return 5;
-                case 1024:
-                    return 6;
-                case 2048:
-                case 4096:
-                    return 7;
-                case 8192:
-                    return 8;
-                case 16384:
-                    return 9;
-                case 32768:
-                    return 10;
-                case 65536:
-                    return 11;
-                case 131072:
-                    return 12;
-                case 262144:
-                    return 13;
-                case 524288:
-                    return 14;
-                case 1048576:
-                    return 15;
-                default:
-                    return -1;// not pooled, just alloc / free as is
+                size >>= 1;
+                c++;
             }
+            return c;
         }
 
         public void Return(AllocatedMemoryData returned)

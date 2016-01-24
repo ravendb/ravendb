@@ -26,27 +26,28 @@ namespace Tryouts
 
         public unsafe static void Main(string[] args)
         {
-            var trie = Trie<int>.Build(new[]
-           {
-                "admin/databases",
-                "databases/*/docs",
-                "databases",
-                "databases/*/queries",
-                "fs/*/stats",
-                "databases/*/indexes/$",
-                "fs/*/files",
-                "admin/debug-info",
-                "dbs",
-                "dbs/*/docs",
-                "dbs/*/queries"
-            }.ToDictionary(x => x, x => 1));
+          
+            // var trie = Trie<int>.Build(new[]
+            //{
+            //     "admin/databases",
+            //     "databases/*/docs",
+            //     "databases",
+            //     "databases/*/queries",
+            //     "fs/*/stats",
+            //     "databases/*/indexes/$",
+            //     "fs/*/files",
+            //     "admin/debug-info",
+            //     "dbs",
+            //     "dbs/*/docs",
+            //     "dbs/*/queries"
+            // }.ToDictionary(x => x, x => 1));
 
-            var tryMatch = trie.TryMatch("Databases/northwind/Docs");
-            if (tryMatch.Success)
-            {
-                Console.WriteLine("Found");
-                Console.WriteLine(tryMatch.Url.Substring(tryMatch.CaptureStart, tryMatch.CaptureLength));
-            }
+            // var tryMatch = trie.TryMatch("Databases/northwind/Docs");
+            // if (tryMatch.Success)
+            // {
+            //     Console.WriteLine("Found");
+            //     Console.WriteLine(tryMatch.Url.Substring(tryMatch.CaptureStart, tryMatch.CaptureLength));
+            // }
 
             ////Console.WriteLine("start");
             ////var blittableFormatTests = new UnmanagedStreamTests();
@@ -56,20 +57,20 @@ namespace Tryouts
             ////Console.WriteLine("Done");
             ////return;
 
-            ////force loading of assemblyes
-            //Console.WriteLine(typeof(UnmanageJsonReaderTests));
-            //Console.WriteLine(typeof(BlittableJsonDocument));
-            //Console.WriteLine(typeof(Hashing));
-            //Console.WriteLine(typeof(StorageEnvironment));
+            //force loading of assemblyes
+            Console.WriteLine(typeof(UnmanageJsonReaderTests));
+            Console.WriteLine(typeof(BlittableJsonDocument));
+            Console.WriteLine(typeof(Hashing));
+            Console.WriteLine(typeof(StorageEnvironment));
 
-            ////WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
-            ////Console.WriteLine("Really starting now...");
-            ////WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
-
-            ////WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", 2);
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", 2);
             //Console.WriteLine("Really starting now...");
-            //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", int.MaxValue);
-            //Console.WriteLine("done!");
+            //WriteToStreamBenchmark.PerformanceAnalysis(@"C:\Work\JSON\Big", "output.csv", int.MaxValue);
+
+            //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", 2);
+            Console.WriteLine("Really starting now...");
+            WriteToStreamBenchmark.ManySmallDocs(@"D:\JSON\Lines", int.MaxValue);
+            Console.WriteLine("done!");
         }
     }
 }

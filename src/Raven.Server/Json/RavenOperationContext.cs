@@ -2,15 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Bond;
-using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Binary;
-//using Raven.Imports.Newtonsoft.Json;
 using Voron.Impl;
 using Voron.Util;
-using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace Raven.Server.Json
 {
@@ -19,7 +14,7 @@ namespace Raven.Server.Json
     /// </summary>
     public unsafe class RavenOperationContext : IDisposable
     {
-        private LinkedList<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
+        private Stack<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
 
         public readonly UnmanagedBuffersPool Pool;
         private UnmanagedBuffersPool.AllocatedMemoryData _tempBuffer;
@@ -93,8 +88,7 @@ namespace Raven.Server.Json
             if (_allocatedMemory?[index] == null ||
                 _allocatedMemory[index].Count == 0)
                 return Pool.Allocate(actualSize);
-            var last = _allocatedMemory[index].Last.Value;
-            _allocatedMemory[index].RemoveLast();
+            var last = _allocatedMemory[index].Pop();
             return last;
         }
 
@@ -104,7 +98,7 @@ namespace Raven.Server.Json
                 return;
 
             if (_allocatedMemory == null)
-                _allocatedMemory = new LinkedList<UnmanagedBuffersPool.AllocatedMemoryData>[16];
+                _allocatedMemory = new Stack<UnmanagedBuffersPool.AllocatedMemoryData>[32];
             var index = UnmanagedBuffersPool.GetIndexFromSize(buffer.SizeInBytes);
             if (index == -1)
             {
@@ -112,8 +106,8 @@ namespace Raven.Server.Json
                 return;
             }
             if (_allocatedMemory[index] == null)
-                _allocatedMemory[index] = new LinkedList<UnmanagedBuffersPool.AllocatedMemoryData>();
-            _allocatedMemory[index].AddLast(buffer);
+                _allocatedMemory[index] = new Stack<UnmanagedBuffersPool.AllocatedMemoryData>();
+            _allocatedMemory[index].Push(buffer);
         }
 
         /// <summary>
