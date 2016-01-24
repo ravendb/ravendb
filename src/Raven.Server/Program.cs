@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Abstractions.Logging;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 
@@ -19,15 +20,15 @@ namespace Raven.Server
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
+            // TODO (fitzchak): remove dependency of Microsoft.AspNet.Mvc
+            // services.AddMvc();
         }
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
-            app.Run(async context =>
-            {
-                await context.Response.WriteAsync("Hello there");
-            });
+            var route = new RouteScanner(app.ApplicationServices.GetRequiredService<ServerStore>());
+            route.Scan();
+            app.Run(context => route.HandlePath(context));
         }
 
         public static int Main(string[] args)
