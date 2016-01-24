@@ -29,17 +29,22 @@ namespace Tryouts
             var trie = Trie<int>.Build(new[]
            {
                 "admin/databases",
-                "db/*/docs",
+                "databases/*/docs",
+                "databases",
                 "databases/*/queries",
                 "fs/*/stats",
                 "databases/*/indexes/$",
                 "fs/*/files",
                 "admin/debug-info",
+                "dbs",
+                "dbs/*/docs",
+                "dbs/*/queries"
             }.ToDictionary(x => x, x => 1));
 
-            var tryMatch = trie.TryMatch("Db/רוח-צפונית/Docs");
+            var tryMatch = trie.TryMatch("dbs");
             if (tryMatch.Success)
             {
+                Console.WriteLine("Found");
                 Console.WriteLine(tryMatch.Url.Substring(tryMatch.CaptureStart, tryMatch.CaptureLength));
             }
 
