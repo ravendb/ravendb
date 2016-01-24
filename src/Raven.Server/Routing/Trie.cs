@@ -156,15 +156,14 @@ namespace Raven.Server.Routing
             if (maxKey.StartsWith(minKey))
             {
                 current.Value = source[minKey];
-                Build(current, source, sortedKeys, minKey.Length, start + 1, count-1);
                 current.Key = minKey.Substring(matchStart, minKey.Length - matchStart);
+                AddChild(current, source, sortedKeys, minKey.Length, start + 1, count - 1);
                 return;
             }
 
             current.Key = minKey.Substring(matchStart, matchingIndex - matchStart);
             var childStart = start;
             var childCount = 1;
-            Trie<T> child;
 
             while (childStart + childCount < start + count)
             {
@@ -175,17 +174,19 @@ namespace Raven.Server.Routing
                     continue;
                 }
                 minKey = nextKey;
-                child = new Trie<T>();
-                Build(child, source, sortedKeys, matchingIndex, childStart, childCount);
-                current.Children[char.ToUpper(child.Key[0])] = child;
-                current.Children[char.ToLower(child.Key[0])] = child;
+                AddChild(current, source, sortedKeys, matchingIndex, childStart, childCount);
                 childStart += childCount;
                 childCount = 1;
             }
+            AddChild(current, source, sortedKeys, matchingIndex, childStart, childCount);
+        }
+
+        private static void AddChild(Trie<T> current, Dictionary<string, T> source, string[] sortedKeys, int matchingIndex, int childStart,
+            int childCount)
+        {
+            Trie<T> child;
             child = new Trie<T>();
-
             Build(child, source, sortedKeys, matchingIndex, childStart, childCount);
-
             current.Children[char.ToUpper(child.Key[0])] = child;
             current.Children[char.ToLower(child.Key[0])] = child;
         }

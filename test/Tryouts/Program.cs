@@ -41,7 +41,7 @@ namespace Tryouts
                 "dbs/*/queries"
             }.ToDictionary(x => x, x => 1));
 
-            var tryMatch = trie.TryMatch("dbs");
+            var tryMatch = trie.TryMatch("Databases/northwind/Docs");
             if (tryMatch.Success)
             {
                 Console.WriteLine("Found");
