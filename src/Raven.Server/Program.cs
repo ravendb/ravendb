@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Abstractions.Logging;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 
@@ -24,10 +25,10 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
-            app.Run(async context =>
-            {
-                await context.Response.WriteAsync("Hello there");
-            });
+            var scanner = new RouteScanner(app.ApplicationServices.GetRequiredService<ServerStore>());
+            var routes = scanner.Scan();
+            var router = new RequestRouter(routes);
+            app.Run(context => router.HandlePath(context));
         }
 
         public static int Main(string[] args)

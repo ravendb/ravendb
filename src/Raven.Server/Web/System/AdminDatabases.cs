@@ -4,14 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
-using Raven.Imports.Newtonsoft.Json;
-//using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using JsonTextReader = Newtonsoft.Json.JsonTextReader;
 
 namespace Raven.Server.Web.System
 {
@@ -24,7 +21,8 @@ namespace Raven.Server.Web.System
             _serverStore = serverStore;
         }
 
-        public override Task Get(HttpContext ctx)
+        [Route("/databases", "GET")]
+        public Task Get(HttpContext ctx)
         {
             RavenOperationContext context;
             using (_serverStore.AllocateRequestContext(out context))
@@ -42,7 +40,8 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public override Task Put(HttpContext ctx)
+        [Route("/databases", "PUT")]
+        public Task Put(HttpContext ctx)
         {
             RavenOperationContext context;
             using (_serverStore.AllocateRequestContext(out context))
