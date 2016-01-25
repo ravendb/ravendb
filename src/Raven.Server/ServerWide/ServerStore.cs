@@ -20,6 +20,8 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public unsafe class ServerStore : IDisposable
     {
+        public string DataDirectory;
+
         private static readonly ILog Log = LogManager.GetLogger(typeof(ServerStore));
 
         private StorageEnvironment _env;
@@ -38,14 +40,17 @@ namespace Raven.Server.ServerWide
         public void Initialize()
         {
             var runInMemory = _config.Get<bool>("run.in.memory");
-            var path = _config.Get<string>("system.path").ToFullPath();
+            if (runInMemory == false)
+            {
+                DataDirectory = _config.Get<string>("system.path").ToFullPath();
+            }
             if (Log.IsDebugEnabled)
             {
-                Log.Debug("Starting to open server store for {0}", (runInMemory ? "<memory>" : path));
+                Log.Debug("Starting to open server store for {0}", (runInMemory ? "<memory>" : DataDirectory));
             }
             var options = runInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(path);
+                : StorageEnvironmentOptions.ForPath(DataDirectory);
 
             options.SchemaVersion = 1;
 
@@ -63,7 +68,7 @@ namespace Raven.Server.ServerWide
                 if (Log.IsWarnEnabled)
                 {
                     Log.FatalException(
-                        "Could not open server store for " + (runInMemory ? "<memory>" : path), e);
+                        "Could not open server store for " + (runInMemory ? "<memory>" : DataDirectory), e);
                 }
                 options.Dispose();
                 throw;
