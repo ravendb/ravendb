@@ -38,7 +38,7 @@ namespace Raven.Server.Routing
                 return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
             }
 
-            var reqCtx = new CurrentRequestContext
+            var reqCtx = new RequestHandlerContext
             {
                 HttpContext = context,
                 ServerStore = context.ApplicationServices.GetRequiredService<ServerStore>(),

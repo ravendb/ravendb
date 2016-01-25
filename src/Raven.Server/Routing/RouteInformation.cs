@@ -8,7 +8,7 @@ using Raven.Server.Web;
 
 namespace Raven.Server.Routing
 {
-    public delegate Task RequestHandler(CurrentRequestContext ctx);
+    public delegate Task RequestHandler(RequestHandlerContext ctx);
 
     public class RouteInformation
     {
@@ -25,7 +25,7 @@ namespace Raven.Server.Routing
         public void Build(MemberInfo memberInfo, string method)
         {
             // CurrentRequestContext currentRequestContext
-            var currentRequestContext = Expression.Parameter(typeof (CurrentRequestContext), "currentRequestContext");
+            var currentRequestContext = Expression.Parameter(typeof (RequestHandlerContext), "currentRequestContext");
             // new Handler(currentRequestContext)
             var constructorInfo = memberInfo.DeclaringType.GetConstructors().Single();
             var newExpression = Expression.New(constructorInfo, currentRequestContext);

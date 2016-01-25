@@ -4,7 +4,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Web
 {
-    public class CurrentRequestContext
+    public class RequestHandlerContext
     {
         public HttpContext HttpContext;
         public ServerStore ServerStore;

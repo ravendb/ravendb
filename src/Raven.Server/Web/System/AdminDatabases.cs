@@ -12,29 +12,29 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabases : RequestHandler
     {
-        private readonly CurrentRequestContext _requestContext;
+        private readonly RequestHandlerContext _requestHandlerContext;
 
-        public AdminDatabases(CurrentRequestContext requestContext)
+        public AdminDatabases(RequestHandlerContext requestHandlerContext)
         {
-            _requestContext = requestContext;
+            _requestHandlerContext = requestHandlerContext;
         }
 
         [Route("/admin/databases/$", "GET")]
         public Task Get()
         {
             RavenOperationContext context;
-            using (_requestContext.ServerStore.AllocateRequestContext(out context))
+            using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                var id = _requestContext.RouteMatch.Url.Substring(_requestContext.RouteMatch.MatchLength);
+                var id = _requestHandlerContext.RouteMatch.Url.Substring(_requestHandlerContext.RouteMatch.MatchLength);
                 var dbId = "db/" + id;
-                var obj = _requestContext.ServerStore.Read(context, dbId);
+                var obj = _requestHandlerContext.ServerStore.Read(context, dbId);
                 if (obj == null)
                 {
-                    _requestContext.HttpContext.Response.StatusCode = 404;
+                    _requestHandlerContext.HttpContext.Response.StatusCode = 404;
                     return Task.CompletedTask;
                 }
-                _requestContext.HttpContext.Response.StatusCode = 200;
-                obj.WriteTo(_requestContext.HttpContext.Response.Body);
+                _requestHandlerContext.HttpContext.Response.StatusCode = 200;
+                obj.WriteTo(_requestHandlerContext.HttpContext.Response.Body);
                 return Task.CompletedTask;
             }
         }
@@ -43,16 +43,16 @@ namespace Raven.Server.Web.System
         public Task Put()
         {
             RavenOperationContext context;
-            using (_requestContext.ServerStore.AllocateRequestContext(out context))
+            using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                var id = _requestContext.RouteMatch.Url.Substring(_requestContext.RouteMatch.MatchLength);
+                var id = _requestHandlerContext.RouteMatch.Url.Substring(_requestHandlerContext.RouteMatch.MatchLength);
                 var dbId = "db/" + id;
 
-                var writer = context.Read(_requestContext.HttpContext.Request.Body,  dbId);
+                var writer = context.Read(_requestHandlerContext.HttpContext.Request.Body,  dbId);
 
-                _requestContext.ServerStore.Write(dbId, writer);
+                _requestHandlerContext.ServerStore.Write(dbId, writer);
 
-                _requestContext.HttpContext.Response.StatusCode = 201;
+                _requestHandlerContext.HttpContext.Response.StatusCode = 201;
 
                 return Task.CompletedTask;
             }
