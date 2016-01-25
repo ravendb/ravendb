@@ -4,17 +4,13 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security;
-using System.Security.Cryptography;
 using System.Text;
-using Sparrow;
-using Sparrow.Platform;
 
 namespace Raven.Server.Json
 {
     public unsafe class UnmanagedJsonParser : IDisposable
     {
-        public static readonly byte[] Utf8Preamble = System.Text.Encoding.UTF8.GetPreamble();
+        public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
         private readonly Stream _stream;
         private readonly byte[] _buffer;
