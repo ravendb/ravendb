@@ -5,8 +5,13 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
+using Raven.Abstractions.Data;
+using Raven.Client.Extensions;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 
@@ -72,13 +77,26 @@ namespace Raven.Server.Web.System
                 var dbId = "db/" + id;
 
                 var etag = _requestHandlerContext.HttpContext.Request.Headers["ETag"];
-                if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage) == false)
+                string errorMessage2;
+                if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage2) == false)
                 {
                     _requestHandlerContext.HttpContext.Response.StatusCode = 400;
-                    return _requestHandlerContext.HttpContext.Response.WriteAsync(errorMessage);
+                    return _requestHandlerContext.HttpContext.Response.WriteAsync(errorMessage2);
                 }
 
-                var dbDoc = context.Read(_requestHandlerContext.HttpContext.Request.Body, dbId);
+                BlittableJsonDocument dbDoc;
+                try
+                {
+                    dbDoc = context.Read(_requestHandlerContext.HttpContext.Request.Body, dbId);
+                }
+                catch (EndOfStreamException)
+                {
+                    _requestHandlerContext.HttpContext.Response.StatusCode = 400;
+                    var exampleDocument = MultiDatabase.CreateDatabaseDocument(id);
+                    var exampleJson = RavenJObject.FromObject(exampleDocument).ToString(Formatting.Indented);
+                    return _requestHandlerContext.HttpContext.Response.WriteAsync("The request body is not valid. Here is an example for a valid request body: " + exampleJson);
+                }
+
                 _requestHandlerContext.ServerStore.Write(dbId, dbDoc);
                 _requestHandlerContext.HttpContext.Response.StatusCode = 201;
                 return Task.CompletedTask;
