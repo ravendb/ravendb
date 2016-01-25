@@ -1869,8 +1869,10 @@ namespace Raven.Client.Indexes
                     return node;
 
                 case ExpressionType.NewArrayBounds:
-                    Out("new ");
-                    OutputAppropriateArrayType(node);
+                    if (TypeExistsOnServer(node.Type))
+                        Out("new " + node.Type.GetElementType());
+                    else
+                        Out("new object");
                     VisitExpressions('[', node.Expressions, ']');
                     return node;
             }
