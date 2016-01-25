@@ -29,18 +29,18 @@ namespace Raven.Server.Web.System
             {
                 var id = _requestHandlerContext.RouteMatch.Url.Substring(_requestHandlerContext.RouteMatch.MatchLength);
                 var dbId = "db/" + id;
-                var obj = _requestHandlerContext.ServerStore.Read(context, dbId);
-                if (obj == null)
+                var dbDoc = _requestHandlerContext.ServerStore.Read(context, dbId);
+                if (dbDoc == null)
                 {
                     _requestHandlerContext.HttpContext.Response.StatusCode = 404;
                     return _requestHandlerContext.HttpContext.Response.WriteAsync("Database " + id + " wasn't found");
                 }
 
-                UnprotectSecuredSettingsOfDatabaseDocument(obj);
+                UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
 
                 _requestHandlerContext.HttpContext.Response.StatusCode = 200;
                 _requestHandlerContext.HttpContext.Response.Headers["ETag"] = "TODO: Please implement this: " + Guid.NewGuid(); // TODO (fitzchak)
-                obj.WriteTo(_requestHandlerContext.HttpContext.Response.Body);
+                dbDoc.WriteTo(_requestHandlerContext.HttpContext.Response.Body);
                 return Task.CompletedTask;
             }
         }
@@ -71,14 +71,38 @@ namespace Raven.Server.Web.System
             {
                 var dbId = "db/" + id;
 
-                var writer = context.Read(_requestHandlerContext.HttpContext.Request.Body,  dbId);
+                var etag = _requestHandlerContext.HttpContext.Request.Headers["ETag"];
+                if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage) == false)
+                {
+                    _requestHandlerContext.HttpContext.Response.StatusCode = 400;
+                    return _requestHandlerContext.HttpContext.Response.WriteAsync(errorMessage);
+                }
 
-                _requestHandlerContext.ServerStore.Write(dbId, writer);
-
+                var dbDoc = context.Read(_requestHandlerContext.HttpContext.Request.Body, dbId);
+                _requestHandlerContext.ServerStore.Write(dbId, dbDoc);
                 _requestHandlerContext.HttpContext.Response.StatusCode = 201;
-
                 return Task.CompletedTask;
             }
+        }
+
+        private bool CheckExistingDatabaseName(RavenOperationContext context, string id, string dbId, string etag, out string errorMessage)
+        {
+            var database = _requestHandlerContext.ServerStore.Read(context, dbId);
+            var isExistingDatabase = database != null;
+
+            if (isExistingDatabase && etag == null)
+            {
+                errorMessage = $"Database with the name '{id}' already exists";
+                return false;
+            }
+            if (!isExistingDatabase && etag != null)
+            {
+                errorMessage = $"Database with the name '{id}' doesn't exist";
+                return false;
+            }
+
+            errorMessage = null;
+            return true;
         }
     }
 }
