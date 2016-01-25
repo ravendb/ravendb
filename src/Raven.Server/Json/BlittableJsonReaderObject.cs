@@ -9,7 +9,7 @@ namespace Raven.Server.Json
 {
     public class BlittableJsonReaderObject : BlittableJsonReaderBase
     {
-        private readonly unsafe byte* _propTags;
+        private readonly unsafe byte* _metadataPtr;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
@@ -52,7 +52,7 @@ namespace Raven.Server.Json
             byte propCountOffset = 0;
             _propCount = ReadVariableSizeInt(objStartOffset, out propCountOffset); // get main object properties count
             _objStart = objStartOffset + mem;
-            _propTags = objStartOffset + mem + propCountOffset;
+            _metadataPtr = objStartOffset + mem + propCountOffset;
             // get pointer to current objects property tags metadata collection
 
             var currentType = (BlittableJsonToken)(*(mem + size - sizeof(byte)));
@@ -91,7 +91,7 @@ namespace Raven.Server.Json
             _objStart = _mem + pos;
             byte propCountOffset;
             _propCount = ReadVariableSizeInt(pos, out propCountOffset);
-            _propTags = _objStart + propCountOffset;
+            _metadataPtr = _objStart + propCountOffset;
 
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
@@ -113,7 +113,7 @@ namespace Raven.Server.Json
             // Prepare an array of all offsets and property ids
             for (var i = 0; i < _propCount; i++)
             {
-                var propertyIntPtr = (long)_propTags + (i) * metadataSize;
+                var propertyIntPtr = (long)_metadataPtr + (i) * metadataSize;
                 var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var propertyOffset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
                 idsAndOffsets[i] = new BlittableJsonDocument.PropertyTag
@@ -197,7 +197,7 @@ namespace Raven.Server.Json
             do
             {
                 var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof (byte));
-                var propertyIntPtr = (long) _propTags + (mid)*metadataSize;
+                var propertyIntPtr = (long) _metadataPtr + (mid)*metadataSize;
 
                 var offset = ReadNumber((byte*) propertyIntPtr, _currentOffsetSize);
                 var propertyId = ReadNumber((byte*) propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
@@ -294,7 +294,7 @@ namespace Raven.Server.Json
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
             for (int i = 0; i < props.Length; i++)
             {
-                var propertyIntPtr = _propTags + i * metadataSize;
+                var propertyIntPtr = _metadataPtr + i * metadataSize;
                 var propertyOffset = ReadNumber(propertyIntPtr, _currentOffsetSize);
                 var propertyId = ReadNumber(propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var type = (BlittableJsonToken)(*(propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize));
@@ -330,7 +330,7 @@ namespace Raven.Server.Json
                 {
                     writer.WriteComma();
                 }
-                var propertyIntPtr = _propTags + (i * metadataSize);
+                var propertyIntPtr = _metadataPtr + (i * metadataSize);
                 var propertyOffset = ReadNumber(propertyIntPtr, _currentOffsetSize);
                 var propertyId = ReadNumber(propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var type = (BlittableJsonToken)(*(propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize));

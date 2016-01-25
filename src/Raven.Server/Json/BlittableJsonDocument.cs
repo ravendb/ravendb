@@ -378,10 +378,7 @@ namespace Raven.Server.Json
             {
                 WriteNumber(arrayInfoStart - positions[i], distanceTypeSize);
                 _position += distanceTypeSize;
-            }
 
-            for (var i = 0; i < types.Count; i++)
-            {
                 _stream.WriteByte((byte)types[i]);
                 _position++;
             }

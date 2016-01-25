@@ -50,7 +50,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             }
         }
 
-        [Theory]
+        [Fact]
         public void ShouldNotCrashForManyDifferentProperties()
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })
