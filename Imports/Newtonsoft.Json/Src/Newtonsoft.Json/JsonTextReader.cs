@@ -1766,11 +1766,11 @@ namespace Raven.Imports.Newtonsoft.Json
         {
             if (_charPos == _charsUsed)
                 ReadData(false);
+
             var originBufferPos = bufferPos;
             bool stop = false;
-            for (; _charPos < _charsUsed && 
-                bufferPos < buffer.Length - 2; /*we leave the last two characters free to allow completion*/
-                _charPos++)
+            while( _charPos < _charsUsed && 
+                bufferPos < buffer.Length - 2) /*we leave the last two characters free to allow completion*/
             {
                 var c = charsLookupTable[_chars[_charPos]];
                 switch (c)
@@ -1778,7 +1778,7 @@ namespace Raven.Imports.Newtonsoft.Json
                     case WHITESPACE:
                         continue;
                     case INVALID:
-                        throw new InvalidOperationException("Invalid base64 char " + _chars[_charPos] + ", at position " + _charPos);
+                        throw new InvalidOperationException("Found invalid base64 char while reading property into stream -> " + _chars[_charPos] + ", at position " + _charPos);
                     case QUOTE:
                     case EQUALS:
                         stop = true;
@@ -1799,6 +1799,10 @@ namespace Raven.Imports.Newtonsoft.Json
                 }
                 if (stop)
                     break;
+
+                _charPos++;
+                if (_charPos == _charsUsed)
+                    ReadData(false);				
             }
 
             return bufferPos - originBufferPos;

@@ -50,7 +50,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
         private readonly ServerClient operationClient;
 #else
-		private readonly AsyncServerClient operationClient;
+        private readonly AsyncServerClient operationClient;
 #endif
         private readonly IDatabaseChanges operationChanges;
         private readonly MemoryStream bufferedStream = new MemoryStream();
@@ -63,7 +63,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
         public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
 #else
-		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
+        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
         {
             using (NoSynchronizationContext.Scope())
@@ -144,27 +144,27 @@ namespace Raven.Client.Document
         private Task<RavenJToken> GetAuthToken()
         {
 #if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken",
+            var request = operationClient.CreateRequest("GET", "/singleAuthToken",
                                                         disableRequestCompression: true);
 
             return new CompletedTask<RavenJToken>(request.ReadResponseJson());
 #else
-			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
-														disableRequestCompression: true);
-			request.webRequest.ContentLength = 0;
+            var request = operationClient.CreateRequest("/singleAuthToken", "GET",
+                                                        disableRequestCompression: true);
+            request.webRequest.ContentLength = 0;
 
-			return request.ReadResponseJsonAsync();
+            return request.ReadResponseJsonAsync();
 #endif
-		}
+        }
 
         private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
 #if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
+            var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
 #else
-			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+            var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 #endif
-			request.DisableAuthentication();
+            request.DisableAuthentication();
             request.webRequest.ContentLength = 0;
             request.AddOperationHeader("Single-Use-Auth-Token", token);
             var result = await request.ReadResponseJsonAsync();
@@ -176,7 +176,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
             var request = operationClient.CreateRequest("POST", operationUrl, disableRequestCompression: true);
 #else
-			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
+            var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
 #endif
             request.DisableAuthentication();
             // the request may take a long time to process, so we need to set a large timeout value
@@ -264,7 +264,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
             return new CompletedTask<RavenJToken>(operationClient.GetOperationStatus(operationId));
 #else
-			return operationClient.GetOperationStatusAsync(operationId);
+            return operationClient.GetOperationStatusAsync(operationId);
 #endif
         }
 
@@ -325,19 +325,19 @@ namespace Raven.Client.Document
         }
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
-        {
+        {            
+            WriteBatchToTempBuffer(localBatch);
+            WriteTempBufferTo(requestStream);
+
+            //if the local batch is empty, this means
+            //that the bulk insert operation is empty and there is
+            //no need to continue with reporting how much stuff was written
+            //-> essentially it is a "keep-alive" message
             if (localBatch.Count == 0)
                 return;
-            bufferedStream.SetLength(0);
-            WriteToBuffer(localBatch);
-
-            var requestBinaryWriter = new BinaryWriter(requestStream);
-            requestBinaryWriter.Write((int)bufferedStream.Position);
-            bufferedStream.WriteTo(requestStream);
-            requestStream.Flush();
 
             total += localBatch.Count;
-            Action<string> report = Report;
+            var report = Report;
             if (report != null)
             {
                 report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
@@ -347,8 +347,17 @@ namespace Raven.Client.Document
             }
         }
 
-        private void WriteToBuffer(ICollection<RavenJObject> localBatch)
+        private void WriteTempBufferTo(Stream requestStream)
         {
+            var requestBinaryWriter = new BinaryWriter(requestStream);
+            requestBinaryWriter.Write((int) bufferedStream.Position);
+            bufferedStream.WriteTo(requestStream);
+            requestStream.Flush();
+        }
+
+        private void WriteBatchToTempBuffer(ICollection<RavenJObject> localBatch)
+        {
+            bufferedStream.SetLength(0);
             using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
             {
                 var binaryWriter = new BinaryWriter(gzip);

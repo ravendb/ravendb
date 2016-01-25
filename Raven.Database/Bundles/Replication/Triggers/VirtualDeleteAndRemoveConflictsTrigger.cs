@@ -6,11 +6,10 @@
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
+
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database.Bundles.Replication.Impl;
-using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -44,39 +43,23 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.GetDocumentMetadata(key, transactionInformation);
+				var metadata = Database.GetDocumentMetadata(key, transactionInformation);
 
-				if (document == null)
+				if (metadata == null)
 					return;
 
-                JsonDocument docWithBody;
-				if (IsConflictDocument(document, transactionInformation, out docWithBody))
+				JsonDocument document = null;
+				if (IsConflictDocument(metadata, transactionInformation, ref document) == false && HasConflict(metadata, transactionInformation, ref document))
 				{
-
-					HandleConflictedDocument(docWithBody, transactionInformation);
+					HandleConflictedDocument(document, transactionInformation);
 					return;
 				}
 
-				HandleDocument(document);
+				HandleDocument(metadata);
 			}
 		}
 
-
-        private bool IsConflictDocument(JsonDocumentMetadata document, TransactionInformation transactionInformation, out JsonDocument docWithBody)
-        {
-	        var IsConflictsPositive = true;
-            docWithBody = null;
-            var conflict = document.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
-            if (conflict == null || conflict.Value<bool>() == false)
-            {
-                return false;
-            }
-
-            docWithBody = Database.Get(document.Key, transactionInformation);
-
-	        return true;
-        }
-        public override void AfterDelete(string key, TransactionInformation transactionInformation)
+		public override void AfterDelete(string key, TransactionInformation transactionInformation)
 		{
 			var metadata = new RavenJObject
 			{
@@ -87,7 +70,7 @@ namespace Raven.Bundles.Replication.Triggers
 			};
 			deletedHistory.Value = null;
 
-			Database.TransactionalStorage.Batch(accessor => 
+			Database.TransactionalStorage.Batch(accessor =>
 				accessor.Lists.Set(Constants.RavenReplicationDocsTombstones, key, metadata, UuidType.Documents));
 		}
 
@@ -96,43 +79,82 @@ namespace Raven.Bundles.Replication.Triggers
 			var conflicts = document.DataAsJson.Value<RavenJArray>("Conflicts");
 			var currentSource = Database.TransactionalStorage.Id.ToString();
 			var historySet = false;
-			
+
 			foreach (var c in conflicts)
 			{
-                RavenJObject conflict;
-                Database.Delete(c.Value<string>(), null, transactionInformation, out conflict);
+				RavenJObject conflict;
+				if (Database.Delete(c.Value<string>(), null, transactionInformation, out conflict) == false)
+					continue;
+
+				if (historySet)
+					continue;
 
 				var conflictSource = conflict.Value<RavenJValue>(Constants.RavenReplicationSource).Value<string>();
 
 				if (conflictSource != currentSource)
 					continue;
 
-				if (!historySet)
+				deletedHistory.Value = new RavenJArray
 				{
-					this.deletedHistory.Value = new RavenJArray
+					new RavenJObject
 					{
-						new RavenJObject
-						{
-							{Constants.RavenReplicationVersion, conflict[Constants.RavenReplicationVersion]},
-							{Constants.RavenReplicationSource, conflict[Constants.RavenReplicationSource]}
-						}
-					};
-					historySet = true;
-				}
+						{ Constants.RavenReplicationVersion, conflict[Constants.RavenReplicationVersion] },
+						{ Constants.RavenReplicationSource, conflict[Constants.RavenReplicationSource] }
+					}
+				};
+
+				historySet = true;
 			}
 		}
 
-		private void HandleDocument(JsonDocumentMetadata document)
+		private void HandleDocument(JsonDocumentMetadata metadata)
 		{
-			deletedHistory.Value = new RavenJArray(ReplicationData.GetHistory(document.Metadata))
+			deletedHistory.Value = new RavenJArray(ReplicationData.GetHistory(metadata.Metadata))
 			{
 				new RavenJObject
 				{
-					{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
-					{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
+					{Constants.RavenReplicationVersion, metadata.Metadata[Constants.RavenReplicationVersion]},
+					{Constants.RavenReplicationSource, metadata.Metadata[Constants.RavenReplicationSource]}
 				}
 			};
 		}
 
+		private bool HasConflict(JsonDocumentMetadata metadata, TransactionInformation transactionInformation, ref JsonDocument document)
+		{
+			var conflict = metadata.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
+
+			if (conflict != null && conflict.Value<bool>())
+			{
+				document = document ?? Database.Get(metadata.Key, transactionInformation);
+				return document.DataAsJson.Value<RavenJArray>("Conflicts") != null;
+			}
+
+			return false;
+		}
+
+		public bool IsConflictDocument(JsonDocumentMetadata metadata, TransactionInformation transactionInformation, ref JsonDocument document)
+		{
+			var conflict = metadata.Metadata.Value<RavenJValue>(Constants.RavenReplicationConflict);
+			if (conflict == null || conflict.Value<bool>() == false)
+			{
+				return false;
+			}
+
+			var keyParts = metadata.Key.Split('/');
+			if (keyParts.Contains("conflicts") == false)
+			{
+				return false;
+			}
+
+			document = Database.Get(metadata.Key, transactionInformation);
+
+			var conflicts = document.DataAsJson.Value<RavenJArray>("Conflicts");
+			if (conflicts != null)
+			{
+				return false;
+			}
+
+			return true;
+		}
 	}
 }
