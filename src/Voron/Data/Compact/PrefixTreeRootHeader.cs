@@ -2,11 +2,17 @@
 
 namespace Voron.Data.Compact
 {
+    /// <summary>
+    /// The Prefix Tree Root Header.
+    /// </summary>    
+    /// <remarks>This header extends the <see cref="RootHeader"/> structure.</remarks>    
     //TODO: Change this when we are ready to go.
     //[StructLayout(LayoutKind.Explicit, Pack = 1)]
     [StructLayout(LayoutKind.Sequential)]
     public struct PrefixTreeRootHeader
     {
+        public RootObjectType RootObjectType;
+
         /// <summary>
         /// The table header page for the tree.
         /// </summary>

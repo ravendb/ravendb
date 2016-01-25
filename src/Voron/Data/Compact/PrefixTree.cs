@@ -42,29 +42,39 @@ namespace Voron.Data.Compact
             Name = treeName.ToString();
         }
 
-        public static PrefixTree Create(LowLevelTransaction tx, Tree parent, Slice treeName)
+        public static PrefixTree Create(LowLevelTransaction tx, Tree parent, Slice treeName, int subtreeDepth = 4)
         {
             var header = (PrefixTreeRootHeader*)parent.DirectAdd(treeName, sizeof(PrefixTreeRootHeader));
+            if (header->RootObjectType != RootObjectType.PrefixTree && header->RootObjectType != RootObjectType.None)
+                throw new InvalidOperationException("Tried to create " + treeName + " as a prefix tree, but it is actually a " + header->RootObjectType);
 
-            var state = new PrefixTreeRootMutableState(tx, header);
+            // TODO: Put all this initialization outside of the mutable state. 
+            var state = new PrefixTreeRootMutableState(tx, header);            
             state.Head = new Leaf { PreviousPtr = Constants.InvalidNodeName, NextPtr = Constants.InvalidNodeName };
             state.Tail = new Leaf { PreviousPtr = Constants.InvalidNodeName, NextPtr = Constants.InvalidNodeName };
             state.Items = 0;
+            state.TranslationTable.Initialize(subtreeDepth);
 
             var tablePage = InternalTable.Allocate(tx, state);
-            state.Table = tablePage.PageNumber;
+            state.Table = tablePage.PageNumber;            
 
             return new PrefixTree(tx, parent, state, treeName);    
         }
 
-        public static PrefixTree OpenOrCreate( LowLevelTransaction tx, Tree parent, Slice treeName)
+        public static bool TryOpen( LowLevelTransaction tx, Tree parent, Slice treeName, out PrefixTree tree )
         {
+            tree = null;
+
             var header = (PrefixTreeRootHeader*)parent.DirectRead(treeName);
             if (header == null)
-                return Create(tx, parent, treeName);
-                           
+                return tree != null;
+
+            if (header->RootObjectType != RootObjectType.PrefixTree)
+                throw new InvalidOperationException("Tried to opened " + treeName + " as a prefix tree, but it is actually a " + header->RootObjectType);
+
             var state = new PrefixTreeRootMutableState(tx, header);
-            return new PrefixTree(tx, parent, state, treeName);            
+            tree = new PrefixTree(tx, parent, state, treeName);            
+            return tree != null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -912,6 +922,10 @@ namespace Voron.Data.Compact
 
         internal Node* ReadNodeByName(long nodeName)
         {
+            var location = _translationTable.MapVirtualToPhysical(nodeName, TranslationTableMapMode.Read);
+            if (location.PageNumber == Constants.InvalidPage)
+                return null;
+
             throw new NotImplementedException();
         }
 

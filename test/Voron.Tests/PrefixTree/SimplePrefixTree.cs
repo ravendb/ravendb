@@ -17,14 +17,14 @@ namespace Voron.Data.Compact.Tests
         {
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.PrefixTreeFor(Name);
+                var tree = tx.CreatePrefixTree(Name);
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var tree = tx.PrefixTreeFor(Name);
+                var tree = tx.ReadPrefixTree(Name);
 
                 Assert.Equal(0, tree.Count);
                 Assert.Equal(Slice.BeforeAllKeys, tree.FirstKeyOrDefault());
@@ -41,7 +41,7 @@ namespace Voron.Data.Compact.Tests
 
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.PrefixTreeFor(Name);
+                var tree = tx.CreatePrefixTree(Name);
 
                 Assert.True(tree.Add(key, (Slice)"eini"));
 
@@ -50,7 +50,7 @@ namespace Voron.Data.Compact.Tests
 
             using (var tx = Env.ReadTransaction())
             {
-                var tree = tx.PrefixTreeFor(Name);
+                var tree = tx.ReadPrefixTree(Name);
 
                 Assert.Equal(key, tree.FirstKey());
                 Assert.Equal(key, tree.LastKey());
@@ -70,7 +70,7 @@ namespace Voron.Data.Compact.Tests
 
             using (var tx = Env.WriteTransaction())
             {
-                var tree = tx.PrefixTreeFor(Name);
+                var tree = tx.CreatePrefixTree(Name);
 
                 Assert.True(tree.Add(key, (Slice)"eini"));
 
@@ -79,7 +79,7 @@ namespace Voron.Data.Compact.Tests
 
             using (var tx = Env.ReadTransaction())
             {
-                var tree = tx.PrefixTreeFor(Name);
+                var tree = tx.ReadPrefixTree(Name);
 
                 // x+ = min{y ? S | y = x} (the successor of x in S) - Page 160 of [1]
                 // Therefore the successor of the key "oren" is greater or equal to "oren"

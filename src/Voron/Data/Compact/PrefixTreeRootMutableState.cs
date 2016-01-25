@@ -22,10 +22,12 @@ namespace Voron.Data.Compact
         public PrefixTreeRootMutableState(LowLevelTransaction tx, PrefixTreeRootHeader* header)
         {
             Debug.Assert(tx != null);
+            Debug.Assert(header->RootObjectType == RootObjectType.None || header->RootObjectType == RootObjectType.PrefixTree);
 
             this._tx = tx;
             this._pointer = header;
             this._innerCopy = *header;
+            this._innerCopy.RootObjectType = RootObjectType.PrefixTree;
             this._translationTable = new PrefixTreeTranslationTableMutableState(tx, this);
         }
 

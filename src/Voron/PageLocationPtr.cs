@@ -14,5 +14,10 @@ namespace Voron
 
         [FieldOffset(8)]
         public long Offset;
+
+        public bool IsValid
+        {
+            get { return PageNumber != -1; }
+        }
     }
 }

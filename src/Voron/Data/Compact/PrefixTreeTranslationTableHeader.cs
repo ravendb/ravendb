@@ -17,6 +17,8 @@ namespace Voron.Data.Compact
 
         public long Items;
 
+        public long ChunkSize;
+
         public long NodesPerChunk;
 
         public long InnerNodesPerChunk;
@@ -61,6 +63,24 @@ namespace Voron.Data.Compact
         }
 
         /// <summary>
+        /// How mnay nodes are stored per chunk. 
+        /// </summary>
+        public long NodesPerChunk
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _innerCopy.NodesPerChunk; }
+        }
+
+        /// <summary>
+        /// How many inner nodes are stored per chunk. 
+        /// </summary>
+        public long InnerNodesPerChunk
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _innerCopy.InnerNodesPerChunk; }
+        }
+
+        /// <summary>
         /// This is the amount of pages/subtrees already reserved in the translation table for the tree.
         /// </summary>
         public long Items
@@ -93,16 +113,29 @@ namespace Voron.Data.Compact
             header->TranslationTable = _innerCopy;
         }
 
+        public void Initialize ( int chunkTreeDepth )
+        {            
+            _innerCopy.NodesPerChunk = (int)Math.Pow(2, chunkTreeDepth) - 1;
+            _innerCopy.InnerNodesPerChunk = (int)Math.Pow(2, chunkTreeDepth - 1) - 1;
+            _innerCopy.ChunkSize = _innerCopy.NodesPerChunk * sizeof(PrefixTree.Node) + sizeof(PrefixTreePageHeader);
+            _innerCopy.PageNumber = PrefixTree.Constants.InvalidPage;
+
+            IsModified = true;
+        }
+
         public PageLocationPtr MapVirtualToPhysical(long nodeName, TranslationTableMapMode mode = TranslationTableMapMode.Read)
         {
             Debug.Assert(_tx.Flags == TransactionFlags.ReadWrite || (_tx.Flags == TransactionFlags.Read && mode == TranslationTableMapMode.Read), "Allocate mode for mapping outside of a write transaction is an invalid operation");
 
+            if (_innerCopy.PageNumber == PrefixTree.Constants.InvalidPage)
+                return new PageLocationPtr { PageNumber = PrefixTree.Constants.InvalidPage, Offset = 0 };
+
             long chunkIdx = nodeName / _innerCopy.NodesPerChunk;
             long nodeNameInChunk = nodeName % _innerCopy.NodesPerChunk;
-
+            
             var table = _tx.GetPage(_innerCopy.PageNumber);
-            Debug.Assert(table.IsOverflow, "This must be an overflow page.");        
-                
+            Debug.Assert(table.IsOverflow, "This must be an overflow page.");                                    
+
             if ( chunkIdx > table.OverflowSize / sizeof(long) )
             {
                 if (mode == TranslationTableMapMode.Read)
@@ -123,7 +156,7 @@ namespace Voron.Data.Compact
             if (physicalPage == PrefixTree.Constants.InvalidPage)
             {
                 if (mode == TranslationTableMapMode.Read)
-                    throw new InvalidOperationException("Mapping cannot allocate trees outside of a write transaction");
+                    return new PageLocationPtr { PageNumber = PrefixTree.Constants.InvalidPage, Offset = 0 };
 
                 // We need to allocate a new tree page and store the physical page number it here. 
                 // Update the physical page 
