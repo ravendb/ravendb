@@ -26,13 +26,11 @@ namespace Raven.Server.Routing
         {
             // CurrentRequestContext currentRequestContext
             var currentRequestContext = Expression.Parameter(typeof (CurrentRequestContext), "currentRequestContext");
-            // currentRequestContext.HttpContext
-            var ctx = Expression.Field(currentRequestContext, typeof(CurrentRequestContext), "HttpContext");
             // new Handler(currentRequestContext)
             var constructorInfo = memberInfo.DeclaringType.GetConstructors().Single();
             var newExpression = Expression.New(constructorInfo, currentRequestContext);
-            // .Handle(ctx);
-            var handleExpr = Expression.Call(newExpression, memberInfo.Name, new Type[0], ctx);
+            // .Handle();
+            var handleExpr = Expression.Call(newExpression, memberInfo.Name, new Type[0]);
             var requestDelegate = Expression.Lambda<RequestHandler>(handleExpr, currentRequestContext).Compile();
             
             //TODO: Verify we don't have two methods on the same path & method!
