@@ -11,6 +11,15 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Routing
 {
+    public struct RouteMatch
+    {
+        public string Url;
+        public bool Success;
+        public int CaptureStart;
+        public int CaptureLength;
+        public int MatchLength;
+    }
+
     /// <summary>
     /// We use this trie for speedy routing, by matching parts of the 
     /// urls in the trie. With the notion that * in route URL will 
@@ -24,21 +33,20 @@ namespace Raven.Server.Routing
         public Trie<T>[] Children;
         public Trie<T>[] FilteredChildren =>  Children?.Where(x => x != null).Distinct().ToArray();
          
-        public struct Match
+        public struct MatchResult
         {
+            public RouteMatch Match;
             public T Value;
-            public string Url;
-            public bool Success;
-            public int CaptureStart;
-            public int CaptureLength;
-            public int MatchLength;
         }
 
-        public Match TryMatch(string url)
+        public MatchResult TryMatch(string url)
         {
-            var match = new Match
+            var match = new MatchResult
             {
-                Url = url
+                Match =
+                {
+                    Url = url
+                }
             };
             var current = this;
             var currentIndex = 0;
@@ -51,8 +59,8 @@ namespace Raven.Server.Routing
                     {
                         if (current.Key[currentIndex] == '$')
                         {
-                            match.Success = true;
-                            match.MatchLength = i;
+                            match.Match.Success = true;
+                            match.Match.MatchLength = i;
                             match.Value = current.Value;
                             return match;
                         }
@@ -71,7 +79,7 @@ namespace Raven.Server.Routing
                     maybe = current.Children['*'];
                     if (maybe != null)
                     {
-                        match.CaptureStart = i;
+                        match.Match.CaptureStart = i;
                         for (; i < url.Length; i++)
                         {
                             if (url[i] == '/')
@@ -79,7 +87,7 @@ namespace Raven.Server.Routing
                                 break;
                             }
                         }
-                        match.CaptureLength = i - match.CaptureStart;
+                        match.Match.CaptureLength = i - match.Match.CaptureStart;
                         i--;
                     }
                 }
@@ -94,8 +102,8 @@ namespace Raven.Server.Routing
                 return match;
 
             match.Value = current.Value;
-            match.MatchLength = url.Length;
-            match.Success = true;
+            match.Match.MatchLength = url.Length;
+            match.Match.Success = true;
             return match;
         }
 

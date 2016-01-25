@@ -5,54 +5,54 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using Microsoft.AspNet.Http;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Web.System
 {
     public class AdminDatabases : RequestHandler
     {
-        private readonly ServerStore _serverStore;
+        private readonly RequestHandlerContext _requestHandlerContext;
 
-        public AdminDatabases(ServerStore serverStore)
+        public AdminDatabases(RequestHandlerContext requestHandlerContext)
         {
-            _serverStore = serverStore;
+            _requestHandlerContext = requestHandlerContext;
         }
 
-        [Route("/admin/databases", "GET")]
-        public Task Get(HttpContext ctx)
+        [Route("/admin/databases/$", "GET")]
+        public Task Get()
         {
             RavenOperationContext context;
-            using (_serverStore.AllocateRequestContext(out context))
+            using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                var dbId = "db/"+ ctx.Request.Query["id"];
-                var obj = _serverStore.Read(context, dbId);
+                var id = _requestHandlerContext.RouteMatch.Url.Substring(_requestHandlerContext.RouteMatch.MatchLength);
+                var dbId = "db/" + id;
+                var obj = _requestHandlerContext.ServerStore.Read(context, dbId);
                 if (obj == null)
                 {
-                    ctx.Response.StatusCode = 404;
+                    _requestHandlerContext.HttpContext.Response.StatusCode = 404;
                     return Task.CompletedTask;
                 }
-                ctx.Response.StatusCode = 200;
-                obj.WriteTo(ctx.Response.Body);
+                _requestHandlerContext.HttpContext.Response.StatusCode = 200;
+                obj.WriteTo(_requestHandlerContext.HttpContext.Response.Body);
                 return Task.CompletedTask;
             }
         }
 
-        [Route("/admin/databases", "PUT")]
-        public Task Put(HttpContext ctx)
+        [Route("/admin/databases/$", "PUT")]
+        public Task Put()
         {
             RavenOperationContext context;
-            using (_serverStore.AllocateRequestContext(out context))
+            using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                var dbId = "db/" + ctx.Request.Query["id"];
+                var id = _requestHandlerContext.RouteMatch.Url.Substring(_requestHandlerContext.RouteMatch.MatchLength);
+                var dbId = "db/" + id;
 
-                var writer = context.Read(ctx.Request.Body,  dbId);
+                var writer = context.Read(_requestHandlerContext.HttpContext.Request.Body,  dbId);
 
-                _serverStore.Write(dbId, writer);
+                _requestHandlerContext.ServerStore.Write(dbId, writer);
 
-                ctx.Response.StatusCode = 201;
+                _requestHandlerContext.HttpContext.Response.StatusCode = 201;
 
                 return Task.CompletedTask;
             }

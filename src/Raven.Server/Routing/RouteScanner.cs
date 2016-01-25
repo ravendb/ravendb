@@ -21,13 +21,6 @@ namespace Raven.Server.Routing
     /// </summary>
     public class RouteScanner
     {
-        private readonly ServerStore _serverStore;
-
-        public RouteScanner(ServerStore serverStore)
-        {
-            _serverStore = serverStore;
-        }
-
         public Dictionary<string, RouteInformation> Scan()
         {
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
@@ -44,7 +37,7 @@ namespace Raven.Server.Routing
                 RouteInformation routeInfo;
                 if (routes.TryGetValue(route.Path, out routeInfo) == false)
                 {
-                    routes[route.Path] = routeInfo = new RouteInformation(route.Path, _serverStore);
+                    routes[route.Path] = routeInfo = new RouteInformation(route.Path);
                 }
                 routeInfo.Build(memberInfo, route.Method);
             }
