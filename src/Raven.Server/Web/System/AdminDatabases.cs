@@ -8,10 +8,6 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
-using Raven.Abstractions.Data;
-using Raven.Client.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 
@@ -92,9 +88,14 @@ namespace Raven.Server.Web.System
                 catch (EndOfStreamException)
                 {
                     _requestHandlerContext.HttpContext.Response.StatusCode = 400;
-                    var exampleDocument = MultiDatabase.CreateDatabaseDocument(id);
-                    var exampleJson = RavenJObject.FromObject(exampleDocument).ToString(Formatting.Indented);
-                    return _requestHandlerContext.HttpContext.Response.WriteAsync("The request body is not valid. Here is an example for a valid request body: " + exampleJson);
+                    return _requestHandlerContext.HttpContext.Response.WriteAsync("The request body is not valid. Here is an example for a valid request body:" + @"
+{
+    ""Settings"": {
+        ""Raven/DataDir"": ""~\\" + id + @"""
+    },
+    ""SecuredSettings"": { },
+    ""Disabled"": false
+}");
                 }
 
                 _requestHandlerContext.ServerStore.Write(dbId, dbDoc);
