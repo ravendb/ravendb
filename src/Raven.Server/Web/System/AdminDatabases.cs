@@ -84,6 +84,7 @@ namespace Raven.Server.Web.System
                 try
                 {
                     dbDoc = context.Read(_requestHandlerContext.HttpContext.Request.Body, dbId);
+                    // TODO (fitzchak): validate the incoming object to have Settings.Raven/DataDir (with a valid path)
                 }
                 catch (EndOfStreamException)
                 {
