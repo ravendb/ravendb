@@ -240,9 +240,10 @@ namespace Raven.Server.Json
 
         private BlittableJsonDocument ParseToMemory(Stream stream, string documentId, BlittableJsonDocument.UsageMode mode)
         {
-            using (var parser = new UnmanagedJsonParser(stream, this))
+            using(var state = new JsonParserState(this))
+            using (var parser = new UnmanagedJsonParser(stream, this, state))
             {
-                var writer = new BlittableJsonDocument(parser, this, mode, documentId);
+                var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();
