@@ -8,27 +8,27 @@ using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Web.System
 {
     public class AdminDatabases : RequestHandler
     {
-        private readonly ServerStore _serverStore;
+        private readonly CurrentRequestContext _requestContext;
 
-        public AdminDatabases(ServerStore serverStore)
+        public AdminDatabases(CurrentRequestContext requestContext)
         {
-            _serverStore = serverStore;
+            _requestContext = requestContext;
         }
 
-        [Route("/admin/databases", "GET")]
+        [Route("/admin/databases/$", "GET")]
         public Task Get(HttpContext ctx)
         {
             RavenOperationContext context;
-            using (_serverStore.AllocateRequestContext(out context))
+            using (_requestContext.ServerStore.AllocateRequestContext(out context))
             {
-                var dbId = "db/"+ ctx.Request.Query["id"];
-                var obj = _serverStore.Read(context, dbId);
+                var id = _requestContext.RouteMatch.Url.Substring(_requestContext.RouteMatch.MatchLength);
+                var dbId = "db/" + id;
+                var obj = _requestContext.ServerStore.Read(context, dbId);
                 if (obj == null)
                 {
                     ctx.Response.StatusCode = 404;
@@ -40,17 +40,18 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [Route("/admin/databases", "PUT")]
+        [Route("/admin/databases/$", "PUT")]
         public Task Put(HttpContext ctx)
         {
             RavenOperationContext context;
-            using (_serverStore.AllocateRequestContext(out context))
+            using (_requestContext.ServerStore.AllocateRequestContext(out context))
             {
-                var dbId = "db/" + ctx.Request.Query["id"];
+                var id = _requestContext.RouteMatch.Url.Substring(_requestContext.RouteMatch.MatchLength);
+                var dbId = "db/" + id;
 
                 var writer = context.Read(ctx.Request.Body,  dbId);
 
-                _serverStore.Write(dbId, writer);
+                _requestContext.ServerStore.Write(dbId, writer);
 
                 ctx.Response.StatusCode = 201;
 

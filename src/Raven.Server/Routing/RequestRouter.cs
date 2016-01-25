@@ -7,6 +7,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Raven.Server.ServerWide;
+using Raven.Server.Web;
 
 namespace Raven.Server.Routing
 {
@@ -22,7 +25,7 @@ namespace Raven.Server.Routing
         public Task HandlePath(HttpContext context)
         {
             var tryMatch = _trie.TryMatch(context.Request.Path);
-            if (tryMatch.Success == false)
+            if (tryMatch.Match.Success == false)
             {
                 context.Response.StatusCode = 400;
                 return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path);
@@ -34,7 +37,14 @@ namespace Raven.Server.Routing
                 context.Response.StatusCode = 400;
                 return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
             }
-            return handler(context);
+
+            var reqCtx = new CurrentRequestContext
+            {
+                HttpContext = context,
+                ServerStore = context.ApplicationServices.GetRequiredService<ServerStore>(),
+                RouteMatch = tryMatch.Match,
+            };
+            return handler(reqCtx);
         }
     }
 }
