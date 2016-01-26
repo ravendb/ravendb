@@ -4,7 +4,7 @@ import getOperationStatusCommand = require("commands/operations/getOperationStat
 
 class evalByQueryCommand extends commandBase {
 
-    constructor(private indexName: string, private queryStr: string, private patchPayload: string, private db: database) {
+    constructor(private indexName: string, private queryStr: string, private patchPayload: string, private db: database, private updatePatchingProgress: (bulkOperationStatusDto) => void) {
         super();
     }
 
@@ -30,6 +30,8 @@ class evalByQueryCommand extends commandBase {
         new getOperationStatusCommand(this.db, operationId)
             .execute()
             .done((result: operationStatusDto) => {
+            this.updatePatchingProgress(result);
+
             if (result.Completed) {
                 if (result.Faulted) {
                     this.reportError("Patch failed", result.State.Error);

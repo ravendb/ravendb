@@ -32,7 +32,7 @@ namespace Raven.Database.Actions
         {
         }
 
-        public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, CancellationTokenSource tokenSource, out bool stale)
+        public HashSet<string> QueryDocumentIds(string index, IndexQuery query, CancellationTokenSource tokenSource, out bool stale)
         {
             var queryStat = AddToCurrentlyRunningQueryList(index, query, tokenSource);
             try
