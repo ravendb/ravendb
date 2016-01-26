@@ -144,6 +144,10 @@ namespace Raven.Server.Routing
             {
                 // just one entry, build the trie node
                 current.Key = sortedKeys[start].Substring(matchStart, sortedKeys[start].Length - matchStart);
+                if (current.Key.Contains("*"))
+                {
+                    throw new NotSupportedException("We don't support a single route only that has a * in it, there must be multiple route");
+                }
                 current.Value = source[sortedKeys[start]];
                 return;
             }
