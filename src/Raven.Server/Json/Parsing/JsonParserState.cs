@@ -3,21 +3,12 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Json.Parsing
 {
-    public class JsonParserState : IDisposable
+    public unsafe class JsonParserState
     {
-        public UnmanagedWriteBuffer StringBuffer;
+        public byte* StringBuffer;
+        public int StringSize;
         public long Long;
         public JsonParserToken CurrentTokenType;
         public readonly List<int> EscapePositions = new List<int>();
-
-        public JsonParserState(RavenOperationContext ctx)
-        {
-            StringBuffer = new UnmanagedWriteBuffer(ctx);
-        }
-
-        public void Dispose()
-        {
-            StringBuffer?.Dispose();
-        }
     }
 }

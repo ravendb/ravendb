@@ -233,11 +233,11 @@ namespace Raven.Server.Json
             return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.None);
         }
 
-        public BlittableJsonDocument ReadObject(DynamicJsonBuilder builder, string documentId, 
+        public BlittableJsonDocument ReadObject(DynamicJsonBuilder builder, string documentId,
             BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
         {
-            using (var state = new JsonParserState(this))
-            using (var parser = new ObjectJsonParser(state, builder))
+            var state = new JsonParserState();
+            using (var parser = new ObjectJsonParser(state, builder, this))
             {
                 var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);
                 try
@@ -262,7 +262,7 @@ namespace Raven.Server.Json
 
         private BlittableJsonDocument ParseToMemory(Stream stream, string documentId, BlittableJsonDocument.UsageMode mode)
         {
-            using(var state = new JsonParserState(this))
+            var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(stream, this, state))
             {
                 var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);

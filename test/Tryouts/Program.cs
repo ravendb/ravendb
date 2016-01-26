@@ -26,7 +26,7 @@ namespace Tryouts
 
         public unsafe static void Main(string[] args)
         {
-            new ObjectJsonParsingTests().Dup();
+            new MutatingJsonTests().CanAddProperty();
             return;
             // var trie = Trie<int>.Build(new[]
             //{

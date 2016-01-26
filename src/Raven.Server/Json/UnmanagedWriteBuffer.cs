@@ -114,7 +114,7 @@ namespace Raven.Server.Json
             return copiedBytes;
         }
 
-        public void Clear(int sizeRequired = 0)
+        public void Clear()
         {
             _current.Used = 0;
             _sizeInBytes = 0;
@@ -126,13 +126,6 @@ namespace Raven.Server.Json
             {
                 _context.ReturnMemory(prev.Allocation);
                 prev = prev.Previous;
-            }
-
-            if (_current.Allocation.SizeInBytes < sizeRequired)
-            {
-                _context.ReturnMemory(_current.Allocation);
-                _current = null;
-                AllocateNextSegment(sizeRequired);
             }
         }
 
@@ -150,17 +143,30 @@ namespace Raven.Server.Json
             _disposed = true;
         }
 
-        public byte* GetBufferFor(int requiredSize)
+        public void EnsureSingleChunk(out byte* ptr, out int size)
         {
-            var used = _current.Used;
-            if (used + requiredSize > _current.Allocation.SizeInBytes)
+            if (_current.Previous == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(requiredSize),
-                    "Cannot request a buffer of this size from the buffer, you didn't ensure that it is available first");
+                ptr = _current.Address;
+                size = _current.Used;
+                return;
             }
-            _current.Used += requiredSize;
-            _sizeInBytes += requiredSize;
-            return _current.Address + used;
+
+            AllocateNextSegment(_sizeInBytes);
+
+            var realCurrent = _current;
+            _current = realCurrent.Previous;
+            CopyTo(realCurrent.Address);
+            realCurrent.Used = SizeInBytes;
+            var cur = _current;
+            while (cur != null)
+            {
+                _context.ReturnMemory(cur.Allocation);
+                cur = cur.Previous;
+            }
+            _current = realCurrent;
+            ptr = _current.Address;
+            size = _current.Used;
         }
     }
 }

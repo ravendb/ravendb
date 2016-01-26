@@ -42,7 +42,7 @@ namespace BlittableTests
             AssertEqualAfterRoundTrip(new DynamicJsonBuilder
             {
                 ["Name"] = "Oren Eini",
-                ["Dogs"] = new DynamicArrayBuilder
+                ["Dogs"] = new DynamicJsonArray
                 {
                     "Arava",
                     "Oscar"

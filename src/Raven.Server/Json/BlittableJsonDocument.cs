@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Server.Json.Parsing;
+using Sparrow;
 using Voron.Util;
 
 //using Raven.Imports.Newtonsoft.Json;
@@ -178,10 +179,8 @@ namespace Raven.Server.Json
                 if (_state.CurrentTokenType != JsonParserToken.String)
                     throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
 
-                var buffer = GetTempBuffer(_state.StringBuffer.SizeInBytes);
-                _state.StringBuffer.CopyTo(buffer);
 
-                var property = new LazyStringValue(null, buffer, _state.StringBuffer.SizeInBytes, _context);
+                var property = new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context);
                 if (_state.EscapePositions.Count > 0)
                 {
                     property.EscapePositions = _state.EscapePositions.ToArray();
@@ -323,10 +322,7 @@ namespace Raven.Server.Json
 
         private void WriteStringFromReader(out BlittableJsonToken token)
         {
-            var unmanagedWriteBuffer = _state.StringBuffer;
-            var buffer = GetTempBuffer(unmanagedWriteBuffer.SizeInBytes);
-            unmanagedWriteBuffer.CopyTo(buffer);
-            var str = new LazyStringValue(null, buffer, unmanagedWriteBuffer.SizeInBytes, _context);
+            var str = new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context);
             WriteString(str, out token, _mode);
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence

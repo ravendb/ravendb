@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 
 namespace Raven.Server.Json
 {
-    public class BlittableJsonReaderObject : BlittableJsonReaderBase
+    public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase
     {
         private readonly unsafe byte* _metadataPtr;
         private readonly int _propCount;
@@ -98,12 +96,14 @@ namespace Raven.Server.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
         }
 
+        public int Count => _propCount;
+
 
         /// <summary>
         /// Returns an array of property names, ordered in the order it was stored 
         /// </summary>
         /// <returns></returns>
-        public unsafe string[] GetPropertyNames()
+        public string[] GetPropertyNames()
         {
             var idsAndOffsets = new BlittableJsonDocument.PropertyTag[_propCount];
             var sortedNames = new string[_propCount];
@@ -113,14 +113,7 @@ namespace Raven.Server.Json
             // Prepare an array of all offsets and property ids
             for (var i = 0; i < _propCount; i++)
             {
-                var propertyIntPtr = (long)_metadataPtr + (i) * metadataSize;
-                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
-                var propertyOffset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
-                idsAndOffsets[i] = new BlittableJsonDocument.PropertyTag
-                {
-                    Position = propertyOffset,
-                    PropertyId = propertyId
-                };
+                idsAndOffsets[i] = GetPropertyTag(i, metadataSize);
             }
 
             // sort according to offsets
@@ -132,6 +125,20 @@ namespace Raven.Server.Json
                 sortedNames[i] = GetPropertyName(idsAndOffsets[i].PropertyId);
             }
             return sortedNames;
+        }
+
+        private unsafe BlittableJsonDocument.PropertyTag GetPropertyTag(int index, long metadataSize)
+        {
+            var propPos = _metadataPtr + index * metadataSize;
+            var propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
+            var propertyOffset = ReadNumber(propPos, _currentOffsetSize);
+            var type = *(propPos + _currentOffsetSize + _currentPropertyIdSize);
+            return new BlittableJsonDocument.PropertyTag
+            {
+                Position = propertyOffset,
+                PropertyId = propertyId,
+                Type = type
+            };
         }
 
         private unsafe LazyStringValue GetPropertyName(int propertyId)
@@ -179,8 +186,20 @@ namespace Raven.Server.Json
             return found;
         }
 
+        public Tuple<LazyStringValue, object> GetPropertyByIndex(int index)
+        {
+            if (index < 0 || index >= _propCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
 
-        public unsafe bool TryGetMemberAsTypeValueTuple(string name, out Tuple<object, BlittableJsonToken> result)
+            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+            var propertyTag = GetPropertyTag(index, metadataSize);
+            var value = GetObject((BlittableJsonToken)propertyTag.Type, propertyTag.Position);
+            var stringValue = GetPropertyName(propertyTag.PropertyId);
+
+            return Tuple.Create(stringValue, value);
+        }
+
+        public bool TryGetMemberAsTypeValueTuple(string name, out Tuple<object, BlittableJsonToken> result)
         {
             result = null;
             int min = 0, max = _propCount;
@@ -191,19 +210,19 @@ namespace Raven.Server.Json
 
             var comparer = _context.GetComparerFor(name);
 
-            int mid = comparer.LastFoundAt ?? (min + max)/2;
+            int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)
                 mid = max;
             do
             {
-                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof (byte));
-                var propertyIntPtr = (long) _metadataPtr + (mid)*metadataSize;
+                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+                var propertyIntPtr = (long)_metadataPtr + (mid) * metadataSize;
 
-                var offset = ReadNumber((byte*) propertyIntPtr, _currentOffsetSize);
-                var propertyId = ReadNumber((byte*) propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+                var offset = ReadNumber((byte*)propertyIntPtr, _currentOffsetSize);
+                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
                 var type =
                     (BlittableJsonToken)
-                        ReadNumber((byte*) (propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize),
+                        ReadNumber((byte*)(propertyIntPtr + _currentOffsetSize + _currentPropertyIdSize),
                             _currentPropertyIdSize);
 
 
@@ -211,7 +230,7 @@ namespace Raven.Server.Json
                 if (cmpResult == 0)
                 {
                     // found it...
-                    result = Tuple.Create(GetObject(type, (int) ((long) _objStart - (long) _mem - (long) offset)),
+                    result = Tuple.Create(GetObject(type, (int)((long)_objStart - (long)_mem - (long)offset)),
                         type & typesMask);
                     if (result.Item1 is BlittableJsonReaderBase)
                     {
@@ -314,13 +333,13 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(lazyStringValue);
 
                 var val = GetObject(props[i].Type, (int)(_objStart - _mem - props[i].PropertyOffset));
-                WriteValue(writer, props[i].Type & typesMask, val, originalPropertyOrder:true);
+                WriteValue(writer, props[i].Type & typesMask, val, originalPropertyOrder: true);
             }
 
             writer.WriteEndObject();
         }
 
-        private unsafe void WriteTo(BlittableJsonTextWriter writer)
+        private void WriteTo(BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
@@ -402,7 +421,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        internal unsafe object GetObject(BlittableJsonToken type, int position)
+        internal object GetObject(BlittableJsonToken type, int position)
         {
 
             switch (type & typesMask)
