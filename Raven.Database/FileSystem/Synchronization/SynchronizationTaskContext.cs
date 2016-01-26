@@ -5,14 +5,14 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading;
-using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
     public class SynchronizationTaskContext : IDisposable
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 

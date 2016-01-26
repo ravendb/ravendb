@@ -5,11 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.FileSystem.Notifications;
+using Raven.Abstractions.Logging;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
 using Raven.Database.Config;
@@ -25,7 +25,7 @@ namespace Raven.Database.FileSystem.Synchronization
 {
     public class SynchronizationTask : IDisposable
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         internal const int NumberOfFilesToCheckForSynchronization = 100;
 
