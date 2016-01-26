@@ -13,7 +13,7 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminDatabases : RequestHandler
+    public unsafe class AdminDatabases : RequestHandler
     {
         private readonly RequestHandlerContext _requestHandlerContext;
 
@@ -73,11 +73,10 @@ namespace Raven.Server.Web.System
                 var dbId = "db/" + id;
 
                 var etag = _requestHandlerContext.HttpContext.Request.Headers["ETag"];
-                string errorMessage2;
-                if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage2) == false)
+                if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage) == false)
                 {
                     _requestHandlerContext.HttpContext.Response.StatusCode = 400;
-                    return _requestHandlerContext.HttpContext.Response.WriteAsync(errorMessage2);
+                    return _requestHandlerContext.HttpContext.Response.WriteAsync(errorMessage);
                 }
 
                 BlittableJsonDocument dbDoc;
@@ -98,6 +97,15 @@ namespace Raven.Server.Web.System
     ""Disabled"": false
 }");
                 }
+                //int size;
+                //var buffer = context.GetNativeTempBuffer(dbDoc.SizeInBytes, out size);
+                //dbDoc.CopyTo(buffer);
+
+                //var reader = new BlittableJsonReaderObject(buffer, dbDoc.SizeInBytes, context);
+
+                //var modified = new MofidiedJson(reader, context);
+
+                //dbDoc = context.ReadObject(modified);
 
                 _requestHandlerContext.ServerStore.Write(dbId, dbDoc);
                 _requestHandlerContext.HttpContext.Response.StatusCode = 201;

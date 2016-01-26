@@ -10,6 +10,22 @@ namespace BlittableTests
     public unsafe class ObjectJsonParsingTests
     {
         [Fact]
+        public void Dup()
+        {
+            //var d= new DynamicJsonBuilder();
+            //d["Name"] = "Oren Eini";
+            //d["Name"] = "Ayende Rahien";
+
+            AssertEqualAfterRoundTrip(new DynamicJsonBuilder
+            {
+                ["Name"] = "Oren Eini",
+                ["Name"] = "Ayende Rahien"
+            },
+                "{\"Name\":\"Ayende Rahien\"}");
+
+
+        }
+        [Fact]
         public void CanUseNestedObject()
         {
             AssertEqualAfterRoundTrip(new DynamicJsonBuilder
@@ -22,6 +38,7 @@ namespace BlittableTests
             },
                 "{\"Name\":\"Oren Eini\",\"Wife\":{\"Name\":\"Rachel\"}}");
 
+            
             AssertEqualAfterRoundTrip(new DynamicJsonBuilder
             {
                 ["Name"] = "Oren Eini",
@@ -67,14 +84,14 @@ namespace BlittableTests
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new RavenOperationContext(pool))
             {
-                var bd = ctx.ReadObject(doc, "foo");
-                var allocatedMemoryData = pool.Allocate(bd.SizeInBytes);
+                var writer = ctx.ReadObject(doc, "foo");
+                var allocatedMemoryData = pool.Allocate(writer.SizeInBytes);
                 try
                 {
                     var address = (byte*) allocatedMemoryData.Address;
-                    bd.CopyTo(address);
+                    writer.CopyTo(address);
 
-                    var readerObject = new BlittableJsonReaderObject(address, bd.SizeInBytes, ctx);
+                    var readerObject = new BlittableJsonReaderObject(address, writer.SizeInBytes, ctx);
                     var memoryStream = new MemoryStream();
                     readerObject.WriteTo(memoryStream, originalPropertyOrder: true);
                     var actual = Encoding.UTF8.GetString(memoryStream.ToArray());
