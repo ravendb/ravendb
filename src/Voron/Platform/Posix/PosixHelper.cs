@@ -43,12 +43,6 @@ namespace Voron.Platform.Posix
             var fd = Syscall.open(path, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
                                   FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
-            if (SyncDirectory(path) == -1)
-            {
-                var err = Marshal.GetLastWin32Error();
-                ThrowLastError(err);
-            }
-
             try
             {
                 if (fd == -1)
@@ -72,6 +66,11 @@ namespace Voron.Platform.Posix
                     ptr += written;
                 }
                 if(Syscall.fsync(fd) == -1)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    ThrowLastError(err);
+                }
+                if (SyncDirectory(path) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
                     ThrowLastError(err);
