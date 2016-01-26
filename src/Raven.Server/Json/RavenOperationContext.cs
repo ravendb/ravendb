@@ -236,6 +236,17 @@ namespace Raven.Server.Json
         public BlittableJsonDocument ReadObject(DynamicJsonBuilder builder, string documentId,
             BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
         {
+            return ReadObjectInternal(builder.Value, documentId, mode);
+        }
+
+        public BlittableJsonDocument ReadObject(BlittableJsonReaderObject obj, string documentId,
+         BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
+        {
+            return ReadObjectInternal(obj, documentId, mode);
+        }
+
+        private BlittableJsonDocument ReadObjectInternal(object builder, string documentId, BlittableJsonDocument.UsageMode mode)
+        {
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, builder, this))
             {

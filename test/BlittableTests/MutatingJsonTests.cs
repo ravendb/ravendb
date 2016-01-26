@@ -22,19 +22,14 @@ namespace BlittableTests
         {
             AssertEqualAfterRoundTrip(source =>
             {
-                var modification = new DynamicJsonBuilder
+                source.Modifications = new DynamicJsonBuilder
                 {
-                    Value =
-                    {
-                        Source = source
-                    },
                     ["Age"] = 34
-                };
-                return modification;
+                }.Value;
             }, @"{""Name"":""Oren"", ""Dogs"":[""Arava"",""Oscar"",""Sunny""],""Age"":34}");
         }
 
-        private static void AssertEqualAfterRoundTrip(Func<BlittableJsonReaderObject, DynamicJsonBuilder>  mutate, string expected)
+        private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject>  mutate, string expected)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new RavenOperationContext(pool))
@@ -53,10 +48,13 @@ namespace BlittableTests
                     writer.CopyTo(address);
 
                     var readerObject = new BlittableJsonReaderObject(address, writer.SizeInBytes, ctx);
+                    var ms1 = new MemoryStream();
+                    readerObject.WriteTo(ms1, originalPropertyOrder: true);
+                    var actual1 = Encoding.UTF8.GetString(ms1.ToArray());
 
-                    var builder = mutate(readerObject);
+                    mutate(readerObject);
 
-                    var document = ctx.ReadObject(builder, "foo");
+                    var document = ctx.ReadObject(readerObject, "foo");
                     newDocMem = pool.Allocate(document.SizeInBytes);
 
                     readerObject = new BlittableJsonReaderObject((byte*)newDocMem.Address, document.SizeInBytes, ctx);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Server.Json.Parsing;
 
 namespace Raven.Server.Json
 {
@@ -11,6 +12,8 @@ namespace Raven.Server.Json
         private byte* _dataStart;
         private long _currentOffsetSize;
         private Dictionary<int, Tuple<object,BlittableJsonToken>> cache;
+
+        public DynamicJsonArray Modifications;
 
         public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
         {
@@ -31,32 +34,20 @@ namespace Raven.Server.Json
 
         public int Count => _count;
 
-        public object this[int index]
+        public object this[int index] => GetByIndex(index);
+
+        public object GetByIndex(int index)
         {
-            get
-            {
-                object result;
-                TryGetIndex(index, out result);
-                return result;
-            }
+            return GetValueTokenTupleByIndex(index).Item1;
         }
 
-        public bool TryGetIndex(int index, out object result)
+        public Tuple<object, BlittableJsonToken> GetValueTokenTupleByIndex(int index)
         {
-            result = null;
-            Tuple<object, BlittableJsonToken> resultTuple;
-            var found = TryGetValueTokenTupleByIndex(index, out resultTuple);
-            result = resultTuple.Item1;
-            return found;
-        }
-
-        public bool TryGetValueTokenTupleByIndex(int index, out Tuple<object,BlittableJsonToken> result)
-        {
-            result = null;
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
+            Tuple<object, BlittableJsonToken> result;
             if (cache != null && cache.TryGetValue(index, out result))
-                return true;
+                return result;
 
             if (index >= _count || index < 0)
                 throw new IndexOutOfRangeException($"Cannot access index {index} when our size is {_count}");
@@ -76,7 +67,7 @@ namespace Raven.Server.Json
                 }
                 cache[index] = result;
             }
-            return true;
+            return result;
         }
 
     }

@@ -9,7 +9,6 @@ namespace Raven.Server.Json.Parsing
 {
     public class DynamicJsonValue
     {
-        public BlittableJsonReaderObject Source;
         public int SourceIndex = -1;
         public readonly Queue<Tuple<string, object>> Properties = new Queue<Tuple<string, object>>();
         public HashSet<int> Removals;
@@ -31,7 +30,6 @@ namespace Raven.Server.Json.Parsing
 
     public class DynamicJsonArray : IEnumerable<object>
     {
-        public BlittableJsonReaderArray Source;
         public int SourceIndex = -1;
         public Queue<object> Items = new Queue<object>();
         public List<int> Removals;
@@ -65,11 +63,11 @@ namespace Raven.Server.Json.Parsing
         private readonly RavenOperationContext _ctx;
         private readonly Stack<object> _elements = new Stack<object>();
 
-        public ObjectJsonParser(JsonParserState state, DynamicJsonBuilder jsonBuilder, RavenOperationContext ctx)
+        public ObjectJsonParser(JsonParserState state, object root, RavenOperationContext ctx)
         {
             _state = state;
             _ctx = ctx;
-            _elements.Push(jsonBuilder.Value);
+            _elements.Push(root);
         }
 
         public void Dispose()
@@ -95,13 +93,6 @@ namespace Raven.Server.Json.Parsing
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         _elements.Push(value);
                         return;
-                    }
-                    if (value.Source != null && value.SourceIndex < value.Source.Count)
-                    {
-                        _elements.Push(value);
-                        value.SourceIndex++;
-                        current = value.Source.GetPropertyByIndex(value.SourceIndex);
-                        continue;
                     }
                     if (value.Properties.Count == 0)
                     {
@@ -144,6 +135,62 @@ namespace Raven.Server.Json.Parsing
                     _elements.Push(prop.Item2);
                     current = prop.Item1;
                     continue;
+                }
+                var bjro = current as BlittableJsonReaderObject;
+                if (bjro != null)
+                {
+                    if (bjro.Modifications == null)
+                        bjro.Modifications = new DynamicJsonValue();
+                    if (bjro.Modifications.AlreadySeen == false)
+                    {
+                        _elements.Push(bjro);
+                        bjro.Modifications.AlreadySeen = true;
+                        _state.CurrentTokenType = JsonParserToken.StartObject;
+                        return;
+                    }
+
+                    var modifications = bjro.Modifications;
+                    modifications.SourceIndex++;
+                    if (modifications.SourceIndex < bjro.Count)
+                    {
+                        _elements.Push(bjro);
+                        if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
+                        {
+                            continue;
+                        }
+                        current = bjro.GetPropertyByIndex(modifications.SourceIndex);
+                        continue;
+                    }
+                    current = modifications;
+                    continue;
+                }
+                var bjra = current as BlittableJsonReaderArray;
+                if (bjra != null)
+                {
+                    if (bjra.Modifications == null)
+                        bjra.Modifications = new DynamicJsonArray();
+                    if (bjra.Modifications.AlreadySeen == false)
+                    {
+                        _elements.Push(bjra);
+                        bjra.Modifications.AlreadySeen = true ;
+                        _state.CurrentTokenType = JsonParserToken.StartArray;
+                        return;
+                    }
+                    var modifications = bjra.Modifications;
+                    modifications.SourceIndex++;
+                    if (modifications.SourceIndex < bjra.Count)
+                    {
+                        _elements.Push(bjra);
+                        if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
+                        {
+                            continue;
+                        }
+                        current = bjra.GetByIndex(modifications.SourceIndex);
+                        continue;
+                    }
+                    current = modifications;
+                    continue;
+
                 }
                 var lsv = current as LazyStringValue;
                 if (lsv != null)

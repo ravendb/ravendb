@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Raven.Server.Json.Parsing;
 
 namespace Raven.Server.Json
 {
@@ -13,6 +14,8 @@ namespace Raven.Server.Json
         private readonly long _currentPropertyIdSize;
         private readonly unsafe byte* _objStart;
         private LazyStringValue[] _propertyNames;
+
+        public DynamicJsonValue Modifications;
 
         private Dictionary<string, Tuple<object, BlittableJsonToken>> _objectsPathCache;
 
@@ -127,7 +130,7 @@ namespace Raven.Server.Json
             return sortedNames;
         }
 
-        private unsafe BlittableJsonDocument.PropertyTag GetPropertyTag(int index, long metadataSize)
+        private BlittableJsonDocument.PropertyTag GetPropertyTag(int index, long metadataSize)
         {
             var propPos = _metadataPtr + index * metadataSize;
             var propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
@@ -193,7 +196,7 @@ namespace Raven.Server.Json
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
             var propertyTag = GetPropertyTag(index, metadataSize);
-            var value = GetObject((BlittableJsonToken)propertyTag.Type, propertyTag.Position);
+            var value = GetObject((BlittableJsonToken)propertyTag.Type, (int)(_objStart - _mem- propertyTag.Position));
             var stringValue = GetPropertyName(propertyTag.PropertyId);
 
             return Tuple.Create(stringValue, value);
@@ -406,9 +409,7 @@ namespace Raven.Server.Json
             var length = blittableArray.Length;
             for (var i = 0; i < length; i++)
             {
-                Tuple<object, BlittableJsonToken> propertyValueAndType;
-                if (blittableArray.TryGetValueTokenTupleByIndex(i, out propertyValueAndType) == false)
-                    throw new DataMisalignedException($"Index {i} not found in array");
+                var propertyValueAndType = blittableArray.GetValueTokenTupleByIndex(i);
 
                 if (i != 0)
                 {
