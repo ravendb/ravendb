@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -32,6 +32,7 @@ namespace Raven.Client.Connection
         {
         }
 
+        public Action<BulkOperationProgress> OnProgressChanged;
 
         public virtual async Task<RavenJToken> WaitForCompletionAsync()
         {
@@ -45,6 +46,22 @@ namespace Raven.Client.Connection
                 var status = await statusFetcher(id).ConfigureAwait(false);
                 if (status == null)
                     return null;
+
+                var onProgress = OnProgressChanged;
+
+                if (onProgress != null)
+                {
+                    var progressToken = status.Value<RavenJToken>("OperationProgress");
+
+                    if (progressToken != null && progressToken.Equals(RavenJValue.Null) == false)
+                    {
+                        onProgress(new BulkOperationProgress
+                        {
+                            TotalEntries = progressToken.Value<int>("TotalEntries"),
+                            ProcessedEntries = progressToken.Value<int>("ProcessedEntries")
+                        });
+                    }
+                }
 
                 if (status.Value<bool>("Completed"))
                 {
