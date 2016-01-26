@@ -363,7 +363,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
         public JsonDocumentMetadata DocumentMetadataByKey(string key)
         {
             if (string.IsNullOrEmpty(key))
-                throw new ArgumentNullException("key");
+            {
+                if (logger.IsDebugEnabled)
+                    logger.Debug("Document key can't be null or empty");
+                return null;
+            }
 
             var normalizedKey = CreateKey(key);
             var sliceKey = (Slice)normalizedKey;
@@ -375,7 +379,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             }
 
             if (logger.IsDebugEnabled)
-            logger.Debug("Document with key='{0}' was not found", key);
+                logger.Debug("Document with key='{0}' was not found", key);
             return null;
         }
 
