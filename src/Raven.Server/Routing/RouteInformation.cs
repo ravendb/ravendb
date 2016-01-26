@@ -14,8 +14,9 @@ namespace Raven.Server.Routing
     {
         public readonly string Path;
 
-        public RequestHandler Get;
-        public RequestHandler Put;
+        private RequestHandler _get;
+        private RequestHandler _put;
+        private RequestHandler _delete;
 
         public RouteInformation(string path)
         {
@@ -37,10 +38,13 @@ namespace Raven.Server.Routing
             switch (method)
             {
                 case "GET":
-                    Get = requestDelegate;
+                    _get = requestDelegate;
                     break;
                 case "PUT":
-                    Put = requestDelegate;
+                    _put = requestDelegate;
+                    break;
+                case "DELETE":
+                    _delete = requestDelegate;
                     break;
                 default:
                     throw new NotSupportedException("There is no handler for " + method);
@@ -52,9 +56,11 @@ namespace Raven.Server.Routing
             switch (context.Request.Method)
             {
                 case "GET":
-                    return Get;
+                    return _get;
                 case "PUT":
-                    return Put;
+                    return _put;
+                case "DELETE":
+                    return _delete;
                 default:
                     throw new NotSupportedException("There is no handler for " + context.Request.Method);
             }
