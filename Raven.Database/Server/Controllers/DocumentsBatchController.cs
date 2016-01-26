@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -105,7 +104,7 @@ namespace Raven.Database.Server.Controllers
             var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatabaseOperationTimeout);
 
             var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
-            return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id, timeout);
+            return OnBulkOperation((index, query, options, reportProgress) => databaseBulkOperations.DeleteByIndex(index, query, options, reportProgress), id, timeout);
         }
 
         [HttpPatch]
@@ -145,7 +144,7 @@ namespace Raven.Database.Server.Controllers
             var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
 
             var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
-            return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, options), id, timeout);
+            return OnBulkOperation((index, query, options, reportProgress) => databaseBulkOperations.UpdateByIndex(index, query, patchRequests, options, reportProgress), id, timeout);
         }
 
         [HttpEval]
@@ -186,10 +185,10 @@ namespace Raven.Database.Server.Controllers
             var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(), cts, timeout);
 
             var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-            return OnBulkOperation((index, query, options) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, options), id, timeout);
+            return OnBulkOperation((index, query, options, reportProgress) => databaseBulkOperations.UpdateByIndex(index, query, advPatch, options, reportProgress), id, timeout);
         }
 
-        private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, BulkOperationOptions, RavenJArray> batchOperation, string index, CancellationTimeout timeout)
+        private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, BulkOperationOptions, Action<BulkOperationProgress>, RavenJArray> batchOperation, string index, CancellationTimeout timeout)
         {
             if (string.IsNullOrEmpty(index))
                 return GetEmptyMessage(HttpStatusCode.BadRequest);
@@ -209,7 +208,10 @@ namespace Raven.Database.Server.Controllers
 
             var task = Task.Factory.StartNew(() =>
             {
-                status.State = batchOperation(index, indexQuery, option);
+                status.State = batchOperation(index, indexQuery, option, x =>
+                {
+                    status.OperationProgress = x;
+                });
             }).ContinueWith(t =>
             {
                 if (timeout != null)
@@ -243,6 +245,7 @@ namespace Raven.Database.Server.Controllers
             public RavenJToken State { get; set; }
             public bool Completed { get; set; }
             public bool Faulted { get; set; }
+            public BulkOperationProgress OperationProgress { get; set; }
         }
     }
 }

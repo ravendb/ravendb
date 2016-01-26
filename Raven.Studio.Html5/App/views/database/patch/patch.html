@@ -91,6 +91,15 @@
                 </div>
             </div>
         </div>
+        <div class="form-group">
+            <div class="col-md-12">
+                <div class="progress" data-bind="css: { active: isPatchingInProgress() }, visible: showPatchingProgress() && (!!patchDocument()) && (patchDocument().isDocumentPatch() == false)">
+                    <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-bind="style: {width: patchingProgressPercentage}, aria-valuenow: patchingProgress">
+                        <span data-bind="text: patchingProgressText"/>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="form-group" data-bind="visible: (!!patchDocument()) && patchDocument().isIndexPatch()">
             <div class="col-md-12">
                 <div>
