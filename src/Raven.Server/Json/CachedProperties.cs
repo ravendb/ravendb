@@ -107,14 +107,34 @@ namespace Raven.Server.Json
                 }
                 _propertiesNeedSorting = false;
             }
+            hasDuplicates = false;
             properties.Sort(this);
+            if (hasDuplicates)
+            {
+                // leave just the latest
+                for (int i = 0; i < properties.Count-1; i++)
+                {
+                    if (properties[i].PropertyId == properties[i + 1].PropertyId)
+                    {
+                        properties.RemoveAt(i + 1);
+                        i--;
+                    }
+                }
+            }
 
         }
 
+        private bool hasDuplicates;
 
         int IComparer<BlittableJsonDocument.PropertyTag>.Compare(BlittableJsonDocument.PropertyTag x, BlittableJsonDocument.PropertyTag y)
         {
-            return _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
+            var compare = _docPropNames[x.PropertyId].GlobalSortOrder - _docPropNames[y.PropertyId].GlobalSortOrder;
+            if (compare == 0)
+            {
+                hasDuplicates = true;
+                return y.Position - x.Position;
+            }
+            return compare;
         }
 
         public LazyStringValue GetProperty(int index)
