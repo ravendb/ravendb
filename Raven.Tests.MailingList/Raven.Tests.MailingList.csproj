@@ -129,6 +129,7 @@
     <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="PeterBalzli.cs" />
     <Compile Include="AaronSt.cs" />
     <Compile Include="AccessControlHeaders.cs" />
     <Compile Include="Accounts.cs" />
