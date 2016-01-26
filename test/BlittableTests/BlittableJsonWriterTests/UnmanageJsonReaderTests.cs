@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Xunit;
 using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 

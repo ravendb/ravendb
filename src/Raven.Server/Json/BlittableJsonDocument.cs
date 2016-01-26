@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Server.Json.Parsing;
 using Voron.Util;
 
 //using Raven.Imports.Newtonsoft.Json;

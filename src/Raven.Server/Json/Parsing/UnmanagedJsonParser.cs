@@ -1,52 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Raven.Server.Json
+namespace Raven.Server.Json.Parsing
 {
-    public class JsonParserState : IDisposable
-    {
-        public UnmanagedWriteBuffer StringBuffer;
-        public long Long;
-        public JsonParserToken Current;
-        public readonly List<int> EscapePositions = new List<int>();
-
-        public JsonParserState(RavenOperationContext ctx)
-        {
-            StringBuffer = new UnmanagedWriteBuffer(ctx);
-        }
-
-        public void Dispose()
-        {
-            StringBuffer?.Dispose();
-        }
-    }
-
-    public enum JsonParserToken
-    {
-        Null,
-        False,
-        True,
-        String,
-        Float,
-        Integer,
-        Separator,
-        StartObject,
-        StartArray,
-        EndArray,
-        EndObject
-    }
-
-    public interface IJsonParser : IDisposable
-    {
-        void Read();
-        void ValidateFloat();
-    }
-
     public unsafe class UnmanagedJsonParser : IJsonParser
     {
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
