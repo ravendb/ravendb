@@ -42,6 +42,12 @@ namespace Voron.Platform.Posix
             if (result != 0)
                 PosixHelper.ThrowLastError(result);
 
+            if (PosixHelper.SyncDirectory(filename) == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                PosixHelper.ThrowLastError(err);
+            }
+
             NumberOfAllocatedPages = journalSize / _options.PageSize;
         }
 

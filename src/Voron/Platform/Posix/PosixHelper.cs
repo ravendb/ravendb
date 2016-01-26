@@ -42,6 +42,7 @@ namespace Voron.Platform.Posix
         {
             var fd = Syscall.open(path, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,
                                   FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+
             try
             {
                 if (fd == -1)
@@ -69,7 +70,11 @@ namespace Voron.Platform.Posix
                     var err = Marshal.GetLastWin32Error();
                     ThrowLastError(err);
                 }
-
+                if (SyncDirectory(path) == -1)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    ThrowLastError(err);
+                }
             }
             finally
             {
@@ -79,6 +84,18 @@ namespace Voron.Platform.Posix
                     fd = -1;
                 }
             }
+        }
+
+        public static int SyncDirectory(string path)
+        {
+            var dir = Path.GetDirectoryName(path);
+            var fd = Syscall.open(dir, 0, 0);
+            if (fd == -1)
+                return -1;
+            var fsyncRc = Syscall.fsync(fd);
+            if (fsyncRc == -1)
+                return -1;
+            return Syscall.close(fd);
         }
 
         public static unsafe bool TryReadFileHeader(FileHeader* header, string path)
