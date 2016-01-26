@@ -102,9 +102,9 @@ namespace BlittableTests.Benchmark
             //foreach (var line in jsonCache)
             //{
             //    var jsonOjbect = JObject.Load(new JsonTextReader(new StringReader(line)));
-            //    jsonOjbect.Value<string>("name");
-            //    jsonOjbect.Value<string>("overview");
-            //    jsonOjbect.Value<JArray>("video_embeds");
+            //    jsonOjbect.Items<string>("name");
+            //    jsonOjbect.Items<string>("overview");
+            //    jsonOjbect.Items<JArray>("video_embeds");
             //}
             Console.WriteLine($"Json indexing time {sp.ElapsedMilliseconds:#,#;;0}");
             sp.Restart();

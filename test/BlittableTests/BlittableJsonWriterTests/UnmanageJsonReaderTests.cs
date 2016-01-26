@@ -6,6 +6,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Xunit;
 using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
@@ -17,11 +18,12 @@ namespace BlittableTests.BlittableJsonWriterTests
         [MemberData("Samples")]
         public void CanReadAll(string name)
         {
-            using(var pool = new UnmanagedBuffersPool("test"))
-            using(var ctx = new RavenOperationContext(pool))
+            using (var pool = new UnmanagedBuffersPool("test"))
+            using (var ctx = new RavenOperationContext(pool))
             using (var stream = typeof(UnmanageJsonReaderTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
+            using (var state = new JsonParserState(ctx))
+            using (var parser = new UnmanagedJsonParser(stream, ctx, state))
             {
-                var parser = new UnmanagedJsonParser(stream, ctx);
                 while (stream.Position != stream.Length)
                 {
                     parser.Read();

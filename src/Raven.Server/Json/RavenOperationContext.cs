@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Raven.Server.Json.Parsing;
 using Sparrow;
 using Sparrow.Binary;
 using Voron.Impl;
@@ -232,6 +233,27 @@ namespace Raven.Server.Json
             return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.None);
         }
 
+        public BlittableJsonDocument ReadObject(DynamicJsonBuilder builder, string documentId, 
+            BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
+        {
+            using (var state = new JsonParserState(this))
+            using (var parser = new ObjectJsonParser(state, builder))
+            {
+                var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);
+                try
+                {
+                    CachedProperties.NewDocument();
+                    writer.Run();
+                    return writer;
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
+            }
+        }
+
         public BlittableJsonDocument Read(Stream stream, string documentId)
         {
             var state = BlittableJsonDocument.UsageMode.ToDisk;
@@ -240,9 +262,10 @@ namespace Raven.Server.Json
 
         private BlittableJsonDocument ParseToMemory(Stream stream, string documentId, BlittableJsonDocument.UsageMode mode)
         {
-            using (var parser = new UnmanagedJsonParser(stream, this))
+            using(var state = new JsonParserState(this))
+            using (var parser = new UnmanagedJsonParser(stream, this, state))
             {
-                var writer = new BlittableJsonDocument(parser, this, mode, documentId);
+                var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();

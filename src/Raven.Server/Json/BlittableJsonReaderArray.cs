@@ -6,8 +6,8 @@ namespace Raven.Server.Json
     public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase
     {
         private int _count;
-        private byte* _positions;
-        private byte* _types;
+        private byte* _metadataPtr;
+        //private byte* _types;
         private byte* _dataStart;
         private long _currentOffsetSize;
         private Dictionary<int, Tuple<object,BlittableJsonToken>> cache;
@@ -19,12 +19,12 @@ namespace Raven.Server.Json
             _count = parent.ReadVariableSizeInt(pos, out arraySizeOffset);
 
             _dataStart = parent._mem + pos;
-            _positions = parent._mem + pos + arraySizeOffset;
+            _metadataPtr = parent._mem + pos + arraySizeOffset;
 
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
 
-            _types = parent._mem + pos + arraySizeOffset + _count * _currentOffsetSize;
+          //  _types = parent._mem + pos + arraySizeOffset + _count * _currentOffsetSize;
         }
 
         public int Length => _count;
@@ -62,9 +62,11 @@ namespace Raven.Server.Json
                 throw new IndexOutOfRangeException($"Cannot access index {index} when our size is {_count}");
 
 
-            var offset = ReadNumber(_positions + index * _currentOffsetSize, _currentOffsetSize);
-            result = Tuple.Create(_parent.GetObject((BlittableJsonToken) _types[index],
-                (int) (_dataStart - _parent._mem - offset)), (BlittableJsonToken) _types[index] & typesMask);
+            var itemMetadataStartPtr = _metadataPtr + index * (_currentOffsetSize+1);
+            var offset = ReadNumber(itemMetadataStartPtr, _currentOffsetSize);
+            var token = *(itemMetadataStartPtr + _currentOffsetSize);
+            result = Tuple.Create(_parent.GetObject((BlittableJsonToken)token,
+                (int) (_dataStart - _parent._mem - offset)), (BlittableJsonToken)token & typesMask);
 
             if (result.Item1 is BlittableJsonReaderBase)
             {

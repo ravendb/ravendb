@@ -26,7 +26,8 @@ namespace Tryouts
 
         public unsafe static void Main(string[] args)
         {
-          
+            new ObjectJsonParsingTests().CanUseNestedObject();
+            return;
             // var trie = Trie<int>.Build(new[]
             //{
             //     "admin/databases",

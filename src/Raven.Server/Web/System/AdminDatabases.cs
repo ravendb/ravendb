@@ -89,7 +89,7 @@ namespace Raven.Server.Web.System
                 catch (EndOfStreamException)
                 {
                     _requestHandlerContext.HttpContext.Response.StatusCode = 400;
-                    return _requestHandlerContext.HttpContext.Response.WriteAsync("The request body is not valid. Here is an example for a valid request body:" + @"
+                    return _requestHandlerContext.HttpContext.Response.WriteAsync(@"The request body is not valid. Here is an example for a valid request body:
 {
     ""Settings"": {
         ""Raven/DataDir"": ""~\\" + id + @"""
