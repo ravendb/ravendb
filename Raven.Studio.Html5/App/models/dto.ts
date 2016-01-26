@@ -1211,11 +1211,17 @@ interface operationStatusDto {
 
 interface bulkOperationStatusDto extends operationStatusDto{
     State: documentStateDto[];
+    OperationProgress: bulkOperationProgress;
 }
 
 interface documentStateDto {
     Document: string;
     Deleted: boolean;
+}
+
+interface bulkOperationProgress {
+    TotalEntries: number;
+    ProcessedEntries: number;
 }
 
 interface importOperationStatusDto extends operationStatusDto{
