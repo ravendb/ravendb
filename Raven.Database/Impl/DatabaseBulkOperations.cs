@@ -6,16 +6,9 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using metrics;
 using Raven.Abstractions;
 using Raven.Database.Extensions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Json;
-using Raven.Database.Data;
-using Raven.Database.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Impl
@@ -33,34 +26,34 @@ namespace Raven.Database.Impl
             this.timeout = timeout;
         }
 
-        public RavenJArray DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null)
+        public RavenJArray DeleteByIndex(string indexName, IndexQuery queryToDelete, BulkOperationOptions options = null, Action<BulkOperationProgress> reportProgress = null)
         {
             return PerformBulkOperation(indexName, queryToDelete, options, (docId) =>
             {
                 database.Documents.Delete(docId, null);
                 return new { Document = docId, Deleted = true };
-            });
+            }, reportProgress);
         }
 
-        public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null)
+        public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, BulkOperationOptions options = null, Action<BulkOperationProgress> reportProgress = null)
         {
             return PerformBulkOperation(indexName, queryToUpdate, options, (docId) =>
             {
                 var patchResult = database.Patches.ApplyPatch(docId, null, patchRequests);
                 return new { Document = docId, Result = patchResult };
-            });
+            }, reportProgress);
         }
 
-        public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null)
+        public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, BulkOperationOptions options = null, Action<BulkOperationProgress> reportProgress = null)
         {
             return PerformBulkOperation(indexName, queryToUpdate, options, (docId) =>
             {
                 var patchResult = database.Patches.ApplyPatch(docId, null, patch);
                 return new { Document = docId, Result = patchResult.Item1, Debug = patchResult.Item2 };
-            });
+            }, reportProgress);
         }
 
-        private RavenJArray PerformBulkOperation(string index, IndexQuery indexQuery, BulkOperationOptions options, Func<string, object> batchOperation)
+        private RavenJArray PerformBulkOperation(string index, IndexQuery indexQuery, BulkOperationOptions options, Func<string, object> batchOperation, Action<BulkOperationProgress> reportProgress = null)
         {
             options = options ?? new BulkOperationOptions();
             var array = new RavenJArray();
@@ -82,8 +75,12 @@ namespace Raven.Database.Impl
                 ResultsTransformer = indexQuery.ResultsTransformer
             };
 
+            var operationProgress = new BulkOperationProgress();
+            
             bool stale;
             var queryResults = database.Queries.QueryDocumentIds(index, bulkIndexQuery, tokenSource, out stale);
+
+            operationProgress.TotalEntries = queryResults.Count;
 
             if (stale && options.AllowStale == false)
             {
@@ -93,6 +90,8 @@ namespace Raven.Database.Impl
                     while (stale && staleWaitTimeout.Elapsed < options.StaleTimeout)
                     {
                         queryResults = database.Queries.QueryDocumentIds(index, bulkIndexQuery, tokenSource, out stale);
+                        operationProgress.TotalEntries = queryResults.Count;
+
                         if(stale)
                             SystemTime.Wait(100);
                     }
@@ -109,6 +108,7 @@ namespace Raven.Database.Impl
             var token = tokenSource.Token;		    
             const int batchSize = 1024;
             int maxOpsPerSec = options.MaxOpsPerSec ?? int.MaxValue;
+
             using (var enumerator = queryResults.GetEnumerator())
             {
                 var duration = Stopwatch.StartNew();
@@ -134,6 +134,10 @@ namespace Raven.Database.Impl
                                 if(options.RetrieveDetails)
                                     array.Add(RavenJObject.FromObject(result));
 
+                                operationProgress.ProcessedEntries++;
+
+                                reportProgress?.Invoke(operationProgress);
+
                                 if (operations >= maxOpsPerSec && duration.ElapsedMilliseconds < 1000)
                                 {
                                     shouldWaitNow = true;
@@ -142,6 +146,7 @@ namespace Raven.Database.Impl
                             }
                         });
                     }
+
                     if (shouldWaitNow)
                     {
                         SystemTime.Wait(500);
@@ -149,7 +154,9 @@ namespace Raven.Database.Impl
                         duration.Restart();
                         continue;
                     }
-                    if (batchCount < batchSize) break;
+
+                    if (batchCount < batchSize)
+                        break;
                 }
             }
             return array;

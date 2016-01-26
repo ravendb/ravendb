@@ -60,6 +60,12 @@ class patch extends viewModelBase {
     documentKey = ko.observable<string>();
     keyOfTestedDocument: KnockoutComputed<string>;
 
+    isPatchingInProgress = ko.observable<boolean>(false);
+    showPatchingProgress = ko.observable<boolean>(false);
+    patchingProgress = ko.observable<number>(0);
+    patchingProgressPercentage: KnockoutComputed<string>;
+    patchingProgressText = ko.observable<string>();
+
     static gridSelector = "#matchingDocumentsGrid";
 
     constructor() {
@@ -69,7 +75,7 @@ class patch extends viewModelBase {
 
         // When we programmatically change the document text or meta text, push it into the editor.
         this.beforePatchDocMode.subscribe(() => {
-            if (this.beforePatchEditor) { 
+            if (this.beforePatchEditor) {
                 var text = this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
                 this.beforePatchEditor.getSession().setValue(text);
             }
@@ -172,6 +178,7 @@ class patch extends viewModelBase {
             }
         });
 
+        this.patchingProgressPercentage = ko.computed(() => this.patchingProgress() + "%");
     }
 
     attached() {
@@ -219,6 +226,7 @@ class patch extends viewModelBase {
     }
 
     setSelectedPatchOnOption(patchOnOption: string) {
+        this.resetProgressBar();
         this.patchDocument().patchOnOption(patchOnOption);
         this.patchDocument().selectedItem('');
         this.clearDocumentPreview();
@@ -241,7 +249,7 @@ class patch extends viewModelBase {
             .execute()
             .always(() => NProgress.done())
             .done((colls: collection[]) => {
-                var currentlySelectedCollection:collection = null;
+                var currentlySelectedCollection: collection = null;
 
                 if (this.patchDocument().selectedItem()) {
                     var selected = this.patchDocument().selectedItem();
@@ -256,6 +264,7 @@ class patch extends viewModelBase {
     }
 
     setSelectedCollection(coll: collection) {
+        this.resetProgressBar();
         this.patchDocument().selectedItem(coll.name);
         var list = coll.getDocuments();
         this.currentCollectionPagedItems(list);
@@ -274,6 +283,7 @@ class patch extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
+        this.resetProgressBar();
         this.selectedIndex(indexName);///
         this.patchDocument().selectedItem(indexName);
         this.runQuery();
@@ -358,7 +368,7 @@ class patch extends viewModelBase {
     }
 
     private updateActions(actions: { PutDocument: any[]; LoadDocument: any }) {
-        this.loadedDocuments(actions.LoadDocument || []); 
+        this.loadedDocuments(actions.LoadDocument || []);
         this.putDocuments((actions.PutDocument || []).map(doc => jsonUtil.syntaxHighlight(doc)));
     }
 
@@ -404,7 +414,34 @@ class patch extends viewModelBase {
             Values: values
         };
 
-        new evalByQueryCommand(index, query, JSON.stringify(patch), this.activeDatabase()).execute();
+        var patchByQueryCommand = new evalByQueryCommand(index, query, JSON.stringify(patch), this.activeDatabase(), status => this.updateProgress(status));
+
+        patchByQueryCommand.execute()
+            .done(() => {
+                this.resetProgressBar();
+                this.isPatchingInProgress(true);
+                this.showPatchingProgress(true);
+            });
+    }
+
+    private resetProgressBar() {
+        this.showPatchingProgress(false);     
+        this.patchingProgress(0);
+        this.patchingProgressText("");
+    }
+
+    private updateProgress(status: bulkOperationStatusDto) {
+
+        if (status.OperationProgress != null) {
+            var progressValue = Math.round(100 * (status.OperationProgress.ProcessedEntries / status.OperationProgress.TotalEntries));
+            this.patchingProgress(progressValue);
+            this.patchingProgressText(status.OperationProgress.ProcessedEntries + " / " + status.OperationProgress.TotalEntries + " (" + progressValue + "%)");
+        }
+
+        if (status.Completed) {
+            this.isPatchingInProgress(false);
+            setTimeout(() => this.showPatchingProgress(false), 2000);
+        }
     }
 
     private confirmAndExecutePatch(keys: string[]) {
@@ -507,20 +544,20 @@ class patch extends viewModelBase {
                 new getDocumentsByEntityNameCommand(new collection(collectionName, this.activeDatabase()), 0, 1)
                     .execute()
                     .done((result: pagedResultSet) => {
-                    if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
-                        var dynamicIndexPattern: document = new document(result.items[0]);
-                        if (!!dynamicIndexPattern) {
-                            this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
+                            var dynamicIndexPattern: document = new document(result.items[0]);
+                            if (!!dynamicIndexPattern) {
+                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
+                            }
                         }
-                    }
-                });
+                    });
             } else {
                 new getIndexDefinitionCommand(indexName, this.activeDatabase())
                     .execute()
                     .done((result: indexDefinitionContainerDto) => {
-                    self.isTestIndex(result.Index.IsTestIndex);
-                    self.indexFields(result.Index.Fields);
-                });
+                        self.isTestIndex(result.Index.IsTestIndex);
+                        self.indexFields(result.Index.Fields);
+                    });
             }
         }
     }
