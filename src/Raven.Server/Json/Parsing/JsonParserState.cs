@@ -7,7 +7,7 @@ namespace Raven.Server.Json.Parsing
     {
         public UnmanagedWriteBuffer StringBuffer;
         public long Long;
-        public JsonParserToken Current;
+        public JsonParserToken CurrentTokenType;
         public readonly List<int> EscapePositions = new List<int>();
 
         public JsonParserState(RavenOperationContext ctx)

@@ -233,6 +233,27 @@ namespace Raven.Server.Json
             return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.None);
         }
 
+        public BlittableJsonDocument ReadObject(DynamicJsonBuilder builder, string documentId, 
+            BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
+        {
+            using (var state = new JsonParserState(this))
+            using (var parser = new ObjectJsonParser(state, builder))
+            {
+                var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);
+                try
+                {
+                    CachedProperties.NewDocument();
+                    writer.Run();
+                    return writer;
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
+            }
+        }
+
         public BlittableJsonDocument Read(Stream stream, string documentId)
         {
             var state = BlittableJsonDocument.UsageMode.ToDisk;

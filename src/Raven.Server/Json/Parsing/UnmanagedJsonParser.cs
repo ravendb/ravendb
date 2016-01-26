@@ -83,33 +83,33 @@ namespace Raven.Server.Json.Parsing
                         break;
                     case (byte)':':
                     case (byte)',':
-                        switch (_state.Current)
+                        switch (_state.CurrentTokenType)
                         {
                             case JsonParserToken.Separator:
                             case JsonParserToken.StartObject:
                             case JsonParserToken.StartArray:
                                 throw CreateException("Cannot have a '" + (char)b + "' in this position");
                         }
-                        _state.Current = JsonParserToken.Separator;
+                        _state.CurrentTokenType = JsonParserToken.Separator;
                         break;
                     case (byte)'N':
                         EnsureRestOfToken(NaN, "NaN");
-                        _state.Current = JsonParserToken.Float;
+                        _state.CurrentTokenType = JsonParserToken.Float;
                         _charPos += 2;
                         return;
                     case (byte)'n':
                         EnsureRestOfToken(BlittableJsonTextWriter.NullBuffer, "null");
-                        _state.Current = JsonParserToken.Null;
+                        _state.CurrentTokenType = JsonParserToken.Null;
                         _charPos += 3;
                         return;
                     case (byte)'t':
                         EnsureRestOfToken(BlittableJsonTextWriter.TrueBuffer, "true");
-                        _state.Current = JsonParserToken.True;
+                        _state.CurrentTokenType = JsonParserToken.True;
                         _charPos += 3;
                         return;
                     case (byte)'f':
                         EnsureRestOfToken(BlittableJsonTextWriter.FalseBuffer, "false");
-                        _state.Current = JsonParserToken.False;
+                        _state.CurrentTokenType = JsonParserToken.False;
                         _charPos += 4;
                         return;
                     case (byte)'"':
@@ -117,16 +117,16 @@ namespace Raven.Server.Json.Parsing
                         ParseString(b);
                         return;
                     case (byte)'{':
-                        _state.Current = JsonParserToken.StartObject;
+                        _state.CurrentTokenType = JsonParserToken.StartObject;
                         return;
                     case (byte)'[':
-                        _state.Current = JsonParserToken.StartArray;
+                        _state.CurrentTokenType = JsonParserToken.StartArray;
                         return;
                     case (byte)'}':
-                        _state.Current = JsonParserToken.EndObject;
+                        _state.CurrentTokenType = JsonParserToken.EndObject;
                         return;
                     case (byte)']':
-                        _state.Current = JsonParserToken.EndArray;
+                        _state.CurrentTokenType = JsonParserToken.EndArray;
                         return;
                     //numbers
 
@@ -214,7 +214,7 @@ namespace Raven.Server.Json.Parsing
                                     throw CreateException("Invalid number with zero prefix");
                                 if (isNegative)
                                     _state.Long *= -1;
-                                _state.Current = isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
+                                _state.CurrentTokenType = isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
                                 _pos--; _charPos--;// need to re-read this char
                                 return;
                             default:
@@ -278,7 +278,7 @@ namespace Raven.Server.Json.Parsing
                     _charPos++;
                     if (b == quote)
                     {
-                        _state.Current = JsonParserToken.String;
+                        _state.CurrentTokenType = JsonParserToken.String;
                         _state.StringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1 /*don't include the last quote*/);
                         return;
                     }

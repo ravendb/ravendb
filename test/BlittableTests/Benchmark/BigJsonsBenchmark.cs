@@ -45,7 +45,7 @@ namespace NewBlittable.Tests.Benchmark
                         fs.Write(result.Duration+",");
                         foreach (var countersValue in result.CountersValues)
                         {
-                            fs.Write(countersValue.Value.Max(x => x.RawValue) +",");
+                            fs.Write(countersValue.Items.Max(x => x.RawValue) +",");
                         }
                         GC.Collect(2);
                         result = JsonProcessorRunner(() =>
@@ -65,7 +65,7 @@ namespace NewBlittable.Tests.Benchmark
                         foreach (var countersValue in result.CountersValues)
                         {
                             Console.WriteLine(countersValue.Key);
-                            fs.Write(countersValue.Value.Average(x => x.RawValue) + ",");
+                            fs.Write(countersValue.Items.Average(x => x.RawValue) + ",");
                         }
                         var size =
                             JObject.Load(new JsonTextReader(new StringReader(jsonFileText)))

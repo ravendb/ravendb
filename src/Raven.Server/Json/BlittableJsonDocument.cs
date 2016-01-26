@@ -99,8 +99,8 @@ namespace Raven.Server.Json
         public void Run()
         {
             _reader.Read();
-            if (_state.Current != JsonParserToken.StartObject)
-                throw new InvalidDataException("Expected start of object, but got " + _state.Current);
+            if (_state.CurrentTokenType != JsonParserToken.StartObject)
+                throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
             BlittableJsonToken token;
 
             // Write the whole object recursively
@@ -172,11 +172,11 @@ namespace Raven.Server.Json
             {
                 _reader.Read();
 
-                if (_state.Current == JsonParserToken.EndObject)
+                if (_state.CurrentTokenType == JsonParserToken.EndObject)
                     break;
 
-                if (_state.Current != JsonParserToken.String)
-                    throw new InvalidDataException("Expected property, but got " + _state.Current);
+                if (_state.CurrentTokenType != JsonParserToken.String)
+                    throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
 
                 var buffer = GetTempBuffer(_state.StringBuffer.SizeInBytes);
                 _state.StringBuffer.CopyTo(buffer);
@@ -282,7 +282,7 @@ namespace Raven.Server.Json
         private int WriteValue(out BlittableJsonToken token)
         {
             var start = _position;
-            switch (_state.Current)
+            switch (_state.CurrentTokenType)
             {
                 case JsonParserToken.StartObject:
                     return WriteObject(out token);
@@ -305,7 +305,7 @@ namespace Raven.Server.Json
                     return start;
                 case JsonParserToken.True:
                 case JsonParserToken.False:
-                    _stream.WriteByte(_state.Current == JsonParserToken.True ? (byte)1 : (byte)0);
+                    _stream.WriteByte(_state.CurrentTokenType == JsonParserToken.True ? (byte)1 : (byte)0);
                     _position++;
                     token = BlittableJsonToken.Boolean;
                     return start;
@@ -316,7 +316,7 @@ namespace Raven.Server.Json
                     return start; // nothing to do here, we handle that with the token
 
                 default:
-                    throw new InvalidDataException("Expected a value, but got " + _state.Current);
+                    throw new InvalidDataException("Expected a value, but got " + _state.CurrentTokenType);
                     // ReSharper restore RedundantCaseLabel
             }
         }
@@ -355,7 +355,7 @@ namespace Raven.Server.Json
             while (true)
             {
                 _reader.Read();
-                if (_state.Current == JsonParserToken.EndArray)
+                if (_state.CurrentTokenType == JsonParserToken.EndArray)
                     break;
 
 

@@ -114,7 +114,7 @@ namespace Raven.Server.Json
             return copiedBytes;
         }
 
-        public void Clear()
+        public void Clear(int sizeRequired = 0)
         {
             _current.Used = 0;
             _sizeInBytes = 0;
@@ -126,6 +126,13 @@ namespace Raven.Server.Json
             {
                 _context.ReturnMemory(prev.Allocation);
                 prev = prev.Previous;
+            }
+
+            if (_current.Allocation.SizeInBytes < sizeRequired)
+            {
+                _context.ReturnMemory(_current.Allocation);
+                _current = null;
+                AllocateNextSegment(sizeRequired);
             }
         }
 
@@ -141,6 +148,19 @@ namespace Raven.Server.Json
                 cur = cur.Previous;
             }
             _disposed = true;
+        }
+
+        public byte* GetBufferFor(int requiredSize)
+        {
+            var used = _current.Used;
+            if (used + requiredSize > _current.Allocation.SizeInBytes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(requiredSize),
+                    "Cannot request a buffer of this size from the buffer, you didn't ensure that it is available first");
+            }
+            _current.Used += requiredSize;
+            _sizeInBytes += requiredSize;
+            return _current.Address + used;
         }
     }
 }
