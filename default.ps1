@@ -11,7 +11,7 @@ properties {
     $base_dir  = resolve-path .
     $lib_dir = "$base_dir\SharedLibs"
     $packages_dir = "$base_dir\packages"
-    $build_dir = "$base_dir\build"
+    $build_dir = "$base_dir\artifacts"
     $sln_file_name = "zzz_RavenDB_Release.sln"
     $sln_file = "$base_dir\$sln_file_name"
     $version = "3.0"

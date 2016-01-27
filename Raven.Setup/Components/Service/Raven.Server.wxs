@@ -8,7 +8,7 @@
 		<DirectoryRef Id='INSTALLFOLDER'>
 			<Component Id="Raven.Server" Guid="70BBCA5D-5EC0-4D96-80FD-823AD8759B2E">
 				<File Id="Raven.Server" Name='$(var.Raven.Server.ProjectName).exe' DiskId='1' Source='$(var.Raven.Server.TargetPath)' KeyPath='yes' />
-				<File Id="Html.Studio.Server" Name="Raven.Studio.Html5.zip" DiskId="1" Source="..\build\Raven.Studio.Html5.zip" />
+				<File Id="Html.Studio.Server" Name="Raven.Studio.Html5.zip" DiskId="1" Source="..\artifacts\Raven.Studio.Html5.zip" />
 
 				<fire:FirewallException Id="Firewall.Raven.Server" Name="RavenDB - Service - [SERVICE_PORT]" Port="[SERVICE_PORT]"
 																Protocol="tcp" Scope="any" IgnoreFailure="yes" Program="System" />
