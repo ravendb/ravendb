@@ -29,6 +29,23 @@ namespace BlittableTests.Routing
             Assert.True(trie.TryMatch("admin/databases").Match.Success);
         }
 
+
+        [Fact]
+        public void CanQueryWithRoot()
+        {
+            var trie = Trie<int>.Build(new[]
+            {
+                "/",
+                "/build/version",
+                "/databases",
+                "/databases/*/docs",
+                "/databases/*/indexes",
+            }.ToDictionary(x => x, x => 1));
+
+            Assert.True(trie.TryMatch("/build/version").Match.Success);
+        }
+
+
         [Theory]
         [InlineData("databases/northwind/docs")]
         [InlineData("databases")]

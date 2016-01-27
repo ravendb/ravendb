@@ -31,8 +31,8 @@ namespace Raven.Server.Routing
         public string Key;
         public T Value;
         public Trie<T>[] Children;
-        public Trie<T>[] FilteredChildren =>  Children?.Where(x => x != null).Distinct().ToArray();
-         
+        public Trie<T>[] FilteredChildren => Children?.Where(x => x != null).Distinct().ToArray();
+
         public struct MatchResult
         {
             public RouteMatch Match;
@@ -109,7 +109,7 @@ namespace Raven.Server.Routing
 
         public override string ToString()
         {
-            return $"Key: {Key}, Children: {Children?.Distinct().Count(x=>x!=null)}";
+            return $"Key: {Key}, Children: {Children?.Distinct().Count(x => x != null)}";
         }
 
         public static Trie<T> Build(Dictionary<string, T> source)
@@ -150,17 +150,13 @@ namespace Raven.Server.Routing
             current.Children = new Trie<T>[127];
             var minKey = sortedKeys[start];
             var maxKey = sortedKeys[start + count - 1];
-            var matchingIndex = matchStart == 0 ? matchStart : matchStart + 1;
-            if (matchStart <= 0 || minKey[matchStart] != '*')
+            var matchingIndex = matchStart;
+            for (int i = matchingIndex; i < Math.Min(minKey.Length, maxKey.Length); i++)
             {
-                for (int i = matchingIndex; i < Math.Min(minKey.Length, maxKey.Length); i++)
-                {
-                    if (minKey[i] == maxKey[i] &&
-                        minKey[i] != '*')
-                        continue;
-                    matchingIndex = i;
-                    break;
-                }
+                if (minKey[i] == maxKey[i])
+                    continue;
+                matchingIndex = i;
+                break;
             }
 
 
@@ -173,6 +169,19 @@ namespace Raven.Server.Routing
             }
 
             current.Key = minKey.Substring(matchStart, matchingIndex - matchStart);
+            var indexOfStar = current.Key.IndexOf('*');
+            if (indexOfStar != -1)
+            {
+                var tmp = current.Key;
+                current.Key = tmp.Substring(0, indexOfStar);
+                current.Children['*'] = new Trie<T>
+                {
+                    Key = "*",
+                    Children = new Trie<T>[127]
+                };
+                AddChild(current.Children['*'], source, sortedKeys, matchStart + indexOfStar + 1, start, count);
+                return;
+            }
             var childStart = start;
             var childCount = 1;
 
@@ -195,15 +204,21 @@ namespace Raven.Server.Routing
         private static void AddChild(Trie<T> current, Dictionary<string, T> source, string[] sortedKeys, int matchingIndex, int childStart,
             int childCount)
         {
-            Trie<T> child;
-            child = new Trie<T>();
+            var child = new Trie<T>();
             Build(child, source, sortedKeys, matchingIndex, childStart, childCount);
-            current.Children[char.ToUpper(child.Key[0])] = child;
-            current.Children[char.ToLower(child.Key[0])] = child;
+            if (child.Key.Length == 0)
+            {
+                current.Children = child.Children;
+            }
+            else
+            {
+                current.Children[char.ToUpper(child.Key[0])] = child;
+                current.Children[char.ToLower(child.Key[0])] = child;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool CharEqualsAt(string x, int xIndex,string y, int yIndex)
+        private static bool CharEqualsAt(string x, int xIndex, string y, int yIndex)
         {
             if (x[xIndex] == y[yIndex])
                 return true;
