@@ -10,6 +10,8 @@ namespace Raven.Server.Json.Parsing
     public class DynamicJsonValue
     {
         public int SourceIndex = -1;
+        public int[] SourceProperties;
+
         public readonly Queue<Tuple<string, object>> Properties = new Queue<Tuple<string, object>>();
         public HashSet<int> Removals;
         public bool AlreadySeen;
@@ -24,6 +26,7 @@ namespace Raven.Server.Json.Parsing
         {
             _source = source;
         }
+
 
 
         public void Remove(string property)
@@ -170,19 +173,21 @@ namespace Raven.Server.Json.Parsing
                     {
                         _elements.Push(bjro);
                         bjro.Modifications.AlreadySeen = true;
+                        bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         return;
                     }
 
                     var modifications = bjro.Modifications;
                     modifications.SourceIndex++;
-                    if (modifications.SourceIndex < bjro.Count)
+                    if (modifications.SourceIndex < modifications.SourceProperties.Length)
                     {
-                        if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
+                        var propIndex = modifications.SourceProperties[modifications.SourceIndex];
+                        if (modifications.Removals != null && modifications.Removals.Contains(propIndex))
                         {
                             continue;
                         }
-                        var property = bjro.GetPropertyByIndex(modifications.SourceIndex);
+                        var property = bjro.GetPropertyByIndex(propIndex);
                         _elements.Push(bjro);
                         _elements.Push(property.Item2);
                         current = property.Item1;

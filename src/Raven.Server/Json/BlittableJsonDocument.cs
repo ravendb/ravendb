@@ -185,6 +185,7 @@ namespace Raven.Server.Json
                 {
                     property.EscapePositions = _state.EscapePositions.ToArray();
                 }
+                
                 var propIndex = _context.CachedProperties.GetPropertyId(property);
 
                 maxPropId = Math.Max(maxPropId, propIndex);
@@ -195,7 +196,7 @@ namespace Raven.Server.Json
                 BlittableJsonToken token;
                 var valuePos = WriteValue(out token);
 
-                // Register property possition, name id (PropertyId) and type (object type and metadata)
+                // Register property position, name id (PropertyId) and type (object type and metadata)
                 properties.Add(new PropertyTag
                 {
                     Position = valuePos,

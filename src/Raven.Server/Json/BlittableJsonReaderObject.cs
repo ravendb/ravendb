@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Server.Json.Parsing;
+using Sparrow;
 
 namespace Raven.Server.Json
 {
@@ -328,7 +329,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private int[] GetPropertiesByInsertionOrder()
+        public int[] GetPropertiesByInsertionOrder()
         {
             var props = new int[_propCount];
             var offsets = new int[_propCount];
@@ -339,7 +340,7 @@ namespace Raven.Server.Json
                 offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
                 props[i] = i;
             }
-            Array.Sort(offsets, props);
+            Array.Sort(offsets, props, NumericDescendingComparer.Instance);
             return props;
         }
 
