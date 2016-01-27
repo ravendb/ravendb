@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Utils
 {
     public class WelcomeMessage
     {
+        // TODO : Take RunningOnPosix from Raven.Sparrow when Fitzhak will finish MemoryStatistics
+        private static bool RunningOnPosix = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                                             RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         public static void Print()
         {
@@ -32,8 +36,14 @@ namespace Raven.Server.Utils
                 throw new ArgumentNullException("consoleTexts");
             }
 
-            var previousForegroundColor = Console.ForegroundColor;
-            var previousBackgroundColor = Console.BackgroundColor;
+            // Linux cannot and will not support getting current color : https://github.com/aspnet/dnx/issues/1708
+            var previousForegroundColor = ConsoleColor.White;
+            var previousBackgroundColor = ConsoleColor.Black;
+            if (RunningOnPosix == false)
+            { 
+                previousForegroundColor = Console.ForegroundColor;
+                previousBackgroundColor = Console.BackgroundColor;
+            }
 
             foreach (var consoleText in consoleTexts)
             {
@@ -66,10 +76,14 @@ namespace Raven.Server.Utils
 
         private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
         {
+            ConsoleColor consoleBackgroundColor = ConsoleColor.Black;
+            if (RunningOnPosix == false)
+                consoleBackgroundColor = Console.BackgroundColor;
+
             ConsoleWriteWithColor(new ConsoleText
             {
                 ForegroundColor = color,
-                BackgroundColor = Console.BackgroundColor,
+                BackgroundColor = consoleBackgroundColor,
                 IsNewLinePostPended = true,
                 Message = message,
                 Args = args
@@ -80,8 +94,16 @@ namespace Raven.Server.Utils
         {
             public ConsoleText()
             {
-                ForegroundColor = Console.ForegroundColor;
-                BackgroundColor = Console.BackgroundColor;
+                if (RunningOnPosix == true)
+                {
+                    var previousForegroundColor = ConsoleColor.White;
+                    var previousBackgroundColor = ConsoleColor.Black;
+                }
+                else
+                {
+                    ForegroundColor = Console.ForegroundColor;
+                    BackgroundColor = Console.BackgroundColor;
+                }
             }
 
             public string Message { get; set; }
