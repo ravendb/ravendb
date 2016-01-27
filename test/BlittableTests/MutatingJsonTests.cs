@@ -109,11 +109,9 @@ namespace BlittableTests
                     var readerObject = new BlittableJsonReaderObject(address, writer.SizeInBytes, ctx);
 
                     mutate(readerObject);
-                    Console.WriteLine("------------");
                     var document = ctx.ReadObject(readerObject, "foo");
                     newDocMem = pool.Allocate(document.SizeInBytes);
                     document.CopyTo((byte*)newDocMem.Address);
-                    Console.WriteLine("------------");
                     readerObject = new BlittableJsonReaderObject((byte*)newDocMem.Address, document.SizeInBytes, ctx);
                     var ms = new MemoryStream();
                     readerObject.WriteTo(ms, originalPropertyOrder: true);
