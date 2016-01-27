@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Mono.CSharp;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -19,7 +19,6 @@ using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
-using Raven.Database.Prefetching;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Database.Util;
@@ -168,35 +167,8 @@ namespace Raven.Database.Actions
 
                             token.ThrowIfCancellationRequested();
 
-                            if (storedTransformer != null)
-                            {
-                                using (new CurrentTransformationScope(Database, documentRetriever))
-                                {
-                                    var transformed =
-                                        storedTransformer.TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
-                                                         .Select(x => JsonExtensions.ToJObject(x))
-                                                         .ToArray();
-
-                                    if (transformed.Length == 0)
-                                    {
-                                        throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
-                                    }
-
-                                    var transformedJsonDocument = new JsonDocument
-                                    {
-                                        Etag = document.Etag.CombineHashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
-                                        LastModified = document.LastModified,
-                                        DataAsJson = new RavenJObject { { "$values", new RavenJArray(transformed.Cast<Object>().ToArray()) } },
-                                    };
-
-                                    addDoc(transformedJsonDocument);
-                                }
-
-                            }
-                            else
-                            {
-                                addDoc(document);
-                            }
+                            document = TransformDocumentIfNeeded(document, storedTransformer, documentRetriever);
+                            addDoc(document);
 
                             addedDocs++;
                             docCountOnLastAdd = docCount;
@@ -216,6 +188,40 @@ namespace Raven.Database.Actions
                 nextStart = start + matchedDocs;
             else
                 nextStart = actualStart;
+        }
+
+        private JsonDocument TransformDocumentIfNeeded(JsonDocument document, AbstractTransformer storedTransformer, DocumentRetriever documentRetriever)
+        {
+            if (storedTransformer == null)
+                return document;
+
+            using (new CurrentTransformationScope(Database, documentRetriever))
+            {
+                var transformed = storedTransformer
+                    .TransformResultsDefinition(new[] { new DynamicJsonObject(document.ToJson()) })
+                    .Select<dynamic, dynamic>(x => JsonExtensions.ToJObject((object)x))
+                    .ToArray();
+
+                RavenJObject ravenJObject;
+                switch (transformed.Length)
+                {
+                    case 0:
+                        throw new InvalidOperationException("The transform results function failed on a document: " + document.Key);
+                    case 1:
+                        ravenJObject = transformed[0];
+                        break;
+                    default:
+                        ravenJObject = new RavenJObject { { "$values", new RavenJArray(transformed) } };
+                        break;
+                }
+
+                return new JsonDocument
+                {
+                    Etag = document.Etag.CombineHashWith(storedTransformer.GetHashCodeBytes()).HashWith(documentRetriever.Etag),
+                    LastModified = document.LastModified,
+                    DataAsJson = ravenJObject
+                };
+            }
         }
 
         private void RemoveMetadataReservedProperties(RavenJObject metadata)
@@ -430,17 +436,20 @@ namespace Raven.Database.Actions
             return list;
         }
 
-        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<JsonDocument> addDocument)
-        {
-            return GetDocuments(start, pageSize, etag, token, x => { addDocument(x); return true; });
-        }
-
-        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument)
+        public Etag GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Func<JsonDocument, bool> addDocument, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             Etag lastDocumentReadEtag = null;
 
             TransactionalStorage.Batch(actions =>
             {
+                AbstractTransformer storedTransformer = null;
+                if (transformer != null)
+                {
+                    storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
+                    if (storedTransformer == null)
+                        throw new InvalidOperationException("No transformer with the name: " + transformer);
+                }
+
                 bool returnedDocs = false;
                 while (true)
                 {
@@ -448,7 +457,7 @@ namespace Raven.Database.Actions
                                         ? actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize)
                                         : actions.Documents.GetDocumentsAfter(etag, pageSize, token);
 
-                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers);
+                    var documentRetriever = new DocumentRetriever(Database.Configuration, actions, Database.ReadTriggers, transformerParameters);
                     int docCount = 0;
                     int docCountOnLastAdd = 0;
                     foreach (var doc in documents)
@@ -474,6 +483,8 @@ namespace Raven.Database.Actions
                         returnedDocs = true;
                         Database.WorkContext.UpdateFoundWork();
                         
+                        document = TransformDocumentIfNeeded(document, storedTransformer, documentRetriever);
+
                         bool canContinue = addDocument(document);
                         if (!canContinue)
                             break;
