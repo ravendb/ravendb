@@ -284,12 +284,12 @@ namespace Raven.Server.Json.Parsing
 
         private void SetStringBuffer(string str)
         {
-            _state.StringSize = Encoding.UTF8.GetByteCount(str);
-            int size;
-            _state.StringBuffer = _ctx.GetNativeTempBuffer(_state.StringSize, out size);
+            int size = Encoding.UTF8.GetMaxByteCount(str.Length);
+            
+            _state.StringBuffer = _ctx.GetNativeTempBuffer(size, out size);
             fixed (char* pChars = str)
             {
-                Encoding.UTF8.GetBytes(pChars, str.Length, _state.StringBuffer, _state.StringSize);
+                _state.StringSize = Encoding.UTF8.GetBytes(pChars, str.Length, _state.StringBuffer, _state.StringSize);
             }
         }
 

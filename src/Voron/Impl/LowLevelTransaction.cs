@@ -101,7 +101,6 @@ namespace Voron.Impl
                 scratchPagerState.AddRef();
                 _pagerStates.Add(scratchPagerState);
             }
-            flags.HasFlag()
 
             if (flags != TransactionFlags.ReadWrite)
             {
