@@ -225,34 +225,34 @@ namespace Raven.Server.Json
             return returnedByteArray;
         }
 
-        public BlittableJsonDocument ReadForDisk(Stream stream, string documentId)
+        public BlittableJsonDocumentBuilder ReadForDisk(Stream stream, string documentId)
         {
-            return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.ToDisk);
+            return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        public BlittableJsonDocument ReadForMemory(Stream stream, string documentId)
+        public BlittableJsonDocumentBuilder ReadForMemory(Stream stream, string documentId)
         {
-            return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.None);
+            return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
 
-        public BlittableJsonDocument ReadObject(DynamicJsonValue builder, string documentId,
-            BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
+        public BlittableJsonDocumentBuilder ReadObject(DynamicJsonValue builder, string documentId,
+            BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             return ReadObjectInternal(builder, documentId, mode);
         }
 
-        public BlittableJsonDocument ReadObject(BlittableJsonReaderObject obj, string documentId,
-         BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
+        public BlittableJsonDocumentBuilder ReadObject(BlittableJsonReaderObject obj, string documentId,
+         BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             return ReadObjectInternal(obj, documentId, mode);
         }
 
-        private BlittableJsonDocument ReadObjectInternal(object builder, string documentId, BlittableJsonDocument.UsageMode mode)
+        private BlittableJsonDocumentBuilder ReadObjectInternal(object builder, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, builder, this))
             {
-                var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);
+                var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();
@@ -267,18 +267,18 @@ namespace Raven.Server.Json
             }
         }
 
-        public BlittableJsonDocument Read(Stream stream, string documentId)
+        public BlittableJsonDocumentBuilder Read(Stream stream, string documentId)
         {
-            var state = BlittableJsonDocument.UsageMode.ToDisk;
+            var state = BlittableJsonDocumentBuilder.UsageMode.ToDisk;
             return ParseToMemory(stream, documentId, state);
         }
 
-        private BlittableJsonDocument ParseToMemory(Stream stream, string documentId, BlittableJsonDocument.UsageMode mode)
+        private BlittableJsonDocumentBuilder ParseToMemory(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(stream, this, state))
             {
-                var writer = new BlittableJsonDocument(this, mode, documentId, parser, state);
+                var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();

@@ -121,14 +121,14 @@ namespace Raven.Server.ServerWide
             return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, ctx);
         }
 
-        public void Write(string id, BlittableJsonDocument document)
+        public void Write(string id, BlittableJsonDocumentBuilder documentBuilder)
         {
             using (var tx = _env.WriteTransaction())
             {
                 var dbs = tx.ReadTree("items");
 
-                var ptr = dbs.DirectAdd(id, document.SizeInBytes);
-                document.CopyTo(ptr);
+                var ptr = dbs.DirectAdd(id, documentBuilder.SizeInBytes);
+                documentBuilder.CopyTo(ptr);
 
                 tx.Commit();
             }

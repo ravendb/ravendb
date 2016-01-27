@@ -25,7 +25,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new VariousPropertyAmountsTests().FlatBoundarySizeFieldsAmountStreamRead(byte.MaxValue);
+            new MutatingJsonTests().CanRemoveAndAddProperty();
             return;
             // var trie = Trie<int>.Build(new[]
             //{
@@ -59,7 +59,7 @@ namespace Tryouts
 
             //force loading of assemblyes
             Console.WriteLine(typeof(UnmanageJsonReaderTests));
-            Console.WriteLine(typeof(BlittableJsonDocument));
+            Console.WriteLine(typeof(BlittableJsonDocumentBuilder));
             Console.WriteLine(typeof(Hashing));
             Console.WriteLine(typeof(StorageEnvironment));
 

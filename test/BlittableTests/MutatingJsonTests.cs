@@ -72,11 +72,11 @@ namespace BlittableTests
                     ["Pie"] = 3.147
                 };
                 source.Modifications.Remove("Dogs");
-            }, @"{""Name"":""Oren"",""State"":{""Sleep"":true},""Pie"":3.147}");
+            }, @"{""Name"":""Oren"",""State"":{""Sleep"":false},""Pie"":3.147}");
         }
 
         [Fact]
-        public void CanAddnAndRemoveProperty()
+        public void CanAddAndRemoveProperty()
         {
             AssertEqualAfterRoundTrip(source =>
             {
@@ -85,7 +85,7 @@ namespace BlittableTests
 
                 };
                 source.Modifications.Remove("Dogs");
-            }, @"{""Name"":""Oren"",""State"":{""Sleep"":true}}");
+            }, @"{""Name"":""Oren"",""State"":{""Sleep"":false}}");
         }
 
         private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected)
