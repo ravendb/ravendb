@@ -1109,6 +1109,12 @@ namespace Raven.Abstractions.Smuggler
                         continue;
 
                     Operations.ShowProgress("Importing attachment {0}", key);
+                    if (Operations.Options.StripReplicationInformation)
+                    {
+                        metadata.Remove(Constants.RavenReplicationSource);
+                        metadata.Remove(Constants.RavenReplicationVersion);
+                    }
+
                     await Operations.PutAttachment(dst, new AttachmentExportInfo
                     {
                         Key = key,
