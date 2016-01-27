@@ -16,7 +16,7 @@ namespace BlittableTests
             //d["Name"] = "Oren Eini";
             //d["Name"] = "Ayende Rahien";
 
-            AssertEqualAfterRoundTrip(new DynamicJsonBuilder
+            AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Name"] = "Ayende Rahien"
@@ -28,10 +28,10 @@ namespace BlittableTests
         [Fact]
         public void CanUseNestedObject()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonBuilder
+            AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
-                ["Wife"] = new DynamicJsonBuilder
+                ["Wife"] = new DynamicJsonValue
                 {
                     ["Name"] = "Rachel"
                 }
@@ -39,7 +39,7 @@ namespace BlittableTests
                 "{\"Name\":\"Oren Eini\",\"Wife\":{\"Name\":\"Rachel\"}}");
 
             
-            AssertEqualAfterRoundTrip(new DynamicJsonBuilder
+            AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Dogs"] = new DynamicJsonArray
@@ -53,13 +53,13 @@ namespace BlittableTests
         [Fact]
         public void CanGenerateJsonProperly()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonBuilder
+            AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini"
             }, 
             "{\"Name\":\"Oren Eini\"}");
 
-            AssertEqualAfterRoundTrip(new DynamicJsonBuilder
+            AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Age"] = 34,
@@ -68,7 +68,7 @@ namespace BlittableTests
            "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true}");
 
 
-            AssertEqualAfterRoundTrip(new DynamicJsonBuilder
+            AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Age"] = 34,
@@ -79,7 +79,7 @@ namespace BlittableTests
            "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true,\"Null\":null,\"Pie\":3.14}");
         }
 
-        private static void AssertEqualAfterRoundTrip(DynamicJsonBuilder doc, string expected)
+        private static void AssertEqualAfterRoundTrip(DynamicJsonValue  doc, string expected)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new RavenOperationContext(pool))

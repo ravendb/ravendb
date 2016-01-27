@@ -130,7 +130,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
                     var reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
 
                     var ms = new MemoryStream();
-                    reader.WriteTo(ms, originalPropertyOrder: true);
+                    reader.WriteTo(ms);
 
                     Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
 

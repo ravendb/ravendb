@@ -233,10 +233,10 @@ namespace Raven.Server.Json
             return ParseToMemory(stream, documentId, BlittableJsonDocument.UsageMode.None);
         }
 
-        public BlittableJsonDocument ReadObject(DynamicJsonBuilder builder, string documentId,
+        public BlittableJsonDocument ReadObject(DynamicJsonValue builder, string documentId,
             BlittableJsonDocument.UsageMode mode = BlittableJsonDocument.UsageMode.None)
         {
-            return ReadObjectInternal(builder.Value, documentId, mode);
+            return ReadObjectInternal(builder, documentId, mode);
         }
 
         public BlittableJsonDocument ReadObject(BlittableJsonReaderObject obj, string documentId,

@@ -22,11 +22,9 @@ namespace Tryouts
 {
     public class Program
     {
-
-
         public unsafe static void Main(string[] args)
         {
-            new MutatingJsonTests().CanAddProperty();
+            new MutatingJsonTests().CanModifyNestedObjectProperty();
             return;
             // var trie = Trie<int>.Build(new[]
             //{

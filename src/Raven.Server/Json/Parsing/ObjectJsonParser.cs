@@ -13,17 +13,42 @@ namespace Raven.Server.Json.Parsing
         public readonly Queue<Tuple<string, object>> Properties = new Queue<Tuple<string, object>>();
         public HashSet<int> Removals;
         public bool AlreadySeen;
-    }
+        private readonly BlittableJsonReaderObject _source;
 
-    public class DynamicJsonBuilder
-    {
-        public DynamicJsonValue Value = new DynamicJsonValue();
+        public DynamicJsonValue()
+        {
+            
+        }
+
+        public DynamicJsonValue(BlittableJsonReaderObject source)
+        {
+            _source = source;
+        }
+
+
+        public void Remove(string property)
+        {
+            if (_source == null)
+                throw new InvalidOperationException(
+                    "Cannot remove property when not setup with a source blittable json object");
+
+            var propertyIndex = _source.GetPropertyIndex(property);
+            if (propertyIndex == -1)
+                return;
+
+            if (Removals == null)
+                Removals = new HashSet<int>();
+            Removals.Add(propertyIndex);
+        }
+
 
         public object this[string name]
         {
             set
             {
-                Value.Properties.Enqueue(Tuple.Create(name, value));
+                if (_source != null)
+                    Remove(name);
+                Properties.Enqueue(Tuple.Create(name, value));
             }
         }
     }
@@ -153,12 +178,14 @@ namespace Raven.Server.Json.Parsing
                     modifications.SourceIndex++;
                     if (modifications.SourceIndex < bjro.Count)
                     {
-                        _elements.Push(bjro);
                         if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
                         {
                             continue;
                         }
-                        current = bjro.GetPropertyByIndex(modifications.SourceIndex);
+                        var property = bjro.GetPropertyByIndex(modifications.SourceIndex);
+                        _elements.Push(bjro);
+                        _elements.Push(property.Item2);
+                        current = property.Item1;
                         continue;
                     }
                     current = modifications;
@@ -180,11 +207,11 @@ namespace Raven.Server.Json.Parsing
                     modifications.SourceIndex++;
                     if (modifications.SourceIndex < bjra.Count)
                     {
-                        _elements.Push(bjra);
                         if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
                         {
                             continue;
                         }
+                        _elements.Push(bjra);
                         current = bjra.GetByIndex(modifications.SourceIndex);
                         continue;
                     }
@@ -245,12 +272,7 @@ namespace Raven.Server.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.Null;
                     return;
                 }
-                var djb = current as DynamicJsonBuilder;
-                if (djb != null)
-                {
-                    current = djb.Value;
-                    continue;
-                }
+                
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
             }
         }

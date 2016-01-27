@@ -78,7 +78,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                             var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
 
                             var memoryStream = new MemoryStream();
-                            reader.WriteTo(memoryStream, originalPropertyOrder: true);
+                            reader.WriteTo(memoryStream);
                             var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
                             JObject.Parse(s); // can parse the output
