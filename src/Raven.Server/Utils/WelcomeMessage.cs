@@ -38,7 +38,7 @@ namespace Raven.Server.Utils
 
             // Linux cannot and will not support getting current color : https://github.com/aspnet/dnx/issues/1708
             var previousForegroundColor = ConsoleColor.White;
-            var previousBackgroundColor = ConsoleColor.Black;
+            var previousBackgroundColor = ConsoleColor.DarkMagenta;
             if (RunningOnPosix == false)
             { 
                 previousForegroundColor = Console.ForegroundColor;
@@ -62,21 +62,9 @@ namespace Raven.Server.Utils
             Console.BackgroundColor = previousBackgroundColor;
         }
 
-        private static void ConsoleWriteWithColor(ConsoleColor color, string message, params object[] args)
-        {
-            ConsoleWriteWithColor(new ConsoleText
-            {
-                ForegroundColor = color,
-                BackgroundColor = Console.BackgroundColor,
-                IsNewLinePostPended = false,
-                Message = message,
-                Args = args
-            });
-        }
-
         private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
         {
-            ConsoleColor consoleBackgroundColor = ConsoleColor.Black;
+            ConsoleColor consoleBackgroundColor = ConsoleColor.DarkMagenta;
             if (RunningOnPosix == false)
                 consoleBackgroundColor = Console.BackgroundColor;
 
