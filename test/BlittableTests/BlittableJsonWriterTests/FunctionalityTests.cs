@@ -42,7 +42,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                     Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
                     Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
                     var ms = new MemoryStream();
-                    new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(ms, originalPropertyOrder: true);
+                    new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(ms, originalPropertyOrder:true);
                     Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
                 }
                 finally

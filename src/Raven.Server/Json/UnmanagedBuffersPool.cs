@@ -124,7 +124,7 @@ namespace Raven.Server.Json
             {
                 return list;
             }
-            actualSize = GetIndexSize(index, size); // when we request 7 bytes, we want to get 16 bytes
+            actualSize = GetIndexSize(index, actualSize); // when we request 7 bytes, we want to get 16 bytes
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
@@ -133,7 +133,7 @@ namespace Raven.Server.Json
         }
 
 
-        private static int GetIndexSize(int index, int size)
+        private static int GetIndexSize(int index, int powerBy2Size)
         {
             switch (index)
             {
@@ -147,7 +147,7 @@ namespace Raven.Server.Json
                 case 13:
                     return 4096;
                 default:
-                    return size;
+                    return powerBy2Size;
             }
         }
 

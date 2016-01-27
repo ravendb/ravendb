@@ -39,9 +39,7 @@ namespace Raven.Server.Json
             {
                 var i = (int) (indexes[0]);
                 result = null;
-                object resultObject = null;
-                if (!BlittableJsonReaderArray.TryGetIndex(i, out resultObject))
-                    return false;
+                object resultObject = BlittableJsonReaderArray.GetByIndex(i);
 
                 if (resultObject is BlittableJsonReaderObject)
                 {

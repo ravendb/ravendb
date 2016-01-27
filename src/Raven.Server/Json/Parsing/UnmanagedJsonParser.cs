@@ -10,7 +10,7 @@ namespace Raven.Server.Json.Parsing
     public unsafe class UnmanagedJsonParser : IJsonParser
     {
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
-
+        private readonly UnmanagedWriteBuffer _stringBuffer;
         private readonly Stream _stream;
         private readonly JsonParserState _state;
         private readonly byte[] _buffer;
@@ -33,10 +33,12 @@ namespace Raven.Server.Json.Parsing
             _bufferHandle = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
             try
             {
+                _stringBuffer = new UnmanagedWriteBuffer(ctx);
                 _bufferPtr = (byte*)_bufferHandle.AddrOfPinnedObject();
             }
             catch (Exception)
             {
+                _stringBuffer?.Dispose();
                 _bufferHandle.Free();
                 throw;
             }
@@ -115,6 +117,7 @@ namespace Raven.Server.Json.Parsing
                     case (byte)'"':
                     case (byte)'\'':
                         ParseString(b);
+                        _stringBuffer.EnsureSingleChunk(out _state.StringBuffer, out _state.StringSize);
                         return;
                     case (byte)'{':
                         _state.CurrentTokenType = JsonParserToken.StartObject;
@@ -142,6 +145,10 @@ namespace Raven.Server.Json.Parsing
                     case (byte)'9':
                     case (byte)'-':// negative number
                         ParseNumber(b);
+                        if (_state.CurrentTokenType == JsonParserToken.Float)
+                        {
+                            _stringBuffer.EnsureSingleChunk(out _state.StringBuffer, out _state.StringSize);
+                        }
                         return;
                 }
             }
@@ -149,7 +156,7 @@ namespace Raven.Server.Json.Parsing
 
         private void ParseNumber(byte b)
         {
-            _state.StringBuffer.Clear();
+            _stringBuffer.Clear();
             if (_state.EscapePositions.Count > 0)
                 _state.EscapePositions.Clear();
             _state.Long = 0;
@@ -210,7 +217,7 @@ namespace Raven.Server.Json.Parsing
                             case (byte)',':
                             case (byte)']':
                             case (byte)'}':
-                                if (zeroPrefix && _state.StringBuffer.SizeInBytes != 1)
+                                if (zeroPrefix && _stringBuffer.SizeInBytes != 1)
                                     throw CreateException("Invalid number with zero prefix");
                                 if (isNegative)
                                     _state.Long *= -1;
@@ -221,7 +228,7 @@ namespace Raven.Server.Json.Parsing
                                 throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
                         }
                 }
-                _state.StringBuffer.WriteByte(b);
+                _stringBuffer.WriteByte(b);
                 EnsureBuffer();
                 b = _buffer[_pos++];
                 _charPos++;
@@ -233,17 +240,17 @@ namespace Raven.Server.Json.Parsing
         {
             if (_doubleStringBuffer == null)
                 _doubleStringBuffer = new string(' ', 25);
-            if(_state.StringBuffer.SizeInBytes> 25)
-                throw CreateException("Too many characters in double: " + _state.StringBuffer.SizeInBytes);
+            if(_stringBuffer.SizeInBytes> 25)
+                throw CreateException("Too many characters in double: " + _stringBuffer.SizeInBytes);
 
-            var tmpBuff = stackalloc byte[_state.StringBuffer.SizeInBytes];
+            var tmpBuff = stackalloc byte[_stringBuffer.SizeInBytes];
             // here we assume a clear char <- -> byte conversion, we only support
             // utf8, and those cleanly transfer
             fixed (char* pChars = _doubleStringBuffer)
             {
                 int i = 0;
-                _state.StringBuffer.CopyTo(tmpBuff);
-                for (; i < _state.StringBuffer.SizeInBytes; i++)
+                _stringBuffer.CopyTo(tmpBuff);
+                for (; i < _stringBuffer.SizeInBytes; i++)
                 {
                     pChars[i] = (char)tmpBuff[i];
                 }
@@ -268,7 +275,7 @@ namespace Raven.Server.Json.Parsing
         {
             if (_state.EscapePositions.Count > 0)
                 _state.EscapePositions.Clear();
-            _state.StringBuffer.Clear();
+            _stringBuffer.Clear();
             while (true)
             {
                 _currentStrStart = _pos;
@@ -279,12 +286,12 @@ namespace Raven.Server.Json.Parsing
                     if (b == quote)
                     {
                         _state.CurrentTokenType = JsonParserToken.String;
-                        _state.StringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1 /*don't include the last quote*/);
+                        _stringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1 /*don't include the last quote*/);
                         return;
                     }
                     if (b == (byte)'\\')
                     {
-                        _state.StringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1);
+                        _stringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1);
                         
                         EnsureBuffer();
 
@@ -292,29 +299,29 @@ namespace Raven.Server.Json.Parsing
                         _currentStrStart = _pos;
                         _charPos++;
                         if (b != (byte)'u')
-                            _state.EscapePositions.Add(_state.StringBuffer.SizeInBytes);
+                            _state.EscapePositions.Add(_stringBuffer.SizeInBytes);
 
                         switch (b)
                         {
                             case (byte)'r':
-                                _state.StringBuffer.WriteByte((byte)'\r');
+                                _stringBuffer.WriteByte((byte)'\r');
                                 break;
                             case (byte)'n':
-                                _state.StringBuffer.WriteByte((byte)'\n');
+                                _stringBuffer.WriteByte((byte)'\n');
                                 break;
                             case (byte)'b':
-                                _state.StringBuffer.WriteByte((byte)'\b');
+                                _stringBuffer.WriteByte((byte)'\b');
                                 break;
                             case (byte)'f':
-                                _state.StringBuffer.WriteByte((byte)'\f');
+                                _stringBuffer.WriteByte((byte)'\f');
                                 break;
                             case (byte)'t':
-                                _state.StringBuffer.WriteByte((byte)'\t');
+                                _stringBuffer.WriteByte((byte)'\t');
                                 break;
                             case (byte)'"':
                             case (byte)'\\':
                             case (byte)'/':
-                                _state.StringBuffer.WriteByte(b);
+                                _stringBuffer.WriteByte(b);
                                 break;
                             case (byte)'\r':// line continuation, skip
                                 EnsureBuffer();// flush the buffer, but skip the \,\r chars
@@ -339,7 +346,7 @@ namespace Raven.Server.Json.Parsing
                     }
                 }
                 // copy the buffer to the native code, then refill
-                _state.StringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart);
+                _stringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart);
                 EnsureBuffer();
             }
         }
@@ -381,7 +388,7 @@ namespace Raven.Server.Json.Parsing
             }
             var smallBuffer = stackalloc byte[8];
             var byteCount = Encoding.UTF8.GetBytes(chars, 1, smallBuffer, 8);
-            _state.StringBuffer.Write(smallBuffer, byteCount);
+            _stringBuffer.Write(smallBuffer, byteCount);
         }
 
         
@@ -438,7 +445,9 @@ namespace Raven.Server.Json.Parsing
 
         public void Dispose()
         {
-            _bufferHandle.Free();
+            _stringBuffer?.Dispose();
+            if (_bufferHandle.IsAllocated)
+                _bufferHandle.Free();
         }
     }
 }

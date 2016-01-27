@@ -6,12 +6,15 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNet.Http;
 using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Web.System
 {
-    public class BuildVersion : RequestHandler
+    public unsafe class BuildVersion : RequestHandler
     {
         private readonly RequestHandlerContext _requestHandlerContext;
 
@@ -26,7 +29,23 @@ namespace Raven.Server.Web.System
             RavenOperationContext context;
             using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                throw new NotImplementedException();
+                var result = new DynamicJsonValue
+                {
+                    ["BuildVersion"] = ServerVersion.Build,
+                    ["ProductVersion"] = ServerVersion.Version,
+                    ["CommitHash"] = ServerVersion.CommitHash
+                };
+                var doc = context.ReadObject(result, "build/version");
+                int size;
+                var buffer = context.GetNativeTempBuffer(doc.SizeInBytes, out size);
+                doc.CopyTo(buffer);
+                var reader = new BlittableJsonReaderObject(buffer, doc.SizeInBytes, context);
+
+                var response = _requestHandlerContext.HttpContext.Response;
+                response.StatusCode = 200;
+                reader.WriteTo(response.Body);
+
+                return Task.CompletedTask;
             }
         }
 

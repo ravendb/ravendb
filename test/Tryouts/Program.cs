@@ -10,6 +10,7 @@ using BlittableTests;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
 using BlittableTests.Routing;
+using NewBlittable.Tests.BlittableJsonWriterTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Server.Json;
@@ -22,11 +23,9 @@ namespace Tryouts
 {
     public class Program
     {
-
-
         public unsafe static void Main(string[] args)
         {
-            new ObjectJsonParsingTests().Dup();
+            new VariousPropertyAmountsTests().FlatBoundarySizeFieldsAmountStreamRead(byte);
             return;
             // var trie = Trie<int>.Build(new[]
             //{

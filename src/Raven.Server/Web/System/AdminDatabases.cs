@@ -9,6 +9,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 
 namespace Raven.Server.Web.System
@@ -79,33 +80,25 @@ namespace Raven.Server.Web.System
                     return _requestHandlerContext.HttpContext.Response.WriteAsync(errorMessage);
                 }
 
-                BlittableJsonDocument dbDoc;
-                try
-                {
-                    dbDoc = context.Read(_requestHandlerContext.HttpContext.Request.Body, dbId);
-                    // TODO (fitzchak): validate the incoming object to have Settings.Raven/DataDir (with a valid path)
-                }
-                catch (EndOfStreamException)
-                {
-                    _requestHandlerContext.HttpContext.Response.StatusCode = 400;
-                    return _requestHandlerContext.HttpContext.Response.WriteAsync(@"The request body is not valid. Here is an example for a valid request body:
-{
-    ""Settings"": {
-        ""Raven/DataDir"": ""~\\" + id + @"""
-    },
-    ""SecuredSettings"": { },
-    ""Disabled"": false
-}");
-                }
+                var dbDoc = context.Read(_requestHandlerContext.HttpContext.Request.Body, dbId);
                 //int size;
                 //var buffer = context.GetNativeTempBuffer(dbDoc.SizeInBytes, out size);
                 //dbDoc.CopyTo(buffer);
 
                 //var reader = new BlittableJsonReaderObject(buffer, dbDoc.SizeInBytes, context);
+                //object result;
+                //if (reader.TryGetMember("SecureSettings", out result))
+                //{
+                //    var secureSettings = (BlittableJsonReaderObject) result;
+                //    secureSettings.Modifications = new DynamicJsonValue(secureSettings);
+                //    foreach (var propertyName in secureSettings.GetPropertyNames())
+                //    {
+                //        secureSettings.TryGetMember(propertyName, out result);
+                //        // protect
+                //        secureSettings.Modifications[propertyName] = "fooo";
+                //    }
+                //}
 
-                //var modified = new MofidiedJson(reader, context);
-
-                //dbDoc = context.ReadObject(modified);
 
                 _requestHandlerContext.ServerStore.Write(dbId, dbDoc);
                 _requestHandlerContext.HttpContext.Response.StatusCode = 201;
