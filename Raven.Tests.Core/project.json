@@ -11,6 +11,11 @@
     "Raven.Client.Lightweight": "3.0.0",
     "Rx-Linq": "2.2.5"
   },
+  
+  "runtimes": {
+    "win-x64": {
+    }
+  },
 
   "frameworks": {
     "dnxcore50": {

@@ -17,6 +17,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -1060,40 +1061,97 @@ namespace Raven.Abstractions.Smuggler
         {
             var count = 0;
 
-            while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+            while (true)
             {
-                Options.CancelToken.Token.ThrowIfCancellationRequested();
+                if (jsonReader.Read() == false)
+                    throw new EndOfStreamException();
+                if (jsonReader.TokenType == JsonToken.EndArray)
+                    break;
+                ValidateStartObject(jsonReader);
 
-                var item = RavenJToken.ReadFrom(jsonReader);
-                if ((Options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
-                    continue;
+                if (jsonReader.Read() == false)
+                    throw new EndOfStreamException();
 
-                var attachmentExportInfo = new JsonSerializer { Converters = DefaultConverters }
-                                                    .Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
-
-                Operations.ShowProgress("Importing attachment {0}", attachmentExportInfo.Key);
-
-                try
+                ValidatePropertyName(jsonReader, "Data");
+                using (var valueStream = jsonReader.ReadBytesAsStream())
                 {
-                    if (Options.StripReplicationInformation)
-                        attachmentExportInfo.Metadata = Operations.StripReplicationInformationFromMetadata(attachmentExportInfo.Metadata);
+                    if (jsonReader.Read() == false)
+                        throw new EndOfStreamException();
+                    ValidatePropertyName(jsonReader, "Metadata");
 
-                    await Operations.PutAttachment(dst, attachmentExportInfo);
+                    if (jsonReader.Read() == false) //go to StartObject token
+                        throw new EndOfStreamException();
+                    ValidateStartObject(jsonReader);
+
+                    var metadata = (RavenJObject)RavenJToken.ReadFrom(jsonReader); //read the property as the object
+
+                    if (jsonReader.Read() == false)
+                        throw new EndOfStreamException();
+                    ValidatePropertyName(jsonReader, "Key");
+
+                    var key = jsonReader.ReadAsString();
+
+                    if (jsonReader.Read() == false)
+                        throw new EndOfStreamException();
+                    if (jsonReader.TokenType == JsonToken.PropertyName)
+                    {
+                        ValidatePropertyName(jsonReader, "Etag");
+                        if (jsonReader.Read() == false) // read the etag value
+                            throw new EndOfStreamException();
+                        if (jsonReader.Read() == false) // consume the etag value...
+                            throw new EndOfStreamException();
+
+                    }
+                    ValidateEndObject(jsonReader);
+
+                    if ((Operations.Options.OperateOnTypes & ItemType.Attachments) !=
+                            ItemType.Attachments)
+                        continue;
+
+                    Operations.ShowProgress("Importing attachment {0}", key);
+                    await Operations.PutAttachment(dst, new AttachmentExportInfo
+                    {
+                        Key = key,
+                        Metadata = metadata,
+                        Data = valueStream
+                    });
                 }
-                catch (Exception e)
-                {
-                    if (IgnoreErrorsAndContinue == false)
-                        throw;
-
-                    Operations.ShowProgress("IMPORT of an attachment {0} failed. Message: {1}", attachmentExportInfo.Key, e.Message);
-                }
-
                 count++;
             }
 
             await Operations.PutAttachment(dst, null); // force flush
 
             return count;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ValidateStartObject(JsonTextReader jsonReader)
+        {
+            if (jsonReader.TokenType != JsonToken.StartObject)
+                throw new InvalidOperationException("Expected StartObject token, but got " + jsonReader.TokenType +
+                                                    ". The specific attachment format is invalid.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ValidateEndObject(JsonTextReader jsonReader)
+        {
+            if (jsonReader.TokenType != JsonToken.EndObject)
+                throw new InvalidOperationException("Expected EndObject token, but got " + jsonReader.TokenType +
+                                                    ". The specific attachment format is invalid.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ValidatePropertyName(JsonTextReader jsonReader, string propName)
+        {
+            if (jsonReader.TokenType != JsonToken.PropertyName)
+                throw new InvalidOperationException("Expected property '" + propName + "', but found unexpected token - " + jsonReader.TokenType);
+
+            if (jsonReader.TokenType == JsonToken.PropertyName)
+            {
+                var propertyName = jsonReader.Value as string;
+                if (!string.Equals(propertyName, propName))
+                    throw new InvalidOperationException("Expected property token with the name 'Metadata', but found " + propertyName);
+            }
         }
 
         private async Task<int> ImportDocuments(JsonTextReader jsonReader)

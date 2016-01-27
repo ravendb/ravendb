@@ -299,6 +299,7 @@
     <Compile Include="Json\JsonConverterCache.cs" />
     <Compile Include="Json\JsonInternalsVisibleTo.cs" />
     <Compile Include="Json\JsonLinqEnumerableConverter.cs" />
+    <Compile Include="Json\JsonTextReader.cs" />
     <Compile Include="Json\JsonTextReaderAsync.cs" />
     <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
