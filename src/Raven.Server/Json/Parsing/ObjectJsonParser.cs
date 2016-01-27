@@ -289,7 +289,7 @@ namespace Raven.Server.Json.Parsing
             _state.StringBuffer = _ctx.GetNativeTempBuffer(size, out size);
             fixed (char* pChars = str)
             {
-                _state.StringSize = Encoding.UTF8.GetBytes(pChars, str.Length, _state.StringBuffer, _state.StringSize);
+                _state.StringSize = Encoding.UTF8.GetBytes(pChars, str.Length, _state.StringBuffer, size);
             }
         }
 
