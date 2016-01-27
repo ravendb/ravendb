@@ -13,6 +13,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Raven.SlowTests.Migration.Orders;
 using Raven.Tests.Common;
 
@@ -25,6 +26,13 @@ namespace Raven.SlowTests.Migration
         private Dictionary<string, OrdersByCompany.Result> ordersByCompanyResults;
 
         private Dictionary<string, ProductSales.Result> productSalesResults;
+
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
+        {
+            configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 15;
+
+            base.ModifyConfiguration(configuration);
+        }
 
         public MigrationTests()
         {

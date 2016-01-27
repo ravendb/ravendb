@@ -403,6 +403,7 @@
     <Compile Include="Smuggler\Data\ExportFilesDestinations.cs" />
     <Compile Include="Smuggler\Data\ExportFilesResult.cs" />
     <Compile Include="Smuggler\Data\Tombstone.cs" />
+    <Compile Include="Smuggler\ExportOptions.cs" />
     <Compile Include="Smuggler\ISmugglerApi.cs" />
     <Compile Include="Smuggler\ISmugglerDatabaseOperations.cs" />
     <Compile Include="Smuggler\Data\LastEtagsInfo.cs" />
@@ -410,6 +411,7 @@
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseApiBase.cs" />
     <Compile Include="Smuggler\SmugglerDatabaseOptions.cs" />
+    <Compile Include="Smuggler\SmugglerExportType.cs" />
     <Compile Include="Smuggler\SmugglerFilesApiBase.cs" />
     <Compile Include="Smuggler\SmugglerFilesOptions.cs" />
     <Compile Include="Smuggler\SmugglerHelper.cs" />
