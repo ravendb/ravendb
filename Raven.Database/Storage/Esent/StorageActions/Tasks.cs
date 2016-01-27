@@ -51,12 +51,14 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (Api.TryMoveLast(session, Tasks) == false)
                     return 0;
                 var last = (int)Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]);
-                return last - first;
+
+                var result = last - first;
+                return result == 0 ? 1 : result;
             }
         }
 
         public T GetMergedTask<T>(Func<IComparable, MaxTaskIdStatus> maxIdStatus,
-            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork)
+            Action<IComparable> updateMaxTaskId, Reference<bool> foundWork, List<int> idsToSkip)
             where T : DatabaseTask
         {
             Api.MoveBeforeFirst(session, Tasks);
@@ -81,7 +83,11 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     continue;
                 }
 
+                if (idsToSkip.Contains(task.Index))
+                    continue;
+
                 var currentId = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
+                var addedTime64 = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
 
                 try
                 {
@@ -98,6 +104,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     case MaxTaskIdStatus.ReachedMaxTaskId:
                         // we found work and next run the merge option will be enabled
                         foundWork.Value = true;
+                        // we already removed the task, we need to add it back
+                        AddTask(task, DateTime.FromBinary(addedTime64));
                         return null;
                     case MaxTaskIdStatus.Updated:
                         MergeSimilarTasks(task, updateMaxTaskId);

@@ -1480,6 +1480,19 @@ namespace Raven.Database.Indexing
             return isMapReduce ? "map-reduce" : "simple map";
         }
 
+        public List<int> GetDisabledIndexIds()
+        {
+            var indexIds = new List<int>();
+
+            foreach (var index in indexes)
+            {
+                if (index.Value.Priority.HasFlag(IndexingPriority.Disabled))
+                    indexIds.Add(index.Key);
+            }
+
+            return indexIds;
+        } 
+
         public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
         {
             return GetIndexByName(index).GetExtension(indexExtensionKey);
