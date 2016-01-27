@@ -56,14 +56,15 @@ namespace Raven.Database.Server.Controllers
                 pageSize = int.MaxValue;
 
             var skipAfter = GetQueryStringValue("skipAfter");
+            var transformer = GetQueryStringValue("transformer");
+            var transformerParameters = ExtractTransformerParameters();
 
-            
             var headers = CurrentOperationContext.Headers.Value;
             var user = CurrentOperationContext.User.Value;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new PushStreamContent((stream, content, transportContext) =>
-                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter, headers, user))
+                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, skipAfter, transformer, transformerParameters, headers, user))
                 {
                     Headers =
                     {
@@ -73,7 +74,7 @@ namespace Raven.Database.Server.Controllers
             };
         }
 
-        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, 
+        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters,
             Lazy<NameValueCollection> headers, IPrincipal user)
         {
             var old = CurrentOperationContext.Headers.Value;
@@ -117,13 +118,13 @@ namespace Raven.Database.Server.Controllers
                     {
                         if (string.IsNullOrEmpty(startsWith))
                         {
-                            Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, addDocument);
+                            Database.Documents.GetDocuments(start, pageSize, etag, cts.Token, doc => { addDocument(doc); return true; }, transformer, transformerParameters);
                         }
                         else
                         {
                             var nextPageStartInternal = nextPageStart;
 
-                            Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, skipAfter: skipAfter);
+                            Database.Documents.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, addDocument, transformer, transformerParameters, skipAfter);
 
                             nextPageStart = nextPageStartInternal;
                         }
