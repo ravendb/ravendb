@@ -1,7 +1,8 @@
 using System;
+#if !DNXCORE50
+
 using Raven.Tests.Core;
 using Raven.Tests.Core.Commands;
-#if !DNXCORE50
 using Raven.Tests.Issues;
 using Raven.Tests.MailingList;
 using Raven.Tests.FileSystem.ClientApi;
