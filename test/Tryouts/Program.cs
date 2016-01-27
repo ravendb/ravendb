@@ -10,6 +10,7 @@ using BlittableTests;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
 using BlittableTests.Routing;
+using NewBlittable.Tests.BlittableJsonWriterTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Server.Json;
@@ -24,7 +25,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new MutatingJsonTests().CanModifyNestedObjectProperty();
+            new VariousPropertyAmountsTests().FlatBoundarySizeFieldsAmountStreamRead(byte);
             return;
             // var trie = Trie<int>.Build(new[]
             //{
