@@ -4,12 +4,12 @@ namespace Raven.Server.Json
 {
     public unsafe class BlittableJsonReaderBase
     {
-        internal BlittableJsonReaderObject _parent;
-        internal byte* _mem;
-        internal int _size;
-        internal byte* _propNames;
-        internal int _propNamesDataOffsetSize;
-        internal RavenOperationContext _context;
+        protected BlittableJsonReaderObject _parent;
+        protected byte* _mem;
+        protected int _size;
+        protected byte* _propNames;
+        protected int _propNamesDataOffsetSize;
+        protected RavenOperationContext _context;
 
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {

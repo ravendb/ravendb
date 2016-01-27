@@ -100,7 +100,7 @@ namespace Raven.Server.ServerWide
             public void Dispose()
             {
                 Context.Transaction?.Dispose();
-
+                Context.Reset();
                 //TODO: this probably should have low memory handle
                 if (Store._contextPool.Count > 25) // don't keep too much of them around
                 {
@@ -121,14 +121,14 @@ namespace Raven.Server.ServerWide
             return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, ctx);
         }
 
-        public void Write(string id, BlittableJsonDocumentBuilder documentBuilder)
+        public void Write(string id, BlittableJsonReaderObject doc)
         {
             using (var tx = _env.WriteTransaction())
             {
                 var dbs = tx.ReadTree("items");
 
-                var ptr = dbs.DirectAdd(id, documentBuilder.SizeInBytes);
-                documentBuilder.CopyTo(ptr);
+                var ptr = dbs.DirectAdd(id, doc.Size);
+                doc.CopyTo(ptr);
 
                 tx.Commit();
             }

@@ -24,31 +24,21 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
-                try
+                dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
+                dynamic dynamicBlittableJObject = new DynamicBlittableJson(employee);
+                Assert.Equal(dynamicRavenJObject.Age, dynamicBlittableJObject.Age);
+                Assert.Equal(dynamicRavenJObject.Name, dynamicBlittableJObject.Name);
+                Assert.Equal(dynamicRavenJObject.Dogs.Count, dynamicBlittableJObject.Dogs.Count);
+                for (var i = 0; i < dynamicBlittableJObject.Dogs.Length; i++)
                 {
-                    employee.CopyTo(ptr);
-
-                    dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
-                    dynamic dynamicBlittableJObject = new DynamicBlittableJson(ptr, employee.SizeInBytes, blittableContext);
-                    Assert.Equal(dynamicRavenJObject.Age, dynamicBlittableJObject.Age);
-                    Assert.Equal(dynamicRavenJObject.Name, dynamicBlittableJObject.Name);
-                    Assert.Equal(dynamicRavenJObject.Dogs.Count, dynamicBlittableJObject.Dogs.Count);
-                    for (var i = 0; i < dynamicBlittableJObject.Dogs.Length; i++)
-                    {
-                        Assert.Equal(dynamicRavenJObject.Dogs[i], dynamicBlittableJObject.Dogs[i]);
-                    }
-                    Assert.Equal(dynamicRavenJObject.Office.Name, dynamicRavenJObject.Office.Name);
-                    Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
-                    Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
-                    var ms = new MemoryStream();
-                    new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(ms, originalPropertyOrder:true);
-                    Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
+                    Assert.Equal(dynamicRavenJObject.Dogs[i], dynamicBlittableJObject.Dogs[i]);
                 }
-                finally
-                {
-                    Marshal.FreeHGlobal((IntPtr)ptr);
-                }
+                Assert.Equal(dynamicRavenJObject.Office.Name, dynamicRavenJObject.Office.Name);
+                Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
+                Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
+                var ms = new MemoryStream();
+                employee.WriteTo(ms, originalPropertyOrder:true);
+                Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 
@@ -61,17 +51,7 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
-                try
-                {
-                    employee.CopyTo(ptr);
-
-                    AssertComplexEmployee(str, ptr, employee.SizeInBytes, blittableContext);
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal((IntPtr)ptr);
-                }
+                AssertComplexEmployee(str, employee, blittableContext);
             }
         }
 
@@ -84,23 +64,13 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
-                try
-                {
-                    employee.CopyTo(ptr);
-
-                    dynamic dynamicObject = new DynamicBlittableJson(ptr, employee.SizeInBytes, blittableContext);
-                    Assert.Equal(dynamicObject.Alias, "Jimmy");
-                    Assert.Equal(dynamicObject.Data.Length, 0);
-                    Assert.Equal(dynamicObject.SubData.SubArray.Length, 0);
-                    Assert.Equal(dynamicObject.Name, "Trolo");
-                    Assert.Throws<IndexOutOfRangeException>(() => dynamicObject.Data[0]);
-                    Assert.Throws<IndexOutOfRangeException>(() => dynamicObject.SubData.SubArray[0]);
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal((IntPtr)ptr);
-                }
+                dynamic dynamicObject = new DynamicBlittableJson(employee);
+                Assert.Equal(dynamicObject.Alias, "Jimmy");
+                Assert.Equal(dynamicObject.Data.Length, 0);
+                Assert.Equal(dynamicObject.SubData.SubArray.Length, 0);
+                Assert.Equal(dynamicObject.Name, "Trolo");
+                Assert.Throws<IndexOutOfRangeException>(() => dynamicObject.Data[0]);
+                Assert.Throws<IndexOutOfRangeException>(() => dynamicObject.SubData.SubArray[0]);
             }
         }
 
@@ -164,33 +134,23 @@ namespace BlittableTests.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var doc = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
-                try
-                {
-                    employee.CopyTo(ptr);
-
-                    dynamic dynamicObject = new DynamicBlittableJson(ptr, employee.SizeInBytes, blittableContext);
-                    Assert.Equal(sampleObject.Value, dynamicObject.Value);
-                    Assert.Equal(sampleObject.SomeNumber, dynamicObject.SomeNumber);
-                    Assert.Equal(sampleObject.SomeArray.Length, dynamicObject.SomeArray.Length);
-                    Assert.Equal(sampleObject.SomeArray[0], dynamicObject.SomeArray[0]);
-                    Assert.Equal(sampleObject.AnotherNumber, dynamicObject.AnotherNumber);
-                    Assert.Equal(sampleObject.SomeArray[1], dynamicObject.SomeArray[1]);
-                    Assert.Equal(sampleObject.SomeArray[2], dynamicObject.SomeArray[2]);
-                    Assert.Equal(sampleObject.SomeObject.SomeValue, dynamicObject.SomeObject.SomeValue);
-                    Assert.Equal(sampleObject.SomeObject.SomeArray.Length, dynamicObject.SomeObject.SomeArray.Length);
-                    Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
-                    Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
-                    var ms = new MemoryStream();
-                    new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext).WriteTo(ms, originalPropertyOrder: true);
-                    Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal((IntPtr)ptr);
-                }
+                dynamic dynamicObject = new DynamicBlittableJson(doc);
+                Assert.Equal(sampleObject.Value, dynamicObject.Value);
+                Assert.Equal(sampleObject.SomeNumber, dynamicObject.SomeNumber);
+                Assert.Equal(sampleObject.SomeArray.Length, dynamicObject.SomeArray.Length);
+                Assert.Equal(sampleObject.SomeArray[0], dynamicObject.SomeArray[0]);
+                Assert.Equal(sampleObject.AnotherNumber, dynamicObject.AnotherNumber);
+                Assert.Equal(sampleObject.SomeArray[1], dynamicObject.SomeArray[1]);
+                Assert.Equal(sampleObject.SomeArray[2], dynamicObject.SomeArray[2]);
+                Assert.Equal(sampleObject.SomeObject.SomeValue, dynamicObject.SomeObject.SomeValue);
+                Assert.Equal(sampleObject.SomeObject.SomeArray.Length, dynamicObject.SomeObject.SomeArray.Length);
+                Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
+                Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
+                var ms = new MemoryStream();
+                doc.WriteTo(ms, originalPropertyOrder: true);
+                Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 
@@ -212,13 +172,8 @@ namespace BlittableTests.BlittableJsonWriterTests
 
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var ctx = new RavenOperationContext(pool))
-            using (var obj = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
+            using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
-                int size;
-                var buffer = ctx.GetNativeTempBuffer(obj.SizeInBytes, out size);
-                size = obj.CopyTo(buffer);
-                var r = new BlittableJsonReaderObject(buffer, size, ctx);
-
                 var ms = new MemoryStream();
                 r.WriteTo(ms, originalPropertyOrder: true);
 

@@ -98,31 +98,16 @@ namespace BlittableTests
                 streamWriter.Write(InitialJson);
                 streamWriter.Flush();
                 stream.Position = 0;
-                var writer = ctx.Read(stream, "foo");
-                UnmanagedBuffersPool.AllocatedMemoryData newDocMem = null;
-                var allocatedMemoryData = pool.Allocate(writer.SizeInBytes);
-                try
+                using (var writer = ctx.Read(stream, "foo"))
                 {
-                    var address = (byte*)allocatedMemoryData.Address;
-                    writer.CopyTo(address);
-
-                    var readerObject = new BlittableJsonReaderObject(address, writer.SizeInBytes, ctx);
-
-                    mutate(readerObject);
-                    var document = ctx.ReadObject(readerObject, "foo");
-                    newDocMem = pool.Allocate(document.SizeInBytes);
-                    document.CopyTo((byte*)newDocMem.Address);
-                    readerObject = new BlittableJsonReaderObject((byte*)newDocMem.Address, document.SizeInBytes, ctx);
-                    var ms = new MemoryStream();
-                    readerObject.WriteTo(ms, originalPropertyOrder: true);
-                    var actual = Encoding.UTF8.GetString(ms.ToArray());
-                    Assert.Equal(expected, actual);
-                }
-                finally
-                {
-                    pool.Return(allocatedMemoryData);
-                    if (newDocMem != null)
-                        pool.Return(newDocMem);
+                    mutate(writer);
+                    using (var document = ctx.ReadObject(writer, "foo"))
+                    {
+                        var ms = new MemoryStream();
+                        document.WriteTo(ms, originalPropertyOrder: true);
+                        var actual = Encoding.UTF8.GetString(ms.ToArray());
+                        Assert.Equal(expected, actual);
+                    }
                 }
             }
         }

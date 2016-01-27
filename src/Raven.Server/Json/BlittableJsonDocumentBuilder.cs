@@ -87,6 +87,14 @@ namespace Raven.Server.Json
             return _stream.CopyTo(ptr);
         }
 
+        public BlittableJsonReaderObject CreateReader()
+        {
+            byte* ptr;
+            int size;
+            _stream.EnsureSingleChunk(out ptr, out size);
+            return new BlittableJsonReaderObject(ptr, size, _context, this);
+        }
+
         /// <summary>
         /// Writes the json object from  reader received in the ctor into the received UnmanangedWriteBuffer
         /// </summary>

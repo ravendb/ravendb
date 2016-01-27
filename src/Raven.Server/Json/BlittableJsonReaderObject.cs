@@ -7,13 +7,14 @@ using Sparrow;
 
 namespace Raven.Server.Json
 {
-    public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase
+    public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
-        private readonly unsafe byte* _metadataPtr;
+        private readonly BlittableJsonDocumentBuilder _builder;
+        private readonly byte* _metadataPtr;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
-        private readonly unsafe byte* _objStart;
+        private readonly byte* _objStart;
         private LazyStringValue[] _propertyNames;
 
         public DynamicJsonValue Modifications;
@@ -22,8 +23,9 @@ namespace Raven.Server.Json
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
 
-        public unsafe BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context)
+        public BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context, BlittableJsonDocumentBuilder builder = null)
         {
+            _builder = builder;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
             _context = context;
@@ -101,7 +103,10 @@ namespace Raven.Server.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
         }
 
+        public int Size => _size;
+
         public int Count => _propCount;
+        public byte* BasePointer => _mem;
 
 
         /// <summary>
@@ -444,5 +449,14 @@ namespace Raven.Server.Json
             }
         }
 
+        public void Dispose()
+        {
+            _builder?.Dispose();
+        }
+
+        public void CopyTo(byte* ptr)
+        {
+            Memory.Copy(ptr, _mem, _size);
+        }
     }
 }

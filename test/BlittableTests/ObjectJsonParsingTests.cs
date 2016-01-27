@@ -84,22 +84,12 @@ namespace BlittableTests
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new RavenOperationContext(pool))
             {
-                var writer = ctx.ReadObject(doc, "foo");
-                var allocatedMemoryData = pool.Allocate(writer.SizeInBytes);
-                try
+                using (var writer = ctx.ReadObject(doc, "foo"))
                 {
-                    var address = (byte*) allocatedMemoryData.Address;
-                    writer.CopyTo(address);
-
-                    var readerObject = new BlittableJsonReaderObject(address, writer.SizeInBytes, ctx);
                     var memoryStream = new MemoryStream();
-                    readerObject.WriteTo(memoryStream, originalPropertyOrder: true);
+                    writer.WriteTo(memoryStream, originalPropertyOrder: true);
                     var actual = Encoding.UTF8.GetString(memoryStream.ToArray());
                     Assert.Equal(expected, actual);
-                }
-                finally
-                {
-                    pool.Return(allocatedMemoryData);
                 }
             }
         }
