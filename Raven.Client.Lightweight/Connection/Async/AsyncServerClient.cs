@@ -2095,21 +2095,24 @@ namespace Raven.Client.Connection.Async
         public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(
                         Etag fromEtag = null, string startsWith = null,
                         string matches = null, int start = 0,
-                        int pageSize = Int32.MaxValue,
+                        int pageSize = int.MaxValue,
                         string exclude = null,
                         RavenPagingInformation pagingInformation = null,
-                        string skipAfter = null, CancellationToken token = default(CancellationToken))
+                        string skipAfter = null,
+                        string transformer = null, 
+                        Dictionary<string, RavenJToken> transformerParameters = null,
+                        CancellationToken token = default(CancellationToken))
         {
             if (fromEtag != null && startsWith != null)
                 throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
             if (fromEtag != null) // etags does not match between servers
-                return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null), skipAfter, token).ConfigureAwait(false);
+                return await DirectStreamDocsAsync(fromEtag, null, matches, start, pageSize, exclude, pagingInformation, new OperationMetadata(Url, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null), skipAfter, transformer, transformerParameters, token).ConfigureAwait(false);
 
-            return await ExecuteWithReplication(HttpMethod.Get, operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, skipAfter, token), token).ConfigureAwait(false);
+            return await ExecuteWithReplication(HttpMethod.Get, operationMetadata => DirectStreamDocsAsync(null, startsWith, matches, start, pageSize, exclude, pagingInformation, operationMetadata, skipAfter, transformer, transformerParameters, token), token).ConfigureAwait(false);
         }
 
-        private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, string skipAfter, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<IAsyncEnumerator<RavenJObject>> DirectStreamDocsAsync(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, OperationMetadata operationMetadata, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (fromEtag != null && startsWith != null)
                 throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -2137,6 +2140,20 @@ namespace Raven.Client.Connection.Async
                 if (skipAfter != null)
                 {
                     sb.Append("skipAfter=").Append(Uri.EscapeDataString(skipAfter)).Append("&");
+                }
+            }
+
+            if (string.IsNullOrEmpty(transformer) == false)
+                sb.Append("transformer=").Append(Uri.EscapeDataString(transformer)).Append("&");
+
+            if (transformerParameters != null && transformerParameters.Count > 0)
+            {
+                foreach (var pair in transformerParameters)
+                {
+                    var parameterName = pair.Key;
+                    var parameterValue = pair.Value;
+
+                    sb.AppendFormat("tp-{0}={1}", parameterName, parameterValue).Append("&");
                 }
             }
 
