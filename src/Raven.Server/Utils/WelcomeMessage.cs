@@ -10,7 +10,7 @@ namespace Raven.Server.Utils
         private static bool RunningOnPosix = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                                              RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
-        private static ConsoleColor DefaultLinuxBackgroundColor = (ConsoleColor) (48 | 10 | 36);
+        private static ConsoleColor DefaultLinuxBackgroundColor = ConsoleColor.DarkMagenta; // Ubuntu default background RGB=48,10,36 or #300A24
 
         public static void Print()
         {
@@ -51,6 +51,8 @@ namespace Raven.Server.Utils
             {
                 Console.ForegroundColor = consoleText.ForegroundColor;
                 Console.BackgroundColor = consoleText.BackgroundColor;
+                if (RunningOnPosix == true)
+                    Console.BackgroundColor = DefaultLinuxBackgroundColor;
 
                 Console.Write(consoleText.Message, consoleText.Args);
 
