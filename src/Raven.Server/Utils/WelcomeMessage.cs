@@ -10,6 +10,8 @@ namespace Raven.Server.Utils
         private static bool RunningOnPosix = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                                              RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
+        private static ConsoleColor DefaultLinuxBackgroundColor = (ConsoleColor) (48 | 10 | 36);
+
         public static void Print()
         {
             const string asciiHeader = @"        ____                       ____  _{0}       |  _ \ __ ___   _____ _ __ |  _ \| |__{0}       | |_) / _` \ \ / / _ \ '_ \| | | | '_ \{0}       |  _ < (_| |\ V /  __/ | | | |_| | |_) |{0}       |_| \_\__,_| \_/ \___|_| |_|____/|_.__/{0}{0}";
@@ -38,7 +40,7 @@ namespace Raven.Server.Utils
 
             // Linux cannot and will not support getting current color : https://github.com/aspnet/dnx/issues/1708
             var previousForegroundColor = ConsoleColor.White;
-            var previousBackgroundColor = ConsoleColor.DarkMagenta;
+            var previousBackgroundColor = DefaultLinuxBackgroundColor;
             if (RunningOnPosix == false)
             { 
                 previousForegroundColor = Console.ForegroundColor;
@@ -64,7 +66,7 @@ namespace Raven.Server.Utils
 
         private static void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
         {
-            ConsoleColor consoleBackgroundColor = ConsoleColor.DarkMagenta;
+            ConsoleColor consoleBackgroundColor = DefaultLinuxBackgroundColor;
             if (RunningOnPosix == false)
                 consoleBackgroundColor = Console.BackgroundColor;
 
@@ -85,7 +87,7 @@ namespace Raven.Server.Utils
                 if (RunningOnPosix == true)
                 {
                     var previousForegroundColor = ConsoleColor.White;
-                    var previousBackgroundColor = ConsoleColor.Black;
+                    var previousBackgroundColor = DefaultLinuxBackgroundColor;
                 }
                 else
                 {
