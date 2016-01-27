@@ -101,9 +101,9 @@ namespace Voron.Impl
                 scratchPagerState.AddRef();
                 _pagerStates.Add(scratchPagerState);
             }
+            flags.HasFlag()
 
-
-            if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
+            if (flags != TransactionFlags.ReadWrite)
             {
                 // for read transactions, we need to keep the pager state frozen
                 // for write transactions, we can use the current one (which == null)

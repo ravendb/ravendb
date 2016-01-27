@@ -81,8 +81,11 @@ namespace Raven.Server.ServerWide
         public IDisposable AllocateRequestContext(out RavenOperationContext context)
         {
             if (_contextPool.TryPop(out context) == false)
-                context = new RavenOperationContext(_pool);
-            context.Transaction = _env.ReadTransaction();
+                context = new RavenOperationContext(_pool)
+                {
+                    Environment = _env
+                };
+            
             return new ReturnRequestContext
             {
                 Store = this,

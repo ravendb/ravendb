@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 using Sparrow.Binary;
+using Voron;
 using Voron.Impl;
 using Voron.Util;
 
@@ -30,6 +31,7 @@ namespace Raven.Server.Json
         public UTF8Encoding Encoding;
         public Transaction Transaction;
         public CachedProperties CachedProperties;
+        public StorageEnvironment Environment;
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {

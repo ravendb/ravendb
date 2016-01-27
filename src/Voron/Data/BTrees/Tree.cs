@@ -69,7 +69,7 @@ namespace Voron.Data.BTrees
                     LeafPages = header->LeafPages,
                     NumberOfEntries = header->NumberOfEntries,
                     Flags = header->Flags,
-                    InWriteTransaction = llt.Flags.HasFlag(TransactionFlags.ReadWrite),
+                    InWriteTransaction = (llt.Flags == TransactionFlags.ReadWrite),
                 }
             };
         }
@@ -719,7 +719,7 @@ namespace Voron.Data.BTrees
                     }
                     else
                     {
-                        if (State.Flags.HasFlag(TreeFlags.FixedSizeTrees))
+                        if ((State.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
                         {
                             var valueReader = TreeNodeHeader.Reader(_llt, node);
                             var valueSize = ((FixedSizeTreeHeader.Embedded*)valueReader.Base)->ValueSize;
