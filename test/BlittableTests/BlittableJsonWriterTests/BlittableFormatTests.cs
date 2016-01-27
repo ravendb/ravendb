@@ -60,7 +60,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 {
                     string origin;
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
-                    Console.WriteLine(resource);
+                    
                     using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly
                         .GetManifestResourceStream(resource))
                     {
