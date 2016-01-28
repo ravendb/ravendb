@@ -570,7 +570,9 @@ namespace Raven.Client.Connection
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
+        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
+        IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
 
         /// <summary>
         ///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless

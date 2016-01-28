@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -175,7 +176,9 @@ namespace Raven.Client
         /// <param name="start">number of documents that should be skipped</param>
         /// <param name="pageSize">maximum number of documents that will be retrieved</param>
         /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
-        IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null);
+        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
+        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
+        IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.
@@ -193,7 +196,9 @@ namespace Raven.Client
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
+        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
+        IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
 
         /// <summary>
         ///     DeleteByIndex using linq expression
