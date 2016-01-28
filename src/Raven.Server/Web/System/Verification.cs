@@ -28,7 +28,7 @@ namespace Raven.Server.Web.System
             {
                 var httpResponse = _requestHandlerContext.HttpContext.Response;
                 httpResponse.ContentType = "text/plain";
-                httpResponse.Headers["Content-Disposition"] = string.Format("attachment; filename={0}.hl7", "loaderio-9efdb3fbfd7839963e77e4443564c2f4.txt".ToString());
+                httpResponse.Headers["Content-Disposition"] = "attachment; filename=loaderio-9efdb3fbfd7839963e77e4443564c2f4.txt";
                 return httpResponse.WriteAsync("loaderio-9efdb3fbfd7839963e77e4443564c2f4");
             }
         }
