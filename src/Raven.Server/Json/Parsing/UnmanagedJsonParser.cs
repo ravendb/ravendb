@@ -157,8 +157,7 @@ namespace Raven.Server.Json.Parsing
         private void ParseNumber(byte b)
         {
             _stringBuffer.Clear();
-            if (_state.EscapePositions.Count > 0)
-                _state.EscapePositions.Clear();
+            _state.EscapePositions.Clear();
             _state.Long = 0;
 
             var zeroPrefix = b == '0';
@@ -240,7 +239,7 @@ namespace Raven.Server.Json.Parsing
         {
             if (_doubleStringBuffer == null)
                 _doubleStringBuffer = new string(' ', 25);
-            if(_stringBuffer.SizeInBytes> 25)
+            if (_stringBuffer.SizeInBytes > 25)
                 throw CreateException("Too many characters in double: " + _stringBuffer.SizeInBytes);
 
             var tmpBuff = stackalloc byte[_stringBuffer.SizeInBytes];
@@ -273,9 +272,9 @@ namespace Raven.Server.Json.Parsing
 
         private void ParseString(byte quote)
         {
-            if (_state.EscapePositions.Count > 0)
-                _state.EscapePositions.Clear();
+            _state.EscapePositions.Clear();
             _stringBuffer.Clear();
+            var prevEscapePosition = 0;
             while (true)
             {
                 _currentStrStart = _pos;
@@ -292,14 +291,17 @@ namespace Raven.Server.Json.Parsing
                     if (b == (byte)'\\')
                     {
                         _stringBuffer.Write(_bufferPtr + _currentStrStart, _pos - _currentStrStart - 1);
-                        
+
                         EnsureBuffer();
 
                         b = _buffer[_pos++];
                         _currentStrStart = _pos;
                         _charPos++;
                         if (b != (byte)'u')
-                            _state.EscapePositions.Add(_stringBuffer.SizeInBytes);
+                        {
+                            _state.EscapePositions.Add(_stringBuffer.SizeInBytes - prevEscapePosition);
+                            prevEscapePosition = _stringBuffer.SizeInBytes + 1;
+                        }
 
                         switch (b)
                         {
@@ -358,19 +360,19 @@ namespace Raven.Server.Json.Parsing
             for (int i = 0; i < 4; i++)
             {
                 EnsureBuffer();
-            
+
                 b = _buffer[_pos++];
                 if (b >= (byte)'0' && b <= (byte)'9')
                 {
-                    val = (val << 4) | ( b- (byte)'0');
+                    val = (val << 4) | (b - (byte)'0');
                 }
                 else if (b >= 'a' && b <= (byte)'f')
                 {
-                    val = (val << 4) | (10+(b- (byte)'a'));
+                    val = (val << 4) | (10 + (b - (byte)'a'));
                 }
                 else if (b >= 'A' && b <= (byte)'F')
                 {
-                    val = (val << 4) | (10 + (b - (byte) 'A'));
+                    val = (val << 4) | (10 + (b - (byte)'A'));
                 }
                 else
                 {
@@ -391,7 +393,7 @@ namespace Raven.Server.Json.Parsing
             _stringBuffer.Write(smallBuffer, byteCount);
         }
 
-        
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureBuffer()

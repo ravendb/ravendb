@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Sparrow;
+using Voron.Data.Tables;
 using Xunit;
 
 namespace Voron.Tests.Tables

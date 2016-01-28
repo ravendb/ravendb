@@ -7,6 +7,7 @@ namespace Raven.Server.Json.Parsing
     {
         public byte* StringBuffer;
         public int StringSize;
+        public int? CompressedSize;
         public long Long;
         public JsonParserToken CurrentTokenType;
         public readonly List<int> EscapePositions = new List<int>();

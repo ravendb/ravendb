@@ -26,7 +26,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new TableValueTests().CanRead();
+            new ObjectJsonParsingTests().CanGenerateJsonProperly_WithEscapePositions();
             return;
             // var trie = Trie<int>.Build(new[]
             //{

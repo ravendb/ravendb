@@ -12,17 +12,12 @@ namespace BlittableTests
         [Fact]
         public void Dup()
         {
-            //var d= new DynamicJsonBuilder();
-            //d["Name"] = "Oren Eini";
-            //d["Name"] = "Ayende Rahien";
-
             AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Name"] = "Ayende Rahien"
             },
                 "{\"Name\":\"Ayende Rahien\"}");
-
 
         }
         [Fact]
@@ -50,6 +45,17 @@ namespace BlittableTests
             },
              "{\"Name\":\"Oren Eini\",\"Dogs\":[\"Arava\",\"Oscar\"]}");
         }
+
+        [Fact]
+        public void CanGenerateJsonProperly_WithEscapePositions()
+        {
+            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            {
+                ["Name"] = "Oren\r\nEini"
+            },
+                "{\"Name\":\"Oren\\r\\nEini\"}");
+        }
+
         [Fact]
         public void CanGenerateJsonProperly()
         {
