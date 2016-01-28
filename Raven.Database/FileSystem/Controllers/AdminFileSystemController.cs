@@ -23,6 +23,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
@@ -32,6 +33,9 @@ namespace Raven.Database.FileSystem.Controllers
 {
     public class AdminFileSystemController : BaseAdminController
     {
+        private static readonly char[] existingDriveLetters = DriveInfo.GetDrives().Select(x => x.Name.ToLower()[0]).ToArray();
+
+
         public string FilesystemName { get; private set; }
 
         protected override void InnerInitialization(HttpControllerContext controllerContext)
@@ -434,7 +438,22 @@ namespace Raven.Database.FileSystem.Controllers
         private bool IsValidPath(string path,out HttpResponseMessage message)
         {
             message = null;
-            if (Directory.Exists(path))
+            var localPath = new DirectoryInfo(path.ToFullPath());
+            if (localPath.Exists)
+                return true;
+
+            message = GetMessageWithObject(new
+            {
+                Message = string.Format("Non-existing path : {0}", path)
+            }, HttpStatusCode.BadRequest);
+            return false;
+        }
+
+        private bool IsOnValidDrive(string path, out HttpResponseMessage message)
+        {
+            message = null;
+            var fullPath = path.ToFullPath().ToLower();
+            if (existingDriveLetters.Contains(fullPath[0]))
                 return true;
 
             message = GetMessageWithObject(new
@@ -496,14 +515,25 @@ namespace Raven.Database.FileSystem.Controllers
 
             if (filesystemDocument != null)
             {
-                var dataLocation = filesystemDocument.Settings[Constants.FileSystem.DataDirectory];
-                if(!IsValidPath(dataLocation, out message))
-                    return message;
+                //no need to check for existence of specified data and index folders here,
+                //since those would be simply created after restore
+                //we need to check only that the drive letter exists, so the folder can actually be created
 
-                var indexesLocation = filesystemDocument.Settings[Constants.FileSystem.IndexStorageDirectory];
-                if (!IsValidPath(indexesLocation, out message))
-                    return message;
+                string dataLocation;
+                if (filesystemDocument.Settings.TryGetValue(Constants.FileSystem.DataDirectory, out dataLocation))
+                {
+                    dataLocation = filesystemDocument.Settings[Constants.FileSystem.DataDirectory];
+                    if (!IsOnValidDrive(dataLocation, out message))
+                        return message;
+                }
 
+                string indexesLocation;
+                if (filesystemDocument.Settings.TryGetValue(Constants.FileSystem.IndexStorageDirectory, out indexesLocation))
+                {
+                    indexesLocation = filesystemDocument.Settings[Constants.FileSystem.IndexStorageDirectory];
+                    if (!IsOnValidDrive(indexesLocation, out message))
+                        return message;
+                }
                 foreach (var setting in filesystemDocument.Settings)
                 {
                     ravenConfiguration.Settings[setting.Key] = setting.Value;
