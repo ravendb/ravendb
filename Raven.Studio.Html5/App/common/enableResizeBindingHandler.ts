@@ -24,7 +24,7 @@ class enableResizeBindingHandler {
             helper: string => "resizable-helper",
             resize: (event: Event, ui: JQueryUI.ResizableUIParams) => {
                 $(element).find('.col-resizable-target').width(ui.size.width - 40);
-                $(element).find('.col-resizable-affected').width($(element).width() - ui.size.width - 20);
+                $(element).find('.col-resizable-affected').width($(element).width() - ui.size.width - 30);
             }
         };
 

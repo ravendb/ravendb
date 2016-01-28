@@ -8,13 +8,11 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
 using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Controllers.Admin;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 using System;
@@ -28,7 +26,6 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
-using Voron.Impl.Backup;
 
 
 namespace Raven.Database.FileSystem.Controllers
@@ -64,13 +61,13 @@ namespace Raven.Database.FileSystem.Controllers
         {
             get
             {
-                var filesystem = FileSystemsLandlord.GetFileSystemInternal(FilesystemName);
+                var filesystem = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternalAsync(FilesystemName));
                 if (filesystem == null)
                 {
                     throw new InvalidOperationException("Could not find a filesystem named: " + FilesystemName);
                 }
 
-                return filesystem.Result;
+                return filesystem;
             }
         }
 
@@ -281,6 +278,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (bool.TryParse(incrementalString, out incrementalBackup) == false)
                 incrementalBackup = false;
 
+
             if (backupRequest.FileSystemDocument == null && FileSystem.Name != null)
             {
                 var jsonDocument = DatabasesLandlord.SystemDatabase.Documents.Get("Raven/FileSystems/" + FileSystem.Name, null);
@@ -364,7 +362,7 @@ namespace Raven.Database.FileSystem.Controllers
                 try
                 {
                     // as we perform compact async we don't catch exceptions here - they will be propagated to operation
-                    var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternal(fs));
+                    var targetFs = AsyncHelpers.RunSync(() => FileSystemsLandlord.GetFileSystemInternalAsync(fs));
                     FileSystemsLandlord.Lock(fs, () => targetFs.Storage.Compact(configuration, msg =>
                     {
                         bool skipProgressReport = false;
@@ -433,6 +431,18 @@ namespace Raven.Database.FileSystem.Controllers
         private static string EsentProgressString = "JET_SNPROG";
         private static string VoronProgressString = "Copied";
 
+        private bool IsValidPath(string path,out HttpResponseMessage message)
+        {
+            message = null;
+            if (Directory.Exists(path))
+                return true;
+
+            message = GetMessageWithObject(new
+            {
+                Message = string.Format("Non-existing path : {0}", path)
+            }, HttpStatusCode.BadRequest);
+            return false;
+        }
 
         [HttpPost]
         [RavenRoute("admin/fs/restore")]
@@ -445,7 +455,8 @@ namespace Raven.Database.FileSystem.Controllers
             var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
             var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
-       
+            HttpResponseMessage message = null;
+
             var fileSystemDocumentPath = FindFilesystemDocument(restoreRequest.BackupLocation);
 
             if (!File.Exists(fileSystemDocumentPath))
@@ -476,18 +487,31 @@ namespace Raven.Database.FileSystem.Controllers
                 FileSystemName = filesystemName,
             };
 
+            if (restoreRequest.IndexesLocation != null && 
+                !IsValidPath(restoreRequest.IndexesLocation, out message))
+                return message;
+            if (restoreRequest.JournalsLocation != null &&
+                !IsValidPath(restoreRequest.JournalsLocation, out message))
+                return message;
+
             if (filesystemDocument != null)
             {
+                var dataLocation = filesystemDocument.Settings[Constants.FileSystem.DataDirectory];
+                if(!IsValidPath(dataLocation, out message))
+                    return message;
+
+                var indexesLocation = filesystemDocument.Settings[Constants.FileSystem.IndexStorageDirectory];
+                if (!IsValidPath(indexesLocation, out message))
+                    return message;
+
                 foreach (var setting in filesystemDocument.Settings)
                 {
                     ravenConfiguration.Settings[setting.Key] = setting.Value;
                 }
             }
 
-            if (Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")))
-                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.EsentTypeName;
-            else
-                ravenConfiguration.FileSystem.DefaultStorageTypeName = InMemoryRavenConfiguration.VoronTypeName;
+            ravenConfiguration.FileSystem.DefaultStorageTypeName = Directory.Exists(Path.Combine(restoreRequest.BackupLocation, "new")) ? 
+                InMemoryRavenConfiguration.EsentTypeName : InMemoryRavenConfiguration.VoronTypeName;
 
             ravenConfiguration.CustomizeValuesForFileSystemTenant(filesystemName);
             ravenConfiguration.Initialize();
@@ -495,7 +519,6 @@ namespace Raven.Database.FileSystem.Controllers
             string documentDataDir;
             ravenConfiguration.FileSystem.DataDirectory = ResolveTenantDataDirectory(restoreRequest.FilesystemLocation, filesystemName, out documentDataDir);
             restoreRequest.FilesystemLocation = ravenConfiguration.FileSystem.DataDirectory;
-
 
             string anotherRestoreResourceName;
             if (IsAnotherRestoreInProgress(out anotherRestoreResourceName))
@@ -531,7 +554,7 @@ namespace Raven.Database.FileSystem.Controllers
             }), new RavenJObject(), null);
 
             DatabasesLandlord.SystemDatabase.Documents.Delete(RestoreStatus.RavenFilesystemRestoreStatusDocumentKey(filesystemName), null, null);
-
+            
             bool defrag;
             if (bool.TryParse(GetQueryStringValue("defrag"), out defrag))
                 restoreRequest.Defrag = defrag;

@@ -651,6 +651,7 @@
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Shard\ShardedSessionInclude.cs" />
     <Compile Include="Smuggler\SmugglerBetweenTests.cs" />
     <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
     <Compile Include="Smuggler\SmugglerExecutionTests.cs" />
@@ -828,7 +829,7 @@
     <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />
     <Compile Include="Storage\Voron\ListStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
-    <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
+    <Compile Include="Storage\TasksStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Subscriptions\SubscriptionsBasic.cs" />
     <Compile Include="Subscriptions\SubscriptionsPaths.cs" />

@@ -123,12 +123,20 @@ namespace Raven.Client.Shard
 
         public T Load<T>(string id)
         {
+            if (IsDeleted(id))
+                return default(T);
+
             object existingEntity;
             if (entitiesByKey.TryGetValue(id, out existingEntity))
             {
                 return (T)existingEntity;
             }
-
+            JsonDocument value;
+            if (includedDocumentsByKey.TryGetValue(id, out value))
+            {
+                includedDocumentsByKey.Remove(id);
+                return TrackEntity<T>(value);
+            }
             IncrementRequestCount();
             var shardRequestData = new ShardRequestData
             {
@@ -328,19 +336,17 @@ namespace Raven.Client.Shard
 
         public T[] LoadInternal<T>(string[] ids)
         {
-            return LoadInternal<T>(ids, new KeyValuePair<string, Type>[0]);
+            return LoadInternal<T>(ids, null);
         }
 
         public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             var results = new T[ids.Length];
-            var includePaths = includes != null ? includes.Select(x => x.Key).ToArray() : null;
-            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null);
+            var includePaths = includes != null && includes.Length > 0 ? includes.Select(x => x.Key).ToArray() : null;
+            var idsToLoad = GetIdsThatNeedLoading<T>(ids, includePaths, transformer: null).ToList();
 
-            if (!idsToLoad.Any())
-                return results;
-
-            IncrementRequestCount();
+            if (idsToLoad.Count>0)
+                IncrementRequestCount();
 
             foreach (var shard in idsToLoad)
             {

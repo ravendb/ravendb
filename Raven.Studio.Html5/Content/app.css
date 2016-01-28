@@ -6605,7 +6605,6 @@ label {
 html,
 body {
   height: 100%;
-  overflow-y: scroll;
 }
 .not-implemented-yet {
   position: relative;
@@ -7099,7 +7098,12 @@ div.btn-group[data-toggle=buttons-radio] button.active {
 }
 #documents-page-container {
   border-right: solid 3px rgba(0, 0, 0, 0.73);
-  overflow-y: hidden;
+  padding-right: 0;
+}
+#documents-page-container ul {
+  overflow: auto;
+  max-height: 100%;
+  padding-right: 15px;
 }
 .document-collections li {
   outline: none;

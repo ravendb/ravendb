@@ -17,6 +17,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Smuggler.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Database.Data;
 using Raven.Database.Smuggler;
@@ -35,7 +36,7 @@ namespace Raven.Smuggler
 
         private readonly Func<bool> isTransformersSupported;
 
-        private Func<bool> isIdentitiesSmugglingSupported;
+        private readonly Func<bool> isIdentitiesSmugglingSupported;
 
         const int RetriesCount = 5;
 
@@ -95,16 +96,6 @@ namespace Raven.Smuggler
                 LastAttachmentsEtag = null,
                 LastDocsEtag = null
             };
-        }
-
-        public Etag FetchLastDocDeleteEtag()
-        {
-            return null;
-        }
-
-        public Etag FetchLastAttachmentsDeleteEtag()
-        {
-            return null;
         }
 
         [Obsolete("Use RavenFS instead.")]
@@ -322,36 +313,6 @@ namespace Raven.Smuggler
             }
         }
 
-        public async Task<List<KeyValuePair<string, long>>> GetIdentities()
-        {
-            if (isIdentitiesSmugglingSupported() == false)
-                return new List<KeyValuePair<string, long>>();
-
-            int start = 0;
-            const int pageSize = 1024;
-            long totalIdentitiesCount;
-            var identities = new List<KeyValuePair<string, long>>();
-
-            do
-            {
-                var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
-                using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, "GET", Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
-                {
-                    var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync();
-                    totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
-
-                    foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
-                    {
-                        identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
-                    }
-
-                    start += pageSize;
-                }
-            } while (identities.Count < totalIdentitiesCount);
-
-            return identities;
-        }
-
         public Task SeedIdentityFor(string identityName, long identityValue)
         {
             if (isIdentitiesSmugglingSupported() == false)
@@ -361,6 +322,15 @@ namespace Raven.Smuggler
                 return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
 
             return new CompletedTask();
+        }
+
+        public Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state)
+        {
+            var options = ExportOptions.Create(state, types, Options.ExportDeletions, Options.Limit);
+
+            var client = (AsyncServerClient)Store.AsyncDatabaseCommands;
+
+            return client.StreamExportAsync(options);
         }
     }
 }

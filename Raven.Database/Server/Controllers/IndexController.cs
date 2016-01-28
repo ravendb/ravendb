@@ -390,8 +390,15 @@ namespace Raven.Database.Server.Controllers
             }
 
             var instance = Database.IndexStorage.GetIndexInstance(index);
+            var oldPriority = instance.Priority;
             Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
             instance.Priority = indexingPriority;
+
+            if (oldPriority == IndexingPriority.Disabled &&
+                (indexingPriority == IndexingPriority.Normal || indexingPriority == IndexingPriority.Idle))
+            {
+                Database.WorkContext.NotifyAboutWork();
+            }
 
             return GetEmptyMessage();
         }

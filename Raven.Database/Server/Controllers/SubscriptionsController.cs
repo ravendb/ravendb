@@ -244,7 +244,7 @@ namespace Raven.Database.Server.Controllers
                             // we may be sending a LOT of documents to the user, and most 
                             // of them aren't going to be relevant for other ops, so we are going to skip
                             // the cache for that, to avoid filling it up very quickly
-                            using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+                            using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
                             {    
                                 if (isPrefixCriteria)
                                 {

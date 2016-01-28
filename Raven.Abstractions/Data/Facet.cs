@@ -102,11 +102,11 @@ namespace Raven.Abstractions.Data
                 throw new InvalidOperationException();
 
             var ranges = other.Ranges.Select(Parse).ToList();
-            
+
             var shouldUseRanges = other.Ranges != null &&
                                 other.Ranges.Count > 0 &&
                                 other.Name.Body.Type != typeof(string);
-            var mode = shouldUseRanges ? FacetMode.Ranges: FacetMode.Default;
+            var mode = shouldUseRanges ? FacetMode.Ranges : FacetMode.Default;
 
             var name = String.Empty;
             if (other.Name.Body is MemberExpression)
@@ -125,12 +125,12 @@ namespace Raven.Abstractions.Data
             if (mode == FacetMode.Ranges)
             {
                 var type = GetExpressionType(other.Name);
-                if (type == typeof (int) ||
-                    type == typeof (long) ||
-                    type == typeof (double) ||
-                    type == typeof (short) ||
-                    type == typeof (float) ||
-                    type == typeof (decimal))
+                if (type == typeof(int) ||
+                    type == typeof(long) ||
+                    type == typeof(double) ||
+                    type == typeof(short) ||
+                    type == typeof(float) ||
+                    type == typeof(decimal))
                     name += "_Range";
             }
 
@@ -147,7 +147,7 @@ namespace Raven.Abstractions.Data
             switch (expr.NodeType)
             {
                 case ExpressionType.Lambda:
-                    return GetExpressionType(((LambdaExpression) expr).Body);
+                    return GetExpressionType(((LambdaExpression)expr).Body);
                 case ExpressionType.Convert:
                     return GetExpressionType(((UnaryExpression)expr).Operand);
                 default:
@@ -164,7 +164,7 @@ namespace Raven.Abstractions.Data
             if (operation.Left is MemberExpression)
             {
                 var subExpressionValue = ParseSubExpression(operation);
-                var expression = GetStringRepresentation(operation.NodeType, subExpressionValue);                
+                var expression = GetStringRepresentation(operation.NodeType, subExpressionValue);
                 return expression;
             }
 
@@ -178,11 +178,11 @@ namespace Raven.Abstractions.Data
 
                 var leftMember = left.Left as MemberExpression;
                 var rightMember = right.Left as MemberExpression;
-                var validOperators = ((left.NodeType == ExpressionType.LessThan || left.NodeType == ExpressionType.LessThanOrEqual) 
+                var validOperators = ((left.NodeType == ExpressionType.LessThan || left.NodeType == ExpressionType.LessThanOrEqual)
                     && (right.NodeType == ExpressionType.GreaterThan) || right.NodeType == ExpressionType.GreaterThanOrEqual) ||
-                    ((left.NodeType == ExpressionType.GreaterThan || left.NodeType == ExpressionType.GreaterThanOrEqual) 
+                    ((left.NodeType == ExpressionType.GreaterThan || left.NodeType == ExpressionType.GreaterThanOrEqual)
                     && (right.NodeType == ExpressionType.LessThan || right.NodeType == ExpressionType.LessThanOrEqual));
-                var validMemberNames = leftMember != null && rightMember != null && 
+                var validMemberNames = leftMember != null && rightMember != null &&
                                         GetFieldName(leftMember) == GetFieldName(rightMember);
                 if (validOperators && validMemberNames)
                 {
@@ -195,12 +195,17 @@ namespace Raven.Abstractions.Data
         private static string GetFieldName(MemberExpression left)
         {
             if (Nullable.GetUnderlyingType(left.Member.DeclaringType) != null)
-                return GetFieldName(((MemberExpression) left.Expression));
+                return GetFieldName(((MemberExpression)left.Expression));
             return left.Member.Name;
         }
 
         private static object ParseSubExpression(BinaryExpression operation)
         {
+            if (operation.Right is UnaryExpression)
+            {
+                return ParseUnaryExpression((UnaryExpression)operation.Right);
+            }
+
             if (operation.Right is ConstantExpression)
             {
                 var right = (ConstantExpression)operation.Right;
@@ -231,7 +236,7 @@ namespace Raven.Abstractions.Data
                     {
                         //This chokes on anonymous types!?													
                         var value = property.GetValue(property, null);
-                        return value;						
+                        return value;
                     }
                 }
             }
@@ -250,8 +255,28 @@ namespace Raven.Abstractions.Data
                 }
             }
 
-            throw new InvalidOperationException(String.Format("Unable to parse expression: {0} {1} {2}",
+            throw new InvalidOperationException(string.Format("Unable to parse expression: {0} {1} {2}",
                                     operation.Left.GetType().Name, operation.NodeType, operation.Right.GetType().Name));
+        }
+
+        private static object ParseUnaryExpression(UnaryExpression expression)
+        {
+            if (expression.NodeType == ExpressionType.Convert)
+            {
+                var operand = expression.Operand;
+
+                switch (operand.NodeType)
+                {
+                    case ExpressionType.Constant:
+                        var constant = (ConstantExpression)operand;
+                        var type = expression.Type.IsGenericType() ? expression.Type.GenericTypeArguments[0] : expression.Type;
+                        return Convert.ChangeType(constant.Value, type);
+                    case ExpressionType.Convert:
+                        return ParseUnaryExpression((UnaryExpression)operand);
+                }
+            }
+
+            throw new NotSupportedException("Not supported unary expression type " + expression.NodeType);
         }
 
         private static string GetStringRepresentation(ExpressionType op, object value)
@@ -273,7 +298,7 @@ namespace Raven.Abstractions.Data
             var lValueAsStr = GetStringValue(lValue);
             var rValueAsStr = GetStringValue(rValue);
             if (lValueAsStr != null && rValueAsStr != null)
-                return String.Format("{0}{1} TO {2}{3}",CalculateBraces(leftOp, true), lValueAsStr, rValueAsStr, CalculateBraces(rightOp, false));
+                return String.Format("{0}{1} TO {2}{3}", CalculateBraces(leftOp, true), lValueAsStr, rValueAsStr, CalculateBraces(rightOp, false));
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
         }
 
@@ -302,7 +327,7 @@ namespace Raven.Abstractions.Data
                 case "System.Double":
                     return NumberUtil.NumberToString((double)value);
                 case "System.Decimal":
-                    return NumberUtil.NumberToString((double)(decimal) value);
+                    return NumberUtil.NumberToString((double)(decimal)value);
                 case "System.String":
                     return RavenQuery.Escape(value.ToString());
                 default:

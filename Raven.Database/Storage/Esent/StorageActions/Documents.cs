@@ -544,6 +544,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
             }
 
+            cacher.RemoveCachedDocument(key, preTouchEtag);
             etagTouches.Add(preTouchEtag, afterTouchEtag);
         }
 
@@ -635,7 +636,9 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
                                key, isUpdate);
 
-                cacher.RemoveCachedDocument(key, newEtag);
+                if (existingEtag != null)
+                    cacher.RemoveCachedDocument(key, existingEtag);
+
                 return new AddDocumentResult
                 {
                     Etag = newEtag,
@@ -669,49 +672,52 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 }
             }
 
-            try 
+            try
             {
-            using (var update = new Update(session, Documents, prep))
-            {
-                Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
-                using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
+                using (var update = new Update(session, Documents, prep))
                 {
-                    if (isUpdate)
-                        columnStream.SetLength(0);
-                    using (Stream stream = new BufferedStream(columnStream))
-                    using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+                    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
+                    using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"]))
                     {
-                        data.WriteTo(finalStream);
-                        finalStream.Flush();
+                        if (isUpdate)
+                            columnStream.SetLength(0);
+                        using (Stream stream = new BufferedStream(columnStream))
+                        using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+                        {
+                            data.WriteTo(finalStream);
+                            finalStream.Flush();
+                        }
                     }
-                }
-                Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-                Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-                DateTime savedAt = SystemTime.UtcNow;
-                Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
+                    Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
+                    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+                    DateTime savedAt = SystemTime.UtcNow;
+                    Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
-                using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
-                {
-                    if (isUpdate)
-                        columnStream.SetLength(0);
-                    using (Stream stream = new BufferedStream(columnStream))
+                    using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
                     {
-                        metadata.WriteTo(stream);
-                        stream.Flush();
+                        if (isUpdate)
+                            columnStream.SetLength(0);
+                        using (Stream stream = new BufferedStream(columnStream))
+                        {
+                            metadata.WriteTo(stream);
+                            stream.Flush();
+                        }
                     }
+
+                    update.Save();
+
+                    if (existingETag != null)
+                        cacher.RemoveCachedDocument(key, existingETag);
+
+                    return new AddDocumentResult
+                    {
+                        Etag = newEtag,
+                        PrevEtag = existingETag,
+                        SavedAt = savedAt,
+                        Updated = isUpdate
+                    };
                 }
-
-                update.Save();
-
-                return new AddDocumentResult
-                {
-                    Etag = newEtag,
-                    PrevEtag = existingETag,
-                    SavedAt = savedAt,
-                    Updated = isUpdate
-                };
             }
-        }
             catch (EsentKeyDuplicateException e)
             {
                 throw new ConcurrencyException("Illegal duplicate key " + key, e);

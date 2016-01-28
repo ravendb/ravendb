@@ -145,6 +145,7 @@
     <Compile Include="Issues\RavenDB_4069.cs" />
     <Compile Include="Issues\RavenDB_4092.cs" />
     <Compile Include="Issues\RavenDB_4164.cs" />
+    <Compile Include="Issues\RavenDB_4189.cs" />
     <Compile Include="Issues\RavenDB_4206.cs" />
     <Compile Include="Issues\RavenDB_4208.cs" />
     <Compile Include="Issues\RavenDB_4217.cs" />
