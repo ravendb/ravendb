@@ -788,6 +788,11 @@ namespace Raven.Client.Connection.Implementation
             });
         }
 
+        public Task<HttpResponseMessage> ExecuteRawResponseAsync(RavenJToken token)
+        {
+            return ExecuteRawResponseInternalAsync(new JsonContent(token));
+        }
+
         public Task<HttpResponseMessage> ExecuteRawResponseAsync(string data)
         {
             return ExecuteRawResponseInternalAsync(new CompressedStringContent(data, factory.DisableRequestCompression));

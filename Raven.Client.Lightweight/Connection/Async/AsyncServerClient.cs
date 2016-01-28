@@ -27,6 +27,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
@@ -1754,6 +1755,49 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication("HEAD", u => DirectHeadAsync(u, key, token), token);
         }
 
+        public async Task<IAsyncEnumerator<RavenJObject>> StreamExportAsync(ExportOptions options, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var path = "/smuggler/export";
+            var request = CreateRequest(path, "POST");
+
+            request.RemoveAuthorizationHeader();
+
+            var tokenRetriever = new SingleAuthTokenRetriever(this, jsonRequestFactory, convention, OperationsHeaders, new OperationMetadata(Url, PrimaryCredentials));
+
+            var token = await tokenRetriever.GetToken().WithCancellation(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                token = await tokenRetriever.ValidateThatWeCanUseToken(token).WithCancellation(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                request.Dispose();
+
+                throw new InvalidOperationException(
+                    "Could not authenticate token for export streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+            HttpResponseMessage response;
+            try
+            {
+                    response = await request.ExecuteRawResponseAsync(RavenJObject.FromObject(options))
+                                            .WithCancellation(cancellationToken)
+                                            .ConfigureAwait(false);
+
+                await response.AssertNotFailingResponse().WithCancellation(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                request.Dispose();
+
+                throw;
+            }
+
+            return new YieldStreamResults(request, await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false));
+        }
+
         public Task<IAsyncEnumerator<RavenJObject>> StreamQueryAsync(string index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo, CancellationToken token = default(CancellationToken))
         {
             return ExecuteWithReplication("GET", operationMetadata => DirectStreamQueryAsync(index, query, queryHeaderInfo, operationMetadata, token), token);
@@ -1861,7 +1905,7 @@ namespace Raven.Client.Connection.Async
             private bool complete;
 
             private bool wasInitialized;
-            private Func<JsonTextReaderAsync, bool> customizedEndResult;
+            private readonly Func<JsonTextReaderAsync, bool> customizedEndResult;
 
             public YieldStreamResults(HttpJsonRequest request, Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null, Func<JsonTextReaderAsync, bool> customizedEndResult = null)
             {
