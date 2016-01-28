@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -21,6 +22,7 @@ namespace Raven.Server.ServerWide
     public unsafe class ServerStore : IDisposable
     {
         public string DataDirectory;
+        private CancellationTokenSource shutdownNotification;
 
         private static readonly ILog Log = LogManager.GetLogger(typeof(ServerStore));
 
@@ -39,6 +41,8 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
+            shutdownNotification = new CancellationTokenSource();
+
             var runInMemory = _config.Get<bool>("run.in.memory");
             if (runInMemory == false)
             {
@@ -136,6 +140,8 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
+            shutdownNotification.Cancel();
+
             if (_contextPool != null)
             {
                 RavenOperationContext result;
