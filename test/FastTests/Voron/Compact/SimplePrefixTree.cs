@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Voron;
 using Voron.Data.Compact;
 using Xunit;
 
-namespace Voron.Data.Compact.Tests
+namespace FastTests.Voron.Compact
 {
     public class SimplePrefixTree : PrefixTreeStorageTests
     {
@@ -74,12 +75,16 @@ namespace Voron.Data.Compact.Tests
 
                 Assert.True(tree.Add(key, (Slice)"eini"));
 
+                StructuralVerify(tree);
+
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadPrefixTree(Name);
+
+                StructuralVerify(tree);
 
                 // x+ = min{y ? S | y = x} (the successor of x in S) - Page 160 of [1]
                 // Therefore the successor of the key "oren" is greater or equal to "oren"
@@ -92,7 +97,7 @@ namespace Voron.Data.Compact.Tests
                 Assert.Equal(Slice.BeforeAllKeys, tree.Predecessor("aq"));
                 Assert.Equal(key, tree.Predecessor("pq"));
 
-                StructuralVerify(tree);
+
             }
         }
 

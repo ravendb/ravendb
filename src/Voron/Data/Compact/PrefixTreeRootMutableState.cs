@@ -1,20 +1,24 @@
-﻿using System;
+﻿using Sparrow;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Voron.Impl;
 
 namespace Voron.Data.Compact
 {
-    public unsafe class PrefixTreeRootMutableState
+    public unsafe class PrefixTreeRootMutableState : IDisposable
     {
         private readonly LowLevelTransaction _tx;
         private readonly PrefixTreeRootHeader* _pointer;
 
-        private PrefixTreeRootHeader _innerCopy;
+        private IntPtr _innerCopyPtr;
+        private PrefixTreeRootHeader* _innerCopy;
+
         private readonly PrefixTreeTranslationTableMutableState _translationTable;
 
         private bool _isModified;
@@ -26,15 +30,15 @@ namespace Voron.Data.Compact
 
             this._tx = tx;
             this._pointer = header;
-            this._innerCopy = *header;
-            this._innerCopy.RootObjectType = RootObjectType.PrefixTree;
-            this._translationTable = new PrefixTreeTranslationTableMutableState(tx, this);
-        }
 
-        internal PrefixTreeRootHeader* Pointer
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pointer; }
+            // Initialize unmanaged memory to hold the struct.
+            _innerCopyPtr = Marshal.AllocHGlobal(sizeof(PrefixTreeRootHeader));
+            _innerCopy = (PrefixTreeRootHeader*) _innerCopyPtr.ToPointer();
+            Memory.CopyInline((byte*)_innerCopy, (byte*)header, sizeof(PrefixTreeRootHeader));
+
+            this._innerCopy->RootObjectType = RootObjectType.PrefixTree;
+
+            this._translationTable = new PrefixTreeTranslationTableMutableState(tx, this);
         }
 
         public PrefixTreeTranslationTableMutableState TranslationTable
@@ -43,17 +47,23 @@ namespace Voron.Data.Compact
             get { return _translationTable; }
         }
 
+        public PrefixTreeRootHeader* Pointer
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _innerCopy; }
+        }
+
         /// <summary>
         /// The table header page for the tree.
         /// </summary>
         public long Table
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _innerCopy.Table; }
+            get { return _innerCopy->Table; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _innerCopy.Table = value;
+                _innerCopy->Table = value;
                 IsModified = true;
             }
         }
@@ -64,11 +74,11 @@ namespace Voron.Data.Compact
         public PrefixTree.Leaf Head
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _innerCopy.Head; }
+            get { return _innerCopy->Head; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _innerCopy.Head = value;
+                _innerCopy->Head = value;
                 IsModified = true;
             }
         }
@@ -79,11 +89,11 @@ namespace Voron.Data.Compact
         public PrefixTree.Leaf Tail
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _innerCopy.Tail; }
+            get { return _innerCopy->Tail; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _innerCopy.Tail = value;
+                _innerCopy->Tail = value;
                 IsModified = true;
             }
         }
@@ -94,11 +104,11 @@ namespace Voron.Data.Compact
         public long Items
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _innerCopy.Items; }
+            get { return _innerCopy->Items; }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
-                _innerCopy.Items = value;
+                _innerCopy->Items = value;
                 IsModified = true;
             }
         }
@@ -118,9 +128,44 @@ namespace Voron.Data.Compact
 
         public void CopyTo(PrefixTreeRootHeader* header)
         {
-            *header = _innerCopy;
+            Memory.CopyInline((byte*)header, (byte*)_innerCopy, sizeof(PrefixTreeRootHeader));
             if (_translationTable.IsModified)
                 _translationTable.CopyTo(header);
         }
+
+        #region IDisposable Support
+
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                if (_innerCopyPtr != IntPtr.Zero)
+                    Marshal.FreeHGlobal(_innerCopyPtr);
+
+                _innerCopyPtr = IntPtr.Zero;
+                _innerCopy = null;
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        ~PrefixTreeRootMutableState()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(false);
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

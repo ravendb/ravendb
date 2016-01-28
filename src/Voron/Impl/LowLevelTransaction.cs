@@ -11,6 +11,7 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Data;
 
 namespace Voron.Impl
 {
@@ -267,6 +268,29 @@ namespace Voron.Impl
                 }
             }
             return AllocatePage(numberOfPages, pageNumber.Value);
+        }
+
+        public Page AllocateOverflowPage(long headerSize, long dataSize, long? pageNumber = null)
+        {
+            long pageSize = this.DataPager.PageSize;
+            long overflowSize = headerSize + dataSize;
+            if (overflowSize > int.MaxValue - 1)
+                throw new InvalidOperationException($"Cannot allocate chunks bigger than { int.MaxValue / 1024 * 1024 } Mb.");
+
+            Debug.Assert(overflowSize >= 0);
+
+            long numberOfPages = (overflowSize / pageSize) + (overflowSize % pageSize == 0 ? 0 : 1);
+
+            var overflowPage = AllocatePage((int)numberOfPages);
+            overflowPage.Flags = PageFlags.Overflow;
+            overflowPage.OverflowSize = (int)overflowSize;
+
+            return overflowPage;
+        }
+
+        public Page AllocateOverflowPage(long dataSize, long? pageNumber = null)
+        {
+            return AllocateOverflowPage(sizeof(PageHeader), dataSize, pageNumber);                 
         }
 
         private Page AllocatePage(int numberOfPages, long pageNumber)

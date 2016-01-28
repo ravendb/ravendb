@@ -10,6 +10,8 @@ namespace Voron.Data.Compact
     {
         public unsafe static class Constants
         {
+            public const long HeadNodeName = -4;
+            public const long TailNodeName = -3;
             public const long TombstoneNodeName = -2;
             public const long InvalidNodeName = -1;
             public const long RootNodeName = 0;
@@ -20,7 +22,8 @@ namespace Voron.Data.Compact
 
             public static int NodesPerPage = 4096 * 1024 / sizeof(PrefixTree.Node);
             public static int NodesPerCache = L1CacheSize / sizeof(PrefixTree.Node);
-            
+            public static int TranslationTableInitialItems = 2048;
+
         }
     }
 }

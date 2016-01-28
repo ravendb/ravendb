@@ -26,15 +26,14 @@ namespace Voron.Data.Compact
         /// This is the relative index of the parent node at the parent page.
         /// </summary>
         [FieldOffset(14)]
-        public int ParentIndex;
+        public int ParentNodeName;
 
         /// <summary>
-        /// This is the tree number following the growth strategy for the tree structure. This virtual trees
-        /// are used to navigate the whole-tree in a cache concious fashion and are part of a virtual numbering of the nodes
-        /// used for fast retrieval of node offsets.
+        /// This is the virtual tree number for the parent tree. This number can be calculated from the VirtualPage
+        /// but for performance reasons it makes sense to store it instead.
         /// </summary>
-        [FieldOffset(18)]
-        public long Chunk;
+        [FieldOffset(18)]        
+        public long ParentChunk;
 
         /// <summary>
         /// This is the root node name for the current tree in the whole-tree. This number can be calculated from the VirtualPage
@@ -44,10 +43,11 @@ namespace Voron.Data.Compact
         public long RootNodeName;
 
         /// <summary>
-        /// This is the virtual tree number for the parent tree. This number can be calculated from the VirtualPage
-        /// but for performance reasons it makes sense to store it instead.
+        /// This is the tree number following the growth strategy for the tree structure. This virtual trees
+        /// are used to navigate the whole-tree in a cache concious fashion and are part of a virtual numbering of the nodes
+        /// used for fast retrieval of node offsets.
         /// </summary>
         [FieldOffset(34)]
-        public long Parent;
+        public long Chunk;
     }
 }

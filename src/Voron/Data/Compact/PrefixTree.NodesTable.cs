@@ -236,6 +236,8 @@ namespace Voron.Data.Compact
                 int pageNumber = bucket / _entriesPerPage;
                 int entryNumber = bucket % _entriesPerPage;
 
+                // TODO: Cache the last page (it will be probably be a hit).
+
                 Page page = _tx.GetPage(tablePage + pageNumber + 1);
                 var entry = (Entry*)page.DataPointer;
 
@@ -254,6 +256,8 @@ namespace Voron.Data.Compact
             {
                 int pageNumber = bucket / _entriesPerPage;
                 int entryNumber = bucket % _entriesPerPage;
+
+                // TODO: Cache the last page (it will be probably be a hit).
 
                 Page page = _tx.GetPage(tablePage + pageNumber + 1);
                 var entry = (Entry*)page.Pointer;

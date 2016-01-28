@@ -1,22 +1,20 @@
-﻿using Bond;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Voron;
 using Voron.Data.Compact;
 using Voron.Tests;
 using Xunit;
 
-namespace Voron.Data.Compact.Tests
+namespace FastTests.Voron.Compact
 {
     public unsafe class PrefixTreeStorageTests : StorageTest
     {
-        [Schema]
         public sealed class SampleData : IEquatable<SampleData>
         {
-            [Id(0)]
             public string Data;
 
             bool IEquatable<SampleData>.Equals(SampleData other)
@@ -107,8 +105,8 @@ namespace Voron.Data.Compact.Tests
 
             if (tree.Count == 0)
             {
-                Assert.Equal(tree.State.Head.NextPtr, PrefixTree.Constants.InvalidNodeName);
-                Assert.Equal(tree.State.Tail.PreviousPtr, PrefixTree.Constants.InvalidNodeName);
+                Assert.Equal(tree.State.Head.NextPtr, PrefixTree.Constants.TailNodeName);
+                Assert.Equal(tree.State.Tail.PreviousPtr, PrefixTree.Constants.HeadNodeName);
 
                 Assert.Equal(0, tree.NodesTable.Count);
 
@@ -121,12 +119,12 @@ namespace Voron.Data.Compact.Tests
             // We check if the first leaf node is pointing back to a tombstone.
             var head = (PrefixTree.Leaf*)tree.ReadNodeByName(tree.State.Head.NextPtr);
             Assert.True(head->IsLeaf);
-            Assert.Equal(head->PreviousPtr, PrefixTree.Constants.TombstoneNodeName);
+            Assert.Equal(head->PreviousPtr, PrefixTree.Constants.HeadNodeName);
 
             // We check if the last leaf node is pointing forward to a tombstone.
             var tail = (PrefixTree.Leaf*)tree.ReadNodeByName(tree.State.Tail.PreviousPtr);
             Assert.True(tail->IsLeaf);
-            Assert.Equal(tail->NextPtr, PrefixTree.Constants.TombstoneNodeName);
+            Assert.Equal(tail->NextPtr, PrefixTree.Constants.TailNodeName);
 
             var root = tree.Root;
             var nodes = new HashSet<long>();
