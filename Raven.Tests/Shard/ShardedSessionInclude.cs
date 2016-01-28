@@ -81,6 +81,40 @@ namespace Raven.Tests.Shard
         }
 
         [Fact]
+        public void VerifyRequestCountUsingIncludeWithLoadIEnumerableWithShardedDocumentstore()
+        {
+            var doc1 = new Document() { Id = "Document1" };
+            var doc2 = new Document() { Id = "Document2" };
+            using (var session = shardedDocumentStore.OpenSession())
+            {
+                session.Store(doc1);
+                session.Store(doc2);
+                session.Store(new DocumentContainer()
+                {
+                    Id = "documentcontainer1",
+
+                    Documents = { doc1, doc2 }
+                });
+
+                session.SaveChanges();
+            }
+
+            using (var session = shardedDocumentStore.OpenSession())
+            {
+                var companies = session.Query<DocumentContainer>()
+                    .Include<DocumentContainer>(dc => dc.Documents.Select(dl => dl.Id))
+                    .ToArray();
+                var initialReqCount = session.Advanced.NumberOfRequests;
+                var docs = session.Load<Document>(new List<string>() { doc1.Id, doc2.Id });
+                var secondRecCount = session.Advanced.NumberOfRequests;
+
+                Assert.NotNull(docs);
+                Assert.NotEmpty(docs);
+                Assert.Equal(initialReqCount, secondRecCount);
+            }
+        }
+
+        [Fact]
         public void VerifyRequestCountUsingIncludeWithDocumentstore()
         {
             var doc1 = new Document() { Id = "Document1" };
