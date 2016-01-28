@@ -5,6 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Server.Json;
@@ -14,9 +17,43 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Web.System
 {
-    public unsafe class BuildVersion : RequestHandler
+    public class BuildVersion : RequestHandler
     {
         private readonly RequestHandlerContext _requestHandlerContext;
+
+        private static byte[] _versionBuffer;
+
+        private unsafe static byte[] GetVersionBuffer(ServerStore serverStore)
+        {
+            if(_versionBuffer!=null)
+                return _versionBuffer;
+            lock (typeof (BuildVersion))
+            {
+                if (_versionBuffer != null)
+                    return _versionBuffer;
+
+                RavenOperationContext context;
+                using (serverStore.AllocateRequestContext(out context))
+                {
+                    var result = new DynamicJsonValue
+                    {
+                        ["BuildVersion"] = ServerVersion.Build,
+                        ["ProductVersion"] = ServerVersion.Version,
+                        ["CommitHash"] = ServerVersion.CommitHash
+                    };
+                    using (var doc = context.ReadObject(result, "build/version"))
+                    {
+                        var memoryStream = new MemoryStream();
+                        doc.WriteTo(memoryStream);
+                        var versionBuffer = memoryStream.ToArray();
+                        _versionBuffer = versionBuffer;
+                        return versionBuffer;
+                    }
+                }
+
+
+            }
+        }
 
         public BuildVersion(RequestHandlerContext requestHandlerContext)
         {
@@ -26,23 +63,10 @@ namespace Raven.Server.Web.System
         [Route("/build/version", "GET")]
         public Task Get()
         {
-            RavenOperationContext context;
-            using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
-            {
-                var result = new DynamicJsonValue
-                {
-                    ["BuildVersion"] = ServerVersion.Build,
-                    ["ProductVersion"] = ServerVersion.Version,
-                    ["CommitHash"] = ServerVersion.CommitHash
-                };
-                using (var doc = context.ReadObject(result, "build/version"))
-                {
-                    var response = _requestHandlerContext.HttpContext.Response;
-                    response.StatusCode = 200;
-                    doc.WriteTo(response.Body);
-                    return Task.CompletedTask;
-                }
-            }
+            var versionBuffer = GetVersionBuffer(_requestHandlerContext.ServerStore);
+            var response = _requestHandlerContext.HttpContext.Response;
+            response.Body.Write(versionBuffer, 0,versionBuffer.Length);
+            return Task.CompletedTask;
         }
     }
 
