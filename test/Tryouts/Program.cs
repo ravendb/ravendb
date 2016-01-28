@@ -25,7 +25,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new VariousPropertyAmountsTests().FlatBoundarySizeFieldsAmountStreamRead(byte);
+            new VariousPropertyAmountsTests().FlatBoundarySizeFieldsAmountStreamRead(byte.MaxValue);
             return;
             // var trie = Trie<int>.Build(new[]
             //{

@@ -35,17 +35,19 @@ namespace Raven.Server.Web.System
                     ["ProductVersion"] = ServerVersion.Version,
                     ["CommitHash"] = ServerVersion.CommitHash
                 };
-                var doc = context.ReadObject(result, "build/version");
-                int size;
-                var buffer = context.GetNativeTempBuffer(doc.SizeInBytes, out size);
-                doc.CopyTo(buffer);
-                var reader = new BlittableJsonReaderObject(buffer, doc.SizeInBytes, context);
+                using (var doc = context.ReadObject(result, "build/version"))
+                {
+                    int size;
+                    var buffer = context.GetNativeTempBuffer(doc.SizeInBytes, out size);
+                    doc.CopyTo(buffer);
+                    var reader = new BlittableJsonReaderObject(buffer, doc.SizeInBytes, context);
 
-                var response = _requestHandlerContext.HttpContext.Response;
-                response.StatusCode = 200;
-                reader.WriteTo(response.Body);
+                    var response = _requestHandlerContext.HttpContext.Response;
+                    response.StatusCode = 200;
+                    reader.WriteTo(response.Body);
 
-                return Task.CompletedTask;
+                    return Task.CompletedTask;
+                }
             }
         }
 
