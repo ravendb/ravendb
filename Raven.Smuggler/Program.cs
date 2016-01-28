@@ -271,7 +271,7 @@ namespace Raven.Smuggler
                 if (e is AggregateException)
                     Console.WriteLine(e.SimplifyError());
                 else
-                    Console.WriteLine(e.Message);
+                    Console.WriteLine(e);
             
                 Environment.Exit(-1);
             }            
