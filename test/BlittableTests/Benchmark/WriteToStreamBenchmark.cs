@@ -52,7 +52,7 @@ namespace BlittableTests.Benchmark
                             using (var a = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)),
                                 line))
                             {
-                                size += a.SizeInBytes;
+                                size += a.Size;
                             }
                         }
                     }
@@ -65,7 +65,7 @@ namespace BlittableTests.Benchmark
         public static unsafe void Indexing(string directory)
         {
             var jsonCache = new List<string>();
-            var blitCache = new List<Tuple<IntPtr, int>>();
+            var blitCache = new List<BlittableJsonReaderObject>();
 
             var files = Directory.GetFiles(directory, "companies.json").OrderBy(f => new FileInfo(f).Length);
             foreach (var jsonFile in files)
@@ -88,9 +88,7 @@ namespace BlittableTests.Benchmark
 
                         using (var doc = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(line)), "doc1"))
                         {
-                            var ptr = Marshal.AllocHGlobal(doc.SizeInBytes);
-                            doc.CopyTo((byte*) ptr);
-                            blitCache.Add(Tuple.Create(ptr, doc.SizeInBytes));
+                            blitCache.Add(doc);
                         }
                     }
                 }
@@ -115,14 +113,14 @@ namespace BlittableTests.Benchmark
             Console.WriteLine($"Blit indexing time {sp.ElapsedMilliseconds:#,#;;0}");
         }
 
-        private static unsafe void BlitIndexing(List<Tuple<IntPtr, int>> blitCache)
+        private static unsafe void BlitIndexing(List<BlittableJsonReaderObject> blitCache)
         {
             using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             {
                 foreach (var tuple in blitCache)
                 {
-                    var doc = new BlittableJsonReaderObject((byte*) tuple.Item1, tuple.Item2, blittableContext);
+                    var doc = new BlittableJsonReaderObject(tuple.BasePointer, tuple.Size, blittableContext);
                     object result;
                     if (doc.TryGetMember("name", out result) == false)
                         throw new InvalidOperationException();
@@ -171,21 +169,15 @@ namespace BlittableTests.Benchmark
                         using (var employee = blittableContext.Read(File.OpenRead(jsonFile), "doc1"))
                         {
                             streamWriter.Write(sp.ElapsedMilliseconds + ",");
-                            var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
-                            employee.CopyTo(ptr);
                             using (var stream = new FileStream("output2.junk", FileMode.Create))
                             {
                                 sp.Restart();
-                                var obj = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
-                                obj.WriteTo(stream);
-                                streamWriter.Write(employee.SizeInBytes + "," + sp.ElapsedMilliseconds + ",");
+                                employee.WriteTo(stream);
+                                streamWriter.Write(employee.Size + "," + sp.ElapsedMilliseconds + ",");
                             }
-                            Marshal.FreeHGlobal((IntPtr)ptr);
-                            Console.WriteLine(" blit - {0:#,#} ms, Props: {1}, Compressed: {2:#,#}/{3:#,#}",
+                            Console.WriteLine(" blit - {0:#,#} ms, Props: {1}",
                                 sp.ElapsedMilliseconds,
-                                blittableContext.CachedProperties.PropertiesDiscovered,
-                                employee.DiscardedCompressions,
-                                employee.Compressed);
+                                blittableContext.CachedProperties.PropertiesDiscovered);
                         }
                         GC.Collect(2);
 

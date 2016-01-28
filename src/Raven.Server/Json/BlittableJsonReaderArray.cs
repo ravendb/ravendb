@@ -21,8 +21,8 @@ namespace Raven.Server.Json
             byte arraySizeOffset;
             _count = parent.ReadVariableSizeInt(pos, out arraySizeOffset);
 
-            _dataStart = parent._mem + pos;
-            _metadataPtr = parent._mem + pos + arraySizeOffset;
+            _dataStart = parent.BasePointer + pos;
+            _metadataPtr = parent.BasePointer + pos + arraySizeOffset;
 
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
@@ -57,7 +57,7 @@ namespace Raven.Server.Json
             var offset = ReadNumber(itemMetadataStartPtr, _currentOffsetSize);
             var token = *(itemMetadataStartPtr + _currentOffsetSize);
             result = Tuple.Create(_parent.GetObject((BlittableJsonToken)token,
-                (int) (_dataStart - _parent._mem - offset)), (BlittableJsonToken)token & typesMask);
+                (int) (_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & typesMask);
 
             if (result.Item1 is BlittableJsonReaderBase)
             {

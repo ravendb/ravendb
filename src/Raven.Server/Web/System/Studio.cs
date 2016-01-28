@@ -18,7 +18,7 @@ namespace Raven.Server.Web.System
             _requestHandlerContext = requestHandlerContext;
         }
 
-        [Route("/", "GET")]
+      //  [Route("/", "GET")]
         public Task RavenRoot()
         {
             _requestHandlerContext.HttpContext.Response.StatusCode = 302; // Found

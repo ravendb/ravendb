@@ -86,25 +86,14 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
-                try
+
+                System.Dynamic.DynamicObject dynamicBlittableJObject = new DynamicBlittableJson(employee);
+
+                for (var i = 0; i < maxValue; i++)
                 {
-                    employee.CopyTo(ptr);
-
-                    System.Dynamic.DynamicObject dynamicBlittableJObject = new DynamicBlittableJson(ptr,
-                        employee.SizeInBytes, blittableContext);
-
-                    for (var i = 0; i < maxValue; i++)
-                    {
-                        object curVal;
-                        Assert.True(dynamicBlittableJObject.TryGetMember(new CustomMemberBinder("Field" + i, true), out curVal));
-                        Assert.Equal(curVal.ToString(), i.ToString());
-                    }
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal((IntPtr)ptr);
-
+                    object curVal;
+                    Assert.True(dynamicBlittableJObject.TryGetMember(new CustomMemberBinder("Field" + i, true), out curVal));
+                    Assert.Equal(curVal.ToString(), i.ToString());
                 }
             }
         }
@@ -123,23 +112,10 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                var ptr = (byte*)Marshal.AllocHGlobal(employee.SizeInBytes);
-                try
-                {
-                    employee.CopyTo(ptr);
-                    var reader = new BlittableJsonReaderObject(ptr, employee.SizeInBytes, blittableContext);
+                var ms = new MemoryStream();
+                employee.WriteTo(ms, originalPropertyOrder: true);
 
-                    var ms = new MemoryStream();
-                    reader.WriteTo(ms, originalPropertyOrder: true);
-
-                    Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
-
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal((IntPtr)ptr);
-
-                }
+                Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
             }
         }
     }

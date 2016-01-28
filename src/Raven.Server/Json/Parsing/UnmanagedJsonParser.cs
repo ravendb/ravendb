@@ -25,7 +25,7 @@ namespace Raven.Server.Json.Parsing
 
 
 
-        public UnmanagedJsonParser(Stream stream, RavenOperationContext ctx, JsonParserState state)
+        public UnmanagedJsonParser(Stream stream, RavenOperationContext ctx, JsonParserState state, string documentId)
         {
             _stream = stream;
             _state = state;
@@ -33,7 +33,7 @@ namespace Raven.Server.Json.Parsing
             _bufferHandle = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
             try
             {
-                _stringBuffer = new UnmanagedWriteBuffer(ctx);
+                _stringBuffer = ctx.GetStream(documentId);
                 _bufferPtr = (byte*)_bufferHandle.AddrOfPinnedObject();
             }
             catch (Exception)

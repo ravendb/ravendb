@@ -90,6 +90,7 @@ namespace Raven.Server.Json.Parsing
         private readonly JsonParserState _state;
         private readonly RavenOperationContext _ctx;
         private readonly Stack<object> _elements = new Stack<object>();
+        private static readonly Encoding Utf8Encoding = Encoding.UTF8;
 
         public ObjectJsonParser(JsonParserState state, object root, RavenOperationContext ctx)
         {
@@ -284,12 +285,14 @@ namespace Raven.Server.Json.Parsing
 
         private void SetStringBuffer(string str)
         {
-            _state.StringSize = Encoding.UTF8.GetByteCount(str);
-            int size;
-            _state.StringBuffer = _ctx.GetNativeTempBuffer(_state.StringSize, out size);
+            // max possible size - we avoid using GetMaxByteCount because profiling showed it to take 2% of runtime
+            // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
+            int size = str.Length*4;
+            
+            _state.StringBuffer = _ctx.GetNativeTempBuffer(size, out size);
             fixed (char* pChars = str)
             {
-                Encoding.UTF8.GetBytes(pChars, str.Length, _state.StringBuffer, _state.StringSize);
+                _state.StringSize = Utf8Encoding.GetBytes(pChars, str.Length, _state.StringBuffer, size);
             }
         }
 

@@ -1,20 +1,13 @@
-using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Server.Json.Parsing;
-using Sparrow;
-using Voron.Util;
-
-//using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Server.Json
 {
 
-    public unsafe class BlittableJsonDocument : IDisposable
+    public unsafe class BlittableJsonDocumentBuilder : IDisposable
     {
         private readonly RavenOperationContext _context;
         private readonly UsageMode _mode;
@@ -36,7 +29,7 @@ namespace Raven.Server.Json
             ToDisk = ValidateDouble | CompressStrings |  CompressSmallStrings
         }
 
-        internal BlittableJsonDocument(RavenOperationContext context, UsageMode mode, string documentId, IJsonParser reader, JsonParserState state)
+        internal BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string documentId, IJsonParser reader, JsonParserState state)
         {
             _reader = reader;
             _stream = context.GetStream(documentId);
@@ -92,6 +85,14 @@ namespace Raven.Server.Json
         public int CopyTo(byte* ptr)
         {
             return _stream.CopyTo(ptr);
+        }
+
+        public BlittableJsonReaderObject CreateReader()
+        {
+            byte* ptr;
+            int size;
+            _stream.EnsureSingleChunk(out ptr, out size);
+            return new BlittableJsonReaderObject(ptr, size, _context, this);
         }
 
         /// <summary>

@@ -107,7 +107,13 @@ namespace Raven.Server
                 Console.WriteLine("Server started, listening to requests...");
 
                 //TODO: Move the command line options to here
-                Console.ReadLine();
+                while (true)
+                {
+                    if (Console.ReadLine() == "q")
+                        break;
+
+                   // Console.ForegroundColor++;
+                }
                 Log.Info("Server is shutting down");
                 return 0;
             }

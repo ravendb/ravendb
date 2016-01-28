@@ -56,14 +56,9 @@ namespace Raven.Server.Json
                 return true;
             }
         }
-        
 
-        public DynamicBlittableJson(byte* mem, int size, RavenOperationContext context)
-        {
-            BlittableJsonReaderObject = new BlittableJsonReaderObject(mem, size, context);
-        }
 
-        private DynamicBlittableJson(BlittableJsonReaderObject blittableJsonReaderObject)
+        public DynamicBlittableJson(BlittableJsonReaderObject blittableJsonReaderObject)
         {
             BlittableJsonReaderObject = blittableJsonReaderObject;
         }      

@@ -27,25 +27,14 @@ namespace BlittableTests.BlittableJsonWriterTests
                 using (var context = new RavenOperationContext(pool))
                 {
                     var writer = context.Read(stream, "docs/1");
-                     
-                    var ptr = (byte*)Marshal.AllocHGlobal(writer.SizeInBytes);
-                    try
-                    {
-                        writer.CopyTo(ptr);
-                        var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
 
-                        var memoryStream = new MemoryStream();
-                        reader.WriteTo(memoryStream, originalPropertyOrder: true);
-                        var s = Encoding.UTF8.GetString(memoryStream.ToArray());
+                    var memoryStream = new MemoryStream();
+                    writer.WriteTo(memoryStream, originalPropertyOrder: true);
+                    var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
-                        JObject.Parse(s); // can parse the output
+                    JObject.Parse(s); // can parse the output
 
-                        Assert.Equal(compacted, s);
-                    }
-                    finally
-                    {
-                        Marshal.FreeHGlobal((IntPtr) ptr);
-                    }
+                    Assert.Equal(compacted, s);
                 }
             }
         }
@@ -60,7 +49,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 {
                     string origin;
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
-                    Console.WriteLine(resource);
+                    
                     using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly
                         .GetManifestResourceStream(resource))
                     {
@@ -68,28 +57,17 @@ namespace BlittableTests.BlittableJsonWriterTests
                         stream.Position = 0;
                         var compacted = JObject.Parse(origin).ToString(Formatting.None);
 
-                        var writer = context.Read(stream, "docs/1 ");
-
-                        int size;
-                        var ptr = (byte*)Marshal.AllocHGlobal(writer.SizeInBytes);
-                        try
+                        using (var writer = context.Read(stream, "docs/1 "))
                         {
-                            writer.CopyTo(ptr);
-                            var reader = new BlittableJsonReaderObject(ptr, writer.SizeInBytes, context);
 
                             var memoryStream = new MemoryStream();
-                            reader.WriteTo(memoryStream, originalPropertyOrder:true);
+                            writer.WriteTo(memoryStream, originalPropertyOrder: true);
                             var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
                             JObject.Parse(s); // can parse the output
 
                             Assert.Equal(compacted, s);
                         }
-                        finally
-                        {
-                            Marshal.FreeHGlobal((IntPtr)ptr);
-                        }
-                        
                     }
                 }
             }

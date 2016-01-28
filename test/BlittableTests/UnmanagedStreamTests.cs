@@ -15,7 +15,7 @@ namespace BlittableTests
                 using(var ctx = new RavenOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
-                var newStream = new UnmanagedWriteBuffer(ctx);
+                var newStream = ctx.GetStream("tst");
                 var totalSize = 0;
                 var rand = new Random();
                 for (var i = 1; i < 5000; i++)
@@ -69,7 +69,7 @@ namespace BlittableTests
             using(var ctx = new RavenOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
-                var newStream = new UnmanagedWriteBuffer(ctx);
+                var newStream = ctx.GetStream("tst");
                 var rand = new Random();
                 for (var i = 5000; i > 1; i--)
                 {
@@ -106,7 +106,7 @@ namespace BlittableTests
             using (var ctx = new RavenOperationContext(unmanagedByteArrayPool))
             {
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
-                var newStream = new UnmanagedWriteBuffer(ctx);
+                var newStream = ctx.GetStream("tst");
                 var rand = new Random();
                 for (var i = 1; i < 5000; i++)
                 {

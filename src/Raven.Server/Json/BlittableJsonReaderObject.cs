@@ -7,13 +7,14 @@ using Sparrow;
 
 namespace Raven.Server.Json
 {
-    public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase
+    public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
-        private readonly unsafe byte* _metadataPtr;
+        private readonly BlittableJsonDocumentBuilder _builder;
+        private readonly byte* _metadataPtr;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
-        private readonly unsafe byte* _objStart;
+        private readonly byte* _objStart;
         private LazyStringValue[] _propertyNames;
 
         public DynamicJsonValue Modifications;
@@ -22,8 +23,9 @@ namespace Raven.Server.Json
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
 
-        public unsafe BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context)
+        public BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context, BlittableJsonDocumentBuilder builder = null)
         {
+            _builder = builder;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
             _context = context;
@@ -101,7 +103,10 @@ namespace Raven.Server.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
         }
 
+        public int Size => _size;
+
         public int Count => _propCount;
+        public byte* BasePointer => _mem;
 
 
         /// <summary>
@@ -110,7 +115,7 @@ namespace Raven.Server.Json
         /// <returns></returns>
         public string[] GetPropertyNames()
         {
-            var idsAndOffsets = new BlittableJsonDocument.PropertyTag[_propCount];
+            var idsAndOffsets = new BlittableJsonDocumentBuilder.PropertyTag[_propCount];
             var sortedNames = new string[_propCount];
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
@@ -132,13 +137,13 @@ namespace Raven.Server.Json
             return sortedNames;
         }
 
-        private BlittableJsonDocument.PropertyTag GetPropertyTag(int index, long metadataSize)
+        private BlittableJsonDocumentBuilder.PropertyTag GetPropertyTag(int index, long metadataSize)
         {
             var propPos = _metadataPtr + index * metadataSize;
             var propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
             var propertyOffset = ReadNumber(propPos, _currentOffsetSize);
             var type = *(propPos + _currentOffsetSize + _currentPropertyIdSize);
-            return new BlittableJsonDocument.PropertyTag
+            return new BlittableJsonDocumentBuilder.PropertyTag
             {
                 Position = propertyOffset,
                 PropertyId = propertyId,
@@ -444,5 +449,14 @@ namespace Raven.Server.Json
             }
         }
 
+        public void Dispose()
+        {
+            _builder?.Dispose();
+        }
+
+        public void CopyTo(byte* ptr)
+        {
+            Memory.Copy(ptr, _mem, _size);
+        }
     }
 }

@@ -28,10 +28,9 @@ namespace Raven.Server.Json
 
         public int SizeInBytes => _sizeInBytes;
 
-        public UnmanagedWriteBuffer(RavenOperationContext context)
+        internal UnmanagedWriteBuffer(RavenOperationContext context, UnmanagedBuffersPool.AllocatedMemoryData allocatedMemoryData)
         {
             _context = context;
-            var allocatedMemoryData = _context.GetMemory(4096);
             _current = new Segment
             {
                 Address = (byte*)allocatedMemoryData.Address,
@@ -72,10 +71,13 @@ namespace Raven.Server.Json
         {
             // grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
-            var nextSegmentSize = Math.Min(
-                1024 * 1024 * 1024,
-                Math.Max(_current.Allocation.SizeInBytes * 2, (int)Bits.NextPowerOf2(required))
-                );
+            var nextSegmentSize = Math.Max(Bits.NextPowerOf2(required), _current.Allocation.SizeInBytes * 2);
+            const int oneMb = 1024*1024*1024;
+            if (nextSegmentSize > oneMb && required <= oneMb)
+            {
+                nextSegmentSize = oneMb;
+            }
+
             var allocatedMemoryData = _context.GetMemory(nextSegmentSize);
             _current = new Segment
             {
@@ -134,6 +136,7 @@ namespace Raven.Server.Json
             if (_disposed)
                 return;
 
+            _context.LastStreamSize(_sizeInBytes);
             var cur = _current;
             while (cur != null)
             {
