@@ -26,7 +26,10 @@ namespace Raven.Server.Web.System
             RavenOperationContext context;
             using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                return _requestHandlerContext.HttpContext.Response.WriteAsync("loaderio-9efdb3fbfd7839963e77e4443564c2f4");
+                var httpResponse = _requestHandlerContext.HttpContext.Response;
+                httpResponse.ContentType = "text/plain";
+                httpResponse.Headers["Content-Disposition"] = string.Format("attachment; filename={0}.hl7", "loaderio-9efdb3fbfd7839963e77e4443564c2f4.txt".ToString());
+                return httpResponse.WriteAsync("loaderio-9efdb3fbfd7839963e77e4443564c2f4");
             }
         }
     }
