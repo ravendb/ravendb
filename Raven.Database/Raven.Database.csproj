@@ -296,6 +296,7 @@
     <Compile Include="Indexing\Sorting\DocumentIdSet.cs" />
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
     <Compile Include="Server\Controllers\DebugVoronController.cs" />
+    <Compile Include="Server\Controllers\SmugglerController.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -352,6 +353,7 @@
     <Compile Include="Server\WebApi\RavenRouteCollectionRoute .cs" />
     <Compile Include="FileSystem\Smuggler\FilesystemDataDumper.cs" />
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
+    <Compile Include="Smuggler\SmugglerExporter.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
