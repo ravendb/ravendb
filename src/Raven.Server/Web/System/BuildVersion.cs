@@ -32,15 +32,15 @@ namespace Raven.Server.Web.System
                 if (_versionBuffer != null)
                     return _versionBuffer;
 
-                RavenOperationContext context;
+            RavenOperationContext context;
                 using (serverStore.AllocateRequestContext(out context))
+            {
+                var result = new DynamicJsonValue
                 {
-                    var result = new DynamicJsonValue
-                    {
-                        ["BuildVersion"] = ServerVersion.Build,
-                        ["ProductVersion"] = ServerVersion.Version,
-                        ["CommitHash"] = ServerVersion.CommitHash
-                    };
+                    ["BuildVersion"] = ServerVersion.Build,
+                    ["ProductVersion"] = ServerVersion.Version,
+                    ["CommitHash"] = ServerVersion.CommitHash
+                };
                     using (var doc = context.ReadObject(result, "build/version"))
                     {
                         var memoryStream = new MemoryStream();

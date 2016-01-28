@@ -112,7 +112,7 @@ namespace Raven.Server
                     if (Console.ReadLine() == "q")
                         break;
 
-                    Console.ForegroundColor++;
+                   // Console.ForegroundColor++;
                 }
                 Log.Info("Server is shutting down");
                 return 0;
