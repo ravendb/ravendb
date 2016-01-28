@@ -17,6 +17,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow;
 using Voron;
+using Voron.Tests.Tables;
 using Voron.Util;
 
 namespace Tryouts
@@ -25,7 +26,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new MutatingJsonTests().CanRemoveAndAddProperty();
+            new TableValueTests().CanRead();
             return;
             // var trie = Trie<int>.Build(new[]
             //{
