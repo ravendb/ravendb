@@ -26,7 +26,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new BlittableFormatTests().CheckRoundtrip("BlittableTests.BlittableJsonWriterTests.Jsons.mix.json");
+            new TrieTests().CanQueryTrie();
             return;
             // var trie = Trie<int>.Build(new[]
             //{

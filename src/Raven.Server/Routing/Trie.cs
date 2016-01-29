@@ -144,10 +144,9 @@ namespace Raven.Server.Routing
             {
                 // just one entry, build the trie node
                 current.Key = sortedKeys[start].Substring(matchStart, sortedKeys[start].Length - matchStart);
-                if (current.Key.Contains("*"))
-                {
-                    throw new NotSupportedException("We don't support a single route only that has a * in it, there must be multiple route");
-                }
+                if (HandleStarRoute(current, source, sortedKeys, matchStart, start, count))
+                    return;
+
                 current.Value = source[sortedKeys[start]];
                 return;
             }
@@ -173,19 +172,8 @@ namespace Raven.Server.Routing
             }
 
             current.Key = minKey.Substring(matchStart, matchingIndex - matchStart);
-            var indexOfStar = current.Key.IndexOf('*');
-            if (indexOfStar != -1)
-            {
-                var tmp = current.Key;
-                current.Key = tmp.Substring(0, indexOfStar);
-                current.Children['*'] = new Trie<T>
-                {
-                    Key = "*",
-                    Children = new Trie<T>[127]
-                };
-                AddChild(current.Children['*'], source, sortedKeys, matchStart + indexOfStar + 1, start, count);
+            if (HandleStarRoute(current, source, sortedKeys, matchStart, start, count))
                 return;
-            }
             var childStart = start;
             var childCount = 1;
 
@@ -203,6 +191,25 @@ namespace Raven.Server.Routing
                 childCount = 1;
             }
             AddChild(current, source, sortedKeys, matchingIndex, childStart, childCount);
+        }
+
+        private static bool HandleStarRoute(Trie<T> current, Dictionary<string, T> source, string[] sortedKeys, int matchStart, int start,
+            int count)
+        {
+            var indexOfStar = current.Key.IndexOf('*');
+            if (indexOfStar == -1)
+                return false;
+            var tmp = current.Key;
+            current.Key = tmp.Substring(0, indexOfStar);
+            if (current.Children == null)
+                current.Children = new Trie<T>[127];
+            current.Children['*'] = new Trie<T>
+            {
+                Key = "*",
+                Children = new Trie<T>[127]
+            };
+            AddChild(current.Children['*'], source, sortedKeys, matchStart + indexOfStar + 1, start, count);
+            return true;
         }
 
         private static void AddChild(Trie<T> current, Dictionary<string, T> source, string[] sortedKeys, int matchingIndex, int childStart,
