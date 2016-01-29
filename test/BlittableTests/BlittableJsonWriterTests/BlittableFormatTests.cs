@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using Bond;
-using Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 using Xunit;
 using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
-using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace BlittableTests.BlittableJsonWriterTests
 {
