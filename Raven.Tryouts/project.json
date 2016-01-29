@@ -4,8 +4,7 @@
   "compile": [ "**/*.cs", "../CommonAssemblyInfo.cs" ],
 
   "dependencies": {
-    "Raven.Abstractions": "3.0.0",
-    "Raven.Client.Lightweight": "3.0.0",
+    "Raven.Client": "4.0.0",
     "Sparrow": "3.0.0"
   },
 
