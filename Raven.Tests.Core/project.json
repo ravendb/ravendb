@@ -8,7 +8,7 @@
   },
 
   "dependencies": {
-    "Raven.Client.Lightweight": "3.0.0",
+    "Raven.Client": "4.0.0",
     "Rx-Linq": "2.2.5"
   },
 
