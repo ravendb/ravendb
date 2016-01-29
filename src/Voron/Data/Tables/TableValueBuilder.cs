@@ -17,6 +17,13 @@ namespace Voron.Data.Tables
         private int _size;
         private int _elementSize = 1;
 
+        public byte* Read(int index, out int size)
+        {
+            var ptrSize = _values[index];
+            size = ptrSize.Size;
+            return ptrSize.Ptr;
+        }
+
         public void Add(byte* ptr, int size)
         {
             _values.Add(new PtrSize

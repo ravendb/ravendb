@@ -4,42 +4,43 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Text;
 using Bond;
 using Voron.Data.Tables;
 using Xunit;
 
 namespace Voron.Tests.Tables
 {
-    public class BasicUsage : TableStorageTest
+    public unsafe class BasicUsage : TableStorageTest
     {
 
         [Fact]
-        public void CanInsertThenRead()
+        public  void CanInsertThenRead()
         {
             using (var tx = Env.WriteTransaction())
             {
-                _docsSchema.Create(tx);
+                DocsSchema.Create(tx);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                // var docs = new Table<DocumentsFields>(_docsSchema, tx);
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var docs = new Table(DocsSchema, tx);
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
-                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
+                SetHelper(docs, "users/1",  "Users", 1L, "{'Name': 'Oren'}");
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var docs = new Table(DocsSchema, tx);
                 var handle = docs.ReadByKey("users/1");
 
-                Assert.Equal("{'Name': 'Oren'}", handle.GetValue().Data);
+                int size;
+                var read = handle.Read(3, out size);
+                Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(read, size));
                 tx.Commit();
             }
         }
@@ -49,37 +50,36 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                _docsSchema.Create(tx);
+                DocsSchema.Create(tx);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
-
-                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
-                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
+                var docs = new Table(DocsSchema, tx);
+                SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
-
-                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
-                docs.Set(doc, new DocumentData { Data = "{'Name': 'Eini'}" });
+                var docs = new Table(DocsSchema, tx);
+                SetHelper(docs, "users/1", "Users", 2L, "{'Name': 'Eini'}");
 
                 tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var docs = new Table(DocsSchema, tx);
                 var handle = docs.ReadByKey("users/1");
 
-                Assert.Equal("{'Name': 'Eini'}", handle.GetValue().Data);
+                int size;
+                var read = handle.Read(3, out size);
+                Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(read, size));
+
                 tx.Commit();
             }
         }
@@ -89,24 +89,23 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                _docsSchema.Create(tx);
+                DocsSchema.Create(tx);
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var docs = new Table(DocsSchema, tx);
+                SetHelper(docs, "users/1",  "Users", 1L, "{'Name': 'Oren'}");
 
-                var doc = new Documents { Etag = 1L, Key = "users/1", Collection = "Users" };
-                docs.Set(doc, new DocumentData { Data = "{'Name': 'Oren'}" });
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var docs = new Table(DocsSchema, tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -115,10 +114,9 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table<Documents, DocumentData>(_docsSchema, tx);
+                var docs = new Table(DocsSchema, tx);
 
-                var handle = docs.ReadByKey("users/1");
-                Assert.True(handle == TableHandle<Documents,DocumentData>.Null);
+                Assert.Null(docs.ReadByKey("users/1"));
             }
         }
 
