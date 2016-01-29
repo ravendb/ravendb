@@ -149,17 +149,16 @@ namespace Raven.Server.Json
             _position += WriteVariableSizeInt(prop.EscapePositions.Length);
             if (prop.EscapePositions.Length > 0)
             {
-                _position += WriteVariableSizeInt(prop.EscapePositions[0]);
-                for (int i = 1; i < prop.EscapePositions.Length; i++)
+                for (int i = 0; i < prop.EscapePositions.Length; i++)
                 {
-                    _position += WriteVariableSizeInt(prop.EscapePositions[i] - prop.EscapePositions[i - 1] - 1);
+                    _position += WriteVariableSizeInt(prop.EscapePositions[i] );
                 }
             }
             return startPos;
         }
 
         /// <summary>
-        /// Write an object to the UnamangedBuffer
+        /// Write an object to the UnmangedBuffer
         /// </summary>
         /// <param name="objectToken"></param>
         /// <returns></returns>
