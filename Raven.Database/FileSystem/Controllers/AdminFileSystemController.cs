@@ -21,6 +21,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -468,13 +470,16 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/admin/restore")]
         public async Task<HttpResponseMessage> Restore()
         {
+            HttpResponseMessage message = null;
             if (EnsureSystemDatabase() == false)
                 return GetMessageWithString("Restore is only possible from the system database", HttpStatusCode.BadRequest);
 
             var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
             var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
-            HttpResponseMessage message = null;
+
+            if (!HasPermissions(restoreRequest.BackupLocation, out message))
+                return message;
 
             var fileSystemDocumentPath = FindFilesystemDocument(restoreRequest.BackupLocation);
 
@@ -525,6 +530,9 @@ namespace Raven.Database.FileSystem.Controllers
                     dataLocation = filesystemDocument.Settings[Constants.FileSystem.DataDirectory];
                     if (!IsOnValidDrive(dataLocation, out message))
                         return message;
+
+                    if (!HasPermissions(dataLocation, out message))
+                        return message;
                 }
 
                 string indexesLocation;
@@ -532,6 +540,9 @@ namespace Raven.Database.FileSystem.Controllers
                 {
                     indexesLocation = filesystemDocument.Settings[Constants.FileSystem.IndexStorageDirectory];
                     if (!IsOnValidDrive(indexesLocation, out message))
+                        return message;
+
+                    if (!HasPermissions(indexesLocation, out message))
                         return message;
                 }
                 foreach (var setting in filesystemDocument.Settings)
@@ -650,7 +661,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 OperationId = id
             });
-        }
+        }	   
 
         private string FindFilesystemDocument(string rootBackupPath)
         {
