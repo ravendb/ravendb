@@ -32,7 +32,7 @@ namespace Voron
         private readonly IVirtualPager _dataPager;
 
         private readonly WriteAheadJournal _journal;
-        private readonly object _txWriter = new object();
+        private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
         private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
 
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
@@ -306,13 +306,12 @@ namespace Voron
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (TimeSpan.FromSeconds(30));
-                    Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
-                    if (txLockTaken == false)
+                    if (_txWriter.Wait(wait, _cancellationTokenSource.Token) == false)
                     {
                         throw new TimeoutException("Waited for " + wait +
                                                     " for transaction write lock, but could not get it");
                     }
-
+                    txLockTaken = true;
                     if (_endOfDiskSpace != null)
                     {
                         if (_endOfDiskSpace.CanContinueWriting)
@@ -353,7 +352,10 @@ namespace Voron
             catch (Exception)
             {
                 if (txLockTaken)
-                    Monitor.Exit(_txWriter);
+                {
+                    Console.WriteLine("_txWriter.Release()");
+                    _txWriter.Release();
+                }
                 throw;
             }
         }
@@ -404,7 +406,7 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
-            Monitor.Exit(_txWriter);
+            _txWriter.Release();
         }
 
         public StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
