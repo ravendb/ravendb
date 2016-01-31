@@ -90,7 +90,7 @@ namespace Raven.Server.Json
             }
         }
 
-        private static int ReadVariableSizeInt(byte* buffer ,ref int pos)
+        public static int ReadVariableSizeInt(byte* buffer ,ref int pos)
         {
             // Read out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.

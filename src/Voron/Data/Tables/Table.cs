@@ -7,93 +7,18 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util.Conversion;
-using Bond.IO.Unsafe;
-using Bond;
-using Bond.IO.Safe;
-using Bond.Protocols;
 
 namespace Voron.Data.Tables
 {
-    internal sealed class SharedPool
-    {
-        public static readonly ObjectPool<OutputBuffer> Buffers = new ObjectPool<OutputBuffer>(() => new OutputBuffer(512));
-    }
-
-    internal sealed class SharedPool<T>
-    {
-        public static readonly ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>> Reader = new ObjectPool<Deserializer<CompactBinaryReader<InputPointer>>>(() => new Deserializer<CompactBinaryReader<InputPointer>>(typeof(T)));        
-    }
-
-
-    public unsafe struct TableHandle<T, TData>
-    {
-        public static readonly TableHandle<T, TData> Null;
-
-        public T Key;
-        private readonly int Size;
-        private readonly byte* DataPointer;        
-
-        public TableHandle( T indexKeys, byte* ptr, int size)
-        {
-            this.Key = indexKeys;
-            this.DataPointer = ptr;
-            this.Size = size;
-        }
-
-        public TData GetValue()
-        {
-            var readerOfT = SharedPool<TData>.Reader.Allocate();
-
-            try
-            {                    
-                var input = new InputPointer(DataPointer, Size);
-                var reader = new CompactBinaryReader<InputPointer>(input);
-                return readerOfT.Deserialize<TData>(reader);
-            }
-            finally
-            {
-                SharedPool<TData>.Reader.Free(readerOfT);
-            }                
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (obj is TableHandle<T, TData>)
-            {
-                var o = (TableHandle<T, TData>)obj;
-                return o == this;
-            }
-
-            return false;
-        }
-
-        public override int GetHashCode()
-        {
-            return (int)(this.Size * 17 + this.DataPointer);
-        }
-
-        public static bool operator ==(TableHandle<T, TData> c1, TableHandle<T, TData> c2)
-        {
-            return c1.DataPointer == c2.DataPointer && c1.Size == c2.Size;
-        }
-
-        public static bool operator !=(TableHandle<T, TData> c1, TableHandle<T, TData> c2)
-        {
-            return !(c1 == c2);
-        }
-
-    }
-
-    public unsafe class Table<T, TData>
+    public unsafe class Table
     {
         private Dictionary<Slice, Tree> _treesBySlice;
-        private Dictionary<string, Slice> _sliceByName;
 
-        private readonly TableSchema<T> _schema;
+        private readonly TableSchema _schema;
         private readonly Transaction _tx;
+        private readonly string _name;
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
@@ -107,7 +32,7 @@ namespace Voron.Data.Tables
             get
             {
                 if (_fstKey == null)
-                    _fstKey = new FixedSizeTree(_tx.LowLevelTransaction, _tableTree, _schema.Key.Name, sizeof(long));
+                    _fstKey = new FixedSizeTree(_tx.LowLevelTransaction, _tableTree, _schema.Key.NameAsSlice, sizeof(long));
                 return _fstKey;
             }
         }
@@ -148,7 +73,7 @@ namespace Voron.Data.Tables
                 {
                     var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
                     if (readResult == null)
-                        throw new InvalidDataException($"Could not find active sections for {_schema.Name}");
+                        throw new InvalidDataException($"Could not find active sections for {_name}");
 
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
 
@@ -161,57 +86,70 @@ namespace Voron.Data.Tables
 
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
-            // Read from pointer. 
-            var readerOfT = SharedPool<T>.Reader.Allocate();
-
-            var input = new InputPointer(data, size);
-            var reader = new CompactBinaryReader<InputPointer>(input);
-            var value = readerOfT.Deserialize<T>(reader);
-
-            SharedPool<T>.Reader.Free(readerOfT);
-
-            DeleteValueFromIndex(previousId, value);
-            InsertIndexValuesFor(newId, value);
+            DeleteValueFromIndex(previousId, new TableValueReader(data, size));
+            InsertIndexValuesFor(newId, new TableValueReader(data, size));
         }
 
-        public Table(TableSchema<T> schema, Transaction tx)
+        public Table(TableSchema schema, string name, Transaction tx)
         {
             _schema = schema;
             _tx = tx;
-            _tableTree = _tx.ReadTree(_schema.Name);
+            _name = name;
+            _tableTree = _tx.ReadTree(name);
             _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
-                throw new InvalidDataException($"Cannot find stats value for table {_schema.Name}");
+                throw new InvalidDataException($"Cannot find stats value for table {name}");
             NumberOfEntries = stats->NumberOfEntries;
         }
 
-        public TableHandle<T, TData> ReadByKey(Slice key)
+        /// <summary>
+        /// this overload is meant to be used for global reads only, when want to use
+        /// a global index to find data, without touching the actual table.
+        /// </summary>
+        public Table(TableSchema schema, Transaction tx)
         {
-            var readResult = GetTree(_schema.Key.Name).Read(key);
-            if (readResult == null)
-                return default(TableHandle<T, TData>);
+            _schema = schema;
+            _tx = tx;
+            _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
+        }
 
-            var id = readResult.Reader.ReadLittleEndianInt64();
+
+        public TableValueReader ReadByKey(Slice key)
+        {
+            long id;
+            if (TryFindIdFromPrimaryKey(key, out id) == false)
+                return null;
 
             int size;
             var rawData = DirectRead(id, out size);
-
-            var readerOfT = SharedPool<T>.Reader.Allocate();
-            try
+            return new TableValueReader(rawData, size)
             {
-                // Read from pointer. 
-                var input = new InputPointer(rawData, size);
-                var reader = new CompactBinaryReader<InputPointer>(input);
-                var keys = readerOfT.Deserialize<T>(reader);
+                Id = id
+            };
+        }
 
-                return new TableHandle<T, TData>(keys, rawData + input.Position, size - (int)input.Position);
-            }
-            finally
+        private bool TryFindIdFromPrimaryKey(Slice key, out long id)
+        {
+            var pkTree = GetTree(_schema.Key);
+            var readResult = pkTree.Read(key);
+            if (readResult == null)
             {
-                SharedPool<T>.Reader.Free(readerOfT);
+                id = -1;
+                return false;
             }
+
+            id = readResult.Reader.ReadLittleEndianInt64();
+            return true;
+        }
+
+        private Tree GetTree(TableSchema.SchemaIndexDef idx)
+        {
+            if (idx.IsGlobal)
+                return _tx.ReadTree(idx.Name);
+            return GetTree(idx.NameAsSlice);
+
         }
 
         private byte* DirectRead(long id, out int size)
@@ -228,41 +166,15 @@ namespace Voron.Data.Tables
             // here we rely on the fact that RawDataSmallSection can 
             // read any RawDataSmallSection piece of data, not just something that
             // it exists in its own section, but anything from other sections as well
-            return ActiveDataSmallSection.DirectRead(id, out size);
+            return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size);
         }
 
-        public void Set(T value, TData data)
+        public void Update(long id, TableValueBuilder builder)
         {
-            // We create an indexed 
-            var pkValue = GetSliceFromStructure(value, _schema.Key);
-            var pkIndex = GetTree(_schema.Key.Name);
-
-            var readResult = pkIndex.Read(pkValue);
-            if (readResult == null)
-            {
-                Insert(value, data);
-                return;
-            }
-
-            long id = readResult.Reader.ReadLittleEndianInt64();
-            Update(id, value, data);
-        }
-
-        private void Update(long id, T value, TData data)
-        {
-            var output = SharedPool.Buffers.Allocate();
-            output.Position = 0;
-
-            var writer = new CompactBinaryWriter<OutputBuffer>(output);
-            Serialize.To(writer, value);
-            Serialize.To(writer, data);
-
-            SharedPool.Buffers.Free(output);
- 
-            int size = (int)output.Position;
+            int size = builder.Size;
 
             // first, try to fit in place, either in small or large sections
-            var prevIsSmall = id % _pageSize != 0;            
+            var prevIsSmall = id % _pageSize != 0;
             if (size < ActiveDataSmallSection.MaxItemSize)
             {
                 byte* pos;
@@ -271,19 +183,11 @@ namespace Voron.Data.Tables
                     int oldDataSize;
                     var oldData = ActiveDataSmallSection.DirectRead(id, out oldDataSize);
 
-                    DeleteValueFromIndex(id, oldData, oldDataSize);
+                    DeleteValueFromIndex(id, new TableValueReader(oldData, oldDataSize));
 
                     // MemoryCopy into final position.
-                    unsafe
-                    {
-                        fixed (byte* array = output.Data.Array)
-                        {
-                            byte* ptr = array + output.Data.Offset;
-                            Memory.Copy(pos, ptr, output.Data.Count);
-                        }
-                    }
-
-                    InsertIndexValuesFor(id, value);
+                    builder.CopyTo(pos);
+                    InsertIndexValuesFor(id, new TableValueReader(pos, size));
                     return;
                 }
             }
@@ -299,19 +203,12 @@ namespace Voron.Data.Tables
                     page.OverflowSize = size;
                     var pos = page.Pointer + sizeof(PageHeader);
 
-                    DeleteValueFromIndex(id, pos, size);
+                    DeleteValueFromIndex(id, new TableValueReader(pos, size));
 
                     // MemoryCopy into final position.
-                    unsafe
-                    {
-                        fixed (byte* array = output.Data.Array)
-                        {
-                            byte* ptr = array + output.Data.Offset;
-                            Memory.Copy(pos, ptr, output.Data.Count);
-                        }
-                    }
+                    builder.CopyTo(pos);
 
-                    InsertIndexValuesFor(id, value);
+                    InsertIndexValuesFor(id, new TableValueReader(pos, size));
 
                     return;
                 }
@@ -319,7 +216,7 @@ namespace Voron.Data.Tables
 
             // can't fit in place, will just delete & insert instead
             Delete(id);
-            Insert(value, data);
+            Insert(builder);
         }
 
         private void Delete(long id)
@@ -329,16 +226,7 @@ namespace Voron.Data.Tables
             if (ptr == null)
                 return;
 
-            var readerOfT = SharedPool<T>.Reader.Allocate();
-
-            // Read from pointer. 
-            var input = new InputPointer(ptr, size);
-            var reader = new CompactBinaryReader<InputPointer>(input);
-            var value = readerOfT.Deserialize<T>(reader);
-
-            SharedPool<T>.Reader.Free(readerOfT);
-
-            DeleteValueFromIndex(id, value);
+            DeleteValueFromIndex(id, new TableValueReader(ptr, size));
 
             var largeValue = (id % _pageSize) == 0;
             if (largeValue)
@@ -381,7 +269,7 @@ namespace Voron.Data.Tables
 
                 byte* writePos;
                 if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out writePos) == false)
-                    throw new InvalidDataException($"Cannot write to newly allocated size in {_schema.Name} during delete");
+                    throw new InvalidDataException($"Cannot write to newly allocated size in {_name} during delete");
 
                 Memory.Copy(writePos, pos, itemSize);
             }
@@ -389,111 +277,102 @@ namespace Voron.Data.Tables
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
         }
 
-        private void DeleteValueFromIndex(long id, byte* ptr, int size)
+
+        private void DeleteValueFromIndex(long id, TableValueReader value)
         {
-            var readerOfT = SharedPool<T>.Reader.Allocate();
-
-            var input = new InputPointer(ptr, size);
-            var reader = new CompactBinaryReader<InputPointer>(input);
-            T value = readerOfT.Deserialize<T>(reader);
-
-            SharedPool<T>.Reader.Free(readerOfT);
-
-            DeleteValueFromIndex(id, value);
-        }
-
-        private void DeleteValueFromIndex(long id, T value)
-        {
-            var keySlice = GetSliceFromStructure(value, _schema.Key);
-
-            var pkTree = GetTree(_schema.Key.Name);
+            //TODO: Avoid all those allocations by using a single buffer
+            var keySlice = _schema.Key.GetSlice(value);
+            var pkTree = GetTree(_schema.Key);
             pkTree.Delete(keySlice);
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
-                var indexTree = GetTree(indexDef.Name);
-                var val = GetSliceFromStructure(value, indexDef);
+                var indexTree = GetTree(indexDef);
+                var val = indexDef.GetSlice(value);
 
                 var fst = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
                 fst.Delete(id);
             }
+
+            foreach (var indexDef in _schema.FixedSizeIndexes.Values)
+            {
+                var index = GetFixedSizeTree(indexDef);
+                var key = indexDef.GetValue(value);
+                index.Delete(key);
+            }
         }
 
-        private void Insert(T value, TData data)
+        public void Insert(TableValueBuilder builder)
         {
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
             stats->NumberOfEntries = NumberOfEntries;
 
-            var output = SharedPool.Buffers.Allocate();
-            output.Position = 0;
 
-            var writer = new CompactBinaryWriter<OutputBuffer>(output);
-            Serialize.To(writer, value);
-            Serialize.To(writer, data);
+            int size = builder.Size;
 
-            SharedPool.Buffers.Free(output);
-
-            int size = (int)output.Position;
-
+            byte* pos;
             long id;
             if (size < ActiveDataSmallSection.MaxItemSize)
             {
                 id = AllocateFromSmallActiveSection(size);
 
-                byte* pos;
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {_schema.Name}");
+                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {_name}");
 
                 // MemoryCopy into final position.
-                unsafe
-                {
-                    fixed (byte* array = output.Data.Array)
-                    {
-                        byte* ptr = array + output.Data.Offset;
-                        Memory.Copy(pos, ptr, output.Data.Count);
-                    }
-                }
+                builder.CopyTo(pos);
             }
             else
             {
                 var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
-                page.OverflowSize = size;                
+                page.OverflowSize = size;
 
-                byte* pos = page.Pointer + sizeof(PageHeader);
+                pos = page.Pointer + sizeof(PageHeader);
 
-                unsafe
-                {
-                    fixed (byte* array = output.Data.Array)
-                    {
-                        byte* ptr = array + output.Data.Offset;
-                        Memory.Copy(pos, ptr, output.Data.Count);
-                    }
-                }
+                builder.CopyTo(pos);
 
                 id = page.PageNumber;
             }
 
-            InsertIndexValuesFor(id, value);
+            InsertIndexValuesFor(id, new TableValueReader(pos, size));
         }
 
-        private void InsertIndexValuesFor(long id, T value)
+        private void InsertIndexValuesFor(long id, TableValueReader value)
         {
             var isAsBytes = EndianBitConverter.Little.GetBytes(id);
 
-            var pkval = GetSliceFromStructure(value, _schema.Key);
-            var pkIndex = GetTree(_schema.Key.Name);
+            var pkval = _schema.Key.GetSlice(value);
+            var pkIndex = GetTree(_schema.Key);
             pkIndex.Add(pkval, isAsBytes, 0);
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
-                var indexTree = GetTree(indexDef.Name);
-                var val = GetSliceFromStructure(value, indexDef);
+                var val = indexDef.GetSlice(value);
+                var indexTree = GetTree(indexDef);
                 var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
                 index.Add(id);
             }
+
+            foreach (var indexDef in _schema.FixedSizeIndexes.Values)
+            {
+                var index = GetFixedSizeTree(indexDef);
+                long key = indexDef.GetValue(value);
+                index.Add(key, new Slice((byte*)&id, sizeof(long)));
+            }
+        }
+
+        private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
+        {
+            if (indexDef.IsGlobal)
+            {
+                return new FixedSizeTree(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects, indexDef.NameAsSlice, sizeof(long));
+            }
+            var tableTree = _tx.ReadTree(_name);
+            var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof (long));
+            return index;
         }
 
         private long AllocateFromSmallActiveSection(int size)
@@ -532,25 +411,8 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        private Slice GetSliceFromStructure(T reader, TableSchema<T>.SchemaIndexDef definition)
-        {
-            return definition.CreateKey(reader);
-        }
-
         public long NumberOfEntries { get; private set; }
 
-        private Tree GetTree(string name, out Slice slice)
-        {
-            if (_sliceByName == null)
-                _sliceByName = new Dictionary<string, Slice>();
-            if (_sliceByName.TryGetValue(name, out slice) == false)
-            {
-                slice = name;
-                _sliceByName[name] = slice;
-            }
-            return GetTree(slice);
-
-        }
 
         private Tree GetTree(Slice name)
         {
@@ -563,7 +425,7 @@ namespace Voron.Data.Tables
 
             var treeHeader = _tableTree.DirectRead(name);
             if (treeHeader == null)
-                throw new InvalidOperationException($"Cannot find tree {name} in table {_schema.Name}");
+                throw new InvalidOperationException($"Cannot find tree {name} in table {_name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader);
             _treesBySlice[name] = tree;
@@ -572,7 +434,9 @@ namespace Voron.Data.Tables
 
         public void DeleteByKey(Slice key)
         {
-            var readResult = GetTree(_schema.Key.Name).Read(key);
+            var pkTree = GetTree(_schema.Key);
+
+            var readResult = pkTree.Read(key);
             if (readResult == null)
                 return;
 
@@ -583,7 +447,7 @@ namespace Voron.Data.Tables
             Delete(id);
         }
 
-        private IEnumerable<TableHandle<T, TData>> GetSecondaryIndexForValue(Tree tree, Slice value)
+        private IEnumerable<TableValueReader> GetSecondaryIndexForValue(Tree tree, Slice value)
         {
             var fstIndex = new FixedSizeTree(_tx.LowLevelTransaction, tree, value, 0);
             using (var it = fstIndex.Iterate())
@@ -593,26 +457,31 @@ namespace Voron.Data.Tables
 
                 do
                 {
-                    var id = it.CurrentKey;
-                    yield return ReadById(id);
+                    yield return ReadById(it.CurrentKey);
                 } while (it.MoveNext());
             }
+        }
+
+        private TableValueReader ReadById(long id)
+        {
+            int size;
+            var ptr = DirectRead(id, out size);
+            var secondaryIndexForValue = new TableValueReader(ptr, size);
+            return secondaryIndexForValue;
         }
 
         public class SeekResult
         {
             public Slice Key;
-            public IEnumerable<TableHandle<T, TData>> Results;
+            public IEnumerable<TableValueReader> Results;
         }
 
-        //TODO: need a proper way to handle this instead of just saying slice
-        public IEnumerable<SeekResult> SeekTo(string indexName, Slice secondaryIndexValue)
+        public IEnumerable<SeekResult> SeekTo(TableSchema.SchemaIndexDef index, Slice value)
         {
-            Slice treeNameSlice;
-            var tree = GetTree(indexName, out treeNameSlice);
+            var tree = GetTree(index);
             using (var it = tree.Iterate())
             {
-                if(it.Seek(secondaryIndexValue) == false)
+                if (it.Seek(value) == false)
                     yield break;
 
                 do
@@ -622,31 +491,47 @@ namespace Voron.Data.Tables
                         Key = it.CurrentKey,
                         Results = GetSecondaryIndexForValue(tree, it.CurrentKey)
                     };
-
-                }
-                while (it.MoveNext());
+                } while (it.MoveNext());
             }
         }
 
-        private TableHandle<T, TData> ReadById(long id)
+
+        public IEnumerable<TableValueReader> SeekTo(TableSchema.FixedSizeSchemaIndexDef index, long key)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(key) == false)
+                    yield break;
+
+                do
+                {
+                    yield return GetTableValueReader(it);
+                } while (it.MoveNext());
+            }
+        }
+
+        private TableValueReader GetTableValueReader(FixedSizeTree.IFixedSizeIterator it)
+        {
+            long id;
+            it.Value.CopyTo((byte*) &id);
+            int size;
+            var ptr = DirectRead(id, out size);
+            return new TableValueReader(ptr, size);
+        }
+
+        public void Set(TableValueBuilder builder)
         {
             int size;
-            byte* rawData = DirectRead(id, out size);
-
-            // Read from pointer. 
-            var readerOfT = SharedPool<T>.Reader.Allocate();
-            try
+            var read = builder.Read(_schema.Key.StartIndex, out size);
+            long id;
+            if (TryFindIdFromPrimaryKey(new Slice(read, (ushort)size), out id))
             {
-                var input = new InputPointer(rawData, size);
-                var reader = new CompactBinaryReader<InputPointer>(input);
-                var keys = readerOfT.Deserialize<T>(reader);
-
-                return new TableHandle<T, TData>(keys, rawData + input.Position, size - (int)input.Position);
+                Update(id, builder);
+                return;
             }
-            finally
-            {
-                SharedPool<T>.Reader.Free(readerOfT);
-            }
+            Insert(builder);
         }
     }
 }

@@ -188,6 +188,43 @@ namespace Raven.Server.Json
             }
         }
 
+        public bool TryGet<T>(string name, out T obj)
+            where T : class
+        {
+            object result;
+            if (TryGetMember(name, out result) == false)
+            {
+                obj = null;
+                return false;
+            }
+            obj = result as T;
+            return obj != null;
+        }
+
+        public bool TryGet(string name, out string str)
+        {
+            object result;
+            if (TryGetMember(name, out result) == false)
+            {
+                str = null;
+                return false;
+            }
+            var lazyCompressedStringValue = result as LazyCompressedStringValue;
+            if (lazyCompressedStringValue != null)
+            {
+                str = lazyCompressedStringValue;
+                return true;
+            }
+            var lazyStringValue = result as LazyStringValue;
+            if (lazyStringValue != null)
+            {
+                str = lazyStringValue;
+                return true;
+            }
+            str = null;
+            return false;
+        }
+
         public bool TryGetMember(string name, out object result)
         {
             // try get value from cache, works only with Blittable types, other objects are not stored for now
@@ -458,5 +495,6 @@ namespace Raven.Server.Json
         {
             Memory.Copy(ptr, _mem, _size);
         }
+
     }
 }

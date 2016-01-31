@@ -86,12 +86,7 @@ namespace Raven.Server.Utils
         {
             public ConsoleText()
             {
-                if (RunningOnPosix == true)
-                {
-                    var previousForegroundColor = ConsoleColor.White;
-                    var previousBackgroundColor = DefaultLinuxBackgroundColor;
-                }
-                else
+                if (RunningOnPosix == false)
                 {
                     ForegroundColor = Console.ForegroundColor;
                     BackgroundColor = Console.BackgroundColor;

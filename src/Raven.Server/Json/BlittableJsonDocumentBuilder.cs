@@ -149,17 +149,16 @@ namespace Raven.Server.Json
             _position += WriteVariableSizeInt(prop.EscapePositions.Length);
             if (prop.EscapePositions.Length > 0)
             {
-                _position += WriteVariableSizeInt(prop.EscapePositions[0]);
-                for (int i = 1; i < prop.EscapePositions.Length; i++)
+                for (int i = 0; i < prop.EscapePositions.Length; i++)
                 {
-                    _position += WriteVariableSizeInt(prop.EscapePositions[i] - prop.EscapePositions[i - 1] - 1);
+                    _position += WriteVariableSizeInt(prop.EscapePositions[i] );
                 }
             }
             return startPos;
         }
 
         /// <summary>
-        /// Write an object to the UnamangedBuffer
+        /// Write an object to the UnmangedBuffer
         /// </summary>
         /// <param name="objectToken"></param>
         /// <returns></returns>
@@ -331,10 +330,9 @@ namespace Raven.Server.Json
             _position += WriteVariableSizeInt(_state.EscapePositions.Count);
             if (_state.EscapePositions.Count > 0)
             {
-                _position += WriteVariableSizeInt(_state.EscapePositions[0]);
-                for (int i = 1; i < _state.EscapePositions.Count; i++)
+                for (int i = 0; i < _state.EscapePositions.Count; i++)
                 {
-                    _position += WriteVariableSizeInt(_state.EscapePositions[i] - _state.EscapePositions[i - 1] - 1);
+                    _position += WriteVariableSizeInt(_state.EscapePositions[i]);
                 }
             }
         }
@@ -400,29 +398,25 @@ namespace Raven.Server.Json
                      // the verbatim string
                      str.Size - sizeof(int) * 2;
             var shouldCompress =
+                _state.CompressedSize != null ||
                 ((state & UsageMode.CompressStrings) == UsageMode.CompressStrings && size > 128) ||
                 (state & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings;
             if (maxGoodCompressionSize > 0  && shouldCompress)
             {
                 Compressed++;
 
-                var compressionBuffer = GetCompressionBuffer(str.Size);
-               
-                int compressedSize ;
 
-                if (str.Size > 128)
+                int compressedSize;
+                byte* compressionBuffer;
+                if (_state.CompressedSize != null)
                 {
-                    compressedSize = _context.Lz4.Encode64(str.Buffer,
-                        compressionBuffer,
-                        str.Size,
-                        maxGoodCompressionSize);
+                    // we already have compressed data here
+                    compressedSize = _state.CompressedSize.Value;
+                    compressionBuffer = _state.StringBuffer;
                 }
                 else
                 {
-                    compressedSize = SmallStringCompression.Instance.Compress(str.Buffer,
-                        compressionBuffer,
-                        str.Size,
-                        maxGoodCompressionSize);
+                    compressionBuffer = CompressBuffer(str, maxGoodCompressionSize, out compressedSize);
                 }
                 if (compressedSize > 0)// only if we actually save more than space
                 {
@@ -440,6 +434,26 @@ namespace Raven.Server.Json
             _stream.Write(buffer, size);
             _position += size;
             return startPos;
+        }
+
+        private unsafe byte* CompressBuffer(LazyStringValue str, int maxGoodCompressionSize, out int compressedSize)
+        {
+            var compressionBuffer = GetCompressionBuffer(str.Size);
+            if (str.Size > 128)
+            {
+                compressedSize = _context.Lz4.Encode64(str.Buffer,
+                    compressionBuffer,
+                    str.Size,
+                    maxGoodCompressionSize);
+            }
+            else
+            {
+                compressedSize = SmallStringCompression.Instance.Compress(str.Buffer,
+                    compressionBuffer,
+                    str.Size,
+                    maxGoodCompressionSize);
+            }
+            return compressionBuffer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

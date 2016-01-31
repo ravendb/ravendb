@@ -63,5 +63,15 @@ namespace Voron.Util.Conversion
             }
             return ret;
         }
+
+        protected override unsafe long FromBytes(byte* value, int bytesToConvert)
+        {
+            long ret = 0;
+            for (int i = 0; i < bytesToConvert; i++)
+            {
+                ret = (ret << 8) | value[i];
+            }
+            return ret;
+        }
     }
 }

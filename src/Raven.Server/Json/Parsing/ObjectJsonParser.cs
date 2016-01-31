@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Raven.Client.Linq;
 
 namespace Raven.Server.Json.Parsing
 {
@@ -19,7 +20,7 @@ namespace Raven.Server.Json.Parsing
 
         public DynamicJsonValue()
         {
-            
+
         }
 
         public DynamicJsonValue(BlittableJsonReaderObject source)
@@ -205,7 +206,7 @@ namespace Raven.Server.Json.Parsing
                     if (bjra.Modifications.AlreadySeen == false)
                     {
                         _elements.Push(bjra);
-                        bjra.Modifications.AlreadySeen = true ;
+                        bjra.Modifications.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         return;
                     }
@@ -230,7 +231,19 @@ namespace Raven.Server.Json.Parsing
                 {
                     _state.StringBuffer = lsv.Buffer;
                     _state.StringSize = lsv.Size;
-                    _state.CurrentTokenType=JsonParserToken.String;
+                    _state.CompressedSize = -1;// don't even try
+                    _state.CurrentTokenType = JsonParserToken.String;
+                    ReadEscapePositions(lsv.Buffer, lsv.Size);
+                    return;
+                }
+                var lcsv = current as LazyCompressedStringValue;
+                if (lcsv != null)
+                {
+                    _state.StringBuffer = lcsv.Buffer;
+                    _state.StringSize = lcsv.UncompressedSize;
+                    _state.CompressedSize = lcsv.CompressedSize;
+                    _state.CurrentTokenType = JsonParserToken.String;
+                    ReadEscapePositions(lcsv.Buffer, lcsv.CompressedSize);
                     return;
                 }
                 var str = current as string;
@@ -278,17 +291,39 @@ namespace Raven.Server.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.Null;
                     return;
                 }
-                
+
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
             }
         }
 
+        private unsafe void ReadEscapePositions(byte* buffer, int escapeSequencePos)
+        {
+            _state.EscapePositions.Clear();
+            var numberOfEscapeSequences = BlittableJsonTextWriter.ReadVariableSizeInt(buffer, ref escapeSequencePos);
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                var bytesToSkip = BlittableJsonTextWriter.ReadVariableSizeInt(buffer, ref escapeSequencePos);
+                _state.EscapePositions.Add(bytesToSkip);
+            }
+        }
+
+        private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };
         private void SetStringBuffer(string str)
         {
             // max possible size - we avoid using GetMaxByteCount because profiling showed it to take 2% of runtime
             // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
-            int size = str.Length*4;
-            
+            int size = str.Length * 4;
+            _state.EscapePositions.Clear();
+            var lastEscape = 0;
+            while (true)
+            {
+                var curEscape = str.IndexOfAny(EscapeChars, lastEscape);
+                if (curEscape == -1)
+                    break;
+                _state.EscapePositions.Add(curEscape - lastEscape);
+                lastEscape = curEscape + 1;
+            }
             _state.StringBuffer = _ctx.GetNativeTempBuffer(size, out size);
             fixed (char* pChars = str)
             {

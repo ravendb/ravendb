@@ -49,7 +49,6 @@
     }
   },
   "dependencies": {
-    "Bond.Runtime.CSharp": "4.0.2",
     "Sparrow": "4.0.0-*"
   }
 }

@@ -31,6 +31,34 @@ namespace BlittableTests
         }
 
         [Fact]
+        public void CanCompressFields()
+        {
+            AssertEqualAfterRoundTrip(source =>
+            {
+                source.Modifications = new DynamicJsonValue
+                {
+                    ["Age"] = 34
+                };
+            },
+            @"{""Name"":""there goes the man in the moon"",""Age"":34}",
+            @"{""Name"":""there goes the man in the moon""}");
+        }
+
+        [Fact]
+        public void WillPreserveEscapes()
+        {
+            AssertEqualAfterRoundTrip(source =>
+            {
+                source.Modifications = new DynamicJsonValue
+                {
+                    ["Age"] = 34
+                };
+            }, @"{""Name"":""Oren\r\n"",""Age"":34}",
+            @"{""Name"":""Oren\r\n""}");
+        }
+
+
+        [Fact]
         public void CanModifyArrayProperty()
         {
             AssertEqualAfterRoundTrip(source =>
@@ -88,14 +116,14 @@ namespace BlittableTests
             }, @"{""Name"":""Oren"",""State"":{""Sleep"":false}}");
         }
 
-        private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected)
+        private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new RavenOperationContext(pool))
             {
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
-                streamWriter.Write(InitialJson);
+                streamWriter.Write(json ?? InitialJson);
                 streamWriter.Flush();
                 stream.Position = 0;
                 using (var writer = ctx.Read(stream, "foo"))
