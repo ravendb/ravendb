@@ -21,8 +21,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
@@ -32,6 +35,9 @@ namespace Raven.Database.FileSystem.Controllers
 {
     public class AdminFileSystemController : BaseAdminController
     {
+        private static readonly char[] existingDriveLetters = DriveInfo.GetDrives().Select(x => x.Name.ToLower()[0]).ToArray();
+
+
         public string FilesystemName { get; private set; }
 
         protected override void InnerInitialization(HttpControllerContext controllerContext)
@@ -314,6 +320,10 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             }
 
+            HttpResponseMessage message;
+            if (!HasPermissions(backupDestinationDirectory, out message))
+                return message;
+
             bool enableIncrementalBackup;
             if (incrementalBackup &&
                 transactionalStorage is Storage.Esent.TransactionalStorage &&
@@ -434,7 +444,22 @@ namespace Raven.Database.FileSystem.Controllers
         private bool IsValidPath(string path,out HttpResponseMessage message)
         {
             message = null;
-            if (Directory.Exists(path))
+            var localPath = new DirectoryInfo(path.ToFullPath());
+            if (localPath.Exists)
+                return true;
+
+            message = GetMessageWithObject(new
+            {
+                Message = string.Format("Non-existing path : {0}", path)
+            }, HttpStatusCode.BadRequest);
+            return false;
+        }
+
+        private bool IsOnValidDrive(string path, out HttpResponseMessage message)
+        {
+            message = null;
+            var fullPath = path.ToFullPath().ToLower();
+            if (existingDriveLetters.Contains(fullPath[0]))
                 return true;
 
             message = GetMessageWithObject(new
@@ -449,13 +474,16 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/admin/restore")]
         public async Task<HttpResponseMessage> Restore()
         {
+            HttpResponseMessage message = null;
             if (EnsureSystemDatabase() == false)
                 return GetMessageWithString("Restore is only possible from the system database", HttpStatusCode.BadRequest);
 
             var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
 
             var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>();
-            HttpResponseMessage message = null;
+
+            if (!HasPermissions(restoreRequest.BackupLocation, out message))
+                return message;
 
             var fileSystemDocumentPath = FindFilesystemDocument(restoreRequest.BackupLocation);
 
@@ -496,14 +524,31 @@ namespace Raven.Database.FileSystem.Controllers
 
             if (filesystemDocument != null)
             {
-                var dataLocation = filesystemDocument.Settings[Constants.FileSystem.DataDirectory];
-                if(!IsValidPath(dataLocation, out message))
-                    return message;
+                //no need to check for existence of specified data and index folders here,
+                //since those would be simply created after restore
+                //we need to check only that the drive letter exists, so the folder can actually be created
 
-                var indexesLocation = filesystemDocument.Settings[Constants.FileSystem.IndexStorageDirectory];
-                if (!IsValidPath(indexesLocation, out message))
-                    return message;
+                string dataLocation;
+                if (filesystemDocument.Settings.TryGetValue(Constants.FileSystem.DataDirectory, out dataLocation))
+                {
+                    dataLocation = filesystemDocument.Settings[Constants.FileSystem.DataDirectory];
+                    if (!IsOnValidDrive(dataLocation, out message))
+                        return message;
 
+                    if (!HasPermissions(dataLocation, out message))
+                        return message;
+                }
+
+                string indexesLocation;
+                if (filesystemDocument.Settings.TryGetValue(Constants.FileSystem.IndexStorageDirectory, out indexesLocation))
+                {
+                    indexesLocation = filesystemDocument.Settings[Constants.FileSystem.IndexStorageDirectory];
+                    if (!IsOnValidDrive(indexesLocation, out message))
+                        return message;
+
+                    if (!HasPermissions(indexesLocation, out message))
+                        return message;
+                }
                 foreach (var setting in filesystemDocument.Settings)
                 {
                     ravenConfiguration.Settings[setting.Key] = setting.Value;
@@ -620,7 +665,7 @@ namespace Raven.Database.FileSystem.Controllers
             {
                 OperationId = id
             });
-        }
+        }	   
 
         private string FindFilesystemDocument(string rootBackupPath)
         {

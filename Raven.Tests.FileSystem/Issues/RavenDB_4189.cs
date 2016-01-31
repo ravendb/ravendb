@@ -22,7 +22,7 @@ namespace Raven.Tests.FileSystem.Issues
         [Fact]
         public async Task Non_existing_index_storage_folder_should_throw_proper_exception()
         {
-            using (var store = NewStore(requestedStorage: "voron", runInMemory: true))
+            using (var store = NewStore(requestedStorage: "voron"))
             {
                 using (var session = store.OpenAsyncSession())
                 {

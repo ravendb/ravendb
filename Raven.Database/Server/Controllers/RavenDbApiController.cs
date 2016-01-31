@@ -12,13 +12,13 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
-using Raven.Database.Server.WebApi;
+using System.Linq;
 using Raven.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -109,6 +109,43 @@ namespace Raven.Database.Server.Controllers
 
             return result;
         }
+
+        protected bool HasPermissions(string path, out HttpResponseMessage message)
+        {
+            message = null;
+            if (Directory.Exists(path) == false)
+                return true;
+
+            if (!HasPermissionsOnFolder(path))
+            {
+                {
+                    message = GetMessageWithObject(new
+                    {
+                        Message = string.Format("No permissions for folder - {0}", path)
+                    }, HttpStatusCode.BadRequest);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private bool HasPermissionsOnFolder(string path)
+        {
+            try
+            {
+                var filename = Guid.NewGuid().ToString();
+                var fullpath = Path.Combine(path, filename);
+                using (var file = File.CreateText(fullpath))
+                    file.Write(false);
+                IOExtensions.DeleteFile(fullpath);
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+        
 
         protected ReplicationDocument GetReplicationDocument(out HttpResponseMessage erroResponseMessage)
         {
