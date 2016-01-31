@@ -6,7 +6,7 @@ using Raven.Abstractions.Logging;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {
-    public class WinLowMemoryNotification : LowMemoryNotification
+    public class WinLowMemoryNotification : AbstractLowMemoryNotification
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(WinLowMemoryNotification));
 
@@ -93,6 +93,16 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                 IsBackground = true,
                 Name = "Low memory notification thread"
             }.Start();
+        }
+
+        public override void SimulateLowMemoryNotification()
+        {
+            SetEvent(lowMemorySimulationEvent);
+        }
+
+        public void InitiateSoftMemoryRelease()
+        {
+            SetEvent(softMemoryReleaseEvent);
         }
     }
 }

@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Raven.Server.Config;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
-using Sparrow;
+using Sparrow.Platform;
 using Voron;
-using Voron.Data.BTrees;
-using Voron.Impl;
 
 namespace Raven.Server.ServerWide
 {
@@ -42,6 +38,11 @@ namespace Raven.Server.ServerWide
         public void Initialize()
         {
             shutdownNotification = new CancellationTokenSource();
+
+            var configuration = new RavenConfiguration();
+            AbstractLowMemoryNotification lowMemoryNotification = Platform.RunningOnPosix
+                ? new PosixLowMemoryNotification(shutdownNotification.Token, configuration) as AbstractLowMemoryNotification
+                : new WinLowMemoryNotification(shutdownNotification.Token);
 
             var runInMemory = _config.Get<bool>("run.in.memory");
             if (runInMemory == false)

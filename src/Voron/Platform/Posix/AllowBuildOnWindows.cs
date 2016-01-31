@@ -760,6 +760,11 @@ namespace Voron.Platform.Posix
             get { return (ulong)freeram; }
             set { freeram = new UIntPtr (value); }
         }
+        public ulong TotalRam
+        {
+            get { return (ulong)totalram; }
+            set { totalram = new UIntPtr(value); }
+        }
 
         public System.UIntPtr sharedram; /* Amount of shared memory */
         public System.UIntPtr bufferram; /* Memory used by buffers */

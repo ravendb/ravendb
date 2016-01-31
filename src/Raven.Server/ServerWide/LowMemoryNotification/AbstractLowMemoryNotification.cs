@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Logging;
 using Sparrow.Collections;
+using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {
@@ -12,24 +13,25 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         public string DatabaseName { get; set; }
         public object Metadata { get; set; }
     }
-    internal interface ILowMemoryHandler
+
+    public interface ILowMemoryHandler
     {
         void HandleLowMemory();
         void SoftMemoryRelease();
         LowMemoryHandlerStatistics GetStats();
     }
 
-    public class LowMemoryNotification
+    public abstract class AbstractLowMemoryNotification
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(WinLowMemoryNotification));
 
-        private static readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> LowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
+        private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
         protected void RunLowMemoryHandlers()
         {
             var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
 
-            foreach (var lowMemoryHandler in LowMemoryHandlers)
+            foreach (var lowMemoryHandler in _lowMemoryHandlers)
             {
                 ILowMemoryHandler handler;
                 if (lowMemoryHandler.TryGetTarget(out handler))
@@ -47,7 +49,28 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                     inactiveHandlers.Add(lowMemoryHandler);
             }
 
-            inactiveHandlers.ForEach(x => LowMemoryHandlers.TryRemove(x));
+            inactiveHandlers.ForEach(x => _lowMemoryHandlers.TryRemove(x));
         }
+
+        protected void ClearInactiveHandlers()
+        {
+            var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
+
+            foreach (var lowMemoryHandler in _lowMemoryHandlers)
+            {
+                ILowMemoryHandler handler;
+                if (lowMemoryHandler.TryGetTarget(out handler) == false)
+                    inactiveHandlers.Add(lowMemoryHandler);
+            }
+
+            inactiveHandlers.ForEach(x => _lowMemoryHandlers.TryRemove(x));
+        }
+
+        public void RegisterLowMemoryHandler(ILowMemoryHandler handler)
+        {
+            _lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
+        }
+
+        public abstract void SimulateLowMemoryNotification();
     }
 }
