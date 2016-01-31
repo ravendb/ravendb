@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Exceptions;
@@ -91,6 +93,22 @@ namespace Raven.Server.Documents
         //TODO: proper etag generation
         private long _lastEtag;
 
+        public IEnumerable<Document> GetDocumentsStartingWith(RavenOperationContext context, string prefix)
+        {
+            var table = new Table(_docsSchema, context.Transaction);
+
+            var prefixSlice = GetSliceFromKey(context, prefix);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekByPrimaryKey(prefixSlice))
+            {
+                var document = TableValueToDocument(context, result);
+                if (document.Key.StartsWith(prefix) == false)
+                    break;
+                yield return document;
+            }
+        }
+
         public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, long etag)
         {
             var table = new Table(_docsSchema, context.Transaction);
@@ -121,22 +139,73 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
 
-            // TODO: Avoid allocations in this case by using pre-existing buffers
-            var loweredKey = key.ToLowerInvariant();
-            var loweredKeyBytes = Encoding.UTF8.GetBytes(loweredKey);
-
-            if (loweredKeyBytes.Length > 255)
-                throw new ArgumentException(
-                    $"Key cannot exceed 255 bytes, but the key was {loweredKeyBytes.Length} bytes. The invalid key is '{key}'.",
-                    nameof(key));
-
             var table = new Table(_docsSchema, context.Transaction);
 
-            var tvr = table.ReadByKey(new Slice(loweredKeyBytes));
+            var tvr = table.ReadByKey(GetSliceFromKey(context, key));
             if (tvr == null)
                 return null;
 
             return TableValueToDocument(context, tvr);
+        }
+
+        private Slice GetSliceFromKey(RavenOperationContext context, string key)
+        {
+            var byteCount = Encoding.UTF8.GetMaxByteCount(key.Length);
+            if (byteCount > 255)
+                throw new ArgumentException(
+                    $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{key}'.",
+                    nameof(key));
+
+            int size;
+            var buffer = context.GetNativeTempBuffer(
+                byteCount
+                + sizeof(char) * key.Length// for the lower calls
+                , out size);
+
+            fixed (char* pChars = key)
+            {
+                var destChars = (char*) buffer;
+                for (int i = 0; i < key.Length; i++)
+                {
+                    destChars[i] = char.ToLowerInvariant(pChars[i]);
+                }
+
+                var keyBytes = buffer + key.Length*sizeof (char);
+
+                size = Encoding.UTF8.GetBytes(destChars, key.Length, keyBytes, byteCount);
+                return new Slice(keyBytes, (ushort)size);
+            }
+        }
+
+        private void GetSliceFromKey(RavenOperationContext context, string str, out byte* lowerKey, out int lowerSize, out byte* key, out int keySize)
+        {
+            var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
+            if (byteCount > 255)
+                throw new ArgumentException(
+                    $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
+                    nameof(str));
+
+            
+            var buffer = context.GetNativeTempBuffer(
+                (byteCount * 2)
+                + sizeof(char) * str.Length// for the lower calls
+                , out lowerSize);
+
+            fixed (char* pChars = str)
+            {
+                var destChars = (char*)buffer;
+                for (int i = 0; i < str.Length; i++)
+                {
+                    destChars[i] = char.ToLowerInvariant(pChars[i]);
+                }
+
+                lowerKey = buffer + str.Length * sizeof(char);
+
+                lowerSize = Encoding.UTF8.GetBytes(destChars, str.Length, lowerKey, byteCount);
+
+                key = buffer + str.Length*sizeof (char) + byteCount;
+                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, key, byteCount);
+            }
         }
 
         private static Document TableValueToDocument(RavenOperationContext context, TableValueReader tvr)
@@ -146,7 +215,7 @@ namespace Raven.Server.Documents
             var ptr = tvr.Read(2, out size);
             result.Key = Encoding.UTF8.GetString(ptr, size);
             ptr = tvr.Read(1, out size);
-            result.Etag = EndianBitConverter.Big.ToInt64(ptr);
+            result.Etag = IPAddress.NetworkToHostOrder(*(long*) ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
             return result;
         }
@@ -156,7 +225,8 @@ namespace Raven.Server.Documents
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
             if (context.Transaction == null)
-                throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
+                throw new ArgumentException("Context must be set with a valid transaction before calling Put",
+                    nameof(context));
 
             BlittableJsonReaderObject metadata;
             string collectionName;
@@ -165,52 +235,45 @@ namespace Raven.Server.Documents
             {
                 collectionName = "<no-collection>";
             }
+            byte* lowerKey;
+            int lowerSize;
+            byte* keyPtr;
+            int keySize;
+            GetSliceFromKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            // TODO: Avoid allocations in this case by using pre-existing buffers
-            var loweredKey = key.ToLowerInvariant();
-            var loweredKeyBytes = Encoding.UTF8.GetBytes(loweredKey);
-            var keyBytes = Encoding.UTF8.GetBytes(key);
-            if (loweredKeyBytes.Length > 255)
-                throw new ArgumentException(
-                    $"Key cannot exceed 255 bytes, but the key was {loweredKeyBytes.Length} bytes. The invalid key is '{key}'.",
-                    nameof(key));
+            var newEtag = (++_lastEtag);
+            newEtag = IPAddress.HostToNetworkOrder(newEtag); // to big endian
 
-            var etagBytes = EndianBitConverter.Big.GetBytes(++_lastEtag);
-            fixed (byte* keyPtr = keyBytes)
-            fixed (byte* loweredKeyPtr = loweredKeyBytes)
-            fixed (byte* etagBytesPtr = etagBytes)
+            var tbv = new TableValueBuilder
             {
-                var tbv = new TableValueBuilder
-                {
-                    {loweredKeyPtr, loweredKeyBytes.Length},
-                    {etagBytesPtr, etagBytes.Length},
-                    {keyPtr, keyBytes.Length },
-                    {document.BasePointer, document.Size}
-                };
+                {lowerKey, lowerSize},
+                {(byte*) &newEtag, sizeof (long)},
+                {keyPtr, keySize},
+                {document.BasePointer, document.Size}
+            };
 
-                _docsSchema.Create(context.Transaction, collectionName);
+            _docsSchema.Create(context.Transaction, collectionName);
 
-                var table = new Table(_docsSchema, collectionName, context.Transaction);
-                var oldValue = table.ReadByKey(new Slice(loweredKeyPtr, (ushort)loweredKeyBytes.Length));
-                if (oldValue == null)
+            var table = new Table(_docsSchema, collectionName, context.Transaction);
+            var oldValue = table.ReadByKey(new Slice(lowerKey, (ushort)lowerSize));
+            if (oldValue == null)
+            {
+                if (expectedEtag != null && expectedEtag != 0)
                 {
-                    if (expectedEtag != null && expectedEtag != 0)
-                    {
-                        throw new ConcurrencyException(
-                            $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-                    }
-                    table.Insert(tbv);
+                    throw new ConcurrencyException(
+                        $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
                 }
-                else
-                {
-                    int size;
-                    byte* pOldEtag = oldValue.Read(1, out size);
-                    var oldEtag = EndianBitConverter.Big.ToInt64(pOldEtag);
-                    if (expectedEtag != null && oldEtag != expectedEtag)
-                        throw new ConcurrencyException(
-                            $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-                    table.Update(oldValue.Id, tbv);
-                }
+                table.Insert(tbv);
+            }
+            else
+            {
+                int size;
+                byte* pOldEtag = oldValue.Read(1, out size);
+                var oldEtag = EndianBitConverter.Big.ToInt64(pOldEtag);
+                if (expectedEtag != null && oldEtag != expectedEtag)
+                    throw new ConcurrencyException(
+                        $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                table.Update(oldValue.Id, tbv);
             }
             return -1;
         }
