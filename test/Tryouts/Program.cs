@@ -27,7 +27,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new DocumentsCrud().PutAndGetDocumentById("users/1");
+            new DocumentsCrud().CanQueryByCollectionEtag();
             return;
             // var trie = Trie<int>.Build(new[]
             //{

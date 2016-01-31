@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
@@ -57,6 +58,127 @@ namespace BlittableTests.Documents
                 string name;
                 document.Data.TryGet("Name", out name);
                 Assert.Equal(key, name);
+
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
+        public void CanQueryByGlobalEtag()
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] ="Users"
+                    }
+                }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/1", null, doc);
+                }
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Ayende",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/2", null, doc);
+                }
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Arava",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Dogs"
+                    }
+                }, "pets/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "pets/1", null, doc);
+                }
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                var documents = _documentsStorage.GetDocumentsAfter(ctx, 0).ToList();
+                Assert.Equal(3, documents.Count);
+                string name;
+                documents[0].Data.TryGet("Name", out name);
+                Assert.Equal("Oren", name);
+                documents[1].Data.TryGet("Name", out name);
+                Assert.Equal("Ayende", name);
+                documents[2].Data.TryGet("Name", out name);
+                Assert.Equal("Arava", name);
+
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
+        public void CanQueryByCollectionEtag()
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/1", null, doc);
+                }
+              
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Arava",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Dogs"
+                    }
+                }, "pets/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "pets/1", null, doc);
+                }
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Ayende",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/2", null, doc);
+                }
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                var documents = _documentsStorage.GetDocumentsAfter(ctx, "Users", 0).ToList();
+                Assert.Equal(2, documents.Count);
+                string name;
+                documents[0].Data.TryGet("Name", out name);
+                Assert.Equal("Oren", name);
+                documents[1].Data.TryGet("Name", out name);
+                Assert.Equal("Ayende", name);
 
                 ctx.Transaction.Commit();
             }

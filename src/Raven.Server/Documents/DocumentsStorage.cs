@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Exceptions;
@@ -57,20 +58,14 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
                 Name = "Docs"
             });
-            _docsSchema.DefineIndex("CollectionEtags", new TableSchema.SchemaIndexDef
+            _docsSchema.DefineFixedSizeIndex("CollectionEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
-                Count = 1,
-                Size = sizeof(long),
-                MultiValue = false,
                 IsGlobal = false
             });
-            _docsSchema.DefineIndex("AllDocsEtags", new TableSchema.SchemaIndexDef
+            _docsSchema.DefineFixedSizeIndex("AllDocsEtags", new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = 1,
-                Count = 1,
-                Size = sizeof(long),
-                MultiValue = false,
                 IsGlobal = true
             });
             try
@@ -96,6 +91,29 @@ namespace Raven.Server.Documents
         //TODO: proper etag generation
         private long _lastEtag;
 
+        public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, long etag)
+        {
+            var table = new Table(_docsSchema, context.Transaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekTo(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
+            {
+                yield return TableValueToDocument(context, result);
+            }
+        }
+
+        public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, string collection, long etag)
+        {
+            var table = new Table(_docsSchema, collection, context.Transaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekTo(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
+            {
+                yield return TableValueToDocument(context, result);
+            }
+        }
+
+
         public Document Get(RavenOperationContext context, string key)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -118,6 +136,11 @@ namespace Raven.Server.Documents
             if (tvr == null)
                 return null;
 
+            return TableValueToDocument(context, tvr);
+        }
+
+        private static Document TableValueToDocument(RavenOperationContext context, TableValueReader tvr)
+        {
             var result = new Document();
             int size;
             var ptr = tvr.Read(2, out size);
@@ -125,7 +148,6 @@ namespace Raven.Server.Documents
             ptr = tvr.Read(1, out size);
             result.Etag = EndianBitConverter.Big.ToInt64(ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
-
             return result;
         }
 
@@ -139,7 +161,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject metadata;
             string collectionName;
             if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                document.TryGet(Constants.RavenEntityName, out collectionName) == false)
+                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
             {
                 collectionName = "<no-collection>";
             }

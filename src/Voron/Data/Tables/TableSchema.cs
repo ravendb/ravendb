@@ -17,6 +17,7 @@ namespace Voron.Data.Tables
         public SchemaIndexDef Key => _pk;
 
         public Dictionary<string, SchemaIndexDef> Indexes => _indexes;
+        public Dictionary<string, FixedSizeSchemaIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
 
         public class SchemaIndexDef
         {
@@ -27,15 +28,9 @@ namespace Voron.Data.Tables
             /// </summary>
             public int StartIndex = -1;
             public int Count = -1;
-            public int? Size ;
             public bool MultiValue;
             public Slice NameAsSlice;
             public string Name;
-
-            public bool CanUseFixedSizeTree =>
-                Size != null && 
-                Size <= sizeof(long) &&
-                MultiValue == false;
 
             public bool IsGlobal;
 
@@ -53,15 +48,42 @@ namespace Voron.Data.Tables
             }
         }
 
+        public class FixedSizeSchemaIndexDef
+        {
+            public int StartIndex = -1;
+            public Slice NameAsSlice;
+            public string Name;
+
+            public bool IsGlobal;
+
+            public long GetValue(TableValueReader value)
+            {
+                int totalSize;
+                var ptr = value.Read(StartIndex, out totalSize);
+                return EndianBitConverter.Big.ToInt64(ptr);
+            }
+        }
+
+
 
         private SchemaIndexDef _pk;
         private readonly Dictionary<string, SchemaIndexDef> _indexes = new Dictionary<string, SchemaIndexDef>();
+        private readonly Dictionary<string, FixedSizeSchemaIndexDef> _fixedSizeIndexes = new Dictionary<string, FixedSizeSchemaIndexDef>();
 
 
         public TableSchema DefineIndex(string name, SchemaIndexDef index)
         {
             index.NameAsSlice = name;
             _indexes[name] = index;
+
+            return this;
+        }
+
+
+        public TableSchema DefineFixedSizeIndex(string name, FixedSizeSchemaIndexDef index)
+        {
+            index.NameAsSlice = name;
+            _fixedSizeIndexes[name] = index;
 
             return this;
         }
@@ -103,41 +125,35 @@ namespace Voron.Data.Tables
 
             var tableTree = tx.CreateTree(name);
             if (tableTree.State.NumberOfEntries > 0)
-                return;// this was already created
+                return; // this was already created
 
             var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction);
             tableTree.Add(ActiveSectionSlice, EndianBitConverter.Little.GetBytes(rawDataActiveSection.PageNumber));
-            var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
+            var stats = (TableSchemaStats*) tableTree.DirectAdd(StatsSlice, sizeof (TableSchemaStats));
             stats->NumberOfEntries = 0;
 
-            if (_pk.CanUseFixedSizeTree == false)
+            if (_pk.IsGlobal == false)
             {
-                if (_pk.IsGlobal == false)
-                {
-                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                    var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof (TreeRootHeader));
-                    indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
-                }
-                else
-                {
-                    tx.CreateTree(_pk.Name);
-                }
+                var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                var treeHeader = tableTree.DirectAdd(_pk.NameAsSlice, sizeof (TreeRootHeader));
+                indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
+            }
+            else
+            {
+                tx.CreateTree(_pk.Name);
             }
 
             foreach (var indexDef in _indexes.Values)
             {
-                if (indexDef.CanUseFixedSizeTree == false)
+                if (indexDef.IsGlobal == false)
                 {
-                    if (indexDef.IsGlobal == false)
-                    {
-                        var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
-                        var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof (TreeRootHeader));
-                        indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
-                    }
-                    else
-                    {
-                        tx.CreateTree(indexDef.Name);
-                    }
+                    var indexTree = Tree.Create(tx.LowLevelTransaction, tx);
+                    var treeHeader = tableTree.DirectAdd(indexDef.NameAsSlice, sizeof (TreeRootHeader));
+                    indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
+                }
+                else
+                {
+                    tx.CreateTree(indexDef.Name);
                 }
             }
         }

@@ -20,7 +20,6 @@ namespace Voron.Tests.Tables
                 {
                     StartIndex = 2,
                     Count = 1,
-                    Size = sizeof(long)
                 })
                 .DefineIndex("Etag&Collection", new TableSchema.SchemaIndexDef
                 {
