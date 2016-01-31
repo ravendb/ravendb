@@ -19,6 +19,7 @@ namespace Voron.Data.Tables
 
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
+        private readonly string _name;
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
@@ -32,7 +33,7 @@ namespace Voron.Data.Tables
             get
             {
                 if (_fstKey == null)
-                    _fstKey = new FixedSizeTree(_tx.LowLevelTransaction, _tableTree, _schema.Key.Name, sizeof(long));
+                    _fstKey = new FixedSizeTree(_tx.LowLevelTransaction, _tableTree, _schema.Key.NameAsSlice, sizeof(long));
                 return _fstKey;
             }
         }
@@ -73,7 +74,7 @@ namespace Voron.Data.Tables
                 {
                     var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
                     if (readResult == null)
-                        throw new InvalidDataException($"Could not find active sections for {_schema.Name}");
+                        throw new InvalidDataException($"Could not find active sections for {_name}");
 
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
 
@@ -90,18 +91,31 @@ namespace Voron.Data.Tables
             InsertIndexValuesFor(newId, new TableValueReader(data, size));
         }
 
-        public Table(TableSchema schema, Transaction tx)
+        public Table(TableSchema schema, string name, Transaction tx)
         {
             _schema = schema;
             _tx = tx;
-            _tableTree = _tx.ReadTree(_schema.Name);
+            _name = name;
+            _tableTree = _tx.ReadTree(name);
             _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
 
             var stats = (TableSchemaStats*)_tableTree.DirectRead(TableSchema.StatsSlice);
             if (stats == null)
-                throw new InvalidDataException($"Cannot find stats value for table {_schema.Name}");
+                throw new InvalidDataException($"Cannot find stats value for table {name}");
             NumberOfEntries = stats->NumberOfEntries;
         }
+
+        /// <summary>
+        /// this overload is meant to be used for global reads only, when want to use
+        /// a global index to find data, without touching the actual table.
+        /// </summary>
+        public Table(TableSchema schema, Transaction tx)
+        {
+            _schema = schema;
+            _tx = tx;
+            _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
+        }
+
 
         public TableValueReader ReadByKey(Slice key)
         {
@@ -111,12 +125,16 @@ namespace Voron.Data.Tables
 
             int size;
             var rawData = DirectRead(id, out size);
-            return new TableValueReader(rawData, size);
+            return new TableValueReader(rawData, size)
+            {
+                Id = id
+            };
         }
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
-            var readResult = GetTree(_schema.Key.Name).Read(key);
+            var pkTree = GetTree(_schema.Key);
+            var readResult = pkTree.Read(key);
             if (readResult == null)
             {
                 id = -1;
@@ -125,6 +143,14 @@ namespace Voron.Data.Tables
 
             id = readResult.Reader.ReadLittleEndianInt64();
             return true;
+        }
+
+        private Tree GetTree(TableSchema.SchemaIndexDef idx)
+        {
+            if (idx.IsGlobal)
+                return _tx.ReadTree(idx.Name);
+            return GetTree2(idx.NameAsSlice);
+
         }
 
         private byte* DirectRead(long id, out int size)
@@ -141,12 +167,11 @@ namespace Voron.Data.Tables
             // here we rely on the fact that RawDataSmallSection can 
             // read any RawDataSmallSection piece of data, not just something that
             // it exists in its own section, but anything from other sections as well
-            return ActiveDataSmallSection.DirectRead(id, out size);
+            return RawDataSection.DirectRead(_tx.LowLevelTransaction, id, out size);
         }
 
-        private void Update(long id, TableValueBuilder builder)
+        public void Update(long id, TableValueBuilder builder)
         {
-
             int size = builder.Size;
 
             // first, try to fit in place, either in small or large sections
@@ -245,7 +270,7 @@ namespace Voron.Data.Tables
 
                 byte* writePos;
                 if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out writePos) == false)
-                    throw new InvalidDataException($"Cannot write to newly allocated size in {_schema.Name} during delete");
+                    throw new InvalidDataException($"Cannot write to newly allocated size in {_name} during delete");
 
                 Memory.Copy(writePos, pos, itemSize);
             }
@@ -258,20 +283,29 @@ namespace Voron.Data.Tables
         {
             //TODO: Avoid all those allocations by using a single buffer
             var keySlice = _schema.Key.GetSlice(value);
-            var pkTree = GetTree(_schema.Key.Name);
+            var pkTree = GetTree(_schema.Key);
             pkTree.Delete(keySlice);
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
-                var indexTree = GetTree(indexDef.Name);
-                var val = indexDef.GetSlice(value);
+                if (indexDef.CanUseFixedSizeTree)
+                {
+                    var tableTree = _tx.CreateTree(_name);
+                    var fst = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof(long));
+                    fst.Delete(id);
+                }
+                else
+                {
+                    var indexTree = GetTree(indexDef);
+                    var val = indexDef.GetSlice(value);
 
-                var fst = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
-                fst.Delete(id);
+                    var fst = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
+                    fst.Delete(id);
+                }
             }
         }
 
-        private void Insert(TableValueBuilder builder)
+        public void Insert(TableValueBuilder builder)
         {
             var stats = (TableSchemaStats*)_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats));
             NumberOfEntries++;
@@ -287,7 +321,7 @@ namespace Voron.Data.Tables
                 id = AllocateFromSmallActiveSection(size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {_schema.Name}");
+                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {_name}");
 
                 // MemoryCopy into final position.
                 builder.CopyTo(pos);
@@ -314,15 +348,27 @@ namespace Voron.Data.Tables
             var isAsBytes = EndianBitConverter.Little.GetBytes(id);
 
             var pkval = _schema.Key.GetSlice(value);
-            var pkIndex = GetTree(_schema.Key.Name);
+            var pkIndex = GetTree(_schema.Key);
             pkIndex.Add(pkval, isAsBytes, 0);
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
-                var indexTree = GetTree(indexDef.Name);
                 var val = indexDef.GetSlice(value);
-                var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
-                index.Add(id);
+                if (indexDef.CanUseFixedSizeTree)
+                {
+                    var tableTree = _tx.ReadTree(_name);
+                    var index = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, indexDef.NameAsSlice, sizeof(long));
+                    Debug.Assert(val.Size == sizeof(long));
+                    long key;
+                    val.CopyTo((byte*) &key);
+                    index.Add(key, new Slice((byte*) &id, sizeof (long)));
+                }
+                else
+                {
+                    var indexTree = GetTree(indexDef);
+                    var index = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, val, 0);
+                    index.Add(id);
+                }
             }
         }
 
@@ -373,11 +419,11 @@ namespace Voron.Data.Tables
                 slice = name;
                 _sliceByName[name] = slice;
             }
-            return GetTree(slice);
+            return GetTree2(slice);
 
         }
 
-        private Tree GetTree(Slice name)
+        private Tree GetTree2(Slice name)
         {
             if (_treesBySlice == null)
                 _treesBySlice = new Dictionary<Slice, Tree>();
@@ -388,7 +434,7 @@ namespace Voron.Data.Tables
 
             var treeHeader = _tableTree.DirectRead(name);
             if (treeHeader == null)
-                throw new InvalidOperationException($"Cannot find tree {name} in table {_schema.Name}");
+                throw new InvalidOperationException($"Cannot find tree {name} in table {_name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader);
             _treesBySlice[name] = tree;
@@ -397,7 +443,9 @@ namespace Voron.Data.Tables
 
         public void DeleteByKey(Slice key)
         {
-            var readResult = GetTree(_schema.Key.Name).Read(key);
+            var pkTree = GetTree(_schema.Key);
+
+            var readResult = pkTree.Read(key);
             if (readResult == null)
                 return;
 
@@ -437,14 +485,12 @@ namespace Voron.Data.Tables
             public IEnumerable<TableValueReader> Results;
         }
 
-        //TODO: need a proper way to handle this instead of just saying slice
-        public IEnumerable<SeekResult> SeekTo(string indexName, Slice secondaryIndexValue)
+        public IEnumerable<SeekResult> SeekTo(TableSchema.SchemaIndexDef index, Slice value)
         {
-            Slice treeNameSlice;
-            var tree = GetTree(indexName, out treeNameSlice);
+            var tree = GetTree(index);
             using (var it = tree.Iterate())
             {
-                if (it.Seek(secondaryIndexValue) == false)
+                if (it.Seek(value) == false)
                     yield break;
 
                 do
@@ -463,9 +509,9 @@ namespace Voron.Data.Tables
         public void Set(TableValueBuilder builder)
         {
             int size;
-            var read = builder.Read(_schema.Key.StartIndex,out size);
+            var read = builder.Read(_schema.Key.StartIndex, out size);
             long id;
-            if (TryFindIdFromPrimaryKey(new Slice(read, (ushort) size), out id))
+            if (TryFindIdFromPrimaryKey(new Slice(read, (ushort)size), out id))
             {
                 Update(id, builder);
                 return;

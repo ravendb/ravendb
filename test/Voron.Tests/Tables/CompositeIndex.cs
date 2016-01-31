@@ -13,14 +13,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1","Users", 1L, "{'Name': 'Oren'}");
                 SetHelper(docs, "users/2","Users", 2L,  "{'Name': 'Eini'}");
 
@@ -29,9 +29,9 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
-                var seekResults = docs.SeekTo("Etag&Collection", "Users").GetEnumerator();
+                var seekResults = docs.SeekTo(DocsSchema.Indexes["Etag&Collection"], "Users").GetEnumerator();
                 Assert.True(seekResults.MoveNext());
                 var reader = seekResults.Current;
 
@@ -61,14 +61,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
 
@@ -77,7 +77,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -86,9 +86,9 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
-                var reader = docs.SeekTo("Etag&Collection", "Users");
+                var reader = docs.SeekTo(DocsSchema.Indexes["Etag&Collection"], "Users");
                 Assert.Empty(reader);
             }
         }
@@ -99,14 +99,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
                 tx.Commit();
@@ -114,7 +114,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 2L, "{'Name': 'Eini'}");
 
                 tx.Commit();
@@ -122,9 +122,9 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
-                var reader = docs.SeekTo("Etag&Collection", "Users")
+                var reader = docs.SeekTo(DocsSchema.Indexes["Etag&Collection"], "Users")
                                  .First();
 
                 var valueReader = reader.Key.CreateReader();

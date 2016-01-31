@@ -22,9 +22,9 @@ namespace Voron.Data.RawData
             _tx = tx;
             _pageSize = _tx.DataPager.PageSize;
 
-            MaxItemSize = (_pageSize - sizeof (RawDataSmallPageHeader))/2;
+            MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
 
-            _sectionHeader = (RawDataSmallSectionPageHeader*) _tx.GetPage(pageNumber).Pointer;
+            _sectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(pageNumber).Pointer;
         }
 
         public long PageNumber { get; }
@@ -32,7 +32,7 @@ namespace Voron.Data.RawData
 
         public int AllocatedSize => _sectionHeader->AllocatedSize;
 
-        public int Size => _sectionHeader->NumberOfPages*_pageSize;
+        public int Size => _sectionHeader->NumberOfPages * _pageSize;
 
 
         public ushort* AvailableSpace
@@ -40,7 +40,7 @@ namespace Voron.Data.RawData
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return (ushort*) ((byte*) _sectionHeader + ReservedHeaderSpace);
+                return (ushort*)((byte*)_sectionHeader + ReservedHeaderSpace);
             }
         }
 
@@ -61,26 +61,26 @@ namespace Voron.Data.RawData
             for (int i = 0; i < _sectionHeader->NumberOfPages; i++)
             {
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
-                var offset = sizeof (RawDataSmallPageHeader);
+                var offset = sizeof(RawDataSmallPageHeader);
                 while (offset < _pageSize)
                 {
-                    var sizes = (short*) ((byte*) pageHeader + offset);
+                    var sizes = (short*)((byte*)pageHeader + offset);
                     if (sizes[1] != -1)
                     {
-                        ids.Add((pageHeader->PageNumber*_pageSize) + offset);
+                        ids.Add((pageHeader->PageNumber * _pageSize) + offset);
                     }
-                    offset += sizeof (short)*2 + sizes[0];
+                    offset += sizeof(short) * 2 + sizes[0];
                 }
             }
             return ids;
-        } 
+        }
 
         public int NumberOfEntries => _sectionHeader->NumberOfEntries;
 
         public int OverheadSize
             => _pageSize /* header page*/+
-               _sectionHeader->NumberOfEntries*(sizeof (ushort)*2) /*per entry*/+
-               _sectionHeader->NumberOfPages*sizeof (RawDataSmallPageHeader);
+               _sectionHeader->NumberOfEntries * (sizeof(ushort) * 2) /*per entry*/+
+               _sectionHeader->NumberOfPages * sizeof(RawDataSmallPageHeader);
 
         public double Density
         {
@@ -91,14 +91,14 @@ namespace Voron.Data.RawData
                 {
                     total += AvailableSpace[i];
                 }
-                return 1 - (total/(double) (_sectionHeader->NumberOfPages*_pageSize));
+                return 1 - (total / (double)(_sectionHeader->NumberOfPages * _pageSize));
             }
         }
 
         public bool Contains(long id)
         {
-            var posInPage = (int) (id%_pageSize);
-            var pageNumberInSection = (id - posInPage)/_pageSize;
+            var posInPage = (int)(id % _pageSize);
+            var pageNumberInSection = (id - posInPage) / _pageSize;
 
             return (pageNumberInSection > _sectionHeader->PageNumber &&
                     pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages);
@@ -115,14 +115,14 @@ namespace Voron.Data.RawData
 
         public bool TryWriteDirect(long id, int size, out byte* writePos)
         {
-            var posInPage = (int) (id%_pageSize);
-            var pageNumberInSection = (id - posInPage)/_pageSize;
+            var posInPage = (int)(id % _pageSize);
+            var pageNumberInSection = (id - posInPage) / _pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException($"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
-            var sizes = (short*) ((byte*) pageHeader + posInPage);
+            var sizes = (short*)((byte*)pageHeader + posInPage);
             if (sizes[1] < 0)
                 throw new InvalidDataException($"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
@@ -134,36 +134,44 @@ namespace Voron.Data.RawData
 
             if (sizes[0] < size)
             {
-                writePos = (byte*) 0;
+                writePos = (byte*)0;
                 return false; // can't write here
             }
 
 
             pageHeader = ModifyPage(pageHeader);
-            writePos = ((byte*) pageHeader + posInPage + sizeof (short) /*allocated*/+ sizeof (short) /*used*/);
+            writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
             // note that we have to do this calc again, pageHeader might have changed
-            ((short*) ((byte*) pageHeader + posInPage))[1] = (short) size;
+            ((short*)((byte*)pageHeader + posInPage))[1] = (short)size;
             return true;
         }
 
         public byte* DirectRead(long id, out int size)
         {
-            var posInPage = (int) (id%_pageSize);
-            var pageNumberInSection = (id - posInPage)/_pageSize;
-            var pageHeader = PageHeaderFor(pageNumberInSection);
+            return DirectRead(_tx, id, out size);
+        }
+
+        public static byte* DirectRead(LowLevelTransaction tx, long id, out int size)
+        {
+            var posInPage = (int)(id % tx.DataPager.PageSize);
+            var pageNumberInSection = (id - posInPage) / tx.DataPager.PageSize;
+            var pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
-                throw new InvalidDataException($"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
+                throw new InvalidDataException(
+                    $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
-            var sizes = (short*) ((byte*) pageHeader + posInPage);
+            var sizes = (short*)((byte*)pageHeader + posInPage);
             if (sizes[1] < 0)
-                throw new InvalidDataException($"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
+                throw new InvalidDataException(
+                    $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
             if (sizes[0] < sizes[1])
-                throw new InvalidDataException($"Asked to load a value that where the allocated size is smaller than the used size: {id} from page {pageHeader->PageNumber}");
+                throw new InvalidDataException(
+                    $"Asked to load a value that where the allocated size is smaller than the used size: {id} from page {pageHeader->PageNumber}");
 
             size = sizes[1];
-            return ((byte*) pageHeader + posInPage + sizeof (short) /*allocated*/+ sizeof (short) /*used*/);
+            return ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
         }
 
         public long GetSectionPageNumber(long id)
@@ -194,8 +202,8 @@ namespace Voron.Data.RawData
 
         public double Free(long id)
         {
-            var posInPage = (int) (id%_pageSize);
-            var pageNumberInSection = (id - posInPage)/_pageSize;
+            var posInPage = (int)(id % _pageSize);
+            var pageNumberInSection = (id - posInPage) / _pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
 
             if (Contains(id) == false)
@@ -209,7 +217,7 @@ namespace Voron.Data.RawData
             if (posInPage >= pageHeader->NextAllocation)
                 throw new InvalidDataException($"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
 
-            var sizes = (short*) ((byte*) pageHeader + posInPage);
+            var sizes = (short*)((byte*)pageHeader + posInPage);
             if (sizes[1] < 0)
                 throw new InvalidDataException($"Asked to free a value that was already freed: {id} from page {pageHeader->PageNumber}");
 
@@ -218,9 +226,9 @@ namespace Voron.Data.RawData
 
             EnsureHeaderModified();
             _sectionHeader->NumberOfEntries--;
-            var sizeFreed = sizes[0] + (sizeof (short)*2);
+            var sizeFreed = sizes[0] + (sizeof(short) * 2);
             _sectionHeader->AllocatedSize -= sizeFreed;
-            AvailableSpace[pageHeader->PageNumberInSection] += (ushort) sizeFreed;
+            AvailableSpace[pageHeader->PageNumberInSection] += (ushort)sizeFreed;
 
             return Density;
         }
@@ -243,7 +251,7 @@ namespace Voron.Data.RawData
             if (_dirtyPages.Add(_sectionHeader->PageNumber) == false)
                 return;
             var page = _tx.ModifyPage(_sectionHeader->PageNumber);
-            _sectionHeader = (RawDataSmallSectionPageHeader*) page.Pointer;
+            _sectionHeader = (RawDataSmallSectionPageHeader*)page.Pointer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -252,13 +260,19 @@ namespace Voron.Data.RawData
             if (_dirtyPages.Add(pageHeader->PageNumber) == false)
                 return pageHeader;
             var page = _tx.ModifyPage(pageHeader->PageNumber);
-            return (RawDataSmallPageHeader*) page.Pointer;
+            return (RawDataSmallPageHeader*)page.Pointer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected RawDataSmallPageHeader* PageHeaderFor(long pageNumber)
         {
-            return (RawDataSmallPageHeader*) (_tx.GetPage(pageNumber).Pointer);
+            return PageHeaderFor(_tx, pageNumber);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static RawDataSmallPageHeader* PageHeaderFor(LowLevelTransaction tx, long pageNumber)
+        {
+            return (RawDataSmallPageHeader*)(tx.GetPage(pageNumber).Pointer);
         }
 
         protected virtual void OnDataMoved(long previousid, long newid, byte* data, int size)

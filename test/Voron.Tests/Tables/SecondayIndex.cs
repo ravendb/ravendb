@@ -14,14 +14,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
 
@@ -30,10 +30,10 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekTo("Etags", etag)
+                var reader = docs.SeekTo(DocsSchema.Indexes["Etags"], etag)
                                  .First();
 
                 Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
@@ -51,14 +51,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
                 tx.Commit();
@@ -66,7 +66,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -75,9 +75,9 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
-                var reader = docs.SeekTo("Etags", new Slice(EndianBitConverter.Big.GetBytes(1)));
+                var reader = docs.SeekTo(DocsSchema.Indexes["Etags"], new Slice(EndianBitConverter.Big.GetBytes(1)));
                 Assert.Empty(reader);
             }
         }
@@ -88,14 +88,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
 
@@ -104,7 +104,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 SetHelper(docs, "users/1", "Users", 2L, "{'Name': 'Eini'}");
 
@@ -113,10 +113,10 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekTo("Etags", etag)
+                var reader = docs.SeekTo(DocsSchema.Indexes["Etags"], etag)
                                  .First();
 
                 Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());

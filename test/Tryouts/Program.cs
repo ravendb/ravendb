@@ -9,6 +9,7 @@ using System.Text;
 using BlittableTests;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
+using BlittableTests.Documents;
 using BlittableTests.Routing;
 using NewBlittable.Tests.BlittableJsonWriterTests;
 using Newtonsoft.Json;
@@ -26,7 +27,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new TrieTests().CanQueryTrie();
+            new DocumentsCrud().PutAndGetDocumentById("users/1");
             return;
             // var trie = Trie<int>.Build(new[]
             //{

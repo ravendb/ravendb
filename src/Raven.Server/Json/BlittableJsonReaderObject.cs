@@ -201,6 +201,30 @@ namespace Raven.Server.Json
             return obj != null;
         }
 
+        public bool TryGet(string name, out string str)
+        {
+            object result;
+            if (TryGetMember(name, out result) == false)
+            {
+                str = null;
+                return false;
+            }
+            var lazyCompressedStringValue = result as LazyCompressedStringValue;
+            if (lazyCompressedStringValue != null)
+            {
+                str = lazyCompressedStringValue;
+                return true;
+            }
+            var lazyStringValue = result as LazyStringValue;
+            if (lazyStringValue != null)
+            {
+                str = lazyStringValue;
+                return true;
+            }
+            str = null;
+            return false;
+        }
+
         public bool TryGetMember(string name, out object result)
         {
             // try get value from cache, works only with Blittable types, other objects are not stored for now

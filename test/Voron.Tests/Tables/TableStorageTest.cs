@@ -15,7 +15,7 @@ namespace Voron.Tests.Tables
         {
             base.Configure(options);
 
-            DocsSchema = new TableSchema("docs")
+            DocsSchema = new TableSchema()
                 .DefineIndex("Etags", new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 2,

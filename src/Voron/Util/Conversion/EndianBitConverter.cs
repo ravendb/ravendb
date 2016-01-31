@@ -178,6 +178,15 @@ namespace Voron.Util.Conversion
         {
             return CheckedFromBytes(value, startIndex, 8);
         }
+        /// <summary>
+        /// Returns a 64-bit signed integer converted from eight bytes at a specified position in a byte array.
+        /// </summary>
+        /// <param name="value">An array of bytes.</param>
+        /// <returns>A 64-bit signed integer formed by eight bytes beginning at startIndex.</returns>
+        public unsafe long ToInt64(byte* value)
+        {
+            return FromBytes(value,  8);
+        }
 
         /// <summary>
         /// Returns a 16-bit unsigned integer converted from two bytes at a specified position in a byte array.
@@ -257,6 +266,8 @@ namespace Voron.Util.Conversion
         /// <param name="bytesToConvert">The number of bytes to use in the conversion</param>
         /// <returns>The converted number</returns>
         protected abstract long FromBytes(byte[] value, int startIndex, int bytesToConvert);
+
+        protected abstract unsafe long FromBytes(byte* value, int bytesToConvert);
         #endregion
 
         #region ToString conversions

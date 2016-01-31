@@ -18,14 +18,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 SetHelper(docs, "users/1",  "Users", 1L, "{'Name': 'Oren'}");
 
@@ -34,7 +34,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 var handle = docs.ReadByKey("users/1");
 
                 int size;
@@ -49,14 +49,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 1L, "{'Name': 'Oren'}");
 
                 tx.Commit();
@@ -64,7 +64,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1", "Users", 2L, "{'Name': 'Eini'}");
 
                 tx.Commit();
@@ -72,7 +72,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 var handle = docs.ReadByKey("users/1");
 
                 int size;
@@ -88,14 +88,14 @@ namespace Voron.Tests.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx);
+                DocsSchema.Create(tx, "docs");
 
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
                 SetHelper(docs, "users/1",  "Users", 1L, "{'Name': 'Oren'}");
 
 
@@ -104,7 +104,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.WriteTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 docs.DeleteByKey("users/1");
 
@@ -113,7 +113,7 @@ namespace Voron.Tests.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var docs = new Table(DocsSchema, tx);
+                var docs = new Table(DocsSchema, "docs", tx);
 
                 Assert.Null(docs.ReadByKey("users/1"));
             }
