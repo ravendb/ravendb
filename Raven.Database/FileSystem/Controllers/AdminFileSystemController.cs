@@ -320,6 +320,10 @@ namespace Raven.Database.FileSystem.Controllers
                 }
             }
 
+            HttpResponseMessage message;
+            if (!HasPermissions(backupDestinationDirectory, out message))
+                return message;
+
             bool enableIncrementalBackup;
             if (incrementalBackup &&
                 transactionalStorage is Storage.Esent.TransactionalStorage &&
