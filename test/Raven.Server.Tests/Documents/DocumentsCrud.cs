@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
+using Raven.Abstractions.Exceptions;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -125,6 +126,65 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
+        public void CanQueryByPrefix()
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/10", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/10", null, doc);
+                }
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Ayende",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/02", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/02", null, doc);
+                }
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Arava",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Dogs"
+                    }
+                }, "pets/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "pets/1", null, doc);
+                }
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                var documents = _documentsStorage.GetDocumentsStartingWith(ctx, "users/").ToList();
+                Assert.Equal(2, documents.Count);
+                string name;
+               
+                documents[0].Data.TryGet("Name", out name);
+                Assert.Equal("Ayende", name);
+                documents[1].Data.TryGet("Name", out name);
+                Assert.Equal("Oren", name);
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
         public void CanQueryByCollectionEtag()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
@@ -185,9 +245,75 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void WillVerifyEtags()
+        public void WillVerifyEtags_New()
         {
-            Assert.False(true);
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+
+                    Assert.Throws<ConcurrencyException>(() => _documentsStorage.Put(ctx, "users/1", 1, doc));
+                }
+
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
+        public void WillVerifyEtags_Existing()
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/1", null, doc);
+                    Assert.Throws<ConcurrencyException>(() => _documentsStorage.Put(ctx, "users/1", 3, doc));
+                }
+
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
+        public void WillVerifyEtags_ShouldBeNew()
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/1", null, doc);
+                    Assert.Throws<ConcurrencyException>(() => _documentsStorage.Put(ctx, "users/1", 0, doc));
+                }
+
+                ctx.Transaction.Commit();
+            }
         }
 
         public void Dispose()

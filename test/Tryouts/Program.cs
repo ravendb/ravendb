@@ -1,25 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using BlittableTests;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
 using BlittableTests.Documents;
-using BlittableTests.Routing;
-using NewBlittable.Tests.BlittableJsonWriterTests;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Sparrow;
 using Voron;
-using Voron.Tests.Tables;
-using Voron.Util;
+using Voron.Tests.Bugs;
 
 namespace Tryouts
 {
@@ -27,7 +14,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new DocumentsCrud().CanQueryByCollectionEtag();
+            new DocumentsCrud().CanQueryByPrefix();
             return;
             // var trie = Trie<int>.Build(new[]
             //{

@@ -127,11 +127,7 @@ namespace Raven.Server.Json
         {
             if (_disposed)
                 return;
-            foreach (var disposable in _disposables)
-            {
-                disposable.Dispose();
-            }
-            _disposables.Clear();
+            Reset();
             Lz4.Dispose();
             if (_tempBuffer != null)
                 Pool.Return(_tempBuffer);
@@ -313,6 +309,8 @@ namespace Raven.Server.Json
                 disposable.Dispose();
             }
             _disposables.Clear();
+
+            Transaction?.Dispose();
         }
     }
 }
