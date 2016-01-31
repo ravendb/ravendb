@@ -14,7 +14,7 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            new DocumentsCrud().WillVerifyEtags_OnDeleteNotThere();
+            new DocumentsCrud().EtagsArePersistedWithDeletes();
             return;
             // var trie = Trie<int>.Build(new[]
             //{
