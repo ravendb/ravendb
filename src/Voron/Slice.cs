@@ -337,7 +337,7 @@ namespace Voron
 	    public ValueReader CreateReader()
 	    {
             if(Array != null)
-                return new ValueReader(Array, Size);
+                throw new InvalidOperationException("Cannot create value reader from byte[]");
 
 	        return new ValueReader(Pointer, Size);
 	    }

@@ -13,53 +13,18 @@ namespace Voron
         [ThreadStatic]
         private static byte[] tmpBuf;
 
-        [ThreadStatic]
-        private static byte[] smallTempBuffer;
-
         private int _pos;
-        private readonly byte[] _buffer;
 
         private readonly int _len;
         private readonly byte* _val;
 
-        public byte* Base { get { return _val; } }
-
-        public ValueReader(Stream stream)
-        {
-            long position = stream.Position;
-
-            _len = (int)(stream.Length - stream.Position);
-            _buffer = new byte[_len];
-
-            int pos = 0;
-            while (true)
-            {
-                int read = stream.Read(_buffer, pos, _buffer.Length - pos);
-                if (read == 0)
-                    break;
-                pos += read;
-            }
-            stream.Position = position;
-
-            _pos = 0;
-            _val = null;
-        }
-
-        public ValueReader(byte[] array, int len)
-        {
-            if (array == null) throw new ArgumentNullException(nameof(array));
-            _buffer = array;
-            _len = len;
-            _pos = 0;
-            _val = null;
-        }
+        public byte* Base => _val;
 
         public ValueReader(byte* val, int len)
         {
             _val = val;
             _len = len;
             _pos = 0;
-            _buffer = null;
         }
 
         public int Length
@@ -67,10 +32,7 @@ namespace Voron
             get { return _len; }
         }
 
-        public bool EndOfData
-        {
-            get { return _len == _pos; }
-        }
+        public bool EndOfData => _len == _pos;
 
         public void Reset()
         {
@@ -79,9 +41,6 @@ namespace Voron
 
         public Stream AsStream()
         {
-            if (_val == null)
-                return new MemoryStream(_buffer, false);
-
             return new UnmanagedMemoryStream(_val, _len, _len, FileAccess.Read);
         }
 
@@ -101,16 +60,7 @@ namespace Voron
             count = Math.Min(count, _len - _pos);
             if (count <= 0)
                 return 0;
-
-            if (_val == null)
-            {
-                fixed (byte* b = _buffer)
-                    Memory.Copy(buffer, b + _pos, count);
-            }
-            else
-            {
-                Memory.Copy(buffer, _val + _pos, count);
-            }
+            Memory.Copy(buffer, _val + _pos, count);
             _pos += count;
 
             return count;
@@ -118,95 +68,46 @@ namespace Voron
 
         public int ReadLittleEndianInt32()
         {
-            if (_len - _pos < sizeof(int))
+            if (_len - _pos < sizeof (int))
                 throw new EndOfStreamException();
+            var val = *(int*) (_val + _pos);
 
-            EnsureSmallTempBuffer();
+            _pos += sizeof (int);
 
-            fixed (byte* tmpBuffer = smallTempBuffer)
-            {
-                if (_val == null)
-                {
-                    fixed (byte* b = _buffer)
-                    {
-                        *(int*)tmpBuffer = *(int*)(b + _pos);
-                    }
-                }
-                else
-                {
-                    *(int*)tmpBuffer = *(int*)(_val + _pos);
-                }
+            if (!BitConverter.IsLittleEndian)
+                return SwapBitShift(val);
 
-                _pos += sizeof(int);
-
-                if (!BitConverter.IsLittleEndian)
-                    return SwapBitShift(*(int*)tmpBuffer);
-
-                return *(int*)tmpBuffer;
-            }
-
-
+            return val;
         }
 
 
         public long ReadLittleEndianInt64()
         {
-            if (_len - _pos < sizeof(long))
+            if (_len - _pos < sizeof (long))
                 throw new EndOfStreamException();
+            var val = *(long*) (_val + _pos);
 
-            EnsureSmallTempBuffer();
+            _pos += sizeof (long);
 
-            fixed (byte* tmpBuffer = smallTempBuffer)
-            {
-                if (_val == null)
-                {
-                    fixed (byte* b = _buffer)
-                    {
-                        *(long*)tmpBuffer = *(long*)(b + _pos);
-                    }
-                }
-                else
-                {
-                    *(long*)tmpBuffer = *(long*)(_val + _pos);
-                }
+            if (!BitConverter.IsLittleEndian)
+                return SwapBitShift(val);
 
-                _pos += sizeof(long);
-
-                if (!BitConverter.IsLittleEndian)
-                    return SwapBitShift(*(long*)tmpBuffer);
-
-                return *(long*)tmpBuffer;
-            }
+            return val;
         }
 
         public int ReadBigEndianInt32()
         {
-            if (_len - _pos < sizeof(int))
+            if (_len - _pos < sizeof (int))
                 throw new EndOfStreamException();
 
-            EnsureSmallTempBuffer();
+            int val = *(int*) (_val + _pos);
 
-            fixed (byte* tmpBuffer = smallTempBuffer)
-            {
-                if (_val == null)
-                {
-                    fixed (byte* b = _buffer)
-                    {
-                        *(int*)tmpBuffer = *(int*)(b + _pos);
-                    }
-                }
-                else
-                {
-                    *(int*)tmpBuffer = *(int*)(_val + _pos);
-                }
+            _pos += sizeof (int);
 
-                _pos += sizeof(int);
+            if (BitConverter.IsLittleEndian)
+                return SwapBitShift(val);
 
-                if (BitConverter.IsLittleEndian)
-                    return SwapBitShift(*(int*)tmpBuffer);
-
-                return *(int*)tmpBuffer;
-            }
+            return val;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -246,30 +147,15 @@ namespace Voron
 
         public long ReadBigEndianInt64()
         {
-            if (_len - _pos < sizeof(long))
+            if (_len - _pos < sizeof (long))
                 throw new EndOfStreamException();
+            
+            var val = *(long*) (_val + _pos);
 
-            EnsureSmallTempBuffer();
+            if (BitConverter.IsLittleEndian)
+                return SwapBitShift(val);
 
-            fixed (byte* tmpBuffer = smallTempBuffer)
-            {
-                if (_val == null)
-                {
-                    fixed (byte* b = _buffer)
-                    {
-                        *(long*)tmpBuffer = *(long*)(b + _pos);
-                    }
-                }
-                else
-                {
-                    *(long*)tmpBuffer = *(long*)(_val + _pos);
-                }
-
-                if (BitConverter.IsLittleEndian)
-                    return SwapBitShift(*(long*)tmpBuffer);
-
-                return *(long*)tmpBuffer;
-            }
+            return val;
         }
 
 
@@ -280,13 +166,6 @@ namespace Voron
                 return tmpBuf;
 
             return tmpBuf = new byte[Bits.NextPowerOf2(size)];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureSmallTempBuffer()
-        {
-            if (smallTempBuffer == null)
-                smallTempBuffer = new byte[sizeof(long)];
         }
 
         public string ReadString(int length)
@@ -342,29 +221,6 @@ namespace Voron
 
         private int CompareData(ValueReader other, int len)
         {
-            if (_buffer != null)
-            {
-                fixed (byte* a = _buffer)
-                {
-                    if (other._buffer != null)
-                    {
-                        fixed (byte* b = other._buffer)
-                        {
-                            return Memory.Compare(a, b, len);
-                        }
-                    }
-                    return Memory.Compare(a, other._val, len);
-                }
-            }
-
-            if (other._buffer != null)
-            {
-                fixed (byte* b = other._buffer)
-                {
-                    return Memory.Compare(_val, b, len);
-                }
-            }
-
             return Memory.Compare(_val, other._val, len);
         }
 
@@ -373,9 +229,6 @@ namespace Voron
             if (_len >= ushort.MaxValue)
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
 
-            if (_buffer != null)
-                return new Slice(_buffer, (ushort)_len);
-
             return new Slice(_val, (ushort)_len);
         }
 
@@ -383,9 +236,6 @@ namespace Voron
         {
             if (_len >= ushort.MaxValue)
                 throw new InvalidOperationException("Cannot convert to slice, len is too big: " + _len);
-
-            if (_buffer != null)
-                return new Slice(_buffer, (ushort)(_len - removeFromEnd));
 
             return new Slice(_val, (ushort)(_len - removeFromEnd));
         }
