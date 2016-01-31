@@ -102,6 +102,7 @@ namespace Raven.Server.Documents
                 using (var tx = Environment.WriteTransaction())
                 {
                     tx.CreateTree("Docs");
+                    tx.CreateTree("Identities");
                     ReadLastEtag(tx);
 
                     tx.Commit();
@@ -358,6 +359,12 @@ namespace Raven.Server.Documents
                 collectionName = "<no-collection>";
             }
             return collectionName;
+        }
+
+        public long IdentityFor(RavenOperationContext ctx, string key)
+        {
+            var identities = ctx.Transaction.ReadTree("Identities");
+            return identities.Increment(key, 1);
         }
     }
 }

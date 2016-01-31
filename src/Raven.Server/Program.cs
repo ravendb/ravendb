@@ -115,6 +115,7 @@ namespace Raven.Server
                         return -3;
                     }
 
+                    Console.WriteLine("Listening to : " + config.Get<string>("server.urls"));
                     Console.WriteLine("Server started, listening to requests...");
 
                     //TODO: Move the command line options to here

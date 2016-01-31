@@ -18,11 +18,11 @@ using RequestHandler = Raven.Server.Web.RequestHandler;
 
 namespace Raven.Server.Documents
 {
-    public class GetDocumentHandler : RequestHandler
+    public class DocumentsHandler : RequestHandler
     {
         private readonly RequestHandlerContext _context;
 
-        public GetDocumentHandler(RequestHandlerContext context)
+        public DocumentsHandler(RequestHandlerContext context)
         {
             _context = context;
         }
@@ -38,6 +38,8 @@ namespace Raven.Server.Documents
                     throw new ArgumentException("The 'id' query string parameter is mandatory");
 
                 var id = ids[0];
+                if (string.IsNullOrWhiteSpace(id))
+                    throw new ArgumentException("The 'id' query string parameter must have a non empty value");
 
                 var doc = context.ReadForDisk(_context.HttpContext.Request.Body, id);
 
@@ -53,6 +55,10 @@ namespace Raven.Server.Documents
                 }
 
                 context.Transaction = context.Environment.WriteTransaction();
+                if (id[id.Length - 1] == '/')
+                {
+                    id = id + _context.DocumentStore.IdentityFor(context, id);
+                }
                 _context.DocumentStore.Put(context, id, etag, doc);
                 context.Transaction.Commit();
             }
