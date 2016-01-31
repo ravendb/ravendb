@@ -64,6 +64,46 @@ namespace BlittableTests.Documents
             }
         }
 
+        [Theory]
+        [InlineData("users/1")]
+        [InlineData("USERs/1")]
+        [InlineData("לכובע שלי שלוש פינות")]
+        public void CanDelete(string key)
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = key
+                }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, key, null, doc);
+                }
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                _documentsStorage.Delete(ctx, key, null);
+                
+                ctx.Transaction.Commit();
+            }
+
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                var document = _documentsStorage.Get(ctx, key);
+                Assert.Null(document);
+
+                ctx.Transaction.Commit();
+            }
+        }
+
         [Fact]
         public void CanQueryByGlobalEtag()
         {
@@ -287,6 +327,43 @@ namespace BlittableTests.Documents
                     _documentsStorage.Put(ctx, "users/1", null, doc);
                     Assert.Throws<ConcurrencyException>(() => _documentsStorage.Put(ctx, "users/1", 3, doc));
                 }
+
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
+        public void WillVerifyEtags_OnDeleteExisting()
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["Raven-Entity-Name"] = "Users"
+                    }
+                }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    _documentsStorage.Put(ctx, "users/1", null, doc);
+                    Assert.Throws<ConcurrencyException>(() => _documentsStorage.Delete(ctx, "users/1", 3));
+                }
+
+                ctx.Transaction.Commit();
+            }
+        }
+
+        [Fact]
+        public void WillVerifyEtags_OnDeleteNotThere()
+        {
+            using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
+            {
+                ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
+
+                Assert.Throws<ConcurrencyException>(() => _documentsStorage.Delete(ctx, "users/1", 3));
 
                 ctx.Transaction.Commit();
             }

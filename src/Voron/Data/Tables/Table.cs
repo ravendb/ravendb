@@ -219,7 +219,7 @@ namespace Voron.Data.Tables
             Insert(builder);
         }
 
-        private void Delete(long id)
+        public void Delete(long id)
         {
             int size;
             var ptr = DirectRead(id, out size);

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Exceptions;
@@ -75,6 +74,8 @@ namespace Raven.Server.Documents
                 _env = new StorageEnvironment(options);
                 using (var tx = _env.WriteTransaction())
                 {
+                    tx.CreateTree("Docs");
+
                     tx.Commit();
                 }
             }
@@ -210,7 +211,10 @@ namespace Raven.Server.Documents
 
         private static Document TableValueToDocument(RavenOperationContext context, TableValueReader tvr)
         {
-            var result = new Document();
+            var result = new Document
+            {
+                StorageId = tvr.Id
+            };
             int size;
             var ptr = tvr.Read(2, out size);
             result.Key = Encoding.UTF8.GetString(ptr, size);
@@ -218,6 +222,27 @@ namespace Raven.Server.Documents
             result.Etag = IPAddress.NetworkToHostOrder(*(long*) ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
             return result;
+        }
+
+        public void Delete(RavenOperationContext context, string key, long? expectedEtag)
+        {
+            var doc = Get(context, key);
+            if (doc == null)
+            {
+                if (expectedEtag != null)
+                    throw new ConcurrencyException(
+                        $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                return;
+            }
+            if (expectedEtag != null && doc.Etag != expectedEtag)
+            {
+                throw new ConcurrencyException(
+                  $"Document {key} has etag {doc.Etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+            }
+
+            var collectionName = GetCollectionName(doc.Data);
+            var table = new Table(_docsSchema, collectionName, context.Transaction);
+            table.Delete(doc.StorageId);
         }
 
         public long Put(RavenOperationContext context, string key, long? expectedEtag, BlittableJsonReaderObject document)
@@ -228,13 +253,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
 
-            BlittableJsonReaderObject metadata;
-            string collectionName;
-            if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
-            {
-                collectionName = "<no-collection>";
-            }
+            var collectionName = GetCollectionName(document);
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -276,6 +295,18 @@ namespace Raven.Server.Documents
                 table.Update(oldValue.Id, tbv);
             }
             return -1;
+        }
+
+        private static string GetCollectionName(BlittableJsonReaderObject document)
+        {
+            BlittableJsonReaderObject metadata;
+            string collectionName;
+            if (document.TryGet(Constants.Metadata, out metadata) == false ||
+                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
+            {
+                collectionName = "<no-collection>";
+            }
+            return collectionName;
         }
 
         public StorageEnvironment Environment => _env;
