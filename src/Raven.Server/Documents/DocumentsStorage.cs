@@ -11,7 +11,6 @@ using Voron;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Voron.Util.Conversion;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents

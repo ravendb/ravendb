@@ -149,7 +149,7 @@ namespace Raven.Server.Json
             _disposed = true;
         }
 
-        public LazyStringValue GetComparerFor(string field)
+        public LazyStringValue GetLazyStringFor(string field)
         {
             LazyStringValue value;
             if (_fieldNames == null)
@@ -159,13 +159,14 @@ namespace Raven.Server.Json
                 return value;
 
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
-            var memory = GetMemory(maxByteCount);
+            var memory = GetMemory(maxByteCount+1);
             try
             {
                 fixed (char* pField = field)
                 {
                     var address = (byte*)memory.Address;
                     var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
+                    address[actualSize] = 0;// TODO: handle escape positions
                     _fieldNames[field] = value = new LazyStringValue(field, address, actualSize, this)
                     {
                         AllocatedMemoryData = memory

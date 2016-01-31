@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Hosting.Internal;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Abstractions.Logging;
+using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -70,11 +73,18 @@ namespace Raven.Server
                 IHostingEngine application;
                 try
                 {
+                    var configurationRoot = new ConfigurationBuilder()
+                        .Add(new MemoryConfigurationProvider(new Dictionary<string,string>
+                        {
+                            ["run.in.memory"] = "true"
+                        }));
+                    var documentsStorage = new DocumentsStorage("test", configurationRoot.Build());
+                    documentsStorage.Initialize();
                     application = new WebHostBuilder(config)
                         .UseStartup<Program>()
                         .UseServer("Microsoft.AspNet.Server.Kestrel")
                         // ReSharper disable once AccessToDisposedClosure
-                        .UseServices(services => services.AddInstance(serverStore))
+                        .UseServices(services => services.AddInstance(serverStore).AddInstance(documentsStorage))
                         .Build();
                 }
                 catch (Exception e)

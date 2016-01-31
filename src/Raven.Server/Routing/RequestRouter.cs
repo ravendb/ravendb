@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Raven.Client.Document;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.Web;
 
@@ -38,10 +40,13 @@ namespace Raven.Server.Routing
                 return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
             }
 
+            var serverStore = context.ApplicationServices.GetRequiredService<ServerStore>();
             var reqCtx = new RequestHandlerContext
             {
                 HttpContext = context,
-                ServerStore = context.ApplicationServices.GetRequiredService<ServerStore>(),
+                ServerStore = serverStore,
+                DocumentStore = context.ApplicationServices.GetRequiredService<DocumentsStorage>(),
+                OperationContextPool = serverStore.ContextPool,
                 RouteMatch = tryMatch.Match,
             };
             return handler(reqCtx);

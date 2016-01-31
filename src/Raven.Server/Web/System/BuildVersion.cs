@@ -19,7 +19,7 @@ namespace Raven.Server.Web.System
 
         private static byte[] _versionBuffer;
 
-        private unsafe static byte[] GetVersionBuffer(ServerStore serverStore)
+        private static byte[] GetVersionBuffer(ServerStore serverStore)
         {
             if (_versionBuffer != null)
                 return _versionBuffer;
@@ -29,7 +29,7 @@ namespace Raven.Server.Web.System
                     return _versionBuffer;
 
                 RavenOperationContext context;
-                using (serverStore.AllocateRequestContext(out context))
+                using (serverStore.ContextPool.AllocateOperationContext(out context))
                 {
                     var result = new DynamicJsonValue
                     {

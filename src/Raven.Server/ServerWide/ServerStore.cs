@@ -26,7 +26,6 @@ namespace Raven.Server.ServerWide
         private readonly IConfigurationRoot _config;
 
         private UnmanagedBuffersPool _pool;
-        private ConcurrentStack<RavenOperationContext> _contextPool;
 
 
         public ServerStore(IConfigurationRoot config)
@@ -34,6 +33,8 @@ namespace Raven.Server.ServerWide
             if (config == null) throw new ArgumentNullException(nameof(config));
             _config = config;
         }
+
+        public ContextPool ContextPool;
 
         public void Initialize()
         {
@@ -80,42 +81,8 @@ namespace Raven.Server.ServerWide
             }
 
             _pool = new UnmanagedBuffersPool("ServerStore");// 128MB should be more than big enough for the server store
-            _contextPool = new ConcurrentStack<RavenOperationContext>();
+            ContextPool = new ContextPool(_pool, _env);
         }
-
-        public IDisposable AllocateRequestContext(out RavenOperationContext context)
-        {
-            if (_contextPool.TryPop(out context) == false)
-                context = new RavenOperationContext(_pool)
-                {
-                    Environment = _env
-                };
-            
-            return new ReturnRequestContext
-            {
-                Store = this,
-                Context = context
-            };
-        }
-
-        private class ReturnRequestContext : IDisposable
-        {
-            public RavenOperationContext Context;
-            public ServerStore Store;
-            public void Dispose()
-            {
-                Context.Transaction?.Dispose();
-                Context.Reset();
-                //TODO: this probably should have low memory handle
-                if (Store._contextPool.Count > 25) // don't keep too much of them around
-                {
-                    Context.Dispose();
-                    return;
-                }
-                Store._contextPool.Push(Context);
-            }
-        }
-        
 
         public BlittableJsonReaderObject Read(RavenOperationContext ctx, string id)
         {
@@ -143,14 +110,8 @@ namespace Raven.Server.ServerWide
         {
             shutdownNotification.Cancel();
 
-            if (_contextPool != null)
-            {
-                RavenOperationContext result;
-                while (_contextPool.TryPop(out result))
-                {
-                    result.Dispose();
-                }
-            }
+
+            ContextPool?.Dispose();
             _pool?.Dispose();
             _env?.Dispose();
         }

@@ -27,7 +27,7 @@ namespace Raven.Server.Web.System
         public Task Get()
         {
             RavenOperationContext context;
-            using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
+            using (_requestHandlerContext.OperationContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
@@ -71,7 +71,7 @@ namespace Raven.Server.Web.System
             }
 
             RavenOperationContext context;
-            using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
+            using (_requestHandlerContext.OperationContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
                 var dbId = "db/" + id;
