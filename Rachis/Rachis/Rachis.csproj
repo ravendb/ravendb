@@ -82,6 +82,7 @@
     <Compile Include="Messages\CanInstallSnapshotResponse.cs" />
     <Compile Include="Interfaces\ICommandSerializer.cs" />
     <Compile Include="Messages\InstallSnapshotResponse.cs" />
+    <Compile Include="RaftEngineStatistics.cs" />
     <Compile Include="Transport\HttpRaftRequest.cs" />
     <Compile Include="Transport\HttpTransport.cs" />
     <Compile Include="Transport\HttpTransportBus.cs" />

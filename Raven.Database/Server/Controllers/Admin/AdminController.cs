@@ -78,6 +78,13 @@ namespace Raven.Database.Server.Controllers.Admin
             return message;
         }
 
+        [HttpGet]
+        [RavenRoute("admin/cluster-statistics")]
+        public HttpResponseMessage GetClusterStatistics()
+        {
+            return GetMessageWithObject(ClusterManager.Engine.EngineStatistics);
+        }
+
         [HttpPost]
         [RavenRoute("admin/serverSmuggling")]
         public async Task<HttpResponseMessage> ServerSmuggling()

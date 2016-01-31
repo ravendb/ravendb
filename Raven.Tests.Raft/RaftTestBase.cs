@@ -87,7 +87,8 @@ namespace Raven.Tests.Raft
             var random = new Random();
             var leader = nodes[random.Next(0, numberOfNodes - 1)];
 
-            Console.WriteLine("Leader: " + leader.Options.ClusterManager.Value.Engine.Options.SelfConnection.Uri);
+            Console.WriteLine($"Leader: {leader.Options.ClusterManager.Value.Engine.Options.SelfConnection.Uri} " +
+                              $"{leader.Options.ClusterManager.Value.Engine.Name}");
 
             leader.Options.ClusterManager.Value.InitializeTopology(forceCandidateState:true);
 
