@@ -340,7 +340,7 @@ namespace Raven.Server.Documents
             {
                 int size;
                 var pOldEtag = oldValue.Read(1, out size);
-                var oldEtag = EndianBitConverter.Big.ToInt64(pOldEtag);
+                var oldEtag = IPAddress.NetworkToHostOrder(*(long*)pOldEtag);
                 if (expectedEtag != null && oldEtag != expectedEtag)
                     throw new ConcurrencyException(
                         $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
