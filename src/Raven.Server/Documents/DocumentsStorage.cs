@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents
 {
     public unsafe class DocumentsStorage : IDisposable
     {
-        private readonly IConfigurationRoot _config;
+        private readonly RavenConfiguration _configuration;
         private readonly TableSchema _docsSchema = new TableSchema();
         private readonly ILog _log;
         private readonly string _name;
@@ -34,11 +35,10 @@ namespace Raven.Server.Documents
         public ContextPool ContextPool;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
 
-        public DocumentsStorage(string name, IConfigurationRoot config)
+        public DocumentsStorage(string name, RavenConfiguration configuration)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
             _name = name;
-            _config = config;
+            _configuration = configuration;
             _log = LogManager.GetLogger(typeof (DocumentsStorage).FullName + "." + _name);
 
             // The documents schema is as follows
@@ -76,18 +76,13 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            var runInMemory = _config.Get<bool>("run.in.memory");
-            if (runInMemory == false)
-            {
-                DataDirectory = _config.Get<string>("system.path").ToFullPath();
-            }
             if (_log.IsDebugEnabled)
             {
-                _log.Debug("Starting to open document storage for {0}", (runInMemory ? "<memory>" : DataDirectory));
+                _log.Debug("Starting to open document storage for {0}", _configuration.Core.RunInMemory ? "<memory>" : _configuration.Core.DataDirectory);
             }
-            var options = runInMemory
+            var options = _configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(DataDirectory);
+                : StorageEnvironmentOptions.ForPath(_configuration.Core.DataDirectory);
 
             try
             {

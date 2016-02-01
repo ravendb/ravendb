@@ -10,6 +10,7 @@ using Microsoft.AspNet.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Document;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.Web;
 
@@ -24,39 +25,41 @@ namespace Raven.Server.Routing
             _trie = Trie<RouteInformation>.Build(routes);
         }
 
-        public Task HandlePath(HttpContext context)
+        public async Task HandlePath(HttpContext context)
         {
             var tryMatch = _trie.TryMatch(context.Request.Path);
             if (tryMatch.Match.Success == false)
             {
                 context.Response.StatusCode = 400;
-                return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path);
+                await context.Response.WriteAsync("There is no handler for path: " + context.Request.Path);
+                return;
             }
 
             var handler = tryMatch.Value.CreateHandler(context);
             if (handler == null)
             {
                 context.Response.StatusCode = 400;
-                return context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
+                await context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
+                return;
             }
 
             var serverStore = context.ApplicationServices.GetRequiredService<ServerStore>();
-            var documentsStorage = context.ApplicationServices.GetRequiredService<DocumentsStorage>();
             var reqCtx = new RequestHandlerContext
             {
                 HttpContext = context,
                 ServerStore = serverStore,
-                DocumentStore = documentsStorage,
-                OperationContextPool = documentsStorage.ContextPool,
                 RouteMatch = tryMatch.Match,
             };
 
-            /*if (reqCtx.RouteMatch.Url.StartsWith("/databases/#1#"))
+            if (reqCtx.RouteMatch.Url.StartsWith("/databases/*/"))
             {
-              // Set reqCtr.Database here   
-            }*/
+                var databaseName = reqCtx.RouteMatch.Url.Substring(reqCtx.RouteMatch.CaptureStart, reqCtx.RouteMatch.CaptureLength);
+                RavenOperationContext serverContext;
+                using (serverStore.ContextPool.AllocateOperationContext(out serverContext))
+                    reqCtx.Database = await reqCtx.ServerStore.DatabasesLandlord.GetResourceInternal(databaseName, serverContext);
+            }
 
-            return handler(reqCtx);
+            await handler(reqCtx);
         }
     }
 }

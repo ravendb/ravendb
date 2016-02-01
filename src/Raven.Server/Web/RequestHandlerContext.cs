@@ -11,7 +11,7 @@ namespace Raven.Server.Web
         public HttpContext HttpContext;
         public ServerStore ServerStore;
         public RouteMatch RouteMatch;
-        public DocumentsStorage DocumentStore;
-        public ContextPool OperationContextPool;
+
+        public DocumentDatabase Database;
     }
 }

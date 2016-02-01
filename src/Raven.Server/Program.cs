@@ -61,7 +61,6 @@ namespace Raven.Server
                 .AddJsonFile("settings.json", optional: true)
                 .AddEnvironmentVariables(prefix: "RAVEN_");
 
-
             if (args != null)
             {
                 configBuilder.AddCommandLine(args);
@@ -94,19 +93,10 @@ namespace Raven.Server
                 IHostingEngine application;
                 try
                 {
-                    var configurationRoot = new ConfigurationBuilder()
-                        .Add(new MemoryConfigurationProvider(new Dictionary<string, string>
-                        {
-                            //["system.path"] = @"C:\Deployment\Databsaes\northwind"
-                            ["run.in.memory"] = "true"
-                        }));
-                    var documentsStorage = new DocumentsStorage("test", configurationRoot.Build());
-                    documentsStorage.Initialize();
                     application = new WebHostBuilder(config)
                         .UseStartup<Program>()
                         .UseServer("Microsoft.AspNet.Server.Kestrel")
                         // ReSharper disable once AccessToDisposedClosure
-                        .UseServices(services => services.AddInstance(serverStore).AddInstance(documentsStorage))
                         .Build();
                 }
                 catch (Exception e)

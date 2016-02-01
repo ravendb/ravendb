@@ -20,7 +20,6 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public unsafe class ServerStore : IDisposable
     {
-        public string DataDirectory;
         private CancellationTokenSource shutdownNotification;
 
         private static readonly ILog Log = LogManager.GetLogger(typeof(ServerStore));
@@ -41,6 +40,8 @@ namespace Raven.Server.ServerWide
             _config = config;
 
             Configuration = new RavenConfiguration();
+            Configuration.Core.RunInMemory = _config.Get<bool>("run.in.memory");
+            Configuration.Core.DataDirectory = _config.Get<string>("system.path").ToFullPath();
             Configuration.Initialize();
             DatabasesLandlord = new DatabasesLandlord(this);
         }
@@ -56,18 +57,14 @@ namespace Raven.Server.ServerWide
                 ? new PosixLowMemoryNotification(shutdownNotification.Token, Configuration) as AbstractLowMemoryNotification
                 : new WinLowMemoryNotification(shutdownNotification.Token);
 
-            var runInMemory = _config.Get<bool>("run.in.memory");
-            if (runInMemory == false)
-            {
-                DataDirectory = _config.Get<string>("system.path").ToFullPath();
-            }
+            
             if (Log.IsDebugEnabled)
             {
-                Log.Debug("Starting to open server store for {0}", (runInMemory ? "<memory>" : DataDirectory));
+                Log.Debug("Starting to open server store for {0}", Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory);
             }
-            var options = runInMemory
+            var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(DataDirectory);
+                : StorageEnvironmentOptions.ForPath(Configuration.Core.DataDirectory);
 
             options.SchemaVersion = 1;
 
@@ -85,7 +82,7 @@ namespace Raven.Server.ServerWide
                 if (Log.IsWarnEnabled)
                 {
                     Log.FatalException(
-                        "Could not open server store for " + (runInMemory ? "<memory>" : DataDirectory), e);
+                        "Could not open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory), e);
                 }
                 options.Dispose();
                 throw;

@@ -5,11 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 
 namespace Raven.Server.Web.System
@@ -27,7 +25,7 @@ namespace Raven.Server.Web.System
         public Task Get()
         {
             RavenOperationContext context;
-            using (_requestHandlerContext.OperationContextPool.AllocateOperationContext(out context))
+            using (_requestHandlerContext.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
@@ -64,14 +62,14 @@ namespace Raven.Server.Web.System
             var id = _requestHandlerContext.RouteMatch.Url.Substring(_requestHandlerContext.RouteMatch.MatchLength);
 
             string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(id, _requestHandlerContext.ServerStore.DataDirectory, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(id, _requestHandlerContext.ServerStore.Configuration.Core.DataDirectory, out errorMessage) == false)
             {
                 _requestHandlerContext.HttpContext.Response.StatusCode = 400;
                 return _requestHandlerContext.HttpContext.Response.WriteAsync(errorMessage);
             }
 
             RavenOperationContext context;
-            using (_requestHandlerContext.OperationContextPool.AllocateOperationContext(out context))
+            using (_requestHandlerContext.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.WriteTransaction();
                 var dbId = "db/" + id;

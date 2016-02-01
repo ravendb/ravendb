@@ -69,7 +69,7 @@ namespace Raven.Server.Documents
                 hasAcquired = true;
                 database = ResourcesStoresCache.GetOrAdd(databaseId, __ => Task.Factory.StartNew(() =>
                 {
-                    var documentDatabase = new DocumentDatabase(config);
+                    var documentDatabase = new DocumentDatabase(databaseId, config);
 
                     // if we have a very long init process, make sure that we reset the last idle time for this db.
                     LastRecentlyUsed.AddOrUpdate(databaseId, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);

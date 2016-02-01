@@ -31,7 +31,7 @@ namespace Raven.Server.Documents
         public Task Put()
         {
             RavenOperationContext context;
-            using (_context.OperationContextPool.AllocateOperationContext(out context))
+            using (_context.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 var ids = _context.HttpContext.Request.Query["id"];
                 if (ids.Count == 0)
@@ -57,9 +57,9 @@ namespace Raven.Server.Documents
                 context.Transaction = context.Environment.WriteTransaction();
                 if (id[id.Length - 1] == '/')
                 {
-                    id = id + _context.DocumentStore.IdentityFor(context, id);
+                    id = id + _context.Database.DocumentsStorage.IdentityFor(context, id);
                 }
-                _context.DocumentStore.Put(context, id, etag, doc);
+                _context.Database.DocumentsStorage.Put(context, id, etag, doc);
                 context.Transaction.Commit();
 
                 _context.HttpContext.Response.StatusCode = 201;
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents
         public Task Get()
         {
             RavenOperationContext context;
-            using (_context.OperationContextPool.AllocateOperationContext(out context))
+            using (_context.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
                 var first = true;
                 foreach (var id in _context.HttpContext.Request.Query["id"])
                 {
-                    var result = _context.DocumentStore.Get(context, id);
+                    var result = _context.Database.DocumentsStorage.Get(context, id);
                     if (result == null)
                         continue;
                     if(first == false)

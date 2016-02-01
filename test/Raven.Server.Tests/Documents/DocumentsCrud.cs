@@ -5,6 +5,7 @@ using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Abstractions.Exceptions;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -20,13 +21,11 @@ namespace BlittableTests.Documents
 
         public DocumentsCrud()
         {
-            var configBuilder = new ConfigurationBuilder()
-                .Add(new MemoryConfigurationProvider(new Dictionary<string, string>
-                {
-                    ["run.in.memory"] = "true",
-                    //["system.path"] = Path.GetTempPath() + "\\crud"
-                }));
-            _documentsStorage = new DocumentsStorage("foo", configBuilder.Build());
+            var configuration = new RavenConfiguration();
+            configuration.Core.RunInMemory = true;
+            configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
+
+            _documentsStorage = new DocumentsStorage("foo", configuration);
             _documentsStorage.Initialize();
             _unmanagedBuffersPool = new UnmanagedBuffersPool("test");
         }
@@ -273,7 +272,7 @@ namespace BlittableTests.Documents
                  //["run.in.memory"] = "false",
                  //["system.path"] = Path.GetTempPath() + "\\crud"
              }));
-            _documentsStorage = new DocumentsStorage("test", configBuilder.Build());
+            _documentsStorage = new DocumentsStorage("test", new RavenConfiguration());
             _documentsStorage.Initialize(options);
         }
 

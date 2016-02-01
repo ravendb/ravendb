@@ -4,10 +4,15 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
-        public DocumentDatabase(RavenConfiguration configuration)
+        public DocumentDatabase(string name, RavenConfiguration configuration)
         {
+            Name = name;
             Configuration = configuration;
+            DocumentsStorage = new DocumentsStorage("test", configuration);
+            DocumentsStorage.Initialize();
         }
+
+        public DocumentsStorage DocumentsStorage { get; }
 
         public void Dispose()
         {
