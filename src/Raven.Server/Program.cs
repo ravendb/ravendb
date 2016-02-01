@@ -29,9 +29,7 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
-            var scanner = new RouteScanner();
-            var routes = scanner.Scan();
-            var router = new RequestRouter(routes);
+            var router = new RequestRouter(RouteScanner.Scan());
             app.Run(context =>
             {
                 try
@@ -96,6 +94,7 @@ namespace Raven.Server
                     application = new WebHostBuilder(config)
                         .UseStartup<Program>()
                         .UseServer("Microsoft.AspNet.Server.Kestrel")
+                        .UseServices(services => services.AddInstance(serverStore))
                         // ReSharper disable once AccessToDisposedClosure
                         .Build();
                 }
