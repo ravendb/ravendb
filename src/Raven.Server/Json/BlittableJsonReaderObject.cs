@@ -280,7 +280,7 @@ namespace Raven.Server.Json
         public int GetPropertyIndex(string name)
         {
             int min = 0, max = _propCount;
-            var comparer = _context.GetComparerFor(name);
+            var comparer = _context.GetLazyStringFor(name);
 
             int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)
@@ -352,7 +352,7 @@ namespace Raven.Server.Json
 
         // keeping this here because we aren't sure whatever it is worth it to 
         // get the same order of the documents for the perf cost
-        private void WriteToOrdered(BlittableJsonTextWriter writer)
+        public void WriteToOrdered(BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
             var props = GetPropertiesByInsertionOrder();
@@ -387,7 +387,7 @@ namespace Raven.Server.Json
             return props;
         }
 
-        private void WriteTo(BlittableJsonTextWriter writer)
+        public void WriteTo(BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
             for (int i = 0; i < _propCount; i++)

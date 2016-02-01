@@ -1,29 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using BlittableTests;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
 using BlittableTests.Documents;
-using BlittableTests.Routing;
-using Microsoft.Extensions.Configuration;
-using NewBlittable.Tests.BlittableJsonWriterTests;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Raven.Server.Documents;
 using Raven.Server.Json;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Sparrow;
 using Voron;
-using Voron.Tests.Tables;
-using Voron.Util;
+using Voron.Tests.Bugs;
 
 namespace Tryouts
 {
@@ -31,30 +14,8 @@ namespace Tryouts
     {
         public unsafe static void Main(string[] args)
         {
-            var configBuilder = new ConfigurationBuilder()
-               .AddJsonFile("settings.json", optional: true)
-               .AddEnvironmentVariables(prefix: "RAVEN_");
-
-
-            if (args != null)
-            {
-                configBuilder.AddCommandLine(args);
-            }
-
-            var config = configBuilder.Build();
-            var serverStore = new ServerStore(config);
-            serverStore.Initialize();
-
-            RavenOperationContext context;
-            using (serverStore.AllocateRequestContext(out context))
-            {
-                var landlord = new DatabasesLandlord(serverStore);
-                Task<DocumentDatabase> task;
-
-                landlord.TryGetOrCreateResourceStore("Fifa", new RavenOperationContext(new UnmanagedBuffersPool("Fifa")), out task);
-                return;
-            }
-
+            new DocumentsCrud().EtagsArePersistedWithDeletes();
+            return;
             // var trie = Trie<int>.Build(new[]
             //{
             //     "admin/databases",

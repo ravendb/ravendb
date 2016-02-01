@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Hosting.Internal;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Abstractions.Logging;
+using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -16,7 +20,7 @@ namespace Raven.Server
 {
     public class Program
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof (Program));
+        private static readonly ILog Log = LogManager.GetLogger(typeof(Program));
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -28,7 +32,27 @@ namespace Raven.Server
             var scanner = new RouteScanner();
             var routes = scanner.Scan();
             var router = new RequestRouter(routes);
-            app.Run(context => router.HandlePath(context));
+            app.Run(context =>
+            {
+                try
+                {
+                    return router.HandlePath(context);
+                }
+                catch (Exception e)
+                {
+                    if (context.RequestAborted.IsCancellationRequested)
+                        return Task.CompletedTask;
+
+                    var response = context.Response;
+                    response.StatusCode = 500;
+                    return response.WriteAsync(new
+                    {
+                        context.Request.Path,
+                        context.Request.QueryString,
+                        Exception = e.ToString()
+                    }.ToString());
+                }
+            });
         }
 
         public static int Main(string[] args)
@@ -70,11 +94,19 @@ namespace Raven.Server
                 IHostingEngine application;
                 try
                 {
+                    var configurationRoot = new ConfigurationBuilder()
+                        .Add(new MemoryConfigurationProvider(new Dictionary<string, string>
+                        {
+                            //["system.path"] = @"C:\Deployment\Databsaes\northwind"
+                            ["run.in.memory"] = "true"
+                        }));
+                    var documentsStorage = new DocumentsStorage("test", configurationRoot.Build());
+                    documentsStorage.Initialize();
                     application = new WebHostBuilder(config)
                         .UseStartup<Program>()
                         .UseServer("Microsoft.AspNet.Server.Kestrel")
                         // ReSharper disable once AccessToDisposedClosure
-                        .UseServices(services => services.AddInstance(serverStore))
+                        .UseServices(services => services.AddInstance(serverStore).AddInstance(documentsStorage))
                         .Build();
                 }
                 catch (Exception e)
@@ -105,6 +137,7 @@ namespace Raven.Server
                         return -3;
                     }
 
+                    Console.WriteLine("Listening to : " + config.Get<string>("server.urls"));
                     Console.WriteLine("Server started, listening to requests...");
 
                     //TODO: Move the command line options to here

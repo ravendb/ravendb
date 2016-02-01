@@ -19,24 +19,24 @@ namespace Raven.Server.Web.System
 
         private static byte[] _versionBuffer;
 
-        private unsafe static byte[] GetVersionBuffer(ServerStore serverStore)
+        private static byte[] GetVersionBuffer(ServerStore serverStore)
         {
-            if(_versionBuffer!=null)
+            if (_versionBuffer != null)
                 return _versionBuffer;
-            lock (typeof (BuildVersion))
+            lock (typeof(BuildVersion))
             {
                 if (_versionBuffer != null)
                     return _versionBuffer;
 
-            RavenOperationContext context;
-                using (serverStore.AllocateRequestContext(out context))
-            {
-                var result = new DynamicJsonValue
+                RavenOperationContext context;
+                using (serverStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    ["BuildVersion"] = ServerVersion.Build,
-                    ["ProductVersion"] = ServerVersion.Version,
-                    ["CommitHash"] = ServerVersion.CommitHash
-                };
+                    var result = new DynamicJsonValue
+                    {
+                        ["BuildVersion"] = ServerVersion.Build,
+                        ["ProductVersion"] = ServerVersion.Version,
+                        ["CommitHash"] = ServerVersion.CommitHash
+                    };
                     using (var doc = context.ReadObject(result, "build/version"))
                     {
                         var memoryStream = new MemoryStream();
@@ -46,8 +46,6 @@ namespace Raven.Server.Web.System
                         return versionBuffer;
                     }
                 }
-
-
             }
         }
 
@@ -61,7 +59,7 @@ namespace Raven.Server.Web.System
         {
             var versionBuffer = GetVersionBuffer(_requestHandlerContext.ServerStore);
             var response = _requestHandlerContext.HttpContext.Response;
-            response.Body.Write(versionBuffer, 0,versionBuffer.Length);
+            response.Body.Write(versionBuffer, 0, versionBuffer.Length);
             return Task.CompletedTask;
         }
     }

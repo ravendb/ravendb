@@ -324,7 +324,7 @@ namespace Voron.Impl
                 throw new ObjectDisposedException("Transaction");
 
             PageFromScratchBuffer value;
-            if(_scratchPagesTable.TryGetValue(pageNumber,out value)==false)
+            if (_scratchPagesTable.TryGetValue(pageNumber, out value) == false)
                 throw new InvalidOperationException("The page " + pageNumber + " was not previous allocated in this transaction");
 
             if (value.NumberOfPages == 1)
@@ -332,6 +332,9 @@ namespace Voron.Impl
 
             _transactionPages.Remove(value);
             _env.ScratchBufferPool.BreakLargeAllocationToSeparatePages(value);
+            _allocatedPagesInTransaction += value.NumberOfPages - 1;
+            _overflowPagesInTransaction -= value.NumberOfPages - 1;
+
             for (int i = 0; i < value.NumberOfPages; i++)
             {
                 var pageFromScratchBuffer = new PageFromScratchBuffer(value.ScratchFileNumber,

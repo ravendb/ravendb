@@ -219,7 +219,7 @@ namespace Voron.Data.Tables
             Insert(builder);
         }
 
-        private void Delete(long id)
+        public void Delete(long id)
         {
             int size;
             var ptr = DirectRead(id, out size);
@@ -342,11 +342,10 @@ namespace Voron.Data.Tables
 
         private void InsertIndexValuesFor(long id, TableValueReader value)
         {
-            var isAsBytes = EndianBitConverter.Little.GetBytes(id);
-
+            
             var pkval = _schema.Key.GetSlice(value);
             var pkIndex = GetTree(_schema.Key);
-            pkIndex.Add(pkval, isAsBytes, 0);
+            pkIndex.Add(pkval, new Slice((byte*)&id, sizeof(long)));
 
             foreach (var indexDef in _schema.Indexes.Values)
             {
@@ -495,6 +494,20 @@ namespace Voron.Data.Tables
             }
         }
 
+        public IEnumerable<TableValueReader> SeekByPrimaryKey(Slice value)
+        {
+            var tree = GetTree(_schema.Key);
+            using (var it = tree.Iterate())
+            {
+                if (it.Seek(value) == false)
+                    yield break;
+
+                do
+                {
+                    yield return GetTableValueReader(it);
+                } while (it.MoveNext());
+            }
+        }
 
         public IEnumerable<TableValueReader> SeekTo(TableSchema.FixedSizeSchemaIndexDef index, long key)
         {
@@ -516,6 +529,15 @@ namespace Voron.Data.Tables
         {
             long id;
             it.Value.CopyTo((byte*) &id);
+            int size;
+            var ptr = DirectRead(id, out size);
+            return new TableValueReader(ptr, size);
+        }
+
+
+        private TableValueReader GetTableValueReader(IIterator it)
+        {
+            long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
             int size;
             var ptr = DirectRead(id, out size);
             return new TableValueReader(ptr, size);

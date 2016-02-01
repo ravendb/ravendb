@@ -8,15 +8,16 @@ using Raven.Server.Web;
 
 namespace Raven.Server.Routing
 {
-    public delegate Task RequestHandler(RequestHandlerContext ctx);
+    public delegate Task HandleRequest(RequestHandlerContext ctx);
 
     public class RouteInformation
     {
         public readonly string Path;
 
-        private RequestHandler _get;
-        private RequestHandler _put;
-        private RequestHandler _delete;
+        private HandleRequest _get;
+        private HandleRequest _put;
+        private HandleRequest _post;
+        private HandleRequest _delete;
 
         public RouteInformation(string path)
         {
@@ -32,7 +33,7 @@ namespace Raven.Server.Routing
             var newExpression = Expression.New(constructorInfo, currentRequestContext);
             // .Handle();
             var handleExpr = Expression.Call(newExpression, memberInfo.Name, new Type[0]);
-            var requestDelegate = Expression.Lambda<RequestHandler>(handleExpr, currentRequestContext).Compile();
+            var requestDelegate = Expression.Lambda<HandleRequest>(handleExpr, currentRequestContext).Compile();
             
             //TODO: Verify we don't have two methods on the same path & method!
             switch (method)
@@ -43,6 +44,9 @@ namespace Raven.Server.Routing
                 case "PUT":
                     _put = requestDelegate;
                     break;
+                case "POST":
+                    _post = requestDelegate;
+                    break;
                 case "DELETE":
                     _delete = requestDelegate;
                     break;
@@ -51,7 +55,7 @@ namespace Raven.Server.Routing
             }
         }
 
-        public RequestHandler CreateHandler(HttpContext context)
+        public HandleRequest CreateHandler(HttpContext context)
         {
             switch (context.Request.Method)
             {
@@ -61,6 +65,8 @@ namespace Raven.Server.Routing
                     return _put;
                 case "DELETE":
                     return _delete;
+                case "POST":
+                    return _post;
                 default:
                     throw new NotSupportedException("There is no handler for " + context.Request.Method);
             }
