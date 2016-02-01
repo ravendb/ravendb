@@ -21,11 +21,11 @@ namespace Raven.Server.Routing
     /// </summary>
     public class RouteScanner
     {
-        public Dictionary<string, RouteInformation> Scan()
+        public static Dictionary<string, RouteInformation> Scan()
         {
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
 
-            var actions = GetType().GetTypeInfo().Assembly.GetTypes()
+            var actions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
                 .SelectMany(type => type.GetMembers())
                 .Where(type => type.IsDefined(typeof (RouteAttribute)))
                 .ToList();

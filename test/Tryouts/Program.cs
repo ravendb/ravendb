@@ -4,6 +4,7 @@ using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
 using BlittableTests.Documents;
 using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Sparrow;
 using Voron;
 using Voron.Tests.Bugs;
@@ -12,9 +13,31 @@ namespace Tryouts
 {
     public class Program
     {
+        public class User
+        {
+            public string Name { get; set; }
+            public int Age { get; set; }
+
+            public User()
+            {
+                Age = 33;
+            }
+        }
         public unsafe static void Main(string[] args)
         {
-            new DocumentsCrud().PutAndGetDocumentById("test22");
+            var sampleCode = JsonDeserialization.GenerateJsonDeserializationRoutine<User>();
+
+            var dvj = new DynamicJsonValue
+            {
+                ["Name"] = "Oren",
+                ["Age"] = 34,
+            };
+
+            var blittableJsonReaderObject = new RavenOperationContext(new UnmanagedBuffersPool("Foo")).ReadObject(dvj, "foo");
+
+            var code = sampleCode(blittableJsonReaderObject);
+
+            //new DocumentsCrud().PutAndGetDocumentById("test22");
             return;
             // var trie = Trie<int>.Build(new[]
             //{

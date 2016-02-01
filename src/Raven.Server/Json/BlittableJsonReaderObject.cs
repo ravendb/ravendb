@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Raven.Server.Json.Parsing;
 using Sparrow;
@@ -190,16 +189,27 @@ namespace Raven.Server.Json
         }
 
         public bool TryGet<T>(string name, out T obj)
-            where T : class
         {
             object result;
             if (TryGetMember(name, out result) == false)
             {
-                obj = null;
+                obj = default(T);
                 return false;
             }
-            obj = result as T;
-            return obj != null;
+            if (result == null)
+            {
+                obj = default(T);
+                return ReferenceEquals(default(T), null);
+            }
+            if (result is T)
+            {
+                obj = (T) result;
+            }
+            else
+            {
+                obj = (T)Convert.ChangeType(result, typeof(T));
+            }
+            return true;
         }
 
         public bool TryGet(string name, out string str)
@@ -495,54 +505,6 @@ namespace Raven.Server.Json
         public void CopyTo(byte* ptr)
         {
             Memory.Copy(ptr, _mem, _size);
-        }
-
-        public T Deserialize<T>() where T : new()
-        {
-            var deserialize = new T();
-            var type = typeof(T);
-            return (T)Deserialize(deserialize, type);
-        }
-
-        public object Deserialize(Type type)
-        {
-            var deserialize = Activator.CreateInstance(type);
-            return Deserialize(deserialize, type);
-        }
-
-        private object Deserialize(object deserialize, Type type)
-        {
-            foreach (var propertyName in GetPropertyNames())
-            {
-                object result;
-                TryGetMember(propertyName, out result);
-
-                var str = result as LazyStringValue;
-                if (type == typeof(Dictionary<string, string>))
-                {
-                    var dictionary = (Dictionary<string, string>)deserialize;
-                    dictionary[propertyName] = str;
-                    continue;
-                }
-                var propertyInfo = type.GetProperty(propertyName);
-                if (str != null)
-                {
-                    propertyInfo.SetValue(deserialize, (string)str);
-                    continue;
-                }
-                var jsonReaderObject = result as BlittableJsonReaderObject;
-                if (jsonReaderObject != null)
-                {
-                    var value = jsonReaderObject.Deserialize(propertyInfo.PropertyType);
-                    propertyInfo.SetValue(deserialize, value);
-                    continue;
-                }
-                else
-                {
-                    propertyInfo.SetValue(deserialize, result);
-                }
-            }
-            return deserialize;
         }
     }
 }

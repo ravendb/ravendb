@@ -5,35 +5,23 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
-using Raven.Server.Web;
-using RequestHandler = Raven.Server.Web.RequestHandler;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentsHandler : RequestHandler
+    public class DocumentsHandler : DatabaseRequestHandler
     {
-        private readonly RequestHandlerContext _context;
-
-        public DocumentsHandler(RequestHandlerContext context)
-        {
-            _context = context;
-        }
-
         [Route("/databases/*/docs", "PUT")]
         public Task Put()
         {
             RavenOperationContext context;
-            using (_context.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out context))
             {
-                var ids = _context.HttpContext.Request.Query["id"];
+                var ids = HttpContext.Request.Query["id"];
                 if (ids.Count == 0)
                     throw new ArgumentException("The 'id' query string parameter is mandatory");
 
@@ -41,10 +29,10 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrWhiteSpace(id))
                     throw new ArgumentException("The 'id' query string parameter must have a non empty value");
 
-                var doc = context.ReadForDisk(_context.HttpContext.Request.Body, id);
+                var doc = context.ReadForDisk(HttpContext.Request.Body, id);
 
                 long? etag = null;
-                var etags = _context.HttpContext.Request.Headers["If-None-Match"];
+                var etags = HttpContext.Request.Headers["If-None-Match"];
                 if (etags.Count != 0)
                 {
                     long result;
@@ -57,13 +45,13 @@ namespace Raven.Server.Documents
                 context.Transaction = context.Environment.WriteTransaction();
                 if (id[id.Length - 1] == '/')
                 {
-                    id = id + _context.Database.DocumentsStorage.IdentityFor(context, id);
+                    id = id + DocumentsStorage.IdentityFor(context, id);
                 }
-                _context.Database.DocumentsStorage.Put(context, id, etag, doc);
+                DocumentsStorage.Put(context, id, etag, doc);
                 context.Transaction.Commit();
 
-                _context.HttpContext.Response.StatusCode = 201;
-                _context.HttpContext.Response.Headers["Location"] = id;
+                HttpContext.Response.StatusCode = 201;
+                HttpContext.Response.Headers["Location"] = id;
             }
             return Task.CompletedTask;
         }
@@ -72,18 +60,18 @@ namespace Raven.Server.Documents
         public Task Get()
         {
             RavenOperationContext context;
-            using (_context.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
-                var writer = new BlittableJsonTextWriter(context, _context.HttpContext.Response.Body);
+                var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
                 writer.WriteStartObject();
                 writer.WritePropertyName(context.GetLazyStringFor("Results"));
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var id in _context.HttpContext.Request.Query["id"])
+                foreach (var id in HttpContext.Request.Query["id"])
                 {
-                    var result = _context.Database.DocumentsStorage.Get(context, id);
+                    var result = DocumentsStorage.Get(context, id);
                     if (result == null)
                         continue;
                     if(first == false)

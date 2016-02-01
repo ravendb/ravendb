@@ -15,8 +15,6 @@ namespace Raven.Server.Web.System
 {
     public class BuildVersion : RequestHandler
     {
-        private readonly RequestHandlerContext _requestHandlerContext;
-
         private static byte[] _versionBuffer;
 
         private static byte[] GetVersionBuffer(ServerStore serverStore)
@@ -49,20 +47,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public BuildVersion(RequestHandlerContext requestHandlerContext)
-        {
-            _requestHandlerContext = requestHandlerContext;
-        }
-
         [Route("/build/version", "GET")]
         public Task Get()
         {
-            var versionBuffer = GetVersionBuffer(_requestHandlerContext.ServerStore);
-            var response = _requestHandlerContext.HttpContext.Response;
+            var versionBuffer = GetVersionBuffer(ServerStore);
+            var response = HttpContext.Response;
             response.Body.Write(versionBuffer, 0, versionBuffer.Length);
             return Task.CompletedTask;
         }
     }
-
-
 }

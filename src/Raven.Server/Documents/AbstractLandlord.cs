@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents
 {
-    public abstract class AbstractLandlord<TResource> : IResourceLandlord<TResource>
-        where TResource : IResourceStore
+    public abstract class AbstractLandlord<TResource> : IDisposable
     {
         protected static readonly ILog Log = LogManager.GetLogger(typeof(AbstractLandlord<TResource>).FullName);
 
@@ -18,11 +18,11 @@ namespace Raven.Server.Documents
         protected readonly SemaphoreSlim ResourceSemaphore;
         protected readonly TimeSpan ConcurrentResourceLoadTimeout;
 
-        public readonly AtomicDictionary<Task<TResource>> ResourcesStoresCache =
-            new AtomicDictionary<Task<TResource>>(StringComparer.OrdinalIgnoreCase);
+        public readonly ConcurrentDictionary<StringSegment, Task<TResource>> ResourcesStoresCache =
+            new ConcurrentDictionary<StringSegment, Task<TResource>>();
 
-        public readonly ConcurrentDictionary<string, DateTime> LastRecentlyUsed = 
-            new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
+            new ConcurrentDictionary<StringSegment, DateTime>();
 
         public AbstractLandlord(ServerStore serverStore)
         {
@@ -31,9 +31,9 @@ namespace Raven.Server.Documents
             ConcurrentResourceLoadTimeout = ServerStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
         }
 
-        public abstract Task<TResource> GetResourceInternal(string resourceName, RavenOperationContext context);
+        public abstract Task<TResource> GetResourceInternal(StringSegment resourceName);
 
-        public abstract bool TryGetOrCreateResourceStore(string resourceName, RavenOperationContext context, out Task<TResource> resourceTask);
+        public abstract bool TryGetOrCreateResourceStore(StringSegment resourceName, out Task<TResource> resourceTask);
 
         public void Dispose()
         {

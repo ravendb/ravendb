@@ -4,6 +4,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
+using Raven.Server.Documents;
+using Raven.Server.Exceptions;
 using Raven.Server.Web;
 
 namespace Raven.Server.Routing
@@ -19,6 +21,14 @@ namespace Raven.Server.Routing
         private HandleRequest _post;
         private HandleRequest _delete;
 
+        private enum RouteType
+        {
+            None,
+            Databases
+        }
+
+        private RouteType _typeOfRoute;
+
         public RouteInformation(string path)
         {
             Path = path;
@@ -26,14 +36,24 @@ namespace Raven.Server.Routing
 
         public void Build(MemberInfo memberInfo, string method)
         {
+            if (typeof(DatabaseRequestHandler).IsAssignableFrom(memberInfo.DeclaringType))
+            {
+                _typeOfRoute = RouteType.Databases;
+            }
+
             // CurrentRequestContext currentRequestContext
             var currentRequestContext = Expression.Parameter(typeof (RequestHandlerContext), "currentRequestContext");
             // new Handler(currentRequestContext)
-            var constructorInfo = memberInfo.DeclaringType.GetConstructors().Single();
-            var newExpression = Expression.New(constructorInfo, currentRequestContext);
+            var constructorInfo = memberInfo.DeclaringType.GetConstructor(new Type[0]);
+            var newExpression = Expression.New(constructorInfo);
+            var handler = Expression.Parameter(memberInfo.DeclaringType, "handler");
+
+            var block = Expression.Block(typeof(Task),new [] {handler},
+                Expression.Assign(handler, newExpression),
+                Expression.Call(handler, "Init", new Type[0], currentRequestContext),
+                Expression.Call(handler, memberInfo.Name, new Type[0]));
             // .Handle();
-            var handleExpr = Expression.Call(newExpression, memberInfo.Name, new Type[0]);
-            var requestDelegate = Expression.Lambda<HandleRequest>(handleExpr, currentRequestContext).Compile();
+            var requestDelegate = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
             
             //TODO: Verify we don't have two methods on the same path & method!
             switch (method)
@@ -55,9 +75,28 @@ namespace Raven.Server.Routing
             }
         }
 
-        public HandleRequest CreateHandler(HttpContext context)
+        public async Task CreateDatabase(RequestHandlerContext context)
         {
-            switch (context.Request.Method)
+            var databaseId = context.RouteMatch.GetCapture();
+            var databasesLandlord = context.ServerStore.DatabasesLandlord;
+            Task<DocumentsStorage> task;
+            if (databasesLandlord.TryGetOrCreateResourceStore(databaseId, out task) == false)
+            {
+                throw new DatabaseDoesNotExistsException($"Database '{databaseId}' was not found");
+            }
+            context.DocumentsStorage = await task;
+        }
+
+        public async Task<HandleRequest> CreateHandler(RequestHandlerContext context)
+        {
+            switch (_typeOfRoute)
+            {
+                case RouteType.Databases:
+                    await CreateDatabase(context);
+                    break;
+            }
+
+            switch (context.HttpContext.Request.Method)
             {
                 case "GET":
                     return _get;
@@ -68,7 +107,9 @@ namespace Raven.Server.Routing
                 case "POST":
                     return _post;
                 default:
-                    throw new NotSupportedException("There is no handler for " + context.Request.Method);
+                {
+                    throw new NotSupportedException("There is no handler for " + context.HttpContext.Request.Method);
+                }
             }
         }
     }

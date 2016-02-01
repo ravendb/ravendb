@@ -35,14 +35,6 @@ namespace Raven.Server.Routing
                 return;
             }
 
-            var handler = tryMatch.Value.CreateHandler(context);
-            if (handler == null)
-            {
-                context.Response.StatusCode = 400;
-                await context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
-                return;
-            }
-
             var serverStore = context.ApplicationServices.GetRequiredService<ServerStore>();
             var reqCtx = new RequestHandlerContext
             {
@@ -51,12 +43,12 @@ namespace Raven.Server.Routing
                 RouteMatch = tryMatch.Match,
             };
 
-            if (reqCtx.RouteMatch.Url.StartsWith("/databases/*/"))
+            var handler = await tryMatch.Value.CreateHandler(reqCtx);
+            if (handler == null)
             {
-                var databaseName = reqCtx.RouteMatch.Url.Substring(reqCtx.RouteMatch.CaptureStart, reqCtx.RouteMatch.CaptureLength);
-                RavenOperationContext serverContext;
-                using (serverStore.ContextPool.AllocateOperationContext(out serverContext))
-                    reqCtx.Database = await reqCtx.ServerStore.DatabasesLandlord.GetResourceInternal(databaseName, serverContext);
+                context.Response.StatusCode = 400;
+                await context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
+                return;
             }
 
             await handler(reqCtx);

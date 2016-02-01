@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Server.Documents;
 
 namespace Raven.Server.Routing
 {
@@ -18,6 +19,11 @@ namespace Raven.Server.Routing
         public int CaptureStart;
         public int CaptureLength;
         public int MatchLength;
+
+        public StringSegment GetCapture()
+        {
+            return new StringSegment(Url, CaptureStart, CaptureLength);
+        }
     }
 
     /// <summary>

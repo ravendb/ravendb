@@ -12,6 +12,6 @@ namespace Raven.Server.Web
         public ServerStore ServerStore;
         public RouteMatch RouteMatch;
 
-        public DocumentDatabase Database;
+        public DocumentsStorage DocumentsStorage;
     }
 }
