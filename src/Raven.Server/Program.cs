@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Hosting;
 using Microsoft.AspNet.Hosting.Internal;
@@ -19,7 +20,7 @@ namespace Raven.Server
 {
     public class Program
     {
-        private static readonly ILog Log = LogManager.GetLogger(typeof (Program));
+        private static readonly ILog Log = LogManager.GetLogger(typeof(Program));
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -31,7 +32,27 @@ namespace Raven.Server
             var scanner = new RouteScanner();
             var routes = scanner.Scan();
             var router = new RequestRouter(routes);
-            app.Run(context => router.HandlePath(context));
+            app.Run(context =>
+            {
+                try
+                {
+                    return router.HandlePath(context);
+                }
+                catch (Exception e)
+                {
+                    if (context.RequestAborted.IsCancellationRequested)
+                        return Task.CompletedTask;
+
+                    var response = context.Response;
+                    response.StatusCode = 500;
+                    return response.WriteAsync(new
+                    {
+                        context.Request.Path,
+                        context.Request.QueryString,
+                        Exception = e.ToString()
+                    }.ToString());
+                }
+            });
         }
 
         public static int Main(string[] args)
@@ -74,8 +95,9 @@ namespace Raven.Server
                 try
                 {
                     var configurationRoot = new ConfigurationBuilder()
-                        .Add(new MemoryConfigurationProvider(new Dictionary<string,string>
+                        .Add(new MemoryConfigurationProvider(new Dictionary<string, string>
                         {
+                            //["system.path"] = @"C:\Deployment\Databsaes\northwind"
                             ["run.in.memory"] = "true"
                         }));
                     var documentsStorage = new DocumentsStorage("test", configurationRoot.Build());

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Voron;
 using Voron.Data.Fixed;
@@ -30,6 +31,8 @@ namespace Raven.Server.Documents
         private long _lastEtag;
 
         public string DataDirectory;
+        public ContextPool ContextPool;
+        private UnmanagedBuffersPool _unmanagedBuffersPool;
 
         public DocumentsStorage(string name, IConfigurationRoot config)
         {
@@ -65,6 +68,10 @@ namespace Raven.Server.Documents
         {
             Environment?.Dispose();
             Environment = null;
+            _unmanagedBuffersPool?.Dispose();
+            _unmanagedBuffersPool = null;
+            ContextPool?.Dispose();
+            ContextPool = null;
         }
 
         public void Initialize()
@@ -99,6 +106,9 @@ namespace Raven.Server.Documents
             try
             {
                 Environment = new StorageEnvironment(options);
+                _unmanagedBuffersPool = new UnmanagedBuffersPool(_name);
+                ContextPool = new ContextPool(_unmanagedBuffersPool, Environment);
+
                 using (var tx = Environment.WriteTransaction())
                 {
                     tx.CreateTree("Docs");
@@ -115,6 +125,7 @@ namespace Raven.Server.Documents
                     _log.FatalException("Could not open server store for " + _name, e);
                 }
                 options.Dispose();
+                Dispose();
                 throw;
             }
         }

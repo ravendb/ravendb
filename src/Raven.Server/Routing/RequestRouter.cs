@@ -41,12 +41,13 @@ namespace Raven.Server.Routing
             }
 
             var serverStore = context.ApplicationServices.GetRequiredService<ServerStore>();
+            var documentsStorage = context.ApplicationServices.GetRequiredService<DocumentsStorage>();
             var reqCtx = new RequestHandlerContext
             {
                 HttpContext = context,
                 ServerStore = serverStore,
-                DocumentStore = context.ApplicationServices.GetRequiredService<DocumentsStorage>(),
-                OperationContextPool = serverStore.ContextPool,
+                DocumentStore = documentsStorage,
+                OperationContextPool = documentsStorage.ContextPool,
                 RouteMatch = tryMatch.Match,
             };
             return handler(reqCtx);

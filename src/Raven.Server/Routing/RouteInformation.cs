@@ -16,6 +16,7 @@ namespace Raven.Server.Routing
 
         private HandleRequest _get;
         private HandleRequest _put;
+        private HandleRequest _post;
         private HandleRequest _delete;
 
         public RouteInformation(string path)
@@ -43,6 +44,9 @@ namespace Raven.Server.Routing
                 case "PUT":
                     _put = requestDelegate;
                     break;
+                case "POST":
+                    _post = requestDelegate;
+                    break;
                 case "DELETE":
                     _delete = requestDelegate;
                     break;
@@ -61,6 +65,8 @@ namespace Raven.Server.Routing
                     return _put;
                 case "DELETE":
                     return _delete;
+                case "POST":
+                    return _post;
                 default:
                     throw new NotSupportedException("There is no handler for " + context.Request.Method);
             }

@@ -61,6 +61,9 @@ namespace Raven.Server.Documents
                 }
                 _context.DocumentStore.Put(context, id, etag, doc);
                 context.Transaction.Commit();
+
+                _context.HttpContext.Response.StatusCode = 201;
+                _context.HttpContext.Response.Headers["Location"] = id;
             }
             return Task.CompletedTask;
         }

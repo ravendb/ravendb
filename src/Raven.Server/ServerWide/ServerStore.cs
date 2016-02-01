@@ -41,6 +41,7 @@ namespace Raven.Server.ServerWide
             shutdownNotification = new CancellationTokenSource();
 
             var configuration = new RavenConfiguration();
+            //TODO: Should this be removed?
             AbstractLowMemoryNotification lowMemoryNotification = Platform.RunningOnPosix
                 ? new PosixLowMemoryNotification(shutdownNotification.Token, configuration) as AbstractLowMemoryNotification
                 : new WinLowMemoryNotification(shutdownNotification.Token);
