@@ -696,9 +696,9 @@ namespace Raven.Client.Indexes
 					}
 					else
 					{
-						right = convention.SaveEnumsAsIntegers
-									? Expression.Constant((int)constantExpression.Value)
-									: Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
+                        right = convention.SaveEnumsAsIntegers
+                                ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
+                                : Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
 
 					}
 					break;
@@ -1886,12 +1886,15 @@ namespace Raven.Client.Indexes
 					VisitExpressions('{', node.Expressions, '}');
 					return node;
 
-				case ExpressionType.NewArrayBounds:
-					Out("new " + node.Type);
-					VisitExpressions('(', node.Expressions, ')');
-					return node;
-			}
-			return node;
+                case ExpressionType.NewArrayBounds:
+                    if (TypeExistsOnServer(node.Type))
+                        Out("new " + node.Type.GetElementType());
+                    else
+                        Out("new object");
+                    VisitExpressions('[', node.Expressions, ']');
+                    return node;
+            }
+            return node;
 		}
 
 		private static bool CheckIfAnonymousType(Type type)
