@@ -44,6 +44,12 @@ namespace Raven.Server.Routing
                 ServerStore = context.ApplicationServices.GetRequiredService<ServerStore>(),
                 RouteMatch = tryMatch.Match,
             };
+
+            /*if (reqCtx.RouteMatch.Url.StartsWith("/databases/#1#"))
+            {
+              // Set reqCtr.Database here   
+            }*/
+
             return handler(reqCtx);
         }
     }
