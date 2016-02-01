@@ -40,9 +40,9 @@ namespace Raven.Server.ServerWide
             _config = config;
 
             Configuration = new RavenConfiguration();
+            Configuration.Initialize();
             Configuration.Core.RunInMemory = _config.Get<bool>("run.in.memory");
             Configuration.Core.DataDirectory = _config.Get<string>("system.path").ToFullPath();
-            Configuration.Initialize();
             DatabasesLandlord = new DatabasesLandlord(this);
         }
 
