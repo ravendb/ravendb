@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Rachis.Messages;
-
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 
 namespace Rachis.Behaviors
@@ -80,7 +80,15 @@ namespace Rachis.Behaviors
                     continue;
                 Engine.Transport.Send(votingPeer, rvr);
             }
-
+            Engine.EngineStatistics.Elections.LimitedSizeEnqueue(new ElectionInformation()
+            {
+                StartTime = DateTime.UtcNow,
+                CurrentTerm = currentTerm,
+                ForcedElection = _forcedElection,
+                TermIncreaseMightGetMyVote = _termIncreaseMightGetMyVote,
+                VotingNodes = allVotingNodes,
+                WonTrialElection = _wonTrialElection
+            },RaftEngineStatistics.NumberOfElectionsToTrack);
             Engine.OnCandidacyAnnounced();
             _log.Info("Voting for myself in {1}election for term {0}", currentTerm, _wonTrialElection ? " " : " trial ");
             Handle(new RequestVoteResponse
@@ -102,6 +110,7 @@ namespace Rachis.Behaviors
 
         public override void Handle(RequestVoteResponse resp)
         {
+            Engine.EngineStatistics.LastElectionInformation.Votes.Enqueue(resp);
             if (FromOurTopology(resp) == false)
             {
                 _log.Info("Got a request vote response message outside my cluster topology (id: {0}), ignoring", resp.ClusterTopologyId);

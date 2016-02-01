@@ -6,7 +6,7 @@ using System.Linq;
 using Rachis.Commands;
 using Rachis.Messages;
 using Rachis.Storage;
-
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 
 namespace Rachis.Behaviors
@@ -17,9 +17,18 @@ namespace Rachis.Behaviors
         public int Timeout { get; set; }
         public abstract RaftEngineState State { get; }
 
-        public DateTime LastHeartbeatTime { get; set; }
+        public DateTime LastHeartbeatTime
+        {
+            get { return lastHeartbeatTime; }
+            set
+            {
+                lastHeartbeatTime = value;
+                Engine.EngineStatistics.HeartBeats.LimitedSizeEnqueue(value, RaftEngineStatistics.NumberOfHeartbeatsToTrack);
+            }
+        }
         public DateTime LastMessageTime { get; set; }
 
+        private DateTime lastHeartbeatTime;
         private readonly Dictionary<Type, Action<MessageContext>> _actionDispatch;
 
         protected bool FromOurTopology(BaseMessage msg)
@@ -188,7 +197,7 @@ namespace Rachis.Behaviors
                 {typeof (Action), ctx => ((Action)ctx.Message)()},
 
             };
-            LastHeartbeatTime = DateTime.UtcNow;
+            LastHeartbeatTime = DateTime.UtcNow;            
         }
 
         public RequestVoteResponse Handle(RequestVoteRequest req)

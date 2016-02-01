@@ -19,7 +19,7 @@ using Rachis.Messages;
 using Rachis.Storage;
 using Rachis.Transport;
 using Rachis.Utils;
-
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -42,7 +42,7 @@ namespace Rachis
 
         public string Name { get; set; }
         public PersistentState PersistentState { get; set; }
-
+        public RaftEngineStatistics EngineStatistics;
         public string CurrentLeader
         {
             get
@@ -126,6 +126,7 @@ namespace Rachis
         public RaftEngine(RaftEngineOptions raftEngineOptions)
         {
             _raftEngineOptions = raftEngineOptions;
+            EngineStatistics = new RaftEngineStatistics(this);
             Debug.Assert(raftEngineOptions.Stopwatch != null);
 
             _log = LogManager.GetLogger(raftEngineOptions.Name + "." + GetType().FullName);
@@ -154,7 +155,7 @@ namespace Rachis
                 SetState(RaftEngineState.Follower);
             }
 
-            _commitIndex = StateMachine.LastAppliedIndex;
+            _commitIndex = StateMachine.LastAppliedIndex;            
             _eventLoopTask = Task.Factory.StartNew(EventLoop, TaskCreationOptions.LongRunning);
         }
 
@@ -173,7 +174,12 @@ namespace Rachis
                     var behavior = StateBehavior;
                     var lastHeartBeat = (int)(DateTime.UtcNow - behavior.LastHeartbeatTime).TotalMilliseconds;
                     var timeout = behavior.Timeout - lastHeartBeat;
-                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);
+                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);                    
+                    var messageBase = message?.Message as BaseMessage;
+                    if(messageBase != null)
+                        EngineStatistics.Messages.LimitedSizeEnqueue(
+                            new MessageWithTimingInformation{Message = messageBase,MessageReceiveTime = DateTime.UtcNow}, 
+                            RaftEngineStatistics.NumberOfMessagesToTrack);
                     if (_eventLoopCancellationTokenSource.IsCancellationRequested)
                     {
                         if (_log.IsDebugEnabled)
@@ -185,6 +191,10 @@ namespace Rachis
                     {
                         if (State != RaftEngineState.Leader && _log.IsDebugEnabled)
                             _log.Debug("State {0} timeout ({1:#,#;;0} ms).", State, behavior.Timeout);
+                        EngineStatistics.TimeOuts.LimitedSizeEnqueue(
+                            new TimeoutInformation()
+                            { ActualTimeout = lastHeartBeat ,State = State,Timeout = behavior.Timeout,TimeOutTime = DateTime.UtcNow}
+                        ,RaftEngineStatistics.NumberOfTimeoutsToTrack);
                         behavior.HandleTimeout();
                         OnStateTimeout();
                         continue;
