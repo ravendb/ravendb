@@ -174,11 +174,12 @@ namespace Rachis
                     var behavior = StateBehavior;
                     var lastHeartBeat = (int)(DateTime.UtcNow - behavior.LastHeartbeatTime).TotalMilliseconds;
                     var timeout = behavior.Timeout - lastHeartBeat;
-                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);
-                    EngineStatistics.HeartBeats.LimitedSizeEnqueue(lastHeartBeat, RaftEngineStatistics.NumberOfHeartbeatsToTrack);
+                    var hasMessage = Transport.TryReceiveMessage(timeout, _eventLoopCancellationTokenSource.Token, out message);                    
                     var messageBase = message?.Message as BaseMessage;
                     if(messageBase != null)
-                        EngineStatistics.Messages.LimitedSizeEnqueue(messageBase, RaftEngineStatistics.NumberOfMessagesToTrack);
+                        EngineStatistics.Messages.LimitedSizeEnqueue(
+                            new MessageWithTimingInformation{Message = messageBase,MessageReceiveTime = DateTime.UtcNow}, 
+                            RaftEngineStatistics.NumberOfMessagesToTrack);
                     if (_eventLoopCancellationTokenSource.IsCancellationRequested)
                     {
                         if (_log.IsDebugEnabled)
@@ -190,7 +191,9 @@ namespace Rachis
                     {
                         if (State != RaftEngineState.Leader && _log.IsDebugEnabled)
                             _log.Debug("State {0} timeout ({1:#,#;;0} ms).", State, behavior.Timeout);
-                        EngineStatistics.TimeOuts.LimitedSizeEnqueue(new TimeoutInformation() { ActualTimeout = lastHeartBeat ,State = State,Timeout = behavior.Timeout}
+                        EngineStatistics.TimeOuts.LimitedSizeEnqueue(
+                            new TimeoutInformation()
+                            { ActualTimeout = lastHeartBeat ,State = State,Timeout = behavior.Timeout,TimeOutTime = DateTime.UtcNow}
                         ,RaftEngineStatistics.NumberOfTimeoutsToTrack);
                         behavior.HandleTimeout();
                         OnStateTimeout();

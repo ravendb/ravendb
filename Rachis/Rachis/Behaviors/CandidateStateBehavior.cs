@@ -82,6 +82,7 @@ namespace Rachis.Behaviors
             }
             Engine.EngineStatistics.Elections.LimitedSizeEnqueue(new ElectionInformation()
             {
+                StartTime = DateTime.UtcNow,
                 CurrentTerm = currentTerm,
                 ForcedElection = _forcedElection,
                 TermIncreaseMightGetMyVote = _termIncreaseMightGetMyVote,
@@ -109,7 +110,6 @@ namespace Rachis.Behaviors
 
         public override void Handle(RequestVoteResponse resp)
         {
-            Console.WriteLine($"Got vote from {resp.From}, {Engine.Name}");
             Engine.EngineStatistics.LastElectionInformation.Votes.Enqueue(resp);
             if (FromOurTopology(resp) == false)
             {

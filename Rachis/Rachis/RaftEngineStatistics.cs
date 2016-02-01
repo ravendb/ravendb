@@ -24,17 +24,17 @@ namespace Rachis
             HeartbeatTimeout = engine.Options.HeartbeatTimeout;
             MaxEntriesPerRequest = engine.Options.MaxEntriesPerRequest;
             MaxLogLengthBeforeCompaction = engine.Options.MaxLogLengthBeforeCompaction;
-            HeartBeats = new ConcurrentQueue<int>();
+            HeartBeats = new ConcurrentQueue<DateTime>();
             TimeOuts = new ConcurrentQueue<TimeoutInformation>();
-            Messages = new ConcurrentQueue<BaseMessage>();
+            Messages = new ConcurrentQueue<MessageWithTimingInformation>();
             Elections = new ConcurrentQueue<ElectionInformation>();
             CommitTimes = new ConcurrentQueue<CommitInformation>();
         }
         private ConcurrentDictionary<long, DateTime> IndexesToAppendTimes = new ConcurrentDictionary<long, DateTime>(); 
         public ConcurrentQueue<TimeoutInformation> TimeOuts { get; }
         public ConcurrentQueue<ElectionInformation> Elections { get; } 
-        public ConcurrentQueue<int> HeartBeats { get; }
-        public ConcurrentQueue<BaseMessage> Messages { get; }
+        public ConcurrentQueue<DateTime> HeartBeats { get; }
+        public ConcurrentQueue<MessageWithTimingInformation> Messages { get; }
         public ElectionInformation LastElectionInformation => Elections.LastOrDefault();
         public ConcurrentQueue<CommitInformation> CommitTimes { get; } 
         public string Name { get; set; }
@@ -65,6 +65,7 @@ namespace Rachis
 
     public class TimeoutInformation
     {
+        public DateTime TimeOutTime { get; set; }
         public RaftEngineState State { get; set; }
         public int Timeout { get; set; }
         public int ActualTimeout { get; set; }
@@ -73,6 +74,7 @@ namespace Rachis
     public class ElectionInformation
     {
         private ConcurrentQueue<RequestVoteResponse> votes = new ConcurrentQueue<RequestVoteResponse>();
+        public DateTime StartTime { get; set; }
         public long CurrentTerm { get; set; }
         public bool WonTrialElection { get; set; }
         public bool TermIncreaseMightGetMyVote { get; set; }
@@ -86,5 +88,11 @@ namespace Rachis
         public long Index { get; set; }
         public DateTime AppendTime { get; set; }
         public double CommitDurationInSeconds { get; set; }
+    }
+
+    public class MessageWithTimingInformation
+    {
+        public DateTime MessageReceiveTime { get; set; }
+        public BaseMessage Message { get; set; }
     }
 }

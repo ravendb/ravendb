@@ -87,9 +87,6 @@ namespace Raven.Tests.Raft
             var random = new Random();
             var leader = nodes[random.Next(0, numberOfNodes - 1)];
 
-            Console.WriteLine($"Leader: {leader.Options.ClusterManager.Value.Engine.Options.SelfConnection.Uri} " +
-                              $"{leader.Options.ClusterManager.Value.Engine.Name}");
-
             leader.Options.ClusterManager.Value.InitializeTopology(forceCandidateState:true);
 
             Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(),"Leader was not elected by himself in time");
