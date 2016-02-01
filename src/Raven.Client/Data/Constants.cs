@@ -209,7 +209,7 @@ namespace Raven.Abstractions.Data
         public const string ResourceMarkerPrefix = ".resource.";
         public static class Database
         {
-            public const string Prefix = "Raven/Databases/";
+            public const string Prefix = "db/";
 
             public const string DataDirectory = "Raven/Databases/DataDir";
 

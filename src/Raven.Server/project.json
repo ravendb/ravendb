@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "4.0.0-*",
   "description": "Raven.Server is the database server for RavenDB",
   "authors": [ "Hibernating Rhinos" ],

@@ -7,6 +7,8 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNet.Http;
+using Raven.Abstractions.Logging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 
@@ -22,7 +24,7 @@ namespace Raven.Server.Web.System
         }
 
         [Route("/databases/*/docs", "PUT")]
-        public Task DocumentPut()
+        public async Task DocumentPut()
         {
             var databaseName = _requestHandlerContext.RouteMatch.Url.Substring(_requestHandlerContext.RouteMatch.CaptureStart, _requestHandlerContext.RouteMatch.CaptureLength);
             var docId = _requestHandlerContext.HttpContext.Request.Query["docId"];
@@ -30,10 +32,24 @@ namespace Raven.Server.Web.System
             RavenOperationContext context;
             using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                var json = context.Read(_requestHandlerContext.HttpContext.Request.Body, docId);
+                context.Transaction = context.Environment.WriteTransaction();
+
+                try
+                {
+                    var json = context.Read(_requestHandlerContext.HttpContext.Request.Body, docId);
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Failed to deserialize document request." + e);
+                    _requestHandlerContext.HttpContext.Response.StatusCode = 422; // Unprocessable entity
+                    await _requestHandlerContext.HttpContext.Response.WriteAsync("Could not understand json, please check its validity.");
+                    return;
+                }
+
+                var database = await _requestHandlerContext.ServerStore.DatabasesLandlord.GetResourceInternal(databaseName, context);
 
                 _requestHandlerContext.HttpContext.Response.StatusCode = 201;
-                return Task.CompletedTask;
             }
         }
 
@@ -46,6 +62,8 @@ namespace Raven.Server.Web.System
             RavenOperationContext context;
             using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
+                context.Transaction = context.Environment.WriteTransaction();
+
                 _requestHandlerContext.HttpContext.Response.StatusCode = 204;
                 return Task.CompletedTask;
             }

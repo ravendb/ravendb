@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Framework.ConfigurationModel;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
@@ -28,20 +31,27 @@ namespace Raven.Server.ServerWide
         private UnmanagedBuffersPool _pool;
         private ConcurrentStack<RavenOperationContext> _contextPool;
 
+        public readonly DatabasesLandlord DatabasesLandlord;
+
+        private readonly IList<IDisposable> toDispose = new List<IDisposable>();
+        public readonly RavenConfiguration Configuration;
 
         public ServerStore(IConfigurationRoot config)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             _config = config;
+
+            Configuration = new RavenConfiguration();
+            Configuration.Initialize();
+            DatabasesLandlord = new DatabasesLandlord(this);
         }
 
         public void Initialize()
         {
             shutdownNotification = new CancellationTokenSource();
 
-            var configuration = new RavenConfiguration();
             AbstractLowMemoryNotification lowMemoryNotification = Platform.RunningOnPosix
-                ? new PosixLowMemoryNotification(shutdownNotification.Token, configuration) as AbstractLowMemoryNotification
+                ? new PosixLowMemoryNotification(shutdownNotification.Token, Configuration) as AbstractLowMemoryNotification
                 : new WinLowMemoryNotification(shutdownNotification.Token);
 
             var runInMemory = _config.Get<bool>("run.in.memory");
@@ -151,8 +161,25 @@ namespace Raven.Server.ServerWide
                     result.Dispose();
                 }
             }
-            _pool?.Dispose();
-            _env?.Dispose();
+
+            toDispose.Add(_pool);
+            toDispose.Add(_env);
+            toDispose.Add(DatabasesLandlord);
+
+            var errors = new List<Exception>();
+            foreach (var disposable in toDispose)
+            {
+                try
+                {
+                    disposable?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    errors.Add(e);
+                }
+            }
+            if (errors.Count != 0)
+                throw new AggregateException(errors);
         }
     }
 }

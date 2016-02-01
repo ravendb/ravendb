@@ -73,7 +73,7 @@ namespace Raven.Server.Web.System
             RavenOperationContext context;
             using (_requestHandlerContext.ServerStore.AllocateRequestContext(out context))
             {
-                context.Transaction = context.Environment.ReadTransaction();
+                context.Transaction = context.Environment.WriteTransaction();
                 var dbId = "db/" + id;
 
                 var etag = _requestHandlerContext.HttpContext.Request.Headers["ETag"];
