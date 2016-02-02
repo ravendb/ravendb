@@ -27,7 +27,7 @@ namespace Raven.Server.Routing
 
         public async Task HandlePath(HttpContext context)
         {
-            var tryMatch = _trie.TryMatch(context.Request.Path);
+            var tryMatch = _trie.TryMatch(context.Request.Method, context.Request.Path);
             if (tryMatch.Match.Success == false)
             {
                 context.Response.StatusCode = 400;

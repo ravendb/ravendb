@@ -14,12 +14,11 @@ namespace Raven.Server.Routing
 
     public class RouteInformation
     {
+        public readonly string Method;
         public readonly string Path;
 
-        private HandleRequest _get;
-        private HandleRequest _put;
-        private HandleRequest _post;
-        private HandleRequest _delete;
+        private HandleRequest _request;
+        private RouteType _typeOfRoute;
 
         private enum RouteType
         {
@@ -27,14 +26,13 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        private RouteType _typeOfRoute;
-
-        public RouteInformation(string path)
+        public RouteInformation(string method, string path)
         {
+            Method = method;
             Path = path;
         }
 
-        public void Build(MemberInfo memberInfo, string method)
+        public void Build(MemberInfo memberInfo)
         {
             if (typeof(DatabaseRequestHandler).IsAssignableFrom(memberInfo.DeclaringType))
             {
@@ -53,26 +51,7 @@ namespace Raven.Server.Routing
                 Expression.Call(handler, "Init", new Type[0], currentRequestContext),
                 Expression.Call(handler, memberInfo.Name, new Type[0]));
             // .Handle();
-            var requestDelegate = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
-            
-            //TODO: Verify we don't have two methods on the same path & method!
-            switch (method)
-            {
-                case "GET":
-                    _get = requestDelegate;
-                    break;
-                case "PUT":
-                    _put = requestDelegate;
-                    break;
-                case "POST":
-                    _post = requestDelegate;
-                    break;
-                case "DELETE":
-                    _delete = requestDelegate;
-                    break;
-                default:
-                    throw new NotSupportedException("There is no handler for " + method);
-            }
+            _request = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
         }
 
         public async Task CreateDatabase(RequestHandlerContext context)
@@ -96,21 +75,7 @@ namespace Raven.Server.Routing
                     break;
             }
 
-            switch (context.HttpContext.Request.Method)
-            {
-                case "GET":
-                    return _get;
-                case "PUT":
-                    return _put;
-                case "DELETE":
-                    return _delete;
-                case "POST":
-                    return _post;
-                default:
-                {
-                    throw new NotSupportedException("There is no handler for " + context.HttpContext.Request.Method);
-                }
-            }
+            return _request;
         }
     }
 }

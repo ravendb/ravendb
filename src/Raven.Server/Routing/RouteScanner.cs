@@ -34,12 +34,13 @@ namespace Raven.Server.Routing
             {
                 var route = memberInfo.GetCustomAttributes<RouteAttribute>().Single();
 
+                //TODO: Verify we don't have two methods on the same path & method!
                 RouteInformation routeInfo;
                 if (routes.TryGetValue(route.Path, out routeInfo) == false)
                 {
-                    routes[route.Path] = routeInfo = new RouteInformation(route.Path);
+                    routes[route.Method + route.Path] = routeInfo = new RouteInformation(route.Method, route.Path);
                 }
-                routeInfo.Build(memberInfo, route.Method);
+                routeInfo.Build(memberInfo);
             }
 
             return routes;

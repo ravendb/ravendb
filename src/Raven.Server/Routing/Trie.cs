@@ -15,6 +15,7 @@ namespace Raven.Server.Routing
     public struct RouteMatch
     {
         public string Url;
+        public string Method;
         public bool Success;
         public int CaptureStart;
         public int CaptureLength;
@@ -43,71 +44,89 @@ namespace Raven.Server.Routing
         {
             public RouteMatch Match;
             public T Value;
+            public int CurrentIndex;
+
+            public Trie<T> SearchTrie(Trie<T> current, string term)
+            {
+                for (int i = 0; i < term.Length; i++)
+                {
+                    if (CurrentIndex < current.Key.Length)
+                    {
+                        // if(current.Key[currentIndex] != url[i])
+                        if (CharEqualsAt(current.Key, CurrentIndex, term, i) == false)
+                        {
+                            if (current.Key[CurrentIndex] == '$')
+                            {
+                                Match.Success = true;
+                                Match.MatchLength = i;
+                                Value = current.Value;
+                                return current;
+                            }
+                            return current;
+                        }
+                        CurrentIndex++;
+                        continue;
+                    }
+                    // end of node, need to search children
+                    var maybe = term[i] <= current.Children.Length
+                        ? current.Children[term[i]]
+                        : null;
+
+                    if (maybe == null)
+                    {
+                        maybe = current.Children['*'];
+                        if (maybe != null)
+                        {
+                            Match.CaptureStart = i;
+                            for (; i < term.Length; i++)
+                            {
+                                if (term[i] == '/')
+                                {
+                                    break;
+                                }
+                            }
+                            Match.CaptureLength = i - Match.CaptureStart;
+                            i--;
+                        }
+                    }
+                    current = maybe;
+                    CurrentIndex = 1;
+                    if (current == null)
+                    {
+                        return null;
+                    }
+                }
+                return current;
+            }
         }
 
-        public MatchResult TryMatch(string url)
+
+        public MatchResult TryMatch(string method, string url)
         {
             var match = new MatchResult
             {
                 Match =
                 {
-                    Url = url
+                    Url = url,
+                    Method = method
                 }
             };
-            var current = this;
-            var currentIndex = 0;
-            for (int i = 0; i < url.Length; i++)
+
+            var result = match.SearchTrie(this, method);
+            if (result == null /*|| result.c != result.Key.Length*/)
             {
-                if (currentIndex < current.Key.Length)
-                {
-                    // if(current.Key[currentIndex] != url[i])
-                    if (CharEqualsAt(current.Key, currentIndex, url, i) == false)
-                    {
-                        if (current.Key[currentIndex] == '$')
-                        {
-                            match.Match.Success = true;
-                            match.Match.MatchLength = i;
-                            match.Value = current.Value;
-                            return match;
-                        }
-                        return match;
-                    }
-                    currentIndex++;
-                    continue;
-                }
-                // end of node, need to search children
-                var maybe = (url[i] <= current.Children.Length)
-                    ? current.Children[url[i]]
-                    : null;
-
-                if (maybe == null)
-                {
-                    maybe = current.Children['*'];
-                    if (maybe != null)
-                    {
-                        match.Match.CaptureStart = i;
-                        for (; i < url.Length; i++)
-                        {
-                            if (url[i] == '/')
-                            {
-                                break;
-                            }
-                        }
-                        match.Match.CaptureLength = i - match.Match.CaptureStart;
-                        i--;
-                    }
-                }
-                current = maybe;
-                currentIndex = 1;
-                if (current == null)
-                {
-                    return match;
-                }
-            }
-            if (currentIndex != current.Key.Length)
+                match.Match.Success = false;
                 return match;
+            }
 
-            match.Value = current.Value;
+            result = match.SearchTrie(result, url);
+            if (result == null || match.CurrentIndex != result.Key.Length)
+            {
+                match.Match.Success = false;
+                return match;
+            }
+
+            match.Value = result.Value;
             match.Match.MatchLength = url.Length;
             match.Match.Success = true;
             return match;

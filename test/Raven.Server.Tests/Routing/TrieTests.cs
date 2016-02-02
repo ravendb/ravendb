@@ -19,14 +19,14 @@ namespace BlittableTests.Routing
         {
             var trie = Trie<int>.Build(new[]
             {
-                "admin/databases",
-                "databases/*/docs",
-                "databases/*/queries",
-                "fs/*/files",
-                "admin/debug-info",
-            }.ToDictionary(x => x, x => 1));
+                "/admin/databases",
+                "/databases/*/docs",
+                "/databases/*/queries",
+                "/fs/*/files",
+                "/admin/debug-info",
+            }.ToDictionary(x => "GET" + x, x => 1));
 
-            Assert.True(trie.TryMatch("admin/databases").Match.Success);
+            Assert.True(trie.TryMatch("GET", "/admin/databases").Match.Success);
         }
 
 
@@ -40,9 +40,9 @@ namespace BlittableTests.Routing
                 "/databases",
                 "/databases/*/docs",
                 "/databases/*/indexes",
-            }.ToDictionary(x => x, x => 1));
+            }.ToDictionary(x => "GET" + x, x => 1));
 
-            Assert.True(trie.TryMatch("/build/version").Match.Success);
+            Assert.True(trie.TryMatch("GET", "/build/version").Match.Success);
         }
 
 
@@ -64,9 +64,9 @@ namespace BlittableTests.Routing
                 "databases/*/indexes/$",
                 "fs/*/files",
                 "admin/debug-info",
-            }.ToDictionary(x => x, x => 1));
+            }.ToDictionary(x => "GET" + x, x => 1));
 
-            Assert.True(trie.TryMatch(url).Match.Success);
+            Assert.True(trie.TryMatch("GET", url).Match.Success);
         }
     }
 }
