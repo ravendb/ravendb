@@ -7,7 +7,6 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Server.Json
 {
-    //TODO: Fix this with a cache using Expression values to avoid using reflection
     public static class JsonDeserialization
     {
         public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
@@ -16,28 +15,12 @@ namespace Raven.Server.Json
         {
             var json = Expression.Parameter(typeof(BlittableJsonReaderObject), "json");
 
-            // new T();
-            
             var vars = new Dictionary<Type, ParameterExpression>();
             var instance = Expression.New(typeof(T).GetConstructor(new Type[0]));
             var propInit = new List<MemberBinding>();
             foreach (var propertyInfo in typeof(T).GetProperties())
             {
-                ParameterExpression value;
-                if (vars.TryGetValue(propertyInfo.PropertyType, out value) == false)
-                {
-                    value = Expression.Variable(propertyInfo.PropertyType, propertyInfo.PropertyType.Name);
-                    vars[propertyInfo.PropertyType] = value;
-                }
-
-                var genericType = propertyInfo.PropertyType != typeof(string) ? new[] { propertyInfo.PropertyType } : new Type[0];
-
-                var tryGet = Expression.Call(json, "TryGet", genericType, Expression.Constant(propertyInfo.Name), value);
-
-                var conditionalExpression = Expression.Condition(tryGet, value, Expression.PropertyOrField(instance, propertyInfo.Name));
-
-
-                propInit.Add(Expression.Bind(propertyInfo,conditionalExpression));
+                propInit.Add(Expression.Bind(propertyInfo,GetValue(propertyInfo, json, vars)));
             }
 
             var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
@@ -45,52 +28,50 @@ namespace Raven.Server.Json
             return lambda.Compile();
         }
 
-
-        private static T Deserialize<T>(BlittableJsonReaderObject obj) where T : new()
+        private static Expression GetValue(PropertyInfo propertyInfo, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
-            var deserialize = new T();
-            Populate(obj, deserialize, typeof(T));
-            return deserialize;
+            if (propertyInfo.PropertyType == typeof (Dictionary<string, string>))
+            {
+                return Expression.Call(typeof (JsonDeserialization).GetMethod(nameof(ToDictionary)),
+                    json, Expression.Constant(propertyInfo.Name));
+
+            }
+            var value = GetParameter(propertyInfo.PropertyType, vars);
+
+            var genericType = propertyInfo.PropertyType != typeof (string) ? new[] {propertyInfo.PropertyType} : new Type[0];
+
+            var tryGet = Expression.Call(json, "TryGet", genericType, Expression.Constant(propertyInfo.Name), value);
+            return Expression.Condition(tryGet, value, Expression.Default(propertyInfo.PropertyType));
         }
 
-        private static object Deserialize(BlittableJsonReaderObject obj, Type type)
+        private static ParameterExpression GetParameter(Type type, Dictionary<Type, ParameterExpression> vars)
         {
-            var deserialize = Activator.CreateInstance(type);
-            return Populate(obj, deserialize, type);
+            ParameterExpression value;
+            if (vars.TryGetValue(type, out value) == false)
+            {
+                value = Expression.Variable(type, type.Name);
+                vars[type] = value;
+            }
+            return value;
         }
 
-        private static object Populate(BlittableJsonReaderObject obj, object deserialize, Type type)
+        public static Dictionary<string, string> ToDictionary(BlittableJsonReaderObject json, string name)
         {
+            var dic = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            if (json.TryGet(name, out obj) == false)
+                return dic;
+
             foreach (var propertyName in obj.GetPropertyNames())
             {
-                object result;
-                obj.TryGetMember(propertyName, out result);
-
-                var str = result as LazyStringValue;
-                if (type == typeof(Dictionary<string, string>))
+                string val;
+                if (obj.TryGet(propertyName, out val))
                 {
-                    var dictionary = (Dictionary<string, string>)deserialize;
-                    dictionary[propertyName] = str;
-                    continue;
-                }
-                var propertyInfo = type.GetProperty(propertyName);
-                if (str != null)
-                {
-                    propertyInfo.SetValue(deserialize, (string)str);
-                    continue;
-                }
-                var jsonReaderObject = result as BlittableJsonReaderObject;
-                if (jsonReaderObject != null)
-                {
-                    var value = Deserialize(jsonReaderObject, propertyInfo.PropertyType);
-                    propertyInfo.SetValue(deserialize, value);
-                }
-                else
-                {
-                    propertyInfo.SetValue(deserialize, result);
+                    dic[propertyName] = val;
                 }
             }
-            return deserialize;
-        }
+            return dic;
+        } 
     }
 }
