@@ -41,16 +41,14 @@ namespace Raven.Tests.FileSystem.Issues
 
                 var drives = DriveInfo.GetDrives().Select(x => x.Name.ToLower()[0]).ToArray();
                 var lastDriveLetter = 'a';
-                for (var c = 'a'; c < 'z'; c++)
+                while (lastDriveLetter != 'z')
                 {
-                    if (!drives.Contains(c))
-                    {
-                        lastDriveLetter = c;
+                    if (drives.Contains(lastDriveLetter) == false)
                         break;
-                    }
+                    lastDriveLetter++;
                 }
 
-                document.Settings[Constants.FileSystem.IndexStorageDirectory] = string.Format("{0}:\\", (char)(lastDriveLetter + 1)); //on purpose, non existing path
+                document.Settings[Constants.FileSystem.IndexStorageDirectory] = string.Format("{0}:\\", lastDriveLetter); //on purpose, non existing path
 
                 using (var file = File.CreateText(Path.Combine(backupLocation, Constants.FilesystemDocumentFilename)))
                 using (var writer = new JsonTextWriter(file))
@@ -86,16 +84,14 @@ namespace Raven.Tests.FileSystem.Issues
 
                 var drives = DriveInfo.GetDrives().Select(x => x.Name.ToLower()[0]).ToArray();
                 var lastDriveLetter = 'a';
-                for (var c = 'a'; c < 'z'; c++)
+                while (lastDriveLetter != 'z')
                 {
-                    if (!drives.Contains(c))
-                    {
-                        lastDriveLetter = c;
+                    if (drives.Contains(lastDriveLetter) == false)
                         break;
-                    }
+                    lastDriveLetter++;
                 }
 
-                document.Settings[Constants.FileSystem.DataDirectory] = string.Format("{0}:\\", (char)(lastDriveLetter + 1)); //on purpose, non existing path
+                document.Settings[Constants.FileSystem.DataDirectory] = string.Format("{0}:\\", (char)(lastDriveLetter )); //on purpose, non existing path
 
                 using (var file = File.CreateText(Path.Combine(backupLocation, Constants.FilesystemDocumentFilename)))
                 using (var writer = new JsonTextWriter(file))
