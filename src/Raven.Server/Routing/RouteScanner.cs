@@ -34,11 +34,15 @@ namespace Raven.Server.Routing
             {
                 var route = memberInfo.GetCustomAttributes<RouteAttribute>().Single();
 
-                //TODO: Verify we don't have two methods on the same path & method!
                 RouteInformation routeInfo;
-                if (routes.TryGetValue(route.Path, out routeInfo) == false)
+                var routeKey = route.Method + route.Path;
+                if (routes.TryGetValue(routeKey, out routeInfo) == false)
                 {
-                    routes[route.Method + route.Path] = routeInfo = new RouteInformation(route.Method, route.Path);
+                    routes[routeKey] = routeInfo = new RouteInformation(route.Method, route.Path);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"A duplicate route found: {routeKey} on {memberInfo.DeclaringType}.{memberInfo.Name}");
                 }
                 routeInfo.Build(memberInfo);
             }
