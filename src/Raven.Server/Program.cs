@@ -30,20 +30,20 @@ namespace Raven.Server
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
             var router = new RequestRouter(RouteScanner.Scan());
-            app.Run(context =>
+            app.Run(async context =>
             {
                 try
                 {
-                    return router.HandlePath(context);
+                    await router.HandlePath(context);
                 }
                 catch (Exception e)
                 {
                     if (context.RequestAborted.IsCancellationRequested)
-                        return Task.CompletedTask;
+                        return;
 
                     var response = context.Response;
                     response.StatusCode = 500;
-                    return response.WriteAsync(new
+                    await response.WriteAsync(new
                     {
                         context.Request.Path,
                         context.Request.QueryString,
