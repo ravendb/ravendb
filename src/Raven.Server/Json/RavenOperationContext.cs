@@ -298,6 +298,34 @@ namespace Raven.Server.Json
             }
         }
 
+
+        public IEnumerable<BlittableJsonReaderObject> ParseMultipleDocuments(Stream stream, int count, BlittableJsonDocumentBuilder.UsageMode mode)
+        {
+            var state = new JsonParserState();
+            using (var parser = new UnmanagedJsonParser(stream, this, state, "many/docs"))
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    BlittableJsonReaderObject reader;
+                    var writer = new BlittableJsonDocumentBuilder(this, mode, "many/docs", parser, state);
+                    try
+                    {
+                        CachedProperties.NewDocument();
+                        writer.Run();
+                        _disposables.Add(writer);
+                        reader = writer.CreateReader();
+                    }
+                    catch (Exception)
+                    {
+                        writer.Dispose();
+                        throw;
+                    }
+                    yield return reader;
+                }
+            }
+        }
+
+
         public void LastStreamSize(int sizeInBytes)
         {
             _lastStreamSize = Math.Max(_lastStreamSize, sizeInBytes);

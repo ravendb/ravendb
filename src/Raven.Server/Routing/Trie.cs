@@ -96,8 +96,10 @@ namespace Raven.Server.Routing
                         return null;
                     }
                 }
+                Match.MatchLength = term.Length;
                 return current;
             }
+
         }
 
 
@@ -120,14 +122,15 @@ namespace Raven.Server.Routing
             }
 
             result = match.SearchTrie(result, url);
-            if (result == null || match.CurrentIndex != result.Key.Length)
+            if (result == null || 
+                 (match.CurrentIndex != result.Key.Length && result.Key[match.CurrentIndex] != '$')
+               )
             {
                 match.Match.Success = false;
                 return match;
             }
 
             match.Value = result.Value;
-            match.Match.MatchLength = url.Length;
             match.Match.Success = true;
             return match;
         }

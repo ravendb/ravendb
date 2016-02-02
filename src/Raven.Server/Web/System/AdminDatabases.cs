@@ -7,6 +7,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
+using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 
@@ -23,7 +24,9 @@ namespace Raven.Server.Web.System
                 context.Transaction = context.Environment.ReadTransaction();
 
                 var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-                var dbId = "db/" + id;
+                if(string.IsNullOrWhiteSpace(id))
+                    throw new InvalidOperationException("Database id was not provided");
+                var dbId = Constants.Database.Prefix + id;
                 var dbDoc = ServerStore.Read(context, dbId);
                 if (dbDoc == null)
                 {
@@ -65,7 +68,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.WriteTransaction();
-                var dbId = "db/" + id;
+                var dbId = Constants.Database.Prefix + id;
 
                 var etag = HttpContext.Request.Headers["ETag"];
                 if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage) == false)
@@ -96,7 +99,10 @@ namespace Raven.Server.Web.System
                 //}
 
 
-                ServerStore.Write(dbId, dbDoc);
+                ServerStore.Write(context, dbId, dbDoc);
+
+                context.Transaction.Commit();
+
                 HttpContext.Response.StatusCode = 201;
                 return Task.CompletedTask;
             }

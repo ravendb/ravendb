@@ -8,7 +8,6 @@ namespace Raven.Abstractions.Data
 
     public enum BulkInsertFormat
     {
-        Bson = 0, 
         Json = 1,        
     }
 
@@ -22,7 +21,7 @@ namespace Raven.Abstractions.Data
             BatchSize = 512;
             WriteTimeoutMilliseconds = 15 * 1000;
             Compression = BulkInsertCompression.GZip;
-            Format = BulkInsertFormat.Bson;
+            Format = BulkInsertFormat.Json;
             ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
             {
                 MaxDocumentsPerChunk = BatchSize*4,
