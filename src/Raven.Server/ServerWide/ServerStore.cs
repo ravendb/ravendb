@@ -92,17 +92,12 @@ namespace Raven.Server.ServerWide
             return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, ctx);
         }
 
-        public void Write(string id, BlittableJsonReaderObject doc)
+        public void Write(RavenOperationContext ctx, string id, BlittableJsonReaderObject doc)
         {
-            using (var tx = _env.WriteTransaction())
-            {
-                var dbs = tx.ReadTree("items");
+            var dbs = ctx.Transaction.ReadTree("items");
 
-                var ptr = dbs.DirectAdd(id, doc.Size);
-                doc.CopyTo(ptr);
-
-                tx.Commit();
-            }
+            var ptr = dbs.DirectAdd(id, doc.Size);
+            doc.CopyTo(ptr);
         }
 
         public void Dispose()

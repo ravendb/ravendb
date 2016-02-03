@@ -353,7 +353,6 @@ namespace Voron
             {
                 if (txLockTaken)
                 {
-                    Console.WriteLine("_txWriter.Release()");
                     _txWriter.Release();
                 }
                 throw;

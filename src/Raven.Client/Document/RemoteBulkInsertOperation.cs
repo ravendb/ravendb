@@ -213,7 +213,6 @@ namespace Raven.Client.Document
 
             switch (options.Format)
             {
-                case BulkInsertFormat.Bson: requestUrl.Append("&format=bson"); break;
                 case BulkInsertFormat.Json: requestUrl.Append("&format=json"); break;
             }
 
@@ -487,11 +486,6 @@ namespace Raven.Client.Document
             {
                 switch (options.Format)
                 {
-                    case BulkInsertFormat.Bson:
-                        {
-                            WriteBsonBatchToBuffer(options, countingStream, batch);
-                            break;
-                        }
                     case BulkInsertFormat.Json:
                         {
                             WriteJsonBatchToBuffer(options, countingStream, batch);
@@ -503,26 +497,6 @@ namespace Raven.Client.Document
                 countingStream.Flush();
                 return countingStream.NumberOfWrittenBytes;
             }
-        }
-
-        private static void WriteBsonBatchToBuffer(BulkInsertOptions options, CountingStream stream, ICollection<RavenJObject> batch)
-        {
-            var binaryWriter = new BinaryWriter(stream);
-            binaryWriter.Write(batch.Count);
-            binaryWriter.Flush();
-
-            var bsonWriter = new BsonWriter(binaryWriter)
-            {
-                DateTimeKindHandling = DateTimeKind.Unspecified
-            };
-
-            foreach (var doc in batch)
-            {
-                doc.WriteTo(bsonWriter);
-            }
-
-            bsonWriter.Flush();
-
         }
 
         private static void WriteJsonBatchToBuffer(BulkInsertOptions options, CountingStream stream, ICollection<RavenJObject> batch)

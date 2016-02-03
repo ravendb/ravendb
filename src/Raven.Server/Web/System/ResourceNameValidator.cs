@@ -42,7 +42,7 @@ namespace Raven.Server.Web.System
 
         public static bool IsValidResourceName(string name, string dataDirectory, out string errorMessage)
         {
-            if (name == null)
+            if (string.IsNullOrEmpty(name))
             {
                 errorMessage = "An empty name is forbidden for use!";
                 return false;
