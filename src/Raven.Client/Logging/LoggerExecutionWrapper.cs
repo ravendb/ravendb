@@ -80,15 +80,11 @@ namespace Raven.Abstractions.Logging
                 return;
             }
 
-            string databaseName = LogContext.DatabaseName;
-            if (string.IsNullOrWhiteSpace(databaseName))
-                databaseName = Constants.SystemDatabase;
-
             foreach (var target in targets)
             {
                 target.Write(new LogEventInfo
                 {
-                    Database = databaseName,
+                    Database = LogContext.DatabaseName,
                     Exception = null,
                     FormattedMessage = formattedMessage,
                     Level = logLevel,

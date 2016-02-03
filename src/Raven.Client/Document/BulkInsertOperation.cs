@@ -51,10 +51,7 @@ namespace Raven.Client.Document
 
             database = database ?? MultiDatabase.GetDatabaseName(documentStore.Url);
 
-            // Fitzchak: Should not be ever null because of the above code, please refactor this.
-            DatabaseCommands = database == null
-                ? documentStore.AsyncDatabaseCommands.ForSystemDatabase()
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
+            DatabaseCommands = documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
             generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, entity =>
                 AsyncHelpers.RunSync(() => documentStore.Conventions.GenerateDocumentKeyAsync(database, DatabaseCommands, entity)));

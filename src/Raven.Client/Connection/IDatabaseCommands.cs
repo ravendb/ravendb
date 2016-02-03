@@ -109,12 +109,6 @@ namespace Raven.Client.Connection
         IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
         /// <summary>
-        ///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact
-        ///     with the default database
-        /// </summary>
-        IDatabaseCommands ForSystemDatabase();
-
-        /// <summary>
         ///     Force the database commands to read directly from the master, unless there has been a failover.
         /// </summary>
         IDisposable ForceReadFromMaster();
@@ -623,11 +617,6 @@ namespace Raven.Client.Connection
         /// <param name="databaseName">name of a database to delete</param>
         /// <param name="hardDelete">should all data be removed (data files, indexing files, etc.). Default: false</param>
         void DeleteDatabase(string databaseName, bool hardDelete = false);
-
-        /// <summary>
-        ///     Ensures that the database exists, creating it if needed
-        /// </summary>
-        void EnsureDatabaseExists(string name, bool ignoreFailures = false);
 
         /// <summary>
         ///     Gets the build number

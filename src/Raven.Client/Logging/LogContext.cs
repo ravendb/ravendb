@@ -18,9 +18,8 @@ namespace Raven.Abstractions.Logging
         public static IDisposable WithDatabase(string database)
         {
             var old = databaseName.Value;
-            var db = database ?? Constants.SystemDatabase;
-            var disposable = LogManager.OpenMappedContext("database", db);
-            databaseName.Value = db;
+            var disposable = LogManager.OpenMappedContext("database", database);
+            databaseName.Value = database;
 
             return new DisposableAction(()=>
             {

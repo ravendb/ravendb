@@ -27,7 +27,7 @@ namespace Raven.Client.Connection.Async
         {
             innerAsyncServerClient = asyncServerClient;
             adminRequest =
-                new AdminRequestCreator((url, method) => innerAsyncServerClient.ForSystemDatabase().CreateRequest(url, method),
+                new AdminRequestCreator((url, method) => innerAsyncServerClient.CreateRequest(url, method),
                                         (currentServerUrl, requestUrl, method) => innerAsyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method));
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Client.Connection.Async
             using (var req = adminRequest.CompactDatabase(databaseName))
             {
                 var json = await req.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), json.Value<long>("OperationId"));
+                return new Operation(innerAsyncServerClient, json.Value<long>("OperationId"));
             }
         }
 
@@ -118,7 +118,7 @@ namespace Raven.Client.Connection.Async
 
                 var jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
-                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
+                return new Operation((AsyncServerClient)innerAsyncServerClient, jsonResponse.Value<long>("OperationId"));
             }
         }
 
@@ -143,38 +143,6 @@ namespace Raven.Client.Connection.Async
                     return (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
                 }
             }, token);
-        }
-
-        public async Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false, CancellationToken token = default (CancellationToken))
-        {
-            var serverClient = (AsyncServerClient)(innerAsyncServerClient.ForSystemDatabase());
-
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
-
-            serverClient.ForceReadFromMaster();
-
-            try
-            {
-                var get = await serverClient.GetAsync(doc.Id, token).ConfigureAwait(false);
-                if (get != null)
-                    return;
-
-                await serverClient.GlobalAdmin.CreateDatabaseAsync(doc, token).ConfigureAwait(false);
-
-                try
-                {
-                    await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention(), token).ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    // this is a courtesy, not required, and can happen if we don't have permissions to the new db
-                }
-            }
-            catch (Exception)
-            {
-                if (ignoreFailures == false)
-                    throw;
-            }
         }
 
         public IAsyncDatabaseCommands Commands
