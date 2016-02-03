@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Abstractions.Logging;
+using Raven.Server.Config;
 using Sparrow.Collections;
 using Sparrow.Platform;
 
@@ -26,6 +28,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         private static readonly ILog Log = LogManager.GetLogger(typeof(WinLowMemoryNotification));
 
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
+        private static AbstractLowMemoryNotification _instance;
 
         protected void RunLowMemoryHandlers()
         {
@@ -72,5 +75,17 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         }
 
         public abstract void SimulateLowMemoryNotification();
+
+        public static AbstractLowMemoryNotification Instance
+        {
+            get { return _instance; }
+        }
+
+        public static void Initialize(CancellationToken shutdownNotification, RavenConfiguration configuration)
+        {
+            _instance = Platform.RunningOnPosix
+                ? new PosixLowMemoryNotification(shutdownNotification, configuration) as AbstractLowMemoryNotification
+                : new WinLowMemoryNotification(shutdownNotification);
+        }
     }
 }
