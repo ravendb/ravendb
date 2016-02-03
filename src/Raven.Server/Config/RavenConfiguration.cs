@@ -116,6 +116,7 @@ namespace Raven.Server.Config
             WebHostConfig = _configBuilder.Build();
             Core.RunInMemory = WebHostConfig.Get<bool>("run.in.memory");
             Core.DataDirectory = WebHostConfig.Get<string>("system.path").ToFullPath();
+            Core.ServerUrls = new[] {WebHostConfig.Get<string>("server.urls")};
         }
 
         public void CopyParentSettings(RavenConfiguration serverConfiguration)

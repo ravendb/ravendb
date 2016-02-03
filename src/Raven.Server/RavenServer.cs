@@ -13,7 +13,7 @@ namespace Raven.Server
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(RavenServer));
 
-        private readonly RavenConfiguration _configuration;
+        public readonly RavenConfiguration Configuration;
 
         public readonly ServerStore ServerStore;
         private IApplication _application;
@@ -22,11 +22,11 @@ namespace Raven.Server
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
-            _configuration = configuration;
-            if (_configuration.Initialized == false)
+            Configuration = configuration;
+            if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
-            ServerStore = new ServerStore(_configuration);
+            ServerStore = new ServerStore(Configuration);
         }
 
         public void Initialize()
@@ -51,7 +51,7 @@ namespace Raven.Server
             IHostingEngine hostingEngine;
             try
             {
-                hostingEngine = new WebHostBuilder(_configuration.WebHostConfig, true)
+                hostingEngine = new WebHostBuilder(Configuration.WebHostConfig, true)
                     .UseServer("Microsoft.AspNet.Server.Kestrel")
                     .UseStartup<RavenServerStartup>()
                     .UseServices(services => services.AddInstance(ServerStore))

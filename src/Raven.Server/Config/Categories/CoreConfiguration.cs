@@ -16,6 +16,19 @@ namespace Raven.Server.Config.Categories
         private bool runInMemory;
         private string workingDirectory;
         private string dataDirectory;
+        private string[] serverUrls;
+
+        [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
+        [DefaultValue(new[] {"http://localhost:8080"})]
+        [ConfigurationEntry("Raven/ServerUrls")]
+        public string[] ServerUrls
+        {
+            get { return serverUrls; }
+            set
+            {
+                serverUrls = value;
+            }
+        }
 
         [Description("Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [DefaultValue(false)]
