@@ -142,7 +142,6 @@
     <Compile Include="RavenDB_3928.cs" />
     <Compile Include="RavenDB-4227.cs" />
     <Compile Include="RavenDB_4053.cs" />
-
     <Compile Include="RavenDB-4222.cs" />
     <Compile Include="RavenDB-4221.cs" />
     <Compile Include="RavenDB_4215.cs" />
@@ -548,6 +547,7 @@
     <Compile Include="RavenDB_3113.cs" />
     <Compile Include="RavenDB_3106.cs" />
     <Compile Include="RavenDB-3225.cs" />
+    <Compile Include="ThorMigrationIssues.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
   </ItemGroup>
   <ItemGroup>
