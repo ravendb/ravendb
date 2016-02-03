@@ -1,20 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Hosting;
-using Microsoft.AspNet.Hosting.Internal;
-using Microsoft.AspNet.Http;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Memory;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 
 namespace Raven.Server
