@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -16,7 +18,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Tests.Core
 {
-    public class RavenTestBase
+    public class RavenTestBase : IDisposable
     {
         public const string ServerName = "Raven.Tests.Core.Server";
 
@@ -29,7 +31,7 @@ namespace Raven.Tests.Core
             var configuration = new RavenConfiguration();
             configuration.Initialize();
 
-            configuration.Core.ServerUrls = new[] { "http://localhost:0" };
+            configuration.Core.ServerUrls = new[] { "http://localhost:8089" };
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
@@ -71,6 +73,11 @@ namespace Raven.Tests.Core
             };
             store.Initialize();
 
+            do
+            {
+                Thread.Sleep(100);
+            } while (true);
+
             await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc);
 
             CreatedStores.Add(store);
@@ -80,6 +87,30 @@ namespace Raven.Tests.Core
         private string UseFiddler(string url)
         {
             return url.Replace("localhost", "localhost.fiddler");
+        }
+
+        public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
+        {
+            if (debug && Debugger.IsAttached == false)
+                return;
+
+            string url = documentStore.Url;
+
+            var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase);
+            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+
+            Process.Start(documentsPage); // start the server
+
+            do
+            {
+                Thread.Sleep(100);
+            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+        }
+
+
+        public void Dispose()
+        {
+            // TODO: Delete database here
         }
     }
 }
