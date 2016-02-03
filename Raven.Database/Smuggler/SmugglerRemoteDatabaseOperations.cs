@@ -330,6 +330,36 @@ namespace Raven.Smuggler
             }
         }
 
+        public async Task<List<KeyValuePair<string, long>>> GetIdentities()
+        {
+            if (isIdentitiesSmugglingSupported() == false)
+                return new List<KeyValuePair<string, long>>();
+
+            int start = 0;
+            const int pageSize = 1024;
+            long totalIdentitiesCount;
+            var identities = new List<KeyValuePair<string, long>>();
+
+            do
+            {
+                var url = Store.Url.ForDatabase(Store.DefaultDatabase) + "/debug/identities?start=" + start + "&pageSize=" + pageSize;
+                using (var request = Store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get, Store.DatabaseCommands.PrimaryCredentials, Store.Conventions)))
+                {
+                    var identitiesInfo = (RavenJObject)await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    totalIdentitiesCount = identitiesInfo.Value<long>("TotalCount");
+
+                    foreach (var identity in identitiesInfo.Value<RavenJArray>("Identities"))
+                    {
+                        identities.Add(new KeyValuePair<string, long>(identity.Value<string>("Key"), identity.Value<long>("Value")));
+                    }
+
+                    start += pageSize;
+                }
+            } while (identities.Count < totalIdentitiesCount);
+
+            return identities;
+        }
+
         public Task SeedIdentityFor(string identityName, long identityValue)
         {
             if (isIdentitiesSmugglingSupported() == false)

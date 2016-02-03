@@ -116,6 +116,7 @@ namespace Raven.Smuggler
             filesystemOptionSet.Add("key2|api-key2|apikey2:", OptionCategory.SmugglerFileSystem, "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => filesOptions.Destination.ApiKey = value);
             filesystemOptionSet.Add("f|filesystem:", OptionCategory.SmugglerFileSystem, "The filesystem to operate on. If no specified, the operations will be on the default filesystem.", value => filesOptions.Source.DefaultFileSystem = value);
             filesystemOptionSet.Add("f2|filesystem2:", OptionCategory.SmugglerFileSystem, "The filesystem to export to. If no specified, the operations will be on the default filesystem. This parameter is used only in the between operation.", value => filesOptions.Destination.DefaultFileSystem = value);
+            filesystemOptionSet.Add("batch-size:", OptionCategory.SmugglerFileSystem, "The batch size for requests", s => filesOptions.BatchSize = int.Parse(s));
         }
 
         private void DefineDatabaseOptionsSet(SmugglerDatabaseOptions databaseOptions)
@@ -203,7 +204,6 @@ namespace Raven.Smuggler
             databaseOptionSet.Add("strip-replication-information", OptionCategory.SmugglerDatabase, "Remove all replication information from metadata (import only)", _ => databaseOptions.StripReplicationInformation = true);
             databaseOptionSet.Add("continuation-token:", OptionCategory.SmugglerDatabase, "Activates the usage of a continuation token in case of unreliable connections or huge imports", s => databaseOptions.ContinuationToken = s);
             databaseOptionSet.Add("skip-conflicted", OptionCategory.SmugglerDatabase, "The database will issue and error when conflicted documents are put. The default is to alert the user, this allows to skip them to continue.", _ => databaseOptions.SkipConflicted = true);
-            filesystemOptionSet.Add("batch-size:", OptionCategory.SmugglerFileSystem, "The batch size for requests", s => filesOptions.BatchSize = int.Parse(s));
         }
 
         private NetworkCredential GetCredentials(FilesConnectionStringOptions connectionStringOptions)

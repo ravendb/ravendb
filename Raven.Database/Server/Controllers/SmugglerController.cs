@@ -22,7 +22,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-    public class SmugglerController : RavenDbApiController
+    public class SmugglerController : BaseDatabaseApiController
     {
         [HttpPost]
         [RavenRoute("smuggler/export")]

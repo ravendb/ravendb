@@ -726,14 +726,14 @@ namespace Raven.Tests.Smuggler
             {
             }
 
-            public Task<ExportOperationStatus> ExportDocuments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag, int maxNumberOfDocumentsToExport)
+            public Task<ExportOperationStatus> ExportDocuments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag, int maxNumberOfDocumentsToExport)
             {
                 Operations.Initialize(Options);
 
                 return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag, maxNumberOfDocumentsToExport);
             }
 
-            public Task<ExportOperationStatus> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag, int maxNumberOfAttachmentsToExport)
+            public Task<ExportOperationStatus> ExportAttachments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag, int maxNumberOfAttachmentsToExport)
             {
                 Operations.Initialize(Options);
 

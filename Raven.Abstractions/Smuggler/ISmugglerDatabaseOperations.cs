@@ -77,5 +77,7 @@ namespace Raven.Abstractions.Smuggler
         Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state);
 
         string GetIdentifier();
+
+        Task<List<KeyValuePair<string, long>>> GetIdentities();
     }
 }

@@ -196,6 +196,8 @@ namespace Raven.Database.Smuggler
                     { "Type", exportTypes[SmugglerExportType.Document] },
                     { "Item", document.ToJson() }
                 });
+
+                return true;
             }) ?? startEtag;
         }
 

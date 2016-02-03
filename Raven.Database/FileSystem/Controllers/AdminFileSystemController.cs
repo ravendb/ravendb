@@ -21,11 +21,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.AccessControl;
-using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
 
 using Raven.Database.FileSystem.Synchronization;
@@ -34,6 +31,8 @@ namespace Raven.Database.FileSystem.Controllers
 {
     public class AdminFileSystemController : BaseAdminFileSystemApiController
     {
+        private static readonly char[] ExistingDriveLetters = DriveInfo.GetDrives().Select(x => x.Name.ToLower()[0]).ToArray();
+
         [HttpPut]
         [RavenRoute("admin/fs/{*id}")]
         public async Task<HttpResponseMessage> Put(string id, bool update = false)
@@ -408,7 +407,7 @@ namespace Raven.Database.FileSystem.Controllers
         {
             message = null;
             var fullPath = path.ToFullPath().ToLower();
-            if (existingDriveLetters.Contains(fullPath[0]))
+            if (ExistingDriveLetters.Contains(fullPath[0]))
                 return true;
 
             message = GetMessageWithObject(new
@@ -427,6 +426,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             var restoreRequest = await ReadJsonObjectAsync<FilesystemRestoreRequest>().ConfigureAwait(false);
 
+            HttpResponseMessage message;
             if (!HasPermissions(restoreRequest.BackupLocation, out message))
                 return message;
 

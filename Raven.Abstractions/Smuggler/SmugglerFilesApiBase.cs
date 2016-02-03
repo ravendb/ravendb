@@ -186,7 +186,7 @@ namespace Raven.Abstractions.Smuggler
             using (var cts = new CancellationTokenSource())
             {
                 var fileHeaders = new BlockingCollection<FileHeader>();
-                var getFilesTask = Task.Run(async () => await GetFilesTask(lastEtag, maxEtag, cts, fileHeaders), cts.Token);
+                var getFilesTask = Task.Run(async () => await GetFilesTask(lastEtag, maxEtag, cts, fileHeaders).ConfigureAwait(false), cts.Token);
 
                 try
                 {
@@ -214,7 +214,7 @@ namespace Raven.Abstractions.Smuggler
 
                         ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
 
-                        using (var fileStream = await Operations.DownloadFile(fileHeader))
+                        using (var fileStream = await Operations.DownloadFile(fileHeader).ConfigureAwait(false))
                         using (var zipStream = fileToStore.Open())
                         {
                             await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
@@ -286,10 +286,10 @@ namespace Raven.Abstractions.Smuggler
                     if (cts.IsCancellationRequested)
                         break;
 
-                    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize))
+                    using (var files = await Operations.GetFiles(lastEtag, Options.BatchSize).ConfigureAwait(false))
                     {
                         var hasDocs = false;
-                        while (await files.MoveNextAsync())
+                        while (await files.MoveNextAsync().ConfigureAwait(false))
                         {
                             if (cts.IsCancellationRequested)
                                 break;

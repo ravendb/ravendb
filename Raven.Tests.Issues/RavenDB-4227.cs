@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Net.Http;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -427,7 +428,7 @@ namespace Raven.Tests.Issues
             var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null,
                     store.Url + string.Format("/databases/{0}/debug/cache-details", store.DefaultDatabase),
-                    "GET",
+                    HttpMethod.Get, 
                     store.DatabaseCommands.PrimaryCredentials,
                     store.Conventions));
 

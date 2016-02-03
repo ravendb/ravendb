@@ -1843,11 +1843,11 @@ namespace Raven.Client.Connection.Async
         public async Task<IAsyncEnumerator<RavenJObject>> StreamExportAsync(ExportOptions options, CancellationToken cancellationToken = default(CancellationToken))
         {
             var path = "/smuggler/export";
-            var request = CreateRequest(path, "POST");
+            var request = CreateRequest(path, HttpMethod.Post);
 
             request.RemoveAuthorizationHeader();
 
-            var tokenRetriever = new SingleAuthTokenRetriever(this, jsonRequestFactory, convention, OperationsHeaders, new OperationMetadata(Url, PrimaryCredentials));
+            var tokenRetriever = new SingleAuthTokenRetriever(this, jsonRequestFactory, convention, OperationsHeaders, new OperationMetadata(Url, PrimaryCredentials, null));
 
             var token = await tokenRetriever.GetToken().WithCancellation(cancellationToken).ConfigureAwait(false);
             try
