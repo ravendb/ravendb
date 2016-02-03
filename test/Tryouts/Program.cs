@@ -27,10 +27,8 @@ namespace Tryouts
         }
         public unsafe static void Main(string[] args)
         {
-            using (var c = new Crud())
-            {
-                c.CanSaveAndLoad().Wait();
-            }
+            var c = new FunctionalityTests();
+            c.FunctionalityTest2();
         }
     }
 }
