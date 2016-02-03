@@ -40,8 +40,6 @@ namespace Raven.Tests.Core
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 
-            // NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(Port);
-
             Server = new RavenServer(configuration)
             {
             };
@@ -55,8 +53,7 @@ namespace Raven.Tests.Core
                 databaseName = string.Format("{0}_{1}", databaseName, dbSuffixIdentifier);
 
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-            if (modifyDatabaseDocument != null)
-                modifyDatabaseDocument(doc);
+            modifyDatabaseDocument?.Invoke(doc);
 
             RavenOperationContext context;
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -73,13 +70,11 @@ namespace Raven.Tests.Core
             };
             store.Initialize();
 
-            do
-            {
-                Thread.Sleep(100);
-            } while (true);
-
             await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc);
-
+            store.AfterDispose += (sender, args) =>
+            {
+                store.AsyncDatabaseCommands.GlobalAdmin.DeleteDatabaseAsync(databaseName, hardDelete: true);
+            };
             CreatedStores.Add(store);
             return store;
         }
@@ -110,7 +105,10 @@ namespace Raven.Tests.Core
 
         public void Dispose()
         {
-            // TODO: Delete database here
+            foreach (var documentStore in CreatedStores)
+            {
+                documentStore.Dispose();
+            }
         }
     }
 }
