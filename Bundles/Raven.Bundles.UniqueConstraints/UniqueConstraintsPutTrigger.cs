@@ -204,10 +204,9 @@ namespace Raven.Bundles.UniqueConstraints
             //This is a very expensive deep clone, i don't want to expose it as a method of JsonDocument.
             //The reason i do this is because Snapshoting is shallow and we need a deep snapshot.
             JsonDocument clone = new JsonDocument();
-            clone.DataAsJson = RavenJObject.Parse(uniqueConstraintsDocument.DataAsJson.ToString());
-            clone.Metadata = RavenJObject.Parse(uniqueConstraintsDocument.Metadata.ToString());
-            uniqueConstraintsDocument = clone;
-            return uniqueConstraintsDocument;
+            clone.DataAsJson =(RavenJObject)(uniqueConstraintsDocument.DataAsJson.CloneToken());
+            clone.Metadata = (RavenJObject)(uniqueConstraintsDocument.Metadata.CloneToken());
+            return clone;
         }
 
         private static bool ShouldRemoveUniqueConstraintDocument(JsonDocument uniqueConstraintsDocument)
