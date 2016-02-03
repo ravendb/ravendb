@@ -3,16 +3,20 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Extensions;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Config
 {
     public class RavenConfiguration
     {
-        private bool initialized = false;
+        public bool Initialized { get; private set; }
         private bool allowChanges = false;
+
+        private readonly IConfigurationBuilder _configBuilder;
 
         public CoreConfiguration Core { get; }
 
@@ -52,6 +56,10 @@ namespace Raven.Server.Config
 
         public RavenConfiguration()
         {
+            _configBuilder = new ConfigurationBuilder()
+                .AddJsonFile("settings.json", optional: true)
+                .AddEnvironmentVariables(prefix: "RAVEN_");
+
             Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
 
             Core = new CoreConfiguration();
@@ -75,6 +83,7 @@ namespace Raven.Server.Config
         }
 
         public string DatabaseName { get; set; }
+        public IConfiguration WebHostConfig { get; private set; }
 
         public RavenConfiguration Initialize()
         {
@@ -97,14 +106,16 @@ namespace Raven.Server.Config
 
             PostInit();
 
-            initialized = true;
+            Initialized = true;
 
             return this;
         }
 
         public void PostInit()
         {
-            
+            WebHostConfig = _configBuilder.Build();
+            Core.RunInMemory = WebHostConfig.Get<bool>("run.in.memory");
+            Core.DataDirectory = WebHostConfig.Get<string>("system.path").ToFullPath();
         }
 
         public void CopyParentSettings(RavenConfiguration serverConfiguration)
@@ -117,7 +128,7 @@ namespace Raven.Server.Config
 
         public void SetSetting(string key, string value)
         {
-            if (initialized && allowChanges == false)
+            if (Initialized && allowChanges == false)
                 throw new InvalidOperationException("Configuration already initialized. You cannot specify an already initialized setting.");
 
             Settings[key] = value;
@@ -144,6 +155,11 @@ namespace Raven.Server.Config
             result.Settings[GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString();
 
             return result;
+        }
+
+        public void AddCommandLine(string[] args)
+        {
+            _configBuilder.AddCommandLine(args);
         }
     }
 }

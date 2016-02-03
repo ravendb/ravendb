@@ -3,6 +3,7 @@ using System.Diagnostics;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
 using BlittableTests.Documents;
+using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Sparrow;
@@ -25,17 +26,12 @@ namespace Tryouts
         }
         public unsafe static void Main(string[] args)
         {
-            var sampleCode = JsonDeserialization.GenerateJsonDeserializationRoutine<User>();
-
-            var dvj = new DynamicJsonValue
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < 1000000; i++)
             {
-                ["Name"] = "Oren",
-                ["Age"] = 34,
-            };
-
-            var blittableJsonReaderObject = new RavenOperationContext(new UnmanagedBuffersPool("Foo")).ReadObject(dvj, "foo");
-
-            var code = sampleCode(blittableJsonReaderObject);
+            var memoryConfiguration = new MemoryConfiguration();
+            }
+            Console.WriteLine(sw.ElapsedMilliseconds);
 
             //new DocumentsCrud().PutAndGetDocumentById("test22");
             return;
