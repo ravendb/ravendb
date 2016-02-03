@@ -32,9 +32,9 @@ namespace BlittableTests
             using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
                 var allocatedMemory = new Sparrow.Collections.ConcurrentSet<UnmanagedBuffersPool.AllocatedMemoryData>();
-                Parallel.For(0, 1000, x =>
+                Parallel.For(0, 100, x =>
                 {
-                    for (var i = 0; i < 1000; i++)
+                    for (var i = 0; i < 10; i++)
                     {
                         allocatedMemory.Add(pool.Allocate(i));
                     }
@@ -55,7 +55,7 @@ namespace BlittableTests
                 var allocatedMemory = new BlockingCollection<UnmanagedBuffersPool.AllocatedMemoryData>();
                 Task.Run(() =>
                 {
-                    for (var i = 0; i < 10000; i++)
+                    for (var i = 0; i < 100; i++)
                     {
                         allocatedMemory.Add(pool.Allocate(i));
                     }
