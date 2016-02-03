@@ -15,9 +15,8 @@ namespace Voron.Tests.Backups
             options.ManualFlushing = true;
         }
 
-
         [Fact]
-        public void CanBackupAndRestoreSmall()
+        public void CanBackupAndRestore()
         {
             RequireFileBasedPager();
             var random = new Random();
@@ -27,7 +26,7 @@ namespace Voron.Tests.Backups
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < 500; i++)
                 {
                     tree.Add("items/" + i, new MemoryStream(buffer));
                 }
@@ -35,13 +34,15 @@ namespace Voron.Tests.Backups
                 tx.Commit();
             }
 
+            Assert.True(Env.Journal.Files.Count > 1);
+
             Env.FlushLogToDataFile(); // force writing data to the data file
 
             // add more data to journal files
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                for (int i = 2; i < 4; i++)
+                for (int i = 500; i < 1000; i++)
                 {
                     tree.Add("items/" + i, new MemoryStream(buffer));
                 }
@@ -63,7 +64,7 @@ namespace Voron.Tests.Backups
                 using (var tx = env.ReadTransaction())
                 {
                     var tree = tx.CreateTree("foo");
-                    for (int i = 0; i < 4; i++)
+                    for (int i = 0; i < 1000; i++)
                     {
                         var readResult = tree.Read("items/" + i);
                         Assert.NotNull(readResult);

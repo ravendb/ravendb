@@ -6,11 +6,8 @@
 
 using System;
 using System.Collections;
-using Voron.Debugging;
-using Voron.Tests.Util;
 using Voron.Util.Conversion;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Voron.Tests.FixedSize
 {

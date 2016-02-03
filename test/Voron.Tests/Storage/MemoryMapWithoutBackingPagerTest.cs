@@ -92,30 +92,6 @@ namespace Voron.Tests.Storage
              Env.Options.DataPager.EnsureContinuous(0, growthMultiplier / Env.Options.PageSize);
         }
 
-        [Theory]
-        [InlineData(2)]
-        [InlineData(5)]
-        [InlineData(15)]
-        [InlineData(100)]
-        [InlineData(250)]
-        public void Should_be_able_to_allocate_new_pages_with_apply_logs_to_data_file(int growthMultiplier)
-        {
-            _options.ManualFlushing = true;
-             Env.Options.DataPager.EnsureContinuous(0, growthMultiplier);
-            var testData = GenerateTestData().ToList();
-            CreatTestSchema();
-            using (var tx = Env.WriteTransaction())
-            {
-                var tree = tx.ReadTree(TestTreeName);
-                foreach (var dataPair in testData)
-                    tree.Add(dataPair.Key, StreamFor(dataPair.Value));
-
-                tx.Commit();
-            }
-            Env.FlushLogToDataFile();
-        }
-
-
         private void CreatTestSchema()
         {
             using (var tx = Env.WriteTransaction())
