@@ -141,8 +141,10 @@
     <TypeScriptCompile Include="App\viewmodels\database\status\indexing\perfDialogs\mapBatchInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\status\requests\requestTracing.ts" />
     <TypeScriptCompile Include="App\viewmodels\database\tasks\subscriptionsTask.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\search\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\status\activityItems.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\topology.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />
@@ -1153,10 +1155,8 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldRangeFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\fieldStringFilter.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\search\inMethodFilter.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\search\search.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
-    <TypeScriptCompile Include="App\viewmodels\filesystem\status\resetIndexConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\status.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\resolveConflict.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\synchronization\synchronization.ts" />
