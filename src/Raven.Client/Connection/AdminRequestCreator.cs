@@ -36,12 +36,10 @@ namespace Raven.Client.Connection
         {
             if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
                 throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-            var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
-            MultiDatabase.AssertValidName(dbname);
+            MultiDatabase.AssertValidName(databaseDocument.Id);
             doc = RavenJObject.FromObject(databaseDocument);
-            doc.Remove("Id");
 
-            return createRequestForSystemDatabase("/admin/databases/" + Uri.EscapeDataString(dbname), HttpMethods.Put);
+            return createRequestForSystemDatabase("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
         }
 
         public HttpJsonRequest DeleteDatabase(string databaseName, bool hardDelete)
