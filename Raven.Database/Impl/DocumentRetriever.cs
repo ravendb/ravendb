@@ -30,20 +30,20 @@ namespace Raven.Database.Impl
 
         private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);	
-		private readonly HashSet<string> loadedIdsForProjectionRetrievals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-		private readonly HashSet<string> loadedIdsForProjectionFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> loadedIdsForProjectionRetrievals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> loadedIdsForProjectionFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		private readonly InMemoryRavenConfiguration configuration;
+        private readonly InMemoryRavenConfiguration configuration;
         private readonly IStorageActionsAccessor actions;
         private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
-	    private readonly Dictionary<string, RavenJToken> transformerParameters;
+        private readonly Dictionary<string, RavenJToken> transformerParameters;
         private readonly HashSet<string> itemsToInclude;
         private bool disableCache;
 
         public Etag Etag = Etag.Empty;
 
-	    public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
+        public DocumentRetriever(InMemoryRavenConfiguration configuration, IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
             Dictionary<string, RavenJToken> transformerParameters = null,
             HashSet<string> itemsToInclude = null)
         {
@@ -98,13 +98,13 @@ namespace Raven.Database.Impl
                                transactionInformation));
 
             return doc;
-        }		
+        }
 
         private JsonDocument RetrieveDocumentInternal(
             IndexQueryResult queryResult,
             HashSet<string> loadedIds,
-			HashSet<string> loadedProjections,
-			FieldsToFetch fieldsToFetch,
+            HashSet<string> loadedProjections,
+            FieldsToFetch fieldsToFetch,
             IndexDefinition indexDefinition,
             bool skipDuplicateCheck)
         {
@@ -131,11 +131,11 @@ namespace Raven.Database.Impl
             }
 
             JsonDocument doc = null;
-	        var hasTransformerInQuery = string.IsNullOrWhiteSpace(fieldsToFetch.Query.ResultsTransformer) == false;
+            var hasTransformerInQuery = string.IsNullOrWhiteSpace(fieldsToFetch.Query.ResultsTransformer) == false;
 
-			if (fieldsToFetch.IsProjection)
-            {				
-				if (indexDefinition.IsMapReduce == false)
+            if (fieldsToFetch.IsProjection)
+            {
+                if (indexDefinition.IsMapReduce == false)
                 {
                     bool hasStoredFields = false;
                     FieldStorage value;
@@ -149,34 +149,34 @@ namespace Raven.Database.Impl
                         if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false && value != FieldStorage.No) continue;
                         hasStoredFields = true;
                     }
-					
-					if (hasStoredFields == false)
-	                {
-						//the flag AllowMultipleIndexEntriesForSameDocumentToResultTransformer only
-						//has meaning only if we have a transformer in the query processing pipeline
-						if (hasTransformerInQuery)
-		                {
-							// duplicate document, filter it out
-							// the flag AllowMultipleIndexEntriesForSameDocumentToResultTransformer explicitly allows duplicates 							
-							if (loadedIds.Add(queryResult.Key) == false &&
-			                    fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false)
-				                return null;
-		                }
-		                else
-		                {
-							// duplicate document, filter it out
-							if (loadedIds.Add(queryResult.Key) == false)
-								return null;			                
-		                }
-	                }
-					//here as well, the filtering makes sense only if we have a transformer in the query
-					else if (fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false &&
-							 hasTransformerInQuery) //we have a query with transformer
-					{
-						if (loadedProjections.Add(queryResult.Key) == false)
-							return null;
-					}
-				}
+
+                    if (hasStoredFields == false)
+                    {
+                        //the flag AllowMultipleIndexEntriesForSameDocumentToResultTransformer only
+                        //has meaning only if we have a transformer in the query processing pipeline
+                        if (hasTransformerInQuery)
+                        {
+                            // duplicate document, filter it out
+                            // the flag AllowMultipleIndexEntriesForSameDocumentToResultTransformer explicitly allows duplicates 							
+                            if (loadedIds.Add(queryResult.Key) == false &&
+                                fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false)
+                                return null;
+                        }
+                        else
+                        {
+                            // duplicate document, filter it out
+                            if (loadedIds.Add(queryResult.Key) == false)
+                                return null;
+                        }
+                    }
+                    //here as well, the filtering makes sense only if we have a transformer in the query
+                    else if (fieldsToFetch.Query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer == false &&
+                             hasTransformerInQuery) //we have a query with transformer
+                    {
+                        if (loadedProjections.Add(queryResult.Key) == false)
+                            return null;
+                    }
+                }
 
                 // We have to load the document if user explicitly asked for the id, since 
                 // we normalize the casing for the document id on the index, and we need to return
@@ -199,7 +199,7 @@ namespace Raven.Database.Impl
                                 var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
                                 foreach (var property in result)
                                 {
-                                    if (property.Value == null ) continue;
+                                    if (property.Value == null) continue;
 
                                     queryResult.Projection[property.Key] = property.Value;
                                 }
@@ -285,7 +285,7 @@ namespace Raven.Database.Impl
 
             if (doc != null && doc.Metadata != null)
                 doc.Metadata.EnsureCannotBeChangeAndEnableSnapshotting();
-            
+
             if (disableCache == false && (doc == null || doc.NonAuthoritativeInformation != true))
                 cache[key] = doc;
 
