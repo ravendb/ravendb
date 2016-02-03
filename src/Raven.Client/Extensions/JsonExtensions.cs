@@ -196,9 +196,8 @@ namespace Raven.Abstractions.Extensions
             {
                 DateParseHandling = DateParseHandling.None,
                 ContractResolver = contractResolver,
+                Converters = Default.Converters
             };
-
-            jsonSerializer.Converters.AddRange(Default.Converters);
 
             return jsonSerializer;
         }
