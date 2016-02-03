@@ -989,12 +989,21 @@ namespace Raven.Database.Server.Controllers.Admin
 
                     ravenDebugDir = Path.Combine(Database.Configuration.TempPath, Path.GetRandomFileName());
                     var ravenDebugExe = Path.Combine(ravenDebugDir, "Raven.Debug.exe");
+                    var ravenDbgHelp = Path.Combine(ravenDebugDir, "dbghelp.dll");
                     var ravenDebugOutput = Path.Combine(ravenDebugDir, "stacktraces.txt");
 
                     Directory.CreateDirectory(ravenDebugDir);
 
-                    if (Environment.Is64BitProcess) ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
-                    else ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+                    if (Environment.Is64BitProcess)
+                    {
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x64.dbghelp.dll", ravenDbgHelp);
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x64.Raven.Debug.exe", ravenDebugExe);
+                    }
+                    else
+                    {
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x86.dbghelp.dll", ravenDbgHelp);
+                        ExtractResource("Raven.Database.Util.Raven.Debug.x86.Raven.Debug.exe", ravenDebugExe);
+                    }
 
                     var process = new Process
                     {

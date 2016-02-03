@@ -1176,7 +1176,7 @@ namespace Raven.Database.Indexing
                 return null;
             }
             using (CultureHelper.EnsureInvariantCulture())
-            using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+            using (DocumentCacher.SkipSetAndGetDocumentsInDocumentCache())
             {
                 var performance = value.IndexDocuments(viewGenerator, batch, actions, minimumTimestamp, token);
                 context.RaiseIndexChangeNotification(new IndexChangeNotification
@@ -1580,6 +1580,19 @@ namespace Raven.Database.Indexing
         {
             return isMapReduce ? "map-reduce" : "simple map";
         }
+
+        public List<int> GetDisabledIndexIds()
+        {
+            var indexIds = new List<int>();
+
+            foreach (var index in indexes)
+            {
+                if (index.Value.Priority.HasFlag(IndexingPriority.Disabled))
+                    indexIds.Add(index.Key);
+            }
+
+            return indexIds;
+        } 
 
         public IIndexExtension GetIndexExtension(string index, string indexExtensionKey)
         {

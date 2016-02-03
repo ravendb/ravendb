@@ -43,7 +43,7 @@ namespace Raven.Client.UniqueConstraints
 
         public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
         {
-            var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
+            var documentStoreListeners = session.Advanced.DocumentStore.Listeners.StoreListeners;
             var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
             if (uniqueConstraintsStoreListener == null)
                 throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
@@ -54,7 +54,7 @@ namespace Raven.Client.UniqueConstraints
 
         public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, params object[] values)
         {
-            var documentStoreListeners = ((DocumentSession)session).Listeners.StoreListeners;
+            var documentStoreListeners = session.Advanced.DocumentStore.Listeners.StoreListeners;
             var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
             if (uniqueConstraintsStoreListener == null)
                 throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
@@ -98,9 +98,9 @@ namespace Raven.Client.UniqueConstraints
                                           }).ToList();
 
                 var constraintDocsIds = constraintsIds.Select(x => x.Id).ToList();
-                var inMemory = ((InMemoryDocumentSessionOperations)session);
-                constraintDocsIds.ForEach(inMemory.UnregisterMissing);
 
+                constraintDocsIds.ForEach(session.Advanced.UnregisterMissing);
+               
                 var constraintDocs = session
                     .Include<ConstraintDocument>(x => x.RelatedId)
                     .Include<ConstraintDocument>(x => x.Constraints.Values.Select(c => c.RelatedId))

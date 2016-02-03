@@ -125,6 +125,15 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
             {
                 var newTable = item.table + "_new";
                 JET_TABLEID newTableId;
+                try
+                {
+                    Api.JetDeleteTable(session, dbid, newTable);
+                }
+                catch (Exception)
+                {
+                    //if there is no such table - then it is not important
+                    //this is a precaution against partially failed upgrade process
+                }
 
                 using (var sr = new Table(session, dbid, item.table, OpenTableGrbit.None))
                 {

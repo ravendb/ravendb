@@ -68,7 +68,10 @@ namespace Raven.Client.Linq
         /// <param name="isMapReduce"></param>
         /// <param name="resultsTransformer"></param>
         /// <param name="transformerParameters"></param>
-        public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, Action<RavenJObject> afterStreamExecuted,  string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer, Dictionary<string, RavenJToken> transformerParameters)
+        /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
+        public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted, 
+            Action<RavenJObject> afterStreamExecuted,  string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
+            Dictionary<string, RavenJToken> transformerParameters,Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
             FieldsToRename = fieldsTRename;
@@ -81,6 +84,7 @@ namespace Raven.Client.Linq
             this.customizeQuery = customizeQuery;
             this.resultsTransformer = resultsTransformer;
             this.transformerParameters = transformerParameters;
+            this.originalQueryType = originalType;
             linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
         }
 
@@ -1299,6 +1303,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private bool insideSelect;
         private readonly bool isMapReduce;
         private bool isNotEqualCheckBoundsToAndAlso;
+        private Type originalQueryType;
 
         private void VisitSelect(Expression operand)
         {
@@ -1529,6 +1534,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             q.SetTransformerParameters(transformerParameters);
 
             documentQuery = (IAbstractDocumentQuery<T>)q;
+            documentQuery.SetOriginalQueryType(originalQueryType);
             documentQuery.SetResultTransformer(resultsTransformer);
             try
             {
@@ -1557,6 +1563,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var q = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
 
             documentQuery = (IAbstractDocumentQuery<T>)q;
+            documentQuery.SetOriginalQueryType(originalQueryType);
             documentQuery.SetResultTransformer(resultsTransformer);
             try
             {
