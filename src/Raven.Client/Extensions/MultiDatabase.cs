@@ -21,7 +21,7 @@ namespace Raven.Client.Extensions
 
             return new DatabaseDocument
             {
-                Id = "Raven/Databases/" + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/DataDir", Path.Combine("~", name)},
@@ -34,7 +34,7 @@ namespace Raven.Client.Extensions
 
             return new FileSystemDocument
             {
-                Id = Constants.FileSystem.Prefix + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/FileSystem/DataDir", Path.Combine("~", "FileSystems", name) },
@@ -48,7 +48,7 @@ namespace Raven.Client.Extensions
 
             return new TimeSeriesDocument
             {
-                Id = Constants.TimeSeries.Prefix + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/TimeSeries/DataDir", Path.Combine("~", "TimeSeries", name)},
@@ -62,7 +62,7 @@ namespace Raven.Client.Extensions
 
             return new CounterStorageDocument
             {
-                Id = Constants.Counter.Prefix + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/Counter/DataDir", Path.Combine("~", "Counters", name)},
