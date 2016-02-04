@@ -1,3 +1,3 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Sparrow.Tests")]
+[assembly: InternalsVisibleTo("FastTests")]

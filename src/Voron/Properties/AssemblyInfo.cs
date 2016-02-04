@@ -1,4 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Voron.Tests")]
+[assembly: InternalsVisibleTo("FastTests")]
 [assembly: InternalsVisibleTo("SlowTests")]
