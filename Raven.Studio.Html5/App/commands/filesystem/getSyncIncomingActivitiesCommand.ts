@@ -39,15 +39,23 @@ class getSyncIncomingActivitiesCommand extends commandBase {
             case synchronizationActivity.Finished:
                 url = "/synchronization/finished";
                 resultsSelector = (x: filesystemListPageDto<synchronizationReportDto>) => {
-
                     return {
                         TotalCount: x.TotalCount,
-                        Items: x.Items.map((item: synchronizationReportDto) => new synchronizationDetail({
-                            FileName: item.FileName,
-                            DestinationUrl: item.Exception,
-                            FileETag: item.FileETag,
-                            Type: item.Type
-                        }, synchronizationDirection.Incoming, this.activity))
+                        Items: x.Items.map((item: synchronizationReportDto) => {
+
+                            var detail = new synchronizationDetail({
+                                FileName: item.FileName,
+                                DestinationUrl: "",
+                                FileETag: item.FileETag,
+                                Type: item.Type
+                            }, synchronizationDirection.Incoming, this.activity);
+
+                            if (item.Exception != null) {
+                                detail.AdditionalInfo(item.Exception);
+                            }
+
+                            return detail;
+                        })
                     };
                 };
                 break;

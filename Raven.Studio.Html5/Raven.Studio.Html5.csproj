@@ -146,6 +146,7 @@
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\settings\versioning.ts" />
     <TypeScriptCompile Include="App\viewmodels\filesystem\status\activityItems.ts" />
+    <TypeScriptCompile Include="App\viewmodels\filesystem\status\sourceSynchronizationInformation.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\console.ts" />
     <TypeScriptCompile Include="App\viewmodels\manage\topology.ts" />
     <TypeScriptCompile Include="App\viewmodels\resources\createTimeSeries.ts" />

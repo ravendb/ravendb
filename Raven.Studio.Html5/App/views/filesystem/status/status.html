@@ -186,7 +186,9 @@
                                                     <td data-bind="text: FileName"></td>
                                                     <td data-bind="text: FileEtag"></td>
                                                     <td data-bind="text: TypeDescription"></td>
-                                                    <td data-bind="text: DestinationUrl"></td>
+                                                    <td>
+                                                        <span data-bind="visible: AdditionalInfo() != null"><a href="#" data-bind="click: function() { $root.showException(AdditionalInfo()); }">Details</a></span>
+                                                    </td>
                                                 </tr>
                                             </tbody>
                                         </table>

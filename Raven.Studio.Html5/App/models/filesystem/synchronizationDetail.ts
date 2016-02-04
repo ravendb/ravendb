@@ -7,6 +7,7 @@ class synchronizationDetail implements documentBase {
     TypeDescription = ko.observable<string>();
     Status = ko.observable<synchronizationActivity>();
     Direction = ko.observable<synchronizationDirection>();
+    AdditionalInfo = ko.observable<any>();
 
     constructor(dto: synchronizationDetailsDto, direction: synchronizationDirection, status?: synchronizationActivity) {
 

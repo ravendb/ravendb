@@ -6,6 +6,7 @@ import synchronizeNowCommand = require("commands/filesystem/synchronizeNowComman
 import activityItems = require("viewmodels/filesystem/status/activityItems");
 import getConfigurationNamesByPrefixCommand = require("commands/filesystem/getConfigurationsByPrefixCommand");
 import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
+import sourceSynchronizationInformation = require("viewmodels/filesystem/status/sourceSynchronizationInformation");
 
 class status extends viewModelBase {
 
@@ -15,7 +16,7 @@ class status extends viewModelBase {
     finishedIncoming: activityItems;
     activeIncoming: activityItems;
     
-    sourceSynchronizationInformations = ko.observableArray<sourceSynchronizationInformationDto>();
+    sourceSynchronizationInformations = ko.observableArray<sourceSynchronizationInformation>();
 
     appUrls: computedAppUrls;
 
@@ -32,20 +33,36 @@ class status extends viewModelBase {
         this.finishedIncoming = new activityItems(this.activeFilesystem(), synchronizationActivity.Finished, synchronizationDirection.Incoming);
         this.activeIncoming = new activityItems(this.activeFilesystem(), synchronizationActivity.Active, synchronizationDirection.Incoming);
 
+        this.retrieveLastSynchronizedEtags();
+    }
+
+    createNotifications(): Array<changeSubscription> {
+        return [changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
+    }
+
+    showException(exception: any) {
+        var prettifySpacing = 4;
+        var configText = JSON.stringify(exception, null, prettifySpacing);
+        this.confirmationMessage("Exception details", configText, ["Close"]);
+    }
+
+    private retrieveLastSynchronizedEtags() {
         new getConfigurationNamesByPrefixCommand(this.activeFilesystem(), "Raven/Synchronization/Sources").execute().done((searchResult: configurationSearchResultsDto) => {
             searchResult.ConfigNames.forEach(name => {
                 new getConfigurationByKeyCommand(this.activeFilesystem(), name).execute().
                     done((sourceSyncInfoAsString: string) => {
                         var syncInfo: sourceSynchronizationInformationDto = JSON.parse(sourceSyncInfoAsString);
 
-                        this.sourceSynchronizationInformations.push(syncInfo);
+                        var match = ko.utils.arrayFirst(this.sourceSynchronizationInformations(), item => (syncInfo.SourceServerUrl === item.SourceServerUrl()));
+
+                        if (!match) {
+                            this.sourceSynchronizationInformations.push(new sourceSynchronizationInformation(syncInfo.LastSourceFileEtag, syncInfo.SourceServerUrl));
+                        } else {
+                            match.LastSourceFileEtag(syncInfo.LastSourceFileEtag);
+                        }
                     });
             });
         });
-    }
-
-    createNotifications(): Array<changeSubscription> {
-        return [changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
     }
 
     private processFsSync(e: synchronizationUpdateNotification) {
@@ -71,6 +88,7 @@ class status extends viewModelBase {
                 else if (e.Action === "Finish") {
                     this.activeIncoming.refresh();
                     this.finishedIncoming.refresh();
+                    this.retrieveLastSynchronizedEtags();
                 }
                 break;
             default:
