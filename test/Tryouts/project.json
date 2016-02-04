@@ -10,7 +10,6 @@
     "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*",
     "BlittableTests": "4.0.0-*",
-    "Raven.Server.Tests": "4.0.0-*",
     "Raven.Tests.Core": "4.0.0-*"
   },
 
@@ -23,13 +22,11 @@
       "dependencies": {
         "Microsoft.CSharp": "4.0.1-beta-23516",
         "Sparrow": "4.0.0-*",
-        "Sparrow.Tests": "4.0.0-*",
         "System.Collections": "4.0.11-beta-23516",
         "System.Console": "4.0.0-beta-23516",
         "System.Linq": "4.0.1-beta-23516",
         "System.Threading": "4.0.11-beta-23516",
         "Voron": "4.0.0-*",
-        "Voron.Tests": "4.0.0-*",
         "xunit": "2.1.0",
         "xunit.runner.dnx": "2.1.0-rc1-build204",
 
