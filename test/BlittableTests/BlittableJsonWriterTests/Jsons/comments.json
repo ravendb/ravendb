@@ -1,0 +1,23 @@
+{
+  "Post": {
+    "Id": "posts/4122",
+    "PublishAt": "2009-08-15T07:01:49.1000000+03:00"
+  },
+  "Comments": [
+    {
+      "Id": 16,
+      "Body": "",
+      "Author": "",
+      "Email": "",
+      "Url": "",
+      "Important": false,
+      "IsSpam": false,
+      "CreatedAt": "2009-08-15T15:03:42.0500000+03:00",
+      "UserHostAddress": "8883.16323.11712.24431",
+      "UserAgent": "Opera/9.80 (Windows NT 5.1; U; en) Presto/2.2.15 Version/10.00",
+      "CommenterId": null
+    }
+  ],
+  "Spam": [],
+  "LastCommentId": 207
+}

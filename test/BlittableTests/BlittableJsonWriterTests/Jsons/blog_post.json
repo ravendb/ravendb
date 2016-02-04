@@ -1,0 +1,26 @@
+{
+    "Title": "Towers Of Midnight VIII: Mistrusted Guardians",
+    "LegacySlug": "TowersOfMidnightVIIIMistrustedGuardians",
+    "Body": "",
+    "ContentType": "Html",
+    "Tags": [
+        "Writings"
+    ],
+    "AuthorId": "users/1",
+    "CreatedAt": "2005-02-19T10:00:50.0000000+02:00",
+    "PublishAt": "2005-02-19T10:00:50.0000000+02:00",
+    "SkipAutoReschedule": false,
+    "LastEditedByUserId": null,
+    "LastEditedAt": null,
+    "IsDeleted": false,
+    "AllowComments": true,
+    "ShowPostEvenIfPrivate": "430fd3dd-b142-457e-8506-b9ec6ad13560",
+    "CommentsCount": 0,
+    "CommentsId": "postcomments/190",
+    "TagsAsSlugs": {
+        "$type": "RaccoonBlog.Web.Models.Post+<get_TagsAsSlugs>d__70, RaccoonBlog.Web",
+        "$values": [
+            "writings"
+        ]
+    }
+}

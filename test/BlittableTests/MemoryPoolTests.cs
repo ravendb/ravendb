@@ -1,0 +1,74 @@
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Raven.Server.Json;
+using Xunit;
+
+namespace BlittableTests
+{
+    public unsafe class MemoryPoolTests
+    {
+        [Fact]
+        public void SerialAllocationAndRelease()
+        {
+            using (var pool = new UnmanagedBuffersPool(string.Empty))
+            {
+                var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
+                for (var i = 0; i < 1000; i++)
+                {
+                    allocatedMemory.Add(pool.Allocate(i));
+                }
+                foreach (var data in allocatedMemory)
+                {
+                    pool.Return(data);
+                }
+            }
+        }
+
+        [Fact]
+        public void ParallelAllocationAndReleaseSeperately()
+        {
+            using (var pool = new UnmanagedBuffersPool(string.Empty))
+            {
+                var allocatedMemory = new Sparrow.Collections.ConcurrentSet<UnmanagedBuffersPool.AllocatedMemoryData>();
+                Parallel.For(0, 100, x =>
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        allocatedMemory.Add(pool.Allocate(i));
+                    }
+                });
+
+                Parallel.ForEach(allocatedMemory, item =>
+                {
+                    pool.Return(item);
+                });
+            }
+        }
+
+        [Fact]
+        public void ParallelSerialAllocationAndRelease()
+        {
+            using (var pool = new UnmanagedBuffersPool(string.Empty))
+            {
+                var allocatedMemory = new BlockingCollection<UnmanagedBuffersPool.AllocatedMemoryData>();
+                Task.Run(() =>
+                {
+                    for (var i = 0; i < 100; i++)
+                    {
+                        allocatedMemory.Add(pool.Allocate(i));
+                    }
+                    allocatedMemory.CompleteAdding();
+                });
+                
+                while (allocatedMemory.IsCompleted == false)
+                {
+                    UnmanagedBuffersPool.AllocatedMemoryData tuple;
+                    if (allocatedMemory.TryTake(out tuple, 100))
+                        pool.Return(tuple);
+                }
+            }
+        }
+    }
+}

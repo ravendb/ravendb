@@ -1,0 +1,5 @@
+﻿{
+  "Test\"": "\n",
+  "Url": "http: //foo",
+  "TwoEscapes": "\r\n"
+}
