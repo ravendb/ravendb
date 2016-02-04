@@ -79,9 +79,11 @@ namespace Raven.Tests.Core
             return store;
         }
 
-        private string UseFiddler(string url)
+        private static string UseFiddler(string url)
         {
-            return url.Replace("localhost", "localhost.fiddler");
+            if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
+                return url.Replace("localhost", "localhost.fiddler");
+            return url;
         }
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
