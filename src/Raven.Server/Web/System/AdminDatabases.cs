@@ -77,7 +77,7 @@ namespace Raven.Server.Web.System
                     return HttpContext.Response.WriteAsync(errorMessage);
                 }
 
-                var dbDoc = context.Read(HttpContext.Request.Body, dbId);
+                var dbDoc = context.Read(RequestBodyStream(), dbId);
                 
                 //TODO: Fix this
                 //int size;
