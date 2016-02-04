@@ -34,5 +34,18 @@ namespace Raven.Server.Web
             var gZipStream = new GZipStream(requestBodyStream, CompressionMode.Decompress);
             return gZipStream;
         }
+
+        protected Stream ResponseBodyStream()
+        {
+               var responseBodyStream = HttpContext.Response.Body;
+
+            var contentEncoding = HttpContext.Response.Headers["Content-Encoding"];
+            if (contentEncoding != "")
+                return responseBodyStream;
+
+            HttpContext.Response.Headers["Content-Encoding"] = "gzip";
+            var gZipStream = new GZipStream(responseBodyStream, CompressionMode.Compress);
+            return gZipStream;
+        }
     }
 }
