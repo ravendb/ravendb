@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.FileSystem
 {
-    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations
+    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictNotification>
     {
         private IDisposable conflictCacheRemoval; 
 
@@ -24,9 +24,9 @@ namespace Raven.Client.FileSystem
             : base(filesStore, listeners, id)
         {
             Commands = asyncFilesCommands;
-            conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
+            conflictCacheRemoval = filesStore.Changes(FileSystemName)
                                              .ForConflicts()
-                                             .Subscribe<ConflictNotification>(this.OnFileConflict);
+                                             .Subscribe(this);
         }
 
         /// <summary>
@@ -143,25 +143,34 @@ namespace Raven.Client.FileSystem
             return searchResults.Files.ToArray();
         }
 
-        internal void OnFileConflict(ConflictNotification notification)
-        {
-            if ( notification.Status == ConflictStatus.Detected)
-            {
-                conflicts.Add(notification.FileName);                
-            }
-            else
-            {
-                entitiesByKey.Remove(notification.FileName);
-                conflicts.Remove(notification.FileName);
-            }            
-        }
-
         public override void Dispose ()
         {
             base.Dispose();
 
             if (this.conflictCacheRemoval != null)
                 this.conflictCacheRemoval.Dispose();
+        }
+
+        public void OnCompleted()
+        {
+            
+        }
+
+        public void OnError(Exception error)
+        {
+        }
+
+        public void OnNext(ConflictNotification value)
+        {
+            if ( value.Status == ConflictStatus.Detected)
+            {
+                conflicts.Add(value.FileName);                
+            }
+            else
+            {
+                entitiesByKey.Remove(value.FileName);
+                conflicts.Remove(value.FileName);
+            }
         }
     }
 }

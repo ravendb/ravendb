@@ -34,7 +34,10 @@ namespace Raven.Client.Document
 
     public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
 
-    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
+    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable , 
+        IObserver<DocumentChangeNotification>,
+        IObserver<BulkInsertChangeNotification>,
+        IObserver<DataSubscriptionChangeNotification> where T : class
     {
         private readonly static ILog logger = LogManager.GetLogger(typeof(Subscription<T>));
 
@@ -404,22 +407,10 @@ namespace Raven.Client.Document
 
             var allDocsObservable = changes.ForAllDocuments();
 
-            putDocumentsObserver = allDocsObservable.Subscribe(notification =>
-            {
-                if (notification.Type == DocumentChangeTypes.Put && notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    newDocuments.Set();
-                }
-            });
+            putDocumentsObserver = allDocsObservable.Subscribe(this);
 
             var bulkInsertObservable = changes.ForBulkInsert();
-            endedBulkInsertsObserver = bulkInsertObservable.Subscribe(notification =>
-            {
-                if (notification.Type == DocumentChangeTypes.BulkInsertEnded)
-                {
-                    newDocuments.Set();
-                }
-            });
+            endedBulkInsertsObserver = bulkInsertObservable.Subscribe(this);
 
             Task.WaitAll(new Task[]
             {
@@ -431,29 +422,7 @@ namespace Raven.Client.Document
         {
             var dataSubscriptionObservable = changes.ForDataSubscription(id);
 
-            dataSubscriptionReleasedObserver = dataSubscriptionObservable.Subscribe(notification =>
-            {
-                if (notification.Type == DataSubscriptionChangeTypes.SubscriptionReleased)
-                {
-                    try
-                    {
-                        ensureOpenSubscription().Wait();
-                    }
-                    catch (Exception)
-                    {
-                        return;
-                    }
-
-                    // succeeded in opening the subscription
-
-                    // no longer need to be notified about subscription status changes
-                    dataSubscriptionReleasedObserver.Dispose();
-                    dataSubscriptionReleasedObserver = null;
-
-                    // start standard stuff
-                    Start();
-                }
-            });
+            dataSubscriptionReleasedObserver = dataSubscriptionObservable.Subscribe(this);
 
             dataSubscriptionObservable.Task.Wait();
         }
@@ -599,6 +568,55 @@ namespace Raven.Client.Document
                 await closeRequest.ExecuteRequestAsync().ConfigureAwait(false);
                 IsConnectionClosed = true;
             }
+        }
+
+        public void OnCompleted()
+        {
+            
+        }
+
+        public void OnError(Exception error)
+        {
+        }
+
+        public void OnNext(DataSubscriptionChangeNotification notification)
+        {
+            if (notification.Type != DataSubscriptionChangeTypes.SubscriptionReleased)
+                return;
+            try
+            {
+                ensureOpenSubscription().Wait();
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            // succeeded in opening the subscription
+
+            // no longer need to be notified about subscription status changes
+            dataSubscriptionReleasedObserver.Dispose();
+            dataSubscriptionReleasedObserver = null;
+
+            // start standard stuff
+            Start();
+        }
+
+        public void OnNext(BulkInsertChangeNotification notification)
+        {
+            if (notification.Type != DocumentChangeTypes.BulkInsertEnded)
+                return;
+
+            newDocuments.Set();
+        }
+
+        public void OnNext(DocumentChangeNotification notification)
+        {
+            if (notification.Type != DocumentChangeTypes.Put ||
+                notification.Id.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            newDocuments.Set();
         }
     }
 }
