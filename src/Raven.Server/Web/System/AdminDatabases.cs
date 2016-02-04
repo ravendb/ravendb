@@ -38,7 +38,10 @@ namespace Raven.Server.Web.System
 
                 HttpContext.Response.StatusCode = 200;
                 HttpContext.Response.Headers["ETag"] = "TODO: Please implement this: " + Guid.NewGuid(); // TODO (fitzchak)
-                dbDoc.WriteTo(HttpContext.Response.Body);
+                using (var stream = ResponseBodyStream())
+                {
+                    dbDoc.WriteTo(stream);
+                }
                 return Task.CompletedTask;
             }
         }
@@ -77,7 +80,7 @@ namespace Raven.Server.Web.System
                     return HttpContext.Response.WriteAsync(errorMessage);
                 }
 
-                var dbDoc = context.Read(HttpContext.Request.Body, dbId);
+                var dbDoc = context.Read(RequestBodyStream(), dbId);
                 
                 //TODO: Fix this
                 //int size;

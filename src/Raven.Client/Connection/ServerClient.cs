@@ -341,6 +341,11 @@ namespace Raven.Client.Connection
             return new ServerClient(newAsyncServerClient);
         }
 
+        public IDatabaseCommands ForSystemDatabase()
+        {
+            return new ServerClient(asyncServerClient.ForSystemDatabaseInternal());
+        }
+
         public string Url
         {
             get { return asyncServerClient.Url; }

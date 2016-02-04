@@ -31,7 +31,7 @@ namespace Raven.Tests.Core
             var configuration = new RavenConfiguration();
             configuration.Initialize();
 
-            configuration.Core.ServerUrls = new[] { "http://localhost:8089" };
+            configuration.Core.ServerUrls = new[] { "http://localhost:8080" };
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
@@ -79,9 +79,11 @@ namespace Raven.Tests.Core
             return store;
         }
 
-        private string UseFiddler(string url)
+        private static string UseFiddler(string url)
         {
-            return url.Replace("localhost", "localhost.fiddler");
+            if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
+                return url.Replace("localhost", "localhost.fiddler");
+            return url;
         }
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)

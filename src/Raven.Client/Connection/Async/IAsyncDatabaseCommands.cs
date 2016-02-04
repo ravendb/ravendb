@@ -118,6 +118,12 @@ namespace Raven.Client.Connection.Async
         IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
         /// <summary>
+        ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
+        ///     with the default database
+        /// </summary>
+        IAsyncDatabaseCommands ForSystemDatabase();
+
+        /// <summary>
         ///     Force the database commands to read directly from the master, unless there has been a failover.
         /// </summary>
         IDisposable ForceReadFromMaster();

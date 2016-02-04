@@ -315,6 +315,15 @@ namespace Raven.Client.Document
 
         public override IDocumentStore Initialize()
         {
+            return Initialize(true);
+        }
+
+        /// <summary>
+        /// Initializes this instance.
+        /// </summary>
+        /// <returns></returns>
+        public IDocumentStore Initialize(bool ensureDatabaseExists)
+        {
             if (initialized)
                 return this;
 
@@ -523,7 +532,10 @@ namespace Raven.Client.Document
 
             database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
 
-            var dbUrl = MultiDatabase.GetDatabaseUrl(Url, database);
+            var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+            if (string.IsNullOrEmpty(database) == false &&
+                string.Equals(database, Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase) == false)
+                dbUrl = dbUrl + "/databases/" + database;
 
             using (NoSynchronizationContext.Scope())
             {
@@ -666,7 +678,7 @@ namespace Raven.Client.Document
         {
             if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
             {
-                var databaseName = session.DatabaseName;
+                var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
                 observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName,
                     _ => new EvictItemsFromCacheBasedOnChanges(databaseName,
                         Changes(databaseName),
@@ -678,7 +690,7 @@ namespace Raven.Client.Document
 
         public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
         {
-            var databaseName = database ?? MultiDatabase.GetDatabaseName(Url);
+            var databaseName = database ?? MultiDatabase.GetDatabaseName(Url) ?? Constants.SystemDatabase;
             var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(databaseName);
 
             return changes == null ? new CompletedTask() : changes.ConnectionTask;

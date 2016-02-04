@@ -109,6 +109,12 @@ namespace Raven.Client.Connection
         IDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
         /// <summary>
+        ///     Create a new instance of <see cref="IDatabaseCommands" /> that will interact
+        ///     with the default database
+        /// </summary>
+        IDatabaseCommands ForSystemDatabase();
+
+        /// <summary>
         ///     Force the database commands to read directly from the master, unless there has been a failover.
         /// </summary>
         IDisposable ForceReadFromMaster();

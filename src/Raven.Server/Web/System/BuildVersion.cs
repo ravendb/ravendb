@@ -48,12 +48,14 @@ namespace Raven.Server.Web.System
         }
 
         [Route("/build/version", "GET")]
-        public Task Get()
+        public async Task Get()
         {
             var versionBuffer = GetVersionBuffer(ServerStore);
-            var response = HttpContext.Response;
-            response.Body.Write(versionBuffer, 0, versionBuffer.Length);
-            return Task.CompletedTask;
+
+            using (var stream = ResponseBodyStream())
+            {
+                await stream.WriteAsync(versionBuffer, 0, versionBuffer.Length);
+            }
         }
     }
 }

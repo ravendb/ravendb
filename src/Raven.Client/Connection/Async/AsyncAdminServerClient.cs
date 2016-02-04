@@ -27,7 +27,7 @@ namespace Raven.Client.Connection.Async
         {
             innerAsyncServerClient = asyncServerClient;
             adminRequest =
-                new AdminRequestCreator((url, method) => innerAsyncServerClient.CreateRequest(url, method),
+                new AdminRequestCreator((url, method) => innerAsyncServerClient.ForSystemDatabase().CreateRequest(url, method),
                                         (currentServerUrl, requestUrl, method) => innerAsyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method));
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Client.Connection.Async
             using (var req = adminRequest.CompactDatabase(databaseName))
             {
                 var json = await req.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return new Operation(innerAsyncServerClient, json.Value<long>("OperationId"));
+                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), json.Value<long>("OperationId"));
             }
         }
 
@@ -118,7 +118,7 @@ namespace Raven.Client.Connection.Async
 
                 var jsonResponse = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
 
-                return new Operation((AsyncServerClient)innerAsyncServerClient, jsonResponse.Value<long>("OperationId"));
+                return new Operation((AsyncServerClient)innerAsyncServerClient.ForSystemDatabase(), jsonResponse.Value<long>("OperationId"));
             }
         }
 
