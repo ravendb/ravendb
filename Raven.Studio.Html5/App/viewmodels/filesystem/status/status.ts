@@ -1,43 +1,25 @@
-import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import pagedList = require("common/pagedList");
 import changesContext = require("common/changesContext");
-import shell = require("viewmodels/shell");
 import viewModelBase = require("viewmodels/viewModelBase");
-import synchronizationDetail = require("models/filesystem/synchronizationDetail");
 import changeSubscription = require('common/changeSubscription');
-import getSyncOutgoingActivitiesCommand = require("commands/filesystem/getSyncOutgoingActivitiesCommand");
-import getSyncIncomingActivitiesCommand = require("commands/filesystem/getSyncIncomingActivitiesCommand");
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
-import resetIndexConfirm = require("viewmodels/filesystem/status/resetIndexConfirm");
+import activityItems = require("viewmodels/filesystem/status/activityItems");
+import getConfigurationNamesByPrefixCommand = require("commands/filesystem/getConfigurationsByPrefixCommand");
+import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
+import sourceSynchronizationInformation = require("viewmodels/filesystem/status/sourceSynchronizationInformation");
 
 class status extends viewModelBase {
 
-    pendingActivity = ko.observableArray<synchronizationDetail>();
-    activeActivity = ko.observableArray<synchronizationDetail>();
+    pendingOutgoing: activityItems;
+    activeOutgoing: activityItems;
+
+    finishedIncoming: activityItems;
+    activeIncoming: activityItems;
+    
+    sourceSynchronizationInformations = ko.observableArray<sourceSynchronizationInformation>();
+
     appUrls: computedAppUrls;
 
-    outgoingActivity = ko.computed(() => {
-        var pendingOutgoing = ko.utils.arrayFilter(this.pendingActivity(), (item) => { return item.Direction() === synchronizationDirection.Outgoing; });
-        var activeOutgoing = ko.utils.arrayFilter(this.activeActivity(), (item) => { return item.Direction() === synchronizationDirection.Outgoing; });
-        var allActivity = new Array<synchronizationDetail>();
-        allActivity.pushAll(activeOutgoing);
-        allActivity.pushAll(pendingOutgoing);
-        return allActivity.slice(0, 50);
-    });
-    incomingActivity = ko.computed(() => {
-        var pendingIncoming = ko.utils.arrayFilter(this.pendingActivity(), (item) => { return item.Direction() === synchronizationDirection.Incoming; });
-        var activeIncoming = ko.utils.arrayFilter(this.activeActivity(), (item) => { return item.Direction() === synchronizationDirection.Incoming; });
-        var allActivity = new Array <synchronizationDetail>();
-        allActivity.pushAll(activeIncoming);
-        allActivity.pushAll(pendingIncoming);
-        return allActivity.slice(0, 50);
-    });
-
-    isOutgoingActivityVisible = ko.computed(() => true);
-
-    incomingActivityPagedList = ko.observable<pagedList>();
-    isIncomingActivityVisible = ko.computed(() => true);
     isFsSyncUpToDate: boolean = true;
 
     activate(args) {
@@ -45,43 +27,72 @@ class status extends viewModelBase {
 
         this.appUrls = appUrl.forCurrentFilesystem();
 
-        new getSyncOutgoingActivitiesCommand(this.activeFilesystem()).execute()
-            .done((x: synchronizationDetail[]) => {
-                for (var i = 0; i < x.length; i++) {
-                    this.addOrUpdateActivity(x[i]);
-                }
-            });
+        this.pendingOutgoing = new activityItems(this.activeFilesystem(), synchronizationActivity.Pending, synchronizationDirection.Outgoing);
+        this.activeOutgoing = new activityItems(this.activeFilesystem(), synchronizationActivity.Active, synchronizationDirection.Outgoing);
 
-        new getSyncIncomingActivitiesCommand(this.activeFilesystem()).execute()
-            .done( (x : synchronizationDetail[]) => {
-                for (var i = 0; i < x.length; i++) {
-                    this.addOrUpdateActivity(x[i]);
-                }
-            });
+        this.finishedIncoming = new activityItems(this.activeFilesystem(), synchronizationActivity.Finished, synchronizationDirection.Incoming);
+        this.activeIncoming = new activityItems(this.activeFilesystem(), synchronizationActivity.Active, synchronizationDirection.Incoming);
 
-        if (this.outgoingActivity().length == 0) {
-            $("#outgoingActivityCollapse").collapse();
-        }
+        this.retrieveLastSynchronizedEtags();
     }
 
     createNotifications(): Array<changeSubscription> {
         return [changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)) ];
     }
 
+    showException(exception: any) {
+        var prettifySpacing = 4;
+        var configText = JSON.stringify(exception, null, prettifySpacing);
+        this.confirmationMessage("Exception details", configText, ["Close"]);
+    }
+
+    private retrieveLastSynchronizedEtags() {
+        new getConfigurationNamesByPrefixCommand(this.activeFilesystem(), "Raven/Synchronization/Sources").execute().done((searchResult: configurationSearchResultsDto) => {
+            searchResult.ConfigNames.forEach(name => {
+                new getConfigurationByKeyCommand(this.activeFilesystem(), name).execute().
+                    done((sourceSyncInfoAsString: string) => {
+                        var syncInfo: sourceSynchronizationInformationDto = JSON.parse(sourceSyncInfoAsString);
+
+                        var match = ko.utils.arrayFirst(this.sourceSynchronizationInformations(), item => (syncInfo.SourceServerUrl === item.SourceServerUrl()));
+
+                        if (!match) {
+                            this.sourceSynchronizationInformations.push(new sourceSynchronizationInformation(syncInfo.LastSourceFileEtag, syncInfo.SourceServerUrl));
+                        } else {
+                            match.LastSourceFileEtag(syncInfo.LastSourceFileEtag);
+                        }
+                    });
+            });
+        });
+    }
+
     private processFsSync(e: synchronizationUpdateNotification) {
         // treat notifications events
         this.isFsSyncUpToDate = false;
 
-        var activity = new synchronizationDetail(e, this.getActionDescription(e.Action));
-        
-        if (e.Action != synchronizationAction.Finish) {
-            this.addOrUpdateActivity(activity);
-        }
-        else {
-            setTimeout(() => {
-                this.activeActivity.remove(item => item.fileName() == e.FileName && item.Type() == e.Type);
-                this.pendingActivity.remove(item => item.fileName() == e.FileName && item.Type() == e.Type);
-            }, 3000);
+        switch (e.Direction) {
+            case "Outgoing":
+                
+                if (e.Action === "Enqueue") {
+                    this.pendingOutgoing.refresh();
+                }
+                else if (e.Action === "Start" || e.Action === "Finish") {
+                    this.activeOutgoing.refresh();
+                    this.pendingOutgoing.refresh();
+                }
+                break;
+            case "Incoming":
+
+                if (e.Action === "Start") {
+                    this.activeIncoming.refresh();
+                }
+                else if (e.Action === "Finish") {
+                    this.activeIncoming.refresh();
+                    this.finishedIncoming.refresh();
+                    this.retrieveLastSynchronizedEtags();
+                }
+                break;
+            default:
+                break;
         }
     }
 
@@ -92,62 +103,16 @@ class status extends viewModelBase {
         }
     }
 
-    collapseAll() {
-        $(".synchronization-group-content").collapse('hide');
-    }
-
-    expandAll() {
-        $(".synchronization-group-content").collapse('show');
-    }
-
-    resetIndex() {
-        var resetIndexVm = new resetIndexConfirm(this.activeFilesystem());
-        app.showDialog(resetIndexVm);
-    }
-
-    private addOrUpdateActivity(e: synchronizationDetail) {
-        var matchingActivity = this.getMatchingActivity(e);
-        if (!matchingActivity) {
-            if (e.Status() === "Active") {
-                this.activeActivity.push(e);
-            }
-            else {
-                this.pendingActivity.push(e);
-            }
-        }
-        else if (matchingActivity.Status() === "Pending" && e.Status() === "Active") {
-            this.pendingActivity.remove(matchingActivity);
-            this.activeActivity.push(e);
-        }
-        else {
-            matchingActivity.Status(e.Status());
-        }
-    }
-
-    private getMatchingActivity(e: synchronizationDetail) : synchronizationDetail {
-        var match = ko.utils.arrayFirst(this.pendingActivity(), (item) =>  {
-            return item.fileName() === e.fileName() && item.Type() === e.Type();
-        });
-
-        if (!match) {
-            match = ko.utils.arrayFirst(this.activeActivity(), (item) => {
-                return item.fileName() === e.fileName() && item.Type() === e.Type();
-            });
-        }
-
-        return match;
-    }
-
     private getActionDescription(action: synchronizationAction) {
         switch (action) {
             case synchronizationAction.Enqueue:
-                return "Pending";
+                return synchronizationActivity.Pending;
             case synchronizationAction.Start:
-                return "Active";
+                return synchronizationActivity.Active;
             case synchronizationAction.Finish:
-                return "Finished";
+                return synchronizationActivity.Finished;
             default:
-                return "Unknown";
+                return synchronizationActivity.Unknown;
         }
     }
 }

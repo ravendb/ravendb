@@ -11,6 +11,7 @@ import searchFileSizeRangeClause = require("viewmodels/filesystem/files/searchFi
 import searchHasMetadataClause = require("viewmodels/filesystem/files/searchHasMetadataClause");
 import searchLastModifiedBetweenClause = require("viewmodels/filesystem/files/searchLastModifiedBetweenClause");
 import deleteFilesMatchingQueryConfirm = require("viewmodels/filesystem/deleteFilesMatchingQueryConfirm");
+import resetIndexConfirm = require("viewmodels/filesystem/search/resetIndexConfirm");
 
 class search extends viewModelBase {
 
@@ -153,6 +154,11 @@ class search extends viewModelBase {
         app
             .showDialog(viewModel)
             .done(() => this.search());
+    }
+
+    resetIndex() {
+        var resetIndexVm = new resetIndexConfirm(this.activeFilesystem());
+        app.showDialog(resetIndexVm);
     }
 }
 

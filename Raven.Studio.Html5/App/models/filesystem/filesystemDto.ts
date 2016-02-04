@@ -1,4 +1,4 @@
-const enum filesystemSynchronizationType {
+const enum synchronizationType {
     Unknown = 0,
     ContentUpdate = 1,
     MetadataUpdate = 2,
@@ -6,12 +6,21 @@ const enum filesystemSynchronizationType {
     Delete = 4,
 }
 
-interface filesystemSynchronizationDetailsDto {
+interface synchronizationDetailsDto {
     FileName: string;
     FileETag: string;
     DestinationUrl: string;
     Type: string;
-    Direction: synchronizationDirection;
+}
+
+interface synchronizationReportDto {
+    FileName: string;
+    FileETag: string;
+    BytesTransfered: number;
+    BytesCopied: number,
+    NeedListLength: number;
+    Exception: string,
+    Type: string;
 }
 
 interface filesystemMetricsHistogramDataDto {
@@ -41,8 +50,8 @@ interface filesystemStatisticsDto {
     Name: string;
     FileCount: number;
     Metrics: filesystemMetricsDto;
-    ActiveSyncs: filesystemSynchronizationDetailsDto[];
-    PendingSyncs: filesystemSynchronizationDetailsDto[];
+    ActiveSyncs: synchronizationDetailsDto[];
+    PendingSyncs: synchronizationDetailsDto[];
 }
 
 interface filesystemFileHeaderDto {
@@ -123,7 +132,7 @@ interface folderNodeDto {
     key: string;
     title: string;
     isLazy: boolean;
-    isFolder: boolean
+    isFolder: boolean;
     addClass?: string;
 }
 
@@ -133,9 +142,9 @@ interface synchronizationUpdateNotification {
     DestinationFileSystemUrl: string;
     SourceServerId: string;
     SourceFileSystemUrl: string;
-    Type: filesystemSynchronizationType;
-    Action: synchronizationAction;
-    Direction: synchronizationDirection;
+    Type: synchronizationType;
+    Action: string;
+    Direction: string;
 }
 
 const enum synchronizationAction {
@@ -147,6 +156,13 @@ const enum synchronizationAction {
 const enum synchronizationDirection {
     Outgoing,
     Incoming
+}
+
+const enum synchronizationActivity {
+    Unknown,
+    Active,
+    Pending,
+    Finished
 }
 
 interface synchronizationConflictNotification {
@@ -177,4 +193,17 @@ interface filesystemConfigNotification {
 const enum filesystemConfigurationChangeAction {
     Set,
     Delete
+}
+
+interface configurationSearchResultsDto {
+    ConfigNames: string[];
+    TotalCount: number;
+    Start: number;
+    PageSize: number;
+}
+
+interface sourceSynchronizationInformationDto {
+   LastSourceFileEtag: string;
+   SourceServerUrl: string;
+   DestinationServerId: string;
 }
