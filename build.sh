@@ -6,12 +6,6 @@ CLR_VER="1.0.0-rc1-update1"
 CLR_RUNTIME="coreclr"
 CLR_ARCH="x64"
 
-BlittableTests
-Raven.Server.Tests
-Sparrow.Tests
-Tryouts
-Voron.Tests
-
 TEST_DIRS=( "test/Voron.Tests" "test/BlittableTests" "test/Raven.Server.Tests" "test/Sparrow.Tests" )
 BUILD_DIRS=( "src/Voron" "src/Sparrow" "src/Raven.Client" "src/Raven.Server" )
 CHK_PKGS=( "unzip" "curl" "libunwind8" "gettext" "libssl-dev" "libcurl4-openssl-dev" "zlib1g" "libicu-dev" "uuid-dev" )
