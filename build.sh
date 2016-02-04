@@ -412,12 +412,18 @@ then
 			status=$?
 		fi
 		popd
+		finline=`cat ${OUT_FILE}.test | egrep "Total.*Errors.*Failed.*Skipped" | wc -l | cut -f1`
+		if [ ${finline} == 0 ] # tests can return 0 after specific errors
+		then
+			status=1
+		fi
 		if [ ${status} -ne 0 ]
 		then
 			if [ ${OP_REPORT} == 1 ]
                         then
                                 echo "FAILED !!" >> ${REPORT_FILE}
                                 echo "`date +"%d/%m/%Y_%H:%M:%S"` ERRORS:" >> ${REPORT_FILE}
+				cat ${OUT_FILE}.test | egrep "Total.*Errors.*Failed.*Skipped" >> ${REPORT_FILE} 
                                 grep '\[FAIL\]' ${OUT_FILE}.test >> ${REPORT_FILE}
 				echo "`date +"%d/%m/%Y_%H:%M:%S"` Saving output at ${OUT_FILE}.`date +"%d%m%Y_%H%M%S"`"
 				cp ${OUT_FILE}.test ${OUT_FILE}.`date +"%d%m%Y_%H%M%S"`
@@ -433,6 +439,8 @@ then
 			if [ ${OP_REPORT} == 1 ] 
 			then
 				echo "Successs." >> ${REPORT_FILE}
+				cat ${OUT_FILE}.test | egrep "Total.*Errors.*Failed.*Skipped" >> ${REPORT_FILE}
+
 			fi
 		fi		
 	done
