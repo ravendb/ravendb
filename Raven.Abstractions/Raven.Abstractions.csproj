@@ -294,6 +294,7 @@
     <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
     <Compile Include="Exceptions\OperationVetoedException.cs" />
     <Compile Include="Extensions\CharExtensions.cs" />
+    <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
