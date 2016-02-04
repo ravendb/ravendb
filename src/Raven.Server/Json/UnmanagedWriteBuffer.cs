@@ -168,6 +168,7 @@ namespace Raven.Server.Json
                 cur = cur.Previous;
             }
             _current = realCurrent;
+            _current.Previous = null;
             ptr = _current.Address;
             size = _current.Used;
         }

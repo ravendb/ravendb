@@ -2,12 +2,44 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Raven.Server.Json;
+using Sparrow;
 using Xunit;
 
 namespace BlittableTests
 {
     public unsafe class UnmanagedStreamTests
     {
+        [Fact]
+        public void EnsureSingleChunk()
+        {
+            using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
+            using (var ctx = new RavenOperationContext(unmanagedByteArrayPool))
+            {
+                var newStream = ctx.GetStream("tst");
+                var buffer = new byte[1337];
+                new Random(1337).NextBytes(buffer);
+                fixed (byte* p = buffer)
+                {
+                    for (int i = 0; i < 7; i++)
+                    {
+                        newStream.Write(p, buffer.Length);
+                    }
+                }
+                byte* ptr;
+                int size;
+                newStream.EnsureSingleChunk(out ptr, out size);
+
+                buffer = new byte[buffer.Length*7];
+                fixed (byte* p = buffer)
+                {
+                    newStream.CopyTo(p);
+
+                    Assert.Equal(size, newStream.SizeInBytes);
+                    Assert.Equal(0, Memory.Compare(p, ptr, size));
+                }
+            }
+        }
+
         [Fact]
         public void BulkWriteAscendingSizeTest()
         {
