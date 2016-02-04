@@ -312,6 +312,15 @@ namespace Raven.Database.Actions
                 var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x).indexId).ToArray();
                 Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
 
+                for (var i = 0; i < createdIndexes.Count; i++)
+                {
+                    var index = createdIndexes[i];
+                    var priority = prioritiesList[i];
+
+                    var instance = Database.IndexStorage.GetIndexInstance(index);
+                    instance.Priority = priority;
+                }
+
                 return createdIndexes.ToArray();
             }
             catch (Exception e)
@@ -374,6 +383,15 @@ namespace Raven.Database.Actions
 
                 var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x.Name).indexId).ToArray();
                 Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
+
+                for (var i = 0; i < createdIndexes.Count; i++)
+                {
+                    var index = createdIndexes[i].Name;
+                    var priority = prioritiesList[i];
+
+                    var instance = Database.IndexStorage.GetIndexInstance(index);
+                    instance.Priority = priority;
+                }
 
                 return createdIndexes.ToArray();
             }

@@ -480,6 +480,7 @@
     <Compile Include="Server\Connections\WebSocketBufferPool.cs" />
     <Compile Include="Server\Tenancy\TimeSeriesLandlord.cs" />
     <Compile Include="Server\Controllers\DebugVoronController.cs" />
+    <Compile Include="Server\Controllers\SmugglerController.cs" />
     <Compile Include="Server\WebApi\MultiGetSafeStringContent.cs" />
     <Compile Include="Server\WebApi\RavenInlineConstraintResolver.cs" />
     <Compile Include="Server\WebApi\Attributes\RavenRouteAttribute.cs" />
@@ -548,6 +549,7 @@
     <Compile Include="Smuggler\SmugglerEmbeddedDatabaseOperations.cs" />
     <Compile Include="Smuggler\SmugglerFilesApi.cs" />
     <Compile Include="Smuggler\SmugglerFilesOperationDispatcher.cs" />
+    <Compile Include="Smuggler\SmugglerExporter.cs" />
     <Compile Include="Smuggler\SmugglerJintHelper.cs" />
     <Compile Include="Smuggler\SmugglerOperationDispatcher.cs" />
     <Compile Include="Smuggler\SmugglerRemoteDatabaseOperations.cs" />
@@ -1430,6 +1432,8 @@
       <SubType>Designer</SubType>
     </Content>
     <EmbeddedResource Include="Json\lodash.js" />
+    <EmbeddedResource Include="Util\Raven.Debug\x64\dbghelp.dll" />
+    <EmbeddedResource Include="Util\Raven.Debug\x86\dbghelp.dll" />
     <EmbeddedResource Include="Util\Raven.Debug\x86\Raven.Debug.exe" />
     <EmbeddedResource Include="Util\Raven.Debug\x64\Raven.Debug.exe" />
     <EmbeddedResource Include="Server\WebUI\raven-data.ico" />

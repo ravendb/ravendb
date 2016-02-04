@@ -141,5 +141,41 @@ namespace Raven.Database.Common
             }
             return false;
         }
+
+        protected bool HasPermissions(string path, out HttpResponseMessage message)
+        {
+            message = null;
+            if (Directory.Exists(path) == false)
+                return true;
+
+            if (!HasPermissionsOnFolder(path))
+            {
+                {
+                    message = GetMessageWithObject(new
+                    {
+                        Message = string.Format("No permissions for folder - {0}", path)
+                    }, HttpStatusCode.BadRequest);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private bool HasPermissionsOnFolder(string path)
+        {
+            try
+            {
+                var filename = Guid.NewGuid().ToString();
+                var fullpath = Path.Combine(path, filename);
+                using (var file = File.CreateText(fullpath))
+                    file.Write(false);
+                IOExtensions.DeleteFile(fullpath);
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
     }
 }

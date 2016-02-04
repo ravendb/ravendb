@@ -891,6 +891,11 @@ namespace Raven.Client.Document
             return this;
         }
 
+        public void SetOriginalQueryType(Type originalType)
+        {
+            this.originalType = originalType;
+        }
+
         IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
         {
             this.SetHighlighterTags(preTag, postTag);
@@ -1976,6 +1981,7 @@ If you really want to do in memory filtering on the data returned from the query
         protected QueryOperator defaultOperator;
         protected bool isDistinct;
         protected bool allowMultipleIndexEntriesForSameDocumentToResultTransformer;
+        private Type originalType;
 
         /// <summary>
         /// Perform a search for documents which fields that match the searchTerms.
@@ -2055,7 +2061,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
             {
                 return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value,
-                    whereParams.FieldTypeForIdentifier ?? typeof(T), false);
+                    originalType ?? whereParams.FieldTypeForIdentifier ?? typeof(T), false);
             }
             var strValue = whereParams.Value as string;
             if (strValue != null)

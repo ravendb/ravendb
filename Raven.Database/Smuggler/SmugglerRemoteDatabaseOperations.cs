@@ -100,16 +100,6 @@ namespace Raven.Smuggler
             };
         }
 
-        public Etag FetchLastDocDeleteEtag()
-        {
-            return null;
-        }
-
-        public Etag FetchLastAttachmentsDeleteEtag()
-        {
-            return null;
-        }
-
         [Obsolete("Use RavenFS instead.")]
         public async Task<List<AttachmentInformation>> GetAttachments(int start, Etag etag, int maxRecords)
         {
@@ -379,6 +369,15 @@ namespace Raven.Smuggler
                 return Store.AsyncDatabaseCommands.SeedIdentityForAsync(identityName, identityValue);
 
             return new CompletedTask();
+        }
+
+        public Task<IAsyncEnumerator<RavenJObject>> ExportItems(ItemType types, OperationState state)
+        {
+            var options = ExportOptions.Create(state, types, Options.ExportDeletions, Options.Limit);
+
+            var client = (AsyncServerClient)Store.AsyncDatabaseCommands;
+
+            return client.StreamExportAsync(options);
         }
 
         public string GetIdentifier()

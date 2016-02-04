@@ -14,11 +14,12 @@ namespace Raven.Abstractions.Smuggler
         private const long Mb = 1024L * 1024;
         private readonly int splitSizeMb;
 
+        private readonly Formatting formatting;
+
         private readonly string filepath;
         private int splitsCount;
         private readonly LinkedList<JsonToken> jsonOperationsStructure;
         private string lastPropertyName;
-        public Formatting Formatting { get; set; }
 
         private CountingStream currentCountingStream;
         private JsonTextWriter currentJsonTextWriter;
@@ -31,16 +32,17 @@ namespace Raven.Abstractions.Smuggler
             return currentJsonTextWriter;
         }
 
-        public SmugglerJsonTextWriter(StreamWriter streamWriter, int splitSizeMb, CountingStream countingStream, string filepath)
+        public SmugglerJsonTextWriter(StreamWriter streamWriter, int splitSizeMb, Formatting formatting, CountingStream countingStream, string filepath)
         {
             this.currentStream = streamWriter.BaseStream;
             this.currentStreamWriter = streamWriter;
             this.currentCountingStream = countingStream;
             this.splitSizeMb = splitSizeMb;
+            this.formatting = formatting;
             this.filepath = filepath;
             this.currentJsonTextWriter = new JsonTextWriter(streamWriter)
             {
-                Formatting = this.Formatting
+                Formatting = formatting
             };
             jsonOperationsStructure = new LinkedList<JsonToken>();
         }
@@ -78,7 +80,7 @@ namespace Raven.Abstractions.Smuggler
             currentStreamWriter = new StreamWriter(currentGzipStream);
             currentJsonTextWriter = new JsonTextWriter(currentStreamWriter)
             {
-                Formatting = this.Formatting
+                Formatting = formatting
             };
 
             WriteStartObject();

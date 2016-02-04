@@ -17,6 +17,7 @@ using Raven.Smuggler;
 using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -275,6 +276,7 @@ namespace Raven.Tests.Smuggler
         private void WaitForNextFullBackup(IDocumentStore store)
         {
             var lastFullBackup = DateTime.MinValue;
+            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
 
             SpinWait.SpinUntil(() =>
             {
@@ -287,7 +289,7 @@ namespace Raven.Tests.Smuggler
                     return false;
                 }
                 return lastFullBackup != backupTime;
-            }, 5000);
+            }, timeout);
         }
 
         private void AssertUsersCountInBackup(int expectedNumberOfUsers, string file)
@@ -726,18 +728,18 @@ namespace Raven.Tests.Smuggler
             {
             }
 
-            public Task<Etag> ExportDocuments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<ExportOperationStatus> ExportDocuments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag, int maxNumberOfDocumentsToExport)
             {
                 Operations.Initialize(Options);
 
-                return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
+                return ExportDocuments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag, maxNumberOfDocumentsToExport);
             }
 
-            public Task<Etag> ExportAttachments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag)
+            public Task<ExportOperationStatus> ExportAttachments(SmugglerJsonTextWriter jsonWriter, Etag lastEtag, Etag maxEtag, int maxNumberOfAttachmentsToExport)
             {
                 Operations.Initialize(Options);
 
-                return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag);
+                return ExportAttachments(new RavenConnectionStringOptions(), jsonWriter, lastEtag, maxEtag, maxNumberOfAttachmentsToExport);
             }
         }
 
@@ -764,7 +766,7 @@ namespace Raven.Tests.Smuggler
                     var endEtag = startEtag.IncrementBy(2);
 
                     writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportDocuments(writer, startEtag, endEtag);
+                    var status = await dumper.ExportDocuments(writer, startEtag, endEtag, int.MaxValue);
                     writer.WriteEndArray();
                     writer.Flush();
 
@@ -774,7 +776,7 @@ namespace Raven.Tests.Smuggler
 
                     Assert.Equal("01000000-0000-0001-0000-000000000007", exportedDocs.First().Value<RavenJObject>("@metadata").Value<string>("@etag"));
                     Assert.Equal("01000000-0000-0001-0000-000000000008", exportedDocs.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
-                    Assert.Equal("01000000-0000-0001-0000-000000000008", lastEtag.ToString());
+                    Assert.Equal("01000000-0000-0001-0000-000000000008", status.LastEtag.ToString());
 
                 }
 
@@ -786,7 +788,7 @@ namespace Raven.Tests.Smuggler
                     var startEtag = store.SystemDatabase.Statistics.LastDocEtag.IncrementBy(-5);
 
                     writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportDocuments(writer, startEtag, null);
+                    var status = await dumper.ExportDocuments(writer, startEtag, null, int.MaxValue);
                     writer.WriteEndArray();
                     writer.Flush();
 
@@ -796,7 +798,7 @@ namespace Raven.Tests.Smuggler
 
                     Assert.Equal("01000000-0000-0001-0000-000000000007", exportedDocs.First().Value<RavenJObject>("@metadata").Value<string>("@etag"));
                     Assert.Equal("01000000-0000-0001-0000-00000000000B", exportedDocs.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
-                    Assert.Equal("01000000-0000-0001-0000-00000000000B", lastEtag.ToString());
+                    Assert.Equal("01000000-0000-0001-0000-00000000000B", status.LastEtag.ToString());
                 }
 
                 for (var i = 0; i < 10; i++)
@@ -813,7 +815,7 @@ namespace Raven.Tests.Smuggler
                     var endEtag = startEtag.IncrementBy(2);
 
                     writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportAttachments(writer, startEtag, endEtag);
+                    var status = await dumper.ExportAttachments(writer, startEtag, endEtag, int.MaxValue);
                     writer.WriteEndArray();
                     writer.Flush();
 
@@ -823,7 +825,7 @@ namespace Raven.Tests.Smuggler
 
                     Assert.Equal("02000000-0000-0001-0000-000000000006", exportedAttachments.First().Value<string>("Etag"));
                     Assert.Equal("02000000-0000-0001-0000-000000000007", exportedAttachments.Last().Value<string>("Etag"));
-                    Assert.Equal("02000000-0000-0001-0000-000000000007", lastEtag.ToString());
+                    Assert.Equal("02000000-0000-0001-0000-000000000007", status.LastEtag.ToString());
 
                 }
 
@@ -835,7 +837,7 @@ namespace Raven.Tests.Smuggler
                     var startEtag = store.SystemDatabase.Statistics.LastAttachmentEtag.IncrementBy(-5);
 
                     writer.WriteStartArray();
-                    var lastEtag = await dumper.ExportAttachments(writer, startEtag, null);
+                    var status = await dumper.ExportAttachments(writer, startEtag, null, int.MaxValue);
                     writer.WriteEndArray();
                     writer.Flush();
 
@@ -845,7 +847,7 @@ namespace Raven.Tests.Smuggler
 
                     Assert.Equal("02000000-0000-0001-0000-000000000006", exportedAttachments.First().Value<string>("Etag"));
                     Assert.Equal("02000000-0000-0001-0000-00000000000A", exportedAttachments.Last().Value<string>("Etag"));
-                    Assert.Equal("02000000-0000-0001-0000-00000000000A", lastEtag.ToString());
+                    Assert.Equal("02000000-0000-0001-0000-00000000000A", status.LastEtag.ToString());
 
                 }
 

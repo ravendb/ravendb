@@ -60,6 +60,7 @@ namespace Rhino.Licensing
             {
                 if (sp.Elapsed.TotalSeconds > 5)
                 {
+                    index = (index + 1) % hosts.Length;
                     throw new TimeoutException("After " + sp.Elapsed + " we couldn't get a time from the network, giving up (tried " + (index + 1) + " servers");
                 }
                 if (hosts.Length <= index)
@@ -83,14 +84,20 @@ namespace Rhino.Licensing
                     using (var udpClient = new UdpClient())
                     {
                         udpClient.Connect(endPoint);
-                        udpClient.Client.ReceiveTimeout = 500;
-                        udpClient.Client.SendTimeout = 500;
+                        //Socket timeouts are only been respected by sync calls, i leave this comment so 
+                        //nobody will try to use timeouts in the future.
+                        //udpClient.Client.ReceiveTimeout = 500;
+                        //udpClient.Client.SendTimeout = 500;
                         var sntpData = new byte[SntpDataLength];
                         sntpData[0] = 0x1B; // version = 4 & mode = 3 (client)
 
                         try
                         {
-                            await udpClient.SendAsync(sntpData, sntpData.Length).ConfigureAwait(false);
+                            var sendTask = udpClient.SendAsync(sntpData, sntpData.Length);
+                            if (await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(false) != sendTask)
+                            {
+                                throw new TimeoutException("Failed to send data to " + host+ "within 500ms");
+                            }
                         }
                         catch (Exception e)
                         {
@@ -108,7 +115,12 @@ namespace Rhino.Licensing
 
                         try
                         {
-                            var result = await udpClient.ReceiveAsync().ConfigureAwait(false);
+                            var receiveTask = udpClient.ReceiveAsync();
+                            if (await Task.WhenAny(receiveTask, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(false) != receiveTask)
+                            {
+                                throw new TimeoutException("Failed to receive data to " + host + "within 500ms");
+                            }
+                            var result = receiveTask.Result;
                             hostTiming.Stop();
                             if (IsResponseValid(result.Buffer) == false)
                             {
@@ -128,6 +140,7 @@ namespace Rhino.Licensing
                         {
                             if (log.IsDebugEnabled)
                                 log.DebugException("Could not get time response from: " + host + " took " + hostTiming.Elapsed, e);
+                            index++;
                         }
                     }
                 }

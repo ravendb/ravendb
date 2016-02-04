@@ -222,10 +222,15 @@ namespace Raven.Database.Indexing
 
         private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, Reference<bool> foundWork)
         {
-            var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
+            var disabledIndexIds = context.IndexStorage.GetDisabledIndexIds();
+
+            var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                MaxIdStatus, UpdateMaxTaskId, foundWork, disabledIndexIds);
             if (removeFromIndexTasks != null)
                 return removeFromIndexTasks;
-            return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(MaxIdStatus, UpdateMaxTaskId, foundWork);
+
+            return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(
+                MaxIdStatus, UpdateMaxTaskId, foundWork, disabledIndexIds);
         }
 
         private MaxTaskIdStatus MaxIdStatus(IComparable currentTaskId)
