@@ -76,4 +76,4 @@ Commercial Licensing
 ===================================================================
 In addition to this license, RavenDB is offered under a commerical license.
 You can learn more about this option by contacting us using: 
-http://hibernatingrhinos.com/contact
+https://ravendb.net/
