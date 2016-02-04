@@ -32,19 +32,30 @@ namespace Raven.Server.Web
                 return requestBodyStream;
 
             var gZipStream = new GZipStream(requestBodyStream, CompressionMode.Decompress);
+            HttpContext.Response.RegisterForDispose(gZipStream);
             return gZipStream;
         }
 
         protected Stream ResponseBodyStream()
         {
-               var responseBodyStream = HttpContext.Response.Body;
+            var responseBodyStream = HttpContext.Response.Body;
 
-            var contentEncoding = HttpContext.Response.Headers["Content-Encoding"];
-            if (contentEncoding != "")
+            var contentEncoding = HttpContext.Request.Headers["Accept-Encoding"];
+            var canAcceptGzip = false;
+            foreach (var val in contentEncoding)
+            {
+                if (val == "gzip")
+                {
+                    canAcceptGzip = true;
+                    break;
+                }
+            }
+            if(canAcceptGzip==false)
                 return responseBodyStream;
 
             HttpContext.Response.Headers["Content-Encoding"] = "gzip";
             var gZipStream = new GZipStream(responseBodyStream, CompressionMode.Compress);
+            HttpContext.Response.RegisterForDispose(gZipStream);
             return gZipStream;
         }
     }

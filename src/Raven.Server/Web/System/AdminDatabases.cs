@@ -24,7 +24,7 @@ namespace Raven.Server.Web.System
                 context.Transaction = context.Environment.ReadTransaction();
 
                 var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-                if(string.IsNullOrWhiteSpace(id))
+                if (string.IsNullOrWhiteSpace(id))
                     throw new InvalidOperationException("Database id was not provided");
                 var dbId = Constants.Database.Prefix + id;
                 var dbDoc = ServerStore.Read(context, dbId);
@@ -37,11 +37,9 @@ namespace Raven.Server.Web.System
                 UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
 
                 HttpContext.Response.StatusCode = 200;
-                HttpContext.Response.Headers["ETag"] = "TODO: Please implement this: " + Guid.NewGuid(); // TODO (fitzchak)
-                using (var stream = ResponseBodyStream())
-                {
-                    dbDoc.WriteTo(stream);
-                }
+                // TODO: Implement etags
+
+                dbDoc.WriteTo(ResponseBodyStream());
                 return Task.CompletedTask;
             }
         }
