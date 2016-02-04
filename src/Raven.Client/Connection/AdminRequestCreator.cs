@@ -75,7 +75,12 @@ namespace Raven.Client.Connection
 
         public HttpJsonRequest StartBackup(string backupLocation, DatabaseDocument databaseDocument, string databaseName, bool incremental)
         {
+            if (databaseName == Constants.SystemDatabase)
+            {
+                return createRequestForSystemDatabase("/admin/backup", HttpMethods.Post);
+            }
             return createRequestForSystemDatabase("/databases/" + databaseName + "/admin/backup?incremental=" + incremental, HttpMethods.Post);
+            
         }
 
         public HttpJsonRequest CreateRestoreRequest()
