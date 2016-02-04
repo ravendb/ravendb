@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         private static extern IntPtr CreateMemoryResourceNotification(int notificationType);
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        public class MemoryStatusEx
+        public struct MemoryStatusEx
         {
             public uint dwLength;
             public uint dwMemoryLoad;
@@ -35,11 +35,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             public ulong ullTotalVirtual;
             public ulong ullAvailVirtual;
             public ulong ullAvailExtendedVirtual;
-
-            public MemoryStatusEx()
-            {
-                dwLength = (uint)Marshal.SizeOf(typeof(MemoryStatusEx));
-            }
         }
 
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -59,7 +54,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             }
         }
 
-        public static MemoryInfoResult GetMemoryInfo()
+        public static unsafe MemoryInfoResult GetMemoryInfo()
         {
             if (failedToGetAvailablePhysicalMemory)
             {
@@ -87,7 +82,10 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
               
 
-                var memoryStatus = new MemoryStatusEx();
+                var memoryStatus = new MemoryStatusEx
+                {
+                    dwLength = (uint)sizeof(MemoryStatusEx)
+                };
                 var result = GlobalMemoryStatusEx(memoryStatus);
                 if (result == false)
                 {
