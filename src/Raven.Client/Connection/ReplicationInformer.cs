@@ -50,9 +50,6 @@ namespace Raven.Client.Connection
 
         private Task UpdateReplicationInformationIfNeededInternalAsync(string url, Func<ReplicationDocumentWithClusterInformation> getReplicationDestinations)
         {
-            // TODO: Disable for debugging 4.0
-            return new CompletedTask();
-
             if (Conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
                 return new CompletedTask();
 

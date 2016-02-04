@@ -71,8 +71,7 @@ namespace Raven.Server.Config.Categories
 
             if (workingDirectory.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
             {
-                throw new NotSupportedException("AppDomain.CurrentDomain.BaseDirectory is not exist in DNX");
-                var baseDirectory = "";
+                var baseDirectory = AppContext.BaseDirectory;
                 var rootPath = Path.GetPathRoot(baseDirectory);
                 if (string.IsNullOrEmpty(rootPath) == false)
                     workingDirectory = Regex.Replace(workingDirectory, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
