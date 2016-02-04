@@ -854,7 +854,7 @@ more responsive application.
         {
             if (documentStore.HasJsonRequestFactory && Conventions.ShouldSaveChangesForceAggressiveCacheCheck && batchResults.Count != 0)
             {
-                documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName ?? Constants.SystemDatabase);
+                documentStore.JsonRequestFactory.ExpireItemsFromCache(DatabaseName);
             }
 
             for (var i = saveChangesData.DeferredCommandsCount; i < batchResults.Count; i++)

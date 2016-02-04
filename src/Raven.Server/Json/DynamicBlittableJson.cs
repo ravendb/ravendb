@@ -1,3 +1,4 @@
+using System;
 using System.Dynamic;
 
 namespace Raven.Server.Json
@@ -14,7 +15,7 @@ namespace Raven.Server.Json
             {
                 BlittableJsonReaderArray = blittableJsonReaderArray;
             }
-          
+
 
             public int Length => BlittableJsonReaderArray.Length;
 
@@ -25,7 +26,8 @@ namespace Raven.Server.Json
                 const string LengthName = "Length";
                 const string CountName = "Count";
                 result = null;
-                if (string.CompareOrdinal(binder.Name, LengthName)==0 || string.CompareOrdinal(binder.Name, CountName) == 0)
+                if (string.CompareOrdinal(binder.Name, LengthName) == 0 ||
+                    string.CompareOrdinal(binder.Name, CountName) == 0)
                 {
                     result = Length;
                     return true;
@@ -43,11 +45,11 @@ namespace Raven.Server.Json
 
                 if (resultObject is BlittableJsonReaderObject)
                 {
-                    result = new DynamicBlittableJson((BlittableJsonReaderObject)resultObject);
+                    result = new DynamicBlittableJson((BlittableJsonReaderObject) resultObject);
                 }
                 else if (resultObject is BlittableJsonReaderArray)
                 {
-                    result = new DynamicBlittableArray((BlittableJsonReaderArray)resultObject);
+                    result = new DynamicBlittableArray((BlittableJsonReaderArray) resultObject);
                 }
                 else
                 {
@@ -61,7 +63,7 @@ namespace Raven.Server.Json
         public DynamicBlittableJson(BlittableJsonReaderObject blittableJsonReaderObject)
         {
             BlittableJsonReaderObject = blittableJsonReaderObject;
-        }      
+        }
 
         public string[] GetPropertyNames()
         {
@@ -70,23 +72,30 @@ namespace Raven.Server.Json
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
-            result = null;
-            object objectResult = null;
-            if (!BlittableJsonReaderObject.TryGetMember(binder.Name, out objectResult))
+            return TryGet(binder.Name, out result);
+        }
+
+        private bool TryGet(string name, out object result)
+        {
+            if (!BlittableJsonReaderObject.TryGetMember(name, out result))
                 return false;
 
-            if (objectResult is BlittableJsonReaderObject)
+            if (result is BlittableJsonReaderObject)
             {
-                result = new DynamicBlittableJson((BlittableJsonReaderObject)objectResult);
+                result = new DynamicBlittableJson((BlittableJsonReaderObject) result);
             }
-            else if (objectResult is BlittableJsonReaderArray)
+            else if (result is BlittableJsonReaderArray)
             {
-                result = new DynamicBlittableArray((BlittableJsonReaderArray)objectResult);
+                result = new DynamicBlittableArray((BlittableJsonReaderArray) result);
             }
-            else
-                result = objectResult;
 
             return true;
+        }
+
+        public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
+        {
+            return TryGet((string) indexes[0], out result);
+
         }
     }
 }

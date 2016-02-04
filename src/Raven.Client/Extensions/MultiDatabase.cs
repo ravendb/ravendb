@@ -16,12 +16,10 @@ namespace Raven.Client.Extensions
         public static DatabaseDocument CreateDatabaseDocument(string name)
         {
             AssertValidName(name);
-            if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
-                return new DatabaseDocument { Id = Constants.SystemDatabase };
 
             return new DatabaseDocument
             {
-                Id = "Raven/Databases/" + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/DataDir", Path.Combine("~", name)},
@@ -34,7 +32,7 @@ namespace Raven.Client.Extensions
 
             return new FileSystemDocument
             {
-                Id = Constants.FileSystem.Prefix + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/FileSystem/DataDir", Path.Combine("~", "FileSystems", name) },
@@ -48,7 +46,7 @@ namespace Raven.Client.Extensions
 
             return new TimeSeriesDocument
             {
-                Id = Constants.TimeSeries.Prefix + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/TimeSeries/DataDir", Path.Combine("~", "TimeSeries", name)},
@@ -62,7 +60,7 @@ namespace Raven.Client.Extensions
 
             return new CounterStorageDocument
             {
-                Id = Constants.Counter.Prefix + name,
+                Id = name,
                 Settings =
                 {
                     {"Raven/Counter/DataDir", Path.Combine("~", "Counters", name)},
@@ -74,10 +72,8 @@ namespace Raven.Client.Extensions
 
         internal static void AssertValidName(string name)
         {
-            if (name == null) throw new ArgumentNullException("name");
-
-            if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
-                return;
+            if (name == null)
+                throw new ArgumentNullException("name");
 
             var result = Regex.Matches(name, ValidDbNameChars);
             if (result.Count == 0 || result[0].Value != name)
@@ -95,10 +91,6 @@ namespace Raven.Client.Extensions
         /// <returns></returns>
         public static string GetDatabaseUrl(string url, string database)
         {
-            if (database == Constants.SystemDatabase)
-            {
-                return GetRootDatabaseUrl(url);
-            }
             return GetRootDatabaseUrl(url) + "/databases/" + database + "/";
         }
 
@@ -137,7 +129,7 @@ namespace Raven.Client.Extensions
                 return Regex.Match(databaseUrl, ValidDbNameChars).Value;
             }
 
-            return Constants.SystemDatabase;
+            throw new InvalidOperationException("Not a valid database name");
         }
     }
 }

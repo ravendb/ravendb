@@ -26,53 +26,96 @@ namespace BlittableTests.BlittableJsonWriterTests
                 }
             };
 
-            var jsonSerializer = new JsonSerializer();
-            var stringWriter = new StringWriter();
-            var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonSerializer.Serialize(jsonWriter, employee);
-
-            return stringWriter.ToString();
+            return JsonConvert.SerializeObject(employee);
         }
 
         public string GenerateSimpleEntityForFunctionalityTest2()
         {
-            object employee = new
-            {
-                Name = "Oren",
-                Age = "34",
-                Dogs = new[] { "Arava", "Oscar", "Phoebe" },
-                MegaDevices = new[]
-                {
-                  new
-                  {
-                      Name = "Misteryous Brain Disruptor",
-                      Usages = 0
-                  }  ,
-                  new
-                  {
-                      Name="Hockey stick",
-                      Usages = 4
-                  }
-                },
-                Office = new
-                {
-                    Manager = new
-                    {
-                        Name = "Assi",
-                        Id = 44
-                    },
-                    Name = "Hibernating Rhinos",
-                    Street = "Hanais 21",
-                    City = "Hadera"
-                }
-            };
-
-            var jsonSerializer = new JsonSerializer();
-            var stringWriter = new StringWriter();
-            var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonSerializer.Serialize(jsonWriter, employee);
-
-            return stringWriter.ToString();
+            return @"{""<Name>i__Field"":""Oren"",""<Age>i__Field"":""34"",""<Dogs>i__Field"":[""Arava"",""Oscar"",""Phoebe""],""<MegaDevices>i__Field"":[{""<Name>i__Field"":""Misteryous Brain Disruptor"",""<Usages>i__Field"":0,""Name"":""Misteryous Brain Disruptor"",""Usages"":0},{""<Name>i__Field"":""Hockey stick"",""<Usages>i__Field"":4,""Name"":""Hockey stick"",""Usages"":4}],""<Office>i__Field"":{""<Manager>i__Field"":{""<Name>i__Field"":""Assi"",""<Id>i__Field"":44,""Name"":""Assi"",""Id"":44},""<Name>i__Field"":""Hibernating Rhinos"",""<Street>i__Field"":""Hanais 21"",""<City>i__Field"":""Hadera"",""Manager"":{""<Name>i__Field"":""Assi"",""<Id>i__Field"":44,""Name"":""Assi"",""Id"":44},""Name"":""Hibernating Rhinos"",""Street"":""Hanais 21"",""City"":""Hadera""},""Name"":""Oren"",""Age"":""34"",""Dogs"":[""Arava"",""Oscar"",""Phoebe""],""MegaDevices"":[{""<Name>i__Field"":""Misteryous Brain Disruptor"",""<Usages>i__Field"":0,""Name"":""Misteryous Brain Disruptor"",""Usages"":0},{""<Name>i__Field"":""Hockey stick"",""<Usages>i__Field"":4,""Name"":""Hockey stick"",""Usages"":4}],""Office"":{""<Manager>i__Field"":{""<Name>i__Field"":""Assi"",""<Id>i__Field"":44,""Name"":""Assi"",""Id"":44},""<Name>i__Field"":""Hibernating Rhinos"",""<Street>i__Field"":""Hanais 21"",""<City>i__Field"":""Hadera"",""Manager"":{""<Name>i__Field"":""Assi"",""<Id>i__Field"":44,""Name"":""Assi"",""Id"":44},""Name"":""Hibernating Rhinos"",""Street"":""Hanais 21"",""City"":""Hadera""}}";
+//            return @"{
+//  ""<Name>i__Field"": ""Oren"",
+//  ""<Age>i__Field"": ""34"",
+//  ""<Dogs>i__Field"": [
+//    ""Arava"",
+//    ""Oscar"",
+//    ""Phoebe""
+//  ],
+//  ""<MegaDevices>i__Field"": [
+//    {
+//      ""<Name>i__Field"": ""Misteryous Brain Disruptor"",
+//      ""<Usages>i__Field"": 0,
+//      ""Name"": ""Misteryous Brain Disruptor"",
+//      ""Usages"": 0
+//    },
+//    {
+//      ""<Name>i__Field"": ""Hockey stick"",
+//      ""<Usages>i__Field"": 4,
+//      ""Name"": ""Hockey stick"",
+//      ""Usages"": 4
+//    }
+//  ],
+//  ""<Office>i__Field"": {
+//    ""<Manager>i__Field"": {
+//      ""<Name>i__Field"": ""Assi"",
+//      ""<Id>i__Field"": 44,
+//      ""Name"": ""Assi"",
+//      ""Id"": 44
+//    },
+//    ""<Name>i__Field"": ""Hibernating Rhinos"",
+//    ""<Street>i__Field"": ""Hanais 21"",
+//    ""<City>i__Field"": ""Hadera"",
+//    ""Manager"": {
+//      ""<Name>i__Field"": ""Assi"",
+//      ""<Id>i__Field"": 44,
+//      ""Name"": ""Assi"",
+//      ""Id"": 44
+//    },
+//    ""Name"": ""Hibernating Rhinos"",
+//    ""Street"": ""Hanais 21"",
+//    ""City"": ""Hadera""
+//  },
+//  ""Name"": ""Oren"",
+//  ""Age"": ""34"",
+//  ""Dogs"": [
+//    ""Arava"",
+//    ""Oscar"",
+//    ""Phoebe""
+//  ],
+//  ""MegaDevices"": [
+//    {
+//      ""<Name>i__Field"": ""Misteryous Brain Disruptor"",
+//      ""<Usages>i__Field"": 0,
+//      ""Name"": ""Misteryous Brain Disruptor"",
+//      ""Usages"": 0
+//    },
+//    {
+//      ""<Name>i__Field"": ""Hockey stick"",
+//      ""<Usages>i__Field"": 4,
+//      ""Name"": ""Hockey stick"",
+//      ""Usages"": 4
+//    }
+//  ],
+//  ""Office"": {
+//    ""<Manager>i__Field"": {
+//      ""<Name>i__Field"": ""Assi"",
+//      ""<Id>i__Field"": 44,
+//      ""Name"": ""Assi"",
+//      ""Id"": 44
+//    },
+//    ""<Name>i__Field"": ""Hibernating Rhinos"",
+//    ""<Street>i__Field"": ""Hanais 21"",
+//    ""<City>i__Field"": ""Hadera"",
+//    ""Manager"": {
+//      ""<Name>i__Field"": ""Assi"",
+//      ""<Id>i__Field"": 44,
+//      ""Name"": ""Assi"",
+//      ""Id"": 44
+//    },
+//    ""Name"": ""Hibernating Rhinos"",
+//    ""Street"": ""Hanais 21"",
+//    ""City"": ""Hadera""
+//  }
+//}";
         }
 
         protected static unsafe void AssertComplexEmployee(string str,BlittableJsonReaderObject doc,

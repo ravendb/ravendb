@@ -18,7 +18,7 @@ namespace BlittableTests
                 var newStream = ctx.GetStream("tst");
                 var totalSize = 0;
                 var rand = new Random();
-                for (var i = 1; i < 5000; i++)
+                for (var i = 1; i < 5000; i+=500)
                 {
                     var pointer = ctx.GetMemory(rand.Next(1, i * 7));
                     totalSize += pointer.SizeInBytes;
@@ -71,7 +71,7 @@ namespace BlittableTests
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");
                 var rand = new Random();
-                for (var i = 5000; i > 1; i--)
+                for (var i = 5000; i > 1; i-=500)
                 {
                     var pointer = ctx.GetMemory(rand.Next(1, i * 7));
                     FillData((byte*)pointer.Address, pointer.SizeInBytes);
@@ -108,7 +108,7 @@ namespace BlittableTests
                 var allocatedMemory = new List<UnmanagedBuffersPool.AllocatedMemoryData>();
                 var newStream = ctx.GetStream("tst");
                 var rand = new Random();
-                for (var i = 1; i < 5000; i++)
+                for (var i = 1; i < 5000; i+=500)
                 {
                     var pointer = ctx.GetMemory(rand.Next(1, i*7));
                     FillData((byte*)pointer.Address, pointer.SizeInBytes);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -45,9 +46,8 @@ namespace BlittableTests.BlittableJsonWriterTests
         [Fact]
         public void FunctionalityTest2()
         {
-            var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
-
             var str = GenerateSimpleEntityForFunctionalityTest2();
+            using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {

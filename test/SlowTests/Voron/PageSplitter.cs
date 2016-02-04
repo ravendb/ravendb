@@ -199,7 +199,7 @@ namespace Voron.Tests.Bugs
         private static IList<string> ReadIds(string fileName, int maxSize = int.MaxValue)
         {
             var assembly = typeof(PageSplitter).GetTypeInfo().Assembly;
-            using (var fs = assembly.GetManifestResourceStream("Voron.Tests.Bugs.Data." + fileName))
+            using (var fs = assembly.GetManifestResourceStream("SlowTests.Data." + fileName))
             using (var reader = new StreamReader(fs))
             {
                 string line;

@@ -25,7 +25,6 @@ namespace Raven.Server.ServerWide
         private static readonly ILog Log = LogManager.GetLogger(typeof(ServerStore));
 
         private StorageEnvironment _env;
-        private readonly IConfigurationRoot _config;
 
         private UnmanagedBuffersPool _pool;
 
@@ -34,15 +33,11 @@ namespace Raven.Server.ServerWide
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         public readonly RavenConfiguration Configuration;
 
-        public ServerStore(IConfigurationRoot config)
+        public ServerStore(RavenConfiguration configuration)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            _config = config;
-
-            Configuration = new RavenConfiguration();
-            Configuration.Initialize();
-            Configuration.Core.RunInMemory = _config.Get<bool>("run.in.memory");
-            Configuration.Core.DataDirectory = _config.Get<string>("system.path").ToFullPath();
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
+            Configuration = configuration;
+            
             DatabasesLandlord = new DatabasesLandlord(this);
         }
 
@@ -52,12 +47,8 @@ namespace Raven.Server.ServerWide
         {
             shutdownNotification = new CancellationTokenSource();
 
-            //TODO: Should this be removed?
-            AbstractLowMemoryNotification lowMemoryNotification = Platform.RunningOnPosix
-                ? new PosixLowMemoryNotification(shutdownNotification.Token, Configuration) as AbstractLowMemoryNotification
-                : new WinLowMemoryNotification(shutdownNotification.Token);
+            AbstractLowMemoryNotification.Initialize(shutdownNotification.Token, Configuration);
 
-            
             if (Log.IsDebugEnabled)
             {
                 Log.Debug("Starting to open server store for {0}", Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory);

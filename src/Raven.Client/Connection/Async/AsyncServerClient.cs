@@ -642,16 +642,8 @@ namespace Raven.Client.Connection.Async
             return ForDatabaseInternal(database, clusterBehavior);
         }
 
-        public IAsyncDatabaseCommands ForSystemDatabase()
-        {
-            return ForSystemDatabaseInternal();
-        }
-
         internal AsyncServerClient ForDatabaseInternal(string database, ClusterBehavior? clusterBehavior = null)
         {
-            if (database == Constants.SystemDatabase)
-                return ForSystemDatabaseInternal();
-
             var requestedClusterBehavior = clusterBehavior ?? convention.ClusterBehavior;
 
             var databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url).ForDatabase(database);
@@ -659,15 +651,6 @@ namespace Raven.Client.Connection.Async
                 return this;
 
             return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, database, conflictListeners, false, requestedClusterBehavior) { operationsHeaders = operationsHeaders };
-        }
-
-        internal AsyncServerClient ForSystemDatabaseInternal()
-        {
-            var databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-            if (databaseUrl == Url)
-                return this;
-
-            return new AsyncServerClient(databaseUrl, convention, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, jsonRequestFactory, sessionId, requestExecuterGetter, requestTimeMetricGetter, databaseName, conflictListeners, false, ClusterBehavior.None) { operationsHeaders = operationsHeaders };
         }
 
         public NameValueCollection OperationsHeaders

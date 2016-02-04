@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Microsoft.Extensions.Caching.Memory;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.LowMemoryNotification;
@@ -10,16 +9,16 @@ namespace Raven.Server.Config.Categories
     {
         public MemoryConfiguration()
         {
-            var availableMemory = MemoryInformation.GetAvailableMemory();
+            var memoryInfo = MemoryInformation.GetMemoryInfo();
 
             // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-            LimitForProcessing = Size.Min(new Size(1024, SizeUnit.Megabytes), availableMemory * 0.75);
+            LimitForProcessing = Size.Min(new Size(1024, SizeUnit.Megabytes), memoryInfo.AvailableMemory * 0.75);
 
-            LowMemoryForLinuxDetection = Size.Min(new Size(16, SizeUnit.Megabytes), availableMemory * 0.10);
+            LowMemoryForLinuxDetection = Size.Min(new Size(16, SizeUnit.Megabytes), memoryInfo.AvailableMemory * 0.10);
 
-            MemoryCacheLimit = GetDefaultMemoryCacheLimit();
+            MemoryCacheLimit = GetDefaultMemoryCacheLimit(memoryInfo.TotalPhysicalMemory);
 
-            AvailableMemoryForRaisingBatchSizeLimit = Size.Min(new Size(768, SizeUnit.Megabytes), MemoryInformation.GetTotalPhysicalMemory() / 2);
+            AvailableMemoryForRaisingBatchSizeLimit = Size.Min(new Size(768, SizeUnit.Megabytes), memoryInfo.TotalPhysicalMemory / 2);
         }
 
         [Description("Maximum number of megabytes that can be used by database to control the maximum size of the processing batches.\r\n" +
@@ -66,9 +65,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/AvailableMemoryForRaisingIndexBatchSizeLimit")]
         public Size AvailableMemoryForRaisingBatchSizeLimit { get; set; }
 
-        private Size GetDefaultMemoryCacheLimit()
+        private Size GetDefaultMemoryCacheLimit(Size totalPhysicalMemory)
         {
-            var totalPhysicalMemory = MemoryInformation.GetTotalPhysicalMemory();
             if (totalPhysicalMemory < new Size(1024, SizeUnit.Megabytes))
                 return new Size(128, SizeUnit.Megabytes); // if machine has less than 1024 MB, then only use 128 MB 
 

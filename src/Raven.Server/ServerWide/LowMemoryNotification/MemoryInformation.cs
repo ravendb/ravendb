@@ -14,6 +14,11 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         private static int memoryLimit;
         private static bool memoryLimitSet;
         private static bool failedToGetAvailablePhysicalMemory;
+        private static readonly MemoryInfoResult failedResult = new MemoryInfoResult
+        {
+            AvailableMemory = new Size(256, SizeUnit.Megabytes),
+            TotalPhysicalMemory = new Size(256, SizeUnit.Megabytes),
+        };
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr CreateMemoryResourceNotification(int notificationType);
@@ -54,12 +59,12 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             }
         }
 
-        private static Size GetMemoryInfo(MemoryInfoType type)
+        public static MemoryInfoResult GetMemoryInfo()
         {
             if (failedToGetAvailablePhysicalMemory)
             {
                 Log.Info("Because of a previous error in getting available memory, we are now lying and saying we have 256MB free");
-                return new Size(256, SizeUnit.Megabytes);
+                return failedResult;
             }
 
             try
@@ -70,11 +75,14 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                     if (Syscall.sysinfo(ref info) != 0)
                     {
                         Log.Warn("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
-                        return new Size(256, SizeUnit.Megabytes);
+                        return failedResult;
                     }
 
-                    var ram = type == MemoryInfoType.AvailableRam ? info.AvailableRam : info.TotalRam;
-                    return new Size((long)ram, SizeUnit.Bytes);
+                    return new MemoryInfoResult
+                    {
+                        AvailableMemory = new Size((long)info.AvailableRam, SizeUnit.Bytes),
+                        TotalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes),
+                    };
                 }
 
               
@@ -84,35 +92,27 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                 if (result == false)
                 {
                     Log.Warn("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
-                    return new Size(256, SizeUnit.Megabytes);
+                    return failedResult;
                 }
 
-                var winResult = type == MemoryInfoType.AvailableRam ? memoryStatus.ullAvailPhys : memoryStatus.ullTotalPhys;
-                return new Size((long)winResult, SizeUnit.Bytes);
+                return new MemoryInfoResult
+                {
+                    AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
+                    TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
+                };
             }
             catch (Exception e)
             {
                 Log.ErrorException("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                 failedToGetAvailablePhysicalMemory = true;
-
-                return new Size(256, SizeUnit.Megabytes);
+                return failedResult;
             }
-        }
-
-        public static Size GetTotalPhysicalMemory()
-        {
-            return GetMemoryInfo(MemoryInfoType.TotalRam);
-        }
-
-        public static Size GetAvailableMemory()
-        {
-            return GetMemoryInfo(MemoryInfoType.AvailableRam);
         }
     }
 
-    public enum MemoryInfoType
+    public struct MemoryInfoResult
     {
-        AvailableRam,
-        TotalRam,
+        public Size TotalPhysicalMemory;
+        public Size AvailableMemory;
     }
 }

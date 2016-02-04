@@ -118,12 +118,6 @@ namespace Raven.Client.Connection.Async
         IAsyncDatabaseCommands ForDatabase(string database, ClusterBehavior? clusterBehavior = null);
 
         /// <summary>
-        ///     Create a new instance of <see cref="IAsyncDatabaseCommands" /> that will interacts
-        ///     with the default database
-        /// </summary>
-        IAsyncDatabaseCommands ForSystemDatabase();
-
-        /// <summary>
         ///     Force the database commands to read directly from the master, unless there has been a failover.
         /// </summary>
         IDisposable ForceReadFromMaster();
@@ -663,11 +657,6 @@ namespace Raven.Client.Connection.Async
         /// <param name="hardDelete">should all data be removed (data files, indexing files, etc.). Default: false</param>
         /// <param name="token">The cancellation token.</param>
         Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Ensures that the database exists, creating it if needed
-        /// </summary>
-        Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Gets the build number

@@ -14,61 +14,20 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
 {
     public unsafe class VariousPropertyAmountsTests
     {
-        public ExpandoObject GenerateExpandoObject(int depth = 1, int width = 8, bool reuseFieldNames = true)
+        public string GetJsonString(int size)
         {
-            if (depth <= 0 || width <= 0)
-                throw new ArgumentException("Illegal depth or width");
+            var sb = new StringBuilder();
+            sb.Append("{");
 
-            if (depth == 1)
+            for (int i = 0; i < size; i++)
             {
-                var curExpando = new ExpandoObject();
-                var cuExpandoAsDictionary = (IDictionary<string, object>)curExpando;
-                for (var i = 0; i < width; i++)
-                {
-                    cuExpandoAsDictionary["Field" + i] = i.ToString();
-                }
-
-                return curExpando;
+                if (i != 0)
+                    sb.Append(",");
+                sb.Append("\"Field").Append(i).Append("\":").Append(i);
             }
+            sb.Append("}");
 
-
-
-            var expando = new ExpandoObject();
-            var expandoAsDictionary = (IDictionary<string, object>)expando;
-            for (var i = 0; i < width; i++)
-            {
-                expandoAsDictionary["Field" + i] = GenerateExpandoObject(depth - 1, width, reuseFieldNames);
-            }
-
-            return expando;
-        }
-
-        public string GetJsonString(int depth = 1, int width = 8, bool reuseFieldNames = true)
-        {
-            var expando = GenerateExpandoObject(depth, width, reuseFieldNames);
-
-            JsonSerializerSettings serializerSettings = new JsonSerializerSettings();
-            serializerSettings.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
-            serializerSettings.Converters.Add(new Newtonsoft.Json.Converters.ExpandoObjectConverter());
-
-            JsonSerializer serializer = JsonSerializer.Create(serializerSettings);
-
-            var stringWriter = new StringWriter();
-            var jsonWriter = new JsonTextWriter(stringWriter);
-            serializer.Serialize(jsonWriter, expando);
-            return stringWriter.ToString();
-        }
-
-        public class CustomMemberBinder : GetMemberBinder
-        {
-            public CustomMemberBinder(string name, bool ignoreCase) : base(name, ignoreCase)
-            {
-            }
-
-            public override DynamicMetaObject FallbackGetMember(DynamicMetaObject target, DynamicMetaObject errorSuggestion)
-            {
-                throw new NotImplementedException();
-            }
+            return sb.ToString();
         }
 
 
@@ -79,21 +38,20 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
         public void FlatBoundarySizeFieldsAmount(int maxValue)
         {
             //var maxValue = short.MaxValue + 1000;
-            var str = GetJsonString(1, maxValue);
+            var str = GetJsonString(maxValue);
 
-            var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
-
+            using (var unmanagedPool = new UnmanagedBuffersPool(string.Empty))
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
 
-                System.Dynamic.DynamicObject dynamicBlittableJObject = new DynamicBlittableJson(employee);
+                dynamic dynamicBlittableJObject = new DynamicBlittableJson(employee);
 
                 for (var i = 0; i < maxValue; i++)
                 {
-                    object curVal;
-                    Assert.True(dynamicBlittableJObject.TryGetMember(new CustomMemberBinder("Field" + i, true), out curVal));
-                    Assert.Equal(curVal.ToString(), i.ToString());
+                    string key = "Field" + i;
+                    long curVal = dynamicBlittableJObject[key];
+                    Assert.Equal(curVal, i);
                 }
             }
         }
@@ -105,7 +63,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
         public unsafe void FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
         {
 
-            var str = GetJsonString(1, maxValue);
+            var str = GetJsonString(maxValue);
 
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 

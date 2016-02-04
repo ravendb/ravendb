@@ -2,6 +2,7 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 using Xunit;
@@ -43,15 +44,13 @@ namespace BlittableTests.BlittableJsonWriterTests
                 using (var pool = new UnmanagedBuffersPool("test"))
                 using (var context = new RavenOperationContext(pool))
                 {
-                    string origin;
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
                     
                     using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly
                         .GetManifestResourceStream(resource))
                     {
-                        origin = new StreamReader(stream).ReadToEnd();
+                        var compacted = JObject.Load(new JsonTextReader(new StreamReader(stream))).ToString(Formatting.None);
                         stream.Position = 0;
-                        var compacted = JObject.Parse(origin).ToString(Formatting.None);
 
                         using (var writer = context.Read(stream, "docs/1 "))
                         {
