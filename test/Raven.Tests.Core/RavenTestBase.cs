@@ -31,7 +31,7 @@ namespace Raven.Tests.Core
             var configuration = new RavenConfiguration();
             configuration.Initialize();
 
-            configuration.Core.ServerUrls = new[] { "http://localhost:8089" };
+            configuration.Core.ServerUrls = new[] { "http://localhost:8080" };
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
             configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, "Tests");
