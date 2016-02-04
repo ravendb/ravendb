@@ -17,12 +17,12 @@ namespace Raven.Server.Web.System
     {
         private static byte[] _versionBuffer;
 
-        private static byte[] GetVersionBuffer(ServerStore serverStore)
+        private static async Task<byte[]> GetVersionBuffer(ServerStore serverStore)
         {
             if (_versionBuffer != null)
                 return _versionBuffer;
-            lock (typeof(BuildVersion))
-            {
+          /*  lock (typeof(BuildVersion))
+            {*/
                 if (_versionBuffer != null)
                     return _versionBuffer;
 
@@ -35,7 +35,7 @@ namespace Raven.Server.Web.System
                         ["ProductVersion"] = ServerVersion.Version,
                         ["CommitHash"] = ServerVersion.CommitHash
                     };
-                    using (var doc = context.ReadObject(result, "build/version"))
+                    using (var doc = await context.ReadObject(result, "build/version"))
                     {
                         var memoryStream = new MemoryStream();
                         doc.WriteTo(memoryStream);
@@ -44,14 +44,13 @@ namespace Raven.Server.Web.System
                         return versionBuffer;
                     }
                 }
+            //}
             }
-        }
 
         [Route("/build/version", "GET")]
         public async Task Get()
         {
-            var versionBuffer = GetVersionBuffer(ServerStore);
-
+            var versionBuffer = await GetVersionBuffer(ServerStore);
             await ResponseBodyStream().WriteAsync(versionBuffer, 0, versionBuffer.Length);
         }
     }

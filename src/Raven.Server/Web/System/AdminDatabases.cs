@@ -54,7 +54,8 @@ namespace Raven.Server.Web.System
         }
 
         [Route("/admin/databases/$", "PUT")]
-        public Task Put()
+     
+        public async Task Put()
         {
             var id = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
@@ -62,7 +63,8 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(id, ServerStore.Configuration.Core.DataDirectory, out errorMessage) == false)
             {
                 HttpContext.Response.StatusCode = 400;
-                return HttpContext.Response.WriteAsync(errorMessage);
+                await HttpContext.Response.WriteAsync(errorMessage);
+                return;
             }
 
             RavenOperationContext context;
@@ -75,10 +77,11 @@ namespace Raven.Server.Web.System
                 if (CheckExistingDatabaseName(context, id, dbId, etag, out errorMessage) == false)
                 {
                     HttpContext.Response.StatusCode = 400;
-                    return HttpContext.Response.WriteAsync(errorMessage);
+                    await HttpContext.Response.WriteAsync(errorMessage);
+                    return;
                 }
 
-                var dbDoc = context.Read(RequestBodyStream(), dbId);
+                var dbDoc = await context.Read(RequestBodyStream(), dbId);
                 
                 //TODO: Fix this
                 //int size;
@@ -105,7 +108,7 @@ namespace Raven.Server.Web.System
                 context.Transaction.Commit();
 
                 HttpContext.Response.StatusCode = 201;
-                return Task.CompletedTask;
+                
             }
         }
 

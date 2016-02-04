@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Client.Linq;
 
 namespace Raven.Server.Json.Parsing
@@ -105,7 +106,7 @@ namespace Raven.Server.Json.Parsing
 
         }
 
-        public void Read()
+        public Task ReadAsync()
         {
             if (_elements.Count == 0)
                 throw new EndOfStreamException();
@@ -122,12 +123,12 @@ namespace Raven.Server.Json.Parsing
                         value.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         _elements.Push(value);
-                        return;
+                        return Task.CompletedTask;
                     }
                     if (value.Properties.Count == 0)
                     {
                         _state.CurrentTokenType = JsonParserToken.EndObject;
-                        return;
+                        return Task.CompletedTask; ;
                     }
                     _elements.Push(value);
                     current = value.Properties.Dequeue();
@@ -141,12 +142,12 @@ namespace Raven.Server.Json.Parsing
                         array.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         _elements.Push(array);
-                        return;
+                        return Task.CompletedTask; ;
                     }
                     if (array.Items.Count == 0)
                     {
                         _state.CurrentTokenType = JsonParserToken.EndArray;
-                        return;
+                        return Task.CompletedTask; ;
                     }
                     _elements.Push(array);
                     current = array.Items.Dequeue();
@@ -177,7 +178,7 @@ namespace Raven.Server.Json.Parsing
                         bjro.Modifications.AlreadySeen = true;
                         bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
-                        return;
+                        return Task.CompletedTask; ;
                     }
 
                     var modifications = bjro.Modifications;
@@ -208,7 +209,7 @@ namespace Raven.Server.Json.Parsing
                         _elements.Push(bjra);
                         bjra.Modifications.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
-                        return;
+                        return Task.CompletedTask; ;
                     }
                     var modifications = bjra.Modifications;
                     modifications.SourceIndex++;
@@ -234,7 +235,7 @@ namespace Raven.Server.Json.Parsing
                     _state.CompressedSize = -1;// don't even try
                     _state.CurrentTokenType = JsonParserToken.String;
                     ReadEscapePositions(lsv.Buffer, lsv.Size);
-                    return;
+                    return Task.CompletedTask; ;
                 }
                 var lcsv = current as LazyCompressedStringValue;
                 if (lcsv != null)
@@ -244,31 +245,31 @@ namespace Raven.Server.Json.Parsing
                     _state.CompressedSize = lcsv.CompressedSize;
                     _state.CurrentTokenType = JsonParserToken.String;
                     ReadEscapePositions(lcsv.Buffer, lcsv.CompressedSize);
-                    return;
+                    return Task.CompletedTask; ;
                 }
                 var str = current as string;
                 if (str != null)
                 {
                     SetStringBuffer(str);
                     _state.CurrentTokenType = JsonParserToken.String;
-                    return;
+                    return Task.CompletedTask; ;
                 }
                 if (current is int)
                 {
                     _state.Long = (int)current;
                     _state.CurrentTokenType = JsonParserToken.Integer;
-                    return;
+                    return Task.CompletedTask; ;
                 }
                 if (current is long)
                 {
                     _state.Long = (long)current;
                     _state.CurrentTokenType = JsonParserToken.Integer;
-                    return;
+                    return Task.CompletedTask; ;
                 }
                 if (current is bool)
                 {
                     _state.CurrentTokenType = ((bool)current) ? JsonParserToken.True : JsonParserToken.False;
-                    return;
+                    return Task.CompletedTask; ;
                 }
                 if (current is float)
                 {
@@ -284,12 +285,12 @@ namespace Raven.Server.Json.Parsing
                     var s = EnsureDecimalPlace(d, d.ToString("R", CultureInfo.InvariantCulture));
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.Float;
-                    return;
+                    return Task.CompletedTask; ;
                 }
                 if (current == null)
                 {
                     _state.CurrentTokenType = JsonParserToken.Null;
-                    return;
+                    return Task.CompletedTask; ;
                 }
 
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 using Sparrow.Binary;
@@ -14,7 +15,7 @@ namespace Raven.Server.Json
     /// <summary>
     /// Single threaded for contexts
     /// </summary>
-    public unsafe class RavenOperationContext : IDisposable
+    public class RavenOperationContext : IDisposable
     {
         private Stack<UnmanagedBuffersPool.AllocatedMemoryData>[] _allocatedMemory;
         
@@ -54,7 +55,7 @@ namespace Raven.Server.Json
         /// <param name="requestedSize"></param>
         /// <param name="actualSize"></param>
         /// <returns></returns>
-        public byte* GetNativeTempBuffer(int requestedSize, out int actualSize)
+        public unsafe byte* GetNativeTempBuffer(int requestedSize, out int actualSize)
         {
             if (requestedSize == 0)
                 throw new ArgumentException(nameof(requestedSize));
@@ -149,7 +150,7 @@ namespace Raven.Server.Json
             _disposed = true;
         }
 
-        public LazyStringValue GetLazyStringFor(string field)
+        public unsafe LazyStringValue GetLazyStringFor(string field)
         {
             LazyStringValue value;
             if (_fieldNames == null)
@@ -182,7 +183,7 @@ namespace Raven.Server.Json
             return value;
         }
 
-        public LazyStringValue Intern(LazyStringValue val)
+        public unsafe LazyStringValue Intern(LazyStringValue val)
         {
             LazyStringValue value;
             if (_internedFieldNames == null)
@@ -228,29 +229,29 @@ namespace Raven.Server.Json
             return returnedByteArray;
         }
 
-        public BlittableJsonReaderObject ReadForDisk(Stream stream, string documentId)
+        public async Task<BlittableJsonReaderObject> ReadForDisk(Stream stream, string documentId)
         {
-            return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            return await ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        public BlittableJsonReaderObject ReadForMemory(Stream stream, string documentId)
+        public async Task<BlittableJsonReaderObject> ReadForMemory(Stream stream, string documentId)
         {
-            return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
+            return await ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
 
-        public BlittableJsonReaderObject ReadObject(DynamicJsonValue builder, string documentId,
+        public unsafe Task<BlittableJsonReaderObject> ReadObject(DynamicJsonValue builder, string documentId,
             BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             return ReadObjectInternal(builder, documentId, mode);
         }
 
-        public BlittableJsonReaderObject ReadObject(BlittableJsonReaderObject obj, string documentId,
+        public unsafe Task<BlittableJsonReaderObject> ReadObject(BlittableJsonReaderObject obj, string documentId,
          BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             return ReadObjectInternal(obj, documentId, mode);
         }
 
-        private BlittableJsonReaderObject ReadObjectInternal(object builder, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
+        private async Task<BlittableJsonReaderObject> ReadObjectInternal(object builder, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, builder, this))
@@ -259,7 +260,7 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    writer.Run();
+                    await writer.Run();
                     _disposables.Add(writer);
                     return writer.CreateReader();
                 }
@@ -271,22 +272,22 @@ namespace Raven.Server.Json
             }
         }
 
-        public BlittableJsonReaderObject Read(Stream stream, string documentId)
+        public async Task<BlittableJsonReaderObject> Read(Stream stream, string documentId)
         {
             var state = BlittableJsonDocumentBuilder.UsageMode.ToDisk;
-            return ParseToMemory(stream, documentId, state);
+            return await ParseToMemory(stream, documentId, state);
         }
 
-        private BlittableJsonReaderObject ParseToMemory(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
+        private async Task<BlittableJsonReaderObject> ParseToMemory(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(stream, this, state, documentId))
+            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, documentId))
             {
                 var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
                 try
                 {
                     CachedProperties.NewDocument();
-                    writer.Run();
+                    await writer.Run();
                     _disposables.Add(writer);
                     return writer.CreateReader();
                 }
@@ -299,10 +300,11 @@ namespace Raven.Server.Json
         }
 
 
-        public IEnumerable<BlittableJsonReaderObject> ParseMultipleDocuments(Stream stream, int count, BlittableJsonDocumentBuilder.UsageMode mode)
+        public async Task<BlittableJsonReaderObject[]> ParseMultipleDocuments(Stream stream, int count, BlittableJsonDocumentBuilder.UsageMode mode)
         {
             var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(stream, this, state, "many/docs"))
+            var returnedArray = new BlittableJsonReaderObject[count];
+            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, "many/docs"))
             {
                 for (int i = 0; i < count; i++)
                 {
@@ -311,7 +313,7 @@ namespace Raven.Server.Json
                     try
                     {
                         CachedProperties.NewDocument();
-                        writer.Run();
+                        await writer.Run();
                         _disposables.Add(writer);
                         reader = writer.CreateReader();
                     }
@@ -320,9 +322,11 @@ namespace Raven.Server.Json
                         writer.Dispose();
                         throw;
                     }
-                    yield return reader;
+                    returnedArray[i] = reader;
                 }
             }
+
+            return returnedArray;
         }
 
 

@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Raven.Server.Json.Parsing;
 
 namespace Raven.Server.Json
 {
 
-    public unsafe class BlittableJsonDocumentBuilder : IDisposable
+    public class BlittableJsonDocumentBuilder : IDisposable
     {
         private readonly RavenOperationContext _context;
         private readonly UsageMode _mode;
@@ -56,7 +57,7 @@ namespace Raven.Server.Json
             _stream.Dispose();
         }
 
-        private byte* GetCompressionBuffer(int minSize)
+        private unsafe byte* GetCompressionBuffer(int minSize)
         {
             // enlarge buffer if needed
             if (_compressionBuffer == null ||
@@ -71,7 +72,7 @@ namespace Raven.Server.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private byte* GetTempBuffer(int minSize)
+        private unsafe byte* GetTempBuffer(int minSize)
         {
             if (_buffer != null && minSize <= _buffer.SizeInBytes)
                 return (byte*)_buffer.Address;
@@ -82,12 +83,12 @@ namespace Raven.Server.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int CopyTo(byte* ptr)
+        public unsafe int CopyTo(byte* ptr)
         {
             return _stream.CopyTo(ptr);
         }
 
-        public BlittableJsonReaderObject CreateReader()
+        public unsafe BlittableJsonReaderObject CreateReader()
         {
             byte* ptr;
             int size;
@@ -98,15 +99,17 @@ namespace Raven.Server.Json
         /// <summary>
         /// Writes the json object from  reader received in the ctor into the received UnmanangedWriteBuffer
         /// </summary>
-        public void Run()
+        public async Task Run()
         {
-            _reader.Read();
+            await _reader.ReadAsync();
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
             BlittableJsonToken token;
 
             // Write the whole object recursively
-            var rootOffset = WriteObject(out token);
+            var writeToken = await WriteObject();
+            token = writeToken.WrittenToken;
+            var rootOffset = writeToken.ValuePos;
 
             // Write the property names and register it's positions
             var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
@@ -157,13 +160,24 @@ namespace Raven.Server.Json
             return startPos;
         }
 
+        public struct WriteToken
+        {
+            public int ValuePos;
+            public BlittableJsonToken WrittenToken;
+        }
+
+        private unsafe LazyStringValue CerateLazyStringValueByState()
+        {
+            return new LazyStringValue(null,_state.StringBuffer, _state.StringSize, _context);
+        }
         /// <summary>
         /// Write an object to the UnmangedBuffer
         /// </summary>
         /// <param name="objectToken"></param>
         /// <returns></returns>
-        private int WriteObject(out BlittableJsonToken objectToken)
+        private async Task<WriteToken> WriteObject()
         {
+            BlittableJsonToken objectToken;
             var properties = new List<PropertyTag>();
             var firstWrite = _position;
             var maxPropId = -1;
@@ -171,7 +185,7 @@ namespace Raven.Server.Json
             // Iterate through the object's properties, write it to the UnmanagedWriteBuffer and register it's names and positions
             while (true)
             {
-                _reader.Read();
+                await _reader.ReadAsync();
 
                 if (_state.CurrentTokenType == JsonParserToken.EndObject)
                     break;
@@ -180,7 +194,7 @@ namespace Raven.Server.Json
                     throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
 
 
-                var property = new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context);
+                var property = CerateLazyStringValueByState();
                 if (_state.EscapePositions.Count > 0)
                 {
                     property.EscapePositions = _state.EscapePositions.ToArray();
@@ -190,17 +204,16 @@ namespace Raven.Server.Json
 
                 maxPropId = Math.Max(maxPropId, propIndex);
 
-                _reader.Read();
+                await _reader.ReadAsync();
 
                 // Write object property into the UnmanagedWriteBuffer
-                BlittableJsonToken token;
-                var valuePos = WriteValue(out token);
+                var writeToken = await WriteValue();
 
                 // Register property position, name id (PropertyId) and type (object type and metadata)
                 properties.Add(new PropertyTag
                 {
-                    Position = valuePos,
-                    Type = (byte)token,
+                    Position = writeToken.ValuePos,
+                    Type = (byte)writeToken.WrittenToken,
                     PropertyId = propIndex
                 });
             }
@@ -226,7 +239,11 @@ namespace Raven.Server.Json
                 _position += positionSize + propertyIdSize + sizeof(byte);
             }
 
-            return objectMetadataStart;
+            return new WriteToken
+            {
+                ValuePos = objectMetadataStart,
+                WrittenToken = objectToken
+            };
         }
 
 
@@ -279,49 +296,64 @@ namespace Raven.Server.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int WriteValue(out BlittableJsonToken token)
+        private async Task<WriteToken> WriteValue()
         {
             var start = _position;
             switch (_state.CurrentTokenType)
             {
                 case JsonParserToken.StartObject:
-                    return WriteObject(out token);
+                    return await WriteObject();
                 case JsonParserToken.StartArray:
-                    return WriteArray(out token);
+                    return await WriteArray();
                 case JsonParserToken.Integer:
-                    _position += WriteVariableSizeLong(_state.Long);
-                    token = BlittableJsonToken.Integer;
-                    return start;
+                    _position += WriteVariableSizeLong(_state.Long);                   
+                    return new WriteToken
+                    {
+                        ValuePos = start,
+                        WrittenToken = BlittableJsonToken.Integer
+                    };
                 case JsonParserToken.Float:
                     if ((_mode & UsageMode.ValidateDouble) == UsageMode.ValidateDouble)
                         _reader.ValidateFloat();
-
                     BlittableJsonToken ignored;
                     WriteStringFromReader(out ignored);
-                    token = BlittableJsonToken.Float;
-                    return start;
+                    return new WriteToken
+                    {
+                        ValuePos = start,
+                        WrittenToken = BlittableJsonToken.Float
+                    };
                 case JsonParserToken.String:
-                    WriteStringFromReader(out token);
-                    return start;
+                    BlittableJsonToken stringToken;
+                    WriteStringFromReader(out stringToken);
+                    return new WriteToken
+                    {
+                        ValuePos = start,
+                        WrittenToken = stringToken
+                    };
                 case JsonParserToken.True:
                 case JsonParserToken.False:
                     _stream.WriteByte(_state.CurrentTokenType == JsonParserToken.True ? (byte)1 : (byte)0);
                     _position++;
-                    token = BlittableJsonToken.Boolean;
-                    return start;
+                    return new WriteToken
+                    {
+                        ValuePos = start,
+                        WrittenToken = BlittableJsonToken.Boolean
+                    };
                 case JsonParserToken.Null:
-                    token = BlittableJsonToken.Null;
                     _stream.WriteByte(0);
                     _position++;
-                    return start; // nothing to do here, we handle that with the token
-
+                    return new WriteToken // nothing to do here, we handle that with the token
+                    {
+                        WrittenToken = BlittableJsonToken.Null,
+                        ValuePos = start
+                    };
                 default:
                     throw new InvalidDataException("Expected a value, but got " + _state.CurrentTokenType);
                     // ReSharper restore RedundantCaseLabel
             }
         }
 
-        private void WriteStringFromReader(out BlittableJsonToken token)
+        private unsafe void WriteStringFromReader(out BlittableJsonToken token)
         {
             var str = new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context);
             WriteString(str, out token, _mode);
@@ -344,21 +376,20 @@ namespace Raven.Server.Json
 
             return text + ".0";
         }
-        private int WriteArray(out BlittableJsonToken arrayToken)
+        private async Task<WriteToken> WriteArray()
         {
+            BlittableJsonToken arrayToken;
             var positions = new List<int>();
             var types = new List<BlittableJsonToken>();
             while (true)
             {
-                _reader.Read();
+                await _reader.ReadAsync();
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)
                     break;
-
-
-                BlittableJsonToken token;
-                var pos = WriteValue(out token);
-                types.Add(token);
-                positions.Add(pos);
+                
+                var writeToken = await WriteValue();
+                types.Add(writeToken.WrittenToken);
+                positions.Add(writeToken.ValuePos);
             }
             var arrayInfoStart = _position;
             arrayToken = BlittableJsonToken.StartArray;
@@ -367,7 +398,12 @@ namespace Raven.Server.Json
             if (positions.Count == 0)
             {
                 arrayToken |= BlittableJsonToken.OffsetSizeByte;
-                return arrayInfoStart;
+                return new WriteToken
+                {
+                    ValuePos = arrayInfoStart,
+                    WrittenToken = arrayToken
+                };
+
             }
 
             var distanceFromFirstItem = arrayInfoStart - positions[0];
@@ -382,10 +418,14 @@ namespace Raven.Server.Json
                 _position++;
             }
 
-            return arrayInfoStart;
+            return new WriteToken
+            {
+                ValuePos = arrayInfoStart,
+                WrittenToken = arrayToken
+            };
         }
 
-        public int WriteString(LazyStringValue str, out BlittableJsonToken token, UsageMode state)
+        public unsafe int WriteString(LazyStringValue str, out BlittableJsonToken token, UsageMode state)
         {
             var startPos = _position;
             token = BlittableJsonToken.String;
@@ -479,7 +519,7 @@ namespace Raven.Server.Json
             }
         }
 
-        public int WriteVariableSizeLong(long value)
+        public unsafe int WriteVariableSizeLong(long value)
         {
             // see zig zap trick here:
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
@@ -498,7 +538,7 @@ namespace Raven.Server.Json
             return count;
         }
 
-        public int WriteVariableSizeInt(int value)
+        public unsafe int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
             var buffer = stackalloc byte[5];

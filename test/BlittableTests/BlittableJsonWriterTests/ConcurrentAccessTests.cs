@@ -11,29 +11,37 @@ using Xunit;
 
 namespace BlittableTests.BlittableJsonWriterTests
 {
-    public unsafe class ConcurrentAccessTests: BlittableJsonTestBase
+    public class ConcurrentAccessTests: BlittableJsonTestBase
     {
         [Fact]
-        public void ConcurrentReadsTest()
+        public async Task ConcurrentReadsTest()
         {
-            byte* ptr;
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                var basePointer = employee.BasePointer;
-                var size = employee.Size;
-
-                Parallel.ForEach(Enumerable.Range(0, 100), x =>
-                {
-                    using (var localCtx = new RavenOperationContext(unmanagedPool))
-                    {
-                        AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
-                    }
-                });
+               /* FileStream file = new FileStream(@"c:\Temp\example.txt",FileMode.Create);
+                employee.WriteTo(file);
+                file.Flush();
+                file.Dispose();*/
+                AssertEmployees(employee, unmanagedPool, str);
             }
+        }
+
+        private static unsafe void AssertEmployees(BlittableJsonReaderObject employee, UnmanagedBuffersPool unmanagedPool, string str)
+        {
+            var basePointer = employee.BasePointer;
+            var size = employee.Size;
+
+            Parallel.ForEach(Enumerable.Range(0, 100), x =>
+            {
+                using (var localCtx = new RavenOperationContext(unmanagedPool))
+                {
+                    AssertComplexEmployee(str, new BlittableJsonReaderObject(basePointer, size, localCtx), localCtx);
+                }
+            });
         }
     }
 }

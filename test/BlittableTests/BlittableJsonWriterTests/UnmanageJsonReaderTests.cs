@@ -21,11 +21,11 @@ namespace BlittableTests.BlittableJsonWriterTests
             using (var pool = new UnmanagedBuffersPool("test"))
             using (var ctx = new RavenOperationContext(pool))
             using (var stream = typeof(UnmanageJsonReaderTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
-            using (var parser = new UnmanagedJsonParser(stream, ctx, new JsonParserState(), "test"))
+            using (var parser = new UnmanagedJsonStreamParser(stream, ctx, new JsonParserState(), "test"))
             {
                 while (stream.Position != stream.Length)
                 {
-                    parser.Read();
+                    parser.ReadAsync().Wait();
                 }
             }
         }

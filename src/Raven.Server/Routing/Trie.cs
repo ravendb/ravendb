@@ -68,7 +68,7 @@ namespace Raven.Server.Routing
                         continue;
                     }
                     // end of node, need to search children
-                    var maybe = term[i] <= current.Children.Length
+                    var maybe = term[i] <=  current.Children.Length
                         ? current.Children[term[i]]
                         : null;
 

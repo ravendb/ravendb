@@ -1,18 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Xunit;
 
 namespace BlittableTests
 {
-    public unsafe class ObjectJsonParsingTests
+    public class ObjectJsonParsingTests
     {
         [Fact]
-        public void Dup()
+        public async Task Dup()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Name"] = "Ayende Rahien"
@@ -21,9 +22,9 @@ namespace BlittableTests
 
         }
         [Fact]
-        public void CanUseNestedObject()
+        public async Task CanUseNestedObject()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Wife"] = new DynamicJsonValue
@@ -34,7 +35,7 @@ namespace BlittableTests
                 "{\"Name\":\"Oren Eini\",\"Wife\":{\"Name\":\"Rachel\"}}");
 
             
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Dogs"] = new DynamicJsonArray
@@ -43,13 +44,13 @@ namespace BlittableTests
                     "Oscar"
                 }
             },
-             "{\"Name\":\"Oren Eini\",\"Dogs\":[\"Arava\",\"Oscar\"]}");
+                "{\"Name\":\"Oren Eini\",\"Dogs\":[\"Arava\",\"Oscar\"]}");
         }
 
         [Fact]
-        public void CanGenerateJsonProperly_WithEscapePositions()
+        public async Task CanGenerateJsonProperly_WithEscapePositions()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren\r\nEini"
             },
@@ -57,24 +58,24 @@ namespace BlittableTests
         }
 
         [Fact]
-        public void CanGenerateJsonProperly()
+        public async Task CanGenerateJsonProperly()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini"
             }, 
-            "{\"Name\":\"Oren Eini\"}");
+                "{\"Name\":\"Oren Eini\"}");
 
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Age"] = 34,
                 ["Married"] = true,
             },
-           "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true}");
+                "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true}");
 
 
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTrip(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Age"] = 34,
@@ -82,15 +83,15 @@ namespace BlittableTests
                 ["Null"] = null,
                 ["Pie"] = 3.14
             },
-           "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true,\"Null\":null,\"Pie\":3.14}");
+                "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true,\"Null\":null,\"Pie\":3.14}");
         }
 
-        private static void AssertEqualAfterRoundTrip(DynamicJsonValue  doc, string expected)
+        private static async Task AssertEqualAfterRoundTrip(DynamicJsonValue  doc, string expected)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new RavenOperationContext(pool))
             {
-                using (var writer = ctx.ReadObject(doc, "foo"))
+                using (var writer = await ctx.ReadObject(doc, "foo"))
                 {
                     var memoryStream = new MemoryStream();
                     writer.WriteTo(memoryStream, originalPropertyOrder: true);
