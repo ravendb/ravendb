@@ -3,9 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Xunit;
 
-namespace Voron.Tests.Bugs
+using Xunit;
+using Voron;
+
+namespace FastTests.Voron.Bugs
 {
 	public class Iterating : StorageTest
 	{

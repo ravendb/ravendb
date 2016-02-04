@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.IO;
-
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
     public class PageAllocation : StorageTest
     {

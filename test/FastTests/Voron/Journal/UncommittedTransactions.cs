@@ -4,13 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.IO;
-using Voron.Impl;
-using Voron.Impl.Paging;
 using Xunit;
+using Voron;
+using Voron.Impl;
 
-namespace Voron.Tests.Journal
+namespace FastTests.Voron.Journal
 {
 	public class UncommittedTransactions : StorageTest
 	{

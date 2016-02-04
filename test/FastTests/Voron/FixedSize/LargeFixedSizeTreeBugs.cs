@@ -5,8 +5,9 @@
 // -----------------------------------------------------------------------
 
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.FixedSize
+namespace FastTests.Voron.FixedSize
 {
     public class LargeFixedSizeTreeBugs : StorageTest
     {

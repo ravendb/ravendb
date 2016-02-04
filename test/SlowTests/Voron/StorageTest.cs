@@ -1,17 +1,15 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using Voron;
 using Voron.Data.BTrees;
-using Voron.Debugging;
 using Voron.Impl;
 
-namespace Voron.Tests
+namespace SlowTests.Voron
 {
-	using System.Collections.Generic;
-
-	public abstract class StorageTest : IDisposable
+    public abstract class StorageTest : IDisposable
 	{
 		private StorageEnvironment _storageEnvironment;
 		protected StorageEnvironmentOptions _options;

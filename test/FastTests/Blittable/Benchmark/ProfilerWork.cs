@@ -7,11 +7,10 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-//using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Json;
+//using Raven.Imports.Newtonsoft.Json;
 
-namespace NewBlittable.Tests.Benchmark
+namespace FastTests.Blittable.Benchmark
 {
     public class ProfilerWork
     {

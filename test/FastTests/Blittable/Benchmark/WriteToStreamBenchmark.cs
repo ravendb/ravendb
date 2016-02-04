@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 
-namespace BlittableTests.Benchmark
+namespace FastTests.Blittable.Benchmark
 {
     public class WriteToStreamBenchmark
     {

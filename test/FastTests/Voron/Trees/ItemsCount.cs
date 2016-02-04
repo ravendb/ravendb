@@ -1,7 +1,8 @@
 ﻿using System.IO;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Trees
+namespace FastTests.Voron.Trees
 {
     public class ItemCount : StorageTest
     {

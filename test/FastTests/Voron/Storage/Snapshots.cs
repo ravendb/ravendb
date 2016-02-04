@@ -1,10 +1,9 @@
 ﻿using System.IO;
 using System.Text;
-using System.Threading.Tasks;
-using Voron.Impl;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class Snapshots : StorageTest
     {

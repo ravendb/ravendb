@@ -6,11 +6,10 @@
 
 using System;
 using System.IO;
-using Voron.Impl;
-using Voron.Impl.Paging;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Journal
+namespace FastTests.Voron.Journal
 {
     public class BasicActions : StorageTest
     {

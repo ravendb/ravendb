@@ -5,10 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using Voron.Exceptions;
 using Xunit;
+using Voron;
+using Voron.Exceptions;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class Quotas : StorageTest
     {

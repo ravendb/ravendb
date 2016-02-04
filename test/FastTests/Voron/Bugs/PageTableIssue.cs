@@ -1,10 +1,9 @@
 ﻿using System;
 using System.IO;
-using Voron.Debugging;
-using Voron.Impl.Paging;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
 	public class PageTableIssue : StorageTest
 	{

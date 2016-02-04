@@ -1,7 +1,7 @@
-﻿using System.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
@@ -10,10 +10,9 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
-using Voron;
 using Xunit;
 
-namespace BlittableTests.Documents
+namespace FastTests.Server.Documents
 {
     public class DocumentsCrud : IDisposable
     {

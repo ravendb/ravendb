@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using FastTests.Voron.FixedSize;
 using Sparrow;
-using Voron.Data.RawData;
-using Voron.Impl.Scratch;
-using Voron.Tests.FixedSize;
 using Xunit;
-using Xunit.Extensions;
+using Voron.Data.RawData;
+using Voron;
 
-namespace Voron.Tests.RawData
+namespace FastTests.Voron.RawData
 {
     public unsafe class SmallDataSection : StorageTest
     {

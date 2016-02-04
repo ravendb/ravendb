@@ -1,10 +1,11 @@
-﻿using System.Text;
-using System.Linq;
+﻿using System.Linq;
+using System.Text;
+using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
 using Xunit;
 
-namespace Voron.Tests.Tables
+namespace FastTests.Voron.Tables
 {
     public unsafe class SecondayIndex : TableStorageTest
     {

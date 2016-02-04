@@ -5,9 +5,10 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using Voron;
 using Xunit;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
     public class IndexPointToNonLeafPageTests : StorageTest
     {

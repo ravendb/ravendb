@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
-using Voron.Impl;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Trees
+namespace FastTests.Voron.Trees
 {
     public class Updates : StorageTest
     {

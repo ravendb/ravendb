@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Text;
+using Sparrow;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Sparrow.Tests
+namespace FastTests.Sparrow
 {
     public class HashingTests
     {

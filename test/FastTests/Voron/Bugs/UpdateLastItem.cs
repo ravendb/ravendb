@@ -1,10 +1,8 @@
-﻿using System.IO;
+﻿using Xunit;
+using Voron;
 using Voron.Data.BTrees;
-using Voron.Impl;
-using Voron.Impl.FileHeaders;
-using Xunit;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
 	public unsafe class UpdateLastItem : StorageTest
 	{

@@ -4,10 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Voron.Util;
 using Xunit;
+using Voron;
+using Voron.Util;
 
-namespace Voron.Tests.Util
+namespace FastTests.Voron.Util
 {
     public class CrcTests
     {

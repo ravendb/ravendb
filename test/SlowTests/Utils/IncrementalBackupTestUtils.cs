@@ -3,11 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.IO;
-using System.Runtime.InteropServices.ComTypes;
 
-namespace Voron.Tests.Backups
+using System.IO;
+using SlowTests.Voron;
+
+namespace SlowTests.Utils
 {
     public class IncrementalBackupTestUtils
     {

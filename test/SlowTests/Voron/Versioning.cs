@@ -1,12 +1,10 @@
-﻿namespace Voron.Tests.Bugs
+﻿using System;
+using System.IO;
+using Xunit;
+
+namespace SlowTests.Voron
 {
-	using System;
-	using System.IO;
-
-	using Voron.Impl;
-	using Xunit;
-
-	public class Versioning : StorageTest
+    public class Versioning : StorageTest
 	{
 		[Fact]
 		public void SplittersAndRebalancersShouldNotChangeNodeVersion()

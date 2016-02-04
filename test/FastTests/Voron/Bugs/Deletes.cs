@@ -1,15 +1,11 @@
-﻿using Voron.Util;
+﻿using System;
+using System.IO;
+using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
-	using System;
-	using System.IO;
-	using System.Text;
-
-	using Voron.Impl;
-	using Xunit;
-
-	public class Deletes : StorageTest
+    public class Deletes : StorageTest
 	{
 		[Fact]
 		public void RebalancerIssue()

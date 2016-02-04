@@ -1,16 +1,13 @@
-﻿using System.Text;
-using Voron.Debugging;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Text;
+using Voron;
+using Xunit;
 
-namespace Voron.Tests.Bugs
+namespace SlowTests.Voron
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-
-
-	using Xunit;
-
     public class PageSplitter : StorageTest
     {
         readonly Random _random = new Random(1234);

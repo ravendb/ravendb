@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Dynamic;
-using System.IO;
-using System.Runtime.InteropServices;
+﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-
-using Raven.Imports.Newtonsoft.Json.Converters;
 using Raven.Server.Json;
 using Xunit;
 
-namespace NewBlittable.Tests.BlittableJsonWriterTests
+namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public class VariousPropertyAmountsTests
     {

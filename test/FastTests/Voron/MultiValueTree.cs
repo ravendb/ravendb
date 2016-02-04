@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Voron;
 using Voron.Data;
-using Voron.Impl;
 using Xunit;
 
-namespace Voron.Tests
+namespace FastTests.Voron
 {
 	public class MultiValueTree : StorageTest
 	{

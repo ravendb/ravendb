@@ -1,12 +1,12 @@
-﻿namespace Voron.Tests.Bugs
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using SlowTests.Utils;
+using Xunit;
+using Voron;
+
+namespace SlowTests.Voron
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-
-    using Xunit;
-
     public class LargeValues : StorageTest
     {
         [Fact]

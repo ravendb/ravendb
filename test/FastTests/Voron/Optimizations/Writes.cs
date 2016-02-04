@@ -5,10 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using Voron.Debugging;
 using Xunit;
+using Voron;
+using Voron.Debugging;
 
-namespace Voron.Tests.Optimizations
+namespace FastTests.Voron.Optimizations
 {
 	public class Writes : StorageTest
 	{

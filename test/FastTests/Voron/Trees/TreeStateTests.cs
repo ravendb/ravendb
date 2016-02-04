@@ -3,14 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Voron.Debugging;
-using Xunit;
-using Xunit.Extensions;
 
-namespace Voron.Tests.Trees
+using System;
+using System.Linq;
+using Xunit;
+using Voron;
+
+namespace FastTests.Voron.Trees
 {
 	public class TreeStateTests : StorageTest
 	{

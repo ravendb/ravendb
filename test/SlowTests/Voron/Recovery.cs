@@ -1,16 +1,13 @@
-﻿using Voron.Impl;
-using Voron.Impl.Paging;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using Voron;
+using Xunit;
 
-namespace Voron.Tests.Bugs
+namespace SlowTests.Voron
 {
-	using System;
-	using System.Collections.Generic;
-	using System.IO;
-	using System.Text;
-
-	using Xunit;
-
-	public class Recovery : StorageTest
+    public class Recovery : StorageTest
 	{
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreNoTransactionsToRecoverFromLog()

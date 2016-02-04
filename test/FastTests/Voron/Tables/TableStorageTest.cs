@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
 
-namespace Voron.Tests.Tables
+namespace FastTests.Voron.Tables
 {
 
     public class TableStorageTest : StorageTest

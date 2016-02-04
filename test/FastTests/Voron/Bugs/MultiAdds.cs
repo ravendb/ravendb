@@ -1,18 +1,12 @@
-﻿using System.Text;
-using Xunit.Extensions;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Diagnostics;
-	using System.IO;
-
-	using Voron.Debugging;
-	using Voron.Impl;
-	using Xunit;
-
-	public class MultiAdds
+    public class MultiAdds
 	{
 		readonly Random _random = new Random(1234);
 

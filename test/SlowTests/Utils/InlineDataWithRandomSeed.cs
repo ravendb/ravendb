@@ -3,13 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Xunit;
 using Xunit.Sdk;
 
-namespace Voron.Tests.FixedSize
+namespace SlowTests.Utils
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class InlineDataWithRandomSeed : DataAttribute

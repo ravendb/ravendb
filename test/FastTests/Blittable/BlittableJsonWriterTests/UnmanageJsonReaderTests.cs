@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Text;
-using Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Xunit;
-using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
-namespace BlittableTests.BlittableJsonWriterTests
+namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public unsafe class UnmanageJsonReaderTests
     {

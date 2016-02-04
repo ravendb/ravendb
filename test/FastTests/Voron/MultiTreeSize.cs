@@ -3,11 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Voron.Impl.Paging;
+
 using Xunit;
 
-namespace Voron.Tests
+namespace FastTests.Voron
 {
 	public class MultiTreeSize : StorageTest
 	{

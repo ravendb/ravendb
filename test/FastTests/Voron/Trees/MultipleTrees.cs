@@ -1,11 +1,10 @@
-﻿using Voron.Util;
+﻿using System;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Trees
+namespace FastTests.Voron.Trees
 {
-	using System;
-
-	public class MultipleTrees : StorageTest
+    public class MultipleTrees : StorageTest
 	{
 		[Fact]
 		public void CanCreateNewTree()

@@ -1,13 +1,11 @@
-﻿using Sparrow;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Voron.Impl;
-using Voron.Util;
+using Sparrow;
 using Xunit;
-using Xunit.Extensions;
+using Voron;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class BigValues : StorageTest
     {

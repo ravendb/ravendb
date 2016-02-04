@@ -1,9 +1,9 @@
 ﻿using System.IO;
 using System.Threading;
-using Voron.Util;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
 	public class MemoryAccess : StorageTest
 	{

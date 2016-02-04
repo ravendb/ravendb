@@ -1,13 +1,9 @@
-using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Sparrow.Binary;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Sparrow.Tests
+namespace FastTests.Sparrow
 {
     public class BitVectorsTest
     {

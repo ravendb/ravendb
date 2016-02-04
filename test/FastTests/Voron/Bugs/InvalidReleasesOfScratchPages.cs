@@ -1,15 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System.IO;
+using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
-	using System;
-	using System.IO;
-	using System.Threading.Tasks;
-
-	using Voron.Impl;
-	using Xunit;
-
-	public class InvalidReleasesOfScratchPages : StorageTest
+    public class InvalidReleasesOfScratchPages : StorageTest
 	{
         [Fact]
         public void ReadTransactionCanReadJustCommittedValue()

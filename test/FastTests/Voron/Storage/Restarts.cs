@@ -1,11 +1,8 @@
-using System;
-using System.Diagnostics;
 using System.IO;
-using Voron.Debugging;
-using Voron.Impl;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class Restarts : StorageTest
     {

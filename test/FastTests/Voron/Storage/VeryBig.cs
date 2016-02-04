@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class VeryBig : StorageTest
     {

@@ -5,10 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System.Text;
-using Voron.Data.Tables;
 using Xunit;
+using Voron;
+using Voron.Data.Tables;
 
-namespace Voron.Tests.Tables
+
+namespace FastTests.Voron.Tables
 {
     public unsafe class BasicUsage : TableStorageTest
     {

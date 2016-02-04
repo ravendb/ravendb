@@ -3,13 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.IO;
-using Voron.Impl.Backup;
-using Voron.Impl.Paging;
-using Xunit;
 
-namespace Voron.Tests.Backups
+using System;
+using Xunit;
+using Voron;
+using Voron.Impl.Backup;
+
+namespace FastTests.Voron.Backups
 {
 	public class RavenDB_3115 : StorageTest
 	{

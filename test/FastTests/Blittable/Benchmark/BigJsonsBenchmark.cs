@@ -1,14 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-
-namespace NewBlittable.Tests.Benchmark
+﻿namespace FastTests.Blittable.Benchmark
 {
     /*public class BigJsonsBenchmark
     {

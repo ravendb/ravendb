@@ -1,14 +1,12 @@
-﻿using System.IO;
-using Voron.Debugging;
-using Voron.Util;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
-	using System;
-	using System.Collections.Generic;
-	using Xunit;
-
-	public class TreeRebalancer : StorageTest
+    public class TreeRebalancer : StorageTest
 	{
 		[Fact]
 		public void TreeRabalancerShouldCopyNodeFlagsWhenMultiValuePageRefIsSet()

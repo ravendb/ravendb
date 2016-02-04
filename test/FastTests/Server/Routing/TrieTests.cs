@@ -4,13 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNet.Routing.Constraints;
 using Raven.Server.Routing;
 using Xunit;
 
-namespace BlittableTests.Routing
+namespace FastTests.Server.Routing
 {
     public class TrieTests
     {

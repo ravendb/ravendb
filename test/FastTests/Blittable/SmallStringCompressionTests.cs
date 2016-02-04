@@ -8,7 +8,7 @@ using System.Text;
 using Raven.Server.Json;
 using Xunit;
 
-namespace BlittableTests
+namespace FastTests.Blittable
 {
     public unsafe class SmallStringCompressionTests
     {

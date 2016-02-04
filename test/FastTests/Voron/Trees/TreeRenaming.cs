@@ -3,11 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Voron.Impl;
-using Xunit;
 
-namespace Voron.Tests.Trees
+using System;
+using Xunit;
+using Voron;
+using Voron.Impl;
+
+namespace FastTests.Voron.Trees
 {
 	public class TreeRenaming : StorageTest
 	{

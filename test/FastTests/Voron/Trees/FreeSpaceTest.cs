@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Voron.Impl.FreeSpace;
 using Xunit;
+using Voron;
+using Voron.Impl.FreeSpace;
 
-namespace Voron.Tests.Trees
+namespace FastTests.Voron.Trees
 {
     public class FreeSpaceTest : StorageTest
     {

@@ -1,8 +1,8 @@
 using System.IO;
-using Voron.Debugging;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Trees
+namespace FastTests.Voron.Trees
 {
     public class Rebalance : StorageTest
     {

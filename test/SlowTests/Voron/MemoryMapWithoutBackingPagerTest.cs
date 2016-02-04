@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Voron;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Xunit;
 
-namespace Voron.Tests.Storage
+namespace SlowTests.Voron
 {
     public unsafe class MemoryMapWithoutBackingPagerTest : StorageTest
     {

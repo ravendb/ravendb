@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Xunit;
+using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
-using Xunit;
 
-namespace Voron.Tests.Trees
+namespace FastTests.Voron.Trees
 {
     public class Deletes : StorageTest
     {

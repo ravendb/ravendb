@@ -7,11 +7,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Voron.Impl;
-using Voron.Impl.Scratch;
 using Xunit;
+using Voron;
+using Voron.Impl.Scratch;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class FreeScratchPages : StorageTest
     {

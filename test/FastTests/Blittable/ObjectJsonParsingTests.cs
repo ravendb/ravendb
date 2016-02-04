@@ -1,12 +1,11 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Xunit;
 
-namespace BlittableTests
+namespace FastTests.Blittable
 {
     public class ObjectJsonParsingTests
     {

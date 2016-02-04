@@ -1,19 +1,12 @@
-﻿using System.Linq;
-using Voron.Debugging;
+﻿using System;
+using System.IO;
+using System.Linq;
+using Voron;
+using Xunit;
 
-namespace Voron.Tests.Bugs
+namespace SlowTests.Voron
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Diagnostics;
-	using System.IO;
-	using System.Text;
-	using System.Threading.Tasks;
-
-	using Voron.Impl;
-	using Xunit;
-
-	public class Snapshots : StorageTest
+    public class Snapshots : StorageTest
 	{
 		public Snapshots()
 			: base(StorageEnvironmentOptions.CreateMemoryOnly())

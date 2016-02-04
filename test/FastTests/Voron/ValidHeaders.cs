@@ -2,16 +2,15 @@
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using FastTests.Voron.FixedSize;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
-using Voron.Tests.FixedSize;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Voron.Tests
+namespace FastTests.Voron
 {
     public unsafe class ValidHeaders
     {

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.IO;
-using Voron.Impl;
-using Voron.Impl.Backup;
-using Voron.Impl.Paging;
 using Xunit;
+using Voron;
+using Voron.Impl.Backup;
 
-namespace Voron.Tests.Backups
+namespace SlowTests.Voron
 {
     public class Full : StorageTest
     {

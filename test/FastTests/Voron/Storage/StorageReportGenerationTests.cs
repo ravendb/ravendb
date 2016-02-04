@@ -3,18 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Xunit;
+using Voron;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Xunit;
-using Xunit.Extensions;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class StorageReportGenerationTests : StorageTest
     {

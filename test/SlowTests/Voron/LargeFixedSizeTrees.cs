@@ -6,10 +6,12 @@
 
 using System;
 using System.Collections;
+using SlowTests.Utils;
+using Voron;
 using Voron.Util.Conversion;
 using Xunit;
 
-namespace Voron.Tests.FixedSize
+namespace SlowTests.Voron
 {
     public class LargeFixedSizeTrees : StorageTest
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 
-namespace Voron.Tests.Bugs
+namespace SlowTests.Utils
 {
     public class TestDataUtil
     {

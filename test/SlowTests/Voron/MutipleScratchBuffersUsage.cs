@@ -3,12 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Threading;
-using Voron.Impl.Paging;
+
+using Voron;
 using Xunit;
 
-namespace Voron.Tests.ScratchBuffer
+namespace SlowTests.Voron
 {
 	public class MutipleScratchBuffersUsage : StorageTest
 	{

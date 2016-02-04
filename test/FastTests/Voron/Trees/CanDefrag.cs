@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Trees
+namespace FastTests.Voron.Trees
 {
     public class CanDefrag : StorageTest
     {

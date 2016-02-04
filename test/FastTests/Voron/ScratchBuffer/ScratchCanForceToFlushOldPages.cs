@@ -3,11 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Voron.Debugging;
-using Voron.Util;
-using Xunit;
 
-namespace Voron.Tests.ScratchBuffer
+using Xunit;
+using Voron;
+
+namespace FastTests.Voron.ScratchBuffer
 {
 	public class ScratchCanForceToFlushOldPages: StorageTest
 	{

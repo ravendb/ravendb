@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "4.0.0-*",
   "commands": {
     "test": "xunit.runner.dnx"
@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "Sparrow": "4.0.0-*",
-    "Voron": "4.0.0-*"
+    "Voron": "4.0.0-*",
+    "xunit": "2.2.0-beta1-build3239"
   }
 }

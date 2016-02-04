@@ -3,13 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.IO;
+using SlowTests.Utils;
+using Voron;
 using Voron.Impl.Backup;
-using Voron.Impl.Paging;
 using Xunit;
 
-namespace Voron.Tests.Backups
+namespace SlowTests.Voron
 {
 	public class RavenDB_2939 : StorageTest
 	{

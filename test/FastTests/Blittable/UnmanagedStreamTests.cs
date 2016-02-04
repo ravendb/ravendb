@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Raven.Server.Json;
 using Sparrow;
 using Xunit;
 
-namespace BlittableTests
+namespace FastTests.Blittable
 {
     public unsafe class UnmanagedStreamTests
     {

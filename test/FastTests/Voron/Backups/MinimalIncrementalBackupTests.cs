@@ -2,10 +2,11 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using Voron.Impl.Backup;
 using Xunit;
+using Voron;
+using Voron.Impl.Backup;
 
-namespace Voron.Tests.Backups
+namespace FastTests.Voron.Backups
 {
 	public class MinimalIncrementalBackupTests : StorageTest
 	{

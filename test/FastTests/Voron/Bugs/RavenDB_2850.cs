@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Voron.Impl.Paging;
-using Xunit;
 
-namespace Voron.Tests.Bugs
+using System;
+using Xunit;
+using Voron;
+
+namespace FastTests.Voron.Bugs
 {
 	public class RavenDB_2850 : StorageTest
 	{

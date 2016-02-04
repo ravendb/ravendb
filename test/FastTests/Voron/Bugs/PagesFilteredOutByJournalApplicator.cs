@@ -1,9 +1,9 @@
-﻿using System;
-using System.IO;
-using Voron.Debugging;
+﻿using System.IO;
 using Xunit;
+using Voron;
+using Voron.Debugging;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
 	public class PagesFilteredOutByJournalApplicator : StorageTest
 	{

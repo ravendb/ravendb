@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.IO;
-
 using Xunit;
-
-namespace Voron.Tests.Storage
+using Voron;
+ 
+namespace FastTests.Voron.Storage
 {
     public class Files : StorageTest
     {

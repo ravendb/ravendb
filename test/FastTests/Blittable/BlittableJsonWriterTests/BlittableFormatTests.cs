@@ -9,7 +9,7 @@ using Raven.Server.Json;
 using Xunit;
 using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
-namespace BlittableTests.BlittableJsonWriterTests
+namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     
     public class BlittableFormatTests

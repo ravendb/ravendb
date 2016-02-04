@@ -3,13 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.IO;
-
-using Voron.Impl;
 using Xunit;
+using Voron;
+using Voron.Impl;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
     public class InitialSize : StorageTest
     {

@@ -1,8 +1,8 @@
 using System.IO;
-using Voron.Impl;
 using Xunit;
+using Voron;
 
-namespace Voron.Tests.Bugs
+namespace FastTests.Voron.Bugs
 {
     public class EmptyTree : StorageTest
     {

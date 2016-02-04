@@ -1,15 +1,11 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Server.Json;
 using Xunit;
 
-
-namespace BlittableTests.BlittableJsonWriterTests
+namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public class ConcurrentAccessTests: BlittableJsonTestBase
     {

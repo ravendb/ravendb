@@ -3,15 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Xunit;
+using Voron;
 using Voron.Impl.Compaction;
 
-namespace Voron.Tests.Compaction
+namespace FastTests.Voron.Compaction
 {
 	public class StorageCompactionTests : StorageTest
 	{

@@ -4,17 +4,17 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-namespace Voron.Tests.Bugs
-{
-    using Sparrow.Platform;
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using Voron.Impl;
-    using Voron.Impl.Paging;
-    using Xunit;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Sparrow.Platform;
+using Xunit;
+using Voron;
+using Voron.Impl;
 
+namespace FastTests.Voron.Bugs
+{
     public class FlushingToDataFile : StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)

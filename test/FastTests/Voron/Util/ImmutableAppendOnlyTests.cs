@@ -3,7 +3,7 @@ using System.Linq;
 using Voron.Util;
 using Xunit;
 
-namespace Voron.Tests.Util
+namespace FastTests.Voron.Util
 {
     public class ImmutableAppendOnlyTests
     {

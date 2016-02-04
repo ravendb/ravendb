@@ -1,15 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using Voron;
+using Xunit;
 
-namespace Voron.Tests.Bugs
+namespace SlowTests.Voron
 {
-	using System;
-	using System.IO;
-	using System.Threading.Tasks;
-
-	using Voron.Impl;
-	using Xunit;
-
-	public class InvalidReleasesOfScratchPages : StorageTest
+    public class InvalidReleasesOfScratchPages : StorageTest
 	{
 		
 		protected override void Configure(StorageEnvironmentOptions options)

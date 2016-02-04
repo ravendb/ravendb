@@ -1,8 +1,7 @@
 ﻿using System.IO;
 using Newtonsoft.Json;
 
-
-namespace BlittableTests
+namespace FastTests.Blittable
 {
     public static class StringExtentions
     {

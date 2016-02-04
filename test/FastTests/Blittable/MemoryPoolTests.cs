@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Xunit;
 
-namespace BlittableTests
+namespace FastTests.Blittable
 {
     public unsafe class MemoryPoolTests
     {
@@ -31,7 +30,7 @@ namespace BlittableTests
         {
             using (var pool = new UnmanagedBuffersPool(string.Empty))
             {
-                var allocatedMemory = new Sparrow.Collections.ConcurrentSet<UnmanagedBuffersPool.AllocatedMemoryData>();
+                var allocatedMemory = new global::Sparrow.Collections.ConcurrentSet<UnmanagedBuffersPool.AllocatedMemoryData>();
                 Parallel.For(0, 100, x =>
                 {
                     for (var i = 0; i < 10; i++)

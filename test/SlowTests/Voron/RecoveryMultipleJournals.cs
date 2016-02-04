@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq.Expressions;
-using Voron.Impl;
-using Voron.Impl.Paging;
-using Voron.Util;
+using Voron;
 using Xunit;
 
-namespace Voron.Tests.Bugs
+namespace SlowTests.Voron
 {
 	public class RecoveryMultipleJournals : StorageTest
 	{

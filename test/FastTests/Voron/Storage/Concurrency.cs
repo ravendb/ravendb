@@ -1,14 +1,9 @@
-﻿using System;
+﻿using Xunit;
+using Voron;
+using Voron.Exceptions;
 
-namespace Voron.Tests.Storage
+namespace FastTests.Voron.Storage
 {
-    using System.IO;
-
-    using Voron.Exceptions;
-    using Voron.Impl;
-
-    using Xunit;
-
     public class Concurrency : StorageTest
     {
         [Fact]

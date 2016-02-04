@@ -1,15 +1,12 @@
-﻿using System.Linq;
-using Voron.Impl;
-using Voron.Impl.Paging;
+﻿using System;
+using System.IO;
+using System.Linq;
+using Voron;
+using Xunit;
 
-namespace Voron.Tests.Storage
+namespace SlowTests.Voron
 {
-	using System;
-	using System.IO;
-
-	using Xunit;
-
-	public class SplittingVeryBig : StorageTest
+    public class SplittingVeryBig : StorageTest
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{

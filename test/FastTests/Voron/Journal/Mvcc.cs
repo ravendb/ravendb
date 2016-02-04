@@ -5,12 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using System.Linq;
-using Voron.Impl;
-using Voron.Impl.Paging;
 using Xunit;
+using Voron;
+using System.Linq;
 
-namespace Voron.Tests.Journal
+namespace FastTests.Voron.Journal
 {
     public class Mvcc : StorageTest
     {
