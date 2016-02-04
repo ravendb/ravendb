@@ -17,6 +17,7 @@ using Raven.Smuggler;
 using Raven.Tests.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -275,6 +276,7 @@ namespace Raven.Tests.Smuggler
         private void WaitForNextFullBackup(IDocumentStore store)
         {
             var lastFullBackup = DateTime.MinValue;
+            var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
 
             SpinWait.SpinUntil(() =>
             {
@@ -287,7 +289,7 @@ namespace Raven.Tests.Smuggler
                     return false;
                 }
                 return lastFullBackup != backupTime;
-            }, 5000);
+            }, timeout);
         }
 
         private void AssertUsersCountInBackup(int expectedNumberOfUsers, string file)

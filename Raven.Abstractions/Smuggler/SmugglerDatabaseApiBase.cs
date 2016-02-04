@@ -122,11 +122,7 @@ namespace Raven.Abstractions.Smuggler
                 using (var countingStream = new CountingStream(stream))
                 using (var gZipStream = new GZipStream(countingStream, CompressionMode.Compress, leaveOpen: true))
                 using (var streamWriter = new StreamWriter(gZipStream))
-
-                using (var jsonWriter = new SmugglerJsonTextWriter(streamWriter, maxSplitExportFileSize, countingStream, result.FilePath)
-                {
-                    Formatting = Formatting.Indented
-                })
+                using (var jsonWriter = new SmugglerJsonTextWriter(streamWriter, maxSplitExportFileSize, Formatting.Indented, countingStream, result.FilePath))
                 {
 
                     var isLastExport = false;
