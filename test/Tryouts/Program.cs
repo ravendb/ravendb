@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using BlittableTests.Benchmark;
 using BlittableTests.BlittableJsonWriterTests;
 using BlittableTests.Documents;
@@ -25,7 +26,9 @@ namespace Tryouts
         }
         public unsafe static void Main(string[] args)
         {
-            var sampleCode = JsonDeserialization.GenerateJsonDeserializationRoutine<User>();
+            WriteToStreamBenchmark.PerformanceAnalysis(@"C:\work\JSON\Big", @"C:\work\JSON\Big\output1.txt", 6).Wait();
+            Console.ReadLine();
+          /*  var sampleCode = JsonDeserialization.GenerateJsonDeserializationRoutine<User>();
 
             var dvj = new DynamicJsonValue
             {
@@ -33,10 +36,12 @@ namespace Tryouts
                 ["Age"] = 34,
             };
 
-            var blittableJsonReaderObject = new RavenOperationContext(new UnmanagedBuffersPool("Foo")).ReadObject(dvj, "foo");
+            var readObjectTask = new RavenOperationContext(new UnmanagedBuffersPool("Foo")).ReadObject(dvj, "foo");
+            readObjectTask.Wait();
+            var blittableJsonReaderObject = readObjectTask.Result;
 
             var code = sampleCode(blittableJsonReaderObject);
-
+*/
             //new DocumentsCrud().PutAndGetDocumentById("test22");
             return;
             // var trie = Trie<int>.Build(new[]
@@ -81,7 +86,7 @@ namespace Tryouts
 
             //WriteToStreamBenchmark.ManySmallDocs(@"C:\Work\JSON\Lines", 2);
             Console.WriteLine("Really starting now...");
-            WriteToStreamBenchmark.ManySmallDocs(@"D:\JSON\Lines", int.MaxValue);
+            WriteToStreamBenchmark.ManySmallDocs(@"D:\JSON\Lines", int.MaxValue).Wait();
             Console.WriteLine("done!");
         }
     }

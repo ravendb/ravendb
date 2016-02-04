@@ -16,7 +16,7 @@ namespace Raven.Server.Documents
     public class DocumentsHandler : DatabaseRequestHandler
     {
         [Route("/databases/*/docs", "PUT")]
-        public Task Put()
+        public async Task Put()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrWhiteSpace(id))
                     throw new ArgumentException("The 'id' query string parameter must have a non empty value");
 
-                var doc = context.ReadForDisk(HttpContext.Request.Body, id);
+                var doc = await context.ReadForDisk(HttpContext.Request.Body, id);
 
                 long? etag = null;
                 var etags = HttpContext.Request.Headers["If-None-Match"];
@@ -53,7 +53,6 @@ namespace Raven.Server.Documents
                 HttpContext.Response.StatusCode = 201;
                 HttpContext.Response.Headers["Location"] = id;
             }
-            return Task.CompletedTask;
         }
 
         [Route("/databases/*/queries","GET")]

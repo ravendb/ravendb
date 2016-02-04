@@ -85,7 +85,7 @@ namespace Raven.Server.Json
                 case BlittableJsonToken.OffsetSizeShort:
                     _propNamesDataOffsetSize = sizeof(short);
                     break;
-                case BlittableJsonToken.PropertyIdSizeInt:
+                case BlittableJsonToken.OffsetSizeInt:
                     _propNamesDataOffsetSize = sizeof(int);
                     break;
                 default:

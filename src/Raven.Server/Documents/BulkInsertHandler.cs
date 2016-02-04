@@ -8,22 +8,47 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Net.WebSockets;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 
 namespace Raven.Server.Documents
 {
+    public class EchoHandler : RequestHandler
+    {
+        [Routing.Route("/echo", "GET")]
+        public async Task Echo()
+        {
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var buffer = new byte[1024];
+                string input = null;
+                do
+                {
+                    var receiveAsync =
+                        await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    input = Encoding.UTF8.GetString(buffer, 0, receiveAsync.Count);
+                    Console.WriteLine(input);
+                    var size = Encoding.UTF8.GetBytes(input.Reverse().ToArray(), 0, input.Length, buffer, 0);
+                    await
+                        webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, size), WebSocketMessageType.Text, true,
+                            CancellationToken.None);
+                } while (input != null && input != "q");
+                await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Good Day", CancellationToken.None);
+            }
+        }
+    }
+
     public class BulkInsertHandler : DatabaseRequestHandler
     {
-
-        [Route("/databases/*/bulkInsert", "POST")]
-        public Task BulkInsert()
+        [Routing.Route("/databases/*/bulkInsert", "POST")]
+        public async Task BulkInsert()
         {
             if (HttpContext.Request.Query["op"] == "generate-single-use-auth-token")
             {
@@ -41,7 +66,7 @@ namespace Raven.Server.Documents
                 //{
                 //    Token = token
                 //});
-                return Task.CompletedTask;
+                return;
             }
 
             //var options = new BulkInsertOptions
@@ -53,81 +78,104 @@ namespace Raven.Server.Documents
 
             //TODO: handle timeouts
 
-            var batch = new List<Document>();
-            var requestBody = HttpContext.Request.Body;
-            var reader = new BinaryReader(requestBody);
 
-            RavenOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                while (true)
+                var buffer = new byte[1024];
+                string input = null;
+                
+                
+                    var receiveAsync =
+                        await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                
+                    input = Encoding.UTF8.GetString(buffer, 0, receiveAsync.Count);
+                    Console.WriteLine(input);
+                    var size = Encoding.UTF8.GetBytes(input.Reverse().ToArray(), 0, input.Length, buffer, 0);
+                    await
+                        webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, size), WebSocketMessageType.Text, true,
+                            CancellationToken.None);
+                
+                
+
+                var batch = new List<Document>();
+                var requestBody = HttpContext.Request.Body;
+                var reader = new BinaryReader(requestBody);
+
+                RavenOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
                 {
-                    int compressedBatchSize;
-                    try
+                    while (true)
                     {
-                        compressedBatchSize = reader.ReadInt32();// not required
-                    }
-                    catch (EndOfStreamException)
-                    {
-                        break;
-                    }
-
-                    using (var batchStream = new PartialStream(requestBody, compressedBatchSize))
-                    //TODO: We need to figure out a way to reuse this stream, creating it each time means big allocations
-                    using (var stream = new GZipStream(batchStream, CompressionMode.Decompress, leaveOpen: true))
-                    {
-                        var batchReader = new BinaryReader(stream);
-                        var count = batchReader.ReadInt32();
-                        foreach (var doc in context.ParseMultipleDocuments(stream, count, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                        int compressedBatchSize;
+                        try
                         {
-                            BlittableJsonReaderObject metadata;
-                            string id;
-                            if (doc.TryGet(Constants.Metadata, out metadata) == false ||
-                                metadata.TryGet("@id", out id) == false ||
-                                string.IsNullOrEmpty(id))
-                            {
-                                throw new InvalidDataException("Could not get id from document metadata");
-                            }
-                            if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.OrdinalIgnoreCase))
-                            {
-                                //its just a token document, should not get written into the database
-                                //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
-                                //during long pauses in the bulk insert operation.
-                                // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
-                                //continuation token and lots of document skips
-                                continue;
-                            }
-
-                            batch.Add(new Document
-                            {
-                                Key = id,
-                                Data = doc
-                            });
+                            compressedBatchSize = reader.ReadInt32(); // not required
                         }
-                    }
-
-
-                    if (batch.Count > 0)
-                    {
-                        using (context.Transaction = context.Environment.WriteTransaction())
+                        catch (EndOfStreamException)
                         {
-                            foreach (var doc in batch)
-                            {
-                                DocumentsStorage.Put(context, doc.Key, null, doc.Data);
-                            }
-
-                            context.Transaction.Commit();
+                            break;
                         }
+
+
+                        using (var batchStream = new PartialStream(requestBody, compressedBatchSize))
+                            //TODO: We need to figure out a way to reuse this stream, creating it each time means big allocations
+                        using (var stream = new GZipStream(batchStream, CompressionMode.Decompress, leaveOpen: true))
+                        {
+                            var batchReader = new BinaryReader(stream);
+                            var count = batchReader.ReadInt32();
+                            foreach (
+                                var doc in
+                                    await context.ParseMultipleDocuments(stream, count,
+                                        BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                            {
+                                BlittableJsonReaderObject metadata;
+                                string id;
+                                if (doc.TryGet(Constants.Metadata, out metadata) == false ||
+                                    metadata.TryGet("@id", out id) == false ||
+                                    string.IsNullOrEmpty(id))
+                                {
+                                    throw new InvalidDataException("Could not get id from document metadata");
+                                }
+                                if (id.Equals(Constants.BulkImportHeartbeatDocKey, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    //its just a token document, should not get written into the database
+                                    //the purpose of the heartbeat document is to make sure that the connection doesn't time-out
+                                    //during long pauses in the bulk insert operation.
+                                    // Currently used by smuggler to make sure that the connection doesn't time out if there is a 
+                                    //continuation token and lots of document skips
+                                    continue;
+                                }
+
+                                batch.Add(new Document
+                                {
+                                    Key = id,
+                                    Data = doc
+                                });
+                            }
+                        }
+
+
+                        if (batch.Count > 0)
+                        {
+                            using (context.Transaction = context.Environment.WriteTransaction())
+                            {
+                                foreach (var doc in batch)
+                                {
+                                    DocumentsStorage.Put(context, doc.Key, null, doc.Data);
+                                }
+
+                                context.Transaction.Commit();
+                            }
+                        }
+
+                        batch.Clear();
+                        context.Reset();
                     }
-
-                    batch.Clear();
-                    context.Reset();
-
                 }
 
+                await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "BulkInsert Finished", CancellationToken.None);
             }
-
-            return Task.CompletedTask;
+            return;
         }
 
         private bool GetBooleanQueryStringOption(string name)

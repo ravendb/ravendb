@@ -4,6 +4,7 @@ using System.Dynamic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 using Raven.Imports.Newtonsoft.Json.Converters;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace NewBlittable.Tests.BlittableJsonWriterTests
 {
-    public unsafe class VariousPropertyAmountsTests
+    public class VariousPropertyAmountsTests
     {
         public ExpandoObject GenerateExpandoObject(int depth = 1, int width = 8, bool reuseFieldNames = true)
         {
@@ -76,7 +77,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
-        public void FlatBoundarySizeFieldsAmount(int maxValue)
+        public async Task FlatBoundarySizeFieldsAmount(int maxValue)
         {
             //var maxValue = short.MaxValue + 1000;
             var str = GetJsonString(1, maxValue);
@@ -84,7 +85,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
 
                 System.Dynamic.DynamicObject dynamicBlittableJObject = new DynamicBlittableJson(employee);
@@ -102,7 +103,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
-        public unsafe void FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
+        public async Task FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
         {
 
             var str = GetJsonString(1, maxValue);
@@ -110,7 +111,7 @@ namespace NewBlittable.Tests.BlittableJsonWriterTests
             var unmanagedPool = new UnmanagedBuffersPool(string.Empty);
 
             using (var blittableContext = new RavenOperationContext(unmanagedPool))
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = await blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 var ms = new MemoryStream();
                 employee.WriteTo(ms, originalPropertyOrder: true);

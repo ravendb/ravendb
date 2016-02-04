@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Server.Json.Parsing;
 using Sparrow;
 using Sparrow.Binary;
 
@@ -146,6 +147,10 @@ namespace Raven.Server.Json
             _disposed = true;
         }
 
+        public void EnsureSingleChunk(JsonParserState state)
+        {
+            EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
+        }
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
             if (_current.Previous == null)

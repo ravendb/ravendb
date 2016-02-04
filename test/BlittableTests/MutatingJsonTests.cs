@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Linq;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -14,14 +15,14 @@ using Xunit;
 
 namespace BlittableTests
 {
-    public unsafe class MutatingJsonTests
+    public class MutatingJsonTests
     {
         private const string InitialJson = @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false}}";
 
         [Fact]
-        public void CanAddProperty()
+        public async Task CanAddProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            await AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -31,37 +32,37 @@ namespace BlittableTests
         }
 
         [Fact]
-        public void CanCompressFields()
+        public async Task CanCompressFields()
         {
-            AssertEqualAfterRoundTrip(source =>
+            await AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
                     ["Age"] = 34
                 };
             },
-            @"{""Name"":""there goes the man in the moon"",""Age"":34}",
-            @"{""Name"":""there goes the man in the moon""}");
+                @"{""Name"":""there goes the man in the moon"",""Age"":34}",
+                @"{""Name"":""there goes the man in the moon""}");
         }
 
         [Fact]
-        public void WillPreserveEscapes()
+        public async Task WillPreserveEscapes()
         {
-            AssertEqualAfterRoundTrip(source =>
+            await AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
                     ["Age"] = 34
                 };
             }, @"{""Name"":""Oren\r\n"",""Age"":34}",
-            @"{""Name"":""Oren\r\n""}");
+                @"{""Name"":""Oren\r\n""}");
         }
 
 
         [Fact]
-        public void CanModifyArrayProperty()
+        public async Task CanModifyArrayProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            await AssertEqualAfterRoundTrip(source =>
             {
                 object result;
                 source.TryGetMember("Dogs", out result);
@@ -76,9 +77,9 @@ namespace BlittableTests
 
 
         [Fact]
-        public void CanModifyNestedObjectProperty()
+        public async Task CanModifyNestedObjectProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            await AssertEqualAfterRoundTrip(source =>
             {
                 object result;
                 source.TryGetMember("State", out result);
@@ -91,9 +92,9 @@ namespace BlittableTests
         }
 
         [Fact]
-        public void CanRemoveAndAddProperty()
+        public async Task CanRemoveAndAddProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            await AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue(source)
                 {
@@ -104,9 +105,9 @@ namespace BlittableTests
         }
 
         [Fact]
-        public void CanAddAndRemoveProperty()
+        public async Task CanAddAndRemoveProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            await AssertEqualAfterRoundTrip(source =>
             {
                 source.Modifications = new DynamicJsonValue(source)
                 {
@@ -116,7 +117,7 @@ namespace BlittableTests
             }, @"{""Name"":""Oren"",""State"":{""Sleep"":false}}");
         }
 
-        private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
+        private static async Task AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
         {
             using (var pool = new UnmanagedBuffersPool("foo"))
             using (var ctx = new RavenOperationContext(pool))
@@ -126,10 +127,10 @@ namespace BlittableTests
                 streamWriter.Write(json ?? InitialJson);
                 streamWriter.Flush();
                 stream.Position = 0;
-                using (var writer = ctx.Read(stream, "foo"))
+                using (var writer = await ctx.Read(stream, "foo"))
                 {
                     mutate(writer);
-                    using (var document = ctx.ReadObject(writer, "foo"))
+                    using (var document = await ctx.ReadObject(writer, "foo"))
                     {
                         var ms = new MemoryStream();
                         document.WriteTo(ms, originalPropertyOrder: true);

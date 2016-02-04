@@ -2,6 +2,7 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Server.Json;
 using Xunit;
@@ -9,11 +10,11 @@ using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
 namespace BlittableTests.BlittableJsonWriterTests
 {
-    public unsafe class BlittableFormatTests
+    public class BlittableFormatTests
     {
         [Theory]
         [MemberData("Samples")]
-        public void CheckRoundtrip(string name)
+        public async Task CheckRoundtrip(string name)
         {
             using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             {
@@ -22,7 +23,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                 using (var pool = new UnmanagedBuffersPool("test") )
                 using (var context = new RavenOperationContext(pool))
                 {
-                    var writer = context.Read(stream, "docs/1");
+                    var writer = await context.Read(stream, "docs/1");
 
                     var memoryStream = new MemoryStream();
                     writer.WriteTo(memoryStream, originalPropertyOrder: true);
@@ -36,7 +37,7 @@ namespace BlittableTests.BlittableJsonWriterTests
         }
 
         [Fact]
-        public void ShouldNotCrashForManyDifferentProperties()
+        public async Task ShouldNotCrashForManyDifferentProperties()
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })
             {
@@ -53,7 +54,7 @@ namespace BlittableTests.BlittableJsonWriterTests
                         stream.Position = 0;
                         var compacted = JObject.Parse(origin).ToString(Formatting.None);
 
-                        using (var writer = context.Read(stream, "docs/1 "))
+                        using (var writer = await context.Read(stream, "docs/1 "))
                         {
 
                             var memoryStream = new MemoryStream();

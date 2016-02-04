@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Abstractions.Exceptions;
@@ -34,13 +35,13 @@ namespace BlittableTests.Documents
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
-        public void PutAndGetDocumentById(string key)
+        public async Task PutAndGetDocumentById(string key)
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = key
                 }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -70,13 +71,13 @@ namespace BlittableTests.Documents
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
-        public void CanDelete(string key)
+        public async Task CanDelete(string key)
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = key
                 }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -107,13 +108,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void CanQueryByGlobalEtag()
+        public async Task CanQueryByGlobalEtag()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -124,7 +125,7 @@ namespace BlittableTests.Documents
                 {
                     _documentsStorage.Put(ctx, "users/1", null, doc);
                 }
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
@@ -135,7 +136,7 @@ namespace BlittableTests.Documents
                 {
                     _documentsStorage.Put(ctx, "users/2", null, doc);
                 }
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
@@ -168,13 +169,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void EtagsArePersisted()
+        public async Task EtagsArePersisted()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -196,7 +197,7 @@ namespace BlittableTests.Documents
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -214,13 +215,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void EtagsArePersistedWithDeletes()
+        public async Task EtagsArePersistedWithDeletes()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -243,7 +244,7 @@ namespace BlittableTests.Documents
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
                 _documentsStorage.ReadLastEtag(ctx.Transaction);
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -278,13 +279,13 @@ namespace BlittableTests.Documents
 
 
         [Fact]
-        public void CanQueryByPrefix()
+        public async Task CanQueryByPrefix()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -295,7 +296,7 @@ namespace BlittableTests.Documents
                 {
                     _documentsStorage.Put(ctx, "users/10", null, doc);
                 }
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
@@ -306,7 +307,7 @@ namespace BlittableTests.Documents
                 {
                     _documentsStorage.Put(ctx, "users/02", null, doc);
                 }
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
@@ -337,13 +338,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void CanQueryByCollectionEtag()
+        public async Task CanQueryByCollectionEtag()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -355,7 +356,7 @@ namespace BlittableTests.Documents
                     _documentsStorage.Put(ctx, "users/1", null, doc);
                 }
               
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
@@ -366,7 +367,7 @@ namespace BlittableTests.Documents
                 {
                     _documentsStorage.Put(ctx, "pets/1", null, doc);
                 }
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
@@ -397,13 +398,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void WillVerifyEtags_New()
+        public async Task WillVerifyEtags_New()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -421,13 +422,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void WillVerifyEtags_Existing()
+        public async Task WillVerifyEtags_Existing()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -445,13 +446,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void WillVerifyEtags_OnDeleteExisting()
+        public async Task WillVerifyEtags_OnDeleteExisting()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
@@ -482,13 +483,13 @@ namespace BlittableTests.Documents
         }
 
         [Fact]
-        public void WillVerifyEtags_ShouldBeNew()
+        public async Task WillVerifyEtags_ShouldBeNew()
         {
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue

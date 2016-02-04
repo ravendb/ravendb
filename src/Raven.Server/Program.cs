@@ -30,6 +30,7 @@ namespace Raven.Server
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
             var router = new RequestRouter(RouteScanner.Scan());
+            app.UseWebSockets();
             app.Run(async context =>
             {
                 try

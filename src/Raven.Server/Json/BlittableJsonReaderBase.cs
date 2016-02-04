@@ -105,7 +105,7 @@ namespace Raven.Server.Json
 
         public int ReadVariableSizeInt(int pos, out byte offset)
         {
-            // Read out an Int32 7 bits at a time.  The high bit 
+            // ReadAsync out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             // we assume that the value shouldn't be zero very often
             // because then we'll always take 5 bytes to store it
@@ -127,7 +127,7 @@ namespace Raven.Server.Json
 
         protected long ReadVariableSizeLong(int pos)
         {
-            // Read out an Int64 7 bits at a time.  The high bit 
+            // ReadAsync out an Int64 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             
             ulong count = 0;
