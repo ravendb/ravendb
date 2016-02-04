@@ -4,6 +4,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import changeSubscription = require('common/changeSubscription');
 import synchronizeNowCommand = require("commands/filesystem/synchronizeNowCommand");
 import activityItems = require("viewmodels/filesystem/status/activityItems");
+import getConfigurationNamesByPrefixCommand = require("commands/filesystem/getConfigurationsByPrefixCommand");
+import getConfigurationByKeyCommand = require("commands/filesystem/getConfigurationByKeyCommand");
 
 class status extends viewModelBase {
 
@@ -12,6 +14,8 @@ class status extends viewModelBase {
 
     finishedIncoming: activityItems;
     activeIncoming: activityItems;
+    
+    sourceSynchronizationInformations = ko.observableArray<sourceSynchronizationInformationDto>();
 
     appUrls: computedAppUrls;
 
@@ -27,6 +31,17 @@ class status extends viewModelBase {
 
         this.finishedIncoming = new activityItems(this.activeFilesystem(), synchronizationActivity.Finished, synchronizationDirection.Incoming);
         this.activeIncoming = new activityItems(this.activeFilesystem(), synchronizationActivity.Active, synchronizationDirection.Incoming);
+
+        new getConfigurationNamesByPrefixCommand(this.activeFilesystem(), "Raven/Synchronization/Sources").execute().done((searchResult: configurationSearchResultsDto) => {
+            searchResult.ConfigNames.forEach(name => {
+                new getConfigurationByKeyCommand(this.activeFilesystem(), name).execute().
+                    done((sourceSyncInfoAsString: string) => {
+                        var syncInfo: sourceSynchronizationInformationDto = JSON.parse(sourceSyncInfoAsString);
+
+                        this.sourceSynchronizationInformations.push(syncInfo);
+                    });
+            });
+        });
     }
 
     createNotifications(): Array<changeSubscription> {

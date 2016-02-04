@@ -194,3 +194,16 @@ const enum filesystemConfigurationChangeAction {
     Set,
     Delete
 }
+
+interface configurationSearchResultsDto {
+    ConfigNames: string[];
+    TotalCount: number;
+    Start: number;
+    PageSize: number;
+}
+
+interface sourceSynchronizationInformationDto {
+   LastSourceFileEtag: string;
+   SourceServerUrl: string;
+   DestinationServerId: string;
+}
