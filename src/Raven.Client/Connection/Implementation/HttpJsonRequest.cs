@@ -133,18 +133,17 @@ namespace Raven.Client.Connection.Implementation
 
                             credentialsToUse = credentialCache;
                         }
-            else
-            {
+                        else
+                        {
                             credentialsToUse = _credentials.Credentials;
-                }
-                    }      
-                    var handler = new WinHttpHandler
+                        }
+                    }
+                    var handler = new HttpClientHandler
                     {
-                        ServerCredentials = useDefaultCredentials ? CredentialCache.DefaultCredentials : credentialsToUse
                     };
                     return handler;
-            }
-            );
+                }
+                );
 
             httpClient = factory.httpClientCache.GetClient(Timeout, _credentials, recreateHandler);
 
