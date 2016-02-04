@@ -145,38 +145,6 @@ namespace Raven.Client.Connection.Async
             }, token);
         }
 
-        public async Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false, CancellationToken token = default (CancellationToken))
-        {
-            var serverClient = (AsyncServerClient)(innerAsyncServerClient.ForSystemDatabase());
-
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
-
-            serverClient.ForceReadFromMaster();
-
-            try
-            {
-                var get = await serverClient.GetAsync(doc.Id, token).ConfigureAwait(false);
-                if (get != null)
-                    return;
-
-                await serverClient.GlobalAdmin.CreateDatabaseAsync(doc, token).ConfigureAwait(false);
-
-                try
-                {
-                    await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention(), token).ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                    // this is a courtesy, not required, and can happen if we don't have permissions to the new db
-                }
-            }
-            catch (Exception)
-            {
-                if (ignoreFailures == false)
-                    throw;
-            }
-        }
-
         public IAsyncDatabaseCommands Commands
         {
             get

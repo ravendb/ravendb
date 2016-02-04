@@ -665,11 +665,6 @@ namespace Raven.Client.Connection.Async
         Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false, CancellationToken token = default (CancellationToken));
 
         /// <summary>
-        ///     Ensures that the database exists, creating it if needed
-        /// </summary>
-        Task EnsureDatabaseExistsAsync(string name, bool ignoreFailures = false, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
         ///     Gets the build number
         /// </summary>
         Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default (CancellationToken));

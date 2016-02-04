@@ -355,13 +355,6 @@ namespace Raven.Client.Document
                 }
 
                 initialized = true;
-
-                if (ensureDatabaseExists &&
-                    string.IsNullOrEmpty(DefaultDatabase) == false &&
-                    DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway
-                {
-                    DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
-                }
             }
             catch (Exception)
             {

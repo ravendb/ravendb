@@ -625,11 +625,6 @@ namespace Raven.Client.Connection
         void DeleteDatabase(string databaseName, bool hardDelete = false);
 
         /// <summary>
-        ///     Ensures that the database exists, creating it if needed
-        /// </summary>
-        void EnsureDatabaseExists(string name, bool ignoreFailures = false);
-
-        /// <summary>
         ///     Gets the build number
         /// </summary>
         BuildNumber GetBuildNumber();
