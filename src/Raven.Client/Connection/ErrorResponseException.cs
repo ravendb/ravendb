@@ -43,10 +43,9 @@ namespace Raven.Abstractions.Connection
 
         public static ErrorResponseException FromHttpRequestException(HttpRequestException exception)
         {
-            var ex = new ErrorResponseException
+            var ex = new ErrorResponseException(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), exception.Message, exception.InnerException)
             {
-                Response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
-                ResponseString = exception.Message
+                ResponseString = exception.Message,
             };
 
             foreach (var key in exception.Data.Keys)
