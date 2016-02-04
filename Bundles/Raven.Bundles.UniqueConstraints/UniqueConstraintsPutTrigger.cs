@@ -42,7 +42,10 @@ namespace Raven.Bundles.UniqueConstraints
                     var uniqueConstraintsDocument = Database.Documents.Get(uniqueConstraintsDocumentKey);
 
                     if (uniqueConstraintsDocument != null)
+                    {
+                        uniqueConstraintsDocument = DeepCloneDocument(uniqueConstraintsDocument);
                         ConvertUniqueConstraintsDocumentIfNecessary(uniqueConstraintsDocument, escapedUniqueValue); // backward compatibility
+                    }
                     else
                         uniqueConstraintsDocument = new JsonDocument();
 
@@ -173,6 +176,8 @@ namespace Raven.Bundles.UniqueConstraints
                     if (uniqueConstraintsDocument == null)
                         continue;
 
+                    uniqueConstraintsDocument = DeepCloneDocument(uniqueConstraintsDocument);
+
                     var removed = RemoveConstraintFromUniqueConstraintDocument(uniqueConstraintsDocument, escapedUniqueValue);
 
                     if (ShouldRemoveUniqueConstraintDocument(uniqueConstraintsDocument))
@@ -189,6 +194,16 @@ namespace Raven.Bundles.UniqueConstraints
                 }
 
             }
+        }
+
+        private static JsonDocument DeepCloneDocument(JsonDocument uniqueConstraintsDocument)
+        {
+            //This is a very expensive deep clone, i don't want to expose it as a method of JsonDocument.
+            //The reason i do this is because Snapshoting is shallow and we need a deep snapshot.
+            JsonDocument clone = new JsonDocument();
+            clone.DataAsJson = (RavenJObject)(uniqueConstraintsDocument.DataAsJson.CloneToken());
+            clone.Metadata = (RavenJObject)(uniqueConstraintsDocument.Metadata.CloneToken());
+            return clone;
         }
 
         private static bool ShouldRemoveUniqueConstraintDocument(JsonDocument uniqueConstraintsDocument)
