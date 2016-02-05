@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
 
                 var doc = await context.ReadForDisk(HttpContext.Request.Body, id);
 
-                var etag = GetEtagFromRequest();
+                var etag = GetLongFromHeaders("If-Match");
 
                 context.Transaction = context.Environment.WriteTransaction();
                 if (id[id.Length - 1] == '/')
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrWhiteSpace(id))
                     throw new ArgumentException("The 'id' query string parameter must have a non empty value");
 
-                var etag = GetEtagFromRequest();
+                var etag = GetLongFromHeaders("If-Match");
 
                 context.Transaction = context.Environment.WriteTransaction();
                 DocumentsStorage.Delete(context, id, etag);

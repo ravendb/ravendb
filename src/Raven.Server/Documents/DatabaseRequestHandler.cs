@@ -19,16 +19,16 @@ namespace Raven.Server.Documents
             ContextPool = DocumentsStorage?.ContextPool;
         }
 
-        protected long? GetEtagFromRequest()
+        protected long? GetLongFromHeaders(string name)
         {
             long? etag = null;
-            var etags = HttpContext.Request.Headers["If-None-Match"];
+            var etags = HttpContext.Request.Headers[name];
             if (etags.Count != 0)
             {
                 long result;
                 if (long.TryParse(etags[0], out result) == false)
                     throw new ArgumentException(
-                        "Could not parse header 'If-None-Match' header as int64, value was: " + etags[0]);
+                        "Could not parse header '" + name + "' header as int64, value was: " + etags[0]);
                 etag = result;
             }
             return etag;
