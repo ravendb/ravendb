@@ -25,15 +25,9 @@ namespace Raven.Server.Web.System
     {
         public async Task WriteFile(string filePath)
         {
-            var etagValue = HttpContext.Request.Headers["If-None-Match"].FirstOrDefault() ??
-                            HttpContext.Request.Headers["If-Match"].FirstOrDefault();
-            if (etagValue != null)
-            {
-                // Bug fix: the etag header starts and ends with quotes, resulting in cache-busting; the Studio always receives new files, even if should be cached.
-                etagValue = etagValue.Trim(new[] {'\"'});
-            }
+            var etagValue = HttpContext.Request.Headers["If-None-Match"];
 
-            var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+            var fileEtag = '"' + File.GetLastWriteTimeUtc(filePath).ToString("G") + '"';
             if (etagValue == fileEtag)
             {
                 HttpContext.Response.StatusCode = 304; // Not Modified
@@ -41,28 +35,30 @@ namespace Raven.Server.Web.System
             }
 
             HttpContext.Response.ContentType = "text/html";
-
+            HttpContext.Response.Headers["ETag"] = fileEtag;
             using (var data = File.OpenRead(filePath))
             {
                 await data.CopyToAsync(HttpContext.Response.Body, 16*1024);
             }
         }
 
-        [Route("/studio/$", "GET")]
+        [RavenAction("/studio/$", "GET")]
         public async Task GetStudioFile()
         {
-            var filename = new StringSegment(this.RouteMatch.Url, this.RouteMatch.MatchLength,
-                this.RouteMatch.Url.Length - this.RouteMatch.MatchLength);
+            var filename = new StringSegment(
+                RouteMatch.Url, 
+                RouteMatch.MatchLength,
+                RouteMatch.Url.Length - RouteMatch.MatchLength);
 
-            var ravenPath = $"~/../../Raven.Studio/{filename}";
-            var docPath = "index.html";
+            var ravenPath = $"~/../../../Raven.Studio.Html5/{filename}";
 
-            var filePath = Path.Combine(ravenPath, docPath);
             if (File.Exists(ravenPath))
             {
                 await WriteFile(ravenPath);
                 return;
             }
+            HttpContext.Response.StatusCode = 404;
+            return;
 
             //filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../Raven.Studio/", docPath);
             //if (File.Exists(filePath))
@@ -94,11 +90,10 @@ namespace Raven.Server.Web.System
             //await WriteFile(filepath);
         }
 
-        [Route("/", "GET")]
+        [RavenAction("/", "GET")]
         public Task RavenRoot()
         {
-            const string rootPath = "/studio/index.html";
-            HttpContext.Response.Headers["Location"] = rootPath;
+            HttpContext.Response.Headers["Location"] = "/studio/index.html";
             HttpContext.Response.StatusCode = 301;
             return Task.CompletedTask;
         }
