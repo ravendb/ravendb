@@ -59,9 +59,6 @@ class adminSettings extends viewModelBase {
         ];
         if (license.licenseStatus().Attributes.hotSpare === "true")
             routes.push(hotSpareRoute);
-        if (!shell.has40Features()) {
-            routes.remove(clusterRoute);
-        }
 
         this.router = durandalRouter.createChildRouter()
             .map(routes)
