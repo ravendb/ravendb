@@ -117,10 +117,6 @@ namespace Raven.Server.Config
         public void PostInit()
         {
             WebHostConfig = new RavenWebHostConfiguration(this);
-            var root = _configBuilder.Build();
-            Core.RunInMemory = root.Get<bool>("run.in.memory");
-            Core.DataDirectory = root.Get<string>("system.path").ToFullPath();
-            Core.ServerUrls = new[] { root.Get<string>("server.urls")};
         }
 
         public void CopyParentSettings(RavenConfiguration serverConfiguration)

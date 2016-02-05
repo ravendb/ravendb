@@ -59,11 +59,6 @@ namespace Raven.Server.Config.Categories
             set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
         }
 
-        public override void Initialize(NameValueCollection settings)
-        {
-            base.Initialize(settings);
-        }
-
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
             if (string.IsNullOrEmpty(workingDirectory))
