@@ -19,9 +19,8 @@ namespace Raven.Server.Json
     /// </summary>
     public unsafe class SmallStringCompression
     {
-        // ReSharper disable once RedundantExplicitArraySize
-        private readonly string[] TermsTable = new string[246]
-        {
+
+        private static readonly string[] DefaultTermsTable = {
             " ", "the", "e", "t", "a", "of", "o", "and", "i", "n", "s", "e ", "r", " th",
             " t", "in", "he", "th", "h", "he ", "to", "\r\n", "l", "s ", "d", " a", "an",
             "er", "c", " o", "d ", "on", " of", "re", "of ", "t ", ", ", "is", "u", "at",
@@ -48,35 +47,37 @@ namespace Raven.Server.Json
         private readonly byte*[] _termsTableBytes;
 
         private readonly byte*[][] _hashTable;
+        private readonly string[] _termsTable;
 
         private readonly int _maxTermSize;
         private readonly int _maxVerbatimLen;
 
-        public static SmallStringCompression Instance = new SmallStringCompression(); 
+        public static SmallStringCompression Instance = new SmallStringCompression(DefaultTermsTable);
 
-        private SmallStringCompression()
+        public SmallStringCompression(string[] termsTable)
         {
-            if (TermsTable.Length + 8 > byte.MaxValue)
+            _termsTable = termsTable;
+            if (termsTable.Length + 8 > byte.MaxValue)
                 throw new InvalidOperationException("Too many terms defined");
 
-            _termsTableBytes = new byte*[TermsTable.Length];
-            _maxVerbatimLen = byte.MaxValue - TermsTable.Length;
+            _termsTableBytes = new byte*[termsTable.Length];
+            _maxVerbatimLen = Math.Min(byte.MaxValue - termsTable.Length, 48);
             _hashTable = new byte*[byte.MaxValue][];
-            for (int i = 0; i < TermsTable.Length; i++)
+            for (int i = 0; i < termsTable.Length; i++)
             {
-                var byteCount = Encoding.UTF8.GetByteCount(TermsTable[i]);
+                var byteCount = Encoding.UTF8.GetByteCount(termsTable[i]);
                 if (byteCount > byte.MaxValue)
-                    throw new InvalidOperationException("Term " + TermsTable[i] + " is too big");
+                    throw new InvalidOperationException("Term " + termsTable[i] + " is too big");
                 var ptr = (byte*)Marshal.AllocHGlobal(byteCount + 2);
                 _termsTableBytes[i] = ptr;
                 ptr[0] = (byte)byteCount;
-                fixed (char* pChars = TermsTable[i])
+                fixed (char* pChars = termsTable[i])
                 {
-                    var bytes = Encoding.UTF8.GetBytes(pChars, TermsTable[i].Length, ptr + 1, byteCount);
+                    var bytes = Encoding.UTF8.GetBytes(pChars, termsTable[i].Length, ptr + 1, byteCount);
                     if (bytes != byteCount)
-                        throw new InvalidOperationException("Bug, UTF8 encoding mismatch for GetByteCount and GetBytes for " + TermsTable[i]);
+                        throw new InvalidOperationException("Bug, UTF8 encoding mismatch for GetByteCount and GetBytes for " + termsTable[i]);
                 }
-                ptr[byteCount+1] = (byte)i;
+                ptr[byteCount + 1] = (byte)i;
 
                 _maxTermSize = Math.Max(_maxTermSize, byteCount);
 
@@ -128,11 +129,11 @@ namespace Raven.Server.Json
             for (int i = 0; i < inputLen; i++)
             {
                 var slot = input[i];
-                if (slot >= TermsTable.Length)
+                if (slot >= _termsTable.Length)
                 {
                     // verbatim entry
-                    var len = slot - TermsTable.Length;
-                    if (outPos+len > outputLen)
+                    var len = slot - _termsTable.Length;
+                    if (outPos + len > outputLen)
                         return 0;
                     Memory.Copy(output, input + i + 1, len);
                     outPos += len;
@@ -213,7 +214,7 @@ namespace Raven.Server.Json
                 if (foundMatch == false)
                     state->VerbatimLength++;
             }
-            if (state->OutputPosition + state->VerbatimLength  > outputLen)
+            if (state->OutputPosition + state->VerbatimLength > outputLen)
                 return 0;
             Flush(input, output, state);
             return state->OutputPosition;
@@ -225,8 +226,8 @@ namespace Raven.Server.Json
             while (verbatimLength > 0)
             {
                 var len = Math.Min(_maxVerbatimLen - 1, verbatimLength);
-                output[state->OutputPosition++] = (byte)(len + TermsTable.Length);
-                Memory.Copy(output+state->OutputPosition, input + state->VerbatimStart, len);
+                output[state->OutputPosition++] = (byte)(len + _termsTable.Length);
+                Memory.Copy(output + state->OutputPosition, input + state->VerbatimStart, len);
                 state->VerbatimStart += len;
                 verbatimLength -= len;
                 state->OutputPosition += len;
