@@ -7,7 +7,7 @@ namespace Raven.Server.Documents
     public class Document
     {
         public long Etag;
-        public string Key;
+        public LazyStringValue Key;
         public long StorageId;
         public BlittableJsonReaderObject Data;
 

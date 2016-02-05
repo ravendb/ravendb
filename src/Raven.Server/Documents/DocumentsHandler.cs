@@ -85,7 +85,6 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.MaterializeDocumentKeys = false;
                 var document = DocumentsStorage.Get(context, ids[0]);
                 if (document == null)
                     HttpContext.Response.StatusCode = 404;

@@ -309,48 +309,20 @@ namespace Raven.Server.Json.Parsing
             }
         }
 
-        private static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '/', '"', };
         private void SetStringBuffer(string str)
         {
-            // max possible size - we avoid using GetMaxByteCount because profiling showed it to take 2% of runtime
+            // max possible size - we avoid using GetByteCount because profiling showed it to take 2% of runtime
             // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
-            int size = str.Length * 4;
-            _state.EscapePositions.Clear();
-            var lastEscape = 0;
-            while (true)
-            {
-                var curEscape = str.IndexOfAny(EscapeChars, lastEscape);
-                if (curEscape == -1)
-                    break;
-                _state.EscapePositions.Add(curEscape - lastEscape);
-                lastEscape = curEscape + 1;
-            }
-            //we actually need less than this, because we use variant size ints,
-            //but it is cheaper to allocate a bit more memory here than to compute the sizes
-            size += sizeof (int) + sizeof(int) * _state.EscapePositions.Count; 
+            int size = Encoding.UTF8.GetMaxByteCount(str.Length);
+            _state.FindEscapePositionsIn(str);
+            size += _state.GetEscapePositionsSize();
             _state.StringBuffer = _ctx.GetNativeTempBuffer(size, out size);
             fixed (char* pChars = str)
             {
                 _state.StringSize = Utf8Encoding.GetBytes(pChars, str.Length, _state.StringBuffer, size);
                 var escapePos = _state.StringBuffer + _state.StringSize;
-                WriteVariableSizeInt(ref escapePos, _state.EscapePositions.Count);
-                foreach (int pos in _state.EscapePositions)
-                {
-                    WriteVariableSizeInt(ref escapePos, pos);
-                }
+                _state.WriteEscapePositionsTo(escapePos);
             }
-        }
-
-        void WriteVariableSizeInt(ref byte* dest, int value)
-        {
-            // assume that we don't use negative values very often
-            var v = (uint)value;
-            while (v >= 0x80)
-            {
-                *dest++ = (byte)(v | 0x80);
-                v >>= 7;
-            }
-            *dest++ = (byte)(v);
         }
 
 

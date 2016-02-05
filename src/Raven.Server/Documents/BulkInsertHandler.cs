@@ -123,7 +123,7 @@ namespace Raven.Server.Documents
 
                                 batch.Add(new Document
                                 {
-                                    Key = id,
+                                    Key = LazyStringFromKey(id, context),
                                     Data = doc
                                 });
                             }
@@ -151,6 +151,11 @@ namespace Raven.Server.Documents
                 await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "BulkInsert Finished", CancellationToken.None);
             }
             return;
+        }
+
+        private unsafe LazyStringValue LazyStringFromKey(string id, RavenOperationContext context)
+        {
+            return new LazyStringValue(id, null, 0, context);
         }
 
         private bool GetBooleanQueryStringOption(string name)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 using Sparrow.Binary;
@@ -34,7 +35,6 @@ namespace Raven.Server.Json
         public CachedProperties CachedProperties;
         public StorageEnvironment Environment;
         private int _lastStreamSize = 4096;
-        public bool MaterializeDocumentKeys = true;
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
@@ -159,16 +159,18 @@ namespace Raven.Server.Json
 
             if (_fieldNames.TryGetValue(field, out value))
                 return value;
-
+            
+            var state = new JsonParserState();
+            state.FindEscapePositionsIn(field);
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
-            var memory = GetMemory(maxByteCount+1);
+            var memory = GetMemory(maxByteCount+state.GetEscapePositionsSize());
             try
             {
                 fixed (char* pField = field)
                 {
                     var address = (byte*)memory.Address;
                     var actualSize = Encoding.GetBytes(pField, field.Length, address, memory.SizeInBytes);
-                    address[actualSize] = 0;// TODO: handle escape positions
+                    state.WriteEscapePositionsTo(address + actualSize);
                     _fieldNames[field] = value = new LazyStringValue(field, address, actualSize, this)
                     {
                         AllocatedMemoryData = memory

@@ -148,16 +148,16 @@ namespace Raven.Server.Documents
             var table = new Table(_docsSchema, context.Transaction);
 
             var prefixSlice = GetSliceFromKey(context, prefix);
-
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekByPrimaryKey(prefixSlice))
             {
                 var document = TableValueToDocument(context, result);
-                if (document.Key.StartsWith(prefix) == false)
+                string documenKey = document.Key;
+                if (documenKey.StartsWith(prefix) == false)
                     break;
 
-                if (!WildcardMatcher.Matches(matches, document.Key) ||
-                    WildcardMatcher.MatchesExclusion(exclude, document.Key))
+                if (!WildcardMatcher.Matches(matches, documenKey) ||
+                    WildcardMatcher.MatchesExclusion(exclude, documenKey))
                     continue;
 
                 if (start > 0)
@@ -311,7 +311,7 @@ namespace Raven.Server.Documents
             };
             int size;
             var ptr = tvr.Read(2, out size);
-            result.Key = Encoding.UTF8.GetString(ptr, size);
+            result.Key = new LazyStringValue(null, ptr, size, context);
             ptr = tvr.Read(1, out size);
             result.Etag = IPAddress.NetworkToHostOrder(*(long*) ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
