@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "declaration": false,
+    "sourceMap": true,
+    "target": "es5",
+    "module": "amd"
+  },
+  "exclude": [
+    "node_modules",
+    "wwwroot"
+  ]
+}

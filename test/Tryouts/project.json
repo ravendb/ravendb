@@ -9,7 +9,6 @@
   "dependencies": {
     "Raven.Client": "4.0.0-*",
     "Raven.Server": "4.0.0-*",
-    "BlittableTests": "4.0.0-*",
     "Raven.Tests.Core": "4.0.0-*"
   },
 

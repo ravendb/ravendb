@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "name": "Raven.Studio",
+  "private": true,
+
+  "devDependencies": {
+    "typescript": "^1.7.5",
+    "gulp": "^3.9.0",
+    "gulp-typescript": "^2.10.0",
+    "gulp-sourcemaps": "^1.5.2"
+  }
+}
