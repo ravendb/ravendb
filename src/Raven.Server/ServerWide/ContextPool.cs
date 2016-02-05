@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide
                 {
                     Environment = _env
                 };
-
+           
             return new ReturnRequestContext
             {
                 Parent = this,
@@ -54,6 +54,7 @@ namespace Raven.Server.ServerWide
                     Context.Dispose();
                     return;
                 }
+                Context.MaterializeDocumentKeys = true;// reset value if was changed
                 Parent._contextPool.Push(Context);
             }
         }

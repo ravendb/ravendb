@@ -74,6 +74,27 @@ namespace Raven.Server.Documents
             }
         }
 
+        [RavenAction("/databases/*/docs", "HEAD")]
+        public Task Head()
+        {
+            var ids = HttpContext.Request.Query["id"];
+            if (ids.Count != 1)
+                throw new ArgumentException("Query string value 'id' must appear exactly once");
+            if(string.IsNullOrWhiteSpace(ids[0]))
+                throw new ArgumentException("Query string value 'id' must have a non empty value");
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.MaterializeDocumentKeys = false;
+                var document = DocumentsStorage.Get(context, ids[0]);
+                if (document == null)
+                    HttpContext.Response.StatusCode = 404;
+                else
+                    HttpContext.Response.Headers["ETag"] = document.Etag.ToString();
+                return Task.CompletedTask;
+            }
+        }
+
         [RavenAction("/databases/*/docs","GET")]
         public async Task Get()
         {

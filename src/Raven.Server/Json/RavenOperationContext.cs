@@ -34,6 +34,7 @@ namespace Raven.Server.Json
         public CachedProperties CachedProperties;
         public StorageEnvironment Environment;
         private int _lastStreamSize = 4096;
+        public bool MaterializeDocumentKeys = true;
 
         public RavenOperationContext(UnmanagedBuffersPool pool)
         {
