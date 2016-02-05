@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,12 +31,13 @@ namespace Raven.Server
 
                     var response = context.Response;
                     response.StatusCode = 500;
-                    await response.WriteAsync(new
-                    {
-                        context.Request.Path,
-                        context.Request.QueryString,
-                        Exception = e.ToString()
-                    }.ToString());
+                    var sb = new StringBuilder();
+                    sb.Append(context.Request.Path).Append('?').Append(context.Request.QueryString)
+                        .AppendLine()
+                        .Append("- - - - - - - - - - - - - - - - - - - - -")
+                        .AppendLine();
+                    sb.Append(e);
+                    await response.WriteAsync(e.ToString());
                 }
             });
         }

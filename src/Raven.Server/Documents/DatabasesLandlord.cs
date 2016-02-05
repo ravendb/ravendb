@@ -33,6 +33,7 @@ namespace Raven.Server.Documents
 
         public override bool TryGetOrCreateResourceStore(StringSegment databaseId, out Task<DocumentsStorage> database)
         {
+            //TODO: Restore those
             // if (Locks.Contains(DisposingLock))
             //     throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
             // 
