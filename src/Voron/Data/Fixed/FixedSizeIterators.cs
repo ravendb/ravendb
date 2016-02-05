@@ -19,6 +19,7 @@ namespace Voron.Data.Fixed
             long CurrentKey { get; }
             Slice Value { get; }
             bool MoveNext();
+            bool MovePrev();
 
 			/// <summary>
 			/// Deletes the current key/value pair and returns true if there is 
@@ -50,7 +51,12 @@ namespace Voron.Data.Fixed
                 return false;
             }
 
-	        public bool DeleteCurrentAndMoveNext()
+            public bool MovePrev()
+            {
+                return false;
+            }
+
+            public bool DeleteCurrentAndMoveNext()
 	        {
 		        throw new InvalidOperationException("Invalid position, cannot read past end of tree");
 	        }
@@ -122,6 +128,11 @@ namespace Voron.Data.Fixed
 
                     return new Slice(_dataStart + (_pos * _fst._entrySize) + sizeof(long), _fst._valSize);
                 }
+            }
+
+            public bool MovePrev()
+            {
+                return --_pos >= 0;
             }
 
             public bool MoveNext()
@@ -238,11 +249,42 @@ namespace Voron.Data.Fixed
                 return false;
             }
 
-			/// <summary>
-			/// Deletes the current key/value pair and returns true if there is 
-			/// another key after it
-			/// </summary>
-	        public bool DeleteCurrentAndMoveNext()
+            public bool MovePrev()
+            {
+                if (_currentPage == null)
+                    throw new InvalidOperationException("No current page was set");
+
+                while (_currentPage != null)
+                {
+                    _currentPage.LastSearchPosition--;
+                    if (_currentPage.LastSearchPosition >= 0)
+                    {
+                        // run out of entries, need to select the next page...
+                        while (_currentPage.IsBranch)
+                        {
+                            _parent._cursor.Push(_currentPage);
+                            var childParentNumber = _parent.PageValueFor(_currentPage, _currentPage.LastSearchPosition);
+                            _currentPage = _parent._tx.GetReadOnlyFixedSizeTreePage(childParentNumber);
+
+                            _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
+                        }
+                        return true;// there is another entry in this page
+                    }
+                    if (_parent._cursor.Count == 0)
+                        break;
+                    _currentPage = _parent._cursor.Pop();
+                }
+                _currentPage = null;
+
+                return false;
+            }
+
+
+            /// <summary>
+            /// Deletes the current key/value pair and returns true if there is 
+            /// another key after it
+            /// </summary>
+            public bool DeleteCurrentAndMoveNext()
 	        {
 				var currentKey = CurrentKey;
 				

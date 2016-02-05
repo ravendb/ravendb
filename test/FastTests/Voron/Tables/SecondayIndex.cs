@@ -34,7 +34,7 @@ namespace FastTests.Voron.Tables
                 var docs = new Table(DocsSchema, "docs", tx);
 
                 var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekTo(DocsSchema.Indexes["Etags"], etag)
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], etag)
                                  .First();
 
                 Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
@@ -78,7 +78,7 @@ namespace FastTests.Voron.Tables
             {
                 var docs = new Table(DocsSchema, "docs", tx);
 
-                var reader = docs.SeekTo(DocsSchema.Indexes["Etags"], new Slice(EndianBitConverter.Big.GetBytes(1)));
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], new Slice(EndianBitConverter.Big.GetBytes(1)));
                 Assert.Empty(reader);
             }
         }
@@ -117,7 +117,7 @@ namespace FastTests.Voron.Tables
                 var docs = new Table(DocsSchema, "docs", tx);
 
                 var etag = new Slice(EndianBitConverter.Big.GetBytes(1L));
-                var reader = docs.SeekTo(DocsSchema.Indexes["Etags"], etag)
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes["Etags"], etag)
                                  .First();
 
                 Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());

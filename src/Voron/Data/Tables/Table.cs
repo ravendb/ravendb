@@ -475,7 +475,7 @@ namespace Voron.Data.Tables
             public IEnumerable<TableValueReader> Results;
         }
 
-        public IEnumerable<SeekResult> SeekTo(TableSchema.SchemaIndexDef index, Slice value)
+        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate())
@@ -509,7 +509,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueReader> SeekTo(TableSchema.FixedSizeSchemaIndexDef index, long key)
+        public IEnumerable<TableValueReader> SeekForwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
         {
             var fst = GetFixedSizeTree(index);
 
@@ -522,6 +522,22 @@ namespace Voron.Data.Tables
                 {
                     yield return GetTableValueReader(it);
                 } while (it.MoveNext());
+            }
+        }
+
+        public IEnumerable<TableValueReader> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
+        {
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(key) == false && it.SeekToLast() == false)
+                    yield break;
+
+                do
+                {
+                    yield return GetTableValueReader(it);
+                } while (it.MovePrev());
             }
         }
 
