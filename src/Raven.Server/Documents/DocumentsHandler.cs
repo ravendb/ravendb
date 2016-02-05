@@ -31,16 +31,7 @@ namespace Raven.Server.Documents
 
                 var doc = await context.ReadForDisk(HttpContext.Request.Body, id);
 
-                long? etag = null;
-                var etags = HttpContext.Request.Headers["If-None-Match"];
-                if (etags.Count != 0)
-                {
-                    long result;
-                    if (long.TryParse(etags[0], out result) == false)
-                        throw new ArgumentException(
-                            "Could not parse header 'If-None-Match' header as int64, value was: " + etags[0]);
-                    etag = result;
-                }
+                var etag = GetEtagFromRequest();
 
                 context.Transaction = context.Environment.WriteTransaction();
                 if (id[id.Length - 1] == '/')
@@ -55,6 +46,46 @@ namespace Raven.Server.Documents
             }
         }
 
+        private long? GetEtagFromRequest()
+        {
+            long? etag = null;
+            var etags = HttpContext.Request.Headers["If-None-Match"];
+            if (etags.Count != 0)
+            {
+                long result;
+                if (long.TryParse(etags[0], out result) == false)
+                    throw new ArgumentException(
+                        "Could not parse header 'If-None-Match' header as int64, value was: " + etags[0]);
+                etag = result;
+            }
+            return etag;
+        }
+
+        [RavenAction("/databases/*/docs", "DELETE")]
+        public Task Delete()
+        {
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var ids = HttpContext.Request.Query["id"];
+                if (ids.Count == 0)
+                    throw new ArgumentException("The 'id' query string parameter is mandatory");
+
+                var id = ids[0];
+                if (string.IsNullOrWhiteSpace(id))
+                    throw new ArgumentException("The 'id' query string parameter must have a non empty value");
+
+                var etag = GetEtagFromRequest();
+
+                context.Transaction = context.Environment.WriteTransaction();
+                DocumentsStorage.Delete(context, id, etag);
+                context.Transaction.Commit();
+
+                HttpContext.Response.StatusCode = 204;
+
+                return Task.CompletedTask;
+            }
+        }
         [RavenAction("/databases/*/queries","GET")]
         public Task Get()
         {
