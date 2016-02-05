@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using System.Threading;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Voron;
@@ -41,7 +41,8 @@ namespace Raven.Server.Documents
             _log = LogManager.GetLogger(typeof (DocumentsStorage).FullName + "." + _name);
 
             // The documents schema is as follows
-            // 3 fields (lowered key, etag, key, document)
+            // 4 fields (lowered key, etag, lazy string key, document)
+            // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             _docsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
@@ -273,7 +274,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void GetSliceFromKey(RavenOperationContext context, string str, out byte* lowerKey, out int lowerSize,
+        private void GetLowerKeySliceAndStorageKey(RavenOperationContext context, string str, out byte* lowerKey, out int lowerSize,
             out byte* key, out int keySize)
         {
             var byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
@@ -282,10 +283,30 @@ namespace Raven.Server.Documents
                     $"Key cannot exceed 255 bytes, but the key was {byteCount} bytes. The invalid key is '{str}'.",
                     nameof(str));
 
+            // Because we need to also store escape positions for the key when we store it
+            // we need to store it as a lazy string value.
+            // But lazy string value has two lengths, one is the string length, and the other 
+            // is the actual data size with the escape positions
 
+            // In order to resolve this, we process the key to find escape positions, then store it 
+            // in the table using the following format:
+            //
+            // [var int - string len, string bytes, number of escape positions, escape positions]
+            //
+            // The total length of the string is stored in the actual table (and include the var int size 
+            // prefix.
+
+
+            var jsonParserState = new JsonParserState();
+            jsonParserState.FindEscapePositionsIn(str);
+            var keyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
+            var escapePositionsSize = jsonParserState.GetEscapePositionsSize();
             var buffer = context.GetNativeTempBuffer(
-                (byteCount*2)
-                + sizeof (char)*str.Length // for the lower calls
+                sizeof (char)*str.Length // for the lower calls
+                + byteCount // lower key
+                + keyLenSize // the size of var int for the len of the key
+                + byteCount // actual key
+                + escapePositionsSize
                 , out lowerSize);
 
             fixed (char* pChars = str)
@@ -301,7 +322,11 @@ namespace Raven.Server.Documents
                 lowerSize = Encoding.UTF8.GetBytes(destChars, str.Length, lowerKey, byteCount);
 
                 key = buffer + str.Length*sizeof (char) + byteCount;
-                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, key, byteCount);
+                var writePos = key;
+                keySize = Encoding.UTF8.GetBytes(pChars, str.Length, writePos + keyLenSize, byteCount);
+                JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
+                jsonParserState.WriteEscapePositionsTo(writePos + keySize);
+                keySize += escapePositionsSize + keyLenSize;
             }
         }
 
@@ -312,8 +337,11 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id
             };
             int size;
+            // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
             var ptr = tvr.Read(2, out size);
-            result.Key = new LazyStringValue(null, ptr, size, context);
+            int pos = 0;
+            size = BlittableJsonTextWriter.ReadVariableSizeInt(ptr, ref pos);
+            result.Key = new LazyStringValue(null, ptr + pos, size, context);
             ptr = tvr.Read(1, out size);
             result.Etag = IPAddress.NetworkToHostOrder(*(long*) ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
@@ -361,7 +389,7 @@ namespace Raven.Server.Documents
             int lowerSize;
             byte* keyPtr;
             int keySize;
-            GetSliceFromKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = IPAddress.HostToNetworkOrder(newEtag); 
@@ -407,9 +435,11 @@ namespace Raven.Server.Documents
             if (document.TryGet(Constants.Metadata, out metadata) == false ||
                 metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
             {
-                collectionName = "<no-collection>";
+                collectionName = "@<no-collection>";
             }
-            return collectionName;
+            // we have to have some way to distinguish between dynamic tree names
+            // and our fixed ones, otherwise a collection call Docs will corrupt our state
+            return "@" + collectionName;
         }
 
         public long IdentityFor(RavenOperationContext ctx, string key)

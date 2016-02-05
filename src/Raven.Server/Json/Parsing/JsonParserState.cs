@@ -26,7 +26,7 @@ namespace Raven.Server.Json.Parsing
         }
 
 
-        void WriteVariableSizeInt(ref byte* dest, int value)
+        public static void WriteVariableSizeInt(ref byte* dest, int value)
         {
             // assume that we don't use negative values very often
             var v = (uint)value;
@@ -38,7 +38,7 @@ namespace Raven.Server.Json.Parsing
             *dest++ = (byte)(v);
         }
 
-        int VariableSizeIntSize(int value)
+        public static int VariableSizeIntSize(int value)
         {
             int count = 0;
             // assume that we don't use negative values very often

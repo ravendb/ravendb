@@ -87,7 +87,7 @@ namespace Raven.Server.Json
             }
         }
 
-        public unsafe static int ReadVariableSizeInt(byte* buffer ,ref int pos)
+        public static unsafe int ReadVariableSizeInt(byte* buffer ,ref int pos)
         {
             // ReadAsync out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
