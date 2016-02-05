@@ -86,14 +86,47 @@ namespace Raven.Server.Documents
                 return Task.CompletedTask;
             }
         }
-        [RavenAction("/databases/*/queries","GET")]
-        public Task Get()
+
+        [RavenAction("/databases/*/docs","GET")]
+        public async Task Get()
         {
+            if (HttpContext.Request.Query.ContainsKey("id"))
+            {
+                await GetDocumentsById();
+                return;
+            }
+
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
+                var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
+                writer.WriteStartArray();
+                bool first = true;
+                foreach (var document in DocumentsStorage.GetDocumentsInReverseEtagOrder(context, 0, 25))
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    document.EnsureMetadata();
+
+                    await context.WriteAsync(writer, document.Data);
+                }
+
+                writer.WriteEndArray();
+                writer.Flush();
+            }
+        }
+
+        private Task GetDocumentsById()
+        {
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.Transaction = context.Environment.ReadTransaction();
+                //TODO: Etag handling
                 var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
                 writer.WriteStartObject();
                 writer.WritePropertyName(context.GetLazyStringFor("Results"));
@@ -104,14 +137,14 @@ namespace Raven.Server.Documents
                     var result = DocumentsStorage.Get(context, id);
                     if (result == null)
                         continue;
-                    if(first == false)
+                    if (first == false)
                         writer.WriteComma();
                     first = false;
                     var mutableMetadata = GetMutableMetadata(result);
                     mutableMetadata["@id"] = result.Key;
                     mutableMetadata["@etag"] = result.Etag;
 
-                    result.Data.WriteTo(writer);       
+                    result.Data.WriteTo(writer);
                 }
                 writer.WriteEndArray();
                 writer.WriteComma();

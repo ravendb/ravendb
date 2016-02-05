@@ -345,5 +345,16 @@ namespace Raven.Server.Json
 
             Transaction?.Dispose();
         }
+
+        public async Task WriteAsync(BlittableJsonTextWriter writer, BlittableJsonReaderObject json)
+        {
+            var state = new JsonParserState();
+            using (var parser = new ObjectJsonParser(state, json, this))
+            {
+                await parser.ReadAsync();
+
+                await writer.WriteObjectAsync(this, state, parser);
+            }
+        }
     }
 }
