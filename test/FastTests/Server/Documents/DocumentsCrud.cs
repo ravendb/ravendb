@@ -91,7 +91,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
                 _documentsStorage.Delete(ctx, key, null);
-                
+
                 ctx.Transaction.Commit();
             }
 
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] ="Users"
+                        ["Raven-Entity-Name"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -186,7 +186,7 @@ namespace FastTests.Server.Documents
                     var etag = _documentsStorage.Put(ctx, "users/1", null, doc);
                     Assert.Equal(1, etag);
                 }
-               
+
                 ctx.Transaction.Commit();
             }
 
@@ -233,7 +233,7 @@ namespace FastTests.Server.Documents
                     Assert.Equal(1, etag);
                     _documentsStorage.Delete(ctx, "users/1", null);
                 }
-                
+
                 ctx.Transaction.Commit();
             }
 
@@ -324,10 +324,10 @@ namespace FastTests.Server.Documents
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                var documents = _documentsStorage.GetDocumentsStartingWith(ctx, "users/").ToList();
+                var documents = _documentsStorage.GetDocumentsStartingWith(ctx, "users/", null, null, 0, 100).ToList();
                 Assert.Equal(2, documents.Count);
                 string name;
-               
+
                 documents[0].Data.TryGet("Name", out name);
                 Assert.Equal("Ayende", name);
                 documents[1].Data.TryGet("Name", out name);
@@ -354,7 +354,7 @@ namespace FastTests.Server.Documents
                 {
                     _documentsStorage.Put(ctx, "users/1", null, doc);
                 }
-              
+
                 using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Arava",
@@ -384,7 +384,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                var documents = _documentsStorage.GetDocumentsAfter(ctx, "Users", 0).ToList();
+                var documents = _documentsStorage.GetDocumentsAfter(ctx, "Users", 0, 0, 10).ToList();
                 Assert.Equal(2, documents.Count);
                 string name;
                 documents[0].Data.TryGet("Name", out name);

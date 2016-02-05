@@ -158,7 +158,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private Task GetDocumentsById()
+        private async Task GetDocumentsById()
         {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -178,11 +178,9 @@ namespace Raven.Server.Documents
                     if (first == false)
                         writer.WriteComma();
                     first = false;
-                    var mutableMetadata = GetMutableMetadata(result);
-                    mutableMetadata["@id"] = result.Key;
-                    mutableMetadata["@etag"] = result.Etag;
+                    result.EnsureMetadata();
 
-                    result.Data.WriteTo(writer);
+                    await context.WriteAsync(writer, result.Data);
                 }
                 writer.WriteEndArray();
                 writer.WriteComma();
@@ -194,26 +192,6 @@ namespace Raven.Server.Documents
                 writer.WriteEndObject();
                 writer.Flush();
             }
-
-            return Task.CompletedTask;
-        }
-
-        private static DynamicJsonValue GetMutableMetadata(Document result)
-        {
-            DynamicJsonValue mutableMetadata;
-            BlittableJsonReaderObject metadata;
-            if (result.Data.TryGet(Constants.Metadata, out metadata) == false)
-            {
-                result.Data.Modifications = new DynamicJsonValue(result.Data)
-                {
-                    [Constants.Metadata] = mutableMetadata = new DynamicJsonValue()
-                };
-            }
-            else
-            {
-                metadata.Modifications = mutableMetadata = new DynamicJsonValue(metadata);
-            }
-            return mutableMetadata;
         }
     }
 }
