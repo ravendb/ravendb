@@ -242,7 +242,6 @@ namespace FastTests.Server.Documents
             using (var ctx = new RavenOperationContext(_unmanagedBuffersPool))
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
-                _documentsStorage.ReadLastEtag(ctx.Transaction);
                 using (var doc = await ctx.ReadObject(new DynamicJsonValue
                 {
                     ["Name"] = "Oren",

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
@@ -24,11 +25,10 @@ namespace Raven.Server.Documents
         private readonly string _name;
         private static readonly Slice LastEtagSlice = "LastEtag";
 
-        /// <summary>
-        ///     We don't need to actually modify this using thread safe code, since we can rely
-        ///     on the tx lock to ensure no concurrent access
-        /// </summary>
+        // this is only modified by write transactions under lock
+        // no need to use thread safe ops
         private long _lastEtag;
+
 
         public string DataDirectory;
         public ContextPool ContextPool;
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents
                 {
                     tx.CreateTree("Docs");
                     tx.CreateTree("Identities");
-                    ReadLastEtag(tx);
+                    _lastEtag = ReadLastEtag(tx);
 
                     tx.Commit();
                 }
@@ -124,12 +124,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void ReadLastEtag(Transaction tx)
+        public static long ReadLastEtag(Transaction tx)
         {
             var tree = tx.CreateTree("Etags");
             var readResult = tree.Read(LastEtagSlice);
+            long lastEtag = 0;
             if (readResult != null)
-                _lastEtag = readResult.Reader.ReadLittleEndianInt64();
+                lastEtag = readResult.Reader.ReadLittleEndianInt64();
 
             var fst = new FixedSizeTree(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects, "AllDocsEtags",
                 sizeof (long));
@@ -138,9 +139,10 @@ namespace Raven.Server.Documents
             {
                 if (it.SeekToLast())
                 {
-                    _lastEtag = Math.Max(_lastEtag, it.CurrentKey);
+                    lastEtag = Math.Max(lastEtag, it.CurrentKey);
                 }
             }
+            return lastEtag;
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(RavenOperationContext context, string prefix, string matches, string exclude, int start, int take)
@@ -414,6 +416,12 @@ namespace Raven.Server.Documents
         {
             var identities = ctx.Transaction.ReadTree("Identities");
             return identities.Increment(key, 1);
+        }
+
+        public long GetNumberOfDocuments(RavenOperationContext context)
+        {
+            var fst = context.Transaction.FixedTreeFor(_docsSchema.FixedSizeIndexes["AllDocsEtags"].NameAsSlice);
+            return fst.NumberOfEntries;
         }
     }
 }

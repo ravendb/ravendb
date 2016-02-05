@@ -7,10 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
+using Sparrow;
 
 namespace Raven.Server.Documents
 {
@@ -80,7 +82,7 @@ namespace Raven.Server.Documents
             var ids = HttpContext.Request.Query["id"];
             if (ids.Count != 1)
                 throw new ArgumentException("Query string value 'id' must appear exactly once");
-            if(string.IsNullOrWhiteSpace(ids[0]))
+            if (string.IsNullOrWhiteSpace(ids[0]))
                 throw new ArgumentException("Query string value 'id' must have a non empty value");
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -94,7 +96,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        [RavenAction("/databases/*/docs","GET")]
+        [RavenAction("/databases/*/docs", "GET")]
         public async Task Get()
         {
             if (HttpContext.Request.Query.ContainsKey("id"))
@@ -103,46 +105,45 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (HttpContext.Request.Query.ContainsKey("etag"))
-            {
-                await GetDocumentsAfterEtag();
-                return;
-            }
-
-            if (HttpContext.Request.Query.ContainsKey("startsWith"))
-            {
-                await GetDocumentsStartingWith();
-                return;
-            }
-            await GetRecentDocuments();
-        }
-
-        private async Task GetDocumentsStartingWith()
-        {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                
-                await WriteDocuments(context,
-                    DocumentsStorage.GetDocumentsStartingWith(context,
-                    HttpContext.Request.Query["startsWith"],
-                    HttpContext.Request.Query["matches"],
-                    HttpContext.Request.Query["excludes"],
-                    GetStart(),
-                    GetPageSize()
-                    ));
+
+                // everything here operates on all docs
+                var actualEtag = ComputeAllDocumentsEtag(context);
+
+                if (GetLongFromHeaders("If-None-Match") == actualEtag)
+                {
+                    HttpContext.Response.StatusCode = 304;
+                    return;
+                }
+                HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+
+                IEnumerable<Document> documents;
+                if (HttpContext.Request.Query.ContainsKey("etag"))
+                {
+                    documents = DocumentsStorage.GetDocumentsAfter(context,
+                        GetLongQueryString("etag"), GetStart(), GetPageSize());
+                }
+                else if (HttpContext.Request.Query.ContainsKey("startsWith"))
+                {
+                    documents = DocumentsStorage.GetDocumentsStartingWith(context,
+                        HttpContext.Request.Query["startsWith"],
+                        HttpContext.Request.Query["matches"],
+                        HttpContext.Request.Query["excludes"],
+                        GetStart(),
+                        GetPageSize()
+                        );
+                }
+                else // recent docs
+                {
+                    documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
+                }
+                await WriteDocuments(context, documents);
+
             }
-        }
-        private async Task GetDocumentsAfterEtag()
-        {
-            RavenOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                context.Transaction = context.Environment.ReadTransaction();
-                await WriteDocuments(context, DocumentsStorage.GetDocumentsAfter(context,
-                    GetLongQueryString("etag"), GetStart(), GetPageSize()));
-            }
+
         }
 
         private async Task WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
@@ -166,16 +167,14 @@ namespace Raven.Server.Documents
             writer.Flush();
         }
 
-        private async Task GetRecentDocuments()
+        private unsafe long ComputeAllDocumentsEtag(RavenOperationContext context)
         {
-            RavenOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                context.Transaction = context.Environment.ReadTransaction();
+            var buffer = stackalloc long[2];
 
-                await WriteDocuments(context,
-                        DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize()));
-            }
+            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction);
+            buffer[1] = DocumentsStorage.GetNumberOfDocuments(context);
+
+            return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }
 
         private async Task GetDocumentsById()
@@ -184,34 +183,83 @@ namespace Raven.Server.Documents
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                //TODO: Etag handling
+
+                var ids = HttpContext.Request.Query["id"];
+
+                var documents = new Document[ids.Count];
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    documents[i] = DocumentsStorage.Get(context, ids[i]);
+                }
+
+                //TODO: Handle includes
+
+                long actualEtag = ComputeEtagsFor(documents);
+
+                if (GetLongFromHeaders("If-None-Match") == actualEtag)
+                {
+                    HttpContext.Response.StatusCode = 304;
+                    return;
+                }
+
+                HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
                 var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
                 writer.WriteStartObject();
                 writer.WritePropertyName(context.GetLazyStringFor("Results"));
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var id in HttpContext.Request.Query["id"])
+                foreach (var doc in documents)
                 {
-                    var result = DocumentsStorage.Get(context, id);
-                    if (result == null)
+                    if (doc == null)
                         continue;
                     if (first == false)
                         writer.WriteComma();
                     first = false;
-                    result.EnsureMetadata();
+                    doc.EnsureMetadata();
 
-                    await context.WriteAsync(writer, result.Data);
+                    await context.WriteAsync(writer, doc.Data);
                 }
                 writer.WriteEndArray();
                 writer.WriteComma();
                 writer.WritePropertyName(context.GetLazyStringFor("Includes"));
                 writer.WriteStartArray();
                 //TODO: Includes
+                //TODO: Need to handle etags here as well
                 writer.WriteEndArray();
 
                 writer.WriteEndObject();
                 writer.Flush();
             }
+        }
+
+        private unsafe long ComputeEtagsFor(Document[] documents)
+        {
+            // This method is efficient because we aren't materializing any values
+            // except the etag, which we need
+            if (documents.Length == 1)
+            {
+                return documents[0]?.Etag ?? -1;
+            }
+            // we do this in a loop to avoid either large long array allocation on the heap
+            // or busting the stack if we used stackalloc long[ids.Count]
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess();
+            long* buffer = stackalloc long[4];//32 bytes
+            Memory.Set((byte*)buffer, 0, sizeof(long) * 4);// not sure is stackalloc force init
+            for (int i = 0; i < documents.Length; i += 4)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    if (i + j >= documents.Length)
+                        break;
+                    var document = documents[i + j];
+                    buffer[i] = document?.Etag ?? -1;
+                }
+                // we don't care if we didn't get to the end and have values from previous iteration
+                // it will still be consistent, and that is what we care here.
+                ctx = Hashing.Streamed.XXHash64.Process(ctx, (byte*)buffer, sizeof(long) * 4);
+            }
+
+            return (long)Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
     }
 }
