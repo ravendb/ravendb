@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-
-using Raven.Abstractions.Indexing;
+using System.Threading.Tasks;
+using Microsoft.AspNet.Mvc.Infrastructure;
+using Raven.Server.Json.Parsing;
 using Sparrow;
-using Voron.Exceptions;
 
 namespace Raven.Server.Json
 {
-    public unsafe class BlittableJsonTextWriter
+    public class BlittableJsonTextWriter
     {
         private readonly Stream _stream;
 
@@ -37,7 +34,7 @@ namespace Raven.Server.Json
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteString(LazyStringValue str)
+        public unsafe void WriteString(LazyStringValue str)
         {
             var strBuffer = str.Buffer;
             var size = str.Size;
@@ -90,7 +87,7 @@ namespace Raven.Server.Json
             }
         }
 
-        public static int ReadVariableSizeInt(byte* buffer ,ref int pos)
+        public unsafe static int ReadVariableSizeInt(byte* buffer ,ref int pos)
         {
             // ReadAsync out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
@@ -109,7 +106,7 @@ namespace Raven.Server.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteString(LazyCompressedStringValue str)
+        public unsafe void WriteString(LazyCompressedStringValue str)
         {
             var strBuffer = str.DecompressToTempBuffer();
 
@@ -139,7 +136,7 @@ namespace Raven.Server.Json
         }
 
 
-        private void WriteRawString(byte* buffer, int size)
+        private unsafe void WriteRawString(byte* buffer, int size)
         {
             if (size < _buffer.Length)
             {
@@ -283,12 +280,108 @@ namespace Raven.Server.Json
             _pos += len;
         }
 
-        public void WriteDouble(LazyDoubleValue val)
+        public unsafe void WriteDouble(LazyDoubleValue val)
         {
             var lazyStringValue = val.Inner;
             WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
         }
+
+        private unsafe string WriteString(RavenOperationContext context, JsonParserState state)
+        {
+            var lazyStringValue = new LazyStringValue(null, state.StringBuffer,state.StringSize, context);
+            WriteString(lazyStringValue);
+            return lazyStringValue.ToString();
+        }
+
+        public async Task WriteObjectAsync(RavenOperationContext context,JsonParserState state, IJsonParser parser)
+        {
+            if (state.CurrentTokenType != JsonParserToken.StartObject)
+                throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
+
+            WriteStartObject();
+            bool first = true;
+            while (true)
+            {
+                await parser.ReadAsync();
+                if (state.CurrentTokenType == JsonParserToken.EndObject)
+                    break;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    throw new InvalidOperationException("Property expected, but got " + state.CurrentTokenType);
+
+                if(first == false)
+                    WriteComma();
+                first = false;
+
+                var prop = WriteString(context, state);
+                EnsureBuffer(1);
+                _buffer[_pos++] = Colon;
+
+                await parser.ReadAsync();
+
+                await WriteValueAsync(context, state, parser);
+                Console.WriteLine(prop);
+            }
+            WriteEndObject();
+        }
+
+        private async Task WriteValueAsync(RavenOperationContext context, JsonParserState state, IJsonParser parser)
+        {
+            switch (state.CurrentTokenType)
+            {
+                case JsonParserToken.Null:
+                    WriteNull();
+                    break;
+                case JsonParserToken.False:
+                    WriteBool(false);
+                    break;
+                case JsonParserToken.True:
+                    WriteBool(true);
+                    break;
+                case JsonParserToken.String:
+                    WriteString(context, state);
+                    break;
+                case JsonParserToken.Float:
+                    WriteString(context, state);
+                    break;
+                case JsonParserToken.Integer:
+                    WriteInteger(state.Long);
+                    break;
+                case JsonParserToken.StartObject:
+                    await WriteObjectAsync(context, state, parser);
+                    break;
+                case JsonParserToken.StartArray:
+                    await WriteArrayAsync(context, state, parser);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
+            }
+        }
+
+        public async Task WriteArrayAsync(RavenOperationContext context, JsonParserState state, IJsonParser parser)
+        {
+            await parser.ReadAsync();
+            if (state.CurrentTokenType != JsonParserToken.StartArray)
+                throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
+
+            WriteStartArray();
+            bool first = true;
+            while (true)
+            {
+                await parser.ReadAsync();
+                if (state.CurrentTokenType == JsonParserToken.EndArray)
+                    break;
+
+                if (first == false)
+                    WriteComma();
+                first = false;
+
+
+                await parser.ReadAsync();
+
+                await WriteValueAsync(context, state, parser);
+            }
+            WriteEndArray();
+        }
     }
-
-
 }
