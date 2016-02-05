@@ -153,7 +153,7 @@ namespace FastTests.Server.Documents
             {
                 ctx.Transaction = _documentsStorage.Environment.WriteTransaction();
 
-                var documents = _documentsStorage.GetDocumentsAfter(ctx, 0).ToList();
+                var documents = _documentsStorage.GetDocumentsAfter(ctx, 0, 0, 100).ToList();
                 Assert.Equal(3, documents.Count);
                 string name;
                 documents[0].Data.TryGet("Name", out name);

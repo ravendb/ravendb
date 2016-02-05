@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(RavenOperationContext context, string prefix)
+        public IEnumerable<Document> GetDocumentsStartingWith(RavenOperationContext context, string prefix, string matches, string exclude, int start, int take)
         {
             var table = new Table(_docsSchema, context.Transaction);
 
@@ -156,6 +155,18 @@ namespace Raven.Server.Documents
                 var document = TableValueToDocument(context, result);
                 if (document.Key.StartsWith(prefix) == false)
                     break;
+
+                if (!WildcardMatcher.Matches(matches, document.Key) ||
+                    WildcardMatcher.MatchesExclusion(exclude, document.Key))
+                    continue;
+
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
                 yield return document;
             }
         }
@@ -177,24 +188,39 @@ namespace Raven.Server.Documents
                 yield return TableValueToDocument(context, result);
             }
         }
-        public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, long etag)
+        public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, long etag, int start, int take)
         {
             var table = new Table(_docsSchema, context.Transaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["AllDocsEtags"], etag))
             {
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
+
                 yield return TableValueToDocument(context, result);
             }
         }
 
-        public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, string collection, long etag)
+        public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, string collection, long etag, int start, int take)
         {
             var table = new Table(_docsSchema, collection, context.Transaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
             {
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+                if (take-- <= 0)
+                    yield break;
                 yield return TableValueToDocument(context, result);
             }
         }

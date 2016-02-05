@@ -29,6 +29,10 @@ namespace Raven.Server
                     if (context.RequestAborted.IsCancellationRequested)
                         return;
 
+                    //TODO: special handling for argument exception (400 bad request)
+                    //TODO: database not found (503)
+                    //TODO: operaton cancelled (timeout)
+
                     var response = context.Response;
                     response.StatusCode = 500;
                     var sb = new StringBuilder();

@@ -44,7 +44,7 @@ namespace Raven.Server.Documents
             return GetIntQueryString("pageSize", defaultValue);
         }
 
-        private int GetIntQueryString(string name, int defaultValue)
+        protected int GetIntQueryString(string name, int defaultValue)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count != 0)
@@ -56,6 +56,21 @@ namespace Raven.Server.Documents
                 return result;
             }
             return defaultValue;
+        }
+
+
+        protected long GetLongQueryString(string name)
+        {
+            var val = HttpContext.Request.Query[name];
+            if (val.Count != 0)
+            {
+                int result;
+                if (int.TryParse(val[0], out result) == false)
+                    throw new ArgumentException(
+                        string.Format("Could not parse query string '{0}' header as int32, value was: {1}", name, val[0]));
+                return result;
+            }
+            throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
         }
     }
 }

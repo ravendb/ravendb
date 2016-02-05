@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
@@ -82,27 +83,78 @@ namespace Raven.Server.Documents
                 return;
             }
 
+            if (HttpContext.Request.Query.ContainsKey("etag"))
+            {
+                await GetDocumentsAfterEtag();
+                return;
+            }
+
+            if (HttpContext.Request.Query.ContainsKey("startsWith"))
+            {
+                await GetDocumentsStartingWith();
+                return;
+            }
+            await GetRecentDocuments();
+        }
+
+        private async Task GetDocumentsStartingWith()
+        {
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.Transaction = context.Environment.ReadTransaction();
+                
+                await WriteDocuments(context,
+                    DocumentsStorage.GetDocumentsStartingWith(context,
+                    HttpContext.Request.Query["startsWith"],
+                    HttpContext.Request.Query["matches"],
+                    HttpContext.Request.Query["excludes"],
+                    GetStart(),
+                    GetPageSize()
+                    ));
+            }
+        }
+        private async Task GetDocumentsAfterEtag()
+        {
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.Transaction = context.Environment.ReadTransaction();
+                await WriteDocuments(context, DocumentsStorage.GetDocumentsAfter(context,
+                    GetLongQueryString("etag"), GetStart(), GetPageSize()));
+            }
+        }
+
+        private async Task WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
+        {
+            var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
+            writer.WriteStartArray();
+            bool first = true;
+
+            foreach (var document in documents)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                document.EnsureMetadata();
+
+                await context.WriteAsync(writer, document.Data);
+            }
+
+            writer.WriteEndArray();
+            writer.Flush();
+        }
+
+        private async Task GetRecentDocuments()
+        {
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
 
-                var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
-                writer.WriteStartArray();
-                bool first = true;
-                foreach (var document in DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize()))
-                {
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-
-                    document.EnsureMetadata();
-
-                    await context.WriteAsync(writer, document.Data);
-                }
-
-                writer.WriteEndArray();
-                writer.Flush();
+                await WriteDocuments(context,
+                        DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize()));
             }
         }
 
