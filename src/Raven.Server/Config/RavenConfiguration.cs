@@ -55,16 +55,14 @@ namespace Raven.Server.Config
 
         public QuotasBundleConfiguration Quotas { get; }
 
-        protected NameValueCollection Settings { get; set; }
+        protected IConfigurationRoot Settings { get; set; }
 
         public RavenConfiguration()
         {
             _configBuilder = new ConfigurationBuilder()
                 .AddJsonFile("settings.json", optional: true)
                 .AddEnvironmentVariables(prefix: "RAVEN_");
-
-            Settings = new NameValueCollection(StringComparer.OrdinalIgnoreCase);
-
+            Settings = _configBuilder.Build();
             Core = new CoreConfiguration();
 
             Replication = new ReplicationConfiguration();
@@ -150,7 +148,7 @@ namespace Raven.Server.Config
         {
             var result = new RavenConfiguration
             {
-                Settings = new NameValueCollection(parent.Settings)
+                Settings = parent._configBuilder.Build()
             };
 
             result.Settings[GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString();
@@ -161,6 +159,7 @@ namespace Raven.Server.Config
         public void AddCommandLine(string[] args)
         {
             _configBuilder.AddCommandLine(args);
+            Settings = _configBuilder.Build();
         }
     }
 

@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
+using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories
@@ -13,7 +14,7 @@ namespace Raven.Server.Config.Categories
 
         public SnmpConfiguration Snmp { get; }
 
-        public override void Initialize(NameValueCollection settings)
+        public override void Initialize(IConfigurationRoot settings)
         {
             Snmp.Initialize(settings);
 

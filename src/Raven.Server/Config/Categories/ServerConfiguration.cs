@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 
@@ -78,7 +79,7 @@ namespace Raven.Server.Config.Categories
         public string Name { get; set; }
 
 
-        public override void Initialize(NameValueCollection settings)
+        public override void Initialize(IConfigurationRoot settings)
         {
             base.Initialize(settings);
 

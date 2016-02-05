@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
@@ -17,7 +18,7 @@ namespace Raven.Server.Config.Categories
 
         protected internal bool Initialized { get; set; }
 
-        public virtual void Initialize(NameValueCollection settings)
+        public virtual void Initialize(IConfigurationRoot settings)
         {
             var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
