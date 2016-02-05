@@ -286,11 +286,9 @@ namespace Raven.Server.Json
             WriteRawString(lazyStringValue.Buffer,lazyStringValue.Size);
         }
 
-        private unsafe string WriteString(RavenOperationContext context, JsonParserState state)
+        private unsafe void WriteString(RavenOperationContext context, JsonParserState state)
         {
-            var lazyStringValue = new LazyStringValue(null, state.StringBuffer,state.StringSize, context);
-            WriteString(lazyStringValue);
-            return lazyStringValue.ToString();
+            WriteString(new LazyStringValue(null, state.StringBuffer,state.StringSize, context));
         }
 
         public async Task WriteObjectAsync(RavenOperationContext context,JsonParserState state, IJsonParser parser)
@@ -313,14 +311,13 @@ namespace Raven.Server.Json
                     WriteComma();
                 first = false;
 
-                var prop = WriteString(context, state);
+                WriteString(context, state);
                 EnsureBuffer(1);
                 _buffer[_pos++] = Colon;
 
                 await parser.ReadAsync();
 
                 await WriteValueAsync(context, state, parser);
-                Console.WriteLine(prop);
             }
             WriteEndObject();
         }

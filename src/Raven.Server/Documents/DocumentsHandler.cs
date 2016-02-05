@@ -46,20 +46,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private long? GetEtagFromRequest()
-        {
-            long? etag = null;
-            var etags = HttpContext.Request.Headers["If-None-Match"];
-            if (etags.Count != 0)
-            {
-                long result;
-                if (long.TryParse(etags[0], out result) == false)
-                    throw new ArgumentException(
-                        "Could not parse header 'If-None-Match' header as int64, value was: " + etags[0]);
-                etag = result;
-            }
-            return etag;
-        }
 
         [RavenAction("/databases/*/docs", "DELETE")]
         public Task Delete()
@@ -104,7 +90,7 @@ namespace Raven.Server.Documents
                 var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
                 writer.WriteStartArray();
                 bool first = true;
-                foreach (var document in DocumentsStorage.GetDocumentsInReverseEtagOrder(context, 0, 25))
+                foreach (var document in DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize()))
                 {
                     if (first == false)
                         writer.WriteComma();
