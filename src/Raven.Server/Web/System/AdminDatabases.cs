@@ -15,7 +15,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabases : RequestHandler
     {
-        [Route("/admin/databases/$", "GET")]
+        [RavenAction("/admin/databases/$", "GET")]
         public Task Get()
         {
             RavenOperationContext context;
@@ -53,7 +53,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [Route("/admin/databases/$", "PUT")]
+        [RavenAction("/admin/databases/$", "PUT")]
      
         public async Task Put()
         {

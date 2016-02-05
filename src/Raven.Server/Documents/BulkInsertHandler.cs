@@ -20,34 +20,9 @@ using Raven.Server.Web;
 
 namespace Raven.Server.Documents
 {
-    public class EchoHandler : RequestHandler
-    {
-        [Routing.Route("/echo", "GET")]
-        public async Task Echo()
-        {
-            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
-            {
-                var buffer = new byte[1024];
-                string input = null;
-                do
-                {
-                    var receiveAsync =
-                        await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                    input = Encoding.UTF8.GetString(buffer, 0, receiveAsync.Count);
-                    Console.WriteLine(input);
-                    var size = Encoding.UTF8.GetBytes(input.Reverse().ToArray(), 0, input.Length, buffer, 0);
-                    await
-                        webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, size), WebSocketMessageType.Text, true,
-                            CancellationToken.None);
-                } while (input != null && input != "q");
-                await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Good Day", CancellationToken.None);
-            }
-        }
-    }
-
     public class BulkInsertHandler : DatabaseRequestHandler
     {
-        [Routing.Route("/databases/*/bulkInsert", "POST")]
+        [Routing.RavenAction("/databases/*/bulkInsert", "POST")]
         public async Task BulkInsert()
         {
             if (HttpContext.Request.Query["op"] == "generate-single-use-auth-token")

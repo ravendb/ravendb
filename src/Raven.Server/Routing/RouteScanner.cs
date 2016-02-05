@@ -27,12 +27,12 @@ namespace Raven.Server.Routing
 
             var actions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
                 .SelectMany(type => type.GetMembers())
-                .Where(type => type.IsDefined(typeof (RouteAttribute)))
+                .Where(type => type.IsDefined(typeof (RavenActionAttribute)))
                 .ToList();
 
             foreach (var memberInfo in actions)
             {
-                var route = memberInfo.GetCustomAttributes<RouteAttribute>().Single();
+                var route = memberInfo.GetCustomAttributes<RavenActionAttribute>().Single();
 
                 RouteInformation routeInfo;
                 var routeKey = route.Method + route.Path;

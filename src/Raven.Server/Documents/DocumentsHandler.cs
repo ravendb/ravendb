@@ -15,7 +15,7 @@ namespace Raven.Server.Documents
 {
     public class DocumentsHandler : DatabaseRequestHandler
     {
-        [Route("/databases/*/docs", "PUT")]
+        [RavenAction("/databases/*/docs", "PUT")]
         public async Task Put()
         {
             RavenOperationContext context;
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        [Route("/databases/*/queries","GET")]
+        [RavenAction("/databases/*/queries","GET")]
         public Task Get()
         {
             RavenOperationContext context;
