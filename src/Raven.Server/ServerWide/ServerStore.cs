@@ -12,6 +12,8 @@ using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
 using Sparrow.Platform;
 using Voron;
+using Voron.Data;
+using Voron.Data.BTrees;
 
 namespace Raven.Server.ServerWide
 {
@@ -91,6 +93,47 @@ namespace Raven.Server.ServerWide
                 return null;
             return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, ctx);
         }
+
+        public class Item
+        {
+            public string Key;
+            public BlittableJsonReaderObject Data;
+        }
+
+        public IEnumerable<Item> StartingWith(RavenOperationContext ctx, string prefix, int start, int take)
+        {
+            var dbs = ctx.Transaction.ReadTree("items");
+            using (var it = dbs.Iterate())
+            {
+                it.RequiredPrefix = prefix;
+                if(it.Seek(it.RequiredPrefix) == false)
+                    yield break;
+
+                do
+                {
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return GetCurrentItem(ctx, it);
+                } while (it.MoveNext());
+            }
+        }
+
+        private static Item GetCurrentItem(RavenOperationContext ctx, IIterator it)
+        {
+            var readerForCurrent = it.CreateReaderForCurrent();
+            return new Item
+            {
+                Data = new BlittableJsonReaderObject(readerForCurrent.Base, readerForCurrent.Length, ctx),
+                Key = it.CurrentKey.ToString()
+            };
+        }
+
 
         public void Write(RavenOperationContext ctx, string id, BlittableJsonReaderObject doc)
         {
