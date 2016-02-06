@@ -72,7 +72,7 @@ class status extends viewModelBase {
         // treat notifications events
         this.isFsSyncUpToDate = false;
 
-        var activity = new synchronizationDetail(e, this.getActionDescription(e.Action));
+        var activity = new synchronizationDetail(e, this.getActionDescription(e.Action), null, e.DestinationFileSystemUrl);
         
         if (e.Action != synchronizationAction.Finish) {
             this.addOrUpdateActivity(activity);

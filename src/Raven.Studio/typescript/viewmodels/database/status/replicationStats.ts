@@ -92,7 +92,7 @@ class replicationStats extends viewModelBase {
     checkIfHasReplicationEnabled() {
         new getDatabaseSettingsCommand(this.activeDatabase())
             .execute()
-            .done(document => {
+            .done((document: any) => {
                 var documentSettings = document.Settings["Raven/ActiveBundles"];
                 this.hasReplicationEnabled(documentSettings.indexOf("Replication") !== -1);
             });

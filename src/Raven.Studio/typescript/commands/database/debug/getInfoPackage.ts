@@ -1,6 +1,8 @@
+/// <reference path="../../../../typings/tsd.d.ts" />
+
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import zipUtils = require('jszip/jszip-utils.min');
+import zipUtils = require('jszip-utils');
 import appUrl = require('common/appUrl');
 import d3 = require("d3/d3");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
@@ -30,11 +32,10 @@ class getInfoPackage extends commandBase {
                 var now = d3.time.format("%Y-%m-%d_%H:%M:%S")(new Date());
                 var filename = this.db.isSystem ? "Admin-Debug-Info-" + now + ".zip" : "Debug-Info-" + this.db.name + "-" + now + ".zip";
 
-                zipUtils.getBinaryContent(url, function (err, data) {
+               zipUtils.getBinaryContent(url, function (err, data) {
                     if (err) {
                         task.reject(err);
                     } else {
-
                         task.resolve(data, filename);
                     }            
                 });

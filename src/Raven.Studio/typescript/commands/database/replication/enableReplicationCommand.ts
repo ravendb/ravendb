@@ -14,7 +14,7 @@ class enableReplicationCommand extends commandBase {
         // query for database document
         new getDatabaseSettingsCommand(this.db, false)
             .execute()
-            .done((dbSettings) => {
+            .done((dbSettings: any) => {
                 var activeBundles = dbSettings.Settings["Raven/ActiveBundles"];
                 if (activeBundles.indexOf("Replication") > -1) {
                     // looks like we already have replication enabled - nothing to do

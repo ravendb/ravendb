@@ -140,7 +140,7 @@ class indexes extends viewModelBase {
 
         var replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute();
 
-        $.when(statsTask, replacementTask)
+        $.when<any>(statsTask, replacementTask)
             .done((statsTaskResult, replacements: indexReplaceDocument[]) => {
 
                 var stats: databaseStatisticsDto = statsTaskResult[0];

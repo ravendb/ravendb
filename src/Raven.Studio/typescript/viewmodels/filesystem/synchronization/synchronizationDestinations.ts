@@ -70,7 +70,7 @@ class synchronizationDestinations extends viewModelBase {
             if (fs) {
                 new getFileSystemStatsCommand(fs)
                     .execute()
-                    .done(result => this.prepareAndSaveReplicationSetup(result.DatabaseId));
+                    .done(result => this.prepareAndSaveReplicationSetup(/*result.DatabaseId*/ null));
             }
         }
     }
@@ -88,8 +88,7 @@ class synchronizationDestinations extends viewModelBase {
             new saveDestinationCommand(this.replicationsSetup().toDto(), fs)
                 .execute()
                 .done(() => {
-                    console.log("Reseted dirty flag");
-                    this.dirtyFlag().reset()
+                    this.dirtyFlag().reset();
                 }).always(() => this.saveIssued = false);;
         }
     }

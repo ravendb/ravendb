@@ -492,7 +492,7 @@ class editIndex extends viewModelBase {
         var indexToReplaceName = this.editedIndex().name();
         var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
 
-        replaceDialog.replaceSettingsTask.done((replaceDocument) => {
+        replaceDialog.replaceSettingsTask.done((replaceDocument: any) => {
             if (!this.editedIndex().isSideBySideIndex()) {
                 this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
             }

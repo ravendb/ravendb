@@ -13,9 +13,8 @@ class getPointsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pointDto[]> {
+    execute(): JQueryPromise<timeSeriesPoint[]> {
         var url = "/points/" + this.type + "?key=" + this.key;
-        var doneTask = $.Deferred();
         var selector = (dtos: pointDto[]) => dtos.map(d => new timeSeriesPoint(this.type, this.fields, this.key, d.At, d.Values));
         var args = {
             skip: this.skip,
@@ -23,10 +22,7 @@ class getPointsCommand extends commandBase {
             start: this.start,
             end: this.end
         };
-        var task = this.query(url, args, this.ts, selector);
-        task.done((points: pointDto[]) => doneTask.resolve(points));
-        task.fail(xhr => doneTask.reject(xhr));
-        return doneTask;
+        return this.query(url, args, this.ts, selector);
     }
 }
 

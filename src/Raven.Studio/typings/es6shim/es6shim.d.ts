@@ -14,6 +14,6 @@ interface Array<T> {
   values(): ArrayIterator;
 }
 
-interface  ArrayIterator {
+interface ArrayIterator {
   
 }

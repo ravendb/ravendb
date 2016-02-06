@@ -1,10 +1,12 @@
-﻿/// <binding AfterBuild='dev-compile' />
+﻿/// <binding AfterBuild='dev-compile' ProjectOpened='tsd' />
 var gulp = require('gulp'),
     ts = require('gulp-typescript'),
     less = require('gulp-less'),
+    tsd = require('gulp-tsd'),
     sourcemaps = require("gulp-sourcemaps");
 
 var paths = {
+    tsdConfig: './tsd.json',
     tsSource: './typescript/**/*.ts',
     typings: './typings/**/*.d.ts',
     tsOutput: './wwwroot/App/',
@@ -31,6 +33,13 @@ gulp.task('ts-dev-compile', function() {
         .js
         .pipe(sourcemaps.write("."))
         .pipe(gulp.dest(paths.tsOutput));
+});
+
+gulp.task('tsd', function(callback) {
+    tsd({
+        command: 'reinstall',
+        config: paths.tsdConfig
+    }, callback);
 });
 
 gulp.task('dev-compile', ['dev-less', 'ts-dev-compile']);

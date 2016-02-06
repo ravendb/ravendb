@@ -7,8 +7,13 @@ requirejs.config({
         ace: '../Scripts/ace',
         moment: '../Scripts/moment',
         'd3': '../Scripts/d3',
-        forge: '../Scripts/forge',
-        jszip: '../Scripts/jszip'
+        forge: '../Scripts/forge'
+    },
+    map: {
+        '*': {
+            "jszip": "../Scripts/jszip/jszip",
+            "jszip-utils": "../Scripts/jszip/jszip-utils.min"
+        }
     },
     // 0 disables the timeout completely, default is 7 seconds
     waitSeconds: 30

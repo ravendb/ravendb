@@ -16,7 +16,7 @@ class getSynchronizationConfigCommand extends commandBase {
         };
 
         var task = $.Deferred<synchronizationConfig>();
-        this.query<string>(url, args, this.fs)
+        this.query<synchronizationConfigDto>(url, args, this.fs)
             .done(data => {
                 task.resolve(new synchronizationConfig(data));
             })

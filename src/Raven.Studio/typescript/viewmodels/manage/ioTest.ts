@@ -174,7 +174,7 @@ class ioTest extends viewModelBase {
 
     killTask() {
         if (this.lastCommand !== null) {
-            this.lastCommand.operationIdTask.done((operationId) => {
+            this.lastCommand.operationIdTask.done((operationId: number) => {
                 new killRunningTaskCommand(appUrl.getSystemDatabase(), operationId).execute();
             });
         }

@@ -51,7 +51,7 @@ class sqlReplicationPerfStats extends viewModelBase {
     checkIfHasReplicationEnabled() {
         new getDatabaseSettingsCommand(this.activeDatabase())
             .execute()
-            .done(document => {
+            .done((document: any) => {
                 var documentSettings = document.Settings["Raven/ActiveBundles"];
                 this.hasReplicationEnabled(documentSettings.toLowerCase().indexOf("sqlreplication") !== -1);
             });

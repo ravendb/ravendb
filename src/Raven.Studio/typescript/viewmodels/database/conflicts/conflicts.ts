@@ -97,7 +97,7 @@ class conflicts extends viewModelBase {
         var performCheckTask = $.Deferred<any>();
 
         // perform index check against DB
-        $.when(new getIndexDefinitionCommand(conflicts.conflictsIndexName, db).execute(),
+        $.when<any>(new getIndexDefinitionCommand(conflicts.conflictsIndexName, db).execute(),
             new getSingleTransformerCommand(conflicts.conflictsTransformerName, db).execute())
             .done(() => {
                 conflicts.performedIndexChecks.push(db.name);

@@ -7,7 +7,7 @@ class getIndexMergeSuggestionsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<string[]> {
+    execute(): JQueryPromise<indexMergeSuggestionsDto> {
         var url = "/debug/suggest-index-merge";
         return this.query(url, null, this.db);
     }
