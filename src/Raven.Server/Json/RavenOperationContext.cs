@@ -374,6 +374,11 @@ namespace Raven.Server.Json
 
         public async Task WriteAsync(BlittableJsonTextWriter writer, BlittableJsonReaderObject json)
         {
+            await WriteAsyncInternal(writer, json);
+        }
+
+        private async Task WriteAsyncInternal(BlittableJsonTextWriter writer, object json)
+        {
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, json, this))
             {
@@ -381,6 +386,11 @@ namespace Raven.Server.Json
 
                 await writer.WriteObjectAsync(this, state, parser);
             }
+        }
+
+        public async Task WriteAsync(BlittableJsonTextWriter writer, DynamicJsonValue json)
+        {
+            await WriteAsyncInternal(writer, json);
         }
     }
 }
