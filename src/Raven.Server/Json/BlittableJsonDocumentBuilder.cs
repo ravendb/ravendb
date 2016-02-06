@@ -71,17 +71,7 @@ namespace Raven.Server.Json
             return (byte*)_compressionBuffer.Address;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe byte* GetTempBuffer(int minSize)
-        {
-            if (_buffer != null && minSize <= _buffer.SizeInBytes)
-                return (byte*)_buffer.Address;
-            if (_buffer != null)
-                _context.ReturnMemory(_buffer);
-            _buffer = _context.GetMemory(minSize);
-            return (byte*)_buffer.Address;
-        }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int CopyTo(byte* ptr)
         {
@@ -99,16 +89,16 @@ namespace Raven.Server.Json
         /// <summary>
         /// Writes the json object from  reader received in the ctor into the received UnmanangedWriteBuffer
         /// </summary>
-        public async Task Run()
+        public async Task ReadObject()
         {
             await _reader.ReadAsync();
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
-            BlittableJsonToken token;
 
             // Write the whole object recursively
-            var writeToken = await WriteObject();
-            token = writeToken.WrittenToken;
+            var writeToken = await BuildObject();
+
+            var token = writeToken.WrittenToken;
             var rootOffset = writeToken.ValuePos;
 
             // Write the property names and register it's positions
@@ -129,9 +119,9 @@ namespace Raven.Server.Json
             WriteNumber((int)propertiesSizeMetadata, sizeof(byte));
 
             // Write property names offsets
-            for (var i = 0; i < propertyArrayOffset.Length; i++)
+            foreach (int offset in propertyArrayOffset)
             {
-                WriteNumber(propertiesStart - propertyArrayOffset[i], propertyArrayOffsetValueByteSize);
+                WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
             WriteNumber(rootOffset, sizeof(int));
             WriteNumber(propertiesStart, sizeof(int));
@@ -150,12 +140,9 @@ namespace Raven.Server.Json
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence
             _position += WriteVariableSizeInt(prop.EscapePositions.Length);
-            if (prop.EscapePositions.Length > 0)
+            foreach (int escapePos in prop.EscapePositions)
             {
-                for (int i = 0; i < prop.EscapePositions.Length; i++)
-                {
-                    _position += WriteVariableSizeInt(prop.EscapePositions[i] );
-                }
+                _position += WriteVariableSizeInt(escapePos);
             }
             return startPos;
         }
@@ -173,11 +160,8 @@ namespace Raven.Server.Json
         /// <summary>
         /// Write an object to the UnmangedBuffer
         /// </summary>
-        /// <param name="objectToken"></param>
-        /// <returns></returns>
-        private async Task<WriteToken> WriteObject()
+        private async Task<WriteToken> BuildObject()
         {
-            BlittableJsonToken objectToken;
             var properties = new List<PropertyTag>();
             var firstWrite = _position;
             var maxPropId = -1;
@@ -207,7 +191,7 @@ namespace Raven.Server.Json
                 await _reader.ReadAsync();
 
                 // Write object property into the UnmanagedWriteBuffer
-                var writeToken = await WriteValue();
+                var writeToken = await BuildValue();
 
                 // Register property position, name id (PropertyId) and type (object type and metadata)
                 properties.Add(new PropertyTag
@@ -224,7 +208,7 @@ namespace Raven.Server.Json
             var distanceFromFirstProperty = objectMetadataStart - firstWrite;
 
             // Find metadata size and properties offset and set appropriate flags in the BlittableJsonToken
-            objectToken = BlittableJsonToken.StartObject;
+            var objectToken = BlittableJsonToken.StartObject;
             var positionSize = SetOffsetSizeFlag(ref objectToken, distanceFromFirstProperty);
             var propertyIdSize = SetPropertyIdSizeFlag(ref objectToken, maxPropId);
 
@@ -296,15 +280,15 @@ namespace Raven.Server.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<WriteToken> WriteValue()
+        private async Task<WriteToken> BuildValue()
         {
             var start = _position;
             switch (_state.CurrentTokenType)
             {
                 case JsonParserToken.StartObject:
-                    return await WriteObject();
+                    return await BuildObject();
                 case JsonParserToken.StartArray:
-                    return await WriteArray();
+                    return await BuildArray();
                 case JsonParserToken.Integer:
                     _position += WriteVariableSizeLong(_state.Long);                   
                     return new WriteToken
@@ -360,25 +344,14 @@ namespace Raven.Server.Json
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence
             _position += WriteVariableSizeInt(_state.EscapePositions.Count);
-            if (_state.EscapePositions.Count > 0)
+            foreach (int escapePos in _state.EscapePositions)
             {
-                for (int i = 0; i < _state.EscapePositions.Count; i++)
-                {
-                    _position += WriteVariableSizeInt(_state.EscapePositions[i]);
-                }
+                _position += WriteVariableSizeInt(escapePos);
             }
         }
 
-        private static string EnsureDecimalPlace(double value, string text)
+        private async Task<WriteToken> BuildArray()
         {
-            if (double.IsNaN(value) || double.IsInfinity(value) || text.IndexOf('.') != -1 || text.IndexOf('E') != -1 || text.IndexOf('e') != -1)
-                return text;
-
-            return text + ".0";
-        }
-        private async Task<WriteToken> WriteArray()
-        {
-            BlittableJsonToken arrayToken;
             var positions = new List<int>();
             var types = new List<BlittableJsonToken>();
             while (true)
@@ -387,12 +360,12 @@ namespace Raven.Server.Json
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)
                     break;
                 
-                var writeToken = await WriteValue();
+                var writeToken = await BuildValue();
                 types.Add(writeToken.WrittenToken);
                 positions.Add(writeToken.ValuePos);
             }
             var arrayInfoStart = _position;
-            arrayToken = BlittableJsonToken.StartArray;
+            var arrayToken = BlittableJsonToken.StartArray;
 
             _position += WriteVariableSizeInt(positions.Count);
             if (positions.Count == 0)
@@ -403,7 +376,6 @@ namespace Raven.Server.Json
                     ValuePos = arrayInfoStart,
                     WrittenToken = arrayToken
                 };
-
             }
 
             var distanceFromFirstItem = arrayInfoStart - positions[0];
