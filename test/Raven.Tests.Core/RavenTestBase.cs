@@ -24,9 +24,9 @@ namespace Raven.Tests.Core
 
         protected readonly List<DocumentStore> CreatedStores = new List<DocumentStore>();
 
-        public static RavenServer Server { get; }
+        public static Lazy<RavenServer> Server  = new Lazy<RavenServer>(CreateServer);
 
-        static RavenTestBase()
+        private static RavenServer CreateServer()
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
@@ -40,11 +40,11 @@ namespace Raven.Tests.Core
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 
-            Server = new RavenServer(configuration)
-            {
-            };
-            Server.Initialize();
+            var server = new RavenServer(configuration);
+            server.Initialize();
+            return server;
         }
+
 
         protected virtual async Task<DocumentStore> GetDocumentStore([CallerMemberName] string databaseName = null, string dbSuffixIdentifier = null,
            Action<DatabaseDocument> modifyDatabaseDocument = null)
@@ -56,16 +56,16 @@ namespace Raven.Tests.Core
             modifyDatabaseDocument?.Invoke(doc);
 
             RavenOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (Server.Value.ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
-                if (Server.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
+                if (Server.Value.ServerStore.Read(context, Constants.Database.Prefix + databaseName) != null)
                     throw new InvalidOperationException($"Database '{databaseName}' already exists");
             }
             
             var store = new DocumentStore
             {
-                Url = UseFiddler(Server.Configuration.Core.ServerUrls.First()),
+                Url = UseFiddler(Server.Value.Configuration.Core.ServerUrls.First()),
                 DefaultDatabase = databaseName,
             };
             store.Initialize();
