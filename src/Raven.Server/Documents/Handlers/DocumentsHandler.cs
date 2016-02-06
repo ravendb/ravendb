@@ -101,9 +101,17 @@ namespace Raven.Server.Documents
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var array = await context.ReadForMemory(RequestBodyStream(), "queries");
+                var array = await context.ParseArrayToMemory(RequestBodyStream(), "queries",
+                    BlittableJsonDocumentBuilder.UsageMode.None);
 
-                await GetDocumentsById(context, HttpContext.Request.Query["id"]);
+                var ids = new string[array.Count];
+                for (int i = 0; i < array.Count; i++)
+                {
+                    ids[i] = array.GetStringByIndex(i);
+                }
+
+                context.Transaction = context.Environment.ReadTransaction();
+                await GetDocumentsById(context, new StringValues(ids));
             }
         }
 
@@ -116,7 +124,6 @@ namespace Raven.Server.Documents
                 context.Transaction = context.Environment.ReadTransaction();
                 if (HttpContext.Request.Query.ContainsKey("id"))
                 {
-
                     await GetDocumentsById(context, HttpContext.Request.Query["id"]);
                     return;
                 }
