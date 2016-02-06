@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Http;
@@ -27,11 +28,16 @@ namespace Raven.Server.Routing
 
         public async Task HandlePath(HttpContext context)
         {
-            var tryMatch = _trie.TryMatch(context.Request.Method, context.Request.Path);
+            //TODO: Kestrel bug https://github.com/aspnet/KestrelHttpServer/issues/617
+            //TODO: requires us to do this
+
+            var method = context.Request.Method.Trim();
+
+            var tryMatch = _trie.TryMatch(method, context.Request.Path);
             if (tryMatch.Match.Success == false)
             {
                 context.Response.StatusCode = 400;
-                await context.Response.WriteAsync("There is no handler for path: " + context.Request.Path);
+                await context.Response.WriteAsync($"There is no handler for path: {context.Request.Method} {context.Request.Path}{context.Request.QueryString}");
                 return;
             }
 
