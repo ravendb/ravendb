@@ -6,6 +6,7 @@ namespace Raven.Server.Web.Operations
 {
     public class OperationAlertsHandler : RequestHandler
     {
+        [RavenAction("/databases/*/operation/alerts", "GET")]
         [RavenAction("/operation/alerts", "GET")]
         public Task Get()
         {

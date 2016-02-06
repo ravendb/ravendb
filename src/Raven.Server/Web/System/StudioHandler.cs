@@ -4,30 +4,21 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Http;
-using Raven.Client.Connection;
-using Raven.Server.Documents;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 
 namespace Raven.Server.Web.System
 {
 
-    public class Studio : RequestHandler
+    public class StudioHandler : RequestHandler
     {
         private static readonly Dictionary<string, string> MimeMapping = new Dictionary<string, string>()
         {
             { "css", "text/css"},
-            { "js", "application/javascript" }
+            { "js", "application/javascript" },
+            { "json", "application/javascript" }
         };
 
         //TODO: write better impl for this! - it is temporary solution to make studio work properly

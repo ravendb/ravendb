@@ -12,6 +12,19 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
             return HttpContext.Response.WriteAsync("{'Results':[],'Includes':[]}");
         }
 
+        [RavenAction("/databases/*/silverlight/ensureStartup", "GET")]
+        public Task FakeResponseForEnsureStartup()
+        {
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/configuration/document$", "GET")]
+        public Task FakeResponseForConfigurationDocument()
+        {
+            HttpContext.Response.StatusCode = 404;
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/studio-tasks/latest-server-build-version", "GET")]
         public Task FakeResponseForLastServerBuild()
         {
