@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Server.Documents;
+using Raven.Tests.Core;
 
 namespace Tryouts
 {
@@ -10,7 +12,10 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            new ArrayParsingTests().CanParseSimpleArray().Wait();
+            using (var x = new Crud())
+            {
+                x.CanSaveAndLoad().Wait();
+            }
         }
     }
 }

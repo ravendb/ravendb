@@ -18,6 +18,14 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
             return Task.CompletedTask;
         }
 
+        [RavenAction("/replication/topology", "GET")]
+        [RavenAction("/databases/*/replication/topology", "GET")]
+        public Task FakeResponseForReplicationTopology()
+        {
+            HttpContext.Response.StatusCode = 404;
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/configuration/document$", "GET")]
         public Task FakeResponseForConfigurationDocument()
         {
