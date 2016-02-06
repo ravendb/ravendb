@@ -2,7 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
 import changesContext = require("common/changesContext");
 import getSqlReplicationPerfStatsCommand = require("commands/database/debug/getSqlReplicationPerfStatsCommand");
-import d3 = require("d3/d3");
+import d3 = require("d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
@@ -27,13 +27,13 @@ class sqlReplicationPerfStats extends viewModelBase {
     legendWidth = 0;
     isoFormat = d3.time.format.iso;
     xTickFormat = d3.time.format("%H:%M:%S");	
-    x0Scale: D3.Scale.OrdinalScale;
-    yScale: D3.Scale.LinearScale;
-    color = d3.scale.category20();
-    xAxis: D3.Svg.Axis;
-    yAxis: D3.Svg.Axis;
-    svg: D3.Selection;
-    legend: D3.UpdateSelection;
+    x0Scale: d3.scale.Ordinal;
+    yScale: d3.scale.Linear;
+    color = d3.scale.category20<string>();
+    xAxis: d3.svg.Axis;
+    yAxis: d3.svg.Axis;
+    svg: d3.Selection;
+    legend: d3.selection.Update;
 
     fetchJsonData() {
         return new getSqlReplicationPerfStatsCommand(this.activeDatabase()).execute();
@@ -250,7 +250,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .text("Batch size");
 
         this.x0Scale.domain(d3.nest()
-            .key(d => d.Started)
+            .key((d: any) => d.Started)
             .sortKeys(d3.ascending)
             .entries(self.jsonData)
             .map(d => d.key));
@@ -292,7 +292,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .attr('text-anchor', 'middle')
             .attr('x', d => d.sectionWidth / 2)
             .attr('y', self.height + 16)
-            .text(d => self.xTickFormat(self.isoFormat.parse(d.Started)));
+            .text((d: any) => self.xTickFormat(self.isoFormat.parse(d.Started)));
 
         frameEnter.append("g")
             .attr('class', 'inputs');
@@ -308,7 +308,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .attr("x", (d, i) => i * self.barWidth + self.barPadding)
             .attr("y", d => self.yScale(d.BatchSize))
             .attr("height", d => self.height - self.yScale(d.BatchSize))
-            .style("fill", d => self.color(d.ReplicationName));
+            .style("fill", (d:any) => self.color(d.ReplicationName));
 
         inputCounts.enter().append("rect")
             .attr("class", "inputCounts")
@@ -316,7 +316,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .attr("x", (d, i) => i * self.barWidth + self.barPadding)
             .attr("y", d => self.height)
             .attr("height", 0)
-            .style("fill", d => self.color(d.ReplicationName))
+            .style("fill", (d:any) => self.color(d.ReplicationName))
             .on('click', function (d) {
                 nv.tooltip.cleanup();
                 var offset = $(this).offset();
@@ -397,7 +397,7 @@ class sqlReplicationPerfStats extends viewModelBase {
         var statsInline = d3.merge(jsonData.map((d) => d.Stats));
         var byKey = d3
             .nest()
-            .key(d => d.ReplicationName)
+            .key((d: any) => d.ReplicationName)
             .sortKeys(d3.ascending)
             .rollup(l => l.length)
             .entries(statsInline);

@@ -1,7 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import app = require("durandal/app");
-import d3 = require("d3/d3");
+import d3 = require("d3");
 import nv = require("nvd3");
 import jszip = require("jszip");
 import messagePublisher = require("common/messagePublisher");

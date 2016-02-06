@@ -6,14 +6,15 @@ requirejs.config({
         transitions: '../Scripts/durandal/transitions',
         ace: '../Scripts/ace',
         moment: '../Scripts/moment',
-        'd3': '../Scripts/d3',
         forge: '../Scripts/forge'
     },
 
     map: {
       '*' : {
           "jszip": "../Scripts/jszip/jszip",
-          "jszip-utils": "../Scripts/jszip/jszip-utils.min"
+          "jszip-utils": "../Scripts/jszip/jszip-utils.min",
+          "d3": "../Scripts/d3/d3",
+          "ace": "../Scripts/ace/ace"
       }  
     },
     
@@ -24,8 +25,8 @@ requirejs.config({
 
 define('jquery', () => jQuery);
 define('knockout', () => ko);
-define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], (d3, nv, timelines, chart) => nv);
-define('dagre', ['d3/d3', 'd3/dagre'], (d3, dagre) => dagre);
+define('nvd3', ['d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], (d3, nv, timelines, chart) => nv);
+define('dagre', ['d3', 'd3/dagre'], (d3, dagre) => dagre);
 
 // Do not remove the below comment, as it's used by the optimized build to inline Durandal scripts.
 // OPTIMIZED BUILD INLINE DURANDAL HERE

@@ -6,13 +6,13 @@
   "bundle": "typings/tsd.d.ts",
   "installed": {
     "knockout/knockout.d.ts": {
-      "commit": "f7164a47ffe5e9a7ea2f4bec8fc4009347c64f6d"
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
     },
     "jszip/jszip.d.ts": {
       "commit": "f7164a47ffe5e9a7ea2f4bec8fc4009347c64f6d"
     },
     "jquery/jquery.d.ts": {
-      "commit": "b94d7fa5212aabb40642ce43563bde94bfa09e8b"
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
     },
     "bootstrap/bootstrap.d.ts": {
       "commit": "b63c6f2fbeb17b905d95f91647db35e373df475a"
@@ -40,6 +40,24 @@
     },
     "requirejs/require.d.ts": {
       "commit": "0dcf8d2bb8328c5af0464339d21213b663a0fd7b"
+    },
+    "knockout.postbox/knockout-postbox.d.ts": {
+      "commit": "0dcf8d2bb8328c5af0464339d21213b663a0fd7b"
+    },
+    "typeahead/typeahead.d.ts": {
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
+    },
+    "q/Q.d.ts": {
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
+    },
+    "durandal/durandal.d.ts": {
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
+    },
+    "ace/ace.d.ts": {
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
+    },
+    "d3/d3.d.ts": {
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
     }
   }
 }

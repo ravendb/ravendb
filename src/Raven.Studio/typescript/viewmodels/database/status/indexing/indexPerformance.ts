@@ -6,7 +6,7 @@ import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexi
 import getReducingBatchStatsCommand = require("commands/database/debug/getReducingBatchStatsCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getFilteredOutIndexStatsCommand = require("commands/database/debug/getFilteredOutIndexStatsCommand");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import nv = require('nvd3');
 import app = require("durandal/app");
 import changeSubscription = require('common/changeSubscription');
@@ -154,17 +154,17 @@ class metrics extends viewModelBase {
     isoFormat = d3.time.format.iso;
     xTickFormat = d3.time.format("%H:%M:%S");	
 
-    xScale: D3.Scale.TimeScale;
-    yMapScale: D3.Scale.OrdinalScale;
-    yReduceScale: D3.Scale.OrdinalScale;
-    yPrefetchScale: D3.Scale.OrdinalScale;
+    private xScale: d3.time.Scale<number, number>;
+    private yMapScale: d3.scale.Ordinal<string, number>;
+    private yReduceScale: d3.scale.Ordinal<string, number>;
+    private yPrefetchScale: d3.scale.Ordinal<string, number>;
 
-    xAxis: D3.Svg.Axis;
-    yMapAxis: D3.Svg.Axis;
-    yReduceAxis: D3.Svg.Axis;
-    yPrefetchAxis: D3.Svg.Axis;
+    private xAxis: d3.svg.Axis;
+    private yMapAxis: d3.svg.Axis;
+    private yReduceAxis: d3.svg.Axis;
+    private yPrefetchAxis: d3.svg.Axis;
 
-    svg: D3.Selection;
+    private svg: d3.Selection<any>;
 
     lastIndexingId: number = 0;
     lastReducingId: number = 0;
@@ -349,13 +349,13 @@ class metrics extends viewModelBase {
 
     private mergeFilteredOutIndexesJsonData(currentData: filteredOutIndexStatDto[], incomingData: filteredOutIndexStatDto[]) {
         // create lookup map to avoid O(n^2)
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
 
         currentData.forEach((d, i) => {
             dateLookup.set(this.createFilteredOutCacheKey(d), i);
         });
 
-        incomingData.forEach(d => {
+        incomingData.forEach((d: filteredOutIndexStatDto) => {
             var cacheKey = this.createFilteredOutCacheKey(d);
             if (dateLookup.has(cacheKey)) {
                 var index = dateLookup.get(cacheKey);
@@ -370,7 +370,7 @@ class metrics extends viewModelBase {
 
     private mergePrefetchJsonData(currentData: futureBatchStatsDto[], incomingData: futureBatchStatsDto[]) {
         // create lookup map to avoid O(n^2)
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
         currentData.forEach((d, i) => {
             dateLookup.set(d.Timestamp, i);
         });
@@ -392,7 +392,7 @@ class metrics extends viewModelBase {
     private mergeMapJsonData(currentData: indexingBatchInfoDto[], incomingData: indexingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
         var self = this;
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
         currentData.forEach((d, i) => {
             dateLookup.set(d.StartedAt, i);
         });
@@ -414,7 +414,7 @@ class metrics extends viewModelBase {
     private mergeReduceJsonData(currentData: reducingBatchInfoDto[], incomingData: reducingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
         var self = this;
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
         currentData.forEach((d, i) => {
             dateLookup.set(d.StartedAt, i);
         });
@@ -867,7 +867,7 @@ class metrics extends viewModelBase {
         batches.select('rect')
             .transition()
             .attr('x', (d: reducingBatchInfoDto) => self.xScale(d.StartedAtDate))
-            .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, v => self.yReduceScale(v.indexName)))
+            .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, (v, i) => self.yReduceScale(v.indexName)))
             .attr('width', (d: reducingBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs))
             .attr('height', (d: reducingBatchInfoDto) => {
                 var extent = d3.extent(d.PerfStats, v => self.yReduceScale(v.indexName));

@@ -1,10 +1,10 @@
-/// <reference path="../../../typings/d3/dagre.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import getGlobalReplicationTopology = require("commands/resources/getGlobalReplicationTopology");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import dagre = require('dagre');
 
 class topology extends viewModelBase {

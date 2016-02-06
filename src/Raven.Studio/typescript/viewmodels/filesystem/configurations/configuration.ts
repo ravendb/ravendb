@@ -1,10 +1,10 @@
-/// <reference path="../../../../typings/ace/ace.amd.d.ts" />
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 import app = require("durandal/app");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import changesContext = require("common/changesContext");
-import ace = require("ace/ace");
+import ace = require("ace");
 import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import getConfigurationCommand = require("commands/filesystem/getConfigurationCommand");

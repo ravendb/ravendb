@@ -99,4 +99,5 @@ interface Storage {
 
 interface DurandalRouteConfiguration {
     tooltip?: string;
+    dynamicHash?: KnockoutComputed<string>;
 }

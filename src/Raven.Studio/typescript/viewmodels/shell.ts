@@ -365,7 +365,7 @@ class shell extends viewModelBase {
         }, this, "#goToDocInput");
 
         router.activeInstruction.subscribe(val => {
-            if (!!val && val.config.route.split('/').length == 1) //if it's a root navigation item.
+            if (!!val && val.config.route.toString().split('/').length == 1) //if it's a root navigation item.
                 this.activeArea(val.config.title);
         });
 

@@ -1,4 +1,4 @@
-/// <reference path="../../../../typings/d3/dagre.d.ts" />
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getReplicationStatsCommand = require("commands/database/replication/getReplicationStatsCommand");
@@ -9,7 +9,7 @@ import fileDownloader = require("common/fileDownloader");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import getReplicationTopology = require("commands/database/replication/getReplicationTopology");
 import getReplicationPerfStatsCommand = require("commands/database/debug/getReplicationPerfStatsCommand");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import nv = require('nvd3');
 import dagre = require('dagre');
 
@@ -38,7 +38,7 @@ class replicationStats extends viewModelBase {
 
     width: number;
     height: number;
-    svg: D3.Selection;
+    svg: d3.Selection;
     colors = d3.scale.category10();
     line = d3.svg.line().x(d => d.x).y(d => d.y);
 
