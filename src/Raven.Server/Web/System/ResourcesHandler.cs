@@ -42,8 +42,13 @@ namespace Raven.Server.Web.System
                 context.Transaction = context.Environment.ReadTransaction();
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 writer.WriteStartArray();
+                var first = true;
                 foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
                 {
+                    if(first == false)
+                        writer.WriteComma();
+                    first = false;
+
                     //TODO: Actually handle this properly
                     var doc = new DynamicJsonValue
                     {
