@@ -10,7 +10,7 @@ namespace Raven.Server.Web.Cluster
         public Task Get()
         {
             //TODO: Implement
-            return HttpContext.Response.WriteAsync(@"{}");
+            return HttpContext.Response.WriteAsync(@"{'AllVotingNodes':[]}");
         }
     }
 }
