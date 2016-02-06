@@ -7,6 +7,7 @@ namespace Raven.Server.Web.Security
     public class SingleAuthTokenHandler : RequestHandler
     {
         [RavenAction("/singleAuthToken", "GET")]
+        [RavenAction("/databases/*/singleAuthToken", "GET")]
         public Task Get()
         {
             //TODO: implement
