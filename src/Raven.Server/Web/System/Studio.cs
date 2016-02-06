@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -23,6 +24,26 @@ namespace Raven.Server.Web.System
 
     public class Studio : RequestHandler
     {
+        private static readonly Dictionary<string, string> MimeMapping = new Dictionary<string, string>()
+        {
+            { "css", "text/css"},
+            { "js", "application/javascript" }
+        };
+
+        //TODO: write better impl for this! - it is temporary solution to make studio work properly
+        private string FindMimeType(string filePath)
+        {
+            var extension = filePath.Substring(filePath.LastIndexOf('.') + 1);
+
+            string mime;
+
+            if (MimeMapping.TryGetValue(extension, out mime))
+            {
+                return mime;
+            }
+            return "text/html";
+        }
+
         public async Task WriteFile(string filePath)
         {
             var etagValue = HttpContext.Request.Headers["If-None-Match"];
@@ -34,7 +55,7 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            HttpContext.Response.ContentType = "text/html";
+            HttpContext.Response.ContentType = FindMimeType(filePath);
             HttpContext.Response.Headers["ETag"] = fileEtag;
             using (var data = File.OpenRead(filePath))
             {
@@ -50,7 +71,7 @@ namespace Raven.Server.Web.System
                 RouteMatch.MatchLength,
                 RouteMatch.Url.Length - RouteMatch.MatchLength);
 
-            var ravenPath = $"~/../../../Raven.Studio.Html5/{filename}";
+            var ravenPath = $"~/../../Raven.Studio/wwwroot/{filename}";
 
             if (File.Exists(ravenPath))
             {
