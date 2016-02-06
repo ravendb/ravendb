@@ -21,7 +21,7 @@ class getCollectionsCommand extends commandBase {
         this.query("/databases/" + this.ownerDb.name + "/collections/stats", null, null)
             .done( results => {
                 var collections = results.Collections.map(result => new collection(result.Name, this.ownerDb, result.Count));
-                finalResult.done(collections);
+                finalResult.resolve(collections);
             })
             .fail((response) => {
                 this.reportError("Can't fetch collection names");
