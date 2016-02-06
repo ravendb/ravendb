@@ -7061,6 +7061,11 @@ body {
   cursor: default;
   text-decoration: line-through;
 }
+.index-lock-mode-disabled {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
+}
 #tenantNameLink {
   padding-left: 5px;
 }
@@ -8577,3 +8582,5 @@ a.global_help_link:focus {
   display: inline-block;
   font-weight: bold;
 }
+
+/*# sourceMappingURL=app.css.map */
