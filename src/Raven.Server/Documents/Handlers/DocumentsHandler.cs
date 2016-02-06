@@ -8,9 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
 using Raven.Server.Json;
-using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Sparrow;
 
@@ -18,6 +16,7 @@ namespace Raven.Server.Documents
 {
     public class DocumentsHandler : DatabaseRequestHandler
     {
+
         [RavenAction("/databases/*/docs", "PUT")]
         public async Task Put()
         {
@@ -96,19 +95,32 @@ namespace Raven.Server.Documents
             }
         }
 
+        [RavenAction("/databases/*/queries", "POST")]
+        public async Task QueriesPost()
+        {
+            RavenOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var array = await context.ReadForMemory(RequestBodyStream(), "queries");
+
+                await GetDocumentsById(context, HttpContext.Request.Query["id"]);
+            }
+        }
+
         [RavenAction("/databases/*/docs", "GET")]
         public async Task Get()
         {
-            if (HttpContext.Request.Query.ContainsKey("id"))
-            {
-                await GetDocumentsById();
-                return;
-            }
-
             RavenOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 context.Transaction = context.Environment.ReadTransaction();
+                if (HttpContext.Request.Query.ContainsKey("id"))
+                {
+
+                    await GetDocumentsById(context, HttpContext.Request.Query["id"]);
+                    return;
+                }
+
 
                 // everything here operates on all docs
                 var actualEtag = ComputeAllDocumentsEtag(context);
@@ -141,9 +153,7 @@ namespace Raven.Server.Documents
                     documents = DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
                 }
                 await WriteDocuments(context, documents);
-
             }
-
         }
 
         private async Task WriteDocuments(RavenOperationContext context, IEnumerable<Document> documents)
@@ -177,59 +187,51 @@ namespace Raven.Server.Documents
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }
 
-        private async Task GetDocumentsById()
+        private async Task GetDocumentsById(RavenOperationContext context, StringValues ids)
         {
-            RavenOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            var documents = new Document[ids.Count];
+            for (int i = 0; i < ids.Count; i++)
             {
-                context.Transaction = context.Environment.ReadTransaction();
-
-                var ids = HttpContext.Request.Query["id"];
-
-                var documents = new Document[ids.Count];
-                for (int i = 0; i < ids.Count; i++)
-                {
-                    documents[i] = DocumentsStorage.Get(context, ids[i]);
-                }
-
-                //TODO: Handle includes
-
-                long actualEtag = ComputeEtagsFor(documents);
-
-                if (GetLongFromHeaders("If-None-Match") == actualEtag)
-                {
-                    HttpContext.Response.StatusCode = 304;
-                    return;
-                }
-
-                HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
-                var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
-                writer.WriteStartObject();
-                writer.WritePropertyName(context.GetLazyStringFor("Results"));
-                writer.WriteStartArray();
-                var first = true;
-                foreach (var doc in documents)
-                {
-                    if (doc == null)
-                        continue;
-                    if (first == false)
-                        writer.WriteComma();
-                    first = false;
-                    doc.EnsureMetadata();
-
-                    await context.WriteAsync(writer, doc.Data);
-                }
-                writer.WriteEndArray();
-                writer.WriteComma();
-                writer.WritePropertyName(context.GetLazyStringFor("Includes"));
-                writer.WriteStartArray();
-                //TODO: Includes
-                //TODO: Need to handle etags here as well
-                writer.WriteEndArray();
-
-                writer.WriteEndObject();
-                writer.Flush();
+                documents[i] = DocumentsStorage.Get(context, ids[i]);
             }
+
+            //TODO: Handle includes
+
+            long actualEtag = ComputeEtagsFor(documents);
+
+            if (GetLongFromHeaders("If-None-Match") == actualEtag)
+            {
+                HttpContext.Response.StatusCode = 304;
+                return;
+            }
+
+            HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+            var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
+            writer.WriteStartObject();
+            writer.WritePropertyName(context.GetLazyStringFor("Results"));
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var doc in documents)
+            {
+                if (doc == null)
+                    continue;
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+                doc.EnsureMetadata();
+
+                await context.WriteAsync(writer, doc.Data);
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+            writer.WritePropertyName(context.GetLazyStringFor("Includes"));
+            writer.WriteStartArray();
+            //TODO: Includes
+            //TODO: Need to handle etags here as well
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+            writer.Flush();
         }
 
         private unsafe long ComputeEtagsFor(Document[] documents)
