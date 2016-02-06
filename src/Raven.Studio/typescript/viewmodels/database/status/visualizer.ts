@@ -1,4 +1,4 @@
-/// <reference path="../../../../typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
+/// <reference path="../../../../typings/tsd.d.ts"/>
 
 import app = require("durandal/app");
 

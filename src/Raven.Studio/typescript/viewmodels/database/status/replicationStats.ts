@@ -33,7 +33,7 @@ class replicationStats extends viewModelBase {
     showLoadingIndicator = ko.observable(false); 
     replStatsDoc = ko.observable<replicationStatsDocumentDto>();
     hasNoReplStatsAvailable = ko.observable(false);
-    now = ko.observable<Moment>();
+    now = ko.observable<moment.Moment>();
     updateNowTimeoutHandle = 0;
 
     width: number;

@@ -12,7 +12,34 @@
       "commit": "f7164a47ffe5e9a7ea2f4bec8fc4009347c64f6d"
     },
     "jquery/jquery.d.ts": {
-      "commit": "17ec24d048f9ce34c8b30c8b61769532114a5d13"
+      "commit": "b94d7fa5212aabb40642ce43563bde94bfa09e8b"
+    },
+    "bootstrap/bootstrap.d.ts": {
+      "commit": "b63c6f2fbeb17b905d95f91647db35e373df475a"
+    },
+    "bootstrap.v3.datetimepicker/bootstrap.v3.datetimepicker.d.ts": {
+      "commit": "7d8e7e8c536bc180eade05d81b54db1840d4c8ae"
+    },
+    "moment/moment-node.d.ts": {
+      "commit": "7d8e7e8c536bc180eade05d81b54db1840d4c8ae"
+    },
+    "moment/moment.d.ts": {
+      "commit": "7d8e7e8c536bc180eade05d81b54db1840d4c8ae"
+    },
+    "jquery.blockUI/jquery.blockUI.d.ts": {
+      "commit": "b94d7fa5212aabb40642ce43563bde94bfa09e8b"
+    },
+    "nprogress/NProgress.d.ts": {
+      "commit": "b94d7fa5212aabb40642ce43563bde94bfa09e8b"
+    },
+    "jquery.dynatree/jquery.dynatree.d.ts": {
+      "commit": "b94d7fa5212aabb40642ce43563bde94bfa09e8b"
+    },
+    "jqueryui/jqueryui.d.ts": {
+      "commit": "b94d7fa5212aabb40642ce43563bde94bfa09e8b"
+    },
+    "requirejs/require.d.ts": {
+      "commit": "0dcf8d2bb8328c5af0464339d21213b663a0fd7b"
     }
   }
 }

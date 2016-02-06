@@ -10,7 +10,7 @@ class indexErrors extends viewModelBase {
     allIndexErrors = ko.observableArray<serverErrorDto>();
     hasFetchedErrors = ko.observable(false);
     selectedIndexError = ko.observable<serverErrorDto>();
-    now = ko.observable<Moment>();
+    now = ko.observable<moment.Moment>();
     updateNowTimeoutHandle = 0;
 
     constructor() {

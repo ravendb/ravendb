@@ -1,3 +1,4 @@
+
 import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
@@ -15,7 +16,7 @@ class trafficWatch extends viewModelBase {
     watchClient: trafficWatchClient;
     isConnected = ko.observable(false);
     recentEntries = ko.observableArray<any>([]);
-    now = ko.observable<Moment>();
+    now = ko.observable<moment.Moment>();
     updateNowTimeoutHandle = 0;
     selectedLog = ko.observable<logDto>();
     columnWidths: Array<KnockoutObservable<number>>;
@@ -25,7 +26,7 @@ class trafficWatch extends viewModelBase {
     summedRequestsDuration:number=0;
     minRequestDuration = ko.observable<number>(1000000);
     maxRequestDuration = ko.observable<number>(0);
-    startTraceTime = ko.observable<Moment>();
+    startTraceTime = ko.observable<moment.Moment>();
     startTraceTimeHumanized :KnockoutComputed<string>;
     showLogDetails = ko.observable<boolean>(false);
     logRecordsElement: Element;

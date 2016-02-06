@@ -1,4 +1,4 @@
-// Type definitions for jQuery BlockUI Plugin
+﻿// Type definitions for jQuery BlockUI Plugin
 // Project: http://malsup.com/jquery/block/
 // Definitions by: Jeffrey Lee <http://blog.darkthread.net/>
 // Definitions: https://github.com/borisyankov/DefinitelyTyped

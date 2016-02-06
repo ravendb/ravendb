@@ -1,4 +1,4 @@
-/// <reference path="../../../../../typings/bootstrap.multiselect/bootstrap.multiselect.d.ts" />
+/// <reference path="../../../../../typings/tsd.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
