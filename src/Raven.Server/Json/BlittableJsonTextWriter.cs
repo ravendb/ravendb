@@ -372,9 +372,6 @@ namespace Raven.Server.Json
                     WriteComma();
                 first = false;
 
-
-                await parser.ReadAsync();
-
                 await WriteValueAsync(context, state, parser);
             }
             WriteEndArray();

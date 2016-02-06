@@ -46,6 +46,7 @@ namespace Raven.Server.ServerWide
             public void Dispose()
             {
                 Context.Transaction?.Dispose();
+                Context.Transaction = null;
                 Context.Reset();
                 //TODO: this probably should have low memory handle
                 //TODO: need better policies, stats, reporting, etc
