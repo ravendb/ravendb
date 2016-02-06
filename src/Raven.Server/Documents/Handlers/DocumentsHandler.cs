@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.Json;
+using Raven.Server.Json.Parsing;
 using Raven.Server.Routing;
 using Sparrow;
 
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrWhiteSpace(id))
                     throw new ArgumentException("The 'id' query string parameter must have a non empty value");
 
-                var doc = await context.ReadForDisk(HttpContext.Request.Body, id);
+                var doc = await context.ReadForDisk(RequestBodyStream(), id);
 
                 var etag = GetLongFromHeaders("If-Match");
 
@@ -40,11 +41,26 @@ namespace Raven.Server.Documents
                 {
                     id = id + DocumentsStorage.IdentityFor(context, id);
                 }
-                DocumentsStorage.Put(context, id, etag, doc);
+                var newEtag = DocumentsStorage.Put(context, id, etag, doc);
                 context.Transaction.Commit();
 
+                // we want to release the transaction before we write to the network
+                context.Transaction.Dispose();
+
+
                 HttpContext.Response.StatusCode = 201;
-                HttpContext.Response.Headers["Location"] = id;
+
+                var reply = new DynamicJsonValue
+                {
+                    ["Key"] = id,
+                    ["Etag"] = newEtag
+                };
+
+                var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
+                await context.WriteAsync(writer, reply);
+                writer.Flush();
+
+
             }
         }
 
