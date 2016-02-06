@@ -86,6 +86,15 @@ namespace Raven.Server.Json
             return new BlittableJsonReaderObject(ptr, size, _context, this);
         }
 
+        public unsafe BlittableJsonReaderArray CreateArrayReader()
+        {
+            var reader = CreateReader();
+            BlittableJsonReaderArray array;
+            if (reader.TryGet("_", out array))
+                return array;
+            throw new InvalidOperationException("Couldn't find array");
+        }
+
         /// <summary>
         /// Writes the json object from  reader received in the ctor into the received UnmanangedWriteBuffer
         /// </summary>
@@ -98,6 +107,43 @@ namespace Raven.Server.Json
             // Write the whole object recursively
             var writeToken = await BuildObject();
 
+            FinalizeDocument(writeToken);
+        }
+
+        /// <summary>
+        /// Writes the json object from  reader received in the ctor into the received UnmanangedWriteBuffer
+        /// </summary>
+        public async Task ReadArray()
+        {
+            await _reader.ReadAsync();
+            if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                throw new InvalidDataException("Expected start of array, but got " + _state.CurrentTokenType);
+
+            var properties = new List<PropertyTag>();
+            var firstWrite = _position;
+
+            var fakeFieldName = _context.GetLazyStringFor("_");
+            var propIndex = _context.CachedProperties.GetPropertyId(fakeFieldName);
+
+            // Write actual array to the UnmanagedWriteBuffer
+            var writeToken = await BuildValue();
+            
+            // Register property position, name id (PropertyId) and type (object type and metadata)
+            properties.Add(new PropertyTag
+            {
+                Position = writeToken.ValuePos,
+                Type = (byte) writeToken.WrittenToken,
+                PropertyId = propIndex
+            });
+
+            writeToken = FinalizeObjectWrite(properties, firstWrite, propIndex);
+
+            FinalizeDocument(writeToken);
+        }
+
+
+        private void FinalizeDocument(WriteToken writeToken)
+        {
             var token = writeToken.WrittenToken;
             var rootOffset = writeToken.ValuePos;
 
@@ -116,17 +162,18 @@ namespace Raven.Server.Json
             var propertyNamesOffset = _position - rootOffset;
             var propertyArrayOffsetValueByteSize = SetOffsetSizeFlag(ref propertiesSizeMetadata, propertyNamesOffset);
 
-            WriteNumber((int)propertiesSizeMetadata, sizeof(byte));
+            WriteNumber((int) propertiesSizeMetadata, sizeof (byte));
 
             // Write property names offsets
             foreach (int offset in propertyArrayOffset)
             {
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
-            WriteNumber(rootOffset, sizeof(int));
-            WriteNumber(propertiesStart, sizeof(int));
-            WriteNumber((int)token, sizeof(byte));
+            WriteNumber(rootOffset, sizeof (int));
+            WriteNumber(propertiesStart, sizeof (int));
+            WriteNumber((int) token, sizeof (byte));
         }
+
 
         private int WritePropertyString(LazyStringValue prop)
         {
@@ -153,7 +200,7 @@ namespace Raven.Server.Json
             public BlittableJsonToken WrittenToken;
         }
 
-        private unsafe LazyStringValue CerateLazyStringValueByState()
+        private unsafe LazyStringValue CreateLazyStringValueFromParserState()
         {
             return new LazyStringValue(null,_state.StringBuffer, _state.StringSize, _context);
         }
@@ -178,7 +225,7 @@ namespace Raven.Server.Json
                     throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
 
 
-                var property = CerateLazyStringValueByState();
+                var property = CreateLazyStringValueFromParserState();
                 if (_state.EscapePositions.Count > 0)
                 {
                     property.EscapePositions = _state.EscapePositions.ToArray();
@@ -202,6 +249,11 @@ namespace Raven.Server.Json
                 });
             }
 
+            return FinalizeObjectWrite(properties, firstWrite, maxPropId);
+        }
+
+        private WriteToken FinalizeObjectWrite(List<PropertyTag> properties, int firstWrite, int maxPropId)
+        {
             _context.CachedProperties.Sort(properties);
 
             var objectMetadataStart = _position;
@@ -220,7 +272,7 @@ namespace Raven.Server.Json
                 WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
                 WriteNumber(sortedProperty.PropertyId, propertyIdSize);
                 _stream.WriteByte(sortedProperty.Type);
-                _position += positionSize + propertyIdSize + sizeof(byte);
+                _position += positionSize + propertyIdSize + sizeof (byte);
             }
 
             return new WriteToken

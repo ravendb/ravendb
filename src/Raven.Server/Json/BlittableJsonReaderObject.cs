@@ -196,10 +196,15 @@ namespace Raven.Server.Json
                 obj = default(T);
                 return false;
             }
+            ConvertType(result, out obj);
+            return true;
+        }
+
+        internal static void ConvertType<T>(object result, out T obj)
+        {
             if (result == null)
             {
                 obj = default(T);
-                return ReferenceEquals(default(T), null);
             }
             if (result is T)
             {
@@ -207,9 +212,15 @@ namespace Raven.Server.Json
             }
             else
             {
-                obj = (T)Convert.ChangeType(result, typeof(T));
+                try
+                {
+                    obj = (T) Convert.ChangeType(result, typeof (T));
+                }
+                catch (Exception e)
+                {
+                    throw new FormatException($"Could not convert {result.GetType().FullName} to {typeof (T).FullName}",e);
+                }
             }
-            return true;
         }
 
         public bool TryGet(string name, out string str)

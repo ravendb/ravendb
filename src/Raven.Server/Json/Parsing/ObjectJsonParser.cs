@@ -220,7 +220,7 @@ namespace Raven.Server.Json.Parsing
                             continue;
                         }
                         _elements.Push(bjra);
-                        current = bjra.GetByIndex(modifications.SourceIndex);
+                        current = bjra[modifications.SourceIndex];
                         continue;
                     }
                     current = modifications;

@@ -263,7 +263,7 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    await writer.Run();
+                    await writer.ReadObject();
                     _disposables.Add(writer);
                     return writer.CreateReader();
                 }
@@ -290,9 +290,32 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    await writer.Run();
+                    await writer.ReadObject();
                     _disposables.Add(writer);
                     return writer.CreateReader();
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
+            }
+        }
+
+
+        public async Task<BlittableJsonReaderArray> ParseArrayToMemory(Stream stream, string documentId, 
+            BlittableJsonDocumentBuilder.UsageMode mode)
+        {
+            var state = new JsonParserState();
+            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, documentId))
+            {
+                var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
+                try
+                {
+                    CachedProperties.NewDocument();
+                    await writer.ReadArray();
+                    _disposables.Add(writer);
+                    return writer.CreateArrayReader();
                 }
                 catch (Exception)
                 {
@@ -316,7 +339,7 @@ namespace Raven.Server.Json
                     try
                     {
                         CachedProperties.NewDocument();
-                        await writer.Run();
+                        await writer.ReadObject();
                         _disposables.Add(writer);
                         reader = writer.CreateReader();
                     }
