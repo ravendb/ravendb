@@ -344,9 +344,9 @@ namespace Raven.Server.Documents
             int size;
             // See format of the lazy string key in the GetLowerKeySliceAndStorageKey method
             var ptr = tvr.Read(2, out size);
-            int pos = 0;
-            size = BlittableJsonTextWriter.ReadVariableSizeInt(ptr, ref pos);
-            result.Key = new LazyStringValue(null, ptr + pos, size, context);
+            byte offset;
+            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
+            result.Key = new LazyStringValue(null, ptr + offset, size, context);
             ptr = tvr.Read(1, out size);
             result.Etag = IPAddress.NetworkToHostOrder(*(long*) ptr);
             result.Data = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);

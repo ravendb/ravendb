@@ -105,6 +105,19 @@ namespace Raven.Server.Json
 
         public int ReadVariableSizeInt(int pos, out byte offset)
         {
+            return ReadVariableSizeInt(_mem, pos, out offset);
+        }
+
+        public static int ReadVariableSizeInt(byte* buffer, ref int pos)
+        {
+            byte offset;
+            var result = ReadVariableSizeInt(buffer, pos, out offset);
+            pos += offset;
+            return result;
+        }
+
+        public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
+        {
             // ReadAsync out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             // we assume that the value shouldn't be zero very often
@@ -117,7 +130,7 @@ namespace Raven.Server.Json
             {
                 if (shift == 35)
                     throw new FormatException("Bad variable size int");
-                b = _mem[pos++];
+                b = buffer[pos++];
                 count |= (b & 0x7F) << shift;
                 shift += 7;
                 offset++;
@@ -129,7 +142,7 @@ namespace Raven.Server.Json
         {
             // ReadAsync out an Int64 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
-            
+
             ulong count = 0;
             int shift = 0;
             byte b;

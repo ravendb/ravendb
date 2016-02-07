@@ -41,11 +41,11 @@ namespace Raven.Server.Json
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
             var escapeSequencePos = size;
-            var numberOfEscapeSequences = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
             while (numberOfEscapeSequences > 0)
             {
                 numberOfEscapeSequences--;
-                var bytesToSkip = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
                 WriteRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
@@ -86,24 +86,6 @@ namespace Raven.Server.Json
             }
         }
 
-        public static unsafe int ReadVariableSizeInt(byte* buffer ,ref int pos)
-        {
-            // ReadAsync out an Int32 7 bits at a time.  The high bit 
-            // of the byte when on means to continue reading more bytes.
-            int count = 0;
-            int shift = 0;
-            byte b;
-            do
-            {
-                if (shift == 35)
-                    throw new FormatException("Bad variable size int");
-                b = buffer[pos++];
-                count |= (b & 0x7F) << shift;
-                shift += 7;
-            } while ((b & 0x80) != 0);
-            return count;
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteString(LazyCompressedStringValue str)
         {
@@ -114,11 +96,11 @@ namespace Raven.Server.Json
             EnsureBuffer(1);
             _buffer[_pos++] = Quote;
             var escapeSequencePos = str.CompressedSize;
-            var numberOfEscapeSequences = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
             while (numberOfEscapeSequences > 0)
             {
                 numberOfEscapeSequences--;
-                var bytesToSkip = ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
                 WriteRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
