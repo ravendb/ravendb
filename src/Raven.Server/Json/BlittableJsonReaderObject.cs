@@ -10,6 +10,7 @@ namespace Raven.Server.Json
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
         private readonly BlittableJsonDocumentBuilder _builder;
+        private readonly CachedProperties _cachedProperties;
         private readonly byte* _metadataPtr;
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
@@ -23,31 +24,31 @@ namespace Raven.Server.Json
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
 
-        public BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context, BlittableJsonDocumentBuilder builder = null)
+        public BlittableJsonReaderObject(byte* mem, int size, RavenOperationContext context, 
+            BlittableJsonDocumentBuilder builder = null,
+            CachedProperties cachedProperties = null)
         {
             _builder = builder;
+            _cachedProperties = cachedProperties;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
             _context = context;
 
             // init document level properties
             var propStartPos = size - sizeof(int) - sizeof(byte); //get start position of properties
-            _propNames = (mem + (*(int*)(mem + propStartPos)));
-            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
-            switch (propNamesOffsetFlag)
+            var propsOffset = (*(int*)(mem + propStartPos));
+            if (propsOffset > 0)
             {
-                case BlittableJsonToken.OffsetSizeByte:
-                    _propNamesDataOffsetSize = sizeof(byte);
-                    break;
-                case BlittableJsonToken.OffsetSizeShort:
-                    _propNamesDataOffsetSize = sizeof(short);
-                    break;
-                case BlittableJsonToken.OffsetSizeInt:
-                    _propNamesDataOffsetSize = sizeof(int);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(
-                        $"Property names offset flag should be either byte, short of int, instead of {propNamesOffsetFlag}");
+                SetupPropertiesAccess(mem, propsOffset);
+            }
+            else
+            {
+                if (_cachedProperties == null)
+                    throw new InvalidOperationException("This object requires an external properties cache, but none was supplied");
+
+                if (_cachedProperties.Version != -propsOffset)
+                    throw new InvalidOperationException(
+                        $"This object requires an external properties cache with version {-propsOffset}, but got one with {_cachedProperties.Version}");
             }
             // get pointer to property names array on document level
 
@@ -66,6 +67,27 @@ namespace Raven.Server.Json
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(currentType);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
+        }
+
+        private unsafe void SetupPropertiesAccess(byte* mem, int propsOffset)
+        {
+            _propNames = (mem + propsOffset);
+            var propNamesOffsetFlag = (BlittableJsonToken) (*_propNames);
+            switch (propNamesOffsetFlag)
+            {
+                case BlittableJsonToken.OffsetSizeByte:
+                    _propNamesDataOffsetSize = sizeof (byte);
+                    break;
+                case BlittableJsonToken.OffsetSizeShort:
+                    _propNamesDataOffsetSize = sizeof (short);
+                    break;
+                case BlittableJsonToken.OffsetSizeInt:
+                    _propNamesDataOffsetSize = sizeof (int);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        $"Property names offset flag should be either byte, short of int, instead of {propNamesOffsetFlag}");
+            }
         }
 
         public unsafe BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
@@ -300,6 +322,12 @@ namespace Raven.Server.Json
 
         public int GetPropertyIndex(string name)
         {
+            if (_cachedProperties != null)
+            {
+                var propName = _context.GetLazyStringFor(name);
+                return _cachedProperties.GetPropertyId(propName);
+            }
+
             int min = 0, max = _propCount;
             var comparer = _context.GetLazyStringFor(name);
 

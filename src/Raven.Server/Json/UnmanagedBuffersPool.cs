@@ -14,7 +14,7 @@ namespace Raven.Server.Json
 {
     public unsafe class UnmanagedBuffersPool : IDisposable
     {
-        private readonly string _databaseName;
+        private readonly string _debugTag;
 
         private static readonly ILog _log = LogManager.GetLogger(typeof(UnmanagedBuffersPool));
 
@@ -28,9 +28,9 @@ namespace Raven.Server.Json
             public int SizeInBytes;
         }
 
-        public UnmanagedBuffersPool(string databaseName)
+        public UnmanagedBuffersPool(string debugTag)
         {
-            _databaseName = databaseName;
+            _debugTag = debugTag;
             _freeSegments = new ConcurrentStack<AllocatedMemoryData>[32];
             for (int i = 0; i < _freeSegments.Length; i++)
             {
@@ -41,9 +41,9 @@ namespace Raven.Server.Json
         // todo: add test that test concurrent handle low memory and allocations
         public void HandleLowMemory()
         {
-            _log.Info("HandleLowMemory was called, will release all pooled memory for: {0}", _databaseName);
+            _log.Info("HandleLowMemory was called, will release all pooled memory for: {0}", _debugTag);
             var size = FreeAllPooledMemory();
-            _log.Info("HandleLowMemory freed {1:#,#} bytes in {0}", _databaseName, size);
+            _log.Info("HandleLowMemory freed {1:#,#} bytes in {0}", _debugTag, size);
 
         }
 
@@ -79,16 +79,16 @@ namespace Raven.Server.Json
             }
             return new LowMemoryHandlerStatistics
             {
-                DatabaseName = _databaseName,
+                DatabaseName = _debugTag,
                 EstimatedUsedMemory = size,
-                Name = "UnmanagedBufferPool for " + _databaseName
+                Name = "UnmanagedBufferPool for " + _debugTag
             };
         }
 
         ~UnmanagedBuffersPool()
         {
             if (_isDisposed == false)
-                _log.Warn("UnmanagedBuffersPool for {0} wasn't propertly disposed", _databaseName);
+                _log.Warn("UnmanagedBuffersPool for {0} wasn't propertly disposed", _debugTag);
             Dispose();
         }
 

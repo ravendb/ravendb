@@ -30,7 +30,7 @@ namespace Raven.Server.Json
             ToDisk = ValidateDouble | CompressStrings |  CompressSmallStrings
         }
 
-        internal BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string documentId, IJsonParser reader, JsonParserState state)
+        public BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string documentId, IJsonParser reader, JsonParserState state)
         {
             _reader = reader;
             _stream = context.GetStream(documentId);
@@ -78,12 +78,12 @@ namespace Raven.Server.Json
             return _stream.CopyTo(ptr);
         }
 
-        public unsafe BlittableJsonReaderObject CreateReader()
+        public unsafe BlittableJsonReaderObject CreateReader(CachedProperties cachedProperties = null)
         {
             byte* ptr;
             int size;
             _stream.EnsureSingleChunk(out ptr, out size);
-            return new BlittableJsonReaderObject(ptr, size, _context, this);
+            return new BlittableJsonReaderObject(ptr, size, _context, this, cachedProperties);
         }
 
         public unsafe BlittableJsonReaderArray CreateArrayReader()
@@ -100,14 +100,20 @@ namespace Raven.Server.Json
         /// </summary>
         public async Task ReadObject()
         {
+            var writeToken = await ReadPartialObject();
+
+            FinalizeDocument(writeToken);
+        }
+
+        public async Task<WriteToken> ReadPartialObject()
+        {
             await _reader.ReadAsync();
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
 
             // Write the whole object recursively
             var writeToken = await BuildObject();
-
-            FinalizeDocument(writeToken);
+            return writeToken;
         }
 
         /// <summary>
@@ -147,7 +153,30 @@ namespace Raven.Server.Json
             var token = writeToken.WrittenToken;
             var rootOffset = writeToken.ValuePos;
 
-            // Write the property names and register it's positions
+            var propertiesStart = WritePropertyNames(rootOffset);
+
+            WriteNumber(rootOffset, sizeof (int));
+            WriteNumber(propertiesStart, sizeof (int));
+            WriteNumber((int) token, sizeof (byte));
+        }
+
+
+        public void FinalizeDocumentWithoutProperties(WriteToken writeToken, int propertiesChemaVersion)
+        {
+            if(propertiesChemaVersion <= 0)
+                throw new ArgumentException("Properties schema version must be a positive number", nameof(propertiesChemaVersion));
+
+            var token = writeToken.WrittenToken;
+            var rootOffset = writeToken.ValuePos;
+
+            WriteNumber(rootOffset, sizeof(int));
+            WriteNumber(-propertiesChemaVersion /* negative value here is the schema version */, sizeof(int));
+            WriteNumber((int)token, sizeof(byte));
+        }
+
+        private int WritePropertyNames(int rootOffset)
+        {
+            // Write the property names and register their positions
             var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
             for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
@@ -169,9 +198,7 @@ namespace Raven.Server.Json
             {
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
-            WriteNumber(rootOffset, sizeof (int));
-            WriteNumber(propertiesStart, sizeof (int));
-            WriteNumber((int) token, sizeof (byte));
+            return propertiesStart;
         }
 
 
