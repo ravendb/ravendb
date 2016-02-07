@@ -99,7 +99,9 @@ class editDocument extends viewModelBase {
 
         this.metadata.subscribe((meta: documentMetadata) => this.metadataChanged(meta));
         this.editedDocId = ko.computed(() => this.metadata() ? this.metadata().id : '');
-        this.editedDocId.subscribe((docId: string)=> ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), docId)));
+        this.editedDocId.subscribe((docId: string) =>
+            ko.postbox.publish("SetRawJSONUrl", docId ? appUrl.forDocumentRawData(this.activeDatabase(), docId) : "")
+        );
 
         // When we programmatically change the document text or meta text, push it into the editor.
         this.isEditingMetadata.subscribe(()=> {
