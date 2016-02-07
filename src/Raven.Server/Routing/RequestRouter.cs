@@ -20,6 +20,7 @@ namespace Raven.Server.Routing
     public class RequestRouter
     {
         private readonly Trie<RouteInformation> _trie;
+        private ServerStore _serverStore;
 
         public RequestRouter(Dictionary<string, RouteInformation> routes)
         {
@@ -33,7 +34,7 @@ namespace Raven.Server.Routing
 
             var method = context.Request.Method.Trim();
 
-            var tryMatch = _trie.TryMatch(method, context.Request.Path);
+            var tryMatch = _trie.TryMatch(method, context.Request.Path.Value);
             if (tryMatch.Value == null)
             {
                 context.Response.StatusCode = 400;
@@ -41,11 +42,13 @@ namespace Raven.Server.Routing
                 return;
             }
 
-            var serverStore = context.ApplicationServices.GetRequiredService<ServerStore>();
+            if(_serverStore == null)// okay that this is not thread safe, end up with same value
+                _serverStore = context.ApplicationServices.GetRequiredService<ServerStore>();
+
             var reqCtx = new RequestHandlerContext
             {
                 HttpContext = context,
-                ServerStore = serverStore,
+                ServerStore = _serverStore,
                 RouteMatch = tryMatch.Match,
             };
 
@@ -53,7 +56,7 @@ namespace Raven.Server.Routing
             if (handler == null)
             {
                 context.Response.StatusCode = 400;
-                await context.Response.WriteAsync("There is no handler for path: " + context.Request.Path + " with method: " + context.Request.Method);
+                await context.Response.WriteAsync("There is no handler for {context.Request.Method} {context.Request.Path}");
                 return;
             }
 
