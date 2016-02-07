@@ -77,7 +77,8 @@ class indexAceAutoCompleteProvider {
         return deferred;
     }
 
-    getIndexMapCompleterValues(editor: any, session: any, pos: AceAjax.Position): JQueryPromise<any> {
+    getIndexMapCompleterValues(editor: any, session: any, pos: AceAjax.Position): JQueryPromise<any> { 
+    /* TODO
         var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
         var completedToken: AceAjax.TokenInfo;
         var TokenIterator = require("ace/token_iterator").TokenIterator;
@@ -146,6 +147,8 @@ class indexAceAutoCompleteProvider {
         }
 
         return returnedDeferred;
+        */
+        return null;
     }
 
     indexMapCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {

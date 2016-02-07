@@ -99,6 +99,7 @@ class gapFinder {
     }
 }
 class metrics extends viewModelBase { 
+/*TODO
 
     static reduce_bar_names = 
         ['linq_map_bar', 'linq_reduce_bar',
@@ -844,7 +845,7 @@ class metrics extends viewModelBase {
                 .attr('class', 'batchRange')
                 .on('click', self.mapBatchInfoClicked.bind(self))
             .append('rect')
-                .attr('x', (d: indexingBatchInfoDto) => self.xScale(d.StartedAtDate))
+                .attr('x', d => self.xScale(d.StartedAtDate))
                 .attr('y', (d: indexingBatchInfoDto) => d3.min(d.PerfStats, v => self.yMapScale(v.indexName)))
                 .attr('width', 0)
                 .attr('height', (d: indexingBatchInfoDto) => {
@@ -1202,7 +1203,7 @@ class metrics extends viewModelBase {
         gaps.exit().remove();
 
         var patternWidth = 20;
-        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length + 1 /* prefetch */) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between * 2;
+        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length + 1 /* prefetch *) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between * 2;
 
         gaps.select('text')
             .transition()
@@ -1404,7 +1405,7 @@ class metrics extends viewModelBase {
         }
 
         $("#indexingPerformance").toggleFullScreen();
-    }
+    }*/
 }
 
 export = metrics; 

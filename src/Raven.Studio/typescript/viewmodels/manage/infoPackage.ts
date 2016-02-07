@@ -57,6 +57,7 @@ class stackInfo {
 }
 
 class infoPackage extends viewModelBase {
+/*TODO:
     diagonal: any;
 
     node: D3.Selection = null; // nodes selection
@@ -451,7 +452,7 @@ class infoPackage extends viewModelBase {
         " .box { fill: rgb(21, 140, 186); fill-opacity: 0.2; stroke: rgb(21, 140, 186); stroke-width: 1.5px; }\n" +
         " .notUserCode { fill-opacity: 0.4; }\n" +
         " .headerLine { stroke: rgb(21, 140, 186); stroke-width: 1.5px; }";
-
+*/
 }
 
 export = infoPackage;

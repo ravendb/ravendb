@@ -26,7 +26,7 @@ import d3 = require("d3");
 import nv = require('nvd3');
 
 class visualizer extends viewModelBase {
-
+/* TODO
     static chooseIndexText = "Select an index";
     indexes = ko.observableArray<indexDataDto>();
     indexName = ko.observable(visualizer.chooseIndexText);
@@ -796,7 +796,7 @@ class visualizer extends viewModelBase {
     '.link { fill: none; stroke: rgb(204, 204, 204); stroke-width: 1.5px; }\n' +
     'text { pointer-events: none; text-anchor: middle; }\n' +
     '.link.selected { fill: none; stroke: black; stroke-width: 2.5px; } \n';
-
+*/
 }
 
 export = visualizer;

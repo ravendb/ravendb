@@ -14,7 +14,7 @@ import nv = require('nvd3');
 import dagre = require('dagre');
 
 class replicationStats extends viewModelBase {
-
+/*TODO
     static inlineCss = " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
                            " path.link.error {  stroke: #df382c; } " +
                            " svg:not(.active):not(.ctrl) path.link { cursor: pointer; } " +
@@ -651,7 +651,7 @@ class replicationStats extends viewModelBase {
 
     replicationStatToggle() {
         setTimeout(() => this.redrawGraph(), 1);
-    }
+    }*/
 }
 
 export = replicationStats;

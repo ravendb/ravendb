@@ -7,6 +7,7 @@ class queryUtil {
     public static queryCompleter(indexFields: KnockoutObservableArray<string>, selectedIndex: KnockoutObservable<string>, dynamicPrefix: string, activeDatabase: KnockoutObservable<database>, editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
 
+        /* TODO
         if (!currentToken || typeof currentToken.type === "string") {
             // if in beginning of text or in free text token
             if (!currentToken || currentToken.type === "text") {
@@ -63,7 +64,7 @@ class queryUtil {
                     }
                 }
             }
-        }
+        }*/
     }
     
 }

@@ -9,7 +9,7 @@ import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSetti
 import changeSubscription = require('common/changeSubscription');
 
 class sqlReplicationPerfStats extends viewModelBase {
-
+/* TODO
     hasReplicationEnabled = ko.observable(false);
 
     jsonData: any[] = [];
@@ -403,7 +403,7 @@ class sqlReplicationPerfStats extends viewModelBase {
             .entries(statsInline);
         return byKey.map(d => d.key);
     }
-
+    */
 }
 
 export = sqlReplicationPerfStats;
