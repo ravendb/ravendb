@@ -160,12 +160,12 @@ namespace Raven.Server.Documents
             foreach (var result in table.SeekByPrimaryKey(prefixSlice))
             {
                 var document = TableValueToDocument(context, result);
-                string documenKey = document.Key;
-                if (documenKey.StartsWith(prefix) == false)
+                string documentKey = document.Key;
+                if (documentKey.StartsWith(prefix) == false)
                     break;
 
-                if (!WildcardMatcher.Matches(matches, documenKey) ||
-                    WildcardMatcher.MatchesExclusion(exclude, documenKey))
+                if (!WildcardMatcher.Matches(matches, documentKey) ||
+                    WildcardMatcher.MatchesExclusion(exclude, documentKey))
                     continue;
 
                 if (start > 0)
