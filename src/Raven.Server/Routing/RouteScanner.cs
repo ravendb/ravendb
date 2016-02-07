@@ -27,24 +27,25 @@ namespace Raven.Server.Routing
 
             var actions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
                 .SelectMany(type => type.GetMembers())
-                .Where(type => type.IsDefined(typeof (RavenActionAttribute)))
+                .Where(type => type.IsDefined(typeof(RavenActionAttribute)))
                 .ToList();
 
             foreach (var memberInfo in actions)
             {
-                var route = memberInfo.GetCustomAttributes<RavenActionAttribute>().Single();
-
-                RouteInformation routeInfo;
-                var routeKey = route.Method + route.Path;
-                if (routes.TryGetValue(routeKey, out routeInfo) == false)
+                foreach (var route in memberInfo.GetCustomAttributes<RavenActionAttribute>())
                 {
-                    routes[routeKey] = routeInfo = new RouteInformation(route.Method, route.Path);
+                    RouteInformation routeInfo;
+                    var routeKey = route.Method + route.Path;
+                    if (routes.TryGetValue(routeKey, out routeInfo) == false)
+                    {
+                        routes[routeKey] = routeInfo = new RouteInformation(route.Method, route.Path);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"A duplicate route found: {routeKey} on {memberInfo.DeclaringType}.{memberInfo.Name}");
+                    }
+                    routeInfo.Build(memberInfo);
                 }
-                else
-                {
-                    throw new InvalidOperationException($"A duplicate route found: {routeKey} on {memberInfo.DeclaringType}.{memberInfo.Name}");
-                }
-                routeInfo.Build(memberInfo);
             }
 
             return routes;

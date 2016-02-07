@@ -1,44 +1,37 @@
 {
   "version": "4.0.0-*",
-
-  "compilationOptions": {
-    "emitEntryPoint": true,
-    "allowUnsafe": true
-  },
-
-  "dependencies": {
-    "Raven.Client": "4.0.0-*",
-    "Raven.Server": "4.0.0-*",
-    "Raven.Tests.Core": "4.0.0-*"
-  },
-
   "commands": {
     "Tryouts": "Tryouts"
   },
+  "compilationOptions": {
+    "allowUnsafe": true,
+    "warningsAsErrors": true,
+    "emitEntryPoint": true
+  },
+  "resource": [
+  ],
 
   "frameworks": {
     "dnxcore50": {
       "dependencies": {
-        "Microsoft.CSharp": "4.0.1-beta-23516",
-        "Sparrow": "4.0.0-*",
-        "System.Collections": "4.0.11-beta-23516",
-        "System.Console": "4.0.0-beta-23516",
-        "System.Linq": "4.0.1-beta-23516",
-        "System.Threading": "4.0.11-beta-23516",
-        "Voron": "4.0.0-*",
-        "xunit": "2.1.0",
+        "xunit": "2.2.0-beta1-build3239",
         "xunit.runner.dnx": "2.1.0-rc1-build204",
 
+
+        "Microsoft.CSharp": "4.0.1-beta-23516",
+        "System.Console": "4.0.0-beta-23516",
         "Microsoft.AspNet.Hosting": "1.0.0-rc1-final",
         "Microsoft.AspNet.Server.Kestrel": "1.0.0-rc1-final",
         "Microsoft.AspNet.Mvc": "6.0.0-rc1-final",
-
         "Microsoft.Extensions.Configuration.FileProviderExtensions": "1.0.0-rc1-final",
         "Microsoft.Extensions.Configuration.Json": "1.0.0-rc1-final",
-        "System.Diagnostics.Contracts": "4.0.1-beta-23516",
+        "Microsoft.AspNet.WebSockets.Server": "1.0.0-rc1-final",
+
+        "System.Linq": "4.0.1-beta-23516",
 
         "Microsoft.Win32.Primitives": "4.0.1-beta-23516",
 
+        "System.Collections": "4.0.11-beta-23516",
         "System.Collections.Immutable": "1.1.38-beta-23516",
         "System.Collections.Concurrent": "4.0.11-beta-23516",
 
@@ -54,7 +47,7 @@
         "System.IO.FileSystem.DriveInfo": "4.0.0-beta-23516",
         "System.IO.FileSystem.Primitives": "4.0.1-beta-23516",
 
-
+        "System.Threading": "4.0.11-beta-23516",
         "System.Threading.Tasks": "4.0.11-beta-23516",
         "System.Threading.Thread": "4.0.0-beta-23516",
         "System.Threading.Overlapped": "4.0.1-beta-23516",
@@ -65,8 +58,19 @@
         "System.Runtime": "4.0.21-beta-23516",
 
         "System.Reflection.TypeExtensions": "4.1.0-beta-23516",
+
         "System.Runtime.InteropServices.RuntimeInformation": "4.0.0-beta-23516"
+
+
       }
     }
+  },
+  "dependencies": {
+    "Raven.Client": "4.0.0-*",
+    "Raven.Server": "4.0.0-*",
+    "Sparrow": "4.0.0-*",
+    "Voron": "4.0.0-*",
+    "FastTests": "4.0.0-*",
+    "Raven.Tests.Core": "4.0.0-*"
   }
 }

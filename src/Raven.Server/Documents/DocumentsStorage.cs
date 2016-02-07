@@ -10,6 +10,7 @@ using Raven.Server.Json.Parsing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Voron;
+using Voron.Data;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -29,10 +30,11 @@ namespace Raven.Server.Documents
         // no need to use thread safe ops
         private long _lastEtag;
 
-
         public string DataDirectory;
         public ContextPool ContextPool;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
+        private const string NoCollectionSpecified = "Raven/Empty";
+        private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
         public DocumentsStorage(string name, RavenConfiguration configuration)
         {
@@ -108,6 +110,9 @@ namespace Raven.Server.Documents
                 {
                     tx.CreateTree("Docs");
                     tx.CreateTree("Identities");
+
+                    _docsSchema.Create(tx, SystemDocumentsCollection);
+
                     _lastEtag = ReadLastEtag(tx);
 
                     tx.Commit();
@@ -212,7 +217,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsAfter(RavenOperationContext context, string collection, long etag, int start, int take)
         {
-            var table = new Table(_docsSchema, collection, context.Transaction);
+            var table = new Table(_docsSchema, "@"+collection, context.Transaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(_docsSchema.FixedSizeIndexes["CollectionEtags"], etag))
@@ -370,7 +375,7 @@ namespace Raven.Server.Documents
                 var etag = _lastEtag;
                 etagTree.Add(LastEtagSlice, new Slice((byte*) &etag, sizeof (long)));
             }
-            var collectionName = GetCollectionName(doc.Data);
+            var collectionName = GetCollectionName(key, doc.Data);
             var table = new Table(_docsSchema, collectionName, context.Transaction);
             table.Delete(doc.StorageId);
         }
@@ -384,7 +389,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put",
                     nameof(context));
 
-            var collectionName = GetCollectionName(document);
+            var collectionName = GetCollectionName(key, document);
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -428,15 +433,20 @@ namespace Raven.Server.Documents
             return newEtag;
         }
 
-        private static string GetCollectionName(BlittableJsonReaderObject document)
+        private static string GetCollectionName(string key, BlittableJsonReaderObject document)
         {
-            BlittableJsonReaderObject metadata;
             string collectionName;
-            if (document.TryGet(Constants.Metadata, out metadata) == false ||
+            BlittableJsonReaderObject metadata;
+            if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+            {
+                collectionName = SystemDocumentsCollection;
+            }
+            else if (document.TryGet(Constants.Metadata, out metadata) == false ||
                 metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
             {
-                collectionName = "@<no-collection>";
+                collectionName = NoCollectionSpecified;
             }
+            
             // we have to have some way to distinguish between dynamic tree names
             // and our fixed ones, otherwise a collection call Docs will corrupt our state
             return "@" + collectionName;
@@ -452,6 +462,39 @@ namespace Raven.Server.Documents
         {
             var fst = context.Transaction.FixedTreeFor(_docsSchema.FixedSizeIndexes["AllDocsEtags"].NameAsSlice);
             return fst.NumberOfEntries;
+        }
+
+        public class CollectionStat
+        {
+            public string Name;
+            public long Count;
+        }
+
+        public IEnumerable<CollectionStat> GetCollections(RavenOperationContext context)
+        {
+            using (var it = context.Transaction.LowLevelTransaction.RootObjects.Iterate())
+            {
+                if (it.Seek(Slice.BeforeAllKeys) == false)
+                    yield break;
+                do
+                {
+                    if(context.Transaction.GetRootObjectType(it.CurrentKey) != RootObjectType.VariableSizeTree)
+                        continue;
+
+                    if (it.CurrentKey[0] != '@') // collection prefix
+                        continue;
+
+                    var collectionTableName = it.CurrentKey.ToString();
+                    var collectionTable = new Table(_docsSchema, collectionTableName,context.Transaction);
+                   
+
+                    yield return new CollectionStat
+                    {
+                        Name = collectionTableName.Substring(1),
+                        Count = collectionTable.NumberOfEntries
+                    };
+                } while (it.MoveNext());
+            }
         }
     }
 }

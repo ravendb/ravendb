@@ -4,8 +4,16 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Web.Studo
 {
-    public class StudioServerConfigHandler : RequestHandler
+    public class StudioTasksHandler : RequestHandler
     {
+        [RavenAction("/databases/*/studio-tasks/config", "GET")]
+        public Task Config()
+        {
+            //TODO: implement
+            HttpContext.Response.StatusCode = 404;
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/studio-tasks/server-configs", "GET")]
         public Task Get()
         {

@@ -34,11 +34,32 @@ namespace Raven.Server.Json
 
         public int Count => _count;
 
-        public object this[int index] => GetByIndex(index);
+        public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
 
-        public object GetByIndex(int index)
+        public T GetByIndex<T>(int index)
         {
-            return GetValueTokenTupleByIndex(index).Item1;
+            var obj = GetValueTokenTupleByIndex(index).Item1;
+            T result;
+            BlittableJsonReaderObject.ConvertType(obj, out result);
+            return result;
+        }
+
+        public string GetStringByIndex(int index)
+        {
+            var obj = GetValueTokenTupleByIndex(index).Item1;
+            if (obj == null)
+                return null;
+
+            var lazyStringValue = obj as LazyStringValue;
+            if (lazyStringValue != null)
+                return lazyStringValue;
+            var lazyCompressedStringValue = obj as LazyCompressedStringValue;
+            if (lazyCompressedStringValue != null)
+                return lazyCompressedStringValue;
+            string result;
+            BlittableJsonReaderObject.ConvertType(obj, out result);
+            return result;
+
         }
 
         public Tuple<object, BlittableJsonToken> GetValueTokenTupleByIndex(int index)

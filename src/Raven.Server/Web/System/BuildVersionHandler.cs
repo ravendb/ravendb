@@ -23,19 +23,16 @@ namespace Raven.Server.Web.System
             using (var pool = new UnmanagedBuffersPool("build/version"))
             using (var context = new RavenOperationContext(pool))
             {
-                var result = new DynamicJsonValue
+                var stream = new MemoryStream();
+                var writer = new BlittableJsonTextWriter(context, stream);
+                await context.WriteAsync(writer, new DynamicJsonValue
                 {
                     ["BuildVersion"] = ServerVersion.Build,
                     ["ProductVersion"] = ServerVersion.Version,
                     ["CommitHash"] = ServerVersion.CommitHash
-                };
-                using (var doc = await context.ReadObject(result, "build/version"))
-                {
-                    var memoryStream = new MemoryStream();
-                    doc.WriteTo(memoryStream);
-                    var versionBuffer = memoryStream.ToArray();
-                    return versionBuffer;
-                }
+                });
+                var versionBuffer = stream.ToArray();
+                return versionBuffer;
             }
         }
 

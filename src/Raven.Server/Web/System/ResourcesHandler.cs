@@ -42,17 +42,24 @@ namespace Raven.Server.Web.System
                 context.Transaction = context.Environment.ReadTransaction();
                 var writer = new BlittableJsonTextWriter(context, ResponseBodyStream());
                 writer.WriteStartArray();
+                var first = true;
                 foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
                 {
-                    db.Data.Modifications = new DynamicJsonValue(db.Data)
+                    if(first == false)
+                        writer.WriteComma();
+                    first = false;
+
+                    //TODO: Actually handle this properly
+                    var doc = new DynamicJsonValue
                     {
-                        ["Id"] = db.Key.Substring(prefix.Length),
-                        [Constants.Metadata] = new DynamicJsonValue
-                        {
-                            ["@id"] = db.Key
-                        }
+                        ["Bundles"] = new DynamicJsonArray(),
+                        ["Name"] = db.Key.Substring(prefix.Length),
+                        ["RejectClientsEnabled"] = false,
+                        ["IndexingDisabled"] = false,
+                        ["Disabled"] = false,
+                        ["IsAdminCurrentTenant"] = true
                     };
-                    await context.WriteAsync(writer, db.Data);
+                    await context.WriteAsync(writer, doc);
                 }
                 writer.WriteEndArray();
                 writer.Flush();

@@ -357,7 +357,6 @@ namespace Raven.Server.Json
 
         public async Task WriteArrayAsync(RavenOperationContext context, JsonParserState state, IJsonParser parser)
         {
-            await parser.ReadAsync();
             if (state.CurrentTokenType != JsonParserToken.StartArray)
                 throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
 
@@ -372,9 +371,6 @@ namespace Raven.Server.Json
                 if (first == false)
                     WriteComma();
                 first = false;
-
-
-                await parser.ReadAsync();
 
                 await WriteValueAsync(context, state, parser);
             }

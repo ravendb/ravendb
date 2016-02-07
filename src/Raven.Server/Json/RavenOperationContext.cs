@@ -263,7 +263,7 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    await writer.Run();
+                    await writer.ReadObject();
                     _disposables.Add(writer);
                     return writer.CreateReader();
                 }
@@ -290,9 +290,32 @@ namespace Raven.Server.Json
                 try
                 {
                     CachedProperties.NewDocument();
-                    await writer.Run();
+                    await writer.ReadObject();
                     _disposables.Add(writer);
                     return writer.CreateReader();
+                }
+                catch (Exception)
+                {
+                    writer.Dispose();
+                    throw;
+                }
+            }
+        }
+
+
+        public async Task<BlittableJsonReaderArray> ParseArrayToMemory(Stream stream, string documentId, 
+            BlittableJsonDocumentBuilder.UsageMode mode)
+        {
+            var state = new JsonParserState();
+            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, documentId))
+            {
+                var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
+                try
+                {
+                    CachedProperties.NewDocument();
+                    await writer.ReadArray();
+                    _disposables.Add(writer);
+                    return writer.CreateArrayReader();
                 }
                 catch (Exception)
                 {
@@ -316,7 +339,7 @@ namespace Raven.Server.Json
                     try
                     {
                         CachedProperties.NewDocument();
-                        await writer.Run();
+                        await writer.ReadObject();
                         _disposables.Add(writer);
                         reader = writer.CreateReader();
                     }
@@ -351,12 +374,33 @@ namespace Raven.Server.Json
 
         public async Task WriteAsync(BlittableJsonTextWriter writer, BlittableJsonReaderObject json)
         {
+            await WriteAsyncInternal(writer, json);
+        }
+
+        private async Task WriteAsyncInternal(BlittableJsonTextWriter writer, object json)
+        {
             var state = new JsonParserState();
             using (var parser = new ObjectJsonParser(state, json, this))
             {
                 await parser.ReadAsync();
 
                 await writer.WriteObjectAsync(this, state, parser);
+            }
+        }
+
+        public async Task WriteAsync(BlittableJsonTextWriter writer, DynamicJsonValue json)
+        {
+            await WriteAsyncInternal(writer, json);
+        }
+
+        public async Task WriteAsync(BlittableJsonTextWriter writer, DynamicJsonArray json)
+        {
+            var state = new JsonParserState();
+            using (var parser = new ObjectJsonParser(state, json, this))
+            {
+                await parser.ReadAsync();
+
+                await writer.WriteArrayAsync(this, state, parser);
             }
         }
     }
