@@ -348,7 +348,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public void Delete(RavenOperationContext context, string key, long? expectedEtag)
+        public bool Delete(RavenOperationContext context, string key, long? expectedEtag)
         {
             var doc = Get(context, key);
             if (doc == null)
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents
                 if (expectedEtag != null)
                     throw new ConcurrencyException(
                         $"Document {key} does not exists, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
-                return;
+                return false;
             }
             if (expectedEtag != null && doc.Etag != expectedEtag)
             {
@@ -373,6 +373,8 @@ namespace Raven.Server.Documents
             var collectionName = GetCollectionName(key, doc.Data);
             var table = new Table(_docsSchema, collectionName, context.Transaction);
             table.Delete(doc.StorageId);
+
+            return true;
         }
 
         public long Put(RavenOperationContext context, string key, long? expectedEtag,
