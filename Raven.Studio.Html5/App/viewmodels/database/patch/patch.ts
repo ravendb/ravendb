@@ -27,6 +27,7 @@ import pagedResultSet = require("common/pagedResultSet");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
 
+
 class patch extends viewModelBase {
 
     displayName = "patch";
@@ -396,7 +397,7 @@ class patch extends viewModelBase {
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 index = "Raven/DocumentsByEntityName";
-                query = "Tag:" + this.patchDocument().selectedItem();
+                query = "Tag:" + queryUtil.escape(this.patchDocument().selectedItem());
                 break;
             case "Index":
                 index = this.patchDocument().selectedItem();

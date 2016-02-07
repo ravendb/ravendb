@@ -4,6 +4,26 @@ import database = require("models/resources/database");
 
 class queryUtil {
 
+    /**
+     * Escapes lucene query
+     * @param query query to escape
+     */
+    public static escape(query: string) {
+        var output = "";
+
+        for (var i = 0; i < query.length; i++) {
+            var c = query.charAt(i);
+            if (c === '\\' || c === '+' || c === '-' || c === '!' || c === '(' || c === ')'
+                || c === ':' || c === '^' || c === '[' || c === ']' || c === '\"'
+                || c === '{' || c === '}' || c === '~' || c === '*' || c === '?'
+                || c === '|' || c === '&') {
+                output += "\\";
+            }
+            output += c;
+        }
+        return output;
+    }
+
     public static queryCompleter(indexFields: KnockoutObservableArray<string>, selectedIndex: KnockoutObservable<string>, dynamicPrefix: string, activeDatabase: KnockoutObservable<database>, editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
         var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
 
