@@ -34,14 +34,14 @@ class periodicExport extends viewModelBase {
         $("#awsDecryptFailureSpan").popover({
             html: true,
             trigger: "hover",
-            container: $("body"),
+            container: "body",
             content: content
         });
 
         $("#azureDecryptFailureSpan").popover({
             html: true,
             trigger: "hover",
-            container: $("body"),
+            container: "body",
             content: content
         });
     }

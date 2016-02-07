@@ -15,7 +15,7 @@ class getSyncIncomingActivitiesCommand extends commandBase {
         var pageSize = 50;
 
         this.getIncomingActivity(start, pageSize)
-            .done(x => doneTask.resolve(x.Items.map(x => new synchronizationDetail(x, "Pending", x.Type))))
+            .done(x => doneTask.resolve(x.Items.map(y => new synchronizationDetail(y, "Pending", y.Type))))
             .fail((xhr) => {
                 this.reportError("Failed to get synchronization incoming activities.");
                 doneTask.reject(xhr);

@@ -15,7 +15,7 @@ class logs extends viewModelBase {
     fatalLogCount: KnockoutComputed<number>;
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
-    now = ko.observable<Moment>();
+    now = ko.observable<moment.Moment>();
     updateNowTimeoutHandle = 0;
     filteredLoggers = ko.observableArray<string>();
     sortColumn = ko.observable<string>("TimeStamp");

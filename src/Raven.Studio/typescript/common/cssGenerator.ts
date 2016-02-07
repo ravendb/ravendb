@@ -1,4 +1,4 @@
-/// <reference path="../../typings/knockout/knockout.d.ts" />
+/// <reference path="../../typings/tsd.d.ts" />
 import resource = require("models/resources/resource");
 
 class cssGenerator {

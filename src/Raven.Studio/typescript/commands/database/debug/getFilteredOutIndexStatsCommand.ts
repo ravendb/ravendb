@@ -1,6 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import d3 = require("d3/d3");
+import d3 = require("d3");
 
 class getFilteredOutIndexStatsCommand extends commandBase {
 

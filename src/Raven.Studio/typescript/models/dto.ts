@@ -1529,3 +1529,8 @@ interface filteredOutIndexStatDto {
     TimestampParsed?: Date;
     IndexName: string;
 }
+
+interface generatedCodeDto {
+    Document: string;
+    Code: string;
+}

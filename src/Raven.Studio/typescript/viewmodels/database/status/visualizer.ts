@@ -1,4 +1,4 @@
-/// <reference path="../../../../typings/jquery.fullscreen/jquery.fullscreen.d.ts"/>
+/// <reference path="../../../../typings/tsd.d.ts"/>
 
 import app = require("durandal/app");
 
@@ -22,11 +22,11 @@ import queryIndexDebugReduceCommand = require("commands/database/debug/queryInde
 import queryIndexDebugAfterReduceCommand = require("commands/database/debug/queryIndexDebugAfterReduceCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 
-import d3 = require('d3/d3');
+import d3 = require("d3");
 import nv = require('nvd3');
 
 class visualizer extends viewModelBase {
-
+/* TODO
     static chooseIndexText = "Select an index";
     indexes = ko.observableArray<indexDataDto>();
     indexName = ko.observable(visualizer.chooseIndexText);
@@ -54,7 +54,7 @@ class visualizer extends viewModelBase {
     currentlySelectedLinks = d3.set([]);
 
     tree: visualizerDataObjectNodeDto = null;
-    xScale: D3.Scale.LinearScale;
+    xScale: d3.scale.Linear;
 
     editIndexUrl: KnockoutComputed<string>;
     runQueryUrl: KnockoutComputed<string>;
@@ -74,8 +74,8 @@ class visualizer extends viewModelBase {
     boxWidth: number;
     boxSpacing = 30;
 
-    node: D3.Selection = null; // nodes selection
-    link: D3.Selection = null; // links selection
+    node: d3.Selection = null; // nodes selection
+    link: d3.Selection = null; // links selection
 
     hasSaveAsPngSupport = ko.computed(() => {
         return !(navigator && navigator.msSaveBlob);
@@ -436,7 +436,7 @@ class visualizer extends viewModelBase {
             .attr("id", visualizer.makeLinkId)
             .attr("d", this.diagonal);
 
-        var enteringNodes = (<D3.UpdateSelection>this.node)
+        var enteringNodes = (<d3.selection.Update>this.node)
             .enter()
             .append("g")
             .attr("id", visualizer.makeNodeId)
@@ -796,7 +796,7 @@ class visualizer extends viewModelBase {
     '.link { fill: none; stroke: rgb(204, 204, 204); stroke-width: 1.5px; }\n' +
     'text { pointer-events: none; text-anchor: middle; }\n' +
     '.link.selected { fill: none; stroke: black; stroke-width: 2.5px; } \n';
-
+*/
 }
 
 export = visualizer;

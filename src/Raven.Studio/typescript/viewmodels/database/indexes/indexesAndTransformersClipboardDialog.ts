@@ -41,7 +41,7 @@ class indexesAndTransformersClipboardDialog extends dialogViewModelBase {
                     .done((results: transformerDto[]) => {
                         this.transformers(results);
                     });
-            $.when(getTransformersPromise, getIndexDefinitionsPromise)
+            $.when<any>(getTransformersPromise, getIndexDefinitionsPromise)
                 .then(() => {
                     canActivateResult.resolve({ can: true });
                     var prettifySpacing = 4;

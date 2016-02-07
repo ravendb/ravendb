@@ -12,8 +12,6 @@ import getStatusDebugConfigCommand = require("commands/database/debug/getStatusD
 import extendRaftClusterCommand = require("commands/database/cluster/extendRaftClusterCommand");
 import initializeNewClusterCommand = require("commands/database/cluster/initializeNewClusterCommand");
 import leaveRaftClusterCommand = require("commands/database/cluster/leaveRaftClusterCommand");
-import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import clusterConfiguration = require("models/database/cluster/clusterConfiguration");
 import saveClusterConfigurationCommand = require("commands/database/cluster/saveClusterConfigurationCommand");
 import updateRaftClusterCommand = require("commands/database/cluster/updateRaftClusterCommand");
 import getClusterNodesStatusCommand = require("commands/database/cluster/getClusterNodesStatusCommand");
@@ -128,7 +126,7 @@ class cluster extends viewModelBase {
         var dialog = new editNodeConnectionInfoDialog(node, true);
         dialog.onExit()
             .done(nci => {
-                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci)
+                new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
             });

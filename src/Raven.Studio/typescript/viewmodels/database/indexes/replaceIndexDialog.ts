@@ -14,7 +14,7 @@ class replaceIndexDialog extends dialogViewModelBase {
     private dateMode = ko.observable<boolean>(false);
     private lastIndexedEtag = ko.observable<string>();
 
-    private replaceDate = ko.observable<Moment>(moment(new Date()));
+    private replaceDate = ko.observable<moment.Moment>(moment(new Date()));
     private replaceDateText = ko.computed(() => {
         return this.replaceDate() != null ? this.replaceDate().format("YYYY/MM/DD H:mm:ss") : "";
     });

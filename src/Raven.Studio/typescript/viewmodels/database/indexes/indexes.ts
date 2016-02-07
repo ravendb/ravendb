@@ -14,7 +14,7 @@ import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
 import indexesAndTransformersClipboardDialog = require("viewmodels/database/indexes/indexesAndTransformersClipboardDialog");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import forceIndexReplace = require("commands/database/index/forceIndexReplace");
@@ -140,7 +140,7 @@ class indexes extends viewModelBase {
 
         var replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute();
 
-        $.when(statsTask, replacementTask)
+        $.when<any>(statsTask, replacementTask)
             .done((statsTaskResult, replacements: indexReplaceDocument[]) => {
 
                 var stats: databaseStatisticsDto = statsTaskResult[0];

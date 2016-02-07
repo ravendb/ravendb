@@ -1,4 +1,4 @@
-/// <reference path="../../typings/knockout/knockout.d.ts" />
+/// <reference path="../../typings/tsd.d.ts" />
 
 class apiKeyLocalStorage {
 

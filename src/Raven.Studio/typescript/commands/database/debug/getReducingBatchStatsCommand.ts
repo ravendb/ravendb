@@ -1,6 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import d3 = require("d3/d3");
+import d3 = require("d3");
 
 class getReducingBatchStatsCommand extends commandBase {
 
@@ -13,7 +13,7 @@ class getReducingBatchStatsCommand extends commandBase {
         var args = { lastId: this.lastId };
         var inlinePerfStats = (entry) => {
             var result = [];
-            d3.map(entry).entries().forEach(e => {
+            d3.map<any[]>(entry).entries().forEach(e => {
                 e.value.forEach(s => {
                     result.push({
                         indexName: e.key,

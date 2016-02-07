@@ -54,14 +54,14 @@ class globalConfigPeriodicExport extends viewModelBase {
     bindPopover() {
         $("#onDiskHint").popover({
             html: true,
-            container: $("body"),
+            container: "body",
             trigger: "hover",
             content: "Database name will be appended to path in target configuration. <br /><br />" +
             "For value: <code>C:\\exports\\</code> target path will be: <code>C:\\exports\\{databaseName}</code>"
         });
         $(".folderHint").popover({
             html: true,
-            container: $("body"),
+            container: "body",
             trigger: "hover",
             content: "Folder name will be replaced with database name being exported in local configuration."
         });

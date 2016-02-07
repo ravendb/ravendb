@@ -1,12 +1,9 @@
-/// <reference path="../../../../../typings/d3/nvd3.d.ts" />
-/// <reference path="../../../../../typings/d3/d3.d.ts" />
-/// <reference path="../../../../../typings/d3/timelinesChart.d.ts" />
-/// <reference path="../../../../../typings/d3/timelines.d.ts" />
+/// <reference path="../../../../../typings/tsd.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import moment = require("moment");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import nv = require('nvd3');
 
 class indexPrefetches extends viewModelBase {

@@ -30,7 +30,7 @@ class getFilesystemRevisionsCommand extends commandBase {
         return doneTask;
     }
 
-    private fetchFiles(): JQueryPromise<file[]> {
+    private fetchFiles(): JQueryPromise<filesystemFileHeaderDto[]> {
         var args = {
             startsWith: '/',
             matches: '*/revisions/*',

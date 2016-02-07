@@ -10,8 +10,8 @@ class fieldRangeFilter extends searchDialogViewModel {
     label = "";
     from = ko.observable();
     to = ko.observable();
-    fromDate = ko.observable<Moment>();
-    toDate = ko.observable<Moment>();
+    fromDate = ko.observable<moment.Moment>();
+    toDate = ko.observable<moment.Moment>();
     constructor(label: string) {
         super([ko.observable("")]);
         datePickerBindingHandler.install();

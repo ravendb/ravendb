@@ -1,4 +1,4 @@
-/// <reference path="../../../../typings/d3/dagre.d.ts" />
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import getReplicationStatsCommand = require("commands/database/replication/getReplicationStatsCommand");
@@ -9,12 +9,12 @@ import fileDownloader = require("common/fileDownloader");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import getReplicationTopology = require("commands/database/replication/getReplicationTopology");
 import getReplicationPerfStatsCommand = require("commands/database/debug/getReplicationPerfStatsCommand");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import nv = require('nvd3');
 import dagre = require('dagre');
 
 class replicationStats extends viewModelBase {
-
+/*TODO
     static inlineCss = " path.link { fill: none; stroke: #38b44a; stroke-width: 5px; cursor: default; } " +
                            " path.link.error {  stroke: #df382c; } " +
                            " svg:not(.active):not(.ctrl) path.link { cursor: pointer; } " +
@@ -33,12 +33,12 @@ class replicationStats extends viewModelBase {
     showLoadingIndicator = ko.observable(false); 
     replStatsDoc = ko.observable<replicationStatsDocumentDto>();
     hasNoReplStatsAvailable = ko.observable(false);
-    now = ko.observable<Moment>();
+    now = ko.observable<moment.Moment>();
     updateNowTimeoutHandle = 0;
 
     width: number;
     height: number;
-    svg: D3.Selection;
+    svg: d3.Selection;
     colors = d3.scale.category10();
     line = d3.svg.line().x(d => d.x).y(d => d.y);
 
@@ -92,7 +92,7 @@ class replicationStats extends viewModelBase {
     checkIfHasReplicationEnabled() {
         new getDatabaseSettingsCommand(this.activeDatabase())
             .execute()
-            .done(document => {
+            .done((document: any) => {
                 var documentSettings = document.Settings["Raven/ActiveBundles"];
                 this.hasReplicationEnabled(documentSettings.indexOf("Replication") !== -1);
             });
@@ -651,7 +651,7 @@ class replicationStats extends viewModelBase {
 
     replicationStatToggle() {
         setTimeout(() => this.redrawGraph(), 1);
-    }
+    }*/
 }
 
 export = replicationStats;
