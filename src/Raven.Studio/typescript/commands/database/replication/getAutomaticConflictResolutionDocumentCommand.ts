@@ -7,7 +7,7 @@ class getAutomaticConflictResolutionDocumentCommand extends getDocumentWithMetad
         super(global ? "Raven/Global/Replication/Config":"Raven/Replication/Config", db);
     }
 
-    execute(): JQueryPromise<replicationsDto> {
+    execute(): JQueryPromise<replicationConfigDto> {
         return super.execute();
     }
 }

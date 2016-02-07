@@ -17,8 +17,8 @@ class tasks extends viewModelBase {
         var exportFilesystemUrl = ko.computed(() => appUrl.forExportFilesystem(this.activeFilesystem()));
 
         var routeArray: DurandalRouteConfiguration[] = [
-            { route: ["filesystems/tasks", "filesystems/tasks/importFilesystem"], moduleId: "viewmodels/filesystem/tasks/importFilesystem", title: "Import File System", nav: true, hash: importFilesystemUrl },
-            { route: "filesystems/tasks/exportFilesystem", moduleId: "viewmodels/filesystem/tasks/exportFilesystem", title: "Export File System", nav: true, hash: exportFilesystemUrl }
+            { route: ["filesystems/tasks", "filesystems/tasks/importFilesystem"], moduleId: "viewmodels/filesystem/tasks/importFilesystem", title: "Import File System", nav: true, dynamicHash: importFilesystemUrl },
+            { route: "filesystems/tasks/exportFilesystem", moduleId: "viewmodels/filesystem/tasks/exportFilesystem", title: "Export File System", nav: true, dynamicHash: exportFilesystemUrl }
         ];
 
         this.router = durandalRouter.createChildRouter()

@@ -23,7 +23,7 @@ class getFilesystemFilesCommand extends commandBase {
         return doneTask;
     }
 
-    private fetchFiles(): JQueryPromise<file[]> {
+    private fetchFiles(): JQueryPromise<searchResults> {
         var level = 1;
         if (this.directory) {
             var slashMatches = this.directory.count("/");

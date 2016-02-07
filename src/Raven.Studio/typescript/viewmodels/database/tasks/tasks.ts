@@ -25,12 +25,12 @@ class tasks extends viewModelBase {
         var csvImportUrl = ko.computed(() => appUrl.forCsvImport(this.activeDatabase()));
 
         var routeArray: DurandalRouteConfiguration[] = [
-            { route: ['databases/tasks', 'databases/tasks/importDatabase'], moduleId: 'viewmodels/database/tasks/importDatabase', title: 'Import Database', nav: true, hash: importDatabaseUrl },
-            { route: 'databases/tasks/exportDatabase', moduleId: 'viewmodels/database/tasks/exportDatabase', title: 'Export Database', nav: true, hash: exportDatabaseUrl },
-            { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/database/tasks/toggleIndexing', title: 'Toggle Indexing', nav: this.activeDatabase().isAdminCurrentTenant(), hash: toggleIndexingUrl },
-            { route: 'databases/tasks/subscriptionsTask', moduleId: 'viewmodels/database/tasks/subscriptionsTask', title: 'Subscriptions', nav: this.activeDatabase().isAdminCurrentTenant(), hash: setAcknowledgedEtagUrl },
-            { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/database/tasks/createSampleData', title: 'Create Sample Data', nav: true, hash: sampleDataUrl },
-            { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/database/tasks/csvImport', title: 'CSV Import', nav: true, hash: csvImportUrl }
+            { route: ['databases/tasks', 'databases/tasks/importDatabase'], moduleId: 'viewmodels/database/tasks/importDatabase', title: 'Import Database', nav: true, dynamicHash: importDatabaseUrl },
+            { route: 'databases/tasks/exportDatabase', moduleId: 'viewmodels/database/tasks/exportDatabase', title: 'Export Database', nav: true, dynamicHash: exportDatabaseUrl },
+            { route: 'databases/tasks/toggleIndexing', moduleId: 'viewmodels/database/tasks/toggleIndexing', title: 'Toggle Indexing', nav: this.activeDatabase().isAdminCurrentTenant(), dynamicHash: toggleIndexingUrl },
+            { route: 'databases/tasks/subscriptionsTask', moduleId: 'viewmodels/database/tasks/subscriptionsTask', title: 'Subscriptions', nav: this.activeDatabase().isAdminCurrentTenant(), dynamicHash: setAcknowledgedEtagUrl },
+            { route: 'databases/tasks/sampleData', moduleId: 'viewmodels/database/tasks/createSampleData', title: 'Create Sample Data', nav: true, dynamicHash: sampleDataUrl },
+            { route: 'databases/tasks/csvImport', moduleId: 'viewmodels/database/tasks/csvImport', title: 'CSV Import', nav: true, dynamicHash: csvImportUrl }
         ];
 
         this.router = durandalRouter.createChildRouter()

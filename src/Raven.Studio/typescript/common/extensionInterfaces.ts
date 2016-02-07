@@ -99,4 +99,17 @@ interface Storage {
 
 interface DurandalRouteConfiguration {
     tooltip?: string;
+    dynamicHash?: KnockoutComputed<string>;
+}
+
+declare module AceAjax {
+    interface IEditSession {
+        foldAll();
+    }    
+}
+
+declare module Dagre {
+    interface Graph {
+        setEdge(sourceId: string, targetId: string, label: any): Graph;
+    }
 }

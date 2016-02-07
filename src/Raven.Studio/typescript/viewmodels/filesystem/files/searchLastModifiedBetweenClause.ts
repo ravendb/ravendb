@@ -4,8 +4,8 @@ import searchDialogViewModel = require("viewmodels/filesystem/files/searchDialog
 class searchLastModifiedBetweenClause extends searchDialogViewModel {
 
     public applyFilterTask = $.Deferred();
-    fromDate = ko.observable<Moment>();
-    toDate = ko.observable<Moment>();
+    fromDate = ko.observable<moment.Moment>();
+    toDate = ko.observable<moment.Moment>();
 
     fromDateText = ko.observable<string>();
     toDateText = ko.observable<string>();

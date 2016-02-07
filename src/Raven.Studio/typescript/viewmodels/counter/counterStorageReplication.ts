@@ -41,7 +41,7 @@ class counterStorageReplication extends viewModelBase {
         if (counterStorage) {
             new getCounterStorageReplicationCommand(counterStorage, reportFetchProgress)
                 .execute()
-                .done(data => this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: data.Destinations })))
+                .done(data => this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: null /* TODO: data.Destinations - looks like it isn't available on server side for now */ })))
                 .fail(() => this.replicationsSetup(new counterStorageReplicationSetup({ Destinations: [] })))
                 .always(() => deferred.resolve({ can: true }));
         }

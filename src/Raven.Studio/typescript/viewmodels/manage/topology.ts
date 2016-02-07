@@ -1,10 +1,10 @@
-/// <reference path="../../../typings/d3/dagre.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import svgDownloader = require("common/svgDownloader");
 import fileDownloader = require("common/fileDownloader");
 import getGlobalReplicationTopology = require("commands/resources/getGlobalReplicationTopology");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import dagre = require('dagre');
 
 class topology extends viewModelBase {
@@ -30,10 +30,10 @@ class topology extends viewModelBase {
 
     width: number;
     height: number;
-    svg: D3.Selection;
-    zoom: D3.Behavior.Zoom;
+    private svg: d3.Selection<any>;
+    private zoom: d3.behavior.Zoom<any>;
     colors = d3.scale.category10();
-    line = d3.svg.line().x(d => d.x).y(d => d.y);
+    line = d3.svg.line<any>().x(d => d.x).y(d => d.y);
 
 
     hasSaveAsPngSupport = ko.computed(() => {
@@ -65,17 +65,18 @@ class topology extends viewModelBase {
 
         this.height = 600;
 
-        this.zoom = d3.behavior.zoom()
+        this.zoom = d3.behavior.zoom<any>()
             .scaleExtent([0.2, 5])
             .on("zoom", () => {
-                this.svg.select('.graphZoom').attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+                var evt = <d3.ZoomEvent> d3.event;
+                this.svg.select('.graphZoom').attr("transform", "translate(" + evt.translate + ")scale(" + evt.scale + ")");
             });
 
         this.svg = d3.select("#replicationTopology")
             .style({ height: self.height + 'px' })
             .style({ width: self.width + 'px' })
             .attr("viewBox", "0 0 " + self.width + " " + self.height)
-            .call(this.zoom);
+            .call((s: d3.Selection<any>) => this.zoom(s));
 
         this.syncGraph();
 
@@ -92,7 +93,7 @@ class topology extends viewModelBase {
         this.renderTopology(topologyGraph);
     }
 
-    private fillNodes(topologyGraph) {
+    private fillNodes(topologyGraph: Dagre.Graph) {
         if (this.topologyFiltered().Databases) {
             this.topologyFiltered().Databases.SkippedResources.forEach(s => {
                 topologyGraph.setNode(s, {
@@ -217,7 +218,7 @@ class topology extends viewModelBase {
         }
     }
 
-    renderTopology(topologyGraph) {
+    renderTopology(topologyGraph: Dagre.Graph) {
         var self = this;
 
         var graph = this.svg.selectAll('.graph').data([null]);
@@ -259,7 +260,7 @@ class topology extends viewModelBase {
             .attr("x", -100)
             .attr("y", 6)
             .attr('class', 'fa')
-            .html(d => self.iconText(d.rType));
+            .html(d => self.iconText(<string>d.rType));
 
         nGroup.append('svg:text')
             .attr('x', 10)
@@ -295,7 +296,7 @@ class topology extends viewModelBase {
             .on("click", function (d) {
                 var currentSelection = d3.select(".selected").node();
                 d3.selectAll(".selected").classed("selected", false);
-                d3.select(this).classed('selected', currentSelection !== this);
+                d3.select(<EventTarget>this).classed('selected', currentSelection !== this);
                 self.currentLink(currentSelection !== this ? d : null)
             });
 
@@ -372,7 +373,7 @@ class topology extends viewModelBase {
             .transition()
             .attr('transform', 'translate(0,0)scale(1)');
     }
-
+    
 }
 
 export = topology;

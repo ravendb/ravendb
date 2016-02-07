@@ -1,7 +1,7 @@
-/// <reference path="../../../typings/jszip/jszip.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import jszip = require('jszip/jszip');
+import jszip = require('jszip');
 
 class importPackageImport extends dialogViewModelBase {
 

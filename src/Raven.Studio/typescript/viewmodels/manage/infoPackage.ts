@@ -1,9 +1,9 @@
-/// <reference path="../../../typings/jszip/jszip.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 import app = require("durandal/app");
-import d3 = require("d3/d3");
+import d3 = require("d3");
 import nv = require("nvd3");
-import jszip = require("jszip/jszip");
+import jszip = require("jszip");
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import svgDownloader = require("common/svgDownloader");
@@ -57,6 +57,7 @@ class stackInfo {
 }
 
 class infoPackage extends viewModelBase {
+/*TODO:
     diagonal: any;
 
     node: D3.Selection = null; // nodes selection
@@ -451,7 +452,7 @@ class infoPackage extends viewModelBase {
         " .box { fill: rgb(21, 140, 186); fill-opacity: 0.2; stroke: rgb(21, 140, 186); stroke-width: 1.5px; }\n" +
         " .notUserCode { fill-opacity: 0.4; }\n" +
         " .headerLine { stroke: rgb(21, 140, 186); stroke-width: 1.5px; }";
-
+*/
 }
 
 export = infoPackage;

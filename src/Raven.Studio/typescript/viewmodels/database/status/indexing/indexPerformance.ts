@@ -1,4 +1,4 @@
-/// <reference path="../../../../../typings/bootstrap.multiselect/bootstrap.multiselect.d.ts" />
+/// <reference path="../../../../../typings/tsd.d.ts" />
 
 import viewModelBase = require("viewmodels/viewModelBase");
 import changesContext = require("common/changesContext");
@@ -6,7 +6,7 @@ import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexi
 import getReducingBatchStatsCommand = require("commands/database/debug/getReducingBatchStatsCommand");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getFilteredOutIndexStatsCommand = require("commands/database/debug/getFilteredOutIndexStatsCommand");
-import d3 = require('d3/d3');
+import d3 = require('d3');
 import nv = require('nvd3');
 import app = require("durandal/app");
 import changeSubscription = require('common/changeSubscription');
@@ -99,6 +99,7 @@ class gapFinder {
     }
 }
 class metrics extends viewModelBase { 
+/*TODO
 
     static reduce_bar_names = 
         ['linq_map_bar', 'linq_reduce_bar',
@@ -154,17 +155,17 @@ class metrics extends viewModelBase {
     isoFormat = d3.time.format.iso;
     xTickFormat = d3.time.format("%H:%M:%S");	
 
-    xScale: D3.Scale.TimeScale;
-    yMapScale: D3.Scale.OrdinalScale;
-    yReduceScale: D3.Scale.OrdinalScale;
-    yPrefetchScale: D3.Scale.OrdinalScale;
+    private xScale: d3.time.Scale<number, number>;
+    private yMapScale: d3.scale.Ordinal<string, number>;
+    private yReduceScale: d3.scale.Ordinal<string, number>;
+    private yPrefetchScale: d3.scale.Ordinal<string, number>;
 
-    xAxis: D3.Svg.Axis;
-    yMapAxis: D3.Svg.Axis;
-    yReduceAxis: D3.Svg.Axis;
-    yPrefetchAxis: D3.Svg.Axis;
+    private xAxis: d3.svg.Axis;
+    private yMapAxis: d3.svg.Axis;
+    private yReduceAxis: d3.svg.Axis;
+    private yPrefetchAxis: d3.svg.Axis;
 
-    svg: D3.Selection;
+    private svg: d3.Selection<any>;
 
     lastIndexingId: number = 0;
     lastReducingId: number = 0;
@@ -349,13 +350,13 @@ class metrics extends viewModelBase {
 
     private mergeFilteredOutIndexesJsonData(currentData: filteredOutIndexStatDto[], incomingData: filteredOutIndexStatDto[]) {
         // create lookup map to avoid O(n^2)
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
 
         currentData.forEach((d, i) => {
             dateLookup.set(this.createFilteredOutCacheKey(d), i);
         });
 
-        incomingData.forEach(d => {
+        incomingData.forEach((d: filteredOutIndexStatDto) => {
             var cacheKey = this.createFilteredOutCacheKey(d);
             if (dateLookup.has(cacheKey)) {
                 var index = dateLookup.get(cacheKey);
@@ -370,7 +371,7 @@ class metrics extends viewModelBase {
 
     private mergePrefetchJsonData(currentData: futureBatchStatsDto[], incomingData: futureBatchStatsDto[]) {
         // create lookup map to avoid O(n^2)
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
         currentData.forEach((d, i) => {
             dateLookup.set(d.Timestamp, i);
         });
@@ -392,7 +393,7 @@ class metrics extends viewModelBase {
     private mergeMapJsonData(currentData: indexingBatchInfoDto[], incomingData: indexingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
         var self = this;
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
         currentData.forEach((d, i) => {
             dateLookup.set(d.StartedAt, i);
         });
@@ -414,7 +415,7 @@ class metrics extends viewModelBase {
     private mergeReduceJsonData(currentData: reducingBatchInfoDto[], incomingData: reducingBatchInfoDto[]) {
         // create lookup map to avoid O(n^2) 
         var self = this;
-        var dateLookup = d3.map();
+        var dateLookup = d3.map<number>();
         currentData.forEach((d, i) => {
             dateLookup.set(d.StartedAt, i);
         });
@@ -844,7 +845,7 @@ class metrics extends viewModelBase {
                 .attr('class', 'batchRange')
                 .on('click', self.mapBatchInfoClicked.bind(self))
             .append('rect')
-                .attr('x', (d: indexingBatchInfoDto) => self.xScale(d.StartedAtDate))
+                .attr('x', d => self.xScale(d.StartedAtDate))
                 .attr('y', (d: indexingBatchInfoDto) => d3.min(d.PerfStats, v => self.yMapScale(v.indexName)))
                 .attr('width', 0)
                 .attr('height', (d: indexingBatchInfoDto) => {
@@ -867,7 +868,7 @@ class metrics extends viewModelBase {
         batches.select('rect')
             .transition()
             .attr('x', (d: reducingBatchInfoDto) => self.xScale(d.StartedAtDate))
-            .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, v => self.yReduceScale(v.indexName)))
+            .attr('y', (d: reducingBatchInfoDto) => d3.min(d.PerfStats, (v, i) => self.yReduceScale(v.indexName)))
             .attr('width', (d: reducingBatchInfoDto) => self.xScaleExtent(d.TotalDurationMs))
             .attr('height', (d: reducingBatchInfoDto) => {
                 var extent = d3.extent(d.PerfStats, v => self.yReduceScale(v.indexName));
@@ -1202,7 +1203,7 @@ class metrics extends viewModelBase {
         gaps.exit().remove();
 
         var patternWidth = 20;
-        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length + 1 /* prefetch */) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between * 2;
+        var gapHeight = (self.selectedMapIndexNames().length + self.selectedReduceIndexes().length + 1 /* prefetch *) * (self.yBarHeight + self.yBarMargin * 2) + self.margin.between * 2;
 
         gaps.select('text')
             .transition()
@@ -1404,7 +1405,7 @@ class metrics extends viewModelBase {
         }
 
         $("#indexingPerformance").toggleFullScreen();
-    }
+    }*/
 }
 
 export = metrics; 

@@ -36,7 +36,7 @@ class statusDebugExplainReplication extends viewModelBase {
     private fetchReplicationDestinations() {
         return new getReplicationsCommand(this.activeDatabase())
             .execute()
-            .done((destinations: replicationsDto) => this.destinations(destinations.Destinations));
+            .done((destinations: configurationDocumentDto<replicationsDto>) => this.destinations(null/* TODO: destinations.Destinations */));
     }
 
     buttonEnabled = ko.computed(() => {

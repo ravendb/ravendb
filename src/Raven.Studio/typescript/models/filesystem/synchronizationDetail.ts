@@ -7,15 +7,16 @@ class synchronizationDetail implements documentBase {
     Status = ko.observable<string>();
     Direction = ko.observable<synchronizationDirection>();
 
-    constructor(dto?: synchronizationUpdateNotification, status?: string, type?: string) {
+    constructor(dto?: synchronizationUpdateNotification | filesystemSynchronizationDetailsDto, status?: string, type?: string, destinationUrl?: string) {
 
         this.fileName(dto.FileName);
-        this.DestinationUrl(dto.DestinationFileSystemUrl);
+
+        this.DestinationUrl(destinationUrl);
         if (type) {
             this.Type(synchronizationDetail.getType(type));
         }
         else {
-            this.Type(dto.Type);
+            this.Type((<any>dto).Type);
         }
         this.TypeDescription(synchronizationDetail.getTypeDescription(this.Type()));
         this.Status(status);

@@ -37,7 +37,7 @@ class runningTasks extends viewModelBase {
 
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
-    now = ko.observable<Moment>();
+    now = ko.observable<moment.Moment>();
     updateNowTimeoutHandle = 0;
     sortColumn = ko.observable<string>("logged");
     sortAsc = ko.observable<boolean>(true);

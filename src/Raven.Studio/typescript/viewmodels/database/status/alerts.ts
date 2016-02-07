@@ -15,7 +15,7 @@ class alerts extends viewModelBase {
     selectedAlertIndex = ko.observable<number>();
     unreadAlertCount: KnockoutComputed<number>;
     readAlertCount: KnockoutComputed<number>;
-    now = ko.observable<Moment>();
+    now = ko.observable<moment.Moment>();
     updateNowTimeoutHandle = 0;
 
     constructor() {

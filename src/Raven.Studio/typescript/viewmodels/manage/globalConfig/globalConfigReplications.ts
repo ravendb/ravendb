@@ -51,7 +51,7 @@ class globalConfigReplications extends viewModelBase {
     bindPopover() {
         $(".dbNameHint").popover({
             html: true,
-            container: $("body"),
+            container: "body",
             trigger: "hover",
             content: "Database name will be replaced with database name being replicated in local configuration."
         });

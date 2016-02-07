@@ -16,7 +16,6 @@ namespace Raven.Server.Routing
     {
         public string Url;
         public string Method;
-        public bool Success;
         public int CaptureStart;
         public int CaptureLength;
         public int MatchLength;
@@ -57,7 +56,6 @@ namespace Raven.Server.Routing
                         {
                             if (current.Key[CurrentIndex] == '$')
                             {
-                                Match.Success = true;
                                 Match.MatchLength = i;
                                 Value = current.Value;
                                 return current;
@@ -117,7 +115,6 @@ namespace Raven.Server.Routing
             var result = match.SearchTrie(this, method);
             if (result == null /*|| result.c != result.Key.Length*/)
             {
-                match.Match.Success = false;
                 return match;
             }
 
@@ -126,12 +123,10 @@ namespace Raven.Server.Routing
                  (match.CurrentIndex != result.Key.Length && result.Key[match.CurrentIndex] != '$')
                )
             {
-                match.Match.Success = false;
                 return match;
             }
 
             match.Value = result.Value;
-            match.Match.Success = true;
             return match;
         }
 

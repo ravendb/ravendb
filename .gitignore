@@ -80,5 +80,6 @@ artifacts/
 src/Raven.Studio/node_modules/
 src/Raven.Studio/wwwroot/App/**/*.js
 src/Raven.Studio/wwwroot/App/**/*.js.map
-/src/Raven.Studio/typescript/**/*.js
-/src/Raven.Studio/typescript/**/*.js.map
+
+src/Raven.Studio/typings/**/*.d.ts
+

@@ -7,7 +7,7 @@ class getSystemDocumentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet> {
+    execute(): JQueryPromise<databaseDocumentDto> {
 
         var deferred = $.Deferred();
 

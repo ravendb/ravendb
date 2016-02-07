@@ -1,3 +1,5 @@
+/// <reference path="../../typings/tsd.d.ts"/>
+
 import database = require("models/resources/database");
 import filesystem = require("models/filesystem/filesystem");
 import counterStorage = require("models/counter/counterStorage");
@@ -75,7 +77,7 @@ class appUrl {
         hotSpare: ko.computed(() => appUrl.forHotSpare()),
         versioning: ko.computed(() => appUrl.forVersioning(appUrl.currentDatabase())),
         sqlReplications: ko.computed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
-        editSqlReplication: ko.computed((sqlReplicationName: string) => appUrl.forEditSqlReplication(sqlReplicationName, appUrl.currentDatabase())),
+        editSqlReplication: ko.computed(() => appUrl.forEditSqlReplication(undefined, appUrl.currentDatabase())),
         sqlReplicationsConnections: ko.computed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
         scriptedIndexes: ko.computed(() => appUrl.forScriptedIndexes(appUrl.currentDatabase())),
         customFunctionsEditor: ko.computed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
@@ -135,7 +137,7 @@ class appUrl {
 
     static checkIsAreaActive(routeRoot: string): boolean {
         var items = router.routes.filter(m => m.isActive() && m.route != null && m.route != '');
-        var isThereAny = items.some(m => m.route.substring(0, routeRoot.length) === routeRoot);
+        var isThereAny = items.some(m => m.route.toString().substring(0, routeRoot.length) === routeRoot);
         return isThereAny;
     }
 

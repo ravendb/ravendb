@@ -1,4 +1,4 @@
-/// <reference path="../../../../typings/ace/ace.amd.d.ts" />
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 import app = require("durandal/app");
 import router = require("plugins/router");

@@ -2,7 +2,6 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Microsoft.AspNet.Mvc.Infrastructure;
 using Raven.Server.Json.Parsing;
 using Sparrow;
 

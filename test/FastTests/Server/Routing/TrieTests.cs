@@ -24,7 +24,7 @@ namespace FastTests.Server.Routing
                 "/admin/debug-info",
             }.ToDictionary(x => "GET" + x, x => 1));
 
-            Assert.True(trie.TryMatch("GET", "/admin/databases").Match.Success);
+            Assert.True(trie.TryMatch("GET", "/admin/databases").Value == 1);
         }
 
 
@@ -40,7 +40,7 @@ namespace FastTests.Server.Routing
                 "/databases/*/indexes",
             }.ToDictionary(x => "GET" + x, x => 1));
 
-            Assert.True(trie.TryMatch("GET", "/build/version").Match.Success);
+            Assert.True(trie.TryMatch("GET", "/build/version").Value == 1);
         }
 
 
@@ -64,7 +64,7 @@ namespace FastTests.Server.Routing
                 "admin/debug-info",
             }.ToDictionary(x => "GET" + x, x => 1));
 
-            Assert.True(trie.TryMatch("GET", url).Match.Success);
+            Assert.True(trie.TryMatch("GET", url).Value == 1);
         }
     }
 }
