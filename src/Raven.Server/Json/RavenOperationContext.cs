@@ -303,13 +303,13 @@ namespace Raven.Server.Json
         }
 
 
-        public async Task<BlittableJsonReaderArray> ParseArrayToMemory(Stream stream, string documentId, 
-            BlittableJsonDocumentBuilder.UsageMode mode)
+        public async Task<BlittableJsonReaderArray> ParseArrayToMemory(Stream stream, string debugTag, 
+            BlittableJsonDocumentBuilder.UsageMode mode, int depth = 0)
         {
             var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, documentId))
+            using (var parser = new UnmanagedJsonStreamParser(stream, this, state, debugTag))
             {
-                var writer = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, state);
+                var writer = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, state, depth);
                 try
                 {
                     CachedProperties.NewDocument();
