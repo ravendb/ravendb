@@ -12,12 +12,6 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
             return HttpContext.Response.WriteAsync("{'Results':[],'Includes':[]}");
         }
 
-        [RavenAction("/databases/*/silverlight/ensureStartup", "GET")]
-        public Task FakeResponseForEnsureStartup()
-        {
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/replication/topology", "GET")]
         [RavenAction("/databases/*/replication/topology", "GET")]
         public Task FakeResponseForReplicationTopology()
