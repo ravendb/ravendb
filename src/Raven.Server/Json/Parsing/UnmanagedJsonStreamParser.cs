@@ -9,7 +9,7 @@ namespace Raven.Server.Json.Parsing
     public class UnmanagedJsonStreamParser: UnmanagedJsonParserAbstract
     {
         private readonly Stream _stream;
-        public UnmanagedJsonStreamParser(Stream stream, RavenOperationContext ctx, JsonParserState state, string documentId) : base(ctx, state, documentId)
+        public UnmanagedJsonStreamParser(Stream stream, RavenOperationContext ctx, JsonParserState state, string debugTag) : base(ctx, state, debugTag)
         {
             _stream = stream;
         }

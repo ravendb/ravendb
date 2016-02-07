@@ -18,6 +18,7 @@ namespace Raven.Server.Json
         private UnmanagedBuffersPool.AllocatedMemoryData _buffer, _compressionBuffer;
 
         private int _position;
+        private int _depth;
         public int DiscardedCompressions, Compressed;
 
         [Flags]
@@ -30,13 +31,15 @@ namespace Raven.Server.Json
             ToDisk = ValidateDouble | CompressStrings |  CompressSmallStrings
         }
 
-        public BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string documentId, IJsonParser reader, JsonParserState state)
+       
+        public BlittableJsonDocumentBuilder(RavenOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state, int depth = 0)
         {
             _reader = reader;
-            _stream = context.GetStream(documentId);
+            _stream = context.GetStream(debugTag);
             _context = context;
             _mode = mode;
             _state = state;
+            _depth = depth;
         }
 
         public int SizeInBytes => _stream.SizeInBytes;
