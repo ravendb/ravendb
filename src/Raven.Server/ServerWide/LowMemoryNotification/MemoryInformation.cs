@@ -12,7 +12,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
         private static readonly ILog Log = LogManager.GetLogger(typeof(MemoryInformation));
 
         private static int memoryLimit;
-        private static bool memoryLimitSet;
         private static bool failedToGetAvailablePhysicalMemory;
         private static readonly MemoryInfoResult failedResult = new MemoryInfoResult
         {
@@ -50,7 +49,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             set
             {
                 memoryLimit = value;
-                memoryLimitSet = true;
             }
         }
 
