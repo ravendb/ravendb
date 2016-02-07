@@ -1,5 +1,4 @@
- /// <reference path="../../typings/jquery/jquery.d.ts" />
-/// <reference path="../../typings/knockout/knockout.d.ts" />
+ /// <reference path="../../typings/tsd.d.ts" />
 import changeSubscription = require('common/changeSubscription');
 import changesCallback = require('common/changesCallback');
 import commandBase = require('commands/commandBase');

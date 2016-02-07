@@ -1,4 +1,4 @@
-/// <reference path="../../../typings/bootstrap.v3.datetimepicker/bootstrap.v3.datetimepicker.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 import composition = require("durandal/composition");
 import moment = require("moment");
