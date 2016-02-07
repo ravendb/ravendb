@@ -34,28 +34,26 @@ namespace Raven.Server.Json
             _size = size; // get document size
             _context = context;
 
+            byte offset;
+            var propOffsetStart = _size - 2;
+            var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out offset);
             // init document level properties
-            var propStartPos = size - sizeof(int) - sizeof(byte); //get start position of properties
-            var propsOffset = (*(int*)(mem + propStartPos));
-            if (propsOffset > 0)
+            if (_cachedProperties == null)
             {
                 SetupPropertiesAccess(mem, propsOffset);
             }
             else
             {
-                if (_cachedProperties == null)
-                    throw new InvalidOperationException("This object requires an external properties cache, but none was supplied");
-
-                if (_cachedProperties.Version != -propsOffset)
+                if (_cachedProperties.Version != propsOffset)
                     throw new InvalidOperationException(
-                        $"This object requires an external properties cache with version {-propsOffset}, but got one with {_cachedProperties.Version}");
+                        $"This object requires an external properties cache with version {propsOffset}, but got one with {_cachedProperties.Version}");
             }
             // get pointer to property names array on document level
 
             // init root level object properties
-            var objStartOffset = *(int*)(mem + (size - sizeof(int) - sizeof(int) - sizeof(byte)));
+            var objStartOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart - offset, out offset);
             // get offset of beginning of data of the main object
-            byte propCountOffset = 0;
+            byte propCountOffset;
             _propCount = ReadVariableSizeInt(objStartOffset, out propCountOffset); // get main object properties count
             _objStart = objStartOffset + mem;
             _metadataPtr = objStartOffset + mem + propCountOffset;
@@ -69,7 +67,7 @@ namespace Raven.Server.Json
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
         }
 
-        private unsafe void SetupPropertiesAccess(byte* mem, int propsOffset)
+        private void SetupPropertiesAccess(byte* mem, int propsOffset)
         {
             _propNames = (mem + propsOffset);
             var propNamesOffsetFlag = (BlittableJsonToken) (*_propNames);
@@ -97,8 +95,9 @@ namespace Raven.Server.Json
             _mem = parent._mem;
             _size = parent._size;
             _propNames = parent._propNames;
+            _cachedProperties = parent._cachedProperties;
 
-            var propNamesOffsetFlag = (BlittableJsonToken)(*(byte*)_propNames);
+            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
             switch (propNamesOffsetFlag)
             {
                 case BlittableJsonToken.OffsetSizeByte:

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Blittable.BlittableJsonWriterTests;
 using FastTests.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Json.Parsing;
@@ -17,7 +18,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            new PartialBlitable().CanSkipWritingPropertyNames().Wait();
+            for (int i = 0; i < 1000; i++)
+            {
+                Console.WriteLine(i);
+                var objectJsonParsingTests = new BlittableFormatTests();
+                objectJsonParsingTests.ShouldNotCrashForManyDifferentProperties().Wait();
+            }
+            //new PartialBlitable().CanSkipWritingPropertyNames().Wait();
         }
     }
 
@@ -42,9 +49,10 @@ namespace Tryouts
                     ctx.CachedProperties.Version = 1;
                     var reader = writer.CreateReader(ctx.CachedProperties);
 
+                    Console.WriteLine(reader.Size);
                     string str;
-                    reader.TryGet("Name", out str);
-                    Console.WriteLine(str);
+                    Assert.True(reader.TryGet("Name", out str));
+                    Assert.Equal("Oren", str);
                 }
             }
         }

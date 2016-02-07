@@ -155,8 +155,8 @@ namespace Raven.Server.Json
 
             var propertiesStart = WritePropertyNames(rootOffset);
 
-            WriteNumber(rootOffset, sizeof (int));
-            WriteNumber(propertiesStart, sizeof (int));
+            WriteVariableSizeIntInReverse(rootOffset);
+            WriteVariableSizeIntInReverse(propertiesStart);
             WriteNumber((int) token, sizeof (byte));
         }
 
@@ -169,8 +169,8 @@ namespace Raven.Server.Json
             var token = writeToken.WrittenToken;
             var rootOffset = writeToken.ValuePos;
 
-            WriteNumber(rootOffset, sizeof(int));
-            WriteNumber(-propertiesChemaVersion /* negative value here is the schema version */, sizeof(int));
+            WriteVariableSizeIntInReverse(rootOffset);
+            WriteVariableSizeIntInReverse(propertiesChemaVersion);
             WriteNumber((int)token, sizeof(byte));
         }
 
@@ -601,6 +601,28 @@ namespace Raven.Server.Json
                 v >>= 7;
             }
             buffer[count++] = (byte)(v);
+            _stream.Write(buffer, count);
+            return count;
+        }
+
+        public unsafe int WriteVariableSizeIntInReverse(int value)
+        {
+            // assume that we don't use negative values very often
+            var buffer = stackalloc byte[5];
+            var count = 0;
+            var v = (uint)value;
+            while (v >= 0x80)
+            {
+                buffer[count++] = (byte)(v | 0x80);
+                v >>= 7;
+            }
+            buffer[count++] = (byte)(v);
+            for (int i = count - 1; i >= count/2; i--)
+            {
+                var tmp = buffer[i];
+                buffer[i] = buffer[count - 1 - i];
+                buffer[count - 1 - i] = tmp;
+            }
             _stream.Write(buffer, count);
             return count;
         }
