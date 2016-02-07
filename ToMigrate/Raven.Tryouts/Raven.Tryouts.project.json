@@ -1,12 +1,14 @@
 ﻿{
-  "frameworks": {
-    "net45": {
-      "dependencies": {
-      }
+    "version": "1.0.0-*",
+    "compilationOptions": {
+        "emitEntryPoint": true
+    },
+
+    "dependencies": {
+        "NETStandard.Library": "1.0.0-rc2-23727"
+    },
+
+    "frameworks": {
+        "dnxcore50": { }
     }
-  },
-  "runtimes": {
-    "win-x64": {
-    }
-  }
 }
