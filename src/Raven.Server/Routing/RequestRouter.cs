@@ -34,7 +34,7 @@ namespace Raven.Server.Routing
             var method = context.Request.Method.Trim();
 
             var tryMatch = _trie.TryMatch(method, context.Request.Path);
-            if (tryMatch.Match.Success == false)
+            if (tryMatch.Value == null)
             {
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsync($"There is no handler for path: {context.Request.Method} {context.Request.Path}{context.Request.QueryString}");
