@@ -6,13 +6,14 @@ requirejs.config({
         transitions: '../Scripts/durandal/transitions',
         ace: '../Scripts/ace',
         moment: '../Scripts/moment',
-        'd3': '../Scripts/d3',
         forge: '../Scripts/forge'
     },
     map: {
         '*': {
             "jszip": "../Scripts/jszip/jszip",
-            "jszip-utils": "../Scripts/jszip/jszip-utils.min"
+            "jszip-utils": "../Scripts/jszip/jszip-utils.min",
+            "d3": "../Scripts/d3/d3",
+            "dagre": "../Scripts/d3/dagre"
         }
     },
     // 0 disables the timeout completely, default is 7 seconds
@@ -20,8 +21,8 @@ requirejs.config({
 });
 define('jquery', function () { return jQuery; });
 define('knockout', function () { return ko; });
-define('nvd3', ['d3/d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function (d3, nv, timelines, chart) { return nv; });
-define('dagre', ['d3/d3', 'd3/dagre'], function (d3, dagre) { return dagre; });
+define('nvd3', ['d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], function (d3, nv, timelines, chart) { return nv; });
+define('dagre', ['d3', 'd3/dagre'], function (d3, dagre) { return dagre; });
 // Do not remove the below comment, as it's used by the optimized build to inline Durandal scripts.
 // OPTIMIZED BUILD INLINE DURANDAL HERE
 define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], function (system, app, viewLocator, dialog, composition) {

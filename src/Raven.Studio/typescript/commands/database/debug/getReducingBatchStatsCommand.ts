@@ -13,7 +13,7 @@ class getReducingBatchStatsCommand extends commandBase {
         var args = { lastId: this.lastId };
         var inlinePerfStats = (entry) => {
             var result = [];
-            d3.map(entry).entries().forEach(e => {
+            d3.map<any[]>(entry).entries().forEach(e => {
                 e.value.forEach(s => {
                     result.push({
                         indexName: e.key,

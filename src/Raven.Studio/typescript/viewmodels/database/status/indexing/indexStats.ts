@@ -1,13 +1,14 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import generalUtils = require("common/generalUtils");
 import getIndexingPerfStatsCommand = require("commands/database/debug/getIndexingPerfStatsCommand");
-import d3 = require("d3/d3");
+import d3 = require("d3");
 import nv = require('nvd3');
 import shell = require("viewmodels/shell");
 import changesContext = require("common/changesContext");
 import changeSubscription = require('common/changeSubscription');
 
 class indexStats extends viewModelBase {
+/*TODO
     jsonData: any[] = [];
     rawJsonData: any[] = [];
     hiddenIndexes = d3.set([]);
@@ -479,7 +480,7 @@ class indexStats extends viewModelBase {
             .rollup(l => l.length)
             .entries(statsInline);
         return byKey.map(d => d.key);
-    }
+    }*/
 }
 
 export = indexStats;

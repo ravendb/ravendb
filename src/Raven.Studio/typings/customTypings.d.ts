@@ -58,12 +58,6 @@ declare var jwerty: JwertyStatic;
 /// D3
 ///
 
-declare var dagre: any;
-
-declare module "dagre" {
-    export = dagre;
-}
-
 declare module "d3/models/timelinesChart" {
 } 
 
@@ -79,9 +73,9 @@ declare module "nvd3" {
 
 
 ///
-/// Forge
+/// Ace
 ///
 
-declare module "ace" {
+declare module "ace/ace" {
     export = forge;
 }

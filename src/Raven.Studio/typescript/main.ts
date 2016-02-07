@@ -14,7 +14,7 @@ requirejs.config({
           "jszip": "../Scripts/jszip/jszip",
           "jszip-utils": "../Scripts/jszip/jszip-utils.min",
           "d3": "../Scripts/d3/d3",
-          "ace": "../Scripts/ace/ace"
+          "dagre": "../Scripts/d3/dagre"
       }  
     },
     

@@ -58,6 +58,12 @@
     },
     "d3/d3.d.ts": {
       "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
+    },
+    "dagre/dagre.d.ts": {
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
+    },
+    "dagre-d3/dagre-d3.d.ts": {
+      "commit": "c393f8974d44840a6c9cc6d5b5c0188a8f05143d"
     }
   }
 }

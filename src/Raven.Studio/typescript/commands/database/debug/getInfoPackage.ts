@@ -4,7 +4,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import zipUtils = require('jszip-utils');
 import appUrl = require('common/appUrl');
-import d3 = require("d3/d3");
+import d3 = require("d3");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
 class getInfoPackage extends commandBase {
