@@ -1,3 +1,4 @@
+﻿using System.Diagnostics;
 using System.Linq;
 
 using Raven.Tests.Common;
@@ -8,7 +9,8 @@ namespace Raven.Tests.Bugs
 {
     public class WhereUsingUnicodeTheTextEnteredShouldNotBeNormalized : RavenTest
     {
-        private const string Content = "?????? ?????? ???????? ???????? ???? ???????????????";
+        private const string Content = "לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ";
+
 
         [Fact]
         public void WhenUsingEmbedded()
@@ -24,6 +26,7 @@ namespace Raven.Tests.Bugs
 
                 using (var session = documentStore.OpenSession())
                 {
+
                     var result = session.Query<UnicodeItem>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfLastWrite())
                         .Count(item => item.Content == Content);
@@ -36,7 +39,7 @@ namespace Raven.Tests.Bugs
         [Fact]
         public void WhenUsingHttp()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = NewRemoteDocumentStore(fiddler:true))
             {
                 using (var session = store.OpenSession())
                 {
@@ -50,7 +53,7 @@ namespace Raven.Tests.Bugs
                     var result = session.Query<UnicodeItem>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfLastWrite())
                         .Count(item => item.Content == Content);
-
+                    WaitForUserToContinueTheTest(url:store.Url);
                     Assert.Equal(2, result);
                 }
             }
