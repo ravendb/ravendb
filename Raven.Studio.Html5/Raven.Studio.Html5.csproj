@@ -743,7 +743,6 @@
     <TypeScriptCompile Include="App\commands\database\documents\executeBulkDocsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\generateClassCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getAllDocumentsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\database\documents\getCollectionInfoCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCollectionsCountCommand.ts" />
     <TypeScriptCompile Include="App\commands\database\documents\getCustomColumnsCommand.ts" />
