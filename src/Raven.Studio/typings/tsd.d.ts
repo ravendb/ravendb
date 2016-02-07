@@ -19,3 +19,4 @@
 /// <reference path="d3/d3.d.ts" />
 /// <reference path="dagre/dagre.d.ts" />
 /// <reference path="dagre-d3/dagre-d3.d.ts" />
+/// <reference path="knockout.mapping/knockout.mapping.d.ts" />

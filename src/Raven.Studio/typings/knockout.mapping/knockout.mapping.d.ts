@@ -13,7 +13,8 @@ interface KnockoutMappingCreateOptions {
 interface KnockoutMappingUpdateOptions {
     data: any;
     parent: any;
-    observable: KnockoutObservable<any>;
+    target: any;
+    observable?: KnockoutObservable<any>;
 }
 
 interface KnockoutMappingOptions {
@@ -40,7 +41,21 @@ interface KnockoutMapping {
     defaultOptions(): KnockoutMappingOptions;
     resetDefaultOptions(): void;
     getType(x: any): any;
-    visitModel(rootObject: any, callback: Function, options?: { visitedObjects?; parentName?; ignore?; copy?; include?; }): any;
+    visitModel(rootObject: any, callback: Function, options?: { visitedObjects?: any; parentName?: string; ignore?: string[]; copy?: string[]; include?: string[]; }): any;
+}
+
+interface KnockoutObservableArrayFunctions<T> {
+    mappedCreate(item: T): T;
+
+    mappedRemove(item: T): T[];
+    mappedRemove(removeFunction: (item: T) => boolean): T[];
+    mappedRemoveAll(items: T[]): T[];
+    mappedRemoveAll(): T[];
+
+    mappedDestroy(item: T): void;
+    mappedDestroy(destroyFunction: (item: T) => boolean): void;
+    mappedDestroyAll(items: T[]): void;
+    mappedDestroyAll(): void;
 }
 
 interface KnockoutStatic {
