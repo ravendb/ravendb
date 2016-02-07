@@ -33,6 +33,8 @@ namespace Raven.Server.Documents
         public string DataDirectory;
         public ContextPool ContextPool;
         private UnmanagedBuffersPool _unmanagedBuffersPool;
+        private const string NoCollectionSpecified = "Raven/Empty";
+        private const string SystemDocumentsCollection = "Raven/SystemDocs";
 
         public DocumentsStorage(string name, RavenConfiguration configuration)
         {
@@ -108,6 +110,9 @@ namespace Raven.Server.Documents
                 {
                     tx.CreateTree("Docs");
                     tx.CreateTree("Identities");
+
+                    _docsSchema.Create(tx, SystemDocumentsCollection);
+
                     _lastEtag = ReadLastEtag(tx);
 
                     tx.Commit();
@@ -430,17 +435,18 @@ namespace Raven.Server.Documents
 
         private static string GetCollectionName(string key, BlittableJsonReaderObject document)
         {
-            BlittableJsonReaderObject metadata;
             string collectionName;
-            if (document.TryGet(Constants.Metadata, out metadata) == false ||
-                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
-            {
-                collectionName = "Raven/Empty";
-            }
+            BlittableJsonReaderObject metadata;
             if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
             {
-                collectionName = "Raven/SystemDocs";
+                collectionName = SystemDocumentsCollection;
             }
+            else if (document.TryGet(Constants.Metadata, out metadata) == false ||
+                metadata.TryGet(Constants.RavenEntityName, out collectionName) == false)
+            {
+                collectionName = NoCollectionSpecified;
+            }
+            
             // we have to have some way to distinguish between dynamic tree names
             // and our fixed ones, otherwise a collection call Docs will corrupt our state
             return "@" + collectionName;
