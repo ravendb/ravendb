@@ -484,7 +484,6 @@ namespace Raven.Server.Json
 
         internal object GetObject(BlittableJsonToken type, int position)
         {
-
             switch (type & typesMask)
             {
                 case BlittableJsonToken.StartObject:

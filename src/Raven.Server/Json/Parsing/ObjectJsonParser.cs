@@ -297,14 +297,14 @@ namespace Raven.Server.Json.Parsing
             }
         }
 
-        private unsafe void ReadEscapePositions(byte* buffer, int escapeSequencePos)
+        private void ReadEscapePositions(byte* buffer, int escapeSequencePos)
         {
             _state.EscapePositions.Clear();
-            var numberOfEscapeSequences = BlittableJsonTextWriter.ReadVariableSizeInt(buffer, ref escapeSequencePos);
+            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(buffer, ref escapeSequencePos);
             while (numberOfEscapeSequences > 0)
             {
                 numberOfEscapeSequences--;
-                var bytesToSkip = BlittableJsonTextWriter.ReadVariableSizeInt(buffer, ref escapeSequencePos);
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(buffer, ref escapeSequencePos);
                 _state.EscapePositions.Add(bytesToSkip);
             }
         }
