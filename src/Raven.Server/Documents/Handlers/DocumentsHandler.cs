@@ -36,17 +36,17 @@ namespace Raven.Server.Documents
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                context.Transaction = context.Environment.WriteTransaction();
-                if (id[id.Length - 1] == '/')
+                long newEtag;
+                using (context.Transaction = context.Environment.WriteTransaction())
                 {
-                    id = id + DocumentsStorage.IdentityFor(context, id);
+                    if (id[id.Length - 1] == '/')
+                    {
+                        id = id + DocumentsStorage.IdentityFor(context, id);
+                    }
+                    newEtag = DocumentsStorage.Put(context, id, etag, doc);
+                    context.Transaction.Commit();
+                    // we want to release the transaction before we write to the network
                 }
-                var newEtag = DocumentsStorage.Put(context, id, etag, doc);
-                context.Transaction.Commit();
-
-                // we want to release the transaction before we write to the network
-                context.Transaction.Dispose();
-
 
                 HttpContext.Response.StatusCode = 201;
 
