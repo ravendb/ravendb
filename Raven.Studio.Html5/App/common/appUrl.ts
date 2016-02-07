@@ -594,9 +594,15 @@ class appUrl {
         return "#databases/conflicts?" + databasePart;
     }
 
-    static forPatch(db: database): string {
+    static forPatch(db: database, hashOfRecentPatch?: number): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/patch?" + databasePart;
+
+        if (hashOfRecentPatch) {
+            var patchPath = "recentpatch-" + hashOfRecentPatch;
+            return "#databases/patch/" + encodeURIComponent(patchPath) + "?" + databasePart;
+        } else {
+            return "#databases/patch?" + databasePart;    
+        }
     }
 
     static forIndexes(db: database): string {

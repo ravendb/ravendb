@@ -246,7 +246,7 @@ class shell extends viewModelBase {
             { route: ["", "resources"], title: "Resources", moduleId: "viewmodels/resources/resources", nav: true, hash: this.appUrls.resourcesManagement },
             { route: "databases/documents", title: "Documents", moduleId: "viewmodels/database/documents/documents", nav: true, hash: this.appUrls.documents },
             { route: "databases/conflicts", title: "Conflicts", moduleId: "viewmodels/database/conflicts/conflicts", nav: true, hash: this.appUrls.conflicts },
-            { route: "databases/patch", title: "Patch", moduleId: "viewmodels/database/patch/patch", nav: true, hash: this.appUrls.patch },
+            { route: "databases/patch(/:recentPatchHash)", title: "Patch", moduleId: "viewmodels/database/patch/patch", nav: true, hash: this.appUrls.patch },
             { route: "databases/upgrade", title: "Upgrade in progress", moduleId: "viewmodels/common/upgrade", nav: false, hash: this.appUrls.upgrade },
             { route: "databases/indexes*details", title: "Indexes", moduleId: "viewmodels/database/indexes/indexesShell", nav: true, hash: this.appUrls.indexes },
             { route: "databases/transformers*details", title: "Transformers", moduleId: "viewmodels/database/transformers/transformersShell", nav: false, hash: this.appUrls.transformers },
