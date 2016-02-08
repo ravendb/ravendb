@@ -119,17 +119,17 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly));
         }
 
-        public JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false)
+        public JsonDocument[] GetDocuments(long? fromEtag, int pageSize, bool metadataOnly = false)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.GetDocumentsAsync(fromEtag, pageSize, metadataOnly));
         }
 
-        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
+        public PutResult Put(string key, long? etag, RavenJObject document, RavenJObject metadata)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PutAsync(key, etag, document, metadata));
         }
 
-        public void Delete(string key, Etag etag)
+        public void Delete(string key, long? etag)
         {
             AsyncHelpers.RunSync(() => asyncServerClient.DeleteAsync(key, etag));
         }
@@ -207,7 +207,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PutIndexesAsync(indexesToAdd));
         }
 
-        public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public string[] PutSideBySideIndexes(IndexToAdd[] indexesToAdd, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc));
         }
@@ -270,7 +270,7 @@ namespace Raven.Client.Connection
             return new AsyncEnumerableWrapper<RavenJObject>(streamQueryAsync);
         }
 
-        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+        public IEnumerator<RavenJObject> StreamDocs(long? fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             var streamDocsAsync = AsyncHelpers.RunSync(() => asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation, skipAfter, transformer, transformerParameters));
             return new AsyncEnumerableWrapper<RavenJObject>(streamDocsAsync);
@@ -458,7 +458,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, ignoreMissing));
         }
 
-        public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
+        public RavenJObject Patch(string key, PatchRequest[] patches, long? etag)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patches, etag));
         }
@@ -469,7 +469,7 @@ namespace Raven.Client.Connection
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata));
         }
 
-        public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
+        public RavenJObject Patch(string key, ScriptedPatchRequest patch, long? etag)
         {
             return AsyncHelpers.RunSync(() => asyncServerClient.PatchAsync(key, patch, etag));
         }

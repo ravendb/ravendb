@@ -62,7 +62,7 @@ namespace Raven.Client.Connection
 
             var lastModified = GetLastModified(metadata);
             metadata[Constants.LastModified] = lastModified;
-            var etag = Extract(metadata, "@etag", Etag.Empty, (string g) => HttpExtensions.EtagHeaderToEtag(g));
+            var etag = Extract(metadata, "@etag", 0, (string g) => HttpExtensions.EtagHeaderToEtag(g));
 
             var jsonDocument = new JsonDocument
             {
@@ -128,17 +128,17 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Translate a result for a query
         /// </summary>
-        public static QueryResult ToQueryResult(RavenJObject json, Etag etag, string tempRequestTime, long numberOfCharactersRead)
+        public static QueryResult ToQueryResult(RavenJObject json, long? etag, string tempRequestTime, long numberOfCharactersRead)
         {
             var result = new QueryResult
             {
                 IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
                 IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-                IndexEtag = Etag.Parse(json.Value<string>("IndexEtag")),
+                IndexEtag = long.Parse(json.Value<string>("IndexEtag")),
                 Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
                 TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
                 IndexName = json.Value<string>("IndexName"),
-                ResultEtag = Etag.Parse(json.Value<string>("ResultEtag")),
+                ResultEtag = long.Parse(json.Value<string>("ResultEtag")),
                 SkippedResults = Convert.ToInt32(json["SkippedResults"].ToString()),
                 Highlightings = (json.Value<RavenJObject>("Highlightings") ?? new RavenJObject())
                     .JsonDeserialization<Dictionary<string, Dictionary<string, string[]>>>(),

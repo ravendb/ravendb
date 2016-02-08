@@ -5,7 +5,7 @@ namespace Raven.Abstractions.FileSystem
 {
     public class SourceSynchronizationInformation
     {
-        public Etag LastSourceFileEtag { get; set; }
+        public long? LastSourceFileEtag { get; set; }
         public string SourceServerUrl { get; set; }
         public Guid DestinationServerId { get; set; }
 

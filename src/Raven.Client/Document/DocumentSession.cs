@@ -652,7 +652,7 @@ namespace Raven.Client.Document
                     var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
                     query.InvokeAfterStreamExecuted(ref ravenJObject);
                     string key = null;
-                    Etag etag = null;
+                    long? etag = null;
                     if (meta != null)
                     {
                         key = meta.Value<string>("@id") ??
@@ -661,7 +661,7 @@ namespace Raven.Client.Document
 
                         var value = meta.Value<string>("@etag");
                         if (value != null)
-                            etag = Etag.Parse(value);
+                            etag = long.Parse(value);
                     }
                 
                     yield return new StreamResult<T>
@@ -675,7 +675,7 @@ namespace Raven.Client.Document
             }
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null)
         {
             return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: null, transformer: transformer, transformerParameters: transformerParameters);
         }
@@ -709,7 +709,7 @@ namespace Raven.Client.Document
             return DatabaseCommands.GetMultiFacets(facetQueries);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters)
+        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation, string skipAfter, string transformer, Dictionary<string, RavenJToken> transformerParameters)
         {
             IncrementRequestCount();
             using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter, transformer, transformerParameters))

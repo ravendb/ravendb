@@ -107,7 +107,7 @@ namespace Raven.Client
         /// <summary>
         /// Executes index creation in side-by-side mode.
         /// </summary>
-        public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual void SideBySideExecuteIndex(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             indexCreationTask.SideBySideExecute(DatabaseCommands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
         }
@@ -115,7 +115,7 @@ namespace Raven.Client
         /// <summary>
         /// Executes index creation in side-by-side mode.
         /// </summary>
-        public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual Task SideBySideExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             return indexCreationTask.SideBySideExecuteAsync(AsyncDatabaseCommands, Conventions, minimumEtagBeforeReplace, replaceTimeUtc);
         }
@@ -163,7 +163,7 @@ namespace Raven.Client
         /// <summary>
         /// Executes indexes creation in side-by-side mode.
         /// </summary>
-        public virtual void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual void SideBySideExecuteIndexes(IList<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
             DatabaseCommands.PutSideBySideIndexes(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc);
@@ -175,7 +175,7 @@ namespace Raven.Client
         /// <summary>
         /// Executes indexes creation in side-by-side mode.
         /// </summary>
-        public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
+        public virtual async Task SideBySideExecuteIndexesAsync(List<AbstractIndexCreationTask> indexCreationTasks, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null)
         {
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(indexCreationTasks, Conventions);
             await AsyncDatabaseCommands.PutSideBySideIndexesAsync(indexesToAdd, minimumEtagBeforeReplace, replaceTimeUtc).ConfigureAwait(false);
@@ -225,7 +225,7 @@ namespace Raven.Client
         /// Gets the etag of the last document written by any session belonging to this 
         /// document store
         ///</summary>
-        public virtual Etag GetLastWrittenEtag()
+        public virtual long? GetLastWrittenEtag()
         {
             return LastEtagHolder.GetLastWrittenEtag();
         }

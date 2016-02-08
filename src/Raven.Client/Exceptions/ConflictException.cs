@@ -25,7 +25,7 @@ namespace Raven.Client.Exceptions
         /// <summary>
         /// Gets or sets the conflicted document etag
         /// </summary>
-        public Etag Etag { get; set; }
+        public long? Etag { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConflictException"/> class.

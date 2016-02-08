@@ -145,22 +145,22 @@ namespace Raven.Abstractions.Extensions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Write(this Stream stream, Etag etag)
+        public static void Write(this Stream stream, long? etag)
         {
-            var buffer = etag.ToByteArray();
-            stream.Write(buffer, 0, 16);
+            var buffer = BitConverter.GetBytes(etag.Value);
+            stream.Write(buffer, 0, buffer.Length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Etag ReadEtag(this Stream stream)
+        public static long? ReadEtag(this Stream stream)
         {
-            const int EtagSize = 16;
+            const int EtagSize = 8;
 
             var buffer = new byte[EtagSize]; //etag size is 16 bytes
             var bytesRead = stream.Read(buffer, 0, EtagSize);
             if (bytesRead == 0)
                 throw new EndOfStreamException();
-            return Etag.Parse(buffer);
+            return BitConverter.ToInt64(buffer, 0);
         }
 
         /// <summary>

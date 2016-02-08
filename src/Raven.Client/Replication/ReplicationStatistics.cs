@@ -9,7 +9,7 @@ namespace Raven.Abstractions.Replication
     public class ReplicationStatistics
     {
         public string Self { get; set; }
-        public Etag MostRecentDocumentEtag { get; set; }
+        public long? MostRecentDocumentEtag { get; set; }
 
         public List<DestinationStats> Stats { get; set; }
 
@@ -29,8 +29,8 @@ namespace Raven.Abstractions.Replication
         public int FailureCountInternal = 0;
         public string Url { get; set; }
         public DateTime? LastHeartbeatReceived { get; set; }
-        public Etag LastEtagCheckedForReplication { get; set; }
-        public Etag LastReplicatedEtag { get; set; }
+        public long? LastEtagCheckedForReplication { get; set; }
+        public long? LastReplicatedEtag { get; set; }
         public DateTime? LastReplicatedLastModified { get; set; }
         public DateTime? LastSuccessTimestamp { get; set; }
         public DateTime? LastFailureTimestamp { get; set; }

@@ -24,7 +24,7 @@ namespace Raven.Abstractions.Exceptions
         {
         }
 
-        public Etag LastEtag { get; set; }
+        public long? LastEtag { get; set; }
 
         public string File { get; set; }
     }

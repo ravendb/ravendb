@@ -260,7 +260,7 @@ namespace Raven.Client
         ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
-        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag);
+        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(long? cutOffEtag);
 
         /// <summary>
         ///     Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
@@ -279,7 +279,7 @@ namespace Raven.Client
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
         /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout);
+        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(long? cutOffEtag, TimeSpan waitTimeout);
 
         /// <summary>
         ///     Instructs the query to wait for non stale results as of the last write made by any session belonging to the

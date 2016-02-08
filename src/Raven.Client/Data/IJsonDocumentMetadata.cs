@@ -21,7 +21,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Current document etag, used for concurrency checks (null to skip check)
         /// </summary>
-        Etag Etag { get; set; }
+        long? Etag { get; set; }
 
         /// <summary>
         /// Last modified date for the document

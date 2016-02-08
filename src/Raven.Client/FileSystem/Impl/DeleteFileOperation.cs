@@ -11,9 +11,9 @@ namespace Raven.Client.FileSystem.Impl
 
         public string FileName { get; private set; }
 
-        private Etag Etag { get; set; }
+        private long? Etag { get; set; }
 
-        public DeleteFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, Etag etag)
+        public DeleteFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, long? etag)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace.");

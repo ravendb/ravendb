@@ -32,7 +32,7 @@ namespace Raven.Client.Document
 
     public delegate bool BeforeAcknowledgment();
 
-    public delegate void AfterAcknowledgment(Etag lastProcessedEtag);
+    public delegate void AfterAcknowledgment(long? lastProcessedEtag);
 
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable , 
         IObserver<DocumentChangeNotification>,
@@ -106,7 +106,7 @@ namespace Raven.Client.Document
             {
                 try
                 {
-                    Etag lastProcessedEtagOnClient = null;
+                    long? lastProcessedEtagOnClient = null;
 
                     while (true)
                     {
@@ -116,7 +116,7 @@ namespace Raven.Client.Document
 
                         var pulledDocs = false;
 
-                        Etag lastProcessedEtagOnServer = null;
+                        long? lastProcessedEtagOnServer = null;
                         int processedDocs = 0;
 
                         var queue = new BlockingCollection<T>();
@@ -136,7 +136,7 @@ namespace Raven.Client.Document
                                     if (Equals("LastProcessedEtag", reader.Value) == false)
                                         return false;
 
-                                    lastProcessedEtagOnServer = Etag.Parse(AsyncHelpers.RunSync(reader.ReadAsString));
+                                    lastProcessedEtagOnServer = long.Parse(AsyncHelpers.RunSync(reader.ReadAsString));
 
                                     return true;
                                 }))
@@ -279,7 +279,7 @@ namespace Raven.Client.Document
             });
         }
 
-        private void AcknowledgeBatchToServer(Etag lastProcessedEtagOnServer)
+        private void AcknowledgeBatchToServer(long? lastProcessedEtagOnServer)
         {
             using (var acknowledgmentRequest = CreateAcknowledgmentRequest(lastProcessedEtagOnServer))
             {
@@ -460,7 +460,7 @@ namespace Raven.Client.Document
             });
         }
 
-        private HttpJsonRequest CreateAcknowledgmentRequest(Etag lastProcessedEtag)
+        private HttpJsonRequest CreateAcknowledgmentRequest(long? lastProcessedEtag)
         {
             return commands.CreateRequest(string.Format("/subscriptions/acknowledgeBatch?id={0}&lastEtag={1}&connection={2}", id, lastProcessedEtag, options.ConnectionId), HttpMethods.Post);
         }

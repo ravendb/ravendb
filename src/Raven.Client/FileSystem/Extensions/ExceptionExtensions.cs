@@ -58,8 +58,8 @@ namespace Raven.Client.FileSystem.Extensions
                 var errorResults = JsonConvert.DeserializeAnonymousType(text, new
                 {
                     url = (string) null,
-                    actualETag = Etag.Empty,
-                    expectedETag = Etag.Empty,
+                    actualETag = 0,
+                    expectedETag = 0,
                     error = (string) null
                 });
 

@@ -8,7 +8,7 @@ namespace Raven.Abstractions.Indexing
     {
         public string IndexToReplace { get; set; }
 
-        public Etag MinimumEtagBeforeReplace { get; set; }
+        public long? MinimumEtagBeforeReplace { get; set; }
 
         public DateTime? ReplaceTimeUtc { get; set; }
     }

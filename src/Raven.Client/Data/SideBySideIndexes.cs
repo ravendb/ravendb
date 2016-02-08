@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Minimum etag before replacement
         /// </summary>
-        public Etag MinimumEtagBeforeReplace { get; set; }
+        public long? MinimumEtagBeforeReplace { get; set; }
 
         /// <summary>
         /// UTC time of replacement

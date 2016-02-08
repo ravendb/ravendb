@@ -418,7 +418,7 @@ namespace Raven.Client.Document.Async
             return new QueryYieldStream<T>(this, enumerator, queryOperation,query, token);
         }
 
-        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0,
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0,
                                                                      int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
         {
             return StreamAsync<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, transformer: transformer, transformerParameters: transformerParameters, token: token);
@@ -430,7 +430,7 @@ namespace Raven.Client.Document.Async
             return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
-        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
+        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
         {
             var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters, token: token).ConfigureAwait(false);
             return new DocsYieldStream<T>(this, enumerator, token);
@@ -490,7 +490,7 @@ namespace Raven.Client.Document.Async
 
                 var meta = ravenJObject.Value<RavenJObject>(Constants.Metadata);
                 string key = null;
-                Etag etag = null;
+                long? etag = null;
                 if (meta != null)
                 {
                     key = meta.Value<string>("@id") ??
@@ -499,7 +499,7 @@ namespace Raven.Client.Document.Async
 
                     var value = meta.Value<string>("@etag");
                     if (value != null)
-                        etag = Etag.Parse(value);
+                        etag = long.Parse(value);
                 }
 
                 Current = new StreamResult<T>

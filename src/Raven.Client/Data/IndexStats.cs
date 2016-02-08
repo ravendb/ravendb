@@ -43,7 +43,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// This value represents etag of last document indexed (using map) by this index.
         /// </summary>
-        public Etag LastIndexedEtag { get; set; }
+        public long? LastIndexedEtag { get; set; }
 
         /// <summary>
         /// Shows the difference between last document etag available in database and last indexed etag.
@@ -85,7 +85,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// This value represents etag of last document indexed (using reduce) by this index.
         /// </summary>
-        public Etag LastReducedEtag { get; set; }
+        public long? LastReducedEtag { get; set; }
 
         /// <summary>
         /// Time of last reduce for this index.
@@ -151,17 +151,12 @@ namespace Raven.Abstractions.Data
             return Id.ToString(CultureInfo.InvariantCulture);
         }
 
-        public void SetLastDocumentEtag(Etag lastDocEtag)
+        public void SetLastDocumentEtag(long? lastDocEtag)
         {
             if (lastDocEtag == null)
                 return;
 
-            IndexingLag = (int) (lastDocEtag.Changes - LastIndexedEtag.Changes);
-
-            if (lastDocEtag.Restarts != LastIndexedEtag.Restarts)
-            {
-                IndexingLag *= -1;
-            }
+            IndexingLag = (int) (lastDocEtag - LastIndexedEtag);
         }
     }
 

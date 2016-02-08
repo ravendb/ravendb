@@ -11,9 +11,9 @@ namespace Raven.Client.FileSystem.Impl
 
         public string FileName { get; private set; }
         private string Destination { get; set; }
-        private Etag Etag { get; set; }
+        private long? Etag { get; set; }
 
-        public RenameFileOperation(InMemoryFilesSessionOperations sessionOperations, string sourcePath, string destinationPath, Etag etag)
+        public RenameFileOperation(InMemoryFilesSessionOperations sessionOperations, string sourcePath, string destinationPath, long? etag)
         {
             if (string.IsNullOrWhiteSpace(sourcePath))
                 throw new ArgumentNullException("sourcePath", "The source path cannot be null, empty or whitespace!");

@@ -101,7 +101,7 @@ namespace Raven.Client
         ///     and associate the current state of the entity with the etag from the server.
         /// </summary>
         /// <param name="instance">The instance.</param>
-        Etag GetEtagFor<T>(T instance);
+        long? GetEtagFor<T>(T instance);
 
         /// <summary>
         ///     Gets the metadata for the specified entity.

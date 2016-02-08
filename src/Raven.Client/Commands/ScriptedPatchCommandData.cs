@@ -39,7 +39,7 @@ namespace Raven.Abstractions.Commands
         /// <summary>
         /// Current document etag, used for concurrency checks (null to skip check)
         /// </summary>
-        public Etag Etag { get; set; }
+        public long? Etag { get; set; }
 
         /// <summary>
         /// RavenJObject representing document's metadata.

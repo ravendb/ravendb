@@ -40,10 +40,10 @@ namespace Raven.Client.Document
         /// <param name="database">The database from which to check, if null, the default database for the document store connection string</param>
         /// <param name="replicas">The min number of replicas that must have the value before we can return (or the number of destinations, if higher)</param>
         /// <returns>Task which will have the number of nodes that the caught up to the specified etag</returns>
-        public async Task<int> WaitAsync(Etag etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
+        public async Task<int> WaitAsync(long? etag = null, TimeSpan? timeout = null, string database = null, int replicas = 2)
         {
             etag = etag ?? documentStore.LastEtagHolder.GetLastWrittenEtag();
-            if (etag == Etag.Empty || etag == null)
+            if (etag == 0 || etag == null)
                 return replicas; // if the etag is empty, nothing to do
 
             var asyncDatabaseCommands = (AsyncServerClient)documentStore.AsyncDatabaseCommands;
@@ -111,7 +111,7 @@ namespace Raven.Client.Document
                 }
 
                 // we have either completed (but not enough) or cancelled, meaning timeout
-                var message = string.Format("Could only confirm that the specified Etag {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
+                var message = string.Format("Could only confirm that the specified long? {0} was replicated to {1} of {2} servers after {3}\r\nDetails: {4}", 
                     etag,
                     successCount,
                     destinationsToCheck.Count,
@@ -131,7 +131,7 @@ namespace Raven.Client.Document
                 throw new TimeoutException("Maximum allowed time for the operation has passed.");
         }
 
-        private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, Etag etag, ReplicatedEtagInfo[] latestEtags, int index, CancellationToken cancellationToken)
+        private async Task WaitForReplicationFromServerAsync(string url, string sourceUrl, string sourceDbId, long? etag, ReplicatedEtagInfo[] latestEtags, int index, CancellationToken cancellationToken)
         {
             while (true)
             {
@@ -143,7 +143,7 @@ namespace Raven.Client.Document
 
                     latestEtags[index] = etags;
 
-                    var replicated = etag.CompareTo(etags.DocumentEtag) <= 0;
+                    var replicated = etag.Value.CompareTo(etags.DocumentEtag.Value) <= 0;
 
                     if (replicated)
                         return;
@@ -173,9 +173,9 @@ namespace Raven.Client.Document
             using (var request = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams))
             {
                     var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                var etag = Etag.Parse(json.Value<string>("LastDocumentEtag"));
+                var etag = long.Parse(json.Value<string>("LastDocumentEtag"));
                     if (log.IsDebugEnabled)
-                log.Debug("Received last replicated document Etag {0} from server {1}", etag, destinationUrl);
+                log.Debug("Received last replicated document long? {0} from server {1}", etag, destinationUrl);
                 
                 return new ReplicatedEtagInfo
                 {

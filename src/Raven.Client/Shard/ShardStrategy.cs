@@ -56,10 +56,10 @@ namespace Raven.Client.Shard
         /// </summary>
         public QueryResult DefaultMergeQueryResults(IndexQuery query, IList<QueryResult> queryResults)
         {
-            var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
-            Etag indexEtag;
+            var buffer = queryResults.SelectMany(x => BitConverter.GetBytes(x.IndexEtag.Value)).ToArray();
+            long? indexEtag;
 
-            indexEtag = Etag.FromHash( Hashing.Metro128.Calculate(buffer) );
+            indexEtag = (long)Hashing.XXHash64.Calculate(buffer, buffer.Length);
 
             var results = queryResults.SelectMany(x => x.Results);
 

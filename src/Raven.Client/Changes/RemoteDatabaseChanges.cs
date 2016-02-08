@@ -30,13 +30,13 @@ namespace Raven.Client.Changes
         private bool watchAllTransformers;
         private bool watchAllDataSubscriptions;
         
-        private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+        private readonly Func<string, long?, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 
         public RemoteDatabaseChanges(string url, string apiKey,
                                        ICredentials credentials,
                                        HttpJsonRequestFactory jsonRequestFactory,DocumentConvention conventions,
                                        Action onDispose,                                
-                                       Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
+                                       Func<string, long?, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
             : base(url, apiKey, credentials, jsonRequestFactory, conventions, onDispose)
         {
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;

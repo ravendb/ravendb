@@ -615,7 +615,7 @@ namespace Raven.Client.Shard
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }
 
-        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken))
         {
             throw new NotSupportedException("Streams are currently not supported by sharded document store");
         }

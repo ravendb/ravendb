@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Document etag.
         /// </summary>
-        public Etag Etag { get; set; }
+        public long? Etag { get; set; }
 
         /// <summary>
         /// Document metadata.

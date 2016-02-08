@@ -545,7 +545,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
-        TSelf WaitForNonStaleResultsAsOf(Etag cutOffEtag);
+        TSelf WaitForNonStaleResultsAsOf(long? cutOffEtag);
 
         /// <summary>
         ///     Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
@@ -564,7 +564,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
         /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        TSelf WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout);
+        TSelf WaitForNonStaleResultsAsOf(long? cutOffEtag, TimeSpan waitTimeout);
 
         /// <summary>
         ///     Instructs the query to wait for non stale results as of the last write made by any session belonging to the

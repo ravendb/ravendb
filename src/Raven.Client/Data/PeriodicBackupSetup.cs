@@ -102,14 +102,14 @@ namespace Raven.Abstractions.Data
         public const string RavenDocumentKey = "Raven/Backup/Periodic/Status";
         public DateTime LastBackup { get; set; }
         public DateTime LastFullBackup { get; set; }
-        public Etag LastDocsEtag { get; set; }
+        public long? LastDocsEtag { get; set; }
 
-        public Etag LastDocsDeletionEtag { get; set; }
+        public long? LastDocsDeletionEtag { get; set; }
 
         public PeriodicExportStatus()
         {
-            LastDocsEtag = Etag.Empty;
-            LastDocsDeletionEtag = Etag.Empty;
+            LastDocsEtag = 0;
+            LastDocsDeletionEtag = 0;
         }
         [Flags]
         public enum PeriodicExportStatusEtags

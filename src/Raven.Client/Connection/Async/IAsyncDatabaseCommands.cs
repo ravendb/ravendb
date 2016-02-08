@@ -81,7 +81,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="key">key of a document to be deleted</param>
         /// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
         /// <param name="token">The cancellation token.</param>
-        Task DeleteAsync(string key, Etag etag, CancellationToken token = default (CancellationToken));
+        Task DeleteAsync(string key, long? etag, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Perform a set based deletes using the specified index
@@ -177,7 +177,7 @@ namespace Raven.Client.Connection.Async
         ///     This is primarily useful for administration of a database
         /// </remarks>
         /// <param name="token">The cancellation token.</param>
-        Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false, CancellationToken token = default (CancellationToken));
+        Task<JsonDocument[]> GetDocumentsAsync(long? fromEtag, int pageSize, bool metadataOnly = false, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -346,7 +346,7 @@ namespace Raven.Client.Connection.Async
         Task<long> NextIdentityForAsync(string name, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
+        ///     Sends a patch request for a specific document, ignoring the document's long? and if the document is missing
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patches">Array of patch requests</param>
@@ -366,7 +366,7 @@ namespace Raven.Client.Connection.Async
         Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, bool ignoreMissing, CancellationToken token = default(CancellationToken));
 
         /// <summary>
-        ///     Sends a patch request for a specific document, ignoring the document's Etag and  if the document is missing
+        ///     Sends a patch request for a specific document, ignoring the document's long? and  if the document is missing
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
@@ -390,9 +390,9 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patches">Array of patch requests</param>
-        /// <param name="etag">Require specific Etag [null to ignore]</param>
+        /// <param name="etag">Require specific long? [null to ignore]</param>
         /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag, CancellationToken token = default(CancellationToken));
+        Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, long? etag, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Sends a patch request for a specific document which may or may not currently exist
@@ -409,9 +409,9 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
-        /// <param name="etag">Require specific Etag [null to ignore]</param>
+        /// <param name="etag">Require specific long? [null to ignore]</param>
         /// <param name="token">The cancellation token.</param>
-        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, Etag etag, CancellationToken token = default(CancellationToken));
+        Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, long? etag, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Sends a patch request for a specific document which may or may not currently exist
@@ -430,14 +430,14 @@ namespace Raven.Client.Connection.Async
         ///     Puts the document in the database with the specified key.
         ///     <para>Returns PutResult where:</para>
         ///     <para>- Key - unique key under which document was stored,</para>
-        ///     <para>- Etag - stored document etag</para>
+        ///     <para>- long? - stored document etag</para>
         /// </summary>
         /// <param name="key">unique key under which document will be stored</param>
         /// <param name="etag">current document etag, used for concurrency checks (null to skip check)</param>
         /// <param name="document">document data</param>
         /// <param name="metadata">document metadata</param>
         /// <param name="token">The cancellation token.</param>
-        Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken));
+        Task<PutResult> PutAsync(string key, long? etag, RavenJObject document, RavenJObject metadata, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition
@@ -461,7 +461,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="minimumEtagBeforeReplace">minimum index etag before replace</param>
         /// <param name="replaceTimeUtc">replace time in utc</param>
         /// <param name="token">The cancellation token.</param>
-        Task<string[]> PutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, Etag minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken));
+        Task<string[]> PutSideBySideIndexesAsync(IndexToAdd[] indexesToAdd, long? minimumEtagBeforeReplace = null, DateTime? replaceTimeUtc = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Creates an index with the specified name, based on an index definition
@@ -583,7 +583,7 @@ namespace Raven.Client.Connection.Async
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
         /// <param name="token">The cancellation token.</param>
-        Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default(CancellationToken));
+        Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(long? fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless

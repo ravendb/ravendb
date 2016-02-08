@@ -23,7 +23,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Current document etag.
         /// </summary>
-        public Etag Etag { get; set; }
+        public long? Etag { get; set; }
 
         /// <summary>
         /// Last modified date for the document

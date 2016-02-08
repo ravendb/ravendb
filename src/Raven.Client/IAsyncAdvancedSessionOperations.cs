@@ -146,12 +146,12 @@ namespace Raven.Client
         ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
         ///     forces concurrency check with given Etag
         /// </summary>
-        void Store(object entity, Etag etag);
+        void Store(object entity, long? etag);
 
         /// <summary>
         ///     Stores entity in session with given id and forces concurrency check with given Etag.
         /// </summary>
-        void Store(object entity, Etag etag, string id);
+        void Store(object entity, long? etag, string id);
 
         /// <summary>
         ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.
@@ -216,7 +216,7 @@ namespace Raven.Client
         /// <param name="token">The cancellation token.</param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken));
+        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.

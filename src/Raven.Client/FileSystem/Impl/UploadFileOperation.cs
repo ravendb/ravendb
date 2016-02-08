@@ -14,7 +14,7 @@ namespace Raven.Client.FileSystem.Impl
 
         public string FileName { get; private set; }
         private RavenJObject Metadata { get; set; }
-        public Etag Etag { get; internal set; }
+        public long? Etag { get; internal set; }
 
 
         private long Size { get; set; }
@@ -22,7 +22,7 @@ namespace Raven.Client.FileSystem.Impl
 
         private Stream Stream { get; set; }
 
-        private UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, RavenJObject metadata = null, Etag etag = null)
+        private UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, RavenJObject metadata = null, long? etag = null)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException("path", "The path cannot be null, empty or whitespace!");
@@ -34,13 +34,13 @@ namespace Raven.Client.FileSystem.Impl
             Etag = etag;
         }
 
-        public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, Stream stream, RavenJObject metadata = null, Etag etag = null)
+        public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, Stream stream, RavenJObject metadata = null, long? etag = null)
             : this(sessionOperations, path, metadata, etag)
         {
             Stream = stream;
         }
 
-        public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, long size, Action<Stream> stream, RavenJObject metadata = null, Etag etag = null)
+        public UploadFileOperation(InMemoryFilesSessionOperations sessionOperations, string path, long size, Action<Stream> stream, RavenJObject metadata = null, long? etag = null)
             : this(sessionOperations, path, metadata, etag)
         {
             StreamWriter = stream;

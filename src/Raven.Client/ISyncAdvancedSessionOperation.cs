@@ -178,7 +178,7 @@ namespace Raven.Client
         /// <param name="pagingInformation">used to perform rapid pagination on a server side</param>
         /// <param name="transformer">name of a transformer that should be used to transform the results</param>
         /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
+        IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string transformer = null, Dictionary<string, RavenJToken> transformerParameters = null);
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.

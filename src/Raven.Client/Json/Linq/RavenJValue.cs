@@ -209,8 +209,6 @@ namespace Raven.Json.Linq
                 return JTokenType.Uri;
             else if (value is TimeSpan)
                 return JTokenType.TimeSpan;
-            else if (value is Etag)
-                return JTokenType.String;
 
             throw new ArgumentException(StringUtils.FormatWith("Could not determine JSON object type for type {0}.", CultureInfo.InvariantCulture, value.GetType()));
         }

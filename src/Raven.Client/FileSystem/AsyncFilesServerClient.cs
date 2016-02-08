@@ -144,7 +144,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task DeleteAsync(string filename, Etag etag = null)
+        public Task DeleteAsync(string filename, long? etag = null)
         {
             return ExecuteWithReplication(HttpMethods.Delete, async operation =>
             {
@@ -165,7 +165,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task RenameAsync(string filename, string rename, Etag etag = null)
+        public Task RenameAsync(string filename, string rename, long? etag = null)
         {
             return ExecuteWithReplication(HttpMethods.Patch, async operation =>
             {
@@ -186,7 +186,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task CopyAsync(string sourceName, string targetName, Etag etag = null)
+        public Task CopyAsync(string sourceName, string targetName, long? etag = null)
         {
             return ExecuteWithReplication(HttpMethods.Post, async operation =>
             {
@@ -319,7 +319,7 @@ namespace Raven.Client.FileSystem
             return ExecuteWithReplication(HttpMethods.Get, operation => StartsWithAsyncImpl(prefix, matches, start, pageSize, operation));
         }
 
-        public async Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
+        public async Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(long? fromEtag, int pageSize = int.MaxValue)
         {
             if (fromEtag == null)
                 throw new ArgumentException("fromEtag");
@@ -603,7 +603,7 @@ namespace Raven.Client.FileSystem
             return ExecuteWithReplication(HttpMethod.Get, async operation => await AsyncFilesServerClientExtension.DownloadAsyncImpl(this, RequestFactory, Conventions, OperationsHeaders, "/files/", filename, metadataRef, from, to, operation.Url, operation.Credentials).ConfigureAwait(false));
         }
 
-        public Task UpdateMetadataAsync(string filename, RavenJObject metadata, Etag etag = null)
+        public Task UpdateMetadataAsync(string filename, RavenJObject metadata, long? etag = null)
         {
             return ExecuteWithReplication(HttpMethods.Post, async operation =>
             {
@@ -623,7 +623,7 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, Etag etag = null)
+        public Task UploadAsync(string filename, Stream source, RavenJObject metadata = null, long? etag = null)
         {
             if (source.CanRead == false)
                 throw new Exception("Stream does not support reading");
@@ -650,7 +650,7 @@ namespace Raven.Client.FileSystem
             }, source.Length, metadata, etag);
         }
 
-        public Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, Etag etag = null)
+        public Task UploadAsync(string filename, Action<Stream> source, Action prepareStream, long size, RavenJObject metadata = null, long? etag = null)
         {
             if (metadata == null)
                 metadata = new RavenJObject();
@@ -661,13 +661,13 @@ namespace Raven.Client.FileSystem
             });
         }
 
-        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, Etag etag = null)
+        public Task UploadRawAsync(string filename, Stream source, RavenJObject metadata, long size, long? etag = null)
         {
             var operationMetadata = new OperationMetadata(this.BaseUrl, this.CredentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, null);
             return UploadAsyncImpl(operationMetadata, filename, source.CopyTo, () => { }, metadata, true, size, etag);
         }
 
-        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Action<Stream> source, Action prepareStream, RavenJObject metadata, bool preserveTimestamps, long size, Etag etag)
+        private async Task UploadAsyncImpl(OperationMetadata operation, string filename, Action<Stream> source, Action prepareStream, RavenJObject metadata, bool preserveTimestamps, long size, long? etag)
         {
             var operationUrl = operation.Url + "/files?name=" + Uri.EscapeDataString(filename);
             if (preserveTimestamps)

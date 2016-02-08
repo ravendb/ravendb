@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Last document etag in database.
         /// </summary>
-        public Etag LastDocEtag { get; set; }
+        public long? LastDocEtag { get; set; }
 
         /// <summary>
         /// Total number of indexes in database.

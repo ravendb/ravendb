@@ -59,13 +59,13 @@ namespace Raven.Abstractions.Data
         /// The last etag indexed by the index.
         /// This can be used to determine whatever the results can be cached.
         /// </summary>
-        public Etag IndexEtag { get; set; }
+        public long? IndexEtag { get; set; }
 
         /// <summary>
         /// The ETag value for this index current state, which include what docs were indexed,
         /// what document were deleted, etc.
         /// </summary>
-        public Etag ResultEtag { get; set; }
+        public long? ResultEtag { get; set; }
 
         /// <summary>
         /// Highlighter results (if requested).
